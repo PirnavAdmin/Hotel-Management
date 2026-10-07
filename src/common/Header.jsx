@@ -283,12 +283,12 @@ export function Header({
         fontFamily: 'monospace',
         boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.25)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#ffffff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-main)' }}>
           <Calendar size={14} color="var(--accent-amber)" />
           <span>{time.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</span>
         </div>
         <span style={{ color: 'var(--border-subtle)', opacity: 0.6 }}>•</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-amber-light)' }}>
           <Clock size={14} color="var(--accent-amber)" className="pulse-indicator" />
           <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
         </div>

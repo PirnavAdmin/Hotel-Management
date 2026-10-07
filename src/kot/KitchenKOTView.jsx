@@ -434,12 +434,12 @@ export function KitchenKOTView({
             fontSize: '0.82rem',
             fontFamily: 'monospace'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-main)' }}>
               <Calendar size={14} color="var(--accent-amber)" />
               <span>{currentTime.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</span>
             </div>
             <span style={{ color: 'var(--border-subtle)', opacity: 0.6 }}>•</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-amber-light)' }}>
               <Clock size={14} color="var(--accent-amber)" className="pulse-indicator" />
               <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </div>

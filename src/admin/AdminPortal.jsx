@@ -369,15 +369,15 @@ export function AdminPortal({
               fontSize: '0.76rem',
               fontWeight: 800,
               fontFamily: 'monospace',
-              boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.25)',
+              boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.12)',
               whiteSpace: 'nowrap'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ffffff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-main)' }}>
                 <Calendar size={13} color="var(--accent-amber)" />
                 <span>{currentTime.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
               </div>
               <span style={{ color: 'var(--border-subtle)', opacity: 0.6 }}>•</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-amber-light)' }}>
                 <Clock size={13} color="var(--accent-amber)" className="pulse-indicator" />
                 <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
               </div>
