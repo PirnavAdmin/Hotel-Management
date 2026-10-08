@@ -170,14 +170,57 @@ export function getSession() {
 // ── Save session ─────────────────────────────────────────────
 export function setSession(session) {
   try {
-    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(session));
+    if (session) {
+      const sessStr = JSON.stringify(session);
+      localStorage.setItem(STORAGE_KEY_SESSION, sessStr);
+      localStorage.setItem('auth_user', sessStr);
+      localStorage.setItem('auth_token_timestamp', Date.now().toString());
+      
+      const mockHeader = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+      const mockPayload = btoa(JSON.stringify({ 
+        sub: session.userId, 
+        role: session.role, 
+        name: session.name, 
+        exp: Math.floor(Date.now() / 1000) + 86400 
+      }));
+      const mockSig = "avsr_signature";
+      localStorage.setItem('avsr_jwt_token', `${mockHeader}.${mockPayload}.${mockSig}`);
+
+      // Persist to role-specific storage keys
+      if (session.role === 'admin') {
+        localStorage.setItem('avsr_admin_session', sessStr);
+        sessionStorage.setItem('avsr_admin_session', sessStr);
+      } else if (session.role === 'kot') {
+        localStorage.setItem('avsr_kot_session', sessStr);
+        sessionStorage.setItem('avsr_kot_session', sessStr);
+      } else {
+        localStorage.setItem('avsr_pos_session', sessStr);
+        sessionStorage.setItem('avsr_pos_session', sessStr);
+      }
+    } else {
+      logoutUser();
+    }
   } catch {}
 }
 
 // ── Clear session (logout) ───────────────────────────────────
 export function logoutUser() {
   try {
-    localStorage.removeItem(STORAGE_KEY_SESSION);
+    const keysToRemove = [
+      STORAGE_KEY_SESSION,
+      'auth_user',
+      'auth_token_timestamp',
+      'avsr_jwt_token',
+      'avsr_kitchen_notifications',
+      'avsr_latest_kitchen_alert',
+      'avsr_pos_session',
+      'avsr_kot_session',
+      'avsr_admin_session'
+    ];
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
   } catch {}
 }
 

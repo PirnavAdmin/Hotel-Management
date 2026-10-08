@@ -16,10 +16,10 @@ import {
   TransferTableModal, 
   PastOrdersModal 
 } from './user';
-// Common / Shared components
 import { Header, LoginPage, ErrorBoundary } from './common';
 import { sounds } from './utils/audio';
 import { parseTimeToSeconds, formatElapsedTimer } from './utils/timer';
+import { setSession, logoutUser } from './utils/auth';
 
 const STORAGE_KEY_TABLES = 'gourmet_pos_tables_v2_inr';
 const STORAGE_KEY_DELETED_TABLES = 'gourmet_pos_deleted_tables_v2';
@@ -254,7 +254,7 @@ export function App() {
 
   const loadRouteSession = (key) => {
     try {
-      const raw = sessionStorage.getItem(key);
+      const raw = localStorage.getItem(key) || sessionStorage.getItem(key);
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   };
@@ -265,8 +265,13 @@ export function App() {
 
   const saveRouteSession = (key, session) => {
     try {
-      if (session) sessionStorage.setItem(key, JSON.stringify(session));
-      else         sessionStorage.removeItem(key);
+      if (session) {
+        localStorage.setItem(key, JSON.stringify(session));
+        sessionStorage.setItem(key, JSON.stringify(session));
+      } else {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      }
     } catch {}
   };
 
@@ -276,6 +281,7 @@ export function App() {
 
   const handleGlobalLogin = (s, targetRole) => {
     const roleToUse = targetRole || s?.role || 'pos';
+    setSession(s);
     if (roleToUse === 'admin') {
       handleAdminLogin(s);
       navigate('/admin');
@@ -291,14 +297,17 @@ export function App() {
   const handlePosLogout = () => {
     setPosSession(null);
     saveRouteSession(SESSION_KEY_POS, null);
+    logoutUser();
   };
   const handleKotLogout = () => {
     setKotSession(null);
     saveRouteSession(SESSION_KEY_KOT, null);
+    logoutUser();
   };
   const handleAdminLogout = () => {
     setAdminSession(null);
     saveRouteSession(SESSION_KEY_ADMIN, null);
+    logoutUser();
   };
 
   // Modals state
