@@ -13,7 +13,13 @@ import { loginUser, createUser } from '../utils/auth';
  * Register (admin only) includes: Name, Username, Mobile, Email + OTP, Password.
  */
 export function LoginPage({ role = 'pos', onLoginSuccess }) {
+  const [currentRole, setCurrentRole] = useState(role);
   const [mode, setMode] = useState('login'); // 'login' | 'register'
+
+  // Sync prop role if parent route changes
+  useEffect(() => {
+    setCurrentRole(role);
+  }, [role]);
 
   // Login
   const [username, setUsername] = useState('');
@@ -81,11 +87,11 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
       hint: 'Access: Menu, Tables, Staff, User management'
     }
   };
-  const cfg = cfgMap[role] || cfgMap.pos;
-  const loginTitle = role === 'admin' ? 'Admin Panel Login'
-    : role === 'kot' ? 'Kitchen KOT Login' : 'User POS Login';
-  const loginSub   = role === 'admin' ? 'Restaurant Management Portal'
-    : role === 'kot' ? 'Kitchen Display System (KDS)' : 'Dining Floor & Billing Station';
+  const cfg = cfgMap[currentRole] || cfgMap.pos;
+  const loginTitle = currentRole === 'admin' ? 'Admin Panel Login'
+    : currentRole === 'kot' ? 'Kitchen KOT Login' : 'User POS Login';
+  const loginSub   = currentRole === 'admin' ? 'Restaurant Management Portal'
+    : currentRole === 'kot' ? 'Kitchen Display System (KDS)' : 'Dining Floor & Billing Station';
 
   const triggerShake = () => { setShake(true); setTimeout(() => setShake(false), 600); };
 
@@ -168,9 +174,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
     if (!username.trim() || !password.trim()) { setError('Please enter username and password.'); triggerShake(); return; }
     setLoading(true); setError('');
     setTimeout(() => {
-      const r = loginUser(username.trim(), password.trim(), role);
+      const r = loginUser(username.trim(), password.trim(), currentRole);
       setLoading(false);
-      if (r.success) onLoginSuccess(r.session);
+      if (r.success) onLoginSuccess(r.session, currentRole);
       else { setError(r.error || 'Login failed.'); triggerShake(); }
     }, 380);
   };
@@ -209,7 +215,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
         setTimeout(() => {
           const loginResult = loginUser(regUser.trim(), regPass.trim(), 'admin');
           if (loginResult.success) {
-            onLoginSuccess(loginResult.session);
+            onLoginSuccess(loginResult.session, 'admin');
           } else {
             // Fallback: switch to login tab with fields pre-filled
             setSuccess('');
@@ -302,6 +308,59 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
         </div>
       </div>
 
+      {/* Global 3-Terminal Role Selector Bar */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: '6px',
+        background: 'rgba(14,22,40,0.92)',
+        padding: '5px',
+        borderRadius: '14px',
+        border: '1.5px solid rgba(255, 255, 255, 0.1)',
+        marginBottom: '0.85rem',
+        maxWidth: '400px',
+        width: '100%',
+        position: 'relative',
+        zIndex: 2,
+        boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)'
+      }}>
+        {[
+          { id: 'pos', label: 'User POS', icon: '🍽️', accent: '#f59e0b', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
+          { id: 'kot', label: 'Kitchen KOT', icon: '🔥', accent: '#ea580c', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
+          { id: 'admin', label: 'Admin Portal', icon: '⚙️', accent: '#6366f1', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
+        ].map(t => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => {
+              setCurrentRole(t.id);
+              if (t.id !== 'admin' && mode === 'register') setMode('login');
+              setError('');
+              setSuccess('');
+            }}
+            style={{
+              padding: '0.52rem 0.4rem',
+              borderRadius: '9px',
+              fontSize: '0.78rem',
+              fontWeight: currentRole === t.id ? 800 : 600,
+              background: currentRole === t.id ? cfgMap[t.id].btnBg : 'transparent',
+              color: currentRole === t.id ? '#ffffff' : '#94a3b8',
+              border: currentRole === t.id ? `1.5px solid ${t.accent}` : 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              transition: 'all 0.2s ease',
+              boxShadow: currentRole === t.id ? t.shadow : 'none'
+            }}
+          >
+            <span>{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Card */}
       <div style={{
         width: '100%', maxWidth: '400px',
@@ -345,7 +404,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
         </div>
 
         {/* Tab toggle — Admin only */}
-        {role === 'admin' && (
+        {currentRole === 'admin' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', padding: '0.5rem 1.25rem 0' }}>
             {[
               { key: 'login',    label: 'Sign In',  icon: <LogIn size={13} /> },
@@ -401,7 +460,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
         )}
 
         {/* ── REGISTER FORM ── */}
-        {mode === 'register' && role === 'admin' && (
+        {mode === 'register' && currentRole === 'admin' && (
           <form onSubmit={handleRegister} style={{ padding: '0.8rem 1.25rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0' }}>
             {error   && <Err msg={error} />}
             {success && <Suc msg={success} />}

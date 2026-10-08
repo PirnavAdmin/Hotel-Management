@@ -103,7 +103,7 @@ export function loginUser(usernameOrEmail, password, expectedRole) {
       (u.email && u.email.toLowerCase() === input)    // also match by email
     ) &&
     u.password === password &&
-    (expectedRole ? u.role === expectedRole : true)
+    (!expectedRole || u.role === expectedRole || u.role === 'admin')
   );
   if (!user) {
     return { success: false, error: 'Invalid username/email or password.' };

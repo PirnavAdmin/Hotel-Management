@@ -274,6 +274,20 @@ export function App() {
   const handleKotLogin   = (s) => { setKotSession(s);   saveRouteSession(SESSION_KEY_KOT, s);   };
   const handleAdminLogin = (s) => { setAdminSession(s); saveRouteSession(SESSION_KEY_ADMIN, s); };
 
+  const handleGlobalLogin = (s, targetRole) => {
+    const roleToUse = targetRole || s?.role || 'pos';
+    if (roleToUse === 'admin') {
+      handleAdminLogin(s);
+      navigate('/admin');
+    } else if (roleToUse === 'kot') {
+      handleKotLogin(s);
+      navigate('/kot');
+    } else {
+      handlePosLogin(s);
+      navigate('/');
+    }
+  };
+
   const handlePosLogout = () => {
     setPosSession(null);
     saveRouteSession(SESSION_KEY_POS, null);
@@ -1052,7 +1066,7 @@ export function App() {
                 />
               </ErrorBoundary>
             ) : (
-              <LoginPage role="kot" onLoginSuccess={handleKotLogin} />
+              <LoginPage role="kot" onLoginSuccess={handleGlobalLogin} />
             )
         )}
 
@@ -1083,7 +1097,7 @@ export function App() {
                 onChangeTheme={setTheme}
               />
             ) : (
-              <LoginPage role="admin" onLoginSuccess={handleAdminLogin} />
+              <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} />
             )
         )}
 
@@ -1125,7 +1139,7 @@ export function App() {
                 )}
               </>
             ) : (
-              <LoginPage role="pos" onLoginSuccess={handlePosLogin} />
+              <LoginPage role="pos" onLoginSuccess={handleGlobalLogin} />
             )
         )}
       </main>
