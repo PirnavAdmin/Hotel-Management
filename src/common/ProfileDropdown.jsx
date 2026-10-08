@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ChevronDown, ShieldCheck, Mail, Phone, Clock, KeyRound, Sparkles } from 'lucide-react';
+import { User, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
 
 export function ProfileDropdown({ 
   currentSession = null, 
@@ -201,7 +201,6 @@ export function ProfileDropdown({
           <div style={{
             padding: '1.25rem 1rem 1rem 1rem',
             background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%)',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -266,25 +265,9 @@ export function ProfileDropdown({
             </div>
           </div>
 
-          {/* Details Section */}
-          <div style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.78rem', color: '#cbd5e1' }}>
-              <Mail size={14} color="#38bdf8" />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.78rem', color: '#cbd5e1' }}>
-              <Phone size={14} color="#34d399" />
-              <span>{mobile}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.78rem', color: '#cbd5e1' }}>
-              <Clock size={14} color="#fbbf24" />
-              <span>Active Session: Logged In</span>
-            </div>
-          </div>
-
           {/* Action / Logout Section */}
           <div style={{
-            padding: '0.75rem 1rem',
+            padding: '0.85rem 1rem',
             background: 'rgba(0,0,0,0.25)',
             borderTop: '1px solid rgba(255,255,255,0.08)'
           }}>
@@ -296,12 +279,12 @@ export function ProfileDropdown({
                 }}
                 style={{
                   width: '100%',
-                  padding: '0.6rem 1rem',
+                  padding: '0.65rem 1rem',
                   background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.3) 100%)',
                   border: '1px solid rgba(239, 68, 68, 0.45)',
                   borderRadius: '10px',
                   color: '#f87171',
-                  fontSize: '0.82rem',
+                  fontSize: '0.85rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'flex',
@@ -321,7 +304,7 @@ export function ProfileDropdown({
                 }}
               >
                 <LogOut size={16} />
-                <span>Log Out of Account</span>
+                <span>Log Out</span>
               </button>
             )}
           </div>

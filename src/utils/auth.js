@@ -78,6 +78,12 @@ export function getUsers() {
 export function saveUsers(users) {
   try {
     localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+    // Push to server for global network sync across all connected LAN devices
+    fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avsr_auth_users_v1: users })
+    }).catch(() => {});
   } catch {}
 }
 

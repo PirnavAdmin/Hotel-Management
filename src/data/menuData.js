@@ -8,7 +8,7 @@ export const MENU_CATEGORIES = [
   { id: 'beverages', name: 'Beverages & Lassi', icon: 'Coffee' },
   { id: 'desserts', name: 'Desserts & Sweets', icon: 'IceCream' }
 ];
-
+ 
 export const MENU_ITEMS = [
   // --- BIRIYANI SPECIALS ---
   {
@@ -57,7 +57,7 @@ export const MENU_ITEMS = [
     spiceLevel: 3,
     prepTime: '14 min',
     description: 'Crispy spicy Chicken 65 tossed with curry leaves and green chilies, layered on dum biryani rice with boiled egg.',
-    image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1701579231305-d84d8af9a3fd?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'bir-5',
@@ -69,7 +69,7 @@ export const MENU_ITEMS = [
     spiceLevel: 1,
     prepTime: '12 min',
     description: 'Seasonal farm-fresh vegetables, baby potatoes, and French beans slow-cooked with whole spices and basmati rice in dum style. Served with boondi raita.',
-    image: 'https://images.unsplash.com/photo-1642821373181-696a54913e9a?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'bir-6',
@@ -81,7 +81,7 @@ export const MENU_ITEMS = [
     spiceLevel: 2,
     prepTime: '14 min',
     description: 'Char-grilled cottage cheese cubes coated in Kashmiri tandoori spices, layered over aromatic saffron dum rice with mint and brown onions.',
-    image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'bir-7',
@@ -93,7 +93,7 @@ export const MENU_ITEMS = [
     spiceLevel: 2,
     prepTime: '15 min',
     description: 'Fresh coastal tiger prawns sautéed in spiced coconut-onion gravy, layered with royal basmati rice and fried cashews.',
-    image: 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1559742811-82286364ceaf?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'bir-8',
@@ -105,10 +105,22 @@ export const MENU_ITEMS = [
     spiceLevel: 1,
     prepTime: '10 min',
     description: 'Pan-fried golden boiled eggs coated with spices, nestled in rich aromatic dum biryani rice. Served with cooling raita.',
-    image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80'
   },
-
+ 
   // --- STARTERS & APPETIZERS ---
+  {
+    id: 'st-0',
+    name: 'Shawarma',
+    category: 'starters',
+    price: 250,
+    isVeg: false,
+    isChefSpecial: true,
+    spiceLevel: 1,
+    prepTime: '10 min',
+    description: 'Juicy spiced shredded chicken wrapped in warm pita bread with garlic toum sauce, pickles, and crispy fries.',
+    image: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=500&auto=format&fit=crop&q=80'
+  },
   {
     id: 'st-1',
     name: 'Crispy Chicken 65',
@@ -119,7 +131,7 @@ export const MENU_ITEMS = [
     spiceLevel: 3,
     prepTime: '10 min',
     description: 'Deep-fried chicken pieces tossed in yogurt, spicy red chili sauce, garlic, and fresh curry leaves.',
-    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'st-2',
@@ -155,7 +167,7 @@ export const MENU_ITEMS = [
     spiceLevel: 1,
     prepTime: '8 min',
     description: 'Sweet golden corn kernels tossed with cracked black pepper, fresh lemon juice, scallions, and herbs.',
-    image: 'https://images.unsplash.com/photo-1576107232684-1279f3908594?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'st-5',
@@ -167,9 +179,9 @@ export const MENU_ITEMS = [
     spiceLevel: 2,
     prepTime: '12 min',
     description: 'Boneless fish fillets fried crisp and tossed in Hyderabadi spicy yogurt tadka with green chillies.',
-    image: 'https://images.unsplash.com/photo-1604909052743-94e838986d24?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=500&auto=format&fit=crop&q=80'
   },
-
+ 
   // --- TANDOOR & KEBABS ---
   {
     id: 'tk-1',
@@ -181,7 +193,7 @@ export const MENU_ITEMS = [
     spiceLevel: 2,
     prepTime: '18 min',
     description: 'Chicken bone-in marinated with hung curd, ginger garlic paste, and Kashmiri degi mirch, roasted in clay tandoor.',
-    image: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'tk-2',
@@ -193,7 +205,7 @@ export const MENU_ITEMS = [
     spiceLevel: 0,
     prepTime: '15 min',
     description: 'Melt-in-mouth chicken breast cubes marinated in heavy clotted cream, cheese, cardamom, and white pepper.',
-    image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'tk-3',
@@ -219,7 +231,7 @@ export const MENU_ITEMS = [
     description: 'Minced lamb blended with mint, fresh coriander, ginger, and royal spices, roasted golden on charcoal skewers.',
     image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=500&auto=format&fit=crop&q=80'
   },
-
+ 
   // --- MAIN COURSE & CURRIES ---
   {
     id: 'mc-1',
@@ -231,7 +243,7 @@ export const MENU_ITEMS = [
     spiceLevel: 1,
     prepTime: '15 min',
     description: 'Char-smoked shredded chicken simmered in rich velvety tomato, butter, and cashew nut gravy finished with kasuri methi.',
-    image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'mc-2',
@@ -243,7 +255,7 @@ export const MENU_ITEMS = [
     spiceLevel: 2,
     prepTime: '15 min',
     description: 'Tender chicken tossed with chunky capsicum, tomatoes, and freshly ground coriander-cumin spices in an iron wok.',
-    image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'mc-3',
@@ -278,10 +290,10 @@ export const MENU_ITEMS = [
     isChefSpecial: true,
     spiceLevel: 2,
     prepTime: '18 min',
-    description: 'Kashmiri delicacy of tender mutton cooked in aromatic gravy flavored with रतनजोत (ratan jot) and Kashmiri chilies.',
-    image: 'https://images.unsplash.com/photo-1545247181-516773ca838b?w=500&auto=format&fit=crop&q=80'
+    description: 'Kashmiri delicacy of tender mutton cooked in aromatic gravy flavored with ratan jot and Kashmiri chilies.',
+    image: 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=500&auto=format&fit=crop&q=80'
   },
-
+ 
   // --- BREADS & NAAN ---
   {
     id: 'br-1',
@@ -305,7 +317,7 @@ export const MENU_ITEMS = [
     spiceLevel: 0,
     prepTime: '6 min',
     description: 'Tandoori naan stuffed with melted mozzarella cheese and topped with crushed garlic.',
-    image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1585238342024-78d387f4a707?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'br-3',
@@ -317,9 +329,9 @@ export const MENU_ITEMS = [
     spiceLevel: 0,
     prepTime: '4 min',
     description: 'Whole wheat flatbread baked crisp in the clay oven and buttered.',
-    image: 'https://images.unsplash.com/photo-1505253758473-96b7015fcd40?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=500&auto=format&fit=crop&q=80'
   },
-
+ 
   // --- BEVERAGES & LASSI ---
   {
     id: 'dr-1',
@@ -331,7 +343,7 @@ export const MENU_ITEMS = [
     spiceLevel: 0,
     prepTime: '4 min',
     description: 'Thick creamy yogurt churned with sweet Alphonso mango pulp, saffron, and crushed pistachios.',
-    image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1546173159-315724a31d9b?w=500&auto=format&fit=crop&q=80'
   },
   {
     id: 'dr-2',
@@ -367,10 +379,22 @@ export const MENU_ITEMS = [
     spiceLevel: 1,
     prepTime: '3 min',
     description: 'Refreshing curd drink spiced with crushed ginger, green chili, roasted cumin, and fresh cilantro.',
-    image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?w=500&auto=format&fit=crop&q=80'
   },
-
+ 
   // --- DESSERTS ---
+  {
+    id: 'ds-0',
+    name: 'Ice cream',
+    category: 'desserts',
+    price: 250,
+    isVeg: true,
+    isChefSpecial: false,
+    spiceLevel: 0,
+    prepTime: '3 min',
+    description: 'Gourmet trio scoops of rich Belgian chocolate, Madagascar vanilla, and strawberry ice cream topped with waffle crisps.',
+    image: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=500&auto=format&fit=crop&q=80'
+  },
   {
     id: 'ds-1',
     name: 'Gulab Jamun with Rabdi (2 Pcs)',
@@ -405,6 +429,6 @@ export const MENU_ITEMS = [
     spiceLevel: 0,
     prepTime: '3 min',
     description: 'Creamy malai kulfi served with rose falooda sev, sabja basil seeds, and pure rose syrup.',
-    image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=500&auto=format&fit=crop&q=80'
+    image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=500&auto=format&fit=crop&q=80'
   }
 ];

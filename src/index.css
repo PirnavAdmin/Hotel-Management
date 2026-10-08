@@ -129,37 +129,37 @@
 
 /* Clean Daylight Light Theme */
 [data-theme="light-bistro"] {
-  --bg-primary: #f1f5f9;
+  --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #e2e8f0;
+  --bg-tertiary: #f1f5f9;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
-  --bg-glass: rgba(255, 255, 255, 0.95);
+  --bg-glass: rgba(255, 255, 255, 0.92);
 
-  --border-subtle: #cbd5e1;
-  --border-card: #cbd5e1;
-  --border-focus: rgba(217, 119, 6, 0.8);
+  --border-subtle: #e2e8f0;
+  --border-card: #e2e8f0;
+  --border-focus: rgba(245, 158, 11, 0.6);
 
   --text-main: #0f172a;
-  --text-muted: #334155;
-  --text-dim: #64748b;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
 
   --accent-amber: #d97706;
-  --accent-amber-light: #92400e;
+  --accent-amber-light: #b45309;
   --accent-saffron: #ea580c;
-  --accent-amber-glow: rgba(217, 119, 6, 0.25);
+  --accent-amber-glow: rgba(217, 119, 6, 0.2);
 
-  --status-vacant: #047857;
+  --status-vacant: #059669;
   --status-vacant-bg: #d1fae5;
-  --status-occupied: #b45309;
+  --status-occupied: #d97706;
   --status-occupied-bg: #fef3c7;
-  --status-billed: #6d28d9;
+  --status-billed: #7c3aed;
   --status-billed-bg: #ede9fe;
 
-  --danger: #b91c1c;
+  --danger: #dc2626;
   --danger-bg: #fee2e2;
-  --success: #047857;
-  --info: #0369a1;
+  --success: #059669;
+  --info: #0284c7;
 
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.12);

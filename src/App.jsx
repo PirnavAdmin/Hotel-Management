@@ -349,6 +349,16 @@ export function App() {
     }
   }, [activeKitchenAlert]);
 
+  const pushGlobalSync = (payload) => {
+    try {
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    } catch {}
+  };
+
   const triggerKitchenNotification = (alertData) => {
     const notif = {
       id: Date.now() + Math.random(),
@@ -364,6 +374,7 @@ export function App() {
     setActiveKitchenAlert(notif);
     try {
       localStorage.setItem(STORAGE_KEY_LATEST_ALERT, JSON.stringify(notif));
+      pushGlobalSync({ [STORAGE_KEY_LATEST_ALERT]: notif });
     } catch {}
 
     if (notif.type === 'cooking_completed') {
@@ -378,43 +389,110 @@ export function App() {
     try { localStorage.removeItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS); } catch {}
   };
 
-  // Sync to LocalStorage (always sanitizing against deletedTableIds)
+  // Sync to LocalStorage & Global Network DB
   useEffect(() => {
     try {
       const isDeleted = (id) => deletedTableIds.some(d => String(d) === String(id));
       const cleanTables = tables.filter(t => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
-    } catch {
-      // Local storage full
-    }
+      pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+    } catch {}
   }, [tables, deletedTableIds]);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(menuItems));
-    } catch {
-      // Local storage full
-    }
+      pushGlobalSync({ [STORAGE_KEY_MENU]: menuItems });
+    } catch {}
   }, [menuItems]);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(staffList));
-    } catch {
-      // Local storage full
-    }
+      pushGlobalSync({ [STORAGE_KEY_STAFF]: staffList });
+    } catch {}
   }, [staffList]);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(pastOrders));
-    } catch {
-      // Local storage full
-    }
+      pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
+    } catch {}
   }, [pastOrders]);
 
-  // Real-time cross-tab synchronization for multi-screen restaurant stations
+  // Real-time cross-device network synchronization via SSE Stream & REST API
   useEffect(() => {
+    // 1. Fetch initial network DB state on startup
+    fetch('/api/state')
+      .then(res => res.json())
+      .then(data => {
+        if (!data) return;
+        if (data[STORAGE_KEY_TABLES]) {
+          const freshDel = getDeletedTableIds();
+          const clean = data[STORAGE_KEY_TABLES].filter(t => !freshDel.some(d => String(d) === String(t.id)));
+          setTables(clean);
+          try { localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean)); } catch {}
+        }
+        if (data[STORAGE_KEY_ORDERS]) {
+          setPastOrders(data[STORAGE_KEY_ORDERS]);
+          try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(data[STORAGE_KEY_ORDERS])); } catch {}
+        }
+        if (data[STORAGE_KEY_MENU]) {
+          setMenuItems(data[STORAGE_KEY_MENU]);
+          try { localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(data[STORAGE_KEY_MENU])); } catch {}
+        }
+        if (data[STORAGE_KEY_STAFF]) {
+          setStaffList(data[STORAGE_KEY_STAFF]);
+          try { localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(data[STORAGE_KEY_STAFF])); } catch {}
+        }
+        if (data['avsr_auth_users_v1']) {
+          try { localStorage.setItem('avsr_auth_users_v1', JSON.stringify(data['avsr_auth_users_v1'])); } catch {}
+        }
+      })
+      .catch(() => {});
+
+    // 2. Connect to realtime SSE stream push for instant multi-device updates
+    let es;
+    try {
+      es = new EventSource('/api/events');
+      es.onmessage = (e) => {
+        try {
+          const parsedMsg = JSON.parse(e.data);
+          const payload = parsedMsg.payload;
+          if (!payload) return;
+
+          if (payload[STORAGE_KEY_TABLES]) {
+            const freshDel = getDeletedTableIds();
+            const clean = payload[STORAGE_KEY_TABLES].filter(t => !freshDel.some(d => String(d) === String(t.id)));
+            setTables(clean);
+            try { localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean)); } catch {}
+          }
+          if (payload[STORAGE_KEY_ORDERS]) {
+            setPastOrders(payload[STORAGE_KEY_ORDERS]);
+            try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(payload[STORAGE_KEY_ORDERS])); } catch {}
+          }
+          if (payload[STORAGE_KEY_MENU]) {
+            setMenuItems(payload[STORAGE_KEY_MENU]);
+            try { localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(payload[STORAGE_KEY_MENU])); } catch {}
+          }
+          if (payload[STORAGE_KEY_STAFF]) {
+            setStaffList(payload[STORAGE_KEY_STAFF]);
+            try { localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(payload[STORAGE_KEY_STAFF])); } catch {}
+          }
+          if (payload['avsr_auth_users_v1']) {
+            try { localStorage.setItem('avsr_auth_users_v1', JSON.stringify(payload['avsr_auth_users_v1'])); } catch {}
+          }
+          if (payload[STORAGE_KEY_LATEST_ALERT]) {
+            const alert = payload[STORAGE_KEY_LATEST_ALERT];
+            setActiveKitchenAlert(alert);
+            setKitchenNotifications(prev => [alert, ...prev.filter(n => n.id !== alert.id).slice(0, 39)]);
+            if (alert.type === 'cooking_completed') sounds.playBell();
+            else sounds.playAddItem();
+          }
+        } catch {}
+      };
+    } catch {}
+
     const handleStorageChange = (e) => {
       if (e.key === STORAGE_KEY_LATEST_ALERT && e.newValue) {
         try {
@@ -430,101 +508,13 @@ export function App() {
           }
         } catch {}
       }
-      if (e.key === STORAGE_KEY_KITCHEN_NOTIFICATIONS && e.newValue) {
-        try {
-          setKitchenNotifications(JSON.parse(e.newValue));
-        } catch {}
-      }
-      if (e.key === STORAGE_KEY_DELETED_TABLES && e.newValue) {
-        try {
-          const newDeleted = JSON.parse(e.newValue);
-          setDeletedTableIds(newDeleted);
-          setTables(prev => prev.filter(t => !newDeleted.some(d => String(d) === String(t.id))));
-        } catch {}
-      }
-      if (e.key === STORAGE_KEY_TABLES && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          const currentDeleted = getDeletedTableIds();
-          const clean = parsed.filter(t => !currentDeleted.some(d => String(d) === String(t.id)));
-          setTables(clean);
-        } catch {}
-      }
-      if (e.key === STORAGE_KEY_MENU && e.newValue) {
-        try { setMenuItems(JSON.parse(e.newValue)); } catch {}
-      }
-      if (e.key === STORAGE_KEY_STAFF && e.newValue) {
-        try { setStaffList(JSON.parse(e.newValue)); } catch {}
-      }
-      if (e.key === STORAGE_KEY_ORDERS && e.newValue) {
-        try { setPastOrders(JSON.parse(e.newValue)); } catch {}
-      }
-    };
-
-    // When switching tabs or focusing window, reload fresh state so stale tabs never resurrect deleted tables
-    const handleSyncOnFocus = () => {
-      try {
-        const freshDeleted = getDeletedTableIds();
-        setDeletedTableIds(freshDeleted);
-        const saved = localStorage.getItem(STORAGE_KEY_TABLES);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          const clean = parsed.filter(t => !freshDeleted.some(d => String(d) === String(t.id)));
-          setTables(clean);
-        }
-        const savedOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
-        if (savedOrders) {
-          setPastOrders(JSON.parse(savedOrders));
-        }
-        const savedStaff = localStorage.getItem(STORAGE_KEY_STAFF);
-        if (savedStaff) {
-          setStaffList(JSON.parse(savedStaff));
-        }
-      } catch {}
     };
 
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', handleSyncOnFocus);
-    const handleVis = () => {
-      if (document.visibilityState === 'visible') {
-        handleSyncOnFocus();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVis);
-
-    // Live background interval sync across tabs/windows (every 1200ms)
-    const syncInterval = setInterval(() => {
-      try {
-        const savedOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
-        if (savedOrders) {
-          const parsed = JSON.parse(savedOrders);
-          setPastOrders(prev => {
-            if (JSON.stringify(prev) !== savedOrders) {
-              return parsed;
-            }
-            return prev;
-          });
-        }
-        const savedTables = localStorage.getItem(STORAGE_KEY_TABLES);
-        if (savedTables) {
-          const freshDeleted = getDeletedTableIds();
-          const parsed = JSON.parse(savedTables);
-          const clean = parsed.filter(t => !freshDeleted.some(d => String(d) === String(t.id)));
-          setTables(prev => {
-            if (JSON.stringify(prev) !== JSON.stringify(clean)) {
-              return clean;
-            }
-            return prev;
-          });
-        }
-      } catch {}
-    }, 1200);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', handleSyncOnFocus);
-      document.removeEventListener('visibilitychange', handleVis);
-      clearInterval(syncInterval);
+      if (es) es.close();
     };
   }, []);
 
