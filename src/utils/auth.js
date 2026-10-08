@@ -7,32 +7,69 @@
 const STORAGE_KEY_USERS    = 'avsr_auth_users_v1';
 const STORAGE_KEY_SESSION  = 'avsr_auth_session_v1';
 
-// ── Default admin account (always present) ──────────────────
-const DEFAULT_ADMIN = {
-  id: 'admin-001',
-  username: 'admin',
-  password: 'admin123',
-  role: 'admin',
-  name: 'Administrator',
-  createdAt: new Date().toISOString(),
-  createdBy: 'system'
-};
+// ── Default system accounts (always present across all devices) ──────────────────
+const DEFAULT_USERS = [
+  {
+    id: 'admin-001',
+    username: 'admin',
+    password: 'admin123',
+    role: 'admin',
+    name: 'Administrator',
+    email: 'admin@avsr.com',
+    createdAt: new Date().toISOString(),
+    createdBy: 'system'
+  },
+  {
+    id: 'pos-001',
+    username: 'pos',
+    password: 'pos123',
+    role: 'pos',
+    name: 'Pasupuleti Bhanu (POS)',
+    email: 'pos@avsr.com',
+    createdAt: new Date().toISOString(),
+    createdBy: 'system'
+  },
+  {
+    id: 'kot-001',
+    username: 'kot',
+    password: 'kot123',
+    role: 'kot',
+    name: 'Kitchen Chef (KOT)',
+    email: 'kot@avsr.com',
+    createdAt: new Date().toISOString(),
+    createdBy: 'system'
+  },
+  {
+    id: 'user-001',
+    username: 'user',
+    password: 'user123',
+    role: 'pos',
+    name: 'Floor Staff User',
+    email: 'user@avsr.com',
+    createdAt: new Date().toISOString(),
+    createdBy: 'system'
+  }
+];
 
 // ── Load all users from storage ──────────────────────────────
 export function getUsers() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_USERS);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // Always ensure admin exists
-      if (!parsed.find(u => u.role === 'admin')) {
-        parsed.unshift(DEFAULT_ADMIN);
+      let parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        // Ensure default system accounts exist
+        DEFAULT_USERS.forEach(defUser => {
+          if (!parsed.some(u => u.username.toLowerCase() === defUser.username.toLowerCase())) {
+            parsed.unshift(defUser);
+          }
+        });
         saveUsers(parsed);
+        return parsed;
       }
-      return parsed;
     }
   } catch {}
-  const initial = [DEFAULT_ADMIN];
+  const initial = [...DEFAULT_USERS];
   saveUsers(initial);
   return initial;
 }
