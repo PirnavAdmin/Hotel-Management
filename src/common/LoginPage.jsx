@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ChefHat, Lock, User, Eye, EyeOff,
   Utensils, MonitorCheck, ShieldCheck,
@@ -247,11 +247,11 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
   // Input style
   const inp = (val, extraStyle = {}) => ({
     width: '100%',
-    padding: '0.52rem 0.8rem 0.52rem 2.3rem',
+    padding: '0.42rem 0.75rem 0.42rem 2.2rem',
     background: 'rgba(255,255,255,0.05)',
     border: `1.5px solid ${val ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}`,
     borderRadius: '8px', color: '#ffffff',
-    fontSize: '0.82rem', fontWeight: 600,
+    fontSize: '0.8rem', fontWeight: 600,
     outline: 'none', transition: 'border-color 0.2s ease',
     boxSizing: 'border-box',
     ...extraStyle
@@ -259,11 +259,13 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
+      maxHeight: '100vh',
+      boxSizing: 'border-box',
       background: 'radial-gradient(ellipse 120% 80% at 50% -10%, rgba(15,23,42,0.98) 0%, #0a0f1e 100%)',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      padding: '0.9rem', position: 'relative', overflow: 'hidden',
+      padding: '0.5rem 1rem', position: 'relative', overflow: 'hidden',
       fontFamily: "'Inter','Outfit',system-ui,sans-serif"
     }}>
       {/* BG decoration */}
@@ -288,20 +290,20 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
       </div>
 
       {/* Brand */}
-      <div style={{ textAlign: 'center', marginBottom: '0.85rem', position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+      <div style={{ textAlign: 'center', marginBottom: '0.4rem', position: 'relative', zIndex: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
           <div style={{
-            background: 'linear-gradient(135deg,#f59e0b,#ea580c)', padding: '7px',
-            borderRadius: '10px', boxShadow: '0 4px 16px rgba(245,158,11,0.4)',
+            background: 'linear-gradient(135deg,#f59e0b,#ea580c)', padding: '5px',
+            borderRadius: '8px', boxShadow: '0 4px 16px rgba(245,158,11,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
-            <ChefHat size={20} color="#fff" />
+            <ChefHat size={18} color="#fff" />
           </div>
           <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '1.22rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
               AVSR FOOD COURT
             </div>
-            <div style={{ fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Restaurant Management System
             </div>
           </div>
@@ -312,12 +314,12 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr',
-        gap: '6px',
+        gap: '5px',
         background: 'rgba(14,22,40,0.92)',
-        padding: '5px',
-        borderRadius: '14px',
+        padding: '4px',
+        borderRadius: '12px',
         border: '1.5px solid rgba(255, 255, 255, 0.1)',
-        marginBottom: '0.85rem',
+        marginBottom: '0.45rem',
         maxWidth: '400px',
         width: '100%',
         position: 'relative',
@@ -339,9 +341,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
               setSuccess('');
             }}
             style={{
-              padding: '0.52rem 0.4rem',
-              borderRadius: '9px',
-              fontSize: '0.78rem',
+              padding: '0.42rem 0.35rem',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
               fontWeight: currentRole === t.id ? 800 : 600,
               background: currentRole === t.id ? cfgMap[t.id].btnBg : 'transparent',
               color: currentRole === t.id ? '#ffffff' : '#94a3b8',
@@ -350,7 +352,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem',
+              gap: '0.3rem',
               transition: 'all 0.2s ease',
               boxShadow: currentRole === t.id ? t.shadow : 'none'
             }}
@@ -364,6 +366,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
       {/* Card */}
       <div style={{
         width: '100%', maxWidth: '400px',
+        maxHeight: 'calc(100vh - 125px)',
+        display: 'flex', flexDirection: 'column',
         background: 'rgba(14,22,40,0.93)', backdropFilter: 'blur(20px)',
         border: `1.5px solid ${cfg.accent}45`, borderRadius: '16px',
         boxShadow: `0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06)`,
@@ -371,16 +375,16 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
         animation: shake ? 'shakeCard 0.5s ease' : 'none'
       }}>
         {/* Top accent bar */}
-        <div style={{ height: '3px', background: cfg.btnBg, boxShadow: `0 0 16px ${cfg.iconGlow}` }} />
+        <div style={{ height: '3px', background: cfg.btnBg, boxShadow: `0 0 16px ${cfg.iconGlow}`, flexShrink: 0 }} />
 
         {/* Card header */}
-        <div style={{ padding: '0.9rem 1.25rem 0.65rem', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: '0.55rem 1rem 0.35rem', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: '46px', height: '46px', borderRadius: '12px',
+            width: '38px', height: '38px', borderRadius: '10px',
             background: cfg.iconBg,
             boxShadow: `0 6px 20px ${cfg.iconGlow}, inset 0 1px 0 rgba(255,255,255,0.25)`,
-            marginBottom: '0.45rem'
+            marginBottom: '0.3rem'
           }}>
             {cfg.icon}
           </div>
@@ -388,17 +392,17 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
               background: cfg.badgeBg, border: `1px solid ${cfg.badgeBorder}`,
-              color: cfg.accentLight, fontSize: '0.62rem', fontWeight: 800,
-              letterSpacing: '0.06em', padding: '2px 8px', borderRadius: '20px',
-              marginBottom: '0.35rem'
+              color: cfg.accentLight, fontSize: '0.6rem', fontWeight: 800,
+              letterSpacing: '0.06em', padding: '1px 7px', borderRadius: '20px',
+              marginBottom: '0.25rem'
             }}>
               {cfg.badge}
             </span>
           </div>
-          <h1 style={{ fontSize: '1.08rem', fontWeight: 900, color: '#fff', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: '1rem', fontWeight: 900, color: '#fff', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
             {mode === 'register' ? 'Create Admin Account' : loginTitle}
           </h1>
-          <p style={{ fontSize: '0.7rem', color: '#64748b', margin: 0, fontWeight: 600 }}>
+          <p style={{ fontSize: '0.67rem', color: '#64748b', margin: 0, fontWeight: 600 }}>
             {mode === 'register' ? 'Set up your administrator account with OTP verification' : loginSub}
           </p>
         </div>
@@ -431,9 +435,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
 
         {/* ── LOGIN FORM ── */}
         {mode === 'login' && (
-          <form onSubmit={handleLogin} style={{ padding: '0.85rem 1.25rem 1.1rem' }}>
+          <form onSubmit={handleLogin} style={{ padding: '0.65rem 1rem 0.85rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {error && <Err msg={error} />}
-            <Fld label="Username or Email" icon={<User size={13} color="#475569" />}>
+            <Fld label="Username or Email" icon={<User size={13} color="#475569" />} mb="0.45rem">
               <input id="login-username" type="text" placeholder="Username or Email address"
                 value={username} onChange={e => { setUsername(e.target.value); setError(''); }}
                 style={inp(username)} autoComplete="username"
@@ -441,7 +445,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
                 onBlur={e => e.target.style.borderColor = username ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
               />
             </Fld>
-            <Fld label="Password" icon={<Lock size={13} color="#475569" />} mb="1rem">
+            <Fld label="Password" icon={<Lock size={13} color="#475569" />} mb="0.65rem">
               <input id="login-password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
                 value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
                 style={inp(password, { paddingRight: '2.5rem' })} autoComplete="current-password"
@@ -451,8 +455,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
               <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
             </Fld>
             <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
-            <div style={{ marginTop: '0.65rem', padding: '0.38rem 0.65rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '7px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.67rem', color: '#475569', fontWeight: 700 }}>
+            <div style={{ marginTop: '0.55rem', padding: '0.35rem 0.55rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '7px', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>
                 {cfg.hint} • Sign in with username <strong style={{color:'#64748b'}}>or</strong> email
               </div>
             </div>
@@ -461,252 +465,162 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
 
         {/* ── REGISTER FORM ── */}
         {mode === 'register' && currentRole === 'admin' && (
-          <form onSubmit={handleRegister} style={{ padding: '0.8rem 1.25rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0' }}>
+          <form onSubmit={handleRegister} style={{ padding: '0.55rem 1rem 0.65rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', overflow: 'hidden' }}>
             {error   && <Err msg={error} />}
             {success && <Suc msg={success} />}
 
-            {/* ─ Row 1: Full Name */}
-            <Fld label="Full Name *" icon={<User size={14} color="#475569" />}>
-              <input type="text" placeholder="e.g. AVULA VENKATA SURESH REDDY"
-                value={regName} onChange={e => { setRegName(e.target.value); setError(''); }}
-                style={inp(regName)}
-                onFocus={e => e.target.style.borderColor = cfg.accent}
-                onBlur={e => e.target.style.borderColor = regName ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-              />
-            </Fld>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem 0.65rem' }}>
+              {/* ─ Row 1 Left: Full Name */}
+              <Fld label="Full Name *" icon={<User size={13} color="#475569" />} mb="0">
+                <input type="text" placeholder="e.g. SURESH REDDY"
+                  value={regName} onChange={e => { setRegName(e.target.value); setError(''); }}
+                  style={inp(regName)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regName ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
 
-            {/* ─ Row 2: Username */}
-            <Fld label="Username *" icon={<User size={14} color="#475569" />}>
-              <input type="text" placeholder="Choose a login username"
-                value={regUser} onChange={e => { setRegUser(e.target.value); setError(''); }}
-                style={inp(regUser)} autoComplete="username"
-                onFocus={e => e.target.style.borderColor = cfg.accent}
-                onBlur={e => e.target.style.borderColor = regUser ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-              />
-            </Fld>
+              {/* ─ Row 1 Right: Username */}
+              <Fld label="Username *" icon={<User size={13} color="#475569" />} mb="0">
+                <input type="text" placeholder="Choose username"
+                  value={regUser} onChange={e => { setRegUser(e.target.value); setError(''); }}
+                  style={inp(regUser)} autoComplete="username"
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regUser ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
 
-            {/* ─ Row 3: Mobile Number */}
-            <Fld label="Mobile Number * (10 digits)" icon={<Phone size={14} color="#475569" />}>
-              <input type="tel" placeholder="e.g. 9876543210" maxLength={10}
-                value={regMobile} onChange={e => { setRegMobile(e.target.value.replace(/\D/g, '')); setError(''); }}
-                style={inp(regMobile)}
-                onFocus={e => e.target.style.borderColor = cfg.accent}
-                onBlur={e => e.target.style.borderColor = regMobile ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-              />
-            </Fld>
+              {/* ─ Row 2 Left: Mobile Number */}
+              <Fld label="Mobile Number *" icon={<Phone size={13} color="#475569" />} mb="0">
+                <input type="tel" placeholder="10-digit mobile" maxLength={10}
+                  value={regMobile} onChange={e => { setRegMobile(e.target.value.replace(/\D/g, '')); setError(''); }}
+                  style={inp(regMobile)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regMobile ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
 
-            {/* ─ Row 4: Email + OTP send button */}
-            <div style={{ marginBottom: '0.65rem' }}>
-              <label style={{ display: 'block', fontSize: '0.66rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
-                Email Address * {otpVerified && <span style={{ color: '#10b981', fontSize: '0.64rem', textTransform: 'none' }}>✓ Verified</span>}
-              </label>
-              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'stretch' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <Mail size={13} color="#475569" style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input type="email" placeholder="your@email.com"
-                    value={regEmail} onChange={e => { setRegEmail(e.target.value); setError(''); setOtpVerified(false); setOtpStep(false); setOtpSent(false); }}
-                    disabled={otpVerified}
-                    style={{
-                      ...inp(regEmail),
-                      borderColor: otpVerified ? '#10b981' : (regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'),
-                      opacity: otpVerified ? 0.7 : 1
-                    }}
-                    onFocus={e => e.target.style.borderColor = cfg.accent}
-                    onBlur={e => e.target.style.borderColor = otpVerified ? '#10b981' : (regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)')}
-                  />
-                </div>
-                {!otpVerified && (
-                  <button type="button" onClick={handleSendOtp}
-                    disabled={!regEmail || otpCountdown > 0}
-                    style={{
-                      padding: '0 0.75rem', borderRadius: '8px', flexShrink: 0,
-                      background: (!regEmail || otpCountdown > 0) ? 'rgba(255,255,255,0.06)' : cfg.btnBg,
-                      border: (!regEmail || otpCountdown > 0) ? '1.5px solid rgba(255,255,255,0.1)' : 'none',
-                      color: (!regEmail || otpCountdown > 0) ? '#475569' : '#fff',
-                      fontSize: '0.72rem', fontWeight: 800, cursor: (!regEmail || otpCountdown > 0) ? 'not-allowed' : 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap',
-                      boxShadow: (!regEmail || otpCountdown > 0) ? 'none' : cfg.btnShadow,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {otpCountdown > 0 ? (
-                      <><RefreshCw size={12} style={{ animation: 'none' }} />{otpCountdown}s</>
-                    ) : (
-                      <><Send size={12} />{otpSent ? 'Resend' : 'Send OTP'}</>
-                    )}
-                  </button>
-                )}
-                {otpVerified && (
-                  <div style={{
-                    padding: '0 0.75rem', borderRadius: '8px', flexShrink: 0,
-                    background: 'rgba(16,185,129,0.15)', border: '1.5px solid rgba(16,185,129,0.4)',
-                    color: '#10b981', fontSize: '0.72rem', fontWeight: 800,
-                    display: 'flex', alignItems: 'center', gap: '4px'
-                  }}>
-                    <CheckCircle size={12} /> Verified
+              {/* ─ Row 2 Right: Email + OTP button */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.64rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.24rem' }}>
+                  Email * {otpVerified && <span style={{ color: '#10b981', fontSize: '0.6rem', textTransform: 'none' }}>✓ Verified</span>}
+                </label>
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <Mail size={13} color="#475569" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input type="email" placeholder="your@email.com"
+                      value={regEmail} onChange={e => { setRegEmail(e.target.value); setError(''); setOtpVerified(false); setOtpStep(false); setOtpSent(false); }}
+                      disabled={otpVerified}
+                      style={{
+                        ...inp(regEmail),
+                        borderColor: otpVerified ? '#10b981' : (regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'),
+                        opacity: otpVerified ? 0.7 : 1
+                      }}
+                      onFocus={e => e.target.style.borderColor = cfg.accent}
+                      onBlur={e => e.target.style.borderColor = otpVerified ? '#10b981' : (regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)')}
+                    />
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* ─ OTP Entry Block ── */}
-            {otpStep && !otpVerified && (
-              <div style={{
-                marginBottom: '0.65rem',
-                background: 'rgba(0,0,0,0.35)',
-                border: `1.5px solid ${cfg.accent}35`,
-                borderRadius: '11px', padding: '0.75rem 0.85rem 0.7rem'
-              }}>
-                {/* Demo OTP display */}
-                <div style={{
-                  background: 'rgba(245,158,11,0.1)',
-                  border: '1px solid rgba(245,158,11,0.35)',
-                  borderRadius: '7px', padding: '0.4rem 0.7rem',
-                  marginBottom: '0.65rem',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem'
-                }}>
-                  <div>
-                    <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      📧 OTP sent to {regEmail}
-                    </div>
-                    <div style={{ fontSize: '0.62rem', color: '#64748b', fontWeight: 600, marginTop: '1px' }}>
-                      (Demo mode — check below for your OTP)
-                    </div>
-                  </div>
-                  <div style={{
-                    background: '#000', border: '1px solid rgba(245,158,11,0.5)',
-                    borderRadius: '6px', padding: '2px 9px',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center'
-                  }}>
-                    <span style={{ fontSize: '0.55rem', color: '#64748b', fontWeight: 700 }}>YOUR OTP</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', letterSpacing: '0.08em' }}>
-                      {generatedOtp}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'center', marginBottom: '0.45rem' }}>
-                  <div style={{ fontSize: '0.67rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                    <KeyRound size={12} color={cfg.accent} /> Enter 6-Digit OTP
-                  </div>
-                  {/* OTP boxes */}
-                  <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center' }} onPaste={handleOtpPaste}>
-                    {otpInput.map((digit, i) => (
-                      <input
-                        key={i}
-                        ref={el => otpRefs.current[i] = el}
-                        type="text" inputMode="numeric" maxLength={1}
-                        value={digit}
-                        onChange={e => handleOtpChange(i, e.target.value)}
-                        onKeyDown={e => handleOtpKey(i, e)}
-                        style={{
-                          width: '36px', height: '40px',
-                          textAlign: 'center', fontSize: '1.15rem', fontWeight: 900,
-                          fontFamily: 'monospace', color: '#ffffff',
-                          background: digit ? `${cfg.accent}20` : 'rgba(255,255,255,0.05)',
-                          border: `1.5px solid ${digit ? cfg.accent : 'rgba(255,255,255,0.12)'}`,
-                          borderRadius: '8px', outline: 'none',
-                          transition: 'all 0.15s', boxSizing: 'border-box',
-                          boxShadow: digit ? `0 0 8px ${cfg.accent}40` : 'none'
-                        }}
-                        onFocus={e => e.target.style.borderColor = cfg.accent}
-                        onBlur={e => e.target.style.borderColor = digit ? cfg.accent : 'rgba(255,255,255,0.12)'}
-                      />
-                    ))}
-                  </div>
-
-                  {otpError && (
-                    <div style={{ color: '#f87171', fontSize: '0.72rem', fontWeight: 700, marginTop: '0.4rem' }}>
-                      {otpError}
+                  {!otpVerified && (
+                    <button type="button" onClick={handleSendOtp}
+                      disabled={!regEmail || otpCountdown > 0}
+                      style={{
+                        padding: '0 0.6rem', borderRadius: '8px', flexShrink: 0,
+                        background: (!regEmail || otpCountdown > 0) ? 'rgba(255,255,255,0.06)' : cfg.btnBg,
+                        border: (!regEmail || otpCountdown > 0) ? '1.5px solid rgba(255,255,255,0.1)' : 'none',
+                        color: (!regEmail || otpCountdown > 0) ? '#475569' : '#fff',
+                        fontSize: '0.7rem', fontWeight: 800, cursor: (!regEmail || otpCountdown > 0) ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap',
+                        boxShadow: (!regEmail || otpCountdown > 0) ? 'none' : cfg.btnShadow,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {otpCountdown > 0 ? `${otpCountdown}s` : (otpSent ? 'Resend' : 'Send OTP')}
+                    </button>
+                  )}
+                  {otpVerified && (
+                    <div style={{
+                      padding: '0 0.5rem', borderRadius: '8px', flexShrink: 0,
+                      background: 'rgba(16,185,129,0.15)', border: '1.5px solid rgba(16,185,129,0.4)',
+                      color: '#10b981', fontSize: '0.68rem', fontWeight: 800,
+                      display: 'flex', alignItems: 'center', gap: '3px'
+                    }}>
+                      ✓ Verified
                     </div>
                   )}
+                </div>
+              </div>
 
-                  <button type="button" onClick={handleVerifyOtp}
-                    disabled={otpInput.join('').length < 6}
+              {/* ─ Row 3 Left: Password */}
+              <Fld label="Password *" icon={<Lock size={13} color="#475569" />} mb="0">
+                <input type={showRegPw ? 'text' : 'password'} placeholder="Min 6 chars"
+                  value={regPass} onChange={e => { setRegPass(e.target.value); setError(''); }}
+                  style={inp(regPass, { paddingRight: '2.2rem' })} autoComplete="new-password"
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regPass ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+                <PwEye show={showRegPw} toggle={() => setShowRegPw(p => !p)} />
+              </Fld>
+
+              {/* ─ Row 3 Right: Confirm Password */}
+              <Fld label="Confirm Password *" icon={<Lock size={13} color="#475569" />} mb="0">
+                <input type={showRegPw ? 'text' : 'password'} placeholder="Re-enter password"
+                  value={regConfirm} onChange={e => { setRegConfirm(e.target.value); setError(''); }}
+                  style={inp(regConfirm, {
+                    paddingRight: '2.2rem',
+                    borderColor: regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
+                  })}
+                  autoComplete="new-password"
+                />
+              </Fld>
+            </div>
+
+            {/* OTP Step Box */}
+            {otpStep && !otpVerified && (
+              <div style={{
+                marginTop: '0.2rem',
+                background: 'rgba(0,0,0,0.4)',
+                border: `1.5px solid ${cfg.accent}40`,
+                borderRadius: '8px', padding: '0.45rem 0.65rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                  <div style={{ fontSize: '0.62rem', color: '#fbbf24', fontWeight: 800 }}>
+                    📧 Demo OTP: <strong style={{ color: '#ffffff', fontFamily: 'monospace', fontSize: '0.85rem', marginLeft: '4px' }}>{generatedOtp}</strong>
+                  </div>
+                  <button type="button" onClick={handleVerifyOtp} disabled={otpInput.join('').length < 6}
                     style={{
-                      marginTop: '0.6rem',
-                      padding: '0.45rem 1.2rem', borderRadius: '8px',
-                      background: otpInput.join('').length === 6 ? cfg.btnBg : 'rgba(255,255,255,0.06)',
-                      border: otpInput.join('').length === 6 ? 'none' : '1.5px solid rgba(255,255,255,0.1)',
-                      color: otpInput.join('').length === 6 ? '#fff' : '#475569',
-                      fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer',
-                      boxShadow: otpInput.join('').length === 6 ? cfg.btnShadow : 'none',
-                      display: 'flex', alignItems: 'center', gap: '0.35rem', margin: '0.6rem auto 0'
-                    }}
-                  >
-                    <CheckCircle size={14} /> Verify OTP
+                      padding: '3px 10px', borderRadius: '5px',
+                      background: otpInput.join('').length === 6 ? cfg.btnBg : 'rgba(255,255,255,0.08)',
+                      color: '#fff', fontSize: '0.68rem', fontWeight: 800, border: 'none', cursor: 'pointer'
+                    }}>
+                    Verify OTP
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* OTP verified banner */}
-            {otpVerified && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '0.45rem',
-                background: 'rgba(16,185,129,0.1)', border: '1.5px solid rgba(16,185,129,0.35)',
-                borderRadius: '8px', padding: '0.45rem 0.75rem', marginBottom: '0.65rem'
-              }}>
-                <CheckCircle size={14} color="#10b981" />
-                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#6ee7b7' }}>
-                  Email verified successfully! ✅
-                </span>
-              </div>
-            )}
-
-            {/* ─ Password ── */}
-            <Fld label="Password * (min 6 chars)" icon={<Lock size={13} color="#475569" />}>
-              <input type={showRegPw ? 'text' : 'password'} placeholder="Create a strong password"
-                value={regPass} onChange={e => { setRegPass(e.target.value); setError(''); }}
-                style={inp(regPass, { paddingRight: '2.5rem' })} autoComplete="new-password"
-                onFocus={e => e.target.style.borderColor = cfg.accent}
-                onBlur={e => e.target.style.borderColor = regPass ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-              />
-              <PwEye show={showRegPw} toggle={() => setShowRegPw(p => !p)} />
-            </Fld>
-
-            {/* Strength meter */}
-            {regPass && (
-              <div style={{ marginBottom: '0.65rem', marginTop: '-0.25rem' }}>
-                <div style={{ display: 'flex', gap: '3px', marginBottom: '3px' }}>
-                  {[1,2,3,4,5].map(i => (
-                    <div key={i} style={{
-                      flex: 1, height: '3px', borderRadius: '3px',
-                      background: i <= pwScore ? pwC : 'rgba(255,255,255,0.1)',
-                      transition: 'background 0.2s'
-                    }} />
+                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }} onPaste={handleOtpPaste}>
+                  {otpInput.map((digit, i) => (
+                    <input key={i} ref={el => otpRefs.current[i] = el}
+                      type="text" inputMode="numeric" maxLength={1} value={digit}
+                      onChange={e => handleOtpChange(i, e.target.value)}
+                      onKeyDown={e => handleOtpKey(i, e)}
+                      style={{
+                        width: '30px', height: '32px', textAlign: 'center', fontSize: '1rem', fontWeight: 900,
+                        fontFamily: 'monospace', color: '#fff', background: digit ? `${cfg.accent}20` : 'rgba(255,255,255,0.06)',
+                        border: `1.5px solid ${digit ? cfg.accent : 'rgba(255,255,255,0.15)'}`, borderRadius: '6px', outline: 'none'
+                      }}
+                    />
                   ))}
                 </div>
-                <div style={{ fontSize: '0.64rem', fontWeight: 700, color: pwC }}>
-                  Password strength: {pwL}
-                </div>
+                {otpError && <div style={{ color: '#f87171', fontSize: '0.65rem', fontWeight: 700, textAlign: 'center', marginTop: '2px' }}>{otpError}</div>}
               </div>
             )}
 
-            {/* ─ Confirm Password ── */}
-            <Fld label="Confirm Password *" icon={<Lock size={13} color="#475569" />} mb="1rem">
-              <input type={showRegPw ? 'text' : 'password'} placeholder="Re-enter your password"
-                value={regConfirm} onChange={e => { setRegConfirm(e.target.value); setError(''); }}
-                style={inp(regConfirm, {
-                  paddingRight: '2.5rem',
-                  borderColor: regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
-                })}
-                autoComplete="new-password"
-              />
-              {regConfirm && (
-                <div style={{ position: 'absolute', right: '11px', top: '50%', transform: 'translateY(-50%)', color: regConfirm === regPass ? '#10b981' : '#ef4444', display: 'flex', alignItems: 'center' }}>
-                  {regConfirm === regPass ? <CheckCircle size={14} /> : <span style={{ fontSize: '0.68rem', fontWeight: 900 }}>✗</span>}
-                </div>
-              )}
-            </Fld>
+            <div style={{ marginTop: '0.35rem' }}>
+              <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Create Admin Account" icon={<UserPlus size={15} />} />
+            </div>
 
-            <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow}
-              label="Create Admin Account" icon={<UserPlus size={16} />} />
-
-            <div style={{ textAlign: 'center', marginTop: '0.65rem' }}>
-              <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>Already have an account? </span>
+            <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
+              <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600 }}>Already have an account? </span>
               <button type="button" onClick={() => { setMode('login'); clearAll(); }}
-                style={{ background: 'none', border: 'none', color: cfg.accentLight, fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}>
+                style={{ background: 'none', border: 'none', color: cfg.accentLight, fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}>
                 Sign In
               </button>
             </div>
@@ -715,7 +629,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: '0.85rem', textAlign: 'center', color: '#334155', fontSize: '0.66rem', fontWeight: 700, position: 'relative', zIndex: 2 }}>
+      <div style={{ marginTop: '0.45rem', textAlign: 'center', color: '#334155', fontSize: '0.64rem', fontWeight: 700, position: 'relative', zIndex: 2 }}>
         © 2026 AVSR Food Court • Secured by Restaurant Auth System
       </div>
 
