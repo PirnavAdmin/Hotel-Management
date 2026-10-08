@@ -17,7 +17,9 @@ import {
   Filter,
   ArrowUpDown,
   X,
-  Users
+  Users,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { KOTModal } from './KOTModal';
@@ -417,26 +419,62 @@ export function KitchenKOTView({
           </div>
         </div>
 
-        {/* Right: Live Clock, Search, Theme Switcher & Status Metrics */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Right: Live Clock, Theme Switcher & Profile Dropdown (Symmetrical with Admin Header) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'nowrap', marginLeft: 'auto' }}>
+          {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
+          {onChangeTheme && (
+            <button
+              onClick={() => {
+                const nextTheme = (currentTheme === 'light-bistro') ? 'royal-saffron' : 'light-bistro';
+                onChangeTheme(nextTheme);
+              }}
+              style={{
+                width: '36px',
+                height: '36px',
+                boxSizing: 'border-box',
+                borderRadius: '50%',
+                background: 'var(--bg-tertiary)',
+                border: '1.5px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                flexShrink: 0
+              }}
+              title={currentTheme === 'light-bistro' ? 'Switch to Dark Theme' : 'Switch to Light Theme'}
+            >
+              {currentTheme === 'light-bistro' ? (
+                <Sun size={18} color="#ea580c" />
+              ) : (
+                <Moon size={18} color="#fbbf24" />
+              )}
+            </button>
+          )}
+
           {/* Live Kitchen Clock with Radiant Glow */}
           <div style={{
+            height: '36px',
+            boxSizing: 'border-box',
             background: 'var(--bg-tertiary)',
             border: '1.5px solid var(--accent-amber)',
             boxShadow: '0 0 12px var(--accent-amber-glow)',
-            padding: '0.42rem 0.85rem',
-            borderRadius: 'var(--radius-sm)',
+            padding: '0 0.85rem',
+            borderRadius: '9px',
             display: 'flex',
             alignItems: 'center',
             gap: '0.45rem',
             color: 'var(--accent-amber-light)',
             fontWeight: 800,
             fontSize: '0.82rem',
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            whiteSpace: 'nowrap',
+            flexShrink: 0
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-main)' }}>
               <Calendar size={14} color="var(--accent-amber)" />
-              <span>{currentTime.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              <span>{currentTime.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
             </div>
             <span style={{ color: 'var(--border-subtle)', opacity: 0.6 }}>•</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-amber-light)' }}>
@@ -445,172 +483,141 @@ export function KitchenKOTView({
             </div>
           </div>
 
-          {/* Search table or dish */}
-          <div style={{ position: 'relative', width: '210px' }}>
-            <Search size={15} color="var(--text-dim)" style={{ position: 'absolute', left: '10px', top: '10px' }} />
-            <input
-              type="text"
-              placeholder="Search table or dish..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.48rem 0.75rem 0.48rem 2rem',
-                background: 'var(--bg-tertiary)',
-                border: '1.5px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-main)',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                outline: 'none'
-              }}
-            />
-          </div>
-
-          {/* RADIANT THEME SWITCHER DIRECTLY IN KOT */}
-          {onChangeTheme && (
-            <div style={{
-              display: 'flex',
-              background: 'var(--bg-tertiary)',
-              padding: '3px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1.5px solid var(--border-subtle)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
-            }}>
-              {[
-                { id: 'royal-saffron', name: 'Radiance Saffron', icon: '👑', label: 'Saffron' },
-                { id: 'radiance-midnight', name: 'Radiance Cyber', icon: '✨', label: 'Cyber' },
-                { id: 'emerald-spice', name: 'Radiance Emerald', icon: '🌿', label: 'Emerald' },
-                { id: 'light-bistro', name: 'Daylight Bistro', icon: '☀️', label: 'Light' }
-              ].map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => onChangeTheme(t.id)}
-                  style={{
-                    padding: '0.35rem 0.6rem',
-                    borderRadius: '5px',
-                    fontSize: '0.74rem',
-                    fontWeight: currentTheme === t.id ? 800 : 600,
-                    background: currentTheme === t.id ? 'var(--accent-amber)' : 'transparent',
-                    color: currentTheme === t.id ? '#000000' : 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title={`Switch to ${t.name}`}
-                >
-                  <span>{t.icon}</span>
-                  <span style={{ display: currentTheme === t.id ? 'inline' : 'none' }}>
-                    {t.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Quick status filters with Crystal-Clear High-Contrast Number Badges */}
-          <div style={{
-            display: 'flex',
-            background: 'var(--bg-tertiary)',
-            padding: '3px',
-            borderRadius: 'var(--radius-sm)',
-            border: '1.5px solid var(--border-subtle)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.35)'
-          }}>
-            {[
-              { id: 'all', label: 'All Orders', count: totalOrdersCount, dot: '#fbbf24', badgeColor: '#fbbf24', badgeBg: 'rgba(245, 158, 11, 0.25)', badgeBorder: 'rgba(245, 158, 11, 0.5)' },
-              { id: 'pending', label: 'Received', count: pendingOrdersCount, dot: '#f59e0b', badgeColor: '#fbbf24', badgeBg: 'rgba(245, 158, 11, 0.25)', badgeBorder: 'rgba(245, 158, 11, 0.5)' },
-              { id: 'cooking', label: 'Cooking', count: cookingOrdersCount, dot: '#ea580c', badgeColor: '#fb923c', badgeBg: 'rgba(234, 88, 12, 0.25)', badgeBorder: 'rgba(234, 88, 12, 0.5)' },
-              { id: 'completed', label: 'Completed', count: completedOrdersCount, dot: '#10b981', badgeColor: '#34d399', badgeBg: 'rgba(16, 185, 129, 0.25)', badgeBorder: 'rgba(16, 185, 129, 0.5)' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setStatusFilter(tab.id)}
-                style={{
-                  padding: '0.42rem 0.85rem',
-                  borderRadius: '5px',
-                  fontSize: '0.8rem',
-                  fontWeight: statusFilter === tab.id ? 800 : 700,
-                  background: statusFilter === tab.id 
-                    ? 'linear-gradient(135deg, #f59e0b, #ea580c)' 
-                    : 'transparent',
-                  color: statusFilter === tab.id ? '#ffffff' : 'var(--text-main)',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  cursor: 'pointer',
-                  boxShadow: statusFilter === tab.id ? '0 2px 10px rgba(234, 88, 12, 0.35)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {tab.dot && (
-                  <span style={{ 
-                    width: '7px', 
-                    height: '7px', 
-                    borderRadius: '50%', 
-                    background: tab.dot,
-                    boxShadow: `0 0 6px ${tab.dot}`
-                  }} />
-                )}
-                <span style={{ fontWeight: 800 }}>
-                  {tab.label}
-                </span>
-                <span style={{
-                  background: statusFilter === tab.id ? '#000000' : tab.badgeBg,
-                  color: statusFilter === tab.id ? '#fbbf24' : tab.badgeColor,
-                  border: statusFilter === tab.id ? '1px solid rgba(0,0,0,0.5)' : `1px solid ${tab.badgeBorder}`,
-                  padding: '2px 7px',
-                  borderRadius: '8px',
-                  fontSize: '0.72rem',
-                  fontWeight: 900,
-                  minWidth: '20px',
-                  textAlign: 'center'
-                }}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Time-Wise Chronological Sorting Button */}
-          <button
-            onClick={() => setSortOrder(prev => prev === 'recent-first' ? 'oldest-first' : 'recent-first')}
-            title="Click to toggle sorting: Most Recent First vs Oldest First"
-            style={{
-              padding: '0.42rem 0.85rem',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              background: sortOrder === 'recent-first' 
-                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(234, 88, 12, 0.16))'
-                : 'var(--bg-tertiary)',
-              color: '#fbbf24',
-              border: '1.5px solid rgba(245, 158, 11, 0.45)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              transition: 'all 0.15s ease',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <Clock size={14} color="#fbbf24" />
-            <span>{sortOrder === 'recent-first' ? '🕒 Recent First' : '⏳ Oldest First'}</span>
-            <ArrowUpDown size={13} style={{ opacity: 0.85 }} />
-          </button>
-
-          {/* Profile Dropdown with User Details & Logout (Top Right Corner) */}
+          {/* Profile Dropdown with User Details & Logout (Far Right Corner) */}
           <ProfileDropdown
             currentSession={currentSession}
             onLogout={onLogout}
             role="kot"
           />
         </div>
+      </div>
+
+      {/* ================= 2. KOT SUB-TOOLBAR (Search, Status Filter Pills & Sort Order) ================= */}
+      <div style={{
+        background: 'var(--bg-tertiary)',
+        borderBottom: '1px solid var(--border-subtle)',
+        padding: '0.55rem 1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.75rem',
+        flexShrink: 0
+      }}>
+        {/* Search table or dish */}
+        <div style={{ position: 'relative', width: '240px', flexShrink: 0 }}>
+          <Search size={15} color="var(--text-dim)" style={{ position: 'absolute', left: '10px', top: '10px' }} />
+          <input
+            type="text"
+            placeholder="Search table or dish..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.48rem 0.75rem 0.48rem 2rem',
+              background: 'var(--bg-secondary)',
+              border: '1.5px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-main)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              outline: 'none'
+            }}
+          />
+        </div>
+
+        {/* Center: Quick status filters with High-Contrast Number Badges */}
+        <div style={{
+          display: 'flex',
+          background: 'var(--bg-secondary)',
+          padding: '3px',
+          borderRadius: 'var(--radius-sm)',
+          border: '1.5px solid var(--border-subtle)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
+        }}>
+          {[
+            { id: 'all', label: 'All Orders', count: totalOrdersCount, dot: '#fbbf24', badgeColor: '#fbbf24', badgeBg: 'rgba(245, 158, 11, 0.25)', badgeBorder: 'rgba(245, 158, 11, 0.5)' },
+            { id: 'pending', label: 'Received', count: pendingOrdersCount, dot: '#f59e0b', badgeColor: '#fbbf24', badgeBg: 'rgba(245, 158, 11, 0.25)', badgeBorder: 'rgba(245, 158, 11, 0.5)' },
+            { id: 'cooking', label: 'Cooking', count: cookingOrdersCount, dot: '#ea580c', badgeColor: '#fb923c', badgeBg: 'rgba(234, 88, 12, 0.25)', badgeBorder: 'rgba(234, 88, 12, 0.5)' },
+            { id: 'completed', label: 'Completed', count: completedOrdersCount, dot: '#10b981', badgeColor: '#34d399', badgeBg: 'rgba(16, 185, 129, 0.25)', badgeBorder: 'rgba(16, 185, 129, 0.5)' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              style={{
+                padding: '0.42rem 0.85rem',
+                borderRadius: '5px',
+                fontSize: '0.8rem',
+                fontWeight: statusFilter === tab.id ? 800 : 700,
+                background: statusFilter === tab.id 
+                  ? 'linear-gradient(135deg, #f59e0b, #ea580c)' 
+                  : 'transparent',
+                color: statusFilter === tab.id ? '#ffffff' : 'var(--text-main)',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                cursor: 'pointer',
+                boxShadow: statusFilter === tab.id ? '0 2px 10px rgba(234, 88, 12, 0.35)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {tab.dot && (
+                <span style={{ 
+                  width: '7px', 
+                  height: '7px', 
+                  borderRadius: '50%', 
+                  background: tab.dot,
+                  boxShadow: `0 0 6px ${tab.dot}`
+                }} />
+              )}
+              <span style={{ fontWeight: 800 }}>
+                {tab.label}
+              </span>
+              <span style={{
+                background: statusFilter === tab.id ? '#000000' : tab.badgeBg,
+                color: statusFilter === tab.id ? '#fbbf24' : tab.badgeColor,
+                border: statusFilter === tab.id ? '1px solid rgba(0,0,0,0.5)' : `1px solid ${tab.badgeBorder}`,
+                padding: '2px 7px',
+                borderRadius: '8px',
+                fontSize: '0.72rem',
+                fontWeight: 900,
+                minWidth: '20px',
+                textAlign: 'center'
+              }}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Right: Time-Wise Chronological Sorting Button */}
+        <button
+          onClick={() => setSortOrder(prev => prev === 'recent-first' ? 'oldest-first' : 'recent-first')}
+          title="Click to toggle sorting: Most Recent First vs Oldest First"
+          style={{
+            padding: '0.42rem 0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            background: sortOrder === 'recent-first' 
+              ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(234, 88, 12, 0.16))'
+              : 'var(--bg-secondary)',
+            color: '#fbbf24',
+            border: '1.5px solid rgba(245, 158, 11, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Clock size={14} color="#fbbf24" />
+          <span>{sortOrder === 'recent-first' ? '🕒 Recent First' : '⏳ Oldest First'}</span>
+          <ArrowUpDown size={13} style={{ opacity: 0.85 }} />
+        </button>
       </div>
 
       {/* ================= 2. TABLE NUMBER SELECTOR NAVIGATION BAR ================= */}

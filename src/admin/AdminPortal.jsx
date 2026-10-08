@@ -21,7 +21,9 @@ import {
   RotateCcw,
   ExternalLink,
   Filter,
-  ArrowLeft
+  ArrowLeft,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { MENU_CATEGORIES } from '../data/menuData';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -56,10 +58,8 @@ export function AdminPortal({
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const themes = [
-    { id: 'royal-saffron', name: 'Radiance Saffron', icon: '👑' },
-    { id: 'radiance-midnight', name: 'Radiance Cyber', icon: '✨' },
-    { id: 'emerald-spice', name: 'Radiance Emerald', icon: '🌿' },
-    { id: 'light-bistro', name: 'Daylight Bistro', icon: '☀️' }
+    { id: 'royal-saffron', name: 'Dark Theme', icon: '🌙', label: 'Dark' },
+    { id: 'light-bistro', name: 'Light Theme', icon: '☀️', label: 'Light' }
   ];
 
   const handleThemeChange = (newTheme) => {
@@ -383,45 +383,35 @@ export function AdminPortal({
               </div>
             </div>
 
-            {/* Dynamic Theme Switcher (2nd Screenshot) — Beside Profile on the left */}
-            <div style={{
-              height: '36px',
-              boxSizing: 'border-box',
-              display: 'flex',
-              alignItems: 'center',
-              background: 'var(--bg-tertiary)',
-              padding: '2px',
-              borderRadius: '9px',
-              border: '1px solid var(--border-subtle)'
-            }}>
-              {themes.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => handleThemeChange(t.id)}
-                  style={{
-                    height: '28px',
-                    padding: '0 0.45rem',
-                    borderRadius: '6px',
-                    fontSize: '0.72rem',
-                    fontWeight: currentTheme === t.id ? 700 : 500,
-                    background: currentTheme === t.id ? 'var(--accent-amber)' : 'transparent',
-                    color: currentTheme === t.id ? '#000000' : 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.2rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                  title={`Switch to ${t.name}`}
-                >
-                  <span>{t.icon}</span>
-                  <span style={{ display: currentTheme === t.id ? 'inline' : 'none' }}>
-                    {t.id === 'royal-saffron' ? 'Saffron' : t.id === 'radiance-midnight' ? 'Radiance' : t.id === 'emerald-spice' ? 'Emerald' : 'Light'}
-                  </span>
-                </button>
-              ))}
-            </div>
+            {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
+            <button
+              onClick={() => {
+                const nextTheme = (currentTheme === 'light-bistro') ? 'royal-saffron' : 'light-bistro';
+                handleThemeChange(nextTheme);
+              }}
+              style={{
+                width: '36px',
+                height: '36px',
+                boxSizing: 'border-box',
+                borderRadius: '50%',
+                background: 'var(--bg-tertiary)',
+                border: '1.5px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                flexShrink: 0
+              }}
+              title={currentTheme === 'light-bistro' ? 'Switch to Dark Theme' : 'Switch to Light Theme'}
+            >
+              {currentTheme === 'light-bistro' ? (
+                <Sun size={18} color="#ea580c" />
+              ) : (
+                <Moon size={18} color="#fbbf24" />
+              )}
+            </button>
 
             {/* Profile Avatar with Name Details & Logout (Safely inside Right Corner) */}
             <ProfileDropdown 

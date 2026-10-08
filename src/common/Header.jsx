@@ -15,7 +15,9 @@ import {
   Flame,
   CheckCircle,
   Trash2,
-  ChevronRight
+  ChevronRight,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { ProfileDropdown } from './ProfileDropdown';
@@ -128,10 +130,8 @@ export function Header({
   ).length;
 
   const themes = [
-    { id: 'royal-saffron', name: 'Radiance Saffron', icon: '👑' },
-    { id: 'radiance-midnight', name: 'Radiance Cyber', icon: '✨' },
-    { id: 'emerald-spice', name: 'Radiance Emerald', icon: '🌿' },
-    { id: 'light-bistro', name: 'Daylight Bistro', icon: '☀️' }
+    { id: 'royal-saffron', name: 'Dark Theme', icon: '🌙', label: 'Dark' },
+    { id: 'light-bistro', name: 'Light Theme', icon: '☀️', label: 'Light' }
   ];
 
   return (
@@ -351,40 +351,35 @@ export function Header({
 
       {/* 4. RIGHT CONTROLS: THEME SWITCHER & RESET */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-        {/* Dynamic Theme Switcher */}
-        <div style={{
-          display: 'flex',
-          background: 'var(--bg-tertiary)',
-          padding: '2px',
-          borderRadius: 'var(--radius-sm)',
-          border: '1px solid var(--border-subtle)'
-        }}>
-          {themes.map(t => (
-            <button
-              key={t.id}
-              onClick={() => onChangeTheme(t.id)}
-              style={{
-                padding: '0.35rem 0.55rem',
-                borderRadius: '6px',
-                fontSize: '0.74rem',
-                fontWeight: currentTheme === t.id ? 700 : 500,
-                background: currentTheme === t.id ? 'var(--accent-amber)' : 'transparent',
-                color: currentTheme === t.id ? '#000000' : 'var(--text-muted)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-              title={`Switch to ${t.name}`}
-            >
-              <span>{t.icon}</span>
-              <span style={{ display: currentTheme === t.id ? 'inline' : 'none' }}>
-                {t.id === 'royal-saffron' ? 'Saffron' : t.id === 'radiance-midnight' ? 'Radiance' : t.id === 'emerald-spice' ? 'Emerald' : 'Light'}
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
+        <button
+          onClick={() => {
+            const nextTheme = (currentTheme === 'light-bistro') ? 'royal-saffron' : 'light-bistro';
+            if (onChangeTheme) onChangeTheme(nextTheme);
+          }}
+          style={{
+            width: '36px',
+            height: '36px',
+            boxSizing: 'border-box',
+            borderRadius: '50%',
+            background: 'var(--bg-tertiary)',
+            border: '1.5px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            flexShrink: 0
+          }}
+          title={currentTheme === 'light-bistro' ? 'Switch to Dark Theme' : 'Switch to Light Theme'}
+        >
+          {currentTheme === 'light-bistro' ? (
+            <Sun size={18} color="#ea580c" />
+          ) : (
+            <Moon size={18} color="#fbbf24" />
+          )}
+        </button>
 
         {/* Kitchen Status Notification Bell */}
         <div ref={notifRef} style={{ position: 'relative' }}>
