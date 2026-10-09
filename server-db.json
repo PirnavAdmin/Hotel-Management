@@ -32,7 +32,7 @@
           "quantity": 1,
           "notes": "",
           "timeAdded": "12:42",
-          "kotStatus": "received"
+          "kotStatus": "ready"
         }
       ],
       "discountPercent": 0,
@@ -40,8 +40,8 @@
       "orderTime": "11:26",
       "server": "Vikram S.",
       "orderTimestamp": 1791179782380,
-      "completedAt": null,
-      "completedDuration": null,
+      "completedAt": "09:30 am",
+      "completedDuration": "15h 34m 00s",
       "cookingStartedAt": "05:56 pm"
     },
     {
@@ -59,7 +59,7 @@
           "quantity": 1,
           "notes": "",
           "timeAdded": "04:46 PM",
-          "kotStatus": "received"
+          "kotStatus": "ready"
         },
         {
           "id": "bir-2",
@@ -68,15 +68,15 @@
           "quantity": 1,
           "notes": "",
           "timeAdded": "04:46 PM",
-          "kotStatus": "cooking"
+          "kotStatus": "ready"
         }
       ],
       "discountPercent": 0,
       "serviceCharge": 5,
       "orderTime": "04:46 PM",
-      "cookingStartedAt": null,
-      "completedAt": null,
-      "completedDuration": null,
+      "cookingStartedAt": "09:30 am",
+      "completedAt": "09:30 am",
+      "completedDuration": "00m 00s",
       "server": "Rajesh K."
     },
     {
@@ -990,16 +990,49 @@
       "email": "",
       "createdAt": "2026-10-08T12:50:29.189Z",
       "createdBy": "Pasupuleti"
+    },
+    {
+      "id": "admin-1791518176916",
+      "username": "Varun",
+      "password": "pass123",
+      "role": "admin",
+      "name": "Varun",
+      "mobile": "8523075089",
+      "email": "abc@gmail.com",
+      "createdAt": "2026-10-09T03:56:16.916Z",
+      "createdBy": "self-register"
+    },
+    {
+      "id": "pos-1791518277843",
+      "username": "hmspos",
+      "password": "1234",
+      "role": "pos",
+      "name": "varun",
+      "mobile": "8523075089",
+      "email": "",
+      "createdAt": "2026-10-09T03:57:57.843Z",
+      "createdBy": "Varun"
+    },
+    {
+      "id": "kot-1791518310567",
+      "username": "hmskot",
+      "password": "1234",
+      "role": "kot",
+      "name": "varun",
+      "mobile": "8523075089",
+      "email": "",
+      "createdAt": "2026-10-09T03:58:30.567Z",
+      "createdBy": "Varun"
     }
   ],
   "avsr_latest_kitchen_alert": {
-    "id": 1791465175743.8975,
-    "timestamp": "06:42 PM",
+    "id": 1791518410756.9287,
+    "timestamp": "09:30 am",
     "read": false,
-    "tableId": 1,
-    "tableName": "Table 1",
+    "tableId": 3,
+    "tableName": "Table 3",
     "type": "cooking_completed",
     "title": "🔔 Cooking Completed!",
-    "message": "All dishes for Table 1 are cooked and ready to serve! 🍽️"
+    "message": "All dishes for Table 3 are cooked and ready to serve! 🍽️"
   }
 }
