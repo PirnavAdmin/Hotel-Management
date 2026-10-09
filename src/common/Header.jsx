@@ -18,6 +18,7 @@ import {
   Moon,
   Trash2,
   ChevronRight,
+  
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ProfileDropdown } from './ProfileDropdown';

@@ -20,6 +20,16 @@ import { Header, LoginPage, ErrorBoundary } from './common';
 import { sounds } from './utils/audio';
 import { parseTimeToSeconds, formatElapsedTimer } from './utils/timer';
 import { setSession, logoutUser } from './utils/auth';
+import { 
+  apiGetTables, 
+  apiGetMenuItems, 
+  apiCreateTable, 
+  apiUpdateTable, 
+  apiDeleteTable, 
+  apiCreateMenuItem, 
+  apiUpdateMenuItem, 
+  apiDeleteMenuItem 
+} from './utils/apiService';
 
 const STORAGE_KEY_TABLES = 'gourmet_pos_tables_v2_inr';
 const STORAGE_KEY_DELETED_TABLES = 'gourmet_pos_deleted_tables_v2';
@@ -244,6 +254,25 @@ export function App() {
   const isKotRoute = location.pathname === '/kot';
   const isAdminRoute = location.pathname === '/admin';
   const isUserRoute = !isKotRoute && !isAdminRoute;
+
+  // ── Live Backend Integration Hook (Ngrok API) ──────────────────
+  useEffect(() => {
+    // 1. Load live tables from backend API
+    apiGetTables().then(backendTables => {
+      if (backendTables && backendTables.length > 0) {
+        setTables(backendTables);
+        try { localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(backendTables)); } catch {}
+      }
+    });
+
+    // 2. Load live menu items from backend API
+    apiGetMenuItems().then(backendMenu => {
+      if (backendMenu && backendMenu.length > 0) {
+        setMenuItems(backendMenu);
+        try { localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(backendMenu)); } catch {}
+      }
+    });
+  }, []);
 
   // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
@@ -914,23 +943,25 @@ export function App() {
   // 1. Menu Items Admin
   const handleAddMenuItem = (newItem) => {
     setMenuItems(prev => [newItem, ...prev]);
+    apiCreateMenuItem(newItem).catch(() => {});
     showToast(`✅ Dish "${newItem.name}" added to menu!`);
   };
 
   const handleUpdateMenuItem = (updatedItem) => {
     setMenuItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    apiUpdateMenuItem(updatedItem.id, updatedItem).catch(() => {});
     showToast(`✅ Updated "${updatedItem.name}"`);
   };
 
   const handleDeleteMenuItem = (itemId) => {
     const item = menuItems.find(i => i.id === itemId);
     setMenuItems(prev => prev.filter(i => i.id !== itemId));
+    apiDeleteMenuItem(itemId).catch(() => {});
     showToast(`🗑️ Removed "${item?.name || 'Item'}" from menu.`);
   };
 
   // 2. Tables & Chairs Admin
   const handleAddTable = (newTable) => {
-    // If table ID was previously marked deleted, unmark it
     const nextDeleted = deletedTableIds.filter(id => String(id) !== String(newTable.id));
     setDeletedTableIds(nextDeleted);
     try {
@@ -944,6 +975,7 @@ export function App() {
       } catch {}
       return updated;
     });
+    apiCreateTable(newTable).catch(() => {});
     showToast(`✅ Created ${newTable.name} with ${newTable.capacity} chairs!`);
   };
 
@@ -955,6 +987,7 @@ export function App() {
       } catch {}
       return updated;
     });
+    apiUpdateTable(updatedTable.id, updatedTable).catch(() => {});
     showToast(`✅ Updated ${updatedTable.name} (${updatedTable.capacity} chairs)`);
   };
 
