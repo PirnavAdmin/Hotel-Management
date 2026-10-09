@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, X } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+import { getNextInvoiceNumber } from '../utils/invoiceCounter';
 
 export function ReceiptModal({ table, onClose, onPrint }) {
   if (!table) return null;
@@ -32,7 +33,7 @@ export function ReceiptModal({ table, onClose, onPrint }) {
     ? table.grandTotal
     : Math.round(taxableAmount + taxAmount + serviceChargeAmount);
 
-  const invoiceNumber = table.invoiceNo || `INV-${table.id || '1'}${Date.now().toString().slice(-4)}`;
+  const invoiceNumber = table.invoiceNo || getNextInvoiceNumber();
   const currentDate = table.date || new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',

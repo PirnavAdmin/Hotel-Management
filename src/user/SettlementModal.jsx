@@ -17,17 +17,20 @@ import {
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { formatCurrency } from '../utils/formatCurrency';
+import { getNextInvoiceNumber } from '../utils/invoiceCounter';
 
 export function SettlementModal({ table, onClose, onConfirmPayment }) {
   if (!table) return null;
 
-  const subtotal = table.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const discountAmount = (subtotal * (table.discountPercent || 0)) / 100;
+  const safeItems = Array.isArray(table?.items) ? table.items : [];
+  const subtotal = safeItems.reduce((sum, item) => sum + ((Number(item?.price) || 0) * (Number(item?.quantity) || 1)), 0);
+  const discountAmount = (subtotal * (table?.discountPercent || 0)) / 100;
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxRate = 0.05;
   const taxAmount = taxableAmount * taxRate;
-  const serviceChargeAmount = table.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0;
+  const serviceChargeAmount = table?.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0;
   const grandTotal = Math.round(taxableAmount + taxAmount + serviceChargeAmount);
+
 
   // 'upi' | 'cash' | 'card' | 'wallet'
   const [paymentMethod, setPaymentMethod] = useState('upi');
@@ -59,7 +62,7 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
         changeDue: paymentMethod === 'cash' ? changeDue : 0,
         settledAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        invoiceNo: `INV-${table.id}${Date.now().toString().slice(-4)}`
+        invoiceNo: table.invoiceNo || getNextInvoiceNumber()
       });
     }, 450);
   };

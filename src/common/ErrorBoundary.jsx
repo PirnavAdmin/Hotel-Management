@@ -36,11 +36,16 @@ export class ErrorBoundary extends React.Component {
             maxWidth: '520px'
           }}>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f87171', marginBottom: '0.75rem' }}>
-              Kitchen Screen Updated
+              Display Refresh Required
             </h2>
-            <p style={{ fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              The screen encountered a temporary display refresh. Please click the button below to reload the fresh view.
+            <p style={{ fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '1rem', lineHeight: 1.5 }}>
+              The screen encountered a display refresh. Please click the button below to reload.
             </p>
+            {this.state.error && (
+              <div style={{ background: 'rgba(0,0,0,0.4)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: '#fca5a5', fontFamily: 'monospace', marginBottom: '1.25rem', textAlign: 'left', wordBreak: 'break-all' }}>
+                {this.state.error.toString()}
+              </div>
+            )}
             <button
               onClick={() => {
                 this.setState({ hasError: false, error: null });
@@ -57,8 +62,9 @@ export class ErrorBoundary extends React.Component {
                 cursor: 'pointer'
               }}
             >
-              🔄 Refresh Kitchen Screen
+              🔄 Refresh View
             </button>
+
           </div>
         </div>
       );

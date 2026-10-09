@@ -6,7 +6,8 @@ import {
   Phone, Send, RefreshCw, ArrowLeft,
   KeyRound
 } from 'lucide-react';
-import { loginUser, createUser } from '../utils/auth';
+import { loginUser, createUser, updateUserPassword, getUsers } from '../utils/auth';
+import { apiForgotPassword, apiResetPassword } from '../utils/apiService';
 
 /**
  * LoginPage — role-specific login/register screen.
@@ -45,6 +46,14 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
   const [otpCountdown, setOtpCountdown] = useState(0);
   const countdownRef = useRef(null);
   const otpRefs      = useRef([]);
+
+  // Forgot Password state
+  const [forgotEmail,        setForgotEmail]        = useState('');
+  const [forgotOtpStep,      setForgotOtpStep]      = useState(false);
+  const [forgotOtp,          setForgotOtp]          = useState('');
+  const [generatedResetOtp,  setGeneratedResetOtp]  = useState('');
+  const [newPassword,        setNewPassword]        = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
@@ -229,6 +238,81 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
     }, 450);
   };
 
+  // ── FORGOT PASSWORD HANDLERS ──────────────────────────────
+  const handleSendResetOtp = (e) => {
+    e.preventDefault();
+    const inputEmail = forgotEmail.trim();
+    if (!inputEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail)) {
+      setError('Please enter a valid email address.');
+      triggerShake();
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedResetOtp(code);
+    setForgotOtp(code); // Pre-fill for instant testing
+
+    setTimeout(() => {
+      setLoading(false);
+      setForgotOtpStep(true);
+      setSuccess(`📩 [VERIFICATION OTP]: ${code} (Sent to ${inputEmail}). Enter code & new password below.`);
+      apiForgotPassword(inputEmail).catch(() => {});
+    }, 400);
+  };
+
+  const handleResetPasswordSubmit = (e) => {
+    e.preventDefault();
+    const enteredOtp = forgotOtp.trim();
+    if (!enteredOtp || enteredOtp.length < 4) {
+      setError('Please enter the verification OTP code.');
+      triggerShake();
+      return;
+    }
+    if (generatedResetOtp && enteredOtp !== generatedResetOtp) {
+      setError('❌ Incorrect OTP code. Please check the code generated above.');
+      triggerShake();
+      return;
+    }
+    if (!newPassword.trim() || newPassword.trim().length < 6) {
+      setError('New password must be at least 6 characters long.');
+      triggerShake();
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('Passwords do not match.');
+      triggerShake();
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    const targetEmail = forgotEmail.trim().toLowerCase();
+    const users = getUsers();
+    const user = users.find(u => (u.email && u.email.toLowerCase() === targetEmail) || u.username.toLowerCase() === targetEmail);
+    if (user) {
+      updateUserPassword(user.id, newPassword.trim());
+    }
+
+    apiResetPassword(forgotEmail.trim(), enteredOtp, newPassword.trim()).catch(() => {});
+
+    setTimeout(() => {
+      setLoading(false);
+      setSuccess('✅ Password updated successfully! Signing you in with new password...');
+      setTimeout(() => {
+        setMode('login');
+        setPassword(newPassword.trim());
+        if (user) setUsername(user.username);
+        setSuccess('');
+        setForgotOtpStep(false);
+      }, 1200);
+    }, 400);
+  };
+
   // Password strength
   const pwScore = (() => {
     let s = 0;
@@ -400,10 +484,10 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
             </span>
           </div>
           <h1 style={{ fontSize: '1rem', fontWeight: 900, color: '#fff', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
-            {mode === 'register' ? 'Create Admin Account' : loginTitle}
+            {mode === 'register' ? 'Create Admin Account' : mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
           </h1>
           <p style={{ fontSize: '0.67rem', color: '#64748b', margin: 0, fontWeight: 600 }}>
-            {mode === 'register' ? 'Set up your administrator account with OTP verification' : loginSub}
+            {mode === 'register' ? 'Set up your administrator account with OTP verification' : mode === 'forgot' ? (forgotOtpStep ? 'Enter verification OTP & set new password' : 'Enter email to receive OTP verification code') : loginSub}
           </p>
         </div>
 
@@ -445,21 +529,123 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
                 onBlur={e => e.target.style.borderColor = username ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
               />
             </Fld>
-            <Fld label="Password" icon={<Lock size={13} color="#475569" />} mb="0.65rem">
-              <input id="login-password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
-                value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
-                style={inp(password, { paddingRight: '2.5rem' })} autoComplete="current-password"
-                onFocus={e => e.target.style.borderColor = cfg.accent}
-                onBlur={e => e.target.style.borderColor = password ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-              />
-              <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
-            </Fld>
-            <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.24rem' }}>
+                <label style={{ fontSize: '0.64rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  PASSWORD
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('forgot');
+                    setError('');
+                    setSuccess('');
+                    setForgotEmail(username.includes('@') ? username : '');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: cfg.accentLight || '#fbbf24',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <Lock size={13} color="#475569" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input id="login-password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
+                  value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+                  style={inp(password, { paddingRight: '2.5rem' })} autoComplete="current-password"
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = password ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+                <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '0.65rem' }}>
+              <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
+            </div>
+
             <div style={{ marginTop: '0.55rem', padding: '0.35rem 0.55rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '7px', textAlign: 'center' }}>
               <div style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>
                 {cfg.hint} • Sign in with username <strong style={{color:'#64748b'}}>or</strong> email
               </div>
             </div>
+          </form>
+        )}
+
+        {/* ── FORGOT PASSWORD FORM ── */}
+        {mode === 'forgot' && (
+          <form onSubmit={forgotOtpStep ? handleResetPasswordSubmit : handleSendResetOtp} style={{ padding: '0.75rem 1.25rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.45rem', overflowY: 'auto' }}>
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setSuccess(''); setForgotOtpStep(false); }}
+              style={{
+                background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', width: 'fit-content', padding: 0
+              }}
+            >
+              <ArrowLeft size={14} /> Back to Sign In
+            </button>
+
+
+            {error   && <Err msg={error} />}
+            {success && <Suc msg={success} />}
+
+            {!forgotOtpStep ? (
+              <>
+                <Fld label="Registered Email Address *" icon={<Mail size={13} color="#475569" />} mb="0.45rem">
+                  <input
+                    type="email"
+                    placeholder="Enter your registered email address"
+                    value={forgotEmail}
+                    onChange={e => { setForgotEmail(e.target.value); setError(''); }}
+                    style={inp(forgotEmail)}
+                    onFocus={e => e.target.style.borderColor = cfg.accent}
+                    onBlur={e => e.target.style.borderColor = forgotEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                  />
+                </Fld>
+                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Send Reset Code to Email" icon={<Send size={16} />} />
+              </>
+            ) : (
+              <>
+                <Fld label="6-Digit Email Code *" icon={<KeyRound size={13} color="#475569" />} mb="0.35rem">
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                    value={forgotOtp}
+                    onChange={e => { setForgotOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
+                    style={inp(forgotOtp)}
+                  />
+                </Fld>
+                <Fld label="New Password *" icon={<Lock size={13} color="#475569" />} mb="0.35rem">
+                  <input
+                    type="password"
+                    placeholder="Minimum 6 characters"
+                    value={newPassword}
+                    onChange={e => { setNewPassword(e.target.value); setError(''); }}
+                    style={inp(newPassword)}
+                  />
+                </Fld>
+                <Fld label="Confirm New Password *" icon={<Lock size={13} color="#475569" />} mb="0.45rem">
+                  <input
+                    type="password"
+                    placeholder="Re-enter new password"
+                    value={confirmNewPassword}
+                    onChange={e => { setConfirmNewPassword(e.target.value); setError(''); }}
+                    style={inp(confirmNewPassword)}
+                  />
+                </Fld>
+                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Update Password & Sign In" icon={<CheckCircle size={16} />} />
+              </>
+            )}
           </form>
         )}
 

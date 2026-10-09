@@ -1800,19 +1800,21 @@ export function TableDetailView({
   }, [selectedCategory, dietaryFilter, searchQuery]);
 
   // Financial calculations in Rupees
-  const subtotal = table.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const discountAmount = (subtotal * (table.discountPercent || 0)) / 100;
+  const safeItems = Array.isArray(table?.items) ? table.items : [];
+  const subtotal = safeItems.reduce((sum, item) => sum + ((Number(item?.price) || 0) * (Number(item?.quantity) || 1)), 0);
+  const discountAmount = (subtotal * (table?.discountPercent || 0)) / 100;
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxRate = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
   const taxAmount = taxableAmount * taxRate;
-  const serviceChargeAmount = table.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0;
+  const serviceChargeAmount = table?.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0;
   const grandTotal = Math.round(taxableAmount + taxAmount + serviceChargeAmount);
 
   // Find quantity of an item already in the table order
   const getItemQuantityInCart = (itemId) => {
-    const found = table.items.find(i => i.id === itemId);
+    const found = safeItems.find(i => i.id === itemId);
     return found ? found.quantity : 0;
   };
+
 
   const handleAddItem = (item) => {
     sounds.playAddItem();
@@ -1826,13 +1828,14 @@ export function TableDetailView({
   };
 
   return (
-    <div style={{
+    <div className="responsive-order-detail-layout" style={{
       display: 'flex',
       flexDirection: 'column',
       height: 'calc(100vh - 68px)',
       minHeight: '600px',
       overflow: 'hidden'
     }}>
+
 
       <style>{`
         .pos-menu-grid {

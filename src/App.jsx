@@ -28,8 +28,17 @@ import {
   apiDeleteTable, 
   apiCreateMenuItem, 
   apiUpdateMenuItem, 
-  apiDeleteMenuItem 
+  apiDeleteMenuItem,
+  apiGetKotOrders,
+  apiCreateKotOrder,
+  apiUpdateKotStatus,
+  apiGetStaff,
+  apiCreateStaff,
+  apiDeleteStaff,
+  apiGetOrders,
+  apiCreateOrder
 } from './utils/apiService';
+
 
 const STORAGE_KEY_TABLES = 'gourmet_pos_tables_v2_inr';
 const STORAGE_KEY_DELETED_TABLES = 'gourmet_pos_deleted_tables_v2';
@@ -272,7 +281,24 @@ export function App() {
         try { localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(backendMenu)); } catch {}
       }
     });
+
+    // 3. Load live staff members from backend API
+    apiGetStaff().then(backendStaff => {
+      if (backendStaff && backendStaff.length > 0) {
+        setStaffList(backendStaff);
+        try { localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(backendStaff)); } catch {}
+      }
+    });
+
+    // 4. Load live past settled orders from backend API
+    apiGetOrders().then(backendOrders => {
+      if (backendOrders && backendOrders.length > 0) {
+        setPastOrders(backendOrders);
+        try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(backendOrders)); } catch {}
+      }
+    });
   }, []);
+
 
   // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
@@ -547,8 +573,9 @@ export function App() {
     };
   }, []);
 
-  // Current selected table object
-  const currentTable = tables.find(t => t.id === selectedTableId) || tables[0];
+  // Current selected table object (with defensive fallback)
+  const defaultFallbackTable = { id: 1, name: 'Table 1', section: 'Main Hall', items: [], status: 'vacant', guests: 0, server: 'Unassigned' };
+  const currentTable = (tables && tables.length > 0 ? (tables.find(t => t.id === selectedTableId) || tables[0]) : null) || defaultFallbackTable;
 
   // Table selection handler
   const handleSelectTable = (id) => {
@@ -687,9 +714,11 @@ export function App() {
         completedDuration: allReady ? t.completedDuration : null
       };
     }));
+    apiCreateKotOrder({ tableId, items: tbl?.items, status: 'received' }).catch(() => {});
     setIsKOTOpen(true);
     showToast(`📥 KOT Sent: Order Received from ${tbl?.name || `Table ${tableId}`}!`);
   };
+
 
   // 2. Kitchen KDS Action: Start cooking or update status
   const handleUpdateItemKotStatus = (tableId, status, itemId = null) => {
@@ -901,9 +930,11 @@ export function App() {
 
     const updatedPastOrders = [enrichedSettlement, ...pastOrders];
     setPastOrders(updatedPastOrders);
+    apiCreateOrder(enrichedSettlement).catch(() => {});
     try {
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updatedPastOrders));
     } catch {}
+
 
     const updatedTables = tables.map(t => {
       if (t.id !== settlementData.tableId) return t;
@@ -1013,20 +1044,24 @@ export function App() {
       setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
     }
 
+    apiDeleteTable(tableId).catch(() => {});
     showToast(`🗑️ Permanently Deleted ${tbl?.name || 'Table'}`);
   };
 
   // 3. Staff & Persons Admin
   const handleAddStaff = (newPerson) => {
     setStaffList(prev => [...prev, newPerson]);
+    apiCreateStaff(newPerson).catch(() => {});
     showToast(`✅ Staff member "${newPerson.name}" added!`);
   };
 
   const handleDeleteStaff = (personId) => {
     const person = staffList.find(p => p.id === personId);
     setStaffList(prev => prev.filter(p => p.id !== personId));
+    apiDeleteStaff(personId).catch(() => {});
     showToast(`🗑️ Removed "${person?.name || 'Staff'}"`);
   };
+
 
   // Reset to default initial state
   const handleResetData = () => {
