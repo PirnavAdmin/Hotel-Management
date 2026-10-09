@@ -5,71 +5,26 @@
       "name": "Table 1",
       "section": "Main Hall",
       "capacity": 2,
-      "status": "occupied",
+      "status": "vacant",
       "guests": 2,
-      "items": [
-        {
-          "id": "bir-5",
-          "name": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:17 PM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:18 PM",
-          "kotStatus": "received"
-        }
-      ],
+      "items": [],
       "discountPercent": 0,
       "serviceCharge": 5,
-      "orderTime": "06:17 PM",
-      "server": "Rajesh K.",
-      "orderTimestamp": 1791463677459,
-      "completedAt": null,
-      "completedDuration": null,
-      "cookingStartedAt": "06:23 PM"
+      "orderTime": null,
+      "server": "Rajesh K."
     },
     {
       "id": 2,
       "name": "Table 2",
       "section": "Main Hall",
       "capacity": 4,
-      "status": "occupied",
+      "status": "vacant",
       "guests": 4,
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:49 PM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:49 PM",
-          "kotStatus": "received"
-        }
-      ],
+      "items": [],
       "discountPercent": 0,
       "serviceCharge": 5,
-      "orderTime": "06:49 PM",
-      "server": "Vikram S.",
-      "completedAt": null,
-      "completedDuration": null,
-      "orderTimestamp": 1791465563670
+      "orderTime": null,
+      "server": "Vikram S."
     },
     {
       "id": 3,
@@ -86,7 +41,7 @@
           "quantity": 1,
           "notes": "",
           "timeAdded": "04:46 PM",
-          "kotStatus": "ready"
+          "kotStatus": "served"
         },
         {
           "id": "bir-2",
@@ -95,15 +50,15 @@
           "quantity": 1,
           "notes": "",
           "timeAdded": "04:46 PM",
-          "kotStatus": "ready"
+          "kotStatus": "served"
         }
       ],
       "discountPercent": 0,
       "serviceCharge": 5,
       "orderTime": "04:46 PM",
       "cookingStartedAt": "04:48 PM",
-      "completedAt": "04:26 PM",
-      "completedDuration": "23h 38m 00s",
+      "completedAt": "05:01 PM",
+      "completedDuration": "15m 00s",
       "server": "Rajesh K."
     },
     {
@@ -310,7 +265,7 @@
       "spiceLevel": 3,
       "prepTime": "14 min",
       "description": "Crispy spicy Chicken 65 tossed with curry leaves and green chilies, layered on dum biryani rice with boiled egg.",
-      "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1701579231305-d84d8af9a3fd?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "bir-5",
@@ -322,7 +277,7 @@
       "spiceLevel": 1,
       "prepTime": "12 min",
       "description": "Seasonal farm-fresh vegetables, baby potatoes, and French beans slow-cooked with whole spices and basmati rice in dum style. Served with boondi raita.",
-      "image": "https://images.unsplash.com/photo-1642821373181-696a54913e9a?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1596797038530-2c107229654b?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "bir-6",
@@ -334,7 +289,7 @@
       "spiceLevel": 2,
       "prepTime": "14 min",
       "description": "Char-grilled cottage cheese cubes coated in Kashmiri tandoori spices, layered over aromatic saffron dum rice with mint and brown onions.",
-      "image": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "bir-7",
@@ -346,7 +301,7 @@
       "spiceLevel": 2,
       "prepTime": "15 min",
       "description": "Fresh coastal tiger prawns sautéed in spiced coconut-onion gravy, layered with royal basmati rice and fried cashews.",
-      "image": "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1559742811-82286364ceaf?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "bir-8",
@@ -358,7 +313,19 @@
       "spiceLevel": 1,
       "prepTime": "10 min",
       "description": "Pan-fried golden boiled eggs coated with spices, nestled in rich aromatic dum biryani rice. Served with cooling raita.",
-      "image": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80"
+    },
+    {
+      "id": "st-0",
+      "name": "Shawarma",
+      "category": "starters",
+      "price": 250,
+      "isVeg": false,
+      "isChefSpecial": true,
+      "spiceLevel": 1,
+      "prepTime": "10 min",
+      "description": "Juicy spiced shredded chicken wrapped in warm pita bread with garlic toum sauce, pickles, and crispy fries.",
+      "image": "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "st-1",
@@ -370,7 +337,7 @@
       "spiceLevel": 3,
       "prepTime": "10 min",
       "description": "Deep-fried chicken pieces tossed in yogurt, spicy red chili sauce, garlic, and fresh curry leaves.",
-      "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "st-2",
@@ -406,7 +373,7 @@
       "spiceLevel": 1,
       "prepTime": "8 min",
       "description": "Sweet golden corn kernels tossed with cracked black pepper, fresh lemon juice, scallions, and herbs.",
-      "image": "https://images.unsplash.com/photo-1576107232684-1279f3908594?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "st-5",
@@ -418,7 +385,7 @@
       "spiceLevel": 2,
       "prepTime": "12 min",
       "description": "Boneless fish fillets fried crisp and tossed in Hyderabadi spicy yogurt tadka with green chillies.",
-      "image": "https://images.unsplash.com/photo-1604909052743-94e838986d24?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "tk-1",
@@ -430,7 +397,7 @@
       "spiceLevel": 2,
       "prepTime": "18 min",
       "description": "Chicken bone-in marinated with hung curd, ginger garlic paste, and Kashmiri degi mirch, roasted in clay tandoor.",
-      "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "tk-2",
@@ -442,7 +409,7 @@
       "spiceLevel": 0,
       "prepTime": "15 min",
       "description": "Melt-in-mouth chicken breast cubes marinated in heavy clotted cream, cheese, cardamom, and white pepper.",
-      "image": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "tk-3",
@@ -478,7 +445,7 @@
       "spiceLevel": 1,
       "prepTime": "15 min",
       "description": "Char-smoked shredded chicken simmered in rich velvety tomato, butter, and cashew nut gravy finished with kasuri methi.",
-      "image": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "mc-2",
@@ -490,7 +457,7 @@
       "spiceLevel": 2,
       "prepTime": "15 min",
       "description": "Tender chicken tossed with chunky capsicum, tomatoes, and freshly ground coriander-cumin spices in an iron wok.",
-      "image": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "mc-3",
@@ -525,8 +492,8 @@
       "isChefSpecial": true,
       "spiceLevel": 2,
       "prepTime": "18 min",
-      "description": "Kashmiri delicacy of tender mutton cooked in aromatic gravy flavored with रतनजोत (ratan jot) and Kashmiri chilies.",
-      "image": "https://images.unsplash.com/photo-1545247181-516773ca838b?w=500&auto=format&fit=crop&q=80"
+      "description": "Kashmiri delicacy of tender mutton cooked in aromatic gravy flavored with ratan jot and Kashmiri chilies.",
+      "image": "https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "br-1",
@@ -550,7 +517,7 @@
       "spiceLevel": 0,
       "prepTime": "6 min",
       "description": "Tandoori naan stuffed with melted mozzarella cheese and topped with crushed garlic.",
-      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1585238342024-78d387f4a707?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "br-3",
@@ -562,7 +529,7 @@
       "spiceLevel": 0,
       "prepTime": "4 min",
       "description": "Whole wheat flatbread baked crisp in the clay oven and buttered.",
-      "image": "https://images.unsplash.com/photo-1505253758473-96b7015fcd40?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "dr-1",
@@ -574,7 +541,7 @@
       "spiceLevel": 0,
       "prepTime": "4 min",
       "description": "Thick creamy yogurt churned with sweet Alphonso mango pulp, saffron, and crushed pistachios.",
-      "image": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1546173159-315724a31d9b?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "dr-2",
@@ -610,7 +577,19 @@
       "spiceLevel": 1,
       "prepTime": "3 min",
       "description": "Refreshing curd drink spiced with crushed ginger, green chili, roasted cumin, and fresh cilantro.",
-      "image": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?w=500&auto=format&fit=crop&q=80"
+    },
+    {
+      "id": "ds-0",
+      "name": "Ice cream",
+      "category": "desserts",
+      "price": 250,
+      "isVeg": true,
+      "isChefSpecial": false,
+      "spiceLevel": 0,
+      "prepTime": "3 min",
+      "description": "Gourmet trio scoops of rich Belgian chocolate, Madagascar vanilla, and strawberry ice cream topped with waffle crisps.",
+      "image": "https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=500&auto=format&fit=crop&q=80"
     },
     {
       "id": "ds-1",
@@ -646,7 +625,7 @@
       "spiceLevel": 0,
       "prepTime": "3 min",
       "description": "Creamy malai kulfi served with rose falooda sev, sabja basil seeds, and pure rose syrup.",
-      "image": "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=500&auto=format&fit=crop&q=80"
+      "image": "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=500&auto=format&fit=crop&q=80"
     }
   ],
   "gourmet_pos_staff_v1": [
@@ -701,197 +680,136 @@
       "server": "Vikram S.",
       "items": [
         {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "05:19 PM",
-          "kotStatus": "received"
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 3
         },
         {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "05:19 PM",
-          "kotStatus": "received"
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 2
         }
       ],
-      "subtotal": 790,
+      "subtotal": 1480,
       "discountAmount": 0,
-      "taxAmount": 39.5,
-      "serviceChargeAmount": 39.5,
+      "taxAmount": 27,
+      "serviceChargeAmount": 0,
       "tipAmount": 0,
-      "grandTotal": 869,
-      "paymentMethod": "cash",
-      "cashTendered": 869,
-      "changeDue": 0,
-      "settledAt": "05:19 PM",
+      "grandTotal": 1507,
+      "paymentMethod": "CASH",
+      "settledAt": "09:30 AM",
       "date": "07 Oct 2026",
-      "invoiceNo": "INV-21454",
-      "cookingStartedAt": "05:19 PM",
-      "completedAt": "05:19 PM",
-      "completedDuration": "00m 00s",
-      "orderTime": "05:19 PM",
-      "orderTimestamp": 1791345089779
+      "invoiceNo": "INV-24003"
     },
     {
-      "tableId": 2,
-      "tableName": "Table 2",
+      "tableId": 3,
+      "tableName": "Table 3",
       "section": "Main Hall",
+      "server": "Rajesh K.",
+      "items": [
+        {
+          "id": "bir-2",
+          "name": "Mutton Dum Biryani",
+          "price": 420,
+          "quantity": 2
+        }
+      ],
+      "subtotal": 840,
+      "discountAmount": 4,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 836,
+      "paymentMethod": "CASH",
+      "settledAt": "09:17 AM",
+      "date": "07 Oct 2026",
+      "invoiceNo": "INV-33984"
+    },
+    {
+      "tableId": 5,
+      "tableName": "Table 5",
+      "section": "AC Section",
+      "server": "Suresh P.",
+      "items": [
+        {
+          "id": "st-2",
+          "name": "Paneer Butter Masala",
+          "price": 250,
+          "quantity": 3
+        },
+        {
+          "id": "br-1",
+          "name": "Butter Naan",
+          "price": 50,
+          "quantity": 10
+        }
+      ],
+      "subtotal": 1250,
+      "discountAmount": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1250,
+      "paymentMethod": "UPI",
+      "settledAt": "10:45 AM",
+      "date": "07 Oct 2026",
+      "invoiceNo": "INV-12904"
+    },
+    {
+      "tableId": 8,
+      "tableName": "Table 8",
+      "section": "Family Room",
       "server": "Vikram S.",
       "items": [
         {
           "id": "bir-1",
           "name": "Hyderabadi Chicken Dum Biryani",
           "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "09:21 AM",
-          "kotStatus": "received"
+          "quantity": 2
         },
         {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "09:21 AM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "09:21 AM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "dr-2",
-          "name": "Sweet Punjabi Lassi",
-          "price": 110,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "09:21 AM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "ds-1",
-          "name": "Gulab Jamun with Rabdi (2 Pcs)",
-          "price": 150,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "09:21 AM",
-          "kotStatus": "received"
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
         }
       ],
-      "subtotal": 1370,
+      "subtotal": 900,
       "discountAmount": 0,
-      "taxAmount": 68.5,
-      "serviceChargeAmount": 68.5,
+      "taxAmount": 12,
+      "serviceChargeAmount": 0,
       "tipAmount": 0,
-      "grandTotal": 1507,
-      "paymentMethod": "cash",
-      "cashTendered": 1507,
-      "changeDue": 0,
-      "settledAt": "09:30 AM",
+      "grandTotal": 912,
+      "paymentMethod": "CARD",
+      "settledAt": "11:20 AM",
       "date": "07 Oct 2026",
-      "invoiceNo": "INV-24003",
-      "cookingStartedAt": "09:21 AM",
-      "completedAt": "09:30 AM",
-      "completedDuration": "09m 00s",
-      "orderTime": "09:21 AM",
-      "orderTimestamp": 1791345089779
+      "invoiceNo": "INV-49201"
     },
     {
-      "tableId": 3,
-      "tableName": "Table 3",
-      "section": "Main Hall",
-      "server": "Rajesh K.",
+      "tableId": 4,
+      "tableName": "Table 4",
+      "section": "Garden Terrace",
+      "server": "Priya M.",
       "items": [
         {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:46 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:46 PM",
-          "kotStatus": "served"
+          "id": "st-3",
+          "name": "Tandoori Platter",
+          "price": 550,
+          "quantity": 2
         }
       ],
-      "subtotal": 760,
-      "discountAmount": 0,
-      "taxAmount": 38,
-      "serviceChargeAmount": 38,
+      "subtotal": 1100,
+      "discountAmount": 50,
+      "taxAmount": 55,
+      "serviceChargeAmount": 0,
       "tipAmount": 0,
-      "grandTotal": 836,
-      "paymentMethod": "cash",
-      "cashTendered": 836,
-      "changeDue": 0,
-      "settledAt": "09:17 AM",
-      "date": "07 Oct 2026",
-      "invoiceNo": "INV-33984",
-      "cookingStartedAt": "04:48 PM",
-      "completedAt": "05:01 PM",
-      "completedDuration": "15m 00s",
-      "orderTime": "04:46 PM",
-      "orderTimestamp": 1791344823984
-    },
-    {
-      "tableId": 3,
-      "tableName": "Table 3",
-      "section": "Main Hall",
-      "server": "Rajesh K.",
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:46 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:46 PM",
-          "kotStatus": "served"
-        }
-      ],
-      "subtotal": 760,
-      "discountAmount": 0,
-      "taxAmount": 38,
-      "serviceChargeAmount": 38,
-      "tipAmount": 0,
-      "grandTotal": 836,
-      "paymentMethod": "cash",
-      "cashTendered": 836,
-      "changeDue": 0,
-      "settledAt": "09:16 AM",
-      "date": "07 Oct 2026",
-      "invoiceNo": "INV-36112",
-      "cookingStartedAt": "04:48 PM",
-      "completedAt": "05:01 PM",
-      "completedDuration": "15m 00s",
-      "orderTime": "04:46 PM",
-      "orderTimestamp": 1791344776113
+      "grandTotal": 1105,
+      "paymentMethod": "UPI",
+      "settledAt": "08:40 PM",
+      "date": "06 Oct 2026",
+      "invoiceNo": "INV-98210"
     },
     {
       "tableId": 1,
@@ -924,7 +842,7 @@
       "serviceChargeAmount": 58,
       "tipAmount": 50,
       "grandTotal": 1326,
-      "paymentMethod": "upi",
+      "paymentMethod": "UPI",
       "settledAt": "01:10 PM",
       "date": "01 Oct 2026",
       "invoiceNo": "INV-1048"
@@ -1016,13 +934,13 @@
     }
   ],
   "avsr_latest_kitchen_alert": {
-    "id": 1791465175743.8975,
-    "timestamp": "06:42 PM",
+    "id": 1791519308722.2278,
+    "timestamp": "09:45 AM",
     "read": false,
-    "tableId": 1,
-    "tableName": "Table 1",
-    "type": "cooking_completed",
-    "title": "🔔 Cooking Completed!",
-    "message": "All dishes for Table 1 are cooked and ready to serve! 🍽️"
+    "tableId": 2,
+    "tableName": "Table 2",
+    "type": "cooking_started",
+    "title": "🔥 Cooking Started",
+    "message": "Chef started cooking order for Table 2!"
   }
 }

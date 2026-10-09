@@ -52,12 +52,17 @@ export async function apiGetTables() {
       status: String(t.status || 'VACANT').toLowerCase(),
       server: t.assignedServerName || 'Unassigned',
       guests: t.occupiedChairs || 0,
+      items: Array.isArray(t.items) ? t.items : [],
+      orderTime: t.orderTime || null,
+      discountPercent: t.discountPercent || 0,
+      serviceCharge: t.serviceCharge !== undefined ? t.serviceCharge : 5,
       occupiedSince: t.createdAt ? new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10 min',
       order: null
     }));
   }
   return null;
 }
+
 
 export async function apiCreateTable(tableData) {
   return await apiRequest('/api/v1/tables', {
@@ -187,6 +192,41 @@ export async function apiGetStaff() {
   return null;
 }
 
+export async function apiCreateStaff(staffData) {
+  return await apiRequest('/api/v1/staff', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: staffData.name,
+      role: staffData.role || 'Waiter',
+      phone: staffData.phone || '',
+      email: staffData.email || '',
+      shift: staffData.shift || 'Full Day'
+    })
+  });
+}
+
+export async function apiDeleteStaff(id) {
+  return await apiRequest(`/api/v1/staff/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+// ── ORDERS & BILLING API ───────────────────────────────────────
+export async function apiGetOrders() {
+  const res = await apiRequest('/api/v1/orders');
+  if (res && res.data && Array.isArray(res.data)) {
+    return res.data;
+  }
+  return null;
+}
+
+export async function apiCreateOrder(orderData) {
+  return await apiRequest('/api/v1/orders', {
+    method: 'POST',
+    body: JSON.stringify(orderData)
+  });
+}
+
 // ── AUTH API ───────────────────────────────────────────────────
 export async function apiLogin(username, password) {
   return await apiRequest('/api/v1/auth/login', {
@@ -201,4 +241,33 @@ export async function apiRegister(regData) {
     body: JSON.stringify(regData)
   });
 }
+
+export async function apiForgotPassword(email) {
+  return await apiRequest('/api/v1/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+}
+
+export async function apiSendOtp(email) {
+  return await apiRequest('/api/v1/auth/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+}
+
+export async function apiVerifyOtp(email, otp) {
+  return await apiRequest('/api/v1/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp })
+  });
+}
+
+export async function apiResetPassword(email, otp, newPassword) {
+  return await apiRequest('/api/v1/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp, newPassword })
+  });
+}
+
 

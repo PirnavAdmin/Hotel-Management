@@ -99,6 +99,9 @@ export default defineConfig({
   plugins: [react(), globalSyncPlugin()],
   server: {
     host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
-    port: 5173
+    port: 5173,
+    strictPort: false
   }
 })
+
+

@@ -2550,17 +2550,25 @@ export function KitchenKOTView({
       ticketType: "active",
     }));
 
-  // 2. Paid / Settled Completed Orders (So they REMAIN VISIBLE in KOT screen even after payment!)
-  const paidTickets = (effectivePastOrders || [])
-    .filter((order, idx) => {
-      if (!order.items || order.items.length === 0) return false;
-      const ticketId = `paid-${order.invoiceNo || `${order.tableId}-${idx}`}-${order.settledAt || order.orderTime}`;
-      return !dismissedPaidTicketIds.includes(ticketId);
-    })
-    .map((order, idx) => ({
+  // 2. Paid / Settled Completed Orders (Deduplicated so each invoice appears only once!)
+  const seenPaidKeys = new Set();
+  const paidTickets = [];
+  (effectivePastOrders || []).forEach((order, idx) => {
+    if (!order.items || order.items.length === 0) return;
+    const key = order.invoiceNo || `table-${order.tableId}-${order.settledAt || order.orderTime}`;
+    if (seenPaidKeys.has(key)) return;
+    seenPaidKeys.add(key);
+
+    const ticketId = `paid-${key}`;
+    if (dismissedPaidTicketIds.includes(ticketId)) return;
+
+    const rawName = order.tableName || (String(order.tableId).startsWith("Table") ? String(order.tableId) : `Table ${order.tableId}`);
+    const cleanName = rawName.startsWith("Table ") ? rawName : `Table ${rawName}`;
+
+    paidTickets.push({
       id: order.tableId,
-      uniqueKey: `paid-${order.invoiceNo || `${order.tableId}-${idx}`}-${order.settledAt || order.orderTime}`,
-      name: order.tableName || `Table ${order.tableId}`,
+      uniqueKey: ticketId,
+      name: cleanName,
       section: order.section || "Main Hall",
       server: order.server || "Floor Staff",
       capacity: 4,
@@ -2578,7 +2586,9 @@ export function KitchenKOTView({
       settledAt: order.settledAt,
       invoiceNo: order.invoiceNo,
       ticketType: "paid",
-    }));
+    });
+  });
+
 
   // Precise time value extractor (epoch ms) for chronological time sorting
   const getTicketTimeValue = (ticket) => {
@@ -4743,9 +4753,8 @@ export function KitchenKOTView({
                             >
                               {tbl.isPaid ? (
                                 <>
-                                  Table{" "}
                                   <strong style={{ color: cardPrimaryText }}>
-                                    {tbl.name}
+                                    {tbl.name.startsWith("Table") ? tbl.name : `Table ${tbl.name}`}
                                   </strong>{" "}
                                   bill settled via{" "}
                                   {(tbl.paymentMethod || "UPI").toUpperCase()}{" "}
@@ -4755,11 +4764,12 @@ export function KitchenKOTView({
                                 <>
                                   Order for{" "}
                                   <strong style={{ color: cardPrimaryText }}>
-                                    {tbl.name}
+                                    {tbl.name.startsWith("Table") ? tbl.name : `Table ${tbl.name}`}
                                   </strong>{" "}
                                   is cooked & ready to be served to guests!
                                 </>
                               )}
+
                             </p>
                           </div>
 

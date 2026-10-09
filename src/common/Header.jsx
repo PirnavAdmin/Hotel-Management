@@ -107,35 +107,39 @@ export function Header({
     return () => clearInterval(timer);
   }, []);
 
-  const occupiedCount = tables.filter((t) => t.status === "occupied").length;
-  const billedCount = tables.filter((t) => t.status === "billed").length;
-  const vacantCount = tables.filter((t) => t.status === "vacant").length;
+  const safeTables = Array.isArray(tables) ? tables : [];
 
-  const totalGuests = tables
-    .filter((t) => t.status !== "vacant")
-    .reduce((acc, t) => acc + (t.guests || 0), 0);
+  const occupiedCount = safeTables.filter((t) => t?.status === "occupied").length;
+  const billedCount = safeTables.filter((t) => t?.status === "billed").length;
+  const vacantCount = safeTables.filter((t) => t?.status === "vacant").length;
 
-  const totalRunningRevenue = tables
-    .filter((t) => t.status !== "vacant")
+  const totalGuests = safeTables
+    .filter((t) => t?.status !== "vacant")
+    .reduce((acc, t) => acc + (t?.guests || 0), 0);
+
+  const totalRunningRevenue = safeTables
+    .filter((t) => t?.status !== "vacant")
     .reduce((acc, t) => {
-      const subtotal = t.items.reduce((s, i) => s + i.price * i.quantity, 0);
+      const items = Array.isArray(t?.items) ? t.items : [];
+      const subtotal = items.reduce((s, i) => s + (Number(i?.price) || 0) * (Number(i?.quantity) || 1), 0);
       return acc + subtotal;
     }, 0);
 
-  const totalChairs = tables.reduce(
-    (sum, t) => sum + (Number(t.capacity) || 0),
+  const totalChairs = safeTables.reduce(
+    (sum, t) => sum + (Number(t?.capacity) || 0),
     0,
   );
 
   // Count active KOT tickets that have items and are not completely ready/served
-  const activeKOTCount = tables.filter(
+  const activeKOTCount = safeTables.filter(
     (t) =>
-      t.items &&
+      Array.isArray(t?.items) &&
       t.items.length > 0 &&
       !t.items.every(
-        (i) => i.kotStatus === "served" || i.kotStatus === "ready",
+        (i) => i?.kotStatus === "served" || i?.kotStatus === "ready",
       ),
   ).length;
+
 
   const themes = [
     { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
@@ -146,7 +150,9 @@ export function Header({
 
   return (
     <header
+      className="mobile-header-nav"
       style={{
+
         background: "var(--bg-secondary)",
         borderBottom: "1px solid var(--border-subtle)",
         padding: "0.75rem 1.5rem",

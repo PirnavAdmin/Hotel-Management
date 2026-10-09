@@ -196,15 +196,18 @@ export function TableView({ tables, onSelectTable }) {
         })}
       </div>
 
-      {/* 6 Tables Per Row Grid */}
-      <div style={{
+      {/* 6 Tables Per Row Grid (Auto Responsive on Mobile) */}
+      <div className="responsive-table-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
         gap: '0.75rem'
       }}>
+
         {filteredTables.map(table => {
-          const subtotal = table.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-          const totalItemsCount = table.items.reduce((sum, item) => sum + item.quantity, 0);
+          const items = Array.isArray(table?.items) ? table.items : [];
+          const subtotal = items.reduce((sum, item) => sum + ((Number(item?.price) || 0) * (Number(item?.quantity) || 1)), 0);
+          const totalItemsCount = items.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
+
 
           let statusColor = 'var(--status-vacant)';
           let statusText = 'Available';

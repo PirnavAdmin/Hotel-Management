@@ -277,3 +277,60 @@ input, select, textarea {
 .pulse-indicator {
   animation: pulse-ring 2s infinite ease-in-out;
 }
+
+/* ============================================================ */
+/* AUTOMATIC MOBILE VIEW RESPONSIVE STYLES (< 768px)           */
+/* ============================================================ */
+@media (max-width: 768px) {
+  html, body {
+    font-size: 14px;
+  }
+
+  /* Compact padding for mobile view */
+  .mobile-container {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Table Floor Grid - auto fit 2 columns on mobile */
+  .responsive-table-grid {
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Table Detail Order View Stack vertically on mobile */
+  .responsive-order-detail-layout {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100vh - 60px) !important;
+  }
+
+  /* Modals full width on mobile */
+  .mobile-modal-card {
+    width: 95vw !important;
+    max-width: 100vw !important;
+    border-radius: 12px !important;
+    margin: 0.5rem !important;
+  }
+
+  /* Navigation Header compact on mobile */
+  .mobile-header-nav {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .mobile-full-width {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Ultra-compact for small phone screens */
+  .responsive-table-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
