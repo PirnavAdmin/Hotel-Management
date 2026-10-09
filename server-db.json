@@ -21,6 +21,19 @@
       "status": "vacant",
       "guests": 4,
       "items": [],
+      "status": "occupied",
+      "guests": 2,
+      "items": [
+        {
+          "id": "st-4",
+          "name": "Crispy Corn Salt & Pepper",
+          "price": 190,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "12:42",
+          "kotStatus": "ready"
+        }
+      ],
       "discountPercent": 0,
       "serviceCharge": 5,
       "orderTime": null,
@@ -111,7 +124,11 @@
       "discountPercent": 0,
       "serviceCharge": 5,
       "orderTime": null,
-      "server": "Rajesh K."
+      "server": "Rajesh K.",
+      "orderTimestamp": 1791180888918,
+      "completedAt": "11:45 am",
+      "completedDuration": "01m 29s",
+      "cookingStartedAt": "11:44"
     },
     {
       "id": 8,
@@ -931,6 +948,39 @@
       "email": "",
       "createdAt": "2026-10-08T12:50:29.189Z",
       "createdBy": "Pasupuleti"
+    },
+    {
+      "id": "admin-1791518176916",
+      "username": "Varun",
+      "password": "pass123",
+      "role": "admin",
+      "name": "Varun",
+      "mobile": "8523075089",
+      "email": "abc@gmail.com",
+      "createdAt": "2026-10-09T03:56:16.916Z",
+      "createdBy": "self-register"
+    },
+    {
+      "id": "pos-1791518277843",
+      "username": "hmspos",
+      "password": "1234",
+      "role": "pos",
+      "name": "varun",
+      "mobile": "8523075089",
+      "email": "",
+      "createdAt": "2026-10-09T03:57:57.843Z",
+      "createdBy": "Varun"
+    },
+    {
+      "id": "kot-1791518310567",
+      "username": "hmskot",
+      "password": "1234",
+      "role": "kot",
+      "name": "varun",
+      "mobile": "8523075089",
+      "email": "",
+      "createdAt": "2026-10-09T03:58:30.567Z",
+      "createdBy": "Varun"
     }
   ],
   "avsr_latest_kitchen_alert": {
