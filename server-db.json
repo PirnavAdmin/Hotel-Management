@@ -5,36 +5,17 @@
       "name": "Table 1",
       "section": "Main Hall",
       "capacity": 2,
-      "status": "occupied",
+      "status": "vacant",
       "guests": 2,
-      "items": [
-        {
-          "id": "bir-5",
-          "name": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:17 PM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:18 PM",
-          "kotStatus": "received"
-        }
-      ],
+      "items": [],
       "discountPercent": 0,
       "serviceCharge": 5,
-      "orderTime": "06:17 PM",
+      "orderTime": null,
       "server": "Rajesh K.",
-      "orderTimestamp": 1791463677459,
-      "completedAt": null,
-      "completedDuration": null,
-      "cookingStartedAt": "06:23 PM"
+      "orderTimestamp": 1791180508143,
+      "completedAt": "03:08 pm",
+      "completedDuration": "2h 37m 12s",
+      "cookingStartedAt": "11:38"
     },
     {
       "id": 2,
@@ -42,34 +23,26 @@
       "section": "Main Hall",
       "capacity": 4,
       "status": "occupied",
-      "guests": 4,
+      "guests": 2,
       "items": [
         {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
+          "id": "st-4",
+          "name": "Crispy Corn Salt & Pepper",
+          "price": 190,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "06:49 PM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:49 PM",
+          "timeAdded": "12:42",
           "kotStatus": "received"
         }
       ],
       "discountPercent": 0,
       "serviceCharge": 5,
-      "orderTime": "06:49 PM",
+      "orderTime": "11:26",
       "server": "Vikram S.",
+      "orderTimestamp": 1791179782380,
       "completedAt": null,
       "completedDuration": null,
-      "orderTimestamp": 1791465563670
+      "cookingStartedAt": "05:56 pm"
     },
     {
       "id": 3,
@@ -86,7 +59,7 @@
           "quantity": 1,
           "notes": "",
           "timeAdded": "04:46 PM",
-          "kotStatus": "ready"
+          "kotStatus": "received"
         },
         {
           "id": "bir-2",
@@ -95,15 +68,15 @@
           "quantity": 1,
           "notes": "",
           "timeAdded": "04:46 PM",
-          "kotStatus": "ready"
+          "kotStatus": "cooking"
         }
       ],
       "discountPercent": 0,
       "serviceCharge": 5,
       "orderTime": "04:46 PM",
-      "cookingStartedAt": "04:48 PM",
-      "completedAt": "04:26 PM",
-      "completedDuration": "23h 38m 00s",
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
       "server": "Rajesh K."
     },
     {
@@ -156,7 +129,11 @@
       "discountPercent": 0,
       "serviceCharge": 5,
       "orderTime": null,
-      "server": "Rajesh K."
+      "server": "Rajesh K.",
+      "orderTimestamp": 1791180888918,
+      "completedAt": "11:45 am",
+      "completedDuration": "01m 29s",
+      "cookingStartedAt": "11:44"
     },
     {
       "id": 8,
