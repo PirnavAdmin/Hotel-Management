@@ -31,6 +31,7 @@ import {
   apiCreateMenuItem,
   apiUpdateMenuItem,
   apiDeleteMenuItem,
+  normalizeMenuItem,
 } from "./api/menuApi";
 import {
   apiGetKotOrders,
@@ -168,15 +169,21 @@ export function App() {
 
     // 2. Load live menu items from backend API
     apiGetMenuItems().then((response) => {
-      const backendMenu = Array.isArray(response)
-        ? response
-        : response?.success
-          ? response.data
-          : null;
+      const backendMenu = [
+        response,
+        response?.data,
+        response?.data?.data,
+        response?.data?.menuItems,
+        response?.menuItems,
+      ].find((candidate) => Array.isArray(candidate));
       if (Array.isArray(backendMenu) && backendMenu.length > 0) {
-        setMenuItems(backendMenu);
+        const normalizedMenu = backendMenu.map(normalizeMenuItem);
+        setMenuItems(normalizedMenu);
         try {
-          localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(backendMenu));
+          localStorage.setItem(
+            STORAGE_KEY_MENU,
+            JSON.stringify(normalizedMenu),
+          );
         } catch {}
       }
     });
@@ -1117,7 +1124,22 @@ export function App() {
       return false;
     }
 
-    setMenuItems((prev) => [newItem, ...prev]);
+    const createdItem =
+      result.data &&
+      typeof result.data === "object" &&
+      !Array.isArray(result.data)
+        ? result.data
+        : {};
+    const savedItem = normalizeMenuItem({
+      ...newItem,
+      ...createdItem,
+      id:
+        createdItem.menuItemId ??
+        createdItem.menu_item_id ??
+        createdItem.id ??
+        newItem.id,
+    });
+    setMenuItems((prev) => [savedItem, ...prev]);
     showToast(`✅ Dish "${newItem.name}" saved to the backend menu!`);
     return true;
   };
