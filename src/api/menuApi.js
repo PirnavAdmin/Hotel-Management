@@ -1,27 +1,7 @@
 import { apiClient } from './apiConfig';
 
 export async function apiGetMenuItems() {
-  const res = await apiClient('/api/v1/menu-items');
-  if (res.success && res.data) {
-    const list = Array.isArray(res.data) 
-      ? res.data 
-      : (res.data.menuItems || res.data.data || []);
-    return list.map(m => ({
-      id: m.menuItemId ? String(m.menuItemId) : String(m.id),
-      name: m.dishName || m.name,
-      category: m.category || 'biryani',
-      price: parseFloat(m.price || 0),
-      isVeg: m.dietaryType === 'VEG' || m.isVeg === true,
-      spiceLevel: m.spiceLevel === 1 ? 'Mild' : m.spiceLevel === 2 ? 'Medium' : 'Spicy',
-      description: m.shortDescription || m.description || '',
-      prepTime: m.prepTimeMinutes ? `${m.prepTimeMinutes} mins` : '15 mins',
-      prepTimeMinutes: m.prepTimeMinutes || 15,
-      isChefSpecial: !!m.isChefsSpecial || !!m.isChefSpecial,
-      isAvailable: m.isAvailable !== false,
-      image: m.imageUrl || m.image || 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80'
-    }));
-  }
-  return [];
+  return await apiClient('/api/v1/menu-items');
 }
 
 export async function apiGetMenuCategories() {

@@ -28,118 +28,21 @@ export const mapRole = (r) => {
   return str;
 };
 
-const STORAGE_KEY_USERS = 'avsr_auth_users_v1';
-
-const DEFAULT_USERS = [
-  {
-    id: 'admin-001',
-    username: 'admin',
-    password: 'admin123',
-    role: 'admin',
-    name: 'Administrator',
-    email: 'admin@avsr.com',
-    createdAt: '2026-10-05T11:21:12.371Z',
-    createdBy: 'system'
-  },
-  {
-    id: 'admin-1791459600601',
-    username: 'pirnav',
-    password: 'Admin@123',
-    role: 'admin',
-    name: 'pirnav',
-    mobile: '9876543456',
-    email: 'pasupuleti.bhanu7@gmail.com',
-    createdAt: '2026-10-08T11:40:00.601Z',
-    createdBy: 'system'
-  },
-  {
-    id: 'admin-1791199351632',
-    username: 'Pasupuleti',
-    password: 'Bhanu@001',
-    role: 'admin',
-    name: 'Pasupuleti Bhanuprakash',
-    mobile: '9032037787',
-    email: 'pasupuleti.bhanu7@gmail.com',
-    createdAt: '2026-10-05T11:22:31.633Z',
-    createdBy: 'system'
-  },
-  {
-    id: 'kot-001',
-    username: 'kot',
-    password: 'kot123',
-    role: 'kot',
-    name: 'Kitchen Chef (KOT)',
-    email: 'kot@avsr.com',
-    createdAt: '2026-10-08T12:04:01.389Z',
-    createdBy: 'system'
-  },
-  {
-    id: 'pos-001',
-    username: 'pos',
-    password: 'pos123',
-    role: 'pos',
-    name: 'Pasupuleti Bhanu (POS)',
-    email: 'pos@avsr.com',
-    createdAt: '2026-10-08T12:04:01.389Z',
-    createdBy: 'system'
-  },
-  {
-    id: 'user-001',
-    username: 'user',
-    password: 'user123',
-    role: 'pos',
-    name: 'Floor Staff User',
-    email: 'user@avsr.com',
-    createdAt: '2026-10-08T12:04:01.389Z',
-    createdBy: 'system'
-  }
-];
-
-export function getLocalUsers() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_USERS);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        DEFAULT_USERS.forEach(def => {
-          if (!parsed.some(u => String(u.username || '').toLowerCase() === def.username.toLowerCase())) {
-            parsed.push(def);
-          }
-        });
-        return parsed;
-      }
-    }
-  } catch {}
-  return [...DEFAULT_USERS];
-}
-
-export function saveLocalUsers(users) {
-  try {
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-  } catch {}
-}
-
 export async function getUsers() {
+  const res = await apiGetUsers();
   let list = [];
-  try {
-    const res = await apiGetUsers();
-    if (res.success && res.data) {
-      if (Array.isArray(res.data)) {
-        list = res.data;
-      } else if (res.data.$values && Array.isArray(res.data.$values)) {
-        list = res.data.$values;
-      } else if (res.data.users && Array.isArray(res.data.users)) {
-        list = res.data.users;
-      } else if (res.data.Users && Array.isArray(res.data.Users)) {
-        list = res.data.Users;
-      } else if (res.data.data && Array.isArray(res.data.data)) {
-        list = res.data.data;
-      }
+  if (res.success && res.data) {
+    if (Array.isArray(res.data)) {
+      list = res.data;
+    } else if (res.data.$values && Array.isArray(res.data.$values)) {
+      list = res.data.$values;
+    } else if (res.data.users && Array.isArray(res.data.users)) {
+      list = res.data.users;
+    } else if (res.data.Users && Array.isArray(res.data.Users)) {
+      list = res.data.Users;
+    } else if (res.data.data && Array.isArray(res.data.data)) {
+      list = res.data.data;
     }
-  } catch {}
-
-  if (!list || list.length === 0) {
-    list = getLocalUsers();
   }
 
   return list.map(u => ({
@@ -155,88 +58,20 @@ export async function getUsers() {
 }
 
 export async function createUser(userData) {
-  let res = null;
-  try {
-    res = await apiRegister(userData);
-  } catch (err) {
-    res = { success: false, error: err.message };
-  }
-
-  if (res && res.success) {
+  // Use the working auth registration endpoint instead of /api/Users which returns 405
+  const res = await apiRegister(userData);
+  if (res.success) {
     return { success: true, user: res.data };
   }
-
-  // Fallback to local storage if network error
-  const isNetworkFailure = !res || !res.status || String(res.error || '').toLowerCase().includes('connect') || String(res.error || '').toLowerCase().includes('network') || String(res.error || '').toLowerCase().includes('offline') || String(res.error || '').toLowerCase().includes('tunnel') || String(res.error || '').toLowerCase().includes('fetch');
-
-  if (isNetworkFailure) {
-    const localUsers = getLocalUsers();
-    const username = (userData.Username || userData.username || '').trim();
-    if (localUsers.some(u => String(u.username || '').toLowerCase() === username.toLowerCase())) {
-      return { success: false, error: 'Username already exists.' };
-    }
-    const newUser = {
-      id: `user-${Date.now()}`,
-      username,
-      password: (userData.Password || userData.password || '').trim(),
-      role: mapRole(userData.Role || userData.role || 'admin'),
-      name: (userData.FullName || userData.fullName || username).trim(),
-      email: (userData.Email || userData.email || '').trim(),
-      mobile: (userData.Phone || userData.phone || '').trim(),
-      createdAt: new Date().toISOString(),
-      createdBy: 'self-register'
-    };
-    localUsers.push(newUser);
-    saveLocalUsers(localUsers);
-    return { success: true, user: newUser };
-  }
-
-  return { success: false, error: res?.error || 'Failed to create user' };
+  return { success: false, error: res.error || 'Failed to create user' };
 }
 
 export async function registerUser(userData) {
-  let res = null;
-  try {
-    res = await apiRegister(userData);
-  } catch (err) {
-    res = { success: false, error: err.message };
-  }
-
-  if (res && res.success) {
+  const res = await apiRegister(userData);
+  if (res.success) {
     return { success: true, user: res.data };
   }
-
-  // If backend returned business validation error like duplicate user
-  if (res && res.status && res.status < 500) {
-    return { success: false, error: res.error || 'Failed to register user' };
-  }
-
-  // Fallback to local storage if network error
-  const isNetworkFailure = !res || !res.status || String(res.error || '').toLowerCase().includes('connect') || String(res.error || '').toLowerCase().includes('network') || String(res.error || '').toLowerCase().includes('offline') || String(res.error || '').toLowerCase().includes('tunnel') || String(res.error || '').toLowerCase().includes('fetch');
-
-  if (isNetworkFailure) {
-    const localUsers = getLocalUsers();
-    const username = (userData.Username || userData.username || '').trim();
-    if (localUsers.some(u => String(u.username || '').toLowerCase() === username.toLowerCase())) {
-      return { success: false, error: 'Username already exists.' };
-    }
-    const newUser = {
-      id: `user-${Date.now()}`,
-      username,
-      password: (userData.Password || userData.password || '').trim(),
-      role: mapRole(userData.Role || userData.role || 'admin'),
-      name: (userData.FullName || userData.fullName || username).trim(),
-      email: (userData.Email || userData.email || '').trim(),
-      mobile: (userData.Phone || userData.phone || '').trim(),
-      createdAt: new Date().toISOString(),
-      createdBy: 'self-register'
-    };
-    localUsers.push(newUser);
-    saveLocalUsers(localUsers);
-    return { success: true, user: newUser };
-  }
-
-  return { success: false, error: res?.error || 'Failed to register user' };
+  return { success: false, error: res.error || 'Failed to register user' };
 }
 
 export async function deleteUser(userId) {
@@ -258,79 +93,41 @@ export async function fetchCurrentAuthUser() {
 }
 
 export async function loginUser(usernameOrEmail, password, expectedRole) {
-  const trimmedInput = usernameOrEmail.trim();
-  const trimmedPassword = password.trim();
+  const res = await apiLogin(usernameOrEmail.trim(), password.trim());
+  if (!res.success) {
+    return { success: false, error: res.error || 'Invalid credentials' };
+  }
+  
+  // Handle both nested { token, user } and flat { token, role, username } responses
+  const token = res.data?.token || res.data?.Token;
+  const user = res.data?.user || res.data?.User || res.data;
+  const jwt = token ? parseJwt(token) : null;
 
-  let res = null;
-  try {
-    res = await apiLogin(trimmedInput, trimmedPassword);
-  } catch (err) {
-    res = { success: false, error: err.message };
+  if (!token) {
+    return { success: false, error: 'Invalid response from server' };
+  }
+  
+  const rawRole = user?.role ?? user?.Role ?? user?.roleName ?? user?.RoleName ?? user?.roleId ?? user?.RoleId ?? jwt?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ?? jwt?.role ?? jwt?.Role;
+  const actualRole = mapRole(rawRole);
+  const targetExpected = expectedRole ? mapRole(expectedRole) : null;
+  
+  // Verify role if expectedRole is passed
+  if (targetExpected && actualRole !== targetExpected && actualRole !== 'admin') {
+    return { success: false, error: `Unauthorized. Required role: ${expectedRole}` };
   }
 
-  if (res && res.success) {
-    const token = res.data?.token || res.data?.Token;
-    const user = res.data?.user || res.data?.User || res.data;
-    const jwt = token ? parseJwt(token) : null;
-
-    if (token) {
-      const rawRole = user?.role ?? user?.Role ?? user?.roleName ?? user?.RoleName ?? user?.roleId ?? user?.RoleId ?? jwt?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ?? jwt?.role ?? jwt?.Role;
-      const actualRole = mapRole(rawRole);
-      const targetExpected = expectedRole ? mapRole(expectedRole) : null;
-      
-      if (targetExpected && actualRole !== targetExpected && actualRole !== 'admin') {
-        return { success: false, error: `Unauthorized. Required role: ${expectedRole}` };
-      }
-
-      const session = {
-        userId: user?.id || user?.userId || user?.Id || user?.UserId || jwt?.nameid || jwt?.sub || '1',
-        username: user?.username || user?.Username || jwt?.unique_name || jwt?.name || trimmedInput,
-        name: user?.name || user?.FullName || user?.fullName || jwt?.name || trimmedInput,
-        role: actualRole,
-        email: user?.email || user?.Email || jwt?.email || '',
-        mobile: user?.mobile || user?.Phone || user?.PhoneNumber || '',
-        loginAt: new Date().toISOString()
-      };
-      
-      setSession(session, token);
-      return { success: true, session };
-    }
-  }
-
-  // If backend was unreachable or returned network error, seamlessly fallback to local users
-  const isNetworkFailure = !res || !res.status || String(res.error || '').toLowerCase().includes('connect') || String(res.error || '').toLowerCase().includes('network') || String(res.error || '').toLowerCase().includes('offline') || String(res.error || '').toLowerCase().includes('tunnel') || String(res.error || '').toLowerCase().includes('fetch');
-
-  if (isNetworkFailure) {
-    const localUsers = getLocalUsers();
-    const inputLower = trimmedInput.toLowerCase();
-    const matched = localUsers.find(u => 
-      ((u.username && u.username.toLowerCase() === inputLower) || (u.email && u.email.toLowerCase() === inputLower)) &&
-      u.password === trimmedPassword
-    );
-
-    if (matched) {
-      const actualRole = mapRole(matched.role);
-      const targetExpected = expectedRole ? mapRole(expectedRole) : null;
-      if (targetExpected && actualRole !== targetExpected && actualRole !== 'admin') {
-        return { success: false, error: `Unauthorized. Required role: ${expectedRole}` };
-      }
-
-      const session = {
-        userId: matched.id || String(Date.now()),
-        username: matched.username,
-        name: matched.name || matched.username,
-        role: actualRole,
-        email: matched.email || '',
-        mobile: matched.mobile || '',
-        loginAt: new Date().toISOString(),
-        isOfflineMode: true
-      };
-      setSession(session, 'offline_token');
-      return { success: true, session };
-    }
-  }
-
-  return { success: false, error: res?.error || 'Invalid credentials' };
+  const session = {
+    userId: user?.id || user?.userId || user?.Id || user?.UserId || jwt?.nameid || jwt?.sub || '1',
+    username: user?.username || user?.Username || jwt?.unique_name || jwt?.name || usernameOrEmail,
+    name: user?.name || user?.FullName || user?.fullName || jwt?.name || usernameOrEmail,
+    role: actualRole,
+    email: user?.email || user?.Email || jwt?.email || '',
+    mobile: user?.mobile || user?.Phone || user?.PhoneNumber || '',
+    loginAt: new Date().toISOString()
+  };
+  
+  setSession(session, token);
+  return { success: true, session };
 }
 
 export function getSession() {

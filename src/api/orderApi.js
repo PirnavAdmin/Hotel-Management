@@ -1,14 +1,7 @@
 import { apiClient } from './apiConfig';
 
 export async function apiGetOrders() {
-  const res = await apiClient('/api/v1/orders');
-  if (res.success && res.data) {
-    const list = Array.isArray(res.data) 
-      ? res.data 
-      : (res.data.orders || res.data.data || []);
-    return list;
-  }
-  return [];
+  return await apiClient('/api/v1/orders');
 }
 
 export async function apiGetActiveOrders() {

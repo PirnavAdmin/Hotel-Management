@@ -1,22 +1,7 @@
 import { apiClient } from './apiConfig';
 
 export async function apiGetStaff() {
-  const res = await apiClient('/api/v1/staff');
-  if (res.success && res.data) {
-    const list = Array.isArray(res.data) 
-      ? res.data 
-      : (res.data.staff || res.data.data || []);
-    return list.map(s => ({
-      id: s.staffId || s.id,
-      name: s.fullName || s.name,
-      role: s.roleTitle || s.role || 'Waiter',
-      phone: s.phone || '',
-      email: s.email || '',
-      shift: s.shift || 'Full Day',
-      status: s.isActive === false ? 'inactive' : 'active'
-    }));
-  }
-  return [];
+  return await apiClient('/api/v1/staff');
 }
 
 export async function apiCreateStaff(staffData) {

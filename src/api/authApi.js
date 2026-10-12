@@ -15,7 +15,6 @@ export async function apiRegister(regData) {
   const payload = {
     username,
     Username: username,
-    UserName: username,
     email,
     Email: email,
     phone,

@@ -6,7 +6,7 @@ import {
   Phone, Send, RefreshCw, ArrowLeft,
   KeyRound
 } from 'lucide-react';
-import { loginUser, createUser, registerUser, updateUserPassword, getUsers, getLocalUsers, saveLocalUsers } from '../utils/auth';
+import { loginUser, createUser, registerUser, updateUserPassword, getUsers } from '../utils/auth';
 import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '../api/authApi';
 
 /**
@@ -38,13 +38,10 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
 
   // Forgot Password state
   const [forgotEmail,        setForgotEmail]        = useState('');
-  const [generatedOtp,       setGeneratedOtp]       = useState('');
+  const [forgotOtpStep,      setForgotOtpStep]      = useState(false);
   const [forgotOtp,          setForgotOtp]          = useState('');
-  const [isOtpVerified,      setIsOtpVerified]      = useState(false);
   const [newPassword,        setNewPassword]        = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [showNewPw,          setShowNewPw]          = useState(false);
-  const [showConfirmNewPw,   setShowConfirmNewPw]   = useState(false);
 
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
@@ -155,72 +152,37 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
     } else { setError(r.error || 'Registration failed.'); triggerShake(); }
   };
 
-  // ── FORGOT PASSWORD HANDLERS (AUTO-GENERATE OTP & CHANGE PASSWORD) ──────
-  const handleAutoGenerateOtp = async () => {
-    const input = forgotEmail.trim();
-    if (!input) {
-      setError('Please enter your registered email address or username first.');
+  // ── FORGOT PASSWORD HANDLERS ──────────────────────────────
+  const handleSendResetOtp = async (e) => {
+    e.preventDefault();
+    const inputEmail = forgotEmail.trim();
+    if (!inputEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail)) {
+      setError('Please enter a valid email address.');
       triggerShake();
       return;
     }
-    setError('');
     setLoading(true);
-
-    try {
-      const res = await apiForgotPassword(input);
-      let otpCode = '';
-      if (res && res.success && res.otp) {
-        otpCode = res.otp;
-      } else {
-        otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      }
-      setGeneratedOtp(otpCode);
-      setSuccess(`🔑 Auto-Generated OTP: ${otpCode} (Click 'Auto-Fill OTP' or enter below)`);
-    } catch {
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(otpCode);
-      setSuccess(`🔑 Auto-Generated OTP: ${otpCode} (Click 'Auto-Fill OTP' or enter below)`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAutoFillOtp = () => {
-    if (generatedOtp) {
-      setForgotOtp(generatedOtp);
-      setIsOtpVerified(true);
-      setError('');
-      setSuccess(`✅ OTP ${generatedOtp} entered! Please enter your new password below.`);
-    }
-  };
-
-  const handleOtpChange = (val) => {
-    const digitsOnly = val.replace(/\D/g, '').slice(0, 6);
-    setForgotOtp(digitsOnly);
     setError('');
-    if (digitsOnly.length === 6) {
-      if (!generatedOtp || digitsOnly === generatedOtp) {
-        setIsOtpVerified(true);
-        setSuccess('✅ OTP verified successfully! Enter your new password below.');
-      } else {
-        setIsOtpVerified(false);
-        setError('Invalid OTP code. Please enter the generated OTP.');
-      }
+    setSuccess('');
+    
+    // We shouldn't mock OTP, we should let backend do it
+    const res = await apiForgotPassword(inputEmail);
+    setLoading(false);
+
+    if (res.success) {
+      setForgotOtpStep(true);
+      setSuccess(`📩 OTP sent to ${inputEmail}. Enter code & new password below.`);
     } else {
-      setIsOtpVerified(false);
+      setError(res.error || 'Failed to send OTP.');
+      triggerShake();
     }
   };
 
   const handleResetPasswordSubmit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const input = forgotEmail.trim();
-    if (!input) {
-      setError('Please enter your email or username.');
-      triggerShake();
-      return;
-    }
-    if (!isOtpVerified && forgotOtp !== generatedOtp) {
-      setError('Please enter the 6-digit OTP code to verify.');
+    e.preventDefault();
+    const enteredOtp = forgotOtp.trim();
+    if (!enteredOtp || enteredOtp.length < 4) {
+      setError('Please enter the verification OTP code.');
       triggerShake();
       return;
     }
@@ -239,37 +201,22 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
     setError('');
     setSuccess('');
 
-    try {
-      await apiResetPassword(input, forgotOtp, newPassword.trim());
-    } catch {}
-
-    // Update in local users database as well
-    try {
-      const localUsers = getLocalUsers();
-      const query = input.toLowerCase();
-      const idx = localUsers.findIndex(u => 
-        (u.username && u.username.toLowerCase() === query) || (u.email && u.email.toLowerCase() === query)
-      );
-      if (idx !== -1) {
-        localUsers[idx].password = newPassword.trim();
-        saveLocalUsers(localUsers);
-      }
-    } catch {}
-
+    const res = await apiResetPassword(forgotEmail.trim(), enteredOtp, newPassword.trim());
     setLoading(false);
-    setSuccess('✅ Password changed successfully! Signing you in with new password...');
 
-    setTimeout(async () => {
-      const loginRes = await loginUser(input, newPassword.trim(), currentRole);
-      if (loginRes.success && onLoginSuccess) {
-        onLoginSuccess(loginRes.session, currentRole);
-      } else {
+    if (res.success) {
+      setSuccess('✅ Password updated successfully! Signing you in with new password...');
+      setTimeout(() => {
         setMode('login');
-        setUsername(input);
         setPassword(newPassword.trim());
-        setSuccess('Password updated. You can now sign in.');
-      }
-    }, 1200);
+        setUsername(forgotEmail.trim());
+        setSuccess('');
+        setForgotOtpStep(false);
+      }, 1200);
+    } else {
+      setError(res.error || 'Failed to reset password.');
+      triggerShake();
+    }
   };
 
   // Password strength
@@ -499,7 +446,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
                     setMode('forgot');
                     setError('');
                     setSuccess('');
-                    setForgotEmail(username.trim());
+                    setForgotEmail(username.includes('@') ? username : '');
                   }}
                   style={{
                     background: 'none',
@@ -539,176 +486,71 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
           </form>
         )}
 
-        {/* ── FORGOT PASSWORD FORM (AUTO-GENERATE OTP & CHANGE PASSWORD) ── */}
+        {/* ── FORGOT PASSWORD FORM ── */}
         {mode === 'forgot' && (
-          <form onSubmit={handleResetPasswordSubmit} style={{ padding: '0.65rem 1.15rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.42rem', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.15rem' }}>
-              <button
-                type="button"
-                onClick={() => { setMode('login'); setError(''); setSuccess(''); setGeneratedOtp(''); setForgotOtp(''); setIsOtpVerified(false); }}
-                style={{
-                  background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.74rem', fontWeight: 700,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', padding: 0
-                }}
-              >
-                <ArrowLeft size={14} /> Back to Sign In
-              </button>
-              <span style={{ fontSize: '0.66rem', color: cfg.accentLight, fontWeight: 700 }}>
-                Password Recovery
-              </span>
-            </div>
+          <form onSubmit={forgotOtpStep ? handleResetPasswordSubmit : handleSendResetOtp} style={{ padding: '0.75rem 1.25rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.45rem', overflowY: 'auto' }}>
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setSuccess(''); setForgotOtpStep(false); }}
+              style={{
+                background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', width: 'fit-content', padding: 0
+              }}
+            >
+              <ArrowLeft size={14} /> Back to Sign In
+            </button>
+
 
             {error   && <Err msg={error} />}
             {success && <Suc msg={success} />}
 
-            {/* 1. Email or Username Input */}
-            <Fld label="Registered Email or Username *" icon={<Mail size={13} color="#475569" />} mb="0.3rem">
-              <input
-                type="text"
-                placeholder="Enter email or username (e.g. pirnav)"
-                value={forgotEmail}
-                onChange={e => { setForgotEmail(e.target.value); setError(''); }}
-                style={inp(forgotEmail)}
-                onFocus={e => e.target.style.borderColor = cfg.accent}
-                onBlur={e => e.target.style.borderColor = forgotEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-              />
-            </Fld>
-
-            {/* 2. Auto-Generate OTP Box */}
-            <div style={{
-              background: 'rgba(245, 158, 11, 0.08)',
-              border: '1px dashed rgba(245, 158, 11, 0.35)',
-              borderRadius: '8px',
-              padding: '0.45rem 0.65rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.35rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <span style={{ fontSize: '0.7rem', color: '#cbd5e1', fontWeight: 700 }}>
-                  Verification OTP
-                </span>
-                <button
-                  type="button"
-                  onClick={handleAutoGenerateOtp}
-                  disabled={loading}
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.28) 0%, rgba(234, 88, 12, 0.22) 100%)',
-                    border: '1px solid var(--accent-amber)',
-                    borderRadius: '6px',
-                    padding: '3px 8px',
-                    color: 'var(--accent-amber-light)',
-                    fontSize: '0.68rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <RefreshCw size={11} />
-                  <span>{generatedOtp ? 'Regenerate OTP' : '⚡ Auto-Generate OTP'}</span>
-                </button>
-              </div>
-
-              {generatedOtp && (
-                <div style={{
-                  background: 'rgba(16, 185, 129, 0.16)',
-                  border: '1px solid rgba(16, 185, 129, 0.45)',
-                  borderRadius: '6px',
-                  padding: '4px 8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <span style={{ fontSize: '0.74rem', color: '#6ee7b7', fontWeight: 800 }}>
-                    Auto-OTP: <strong style={{ letterSpacing: '2px', fontSize: '0.85rem', color: '#ffffff' }}>{generatedOtp}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleAutoFillOtp}
-                    style={{
-                      background: '#10b981',
-                      color: '#000000',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '2px 8px',
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Auto-Fill OTP ✓
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 3. Enter OTP input */}
-            <Fld label="Enter 6-Digit OTP *" icon={<KeyRound size={13} color="#475569" />} mb="0.3rem">
-              <input
-                type="text"
-                placeholder="Enter 6-digit code"
-                maxLength={6}
-                value={forgotOtp}
-                onChange={e => handleOtpChange(e.target.value)}
-                style={inp(forgotOtp, {
-                  letterSpacing: forgotOtp ? '3px' : 'normal',
-                  fontWeight: 800,
-                  borderColor: isOtpVerified ? '#10b981' : (forgotOtp ? cfg.accent : 'rgba(255,255,255,0.1)')
-                })}
-              />
-            </Fld>
-
-            {/* 4. Change Password Fields (Unlocks upon entering OTP) */}
-            {(isOtpVerified || forgotOtp.length === 6) ? (
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '9px',
-                padding: '0.55rem 0.65rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem',
-                animation: 'fadeIn 0.2s ease'
-              }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-amber-light)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  🔑 Change Password
-                </div>
-
-                <Fld label="New Password *" icon={<Lock size={13} color="#475569" />} mb="0.2rem">
+            {!forgotOtpStep ? (
+              <>
+                <Fld label="Registered Email Address *" icon={<Mail size={13} color="#475569" />} mb="0.45rem">
                   <input
-                    type={showNewPw ? 'text' : 'password'}
-                    placeholder="Min 6 chars"
+                    type="email"
+                    placeholder="Enter your registered email address"
+                    value={forgotEmail}
+                    onChange={e => { setForgotEmail(e.target.value); setError(''); }}
+                    style={inp(forgotEmail)}
+                    onFocus={e => e.target.style.borderColor = cfg.accent}
+                    onBlur={e => e.target.style.borderColor = forgotEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                  />
+                </Fld>
+                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Send Reset Code to Email" icon={<Send size={16} />} />
+              </>
+            ) : (
+              <>
+                <Fld label="6-Digit Email Code *" icon={<KeyRound size={13} color="#475569" />} mb="0.35rem">
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                    value={forgotOtp}
+                    onChange={e => { setForgotOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
+                    style={inp(forgotOtp)}
+                  />
+                </Fld>
+                <Fld label="New Password *" icon={<Lock size={13} color="#475569" />} mb="0.35rem">
+                  <input
+                    type="password"
+                    placeholder="Minimum 6 characters"
                     value={newPassword}
                     onChange={e => { setNewPassword(e.target.value); setError(''); }}
-                    style={inp(newPassword, { paddingRight: '2.2rem' })}
+                    style={inp(newPassword)}
                   />
-                  <PwEye show={showNewPw} toggle={() => setShowNewPw(p => !p)} />
                 </Fld>
-
-                <Fld label="Confirm New Password *" icon={<Lock size={13} color="#475569" />} mb="0.2rem">
+                <Fld label="Confirm New Password *" icon={<Lock size={13} color="#475569" />} mb="0.45rem">
                   <input
-                    type={showConfirmNewPw ? 'text' : 'password'}
-                    placeholder="Re-enter password"
+                    type="password"
+                    placeholder="Re-enter new password"
                     value={confirmNewPassword}
                     onChange={e => { setConfirmNewPassword(e.target.value); setError(''); }}
-                    style={inp(confirmNewPassword, {
-                      paddingRight: '2.2rem',
-                      borderColor: confirmNewPassword ? (confirmNewPassword === newPassword ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
-                    })}
+                    style={inp(confirmNewPassword)}
                   />
-                  <PwEye show={showConfirmNewPw} toggle={() => setShowConfirmNewPw(p => !p)} />
                 </Fld>
-
-                <div style={{ marginTop: '0.35rem' }}>
-                  <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Change Password & Sign In" icon={<CheckCircle size={16} />} />
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '0.3rem', color: '#64748b', fontSize: '0.68rem' }}>
-                💡 Click <strong>⚡ Auto-Generate OTP</strong> above and enter it to unlock Change Password
-              </div>
+                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Update Password & Sign In" icon={<CheckCircle size={16} />} />
+              </>
             )}
           </form>
         )}

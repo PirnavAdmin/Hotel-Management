@@ -1,27 +1,7 @@
 import { apiClient } from './apiConfig';
 
 export async function apiGetTables() {
-  const res = await apiClient('/api/v1/tables');
-  if (res.success && res.data) {
-    const list = Array.isArray(res.data) 
-      ? res.data 
-      : (res.data.tables || res.data.data || []);
-    return list.map(t => ({
-      id: t.tableId || t.id,
-      name: t.tableName || t.name || `Table ${t.tableId || t.id}`,
-      section: t.sectionArea || t.section || 'Main Hall',
-      capacity: t.capacityChairs || t.capacity || 4,
-      status: (t.status || 'vacant').toLowerCase(),
-      server: t.assignedServerName || t.server || 'Staff',
-      guests: t.occupiedChairs || t.guests || 0,
-      items: Array.isArray(t.items) ? t.items : [],
-      orderTime: t.orderTime || null,
-      discountPercent: t.discountPercent || 0,
-      serviceCharge: t.serviceCharge || 5,
-      occupiedSince: t.occupiedSince || '10:00 AM'
-    }));
-  }
-  return [];
+  return await apiClient('/api/v1/tables');
 }
 
 export async function apiCreateTable(tableData) {
