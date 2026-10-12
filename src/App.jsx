@@ -1,32 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { INITIAL_TABLES } from './data/initialTables';
-import { MENU_ITEMS } from './data/menuData';
-import { INITIAL_STAFF } from './data/initialStaff';
-import { INITIAL_ORDERS } from './data/initialOrders';
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { INITIAL_TABLES } from "./data/initialTables";
+import { MENU_ITEMS } from "./data/menuData";
+import { INITIAL_STAFF } from "./data/initialStaff";
+import { INITIAL_ORDERS } from "./data/initialOrders";
 // Admin modules
 import { AdminPortal } from "./admin";
 // Kitchen KOT modules
 import { KitchenKOTView, KOTModal } from "./kot";
 // User POS / Dining Floor modules
-import { 
-  TableView, 
-  TableDetailView, 
-  ReceiptModal, 
-  SettlementModal, 
-  TransferTableModal, 
-  PastOrdersModal 
-} from './user';
-import { Header, LoginPage, ErrorBoundary } from './common';
-import { sounds } from './utils/audio';
-import { parseTimeToSeconds, formatElapsedTimer } from './utils/timer';
-import { setSession, logoutUser } from './utils/auth';
-import { apiGetTables, apiCreateTable, apiUpdateTable, apiDeleteTable } from './api/tableApi';
-import { apiGetMenuItems, apiCreateMenuItem, apiUpdateMenuItem, apiDeleteMenuItem } from './api/menuApi';
-import { apiGetKotOrders, apiCreateKotOrder, apiUpdateKotStatus } from './api/kotApi';
-import { apiGetStaff, apiCreateStaff, apiDeleteStaff } from './api/staffApi';
-import { apiGetOrders, apiCreateOrder } from './api/orderApi';
-
+import {
+  TableView,
+  TableDetailView,
+  ReceiptModal,
+  SettlementModal,
+  TransferTableModal,
+  PastOrdersModal,
+} from "./user";
+import { Header, LoginPage, ErrorBoundary } from "./common";
+import { sounds } from "./utils/audio";
+import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
+import { setSession, logoutUser } from "./utils/auth";
+import {
+  apiGetTables,
+  apiCreateTable,
+  apiUpdateTable,
+  apiDeleteTable,
+} from "./api/tableApi";
+import {
+  apiGetMenuItems,
+  apiCreateMenuItem,
+  apiUpdateMenuItem,
+  apiDeleteMenuItem,
+  normalizeMenuItem,
+} from "./api/menuApi";
+import {
+  apiGetKotOrders,
+  apiCreateKotOrder,
+  apiUpdateKotStatus,
+} from "./api/kotApi";
+import { apiGetStaff, apiCreateStaff, apiDeleteStaff } from "./api/staffApi";
+import { apiGetOrders, apiCreateOrder } from "./api/orderApi";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -35,12 +49,83 @@ const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 
+const mergeIncomingTables = (incomingTables, deletedTableIds) => {
+  const tablesById = new Map(
+    INITIAL_TABLES.map((table) => [
+      Number(table.id),
+      {
+        ...table,
+        items: Array.isArray(table.items) ? table.items : [],
+      },
+    ]),
+  );
+
+  incomingTables.forEach((table) => {
+    const id = Number(table.tableId ?? table.id);
+    if (!Number.isFinite(id)) return;
+
+    const existing = tablesById.get(id) || {};
+    tablesById.set(id, {
+      ...existing,
+      ...table,
+      id,
+      name: table.tableName || table.name || existing.name || `Table ${id}`,
+      section:
+        table.sectionArea || table.section || existing.section || "Main Hall",
+      capacity:
+        table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
+      status: String(table.status || existing.status || "vacant").toLowerCase(),
+      server:
+        table.assignedServerName || table.server || existing.server || "Staff",
+      guests: table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
+      items: Array.isArray(table.items)
+        ? table.items
+        : Array.isArray(existing.items)
+          ? existing.items
+          : [],
+      orderTime: table.orderTime ?? existing.orderTime ?? null,
+      discountPercent:
+        table.discountPercent ?? existing.discountPercent ?? 0,
+      serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
+      occupiedSince:
+        table.occupiedSince || existing.occupiedSince || "10:00 AM",
+    });
+  });
+
+  const deletedIds = Array.isArray(deletedTableIds)
+    ? deletedTableIds.map(String)
+    : [];
+  return Array.from(tablesById.values())
+    .filter((table) => !deletedIds.includes(String(table.id)))
+    .sort((a, b) => a.id - b.id);
+};
+
 const getDeletedTableIds = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) return parsed;
+    }
+    // Auto-detect any initially deleted tables already missing from saved tables
+    const savedTables = localStorage.getItem(STORAGE_KEY_TABLES);
+    if (savedTables) {
+      const parsed = JSON.parse(savedTables);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const existingIds = new Set(parsed.map((t) => String(t.id)));
+        const missingFromInitial = INITIAL_TABLES.filter(
+          (t) => !existingIds.has(String(t.id)),
+        ).map((t) => t.id);
+        if (missingFromInitial.length > 0) {
+          try {
+            localStorage.setItem(
+              STORAGE_KEY_DELETED_TABLES,
+              JSON.stringify(missingFromInitial),
+            );
+          } catch {}
+          return missingFromInitial;
+        }
+      }
     }
   } catch {}
   return [];
@@ -58,24 +143,33 @@ export function App() {
   }, [theme]);
 
   // Track permanently deleted table IDs so cross-tabs or reloads never resurrect them
-  const [deletedTableIds, setDeletedTableIds] = useState(getDeletedTableIds);
+  const [deletedTableIds, setDeletedTableIds] = useState(() => {
+    const initial = getDeletedTableIds();
+    return Array.isArray(initial) ? initial : [];
+  });
 
   // Load saved tables or fallback to INITIAL_TABLES (filtering out any deleted tables)
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
-    const isDeleted = (id) => (Array.isArray(deleted) ? deleted : []).some(d => String(d) === String(id));
+    const delList = Array.isArray(deleted) ? deleted : [];
+    const isDeleted = (id) => delList.some((d) => String(d) === String(id));
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TABLES);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter(t => !isDeleted(t.id)).map(t => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }));
+          return parsed
+            .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+            .filter((t) => !isDeleted(t.id));
         }
       }
     } catch {
       // Fallback
     }
-    return INITIAL_TABLES.filter(t => !isDeleted(t.id)).map(t => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }));
+    return INITIAL_TABLES.map((t) => ({
+      ...t,
+      items: Array.isArray(t.items) ? t.items : [],
+    })).filter((t) => !isDeleted(t.id));
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -133,63 +227,100 @@ export function App() {
 
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
-    // 1. Load live tables from backend API merged with INITIAL_TABLES
-    apiGetTables().then(backendTables => {
-      if (backendTables && backendTables.length > 0) {
-        const map = new Map();
-        INITIAL_TABLES.forEach(t => map.set(Number(t.id), t));
-        backendTables.forEach(t => {
-          const id = Number(t.tableId || t.id);
-          const existing = map.get(id) || {};
-          map.set(id, { ...existing, ...t, id });
-        });
-        const merged = Array.from(map.values()).sort((a, b) => a.id - b.id);
+    // 1. Load live tables from backend API, preserving initial data and deletions
+    apiGetTables().then((response) => {
+      const backendTables = Array.isArray(response)
+        ? response
+        : response?.success && Array.isArray(response.data)
+          ? response.data
+          : null;
+      if (Array.isArray(backendTables) && backendTables.length > 0) {
+        const merged = mergeIncomingTables(
+          backendTables,
+          getDeletedTableIds(),
+        );
         setTables(merged);
-        try { localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(merged)); } catch {}
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(merged));
+        } catch {}
       }
     });
 
-    // 2. Load live menu items from backend API merged with MENU_ITEMS
-    apiGetMenuItems().then(backendMenu => {
-      if (backendMenu && backendMenu.length > 0) {
-        const map = new Map();
-        MENU_ITEMS.forEach(m => map.set(String(m.name).toLowerCase().trim(), m));
-        backendMenu.forEach(m => {
-          const key = String(m.dishName || m.name).toLowerCase().trim();
-          const existing = map.get(key) || {};
-          map.set(key, { ...existing, ...m });
+    // 2. Load live menu items from backend API
+    apiGetMenuItems().then((response) => {
+      const backendMenu = [
+        response,
+        response?.data,
+        response?.data?.data,
+        response?.data?.menuItems,
+        response?.menuItems,
+      ].find((candidate) => Array.isArray(candidate));
+      if (Array.isArray(backendMenu) && backendMenu.length > 0) {
+        const menuByName = new Map(
+          MENU_ITEMS.map(normalizeMenuItem)
+            .filter((item) => item.name)
+            .map((item) => [item.name.toLowerCase().trim(), item]),
+        );
+        backendMenu.map(normalizeMenuItem).forEach((item) => {
+          const key = item.name.toLowerCase().trim();
+          if (!key) return;
+          const existing = menuByName.get(key) || {};
+          menuByName.set(key, {
+            ...existing,
+            ...item,
+            image: item.image || existing.image || "",
+            description: item.description || existing.description || "",
+          });
         });
-        const mergedMenu = Array.from(map.values());
-        setMenuItems(mergedMenu);
-        try { localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(mergedMenu)); } catch {}
+        const normalizedMenu = Array.from(menuByName.values());
+        setMenuItems(normalizedMenu);
+        try {
+          localStorage.setItem(
+            STORAGE_KEY_MENU,
+            JSON.stringify(normalizedMenu),
+          );
+        } catch {}
       }
     });
 
     // 3. Load live staff members from backend API
-    apiGetStaff().then(backendStaff => {
+    apiGetStaff().then((backendStaff) => {
       if (backendStaff && backendStaff.length > 0) {
         const map = new Map();
-        INITIAL_STAFF.forEach(s => map.set(Number(s.id), s));
-        backendStaff.forEach(s => {
+        INITIAL_STAFF.forEach((s) => map.set(Number(s.id), s));
+        backendStaff.forEach((s) => {
           const id = Number(s.staffId || s.id);
           map.set(id, { ...(map.get(id) || {}), ...s, id });
         });
-        const mergedStaff = Array.from(map.values()).sort((a, b) => a.id - b.id);
+        const mergedStaff = Array.from(map.values()).sort(
+          (a, b) => a.id - b.id,
+        );
         setStaffList(mergedStaff);
-        try { localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(mergedStaff)); } catch {}
+        try {
+          localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(mergedStaff));
+        } catch {}
       }
     });
 
     // 4. Load live past settled orders from backend API merged with INITIAL_ORDERS
-    apiGetOrders().then(backendOrders => {
+    apiGetOrders().then((backendOrders) => {
       if (backendOrders && backendOrders.length > 0) {
         const map = new Map();
-        const getOrderKey = (o) => o.id || `${o.invoiceNo || 'INV'}_${o.date || o.settledDate || ''}_${o.orderTimestamp || ''}`;
-        INITIAL_ORDERS.forEach(o => map.set(getOrderKey(o), o));
-        backendOrders.forEach(o => map.set(getOrderKey(o), o));
-        const mergedOrders = Array.from(map.values()).sort((a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0));
+        const getOrderKey = (o) =>
+          o.id ||
+          `${o.invoiceNo || "INV"}_${o.date || o.settledDate || ""}_${o.orderTimestamp || ""}`;
+        INITIAL_ORDERS.forEach((o) => map.set(getOrderKey(o), o));
+        backendOrders.forEach((o) => map.set(getOrderKey(o), o));
+        const mergedOrders = Array.from(map.values()).sort(
+          (a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0),
+        );
         setPastOrders(mergedOrders);
-        try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(mergedOrders)); } catch {}
+        try {
+          localStorage.setItem(
+            STORAGE_KEY_ORDERS,
+            JSON.stringify(mergedOrders),
+          );
+        } catch {}
       }
     });
   }, []);
@@ -319,13 +450,13 @@ export function App() {
 
   const pushGlobalSync = (payload) => {
     try {
-      fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/sync`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
+      fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       }).catch(() => {});
     } catch {}
   };
@@ -377,8 +508,13 @@ export function App() {
   // Sync to LocalStorage & Global Network DB
   useEffect(() => {
     try {
-      const isDeleted = (id) => (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(d => String(d) === String(id));
-      const cleanTables = tables.filter(t => !isDeleted(t.id));
+      const isDeleted = (id) =>
+        (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
+          (d) => String(d) === String(id),
+        );
+      const cleanTables = (Array.isArray(tables) ? tables : [])
+        .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+        .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
       pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
     } catch {}
@@ -408,112 +544,142 @@ export function App() {
   // Real-time cross-device network synchronization via SSE Stream & REST API
   useEffect(() => {
     // 1. Fetch initial network DB state on startup
-    fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/state`, {
+    fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/state`, {
       headers: {
-        'ngrok-skip-browser-warning': 'true'
-      }
+        "ngrok-skip-browser-warning": "true",
+      },
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (!data) return;
-
-        // Support both direct API schema and local storage key schema
-        const incomingTables = data.tables || data.data?.tables || data[STORAGE_KEY_TABLES];
-        if (incomingTables && incomingTables.length > 0) {
+        const incomingTables =
+          data.tables || data.data?.tables || data[STORAGE_KEY_TABLES];
+        if (Array.isArray(incomingTables) && incomingTables.length > 0) {
           const freshDel = getDeletedTableIds();
-          const map = new Map();
-          INITIAL_TABLES.forEach(t => map.set(Number(t.id), t));
-          incomingTables.forEach(t => {
-            const id = Number(t.tableId || t.id);
-            const existing = map.get(id) || {};
-            map.set(id, {
-              ...existing,
-              id,
-              name: t.tableName || t.name || existing.name || `Table ${id}`,
-              section: t.sectionArea || t.section || existing.section || 'Main Hall',
-              capacity: t.capacityChairs || t.capacity || existing.capacity || 4,
-              status: (t.status || existing.status || 'vacant').toLowerCase(),
-              server: t.assignedServerName || t.server || existing.server || 'Staff',
-              guests: t.occupiedChairs || t.guests || existing.guests || 0,
-              items: Array.isArray(t.items) ? t.items : (existing.items || []),
-              orderTime: t.orderTime || existing.orderTime || null,
-              discountPercent: t.discountPercent ?? existing.discountPercent ?? 0,
-              serviceCharge: t.serviceCharge ?? existing.serviceCharge ?? 5,
-              occupiedSince: t.occupiedSince || existing.occupiedSince || '10:00 AM'
-            });
-          });
-          const clean = Array.from(map.values())
-            .filter(t => !(Array.isArray(freshDel) ? freshDel : []).some(d => String(d) === String(t.id)))
-            .sort((a, b) => a.id - b.id);
+          const clean = mergeIncomingTables(incomingTables, freshDel);
           setTables(clean);
           try {
             localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
           } catch {}
         }
 
-        const incomingOrders = data.pastOrders || data.data?.pastOrders || data[STORAGE_KEY_ORDERS];
+        const incomingOrders =
+          data.pastOrders || data.data?.pastOrders || data[STORAGE_KEY_ORDERS];
         if (incomingOrders && incomingOrders.length > 0) {
           const map = new Map();
-          const getOrderKey = (o) => o.id || `${o.invoiceNo || 'INV'}_${o.date || o.settledDate || ''}_${o.orderTimestamp || ''}`;
-          INITIAL_ORDERS.forEach(o => map.set(getOrderKey(o), o));
-          incomingOrders.forEach(o => map.set(getOrderKey(o), o));
-          const mergedOrders = Array.from(map.values()).sort((a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0));
+          const getOrderKey = (o) =>
+            o.id ||
+            `${o.invoiceNo || "INV"}_${o.date || o.settledDate || ""}_${o.orderTimestamp || ""}`;
+          INITIAL_ORDERS.forEach((o) => map.set(getOrderKey(o), o));
+          incomingOrders.forEach((o) => map.set(getOrderKey(o), o));
+          const mergedOrders = Array.from(map.values()).sort(
+            (a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0),
+          );
           setPastOrders(mergedOrders);
-          try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(mergedOrders)); } catch {}
+          try {
+            localStorage.setItem(
+              STORAGE_KEY_ORDERS,
+              JSON.stringify(mergedOrders),
+            );
+          } catch {}
         }
 
-        const incomingMenu = data.menuItems || data.data?.menuItems || data[STORAGE_KEY_MENU];
+        const incomingMenu =
+          data.menuItems || data.data?.menuItems || data[STORAGE_KEY_MENU];
         if (incomingMenu && incomingMenu.length > 0) {
           const map = new Map();
-          MENU_ITEMS.forEach(m => map.set(String(m.name).toLowerCase().trim(), m));
-          incomingMenu.forEach(m => {
-            const key = String(m.dishName || m.name).toLowerCase().trim();
+          MENU_ITEMS.forEach((m) =>
+            map.set(String(m.name).toLowerCase().trim(), m),
+          );
+          incomingMenu.forEach((m) => {
+            const key = String(m.dishName || m.name)
+              .toLowerCase()
+              .trim();
             const existing = map.get(key) || {};
             map.set(key, {
               ...existing,
-              id: m.menuItemId ? String(m.menuItemId) : (existing.id || String(m.id)),
+              id: m.menuItemId
+                ? String(m.menuItemId)
+                : existing.id || String(m.id),
               name: m.dishName || m.name || existing.name,
-              category: m.category || existing.category || 'biryani',
+              category: m.category || existing.category || "biryani",
               price: parseFloat(m.price || existing.price || 0),
-              isVeg: m.dietaryType ? m.dietaryType === 'VEG' : (existing.isVeg ?? true),
-              spiceLevel: m.spiceLevel === 1 ? 'Mild' : m.spiceLevel === 2 ? 'Medium' : (existing.spiceLevel || 'Spicy'),
-              description: m.shortDescription || m.description || existing.description || '',
-              prepTime: m.prepTimeMinutes ? `${m.prepTimeMinutes} mins` : (existing.prepTime || '15 mins'),
-              prepTimeMinutes: m.prepTimeMinutes || existing.prepTimeMinutes || 15,
-              isChefSpecial: m.isChefsSpecial ?? existing.isChefSpecial ?? false,
+              isVeg: m.dietaryType
+                ? m.dietaryType === "VEG"
+                : (existing.isVeg ?? true),
+              spiceLevel:
+                m.spiceLevel === 1
+                  ? "Mild"
+                  : m.spiceLevel === 2
+                    ? "Medium"
+                    : existing.spiceLevel || "Spicy",
+              description:
+                m.shortDescription ||
+                m.description ||
+                existing.description ||
+                "",
+              prepTime: m.prepTimeMinutes
+                ? `${m.prepTimeMinutes} mins`
+                : existing.prepTime || "15 mins",
+              prepTimeMinutes:
+                m.prepTimeMinutes || existing.prepTimeMinutes || 15,
+              isChefSpecial:
+                m.isChefsSpecial ?? existing.isChefSpecial ?? false,
               isAvailable: m.isAvailable !== false,
-              image: m.imageUrl || m.image || existing.image || 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80'
+              image:
+                m.imageUrl ||
+                m.image ||
+                existing.image ||
+                "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
             });
           });
           const normalizedMenu = Array.from(map.values());
           setMenuItems(normalizedMenu);
-          try { localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu)); } catch {}
+          try {
+            localStorage.setItem(
+              STORAGE_KEY_MENU,
+              JSON.stringify(normalizedMenu),
+            );
+          } catch {}
         }
 
-        const incomingStaff = data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
+        const incomingStaff =
+          data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
         if (incomingStaff && incomingStaff.length > 0) {
           const map = new Map();
-          INITIAL_STAFF.forEach(s => map.set(Number(s.id), s));
-          incomingStaff.forEach(s => {
+          INITIAL_STAFF.forEach((s) => map.set(Number(s.id), s));
+          incomingStaff.forEach((s) => {
             const id = Number(s.staffId || s.id);
             map.set(id, {
               ...(map.get(id) || {}),
               id,
               name: s.fullName || s.name,
-              role: s.roleTitle || s.role || 'Waiter',
-              phone: s.phone || '',
-              email: s.email || '',
-              shift: s.shift || 'Full Day',
-              status: s.isActive === false ? 'inactive' : 'active'
+              role: s.roleTitle || s.role || "Waiter",
+              phone: s.phone || "",
+              email: s.email || "",
+              shift: s.shift || "Full Day",
+              status: s.isActive === false ? "inactive" : "active",
             });
           });
-          const normalizedStaff = Array.from(map.values()).sort((a, b) => a.id - b.id);
+          const normalizedStaff = Array.from(map.values()).sort(
+            (a, b) => a.id - b.id,
+          );
           setStaffList(normalizedStaff);
-          try { localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(normalizedStaff)); } catch {}
+          try {
+            localStorage.setItem(
+              STORAGE_KEY_STAFF,
+              JSON.stringify(normalizedStaff),
+            );
+          } catch {}
         }
 
-        if (data['avsr_auth_users_v1']) {
-          try { localStorage.setItem('avsr_auth_users_v1', JSON.stringify(data['avsr_auth_users_v1'])); } catch {}
+        if (data["avsr_auth_users_v1"]) {
+          try {
+            localStorage.setItem(
+              "avsr_auth_users_v1",
+              JSON.stringify(data["avsr_auth_users_v1"]),
+            );
+          } catch {}
         }
       })
       .catch(() => {});
@@ -521,74 +687,90 @@ export function App() {
     // 2. Connect to realtime SSE stream push for instant multi-device updates
     let es;
     try {
-      es = new EventSource(`${import.meta.env.VITE_API_BASE_URL || ''}/api/events`);
+      es = new EventSource(
+        `${import.meta.env.VITE_API_BASE_URL || ""}/api/events`,
+      );
       es.onmessage = (e) => {
         try {
           const parsedMsg = JSON.parse(e.data);
           const payload = parsedMsg.payload;
           if (!payload) return;
 
-          const incomingTables = payload.tables || payload[STORAGE_KEY_TABLES];
-          if (incomingTables && incomingTables.length > 0) {
+          const incomingTables =
+            payload.tables ||
+            payload.data?.tables ||
+            payload[STORAGE_KEY_TABLES];
+          if (Array.isArray(incomingTables) && incomingTables.length > 0) {
             const freshDel = getDeletedTableIds();
-            const clean = incomingTables
-              .filter(t => !(Array.isArray(freshDel) ? freshDel : []).some(d => String(d) === String(t.id || t.tableId)))
-              .map(t => ({
-                id: t.tableId || t.id,
-                name: t.tableName || t.name || `Table ${t.tableId || t.id}`,
-                section: t.sectionArea || t.section || 'Main Hall',
-                capacity: t.capacityChairs || t.capacity || 4,
-                status: (t.status || 'vacant').toLowerCase(),
-                server: t.assignedServerName || t.server || 'Staff',
-                guests: t.occupiedChairs || t.guests || 0,
-                items: Array.isArray(t.items) ? t.items : [],
-                orderTime: t.orderTime || null,
-                discountPercent: t.discountPercent || 0,
-                serviceCharge: t.serviceCharge || 5,
-                occupiedSince: t.occupiedSince || '10:00 AM'
-              }));
+            const clean = mergeIncomingTables(incomingTables, freshDel);
             setTables(clean);
             try {
               localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
             } catch {}
           }
-          const incomingOrders = payload.pastOrders || payload[STORAGE_KEY_ORDERS];
+          const incomingOrders =
+            payload.pastOrders || payload[STORAGE_KEY_ORDERS];
           if (incomingOrders && incomingOrders.length > 0) {
             setPastOrders(incomingOrders);
-            try { localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(incomingOrders)); } catch {}
+            try {
+              localStorage.setItem(
+                STORAGE_KEY_ORDERS,
+                JSON.stringify(incomingOrders),
+              );
+            } catch {}
           }
           const incomingMenu = payload.menuItems || payload[STORAGE_KEY_MENU];
           if (incomingMenu && incomingMenu.length > 0) {
-            const normalizedMenu = incomingMenu.map(m => ({
+            const normalizedMenu = incomingMenu.map((m) => ({
               id: m.menuItemId ? String(m.menuItemId) : String(m.id),
               name: m.dishName || m.name,
-              category: m.category || 'biryani',
+              category: m.category || "biryani",
               price: parseFloat(m.price || 0),
-              isVeg: m.dietaryType === 'VEG' || m.isVeg === true,
-              spiceLevel: m.spiceLevel === 1 ? 'Mild' : m.spiceLevel === 2 ? 'Medium' : 'Spicy',
-              description: m.shortDescription || m.description || '',
-              prepTime: m.prepTimeMinutes ? `${m.prepTimeMinutes} mins` : '15 mins',
+              isVeg: m.dietaryType === "VEG" || m.isVeg === true,
+              spiceLevel:
+                m.spiceLevel === 1
+                  ? "Mild"
+                  : m.spiceLevel === 2
+                    ? "Medium"
+                    : "Spicy",
+              description: m.shortDescription || m.description || "",
+              prepTime: m.prepTimeMinutes
+                ? `${m.prepTimeMinutes} mins`
+                : "15 mins",
               prepTimeMinutes: m.prepTimeMinutes || 15,
               isChefSpecial: !!m.isChefsSpecial || !!m.isChefSpecial,
               isAvailable: m.isAvailable !== false,
-              image: m.imageUrl || m.image || 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80'
+              image:
+                m.imageUrl ||
+                m.image ||
+                "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
             }));
             setMenuItems(normalizedMenu);
-            try { localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu)); } catch {}
+            try {
+              localStorage.setItem(
+                STORAGE_KEY_MENU,
+                JSON.stringify(normalizedMenu),
+              );
+            } catch {}
           }
           const incomingStaff = payload.staff || payload[STORAGE_KEY_STAFF];
           if (incomingStaff && incomingStaff.length > 0) {
-            const normalizedStaff = incomingStaff.map(s => ({
+            const normalizedStaff = incomingStaff.map((s) => ({
               id: s.staffId || s.id,
               name: s.fullName || s.name,
-              role: s.roleTitle || s.role || 'Waiter',
-              phone: s.phone || '',
-              email: s.email || '',
-              shift: s.shift || 'Full Day',
-              status: s.isActive === false ? 'inactive' : 'active'
+              role: s.roleTitle || s.role || "Waiter",
+              phone: s.phone || "",
+              email: s.email || "",
+              shift: s.shift || "Full Day",
+              status: s.isActive === false ? "inactive" : "active",
             }));
             setStaffList(normalizedStaff);
-            try { localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(normalizedStaff)); } catch {}
+            try {
+              localStorage.setItem(
+                STORAGE_KEY_STAFF,
+                JSON.stringify(normalizedStaff),
+              );
+            } catch {}
           }
           if (payload["avsr_auth_users_v1"]) {
             try {
@@ -1104,12 +1286,24 @@ export function App() {
     }
     const enrichedSettlement = {
       ...settlementData,
-      id: settlementData.id || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      date: settlementData.date || new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      cookingStartedAt: tableObj?.cookingStartedAt || tableObj?.orderTime || settlementData.settledAt,
+      id:
+        settlementData.id ||
+        `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      date:
+        settlementData.date ||
+        new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+      cookingStartedAt:
+        tableObj?.cookingStartedAt ||
+        tableObj?.orderTime ||
+        settlementData.settledAt,
       completedAt: tableObj?.completedAt || settlementData.settledAt,
       completedDuration: finalDuration || "12m 30s",
-      guests: tableObj?.guests ?? settlementData.guests ?? tableObj?.capacity ?? 1,
+      guests:
+        tableObj?.guests ?? settlementData.guests ?? tableObj?.capacity ?? 1,
       orderTime: tableObj?.orderTime || settlementData.settledAt,
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
@@ -1137,8 +1331,13 @@ export function App() {
     });
     setTables(updatedTables);
     try {
-      const isDeleted = (id) => (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(d => String(d) === String(id));
-      const cleanTables = updatedTables.filter(t => !isDeleted(t.id));
+      const isDeleted = (id) =>
+        (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
+          (d) => String(d) === String(id),
+        );
+      const cleanTables = updatedTables
+        .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+        .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
     } catch {}
 
@@ -1180,7 +1379,22 @@ export function App() {
       return false;
     }
 
-    setMenuItems((prev) => [newItem, ...prev]);
+    const createdItem =
+      result.data &&
+      typeof result.data === "object" &&
+      !Array.isArray(result.data)
+        ? result.data
+        : {};
+    const savedItem = normalizeMenuItem({
+      ...newItem,
+      ...createdItem,
+      id:
+        createdItem.menuItemId ??
+        createdItem.menu_item_id ??
+        createdItem.id ??
+        newItem.id,
+    });
+    setMenuItems((prev) => [savedItem, ...prev]);
     showToast(`✅ Dish "${newItem.name}" saved to the backend menu!`);
     return true;
   };
@@ -1709,7 +1923,10 @@ export function App() {
               section: order.section,
               server: order.server,
               guests: order.guests ?? order.occupiedChairs ?? 0,
-              orderTime: order.orderTime || order.cookingStartedAt || order.orderTimestamp,
+              orderTime:
+                order.orderTime ||
+                order.cookingStartedAt ||
+                order.orderTimestamp,
               items: order.items,
               discountPercent: order.discountPercent || 0,
               discountAmount: order.discountAmount || 0,

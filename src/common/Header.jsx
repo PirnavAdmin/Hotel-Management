@@ -553,9 +553,10 @@ export function Header({
                   position: "absolute",
                   top: "-4px",
                   right: "-4px",
-                  background: kitchenNotifications.some(
-                    (n) => n.type === "cooking_completed",
-                  )
+                  background: (Array.isArray(kitchenNotifications)
+                    ? kitchenNotifications
+                    : []
+                  ).some((n) => n.type === "cooking_completed")
                     ? "#10b981"
                     : "#f59e0b",
                   color: "#000000",
