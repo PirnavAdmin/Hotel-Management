@@ -634,6 +634,48 @@
       "prepTime": "3 min",
       "description": "Creamy malai kulfi served with rose falooda sev, sabja basil seeds, and pure rose syrup.",
       "image": "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=500&auto=format&fit=crop&q=80"
+    },
+    {
+      "id": "m-7",
+      "backendId": 7,
+      "name": "Veg THali",
+      "category": "veg",
+      "price": 120,
+      "isVeg": false,
+      "isChefSpecial": true,
+      "spiceLevel": 3,
+      "prepTime": "15 min",
+      "description": "string",
+      "image": "string",
+      "isAvailable": true
+    },
+    {
+      "id": "m-6",
+      "backendId": 6,
+      "name": "string",
+      "category": "string",
+      "price": 100000,
+      "isVeg": false,
+      "isChefSpecial": true,
+      "spiceLevel": 3,
+      "prepTime": "15 min",
+      "description": "string",
+      "image": "string",
+      "isAvailable": true
+    },
+    {
+      "id": "m-5",
+      "backendId": 5,
+      "name": "Paneer Butter Masala",
+      "category": "curries",
+      "price": 260,
+      "isVeg": true,
+      "isChefSpecial": false,
+      "spiceLevel": 1,
+      "prepTime": "12 min",
+      "description": "Cottage cheese cubes in rich tomato cashew cream gravy",
+      "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
+      "isAvailable": true
     }
   ],
   "gourmet_pos_staff_v1": [
@@ -1511,8 +1553,95 @@
       "tipAmount": 50,
       "grandTotal": 1326,
       "paymentMethod": "upi",
+      "paymentMethod": "upi",
       "settledAt": "01:10 PM",
       "invoiceNo": "INV-1048"
+    },
+    {
+      "tableId": 2,
+      "tableName": "Table 2",
+      "section": "Main Hall",
+      "server": "Vikram S.",
+      "items": [
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "05:19 PM",
+          "kotStatus": "received"
+        },
+        {
+          "id": "bir-3",
+          "name": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "05:19 PM",
+          "kotStatus": "received"
+        }
+      ],
+      "subtotal": 790,
+      "discountAmount": 0,
+      "taxAmount": 39.5,
+      "serviceChargeAmount": 39.5,
+      "tipAmount": 0,
+      "grandTotal": 869,
+      "paymentMethod": "cash",
+      "cashTendered": 869,
+      "changeDue": 0,
+      "settledAt": "05:19 PM",
+      "date": "07 Oct 2026",
+      "invoiceNo": "INV-21454",
+      "cookingStartedAt": "05:19 PM",
+      "completedAt": "05:19 PM",
+      "completedDuration": "00m 00s",
+      "orderTime": "05:19 PM",
+      "orderTimestamp": 1791345089779
+    },
+    {
+      "tableId": 3,
+      "tableName": "Table 3",
+      "section": "Main Hall",
+      "server": "Rajesh K.",
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "04:46 PM",
+          "kotStatus": "served"
+        },
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "04:46 PM",
+          "kotStatus": "served"
+        }
+      ],
+      "subtotal": 760,
+      "discountAmount": 0,
+      "taxAmount": 38,
+      "serviceChargeAmount": 38,
+      "tipAmount": 0,
+      "grandTotal": 836,
+      "paymentMethod": "cash",
+      "cashTendered": 836,
+      "changeDue": 0,
+      "settledAt": "09:16 AM",
+      "date": "07 Oct 2026",
+      "invoiceNo": "INV-36112",
+      "cookingStartedAt": "04:48 PM",
+      "completedAt": "05:01 PM",
+      "completedDuration": "15m 00s",
+      "orderTime": "04:46 PM",
+      "orderTimestamp": 1791344776113
     }
   ],
   "avsr_auth_users_v1": [
@@ -1634,11 +1763,11 @@
     }
   ],
   "avsr_latest_kitchen_alert": {
-    "id": 1791519308722.2278,
-    "timestamp": "09:45 AM",
+    "id": 1791520300206.695,
+    "timestamp": "10:01 am",
     "read": false,
-    "tableId": 2,
-    "tableName": "Table 2",
+    "tableId": 3,
+    "tableName": "Table 3",
     "type": "cooking_started",
     "title": "🔥 Cooking Started",
     "message": "Chef started cooking order for Table 2!"

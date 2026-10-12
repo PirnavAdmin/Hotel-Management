@@ -2236,7 +2236,7 @@ import {
   Users,
   ChevronDown,
   Sun,
-  Moon
+  Moon,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
 import { KOTModal } from "./KOTModal";
@@ -3068,7 +3068,7 @@ export function KitchenKOTView({
                 fontSize: "0.82rem",
                 fontFamily: "monospace",
                 whiteSpace: "nowrap",
-                flexShrink: 0
+                flexShrink: 0,
               }}
             >
               <div
@@ -3266,9 +3266,7 @@ export function KitchenKOTView({
                         ? "linear-gradient(135deg, #f59e0b, #ea580c)"
                         : "transparent",
                     color:
-                      statusFilter === tab.id
-                        ? "#ffffff"
-                        : "var(--text-main)",
+                      statusFilter === tab.id ? "#ffffff" : "var(--text-main)",
                     border: "none",
                     display: "flex",
                     alignItems: "center",
@@ -3712,7 +3710,6 @@ export function KitchenKOTView({
                   : 0;
                 const totalCount = tbl.items ? tbl.items.length : 0;
 
-                const priorityMeta = getPriorityMeta(tbl);
                 const delayMeta = getDelayMeta(tbl);
 
                 let headerBg = isLightTheme
@@ -3933,7 +3930,7 @@ export function KitchenKOTView({
                         </div>
                       </div>
 
-                      {/* Right: Priority badge + Paid Pill + Print Slip Button */}
+                      {/* Right: Paid Pill + Print Slip Button */}
                       <div
                         style={{
                           display: "flex",
@@ -3942,21 +3939,6 @@ export function KitchenKOTView({
                           flexShrink: 0,
                         }}
                       >
-                        <span
-                          style={{
-                            background: priorityMeta.bg,
-                            color: priorityMeta.color,
-                            border: `1px solid ${priorityMeta.border}`,
-                            padding: "2px 6px",
-                            borderRadius: "5px",
-                            fontSize: "0.6rem",
-                            fontWeight: 900,
-                            whiteSpace: "nowrap",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          {priorityMeta.emoji} {priorityMeta.label}
-                        </span>
                         {delayMeta.isDelayed && (
                           <span
                             style={{
