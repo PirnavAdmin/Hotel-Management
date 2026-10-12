@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { INITIAL_TABLES } from "./data/initialTables";
 import { MENU_ITEMS } from "./data/menuData";
 import { INITIAL_STAFF } from "./data/initialStaff";
+import { INITIAL_ORDERS } from "./data/initialOrders";
 // Admin modules
 import { AdminPortal } from "./admin";
 // Kitchen KOT modules
@@ -51,26 +52,9 @@ const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const getDeletedTableIds = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
-    if (saved) return JSON.parse(saved);
-    // Auto-detect any initially deleted tables already missing from saved tables
-    const savedTables = localStorage.getItem(STORAGE_KEY_TABLES);
-    if (savedTables) {
-      const parsed = JSON.parse(savedTables);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const existingIds = new Set(parsed.map((t) => String(t.id)));
-        const missingFromInitial = INITIAL_TABLES.filter(
-          (t) => !existingIds.has(String(t.id)),
-        ).map((t) => t.id);
-        if (missingFromInitial.length > 0) {
-          try {
-            localStorage.setItem(
-              STORAGE_KEY_DELETED_TABLES,
-              JSON.stringify(missingFromInitial),
-            );
-          } catch {}
-          return missingFromInitial;
-        }
-      }
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {}
   return [];
@@ -93,26 +77,40 @@ export function App() {
   // Load saved tables or fallback to INITIAL_TABLES (filtering out any deleted tables)
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
-    const isDeleted = (id) => deleted.some((d) => String(d) === String(id));
+    const isDeleted = (id) =>
+      (Array.isArray(deleted) ? deleted : []).some(
+        (d) => String(d) === String(id),
+      );
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TABLES);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter((t) => !isDeleted(t.id));
+          return parsed
+            .filter((t) => !isDeleted(t.id))
+            .map((t) => ({
+              ...t,
+              items: Array.isArray(t.items) ? t.items : [],
+            }));
         }
       }
     } catch {
       // Fallback
     }
-    return INITIAL_TABLES.filter((t) => !isDeleted(t.id));
+    return INITIAL_TABLES.filter((t) => !isDeleted(t.id)).map((t) => ({
+      ...t,
+      items: Array.isArray(t.items) ? t.items : [],
+    }));
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
   const [menuItems, setMenuItems] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_MENU);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {
       // Fallback
     }
@@ -123,7 +121,10 @@ export function App() {
   const [staffList, setStaffList] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {
       // Fallback
     }
@@ -134,11 +135,14 @@ export function App() {
   const [pastOrders, setPastOrders] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_ORDERS);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {
       // Fallback
     }
-    return [];
+    return INITIAL_ORDERS;
   });
 
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
@@ -154,15 +158,20 @@ export function App() {
 
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
-    // 1. Load live tables from backend API
+    // 1. Load live tables from backend API merged with INITIAL_TABLES
     apiGetTables().then((backendTables) => {
       if (backendTables && backendTables.length > 0) {
-        setTables(backendTables);
+        const map = new Map();
+        INITIAL_TABLES.forEach((t) => map.set(Number(t.id), t));
+        backendTables.forEach((t) => {
+          const id = Number(t.tableId || t.id);
+          const existing = map.get(id) || {};
+          map.set(id, { ...existing, ...t, id });
+        });
+        const merged = Array.from(map.values()).sort((a, b) => a.id - b.id);
+        setTables(merged);
         try {
-          localStorage.setItem(
-            STORAGE_KEY_TABLES,
-            JSON.stringify(backendTables),
-          );
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(merged));
         } catch {}
       }
     });
@@ -177,7 +186,23 @@ export function App() {
         response?.menuItems,
       ].find((candidate) => Array.isArray(candidate));
       if (Array.isArray(backendMenu) && backendMenu.length > 0) {
-        const normalizedMenu = backendMenu.map(normalizeMenuItem);
+        const menuByName = new Map(
+          MENU_ITEMS.map(normalizeMenuItem)
+            .filter((item) => item.name)
+            .map((item) => [item.name.toLowerCase().trim(), item]),
+        );
+        backendMenu.map(normalizeMenuItem).forEach((item) => {
+          const key = item.name.toLowerCase().trim();
+          if (!key) return;
+          const existing = menuByName.get(key) || {};
+          menuByName.set(key, {
+            ...existing,
+            ...item,
+            image: item.image || existing.image || "",
+            description: item.description || existing.description || "",
+          });
+        });
+        const normalizedMenu = Array.from(menuByName.values());
         setMenuItems(normalizedMenu);
         try {
           localStorage.setItem(
@@ -189,28 +214,41 @@ export function App() {
     });
 
     // 3. Load live staff members from backend API
-    apiGetStaff().then((response) => {
-      const backendStaff = Array.isArray(response)
-        ? response
-        : response?.success
-          ? response.data
-          : null;
-      if (Array.isArray(backendStaff) && backendStaff.length > 0) {
-        setStaffList(backendStaff);
+    apiGetStaff().then((backendStaff) => {
+      if (backendStaff && backendStaff.length > 0) {
+        const map = new Map();
+        INITIAL_STAFF.forEach((s) => map.set(Number(s.id), s));
+        backendStaff.forEach((s) => {
+          const id = Number(s.staffId || s.id);
+          map.set(id, { ...(map.get(id) || {}), ...s, id });
+        });
+        const mergedStaff = Array.from(map.values()).sort(
+          (a, b) => a.id - b.id,
+        );
+        setStaffList(mergedStaff);
         try {
-          localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(backendStaff));
+          localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(mergedStaff));
         } catch {}
       }
     });
 
-    // 4. Load live past settled orders from backend API
+    // 4. Load live past settled orders from backend API merged with INITIAL_ORDERS
     apiGetOrders().then((backendOrders) => {
       if (backendOrders && backendOrders.length > 0) {
-        setPastOrders(backendOrders);
+        const map = new Map();
+        const getOrderKey = (o) =>
+          o.id ||
+          `${o.invoiceNo || "INV"}_${o.date || o.settledDate || ""}_${o.orderTimestamp || ""}`;
+        INITIAL_ORDERS.forEach((o) => map.set(getOrderKey(o), o));
+        backendOrders.forEach((o) => map.set(getOrderKey(o), o));
+        const mergedOrders = Array.from(map.values()).sort(
+          (a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0),
+        );
+        setPastOrders(mergedOrders);
         try {
           localStorage.setItem(
             STORAGE_KEY_ORDERS,
-            JSON.stringify(backendOrders),
+            JSON.stringify(mergedOrders),
           );
         } catch {}
       }
@@ -342,14 +380,14 @@ export function App() {
 
   const pushGlobalSync = (payload) => {
     try {
-      fetch(
-        `${import.meta.env.VITE_API_BASE_URL || "https://cultivate-suitable-manmade.ngrok-free.dev"}/api/sync`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+      fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
-      ).catch(() => {});
+        body: JSON.stringify(payload),
+      }).catch(() => {});
     } catch {}
   };
 
@@ -401,7 +439,9 @@ export function App() {
   useEffect(() => {
     try {
       const isDeleted = (id) =>
-        deletedTableIds.some((d) => String(d) === String(id));
+        (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
+          (d) => String(d) === String(id),
+        );
       const cleanTables = tables.filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
       pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
@@ -432,49 +472,170 @@ export function App() {
   // Real-time cross-device network synchronization via SSE Stream & REST API
   useEffect(() => {
     // 1. Fetch initial network DB state on startup
-    fetch(
-      `${import.meta.env.VITE_API_BASE_URL || "https://cultivate-suitable-manmade.ngrok-free.dev"}/api/state`,
-    )
+    fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/state`, {
+      headers: {
+        "ngrok-skip-browser-warning": "true",
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (!data) return;
-        if (data[STORAGE_KEY_TABLES]) {
+
+        // Support both direct API schema and local storage key schema
+        const incomingTables =
+          data.tables || data.data?.tables || data[STORAGE_KEY_TABLES];
+        if (incomingTables && incomingTables.length > 0) {
           const freshDel = getDeletedTableIds();
-          const clean = data[STORAGE_KEY_TABLES].filter(
-            (t) => !freshDel.some((d) => String(d) === String(t.id)),
-          );
+          const map = new Map();
+          INITIAL_TABLES.forEach((t) => map.set(Number(t.id), t));
+          incomingTables.forEach((t) => {
+            const id = Number(t.tableId || t.id);
+            const existing = map.get(id) || {};
+            map.set(id, {
+              ...existing,
+              id,
+              name: t.tableName || t.name || existing.name || `Table ${id}`,
+              section:
+                t.sectionArea || t.section || existing.section || "Main Hall",
+              capacity:
+                t.capacityChairs || t.capacity || existing.capacity || 4,
+              status: (t.status || existing.status || "vacant").toLowerCase(),
+              server:
+                t.assignedServerName || t.server || existing.server || "Staff",
+              guests: t.occupiedChairs || t.guests || existing.guests || 0,
+              items: Array.isArray(t.items) ? t.items : existing.items || [],
+              orderTime: t.orderTime || existing.orderTime || null,
+              discountPercent:
+                t.discountPercent ?? existing.discountPercent ?? 0,
+              serviceCharge: t.serviceCharge ?? existing.serviceCharge ?? 5,
+              occupiedSince:
+                t.occupiedSince || existing.occupiedSince || "10:00 AM",
+            });
+          });
+          const clean = Array.from(map.values())
+            .filter(
+              (t) =>
+                !(Array.isArray(freshDel) ? freshDel : []).some(
+                  (d) => String(d) === String(t.id),
+                ),
+            )
+            .sort((a, b) => a.id - b.id);
           setTables(clean);
           try {
             localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
           } catch {}
         }
-        if (data[STORAGE_KEY_ORDERS]) {
-          setPastOrders(data[STORAGE_KEY_ORDERS]);
+
+        const incomingOrders =
+          data.pastOrders || data.data?.pastOrders || data[STORAGE_KEY_ORDERS];
+        if (incomingOrders && incomingOrders.length > 0) {
+          const map = new Map();
+          const getOrderKey = (o) =>
+            o.id ||
+            `${o.invoiceNo || "INV"}_${o.date || o.settledDate || ""}_${o.orderTimestamp || ""}`;
+          INITIAL_ORDERS.forEach((o) => map.set(getOrderKey(o), o));
+          incomingOrders.forEach((o) => map.set(getOrderKey(o), o));
+          const mergedOrders = Array.from(map.values()).sort(
+            (a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0),
+          );
+          setPastOrders(mergedOrders);
           try {
             localStorage.setItem(
               STORAGE_KEY_ORDERS,
-              JSON.stringify(data[STORAGE_KEY_ORDERS]),
+              JSON.stringify(mergedOrders),
             );
           } catch {}
         }
-        if (data[STORAGE_KEY_MENU]) {
-          setMenuItems(data[STORAGE_KEY_MENU]);
+
+        const incomingMenu =
+          data.menuItems || data.data?.menuItems || data[STORAGE_KEY_MENU];
+        if (incomingMenu && incomingMenu.length > 0) {
+          const map = new Map();
+          MENU_ITEMS.forEach((m) =>
+            map.set(String(m.name).toLowerCase().trim(), m),
+          );
+          incomingMenu.forEach((m) => {
+            const key = String(m.dishName || m.name)
+              .toLowerCase()
+              .trim();
+            const existing = map.get(key) || {};
+            map.set(key, {
+              ...existing,
+              id: m.menuItemId
+                ? String(m.menuItemId)
+                : existing.id || String(m.id),
+              name: m.dishName || m.name || existing.name,
+              category: m.category || existing.category || "biryani",
+              price: parseFloat(m.price || existing.price || 0),
+              isVeg: m.dietaryType
+                ? m.dietaryType === "VEG"
+                : (existing.isVeg ?? true),
+              spiceLevel:
+                m.spiceLevel === 1
+                  ? "Mild"
+                  : m.spiceLevel === 2
+                    ? "Medium"
+                    : existing.spiceLevel || "Spicy",
+              description:
+                m.shortDescription ||
+                m.description ||
+                existing.description ||
+                "",
+              prepTime: m.prepTimeMinutes
+                ? `${m.prepTimeMinutes} mins`
+                : existing.prepTime || "15 mins",
+              prepTimeMinutes:
+                m.prepTimeMinutes || existing.prepTimeMinutes || 15,
+              isChefSpecial:
+                m.isChefsSpecial ?? existing.isChefSpecial ?? false,
+              isAvailable: m.isAvailable !== false,
+              image:
+                m.imageUrl ||
+                m.image ||
+                existing.image ||
+                "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
+            });
+          });
+          const normalizedMenu = Array.from(map.values());
+          setMenuItems(normalizedMenu);
           try {
             localStorage.setItem(
               STORAGE_KEY_MENU,
-              JSON.stringify(data[STORAGE_KEY_MENU]),
+              JSON.stringify(normalizedMenu),
             );
           } catch {}
         }
-        if (data[STORAGE_KEY_STAFF]) {
-          setStaffList(data[STORAGE_KEY_STAFF]);
+
+        const incomingStaff =
+          data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
+        if (incomingStaff && incomingStaff.length > 0) {
+          const map = new Map();
+          INITIAL_STAFF.forEach((s) => map.set(Number(s.id), s));
+          incomingStaff.forEach((s) => {
+            const id = Number(s.staffId || s.id);
+            map.set(id, {
+              ...(map.get(id) || {}),
+              id,
+              name: s.fullName || s.name,
+              role: s.roleTitle || s.role || "Waiter",
+              phone: s.phone || "",
+              email: s.email || "",
+              shift: s.shift || "Full Day",
+              status: s.isActive === false ? "inactive" : "active",
+            });
+          });
+          const normalizedStaff = Array.from(map.values()).sort(
+            (a, b) => a.id - b.id,
+          );
+          setStaffList(normalizedStaff);
           try {
             localStorage.setItem(
               STORAGE_KEY_STAFF,
-              JSON.stringify(data[STORAGE_KEY_STAFF]),
+              JSON.stringify(normalizedStaff),
             );
           } catch {}
         }
+
         if (data["avsr_auth_users_v1"]) {
           try {
             localStorage.setItem(
@@ -490,7 +651,7 @@ export function App() {
     let es;
     try {
       es = new EventSource(
-        `${import.meta.env.VITE_API_BASE_URL || "https://cultivate-suitable-manmade.ngrok-free.dev"}/api/events`,
+        `${import.meta.env.VITE_API_BASE_URL || ""}/api/events`,
       );
       es.onmessage = (e) => {
         try {
@@ -498,40 +659,96 @@ export function App() {
           const payload = parsedMsg.payload;
           if (!payload) return;
 
-          if (payload[STORAGE_KEY_TABLES]) {
+          const incomingTables = payload.tables || payload[STORAGE_KEY_TABLES];
+          if (incomingTables && incomingTables.length > 0) {
             const freshDel = getDeletedTableIds();
-            const clean = payload[STORAGE_KEY_TABLES].filter(
-              (t) => !freshDel.some((d) => String(d) === String(t.id)),
-            );
+            const clean = incomingTables
+              .filter(
+                (t) =>
+                  !(Array.isArray(freshDel) ? freshDel : []).some(
+                    (d) => String(d) === String(t.id || t.tableId),
+                  ),
+              )
+              .map((t) => ({
+                id: t.tableId || t.id,
+                name: t.tableName || t.name || `Table ${t.tableId || t.id}`,
+                section: t.sectionArea || t.section || "Main Hall",
+                capacity: t.capacityChairs || t.capacity || 4,
+                status: (t.status || "vacant").toLowerCase(),
+                server: t.assignedServerName || t.server || "Staff",
+                guests: t.occupiedChairs || t.guests || 0,
+                items: Array.isArray(t.items) ? t.items : [],
+                orderTime: t.orderTime || null,
+                discountPercent: t.discountPercent || 0,
+                serviceCharge: t.serviceCharge || 5,
+                occupiedSince: t.occupiedSince || "10:00 AM",
+              }));
             setTables(clean);
             try {
               localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
             } catch {}
           }
-          if (payload[STORAGE_KEY_ORDERS]) {
-            setPastOrders(payload[STORAGE_KEY_ORDERS]);
+          const incomingOrders =
+            payload.pastOrders || payload[STORAGE_KEY_ORDERS];
+          if (incomingOrders && incomingOrders.length > 0) {
+            setPastOrders(incomingOrders);
             try {
               localStorage.setItem(
                 STORAGE_KEY_ORDERS,
-                JSON.stringify(payload[STORAGE_KEY_ORDERS]),
+                JSON.stringify(incomingOrders),
               );
             } catch {}
           }
-          if (payload[STORAGE_KEY_MENU]) {
-            setMenuItems(payload[STORAGE_KEY_MENU]);
+          const incomingMenu = payload.menuItems || payload[STORAGE_KEY_MENU];
+          if (incomingMenu && incomingMenu.length > 0) {
+            const normalizedMenu = incomingMenu.map((m) => ({
+              id: m.menuItemId ? String(m.menuItemId) : String(m.id),
+              name: m.dishName || m.name,
+              category: m.category || "biryani",
+              price: parseFloat(m.price || 0),
+              isVeg: m.dietaryType === "VEG" || m.isVeg === true,
+              spiceLevel:
+                m.spiceLevel === 1
+                  ? "Mild"
+                  : m.spiceLevel === 2
+                    ? "Medium"
+                    : "Spicy",
+              description: m.shortDescription || m.description || "",
+              prepTime: m.prepTimeMinutes
+                ? `${m.prepTimeMinutes} mins`
+                : "15 mins",
+              prepTimeMinutes: m.prepTimeMinutes || 15,
+              isChefSpecial: !!m.isChefsSpecial || !!m.isChefSpecial,
+              isAvailable: m.isAvailable !== false,
+              image:
+                m.imageUrl ||
+                m.image ||
+                "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
+            }));
+            setMenuItems(normalizedMenu);
             try {
               localStorage.setItem(
                 STORAGE_KEY_MENU,
-                JSON.stringify(payload[STORAGE_KEY_MENU]),
+                JSON.stringify(normalizedMenu),
               );
             } catch {}
           }
-          if (payload[STORAGE_KEY_STAFF]) {
-            setStaffList(payload[STORAGE_KEY_STAFF]);
+          const incomingStaff = payload.staff || payload[STORAGE_KEY_STAFF];
+          if (incomingStaff && incomingStaff.length > 0) {
+            const normalizedStaff = incomingStaff.map((s) => ({
+              id: s.staffId || s.id,
+              name: s.fullName || s.name,
+              role: s.roleTitle || s.role || "Waiter",
+              phone: s.phone || "",
+              email: s.email || "",
+              shift: s.shift || "Full Day",
+              status: s.isActive === false ? "inactive" : "active",
+            }));
+            setStaffList(normalizedStaff);
             try {
               localStorage.setItem(
                 STORAGE_KEY_STAFF,
-                JSON.stringify(payload[STORAGE_KEY_STAFF]),
+                JSON.stringify(normalizedStaff),
               );
             } catch {}
           }
@@ -1049,6 +1266,9 @@ export function App() {
     }
     const enrichedSettlement = {
       ...settlementData,
+      id:
+        settlementData.id ||
+        `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       date:
         settlementData.date ||
         new Date().toLocaleDateString("en-IN", {
@@ -1062,6 +1282,8 @@ export function App() {
         settlementData.settledAt,
       completedAt: tableObj?.completedAt || settlementData.settledAt,
       completedDuration: finalDuration || "12m 30s",
+      guests:
+        tableObj?.guests ?? settlementData.guests ?? tableObj?.capacity ?? 1,
       orderTime: tableObj?.orderTime || settlementData.settledAt,
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
@@ -1090,7 +1312,9 @@ export function App() {
     setTables(updatedTables);
     try {
       const isDeleted = (id) =>
-        deletedTableIds.some((d) => String(d) === String(id));
+        (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
+          (d) => String(d) === String(id),
+        );
       const cleanTables = updatedTables.filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
     } catch {}
@@ -1105,10 +1329,19 @@ export function App() {
       name: settlementData.tableName,
       section: settlementData.section,
       server: settlementData.server,
-      guests: 2,
+      guests: enrichedSettlement.guests,
+      orderTime: enrichedSettlement.orderTime,
+      settledAt: enrichedSettlement.settledAt,
       items: settlementData.items,
       discountPercent: 0,
       serviceCharge: 5,
+      subtotal: settlementData.subtotal,
+      taxAmount: settlementData.taxAmount,
+      serviceChargeAmount: settlementData.serviceChargeAmount,
+      grandTotal: settlementData.grandTotal,
+      paymentMethod: settlementData.paymentMethod,
+      invoiceNo: settlementData.invoiceNo,
+      date: enrichedSettlement.date,
     });
     setIsReceiptOpen(true);
   };
@@ -1667,7 +1900,11 @@ export function App() {
               name: order.tableName,
               section: order.section,
               server: order.server,
-              guests: order.guests || 2,
+              guests: order.guests ?? order.occupiedChairs ?? 0,
+              orderTime:
+                order.orderTime ||
+                order.cookingStartedAt ||
+                order.orderTimestamp,
               items: order.items,
               discountPercent: order.discountPercent || 0,
               discountAmount: order.discountAmount || 0,

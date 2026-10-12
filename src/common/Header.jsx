@@ -225,7 +225,7 @@ export function Header({
                 POS
               </span>
             </div>
-            <p style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+            <p className="desktop-only" style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
               {tables.length} Tables • {totalChairs} Chairs
             </p>
           </div>
@@ -301,6 +301,7 @@ export function Header({
 
       {/* 2.5 LIVE RESTAURANT DATE & TIME */}
       <div
+        className="desktop-only"
         style={{
           display: "flex",
           alignItems: "center",
@@ -360,6 +361,7 @@ export function Header({
 
       {/* 3. CENTER LIVE FLOOR METRICS & RUPEE REVENUE */}
       <div
+        className="desktop-only"
         style={{
           display: "flex",
           alignItems: "center",
@@ -538,14 +540,14 @@ export function Header({
             }}
             title="Kitchen Cooking Status Updates"
           >
-            {kitchenNotifications.some(
+            {Array.isArray(kitchenNotifications) && kitchenNotifications.some(
               (n) => n.type === "cooking_completed",
             ) ? (
               <BellRing size={16} color="#10b981" />
             ) : (
               <Bell size={16} />
             )}
-            {kitchenNotifications.length > 0 && (
+            {Array.isArray(kitchenNotifications) && kitchenNotifications.length > 0 && (
               <span
                 style={{
                   position: "absolute",

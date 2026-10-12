@@ -49,6 +49,7 @@ export function TableView({ tables, onSelectTable }) {
 
   return (
     <div
+      className="mobile-container"
       style={{ padding: "1.25rem 1.5rem", maxWidth: "100%", margin: "0 auto" }}
     >
       {/* Floor Plan Title & Controls */}
@@ -95,8 +96,8 @@ export function TableView({ tables, onSelectTable }) {
               marginTop: "3px",
             }}
           >
-            Select any table from the floor below to take orders, add biryanis &
-            generate bills in <strong>Rupees (₹)</strong>.
+            Select any table to take orders, add food or beverages, and generate
+            bills in <strong>Rupees (₹)</strong>.
           </p>
         </div>
 
@@ -295,20 +296,20 @@ export function TableView({ tables, onSelectTable }) {
 
           const isOccupied = table.status !== "vacant";
           const hasCooking =
-            isOccupied && table.items.some((i) => i.kotStatus === "cooking");
+            isOccupied && items.some((i) => i.kotStatus === "cooking");
           const allReady =
             isOccupied &&
-            table.items.length > 0 &&
-            table.items.every(
+            items.length > 0 &&
+            items.every(
               (i) =>
                 i.kotStatus === "ready" ||
                 i.kotStatus === "served" ||
                 i.kotStatus === "completed",
             );
           const hasReady =
-            isOccupied && table.items.some((i) => i.kotStatus === "ready");
+            isOccupied && items.some((i) => i.kotStatus === "ready");
           const readyCount = isOccupied
-            ? table.items.filter(
+            ? items.filter(
                 (i) => i.kotStatus === "ready" || i.kotStatus === "served",
               ).length
             : 0;
@@ -371,7 +372,6 @@ export function TableView({ tables, onSelectTable }) {
                     marginBottom: "0.2rem",
                   }}
                 >
-                  {/* Prominent High-Contrast Table Number */}
                   <div
                     style={{
                       display: "flex",
@@ -424,8 +424,6 @@ export function TableView({ tables, onSelectTable }) {
                       Table {table.id}
                     </h3>
                   </div>
-
-                  {/* Status Indicator */}
                   <div
                     style={{
                       display: "flex",
@@ -489,7 +487,7 @@ export function TableView({ tables, onSelectTable }) {
                 </div>
 
                 {/* Kitchen Cooking Status Live Badge */}
-                {isOccupied && table.items.length > 0 && (
+                {isOccupied && items.length > 0 && (
                   <div style={{ marginTop: "0.32rem" }}>
                     {allReady ? (
                       <div
@@ -559,7 +557,7 @@ export function TableView({ tables, onSelectTable }) {
                           }}
                         >
                           {readyCount > 0
-                            ? `🔥 Cooking (${readyCount}/${table.items.length} Ready)`
+                            ? `🔥 Cooking (${readyCount}/${items.length} Ready)`
                             : "🔥 Cooking in Kitchen"}
                         </span>
                         <span
@@ -591,7 +589,7 @@ export function TableView({ tables, onSelectTable }) {
                             color: "#34d399",
                           }}
                         >
-                          🔔 Dishes Ready ({readyCount}/{table.items.length})
+                          🔔 Dishes Ready ({readyCount}/{items.length})
                         </span>
                       </div>
                     ) : (
@@ -687,7 +685,7 @@ export function TableView({ tables, onSelectTable }) {
                         gap: "0.15rem",
                       }}
                     >
-                      {table.items.slice(0, 1).map((item, idx) => (
+                      {items.slice(0, 1).map((item, idx) => (
                         <div
                           key={idx}
                           style={{
@@ -717,7 +715,7 @@ export function TableView({ tables, onSelectTable }) {
                           </span>
                         </div>
                       ))}
-                      {table.items.length > 1 && (
+                      {items.length > 1 && (
                         <div
                           style={{
                             color: "var(--text-dim)",
@@ -725,8 +723,8 @@ export function TableView({ tables, onSelectTable }) {
                             fontStyle: "italic",
                           }}
                         >
-                          + {table.items.length - 1} more dish
-                          {table.items.length > 2 ? "es" : ""}...
+                          + {items.length - 1} more dish
+                          {items.length > 2 ? "es" : ""}...
                         </div>
                       )}
                     </div>
