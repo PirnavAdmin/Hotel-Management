@@ -2725,7 +2725,7 @@ export function KitchenKOTView({
 
     // 3. Status filter
     if (statusFilter !== "all") {
-      const items = Array.isArray(t.items) ? t.items : [];
+      const items = Array.isArray(t?.items) ? t.items : [];
       const allCompleted = items.length > 0 && items.every(isItemCompleted);
       const hasCooking = items.some(isItemCooking);
       const hasReceived = items.some(isItemReceived);
@@ -2743,13 +2743,13 @@ export function KitchenKOTView({
   // Kitchen stats: accurately reflect Received -> Cooking -> Completed (including paid completed!)
   const totalOrdersCount = allKitchenTickets.length;
   const pendingOrdersCount = allKitchenTickets.filter(
-    (t) => !t.isPaid && (Array.isArray(t.items) ? t.items : []).some(isItemReceived),
+    (t) => !t.isPaid && Array.isArray(t?.items) && t.items.some(isItemReceived),
   ).length;
   const cookingOrdersCount = allKitchenTickets.filter(
-    (t) => !t.isPaid && (Array.isArray(t.items) ? t.items : []).some(isItemCooking),
+    (t) => !t.isPaid && Array.isArray(t?.items) && t.items.some(isItemCooking),
   ).length;
   const completedOrdersCount = allKitchenTickets.filter(
-    (t) => t.isPaid || ((Array.isArray(t.items) ? t.items.length : 0) > 0 && t.items.every(isItemCompleted)),
+    (t) => t.isPaid || (Array.isArray(t?.items) && t.items.length > 0 && t.items.every(isItemCompleted)),
   ).length;
 
   // Auto-switch to "Received" tab when a new KOT arrives
@@ -3423,10 +3423,7 @@ export function KitchenKOTView({
                     selectedTableFilter === table.name;
                   const tableDot = matchingTickets.some(
                     (ticket) =>
-                      !ticket.isPaid &&
-                      (Array.isArray(ticket.items) ? ticket.items : []).some(
-                        isItemCooking,
-                      ),
+                      !ticket.isPaid && Array.isArray(ticket?.items) && ticket.items.some(isItemCooking),
                   )
                     ? "#ea580c"
                     : matchingTickets.length > 0

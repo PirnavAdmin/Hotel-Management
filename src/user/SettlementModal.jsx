@@ -50,6 +50,8 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
         tableName: table.name,
         section: table.section,
         server: table.server || 'Srija Chepuri',
+        guests: table.guests ?? table.occupiedChairs ?? table.capacity ?? 1,
+        orderTime: table.orderTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         items: [...table.items],
         subtotal,
         discountAmount,
