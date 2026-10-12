@@ -312,7 +312,7 @@ export function TableView({ tables, onSelectTable }) {
             ? items.filter(
                 (i) => i.kotStatus === "ready" || i.kotStatus === "served",
               ).length
-            : 0;
+              : 0;
 
           const isTable5 = table.id === 5;
 

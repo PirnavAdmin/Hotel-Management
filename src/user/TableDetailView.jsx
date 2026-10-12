@@ -3207,31 +3207,18 @@ export function TableDetailView({
               style={{
                 flex: 1,
                 minHeight: 0,
-                overflowY: "auto",
-                padding: "0.5rem 0.75rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.4rem",
-              }}
-            >
-              {/* Live Kitchen Status Banner */}
-              {safeItems.length > 0 &&
-                (() => {
-                  const allReady = safeItems.every(
-                    (i) =>
-                      i.kotStatus === "ready" ||
-                      i.kotStatus === "served" ||
-                      i.kotStatus === "completed",
-                  );
-                  const hasCooking = safeItems.some(
-                    (i) => i.kotStatus === "cooking",
-                  );
-                  const hasReady = safeItems.some(
-                    (i) => i.kotStatus === "ready",
-                  );
-                  const readyCount = safeItems.filter(
-                    (i) => i.kotStatus === "ready" || i.kotStatus === "served",
-                  ).length;
+                overflowY: 'auto',
+                padding: '0.5rem 0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.4rem'
+              }}>
+                {/* Live Kitchen Status Banner */}
+                {safeItems.length > 0 && (() => {
+                  const allReady = safeItems.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
+                  const hasCooking = safeItems.some(i => i.kotStatus === 'cooking');
+                  const hasReady = safeItems.some(i => i.kotStatus === 'ready');
+                  const readyCount = safeItems.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length;
 
                   if (allReady) {
                     return (

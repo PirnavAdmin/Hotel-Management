@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Printer, X } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getNextInvoiceNumber } from '../utils/invoiceCounter';
+import paymentQrImage from '../assets/payment-qr.png';
 
 const formatReceiptTime = (value) => {
   if (!value) return '';
@@ -255,7 +256,7 @@ export function ReceiptModal({ table, onClose, onPrint }) {
             </div>
           </div>
 
-          {/* Scannable UPI payment QR, encoded with this invoice total */}
+          {/* Scannable payment QR */}
           <div style={{ textAlign: 'center', marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed #cbd5e1' }}>
             {upiPaymentUri ? (
               <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff' }}>
@@ -263,7 +264,10 @@ export function ReceiptModal({ table, onClose, onPrint }) {
                 <span style={{ fontSize: '0.58rem', color: '#475569', fontWeight: 700 }}>Scan to pay {formatCurrency(grandTotal)}</span>
               </div>
             ) : (
-              <p style={{ fontSize: '0.62rem', color: '#b45309', margin: 0 }}>UPI QR unavailable — configure VITE_UPI_ID</p>
+              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff' }}>
+                <img src={paymentQrImage} alt="Scan to Pay" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
+                <span style={{ fontSize: '0.58rem', color: '#475569', fontWeight: 700 }}>Scan to pay {formatCurrency(grandTotal)}</span>
+              </div>
             )}
             <p style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 0' }}>
               THANK YOU FOR DINING AT AVSR FOOD COURT!

@@ -49,12 +49,83 @@ const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 
+const mergeIncomingTables = (incomingTables, deletedTableIds) => {
+  const tablesById = new Map(
+    INITIAL_TABLES.map((table) => [
+      Number(table.id),
+      {
+        ...table,
+        items: Array.isArray(table.items) ? table.items : [],
+      },
+    ]),
+  );
+
+  incomingTables.forEach((table) => {
+    const id = Number(table.tableId ?? table.id);
+    if (!Number.isFinite(id)) return;
+
+    const existing = tablesById.get(id) || {};
+    tablesById.set(id, {
+      ...existing,
+      ...table,
+      id,
+      name: table.tableName || table.name || existing.name || `Table ${id}`,
+      section:
+        table.sectionArea || table.section || existing.section || "Main Hall",
+      capacity:
+        table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
+      status: String(table.status || existing.status || "vacant").toLowerCase(),
+      server:
+        table.assignedServerName || table.server || existing.server || "Staff",
+      guests: table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
+      items: Array.isArray(table.items)
+        ? table.items
+        : Array.isArray(existing.items)
+          ? existing.items
+          : [],
+      orderTime: table.orderTime ?? existing.orderTime ?? null,
+      discountPercent:
+        table.discountPercent ?? existing.discountPercent ?? 0,
+      serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
+      occupiedSince:
+        table.occupiedSince || existing.occupiedSince || "10:00 AM",
+    });
+  });
+
+  const deletedIds = Array.isArray(deletedTableIds)
+    ? deletedTableIds.map(String)
+    : [];
+  return Array.from(tablesById.values())
+    .filter((table) => !deletedIds.includes(String(table.id)))
+    .sort((a, b) => a.id - b.id);
+};
+
 const getDeletedTableIds = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) return parsed;
+    }
+    // Auto-detect any initially deleted tables already missing from saved tables
+    const savedTables = localStorage.getItem(STORAGE_KEY_TABLES);
+    if (savedTables) {
+      const parsed = JSON.parse(savedTables);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const existingIds = new Set(parsed.map((t) => String(t.id)));
+        const missingFromInitial = INITIAL_TABLES.filter(
+          (t) => !existingIds.has(String(t.id)),
+        ).map((t) => t.id);
+        if (missingFromInitial.length > 0) {
+          try {
+            localStorage.setItem(
+              STORAGE_KEY_DELETED_TABLES,
+              JSON.stringify(missingFromInitial),
+            );
+          } catch {}
+          return missingFromInitial;
+        }
+      }
     }
   } catch {}
   return [];
@@ -72,35 +143,33 @@ export function App() {
   }, [theme]);
 
   // Track permanently deleted table IDs so cross-tabs or reloads never resurrect them
-  const [deletedTableIds, setDeletedTableIds] = useState(getDeletedTableIds);
+  const [deletedTableIds, setDeletedTableIds] = useState(() => {
+    const initial = getDeletedTableIds();
+    return Array.isArray(initial) ? initial : [];
+  });
 
   // Load saved tables or fallback to INITIAL_TABLES (filtering out any deleted tables)
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
-    const isDeleted = (id) =>
-      (Array.isArray(deleted) ? deleted : []).some(
-        (d) => String(d) === String(id),
-      );
+    const delList = Array.isArray(deleted) ? deleted : [];
+    const isDeleted = (id) => delList.some((d) => String(d) === String(id));
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TABLES);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed
-            .filter((t) => !isDeleted(t.id))
-            .map((t) => ({
-              ...t,
-              items: Array.isArray(t.items) ? t.items : [],
-            }));
+            .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+            .filter((t) => !isDeleted(t.id));
         }
       }
     } catch {
       // Fallback
     }
-    return INITIAL_TABLES.filter((t) => !isDeleted(t.id)).map((t) => ({
+    return INITIAL_TABLES.map((t) => ({
       ...t,
       items: Array.isArray(t.items) ? t.items : [],
-    }));
+    })).filter((t) => !isDeleted(t.id));
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -158,17 +227,18 @@ export function App() {
 
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
-    // 1. Load live tables from backend API merged with INITIAL_TABLES
-    apiGetTables().then((backendTables) => {
-      if (backendTables && backendTables.length > 0) {
-        const map = new Map();
-        INITIAL_TABLES.forEach((t) => map.set(Number(t.id), t));
-        backendTables.forEach((t) => {
-          const id = Number(t.tableId || t.id);
-          const existing = map.get(id) || {};
-          map.set(id, { ...existing, ...t, id });
-        });
-        const merged = Array.from(map.values()).sort((a, b) => a.id - b.id);
+    // 1. Load live tables from backend API, preserving initial data and deletions
+    apiGetTables().then((response) => {
+      const backendTables = Array.isArray(response)
+        ? response
+        : response?.success && Array.isArray(response.data)
+          ? response.data
+          : null;
+      if (Array.isArray(backendTables) && backendTables.length > 0) {
+        const merged = mergeIncomingTables(
+          backendTables,
+          getDeletedTableIds(),
+        );
         setTables(merged);
         try {
           localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(merged));
@@ -442,7 +512,9 @@ export function App() {
         (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
           (d) => String(d) === String(id),
         );
-      const cleanTables = tables.filter((t) => !isDeleted(t.id));
+      const cleanTables = (Array.isArray(tables) ? tables : [])
+        .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+        .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
       pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
     } catch {}
@@ -480,46 +552,11 @@ export function App() {
       .then((res) => res.json())
       .then((data) => {
         if (!data) return;
-
-        // Support both direct API schema and local storage key schema
         const incomingTables =
           data.tables || data.data?.tables || data[STORAGE_KEY_TABLES];
-        if (incomingTables && incomingTables.length > 0) {
+        if (Array.isArray(incomingTables) && incomingTables.length > 0) {
           const freshDel = getDeletedTableIds();
-          const map = new Map();
-          INITIAL_TABLES.forEach((t) => map.set(Number(t.id), t));
-          incomingTables.forEach((t) => {
-            const id = Number(t.tableId || t.id);
-            const existing = map.get(id) || {};
-            map.set(id, {
-              ...existing,
-              id,
-              name: t.tableName || t.name || existing.name || `Table ${id}`,
-              section:
-                t.sectionArea || t.section || existing.section || "Main Hall",
-              capacity:
-                t.capacityChairs || t.capacity || existing.capacity || 4,
-              status: (t.status || existing.status || "vacant").toLowerCase(),
-              server:
-                t.assignedServerName || t.server || existing.server || "Staff",
-              guests: t.occupiedChairs || t.guests || existing.guests || 0,
-              items: Array.isArray(t.items) ? t.items : existing.items || [],
-              orderTime: t.orderTime || existing.orderTime || null,
-              discountPercent:
-                t.discountPercent ?? existing.discountPercent ?? 0,
-              serviceCharge: t.serviceCharge ?? existing.serviceCharge ?? 5,
-              occupiedSince:
-                t.occupiedSince || existing.occupiedSince || "10:00 AM",
-            });
-          });
-          const clean = Array.from(map.values())
-            .filter(
-              (t) =>
-                !(Array.isArray(freshDel) ? freshDel : []).some(
-                  (d) => String(d) === String(t.id),
-                ),
-            )
-            .sort((a, b) => a.id - b.id);
+          const clean = mergeIncomingTables(incomingTables, freshDel);
           setTables(clean);
           try {
             localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
@@ -659,30 +696,13 @@ export function App() {
           const payload = parsedMsg.payload;
           if (!payload) return;
 
-          const incomingTables = payload.tables || payload[STORAGE_KEY_TABLES];
-          if (incomingTables && incomingTables.length > 0) {
+          const incomingTables =
+            payload.tables ||
+            payload.data?.tables ||
+            payload[STORAGE_KEY_TABLES];
+          if (Array.isArray(incomingTables) && incomingTables.length > 0) {
             const freshDel = getDeletedTableIds();
-            const clean = incomingTables
-              .filter(
-                (t) =>
-                  !(Array.isArray(freshDel) ? freshDel : []).some(
-                    (d) => String(d) === String(t.id || t.tableId),
-                  ),
-              )
-              .map((t) => ({
-                id: t.tableId || t.id,
-                name: t.tableName || t.name || `Table ${t.tableId || t.id}`,
-                section: t.sectionArea || t.section || "Main Hall",
-                capacity: t.capacityChairs || t.capacity || 4,
-                status: (t.status || "vacant").toLowerCase(),
-                server: t.assignedServerName || t.server || "Staff",
-                guests: t.occupiedChairs || t.guests || 0,
-                items: Array.isArray(t.items) ? t.items : [],
-                orderTime: t.orderTime || null,
-                discountPercent: t.discountPercent || 0,
-                serviceCharge: t.serviceCharge || 5,
-                occupiedSince: t.occupiedSince || "10:00 AM",
-              }));
+            const clean = mergeIncomingTables(incomingTables, freshDel);
             setTables(clean);
             try {
               localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
@@ -1315,7 +1335,9 @@ export function App() {
         (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
           (d) => String(d) === String(id),
         );
-      const cleanTables = updatedTables.filter((t) => !isDeleted(t.id));
+      const cleanTables = updatedTables
+        .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+        .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
     } catch {}
 
