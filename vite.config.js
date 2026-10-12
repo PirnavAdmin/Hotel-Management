@@ -100,7 +100,10 @@ export default defineConfig({
   server: {
     host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
     port: 5173,
-    strictPort: false
+    strictPort: false,
+    watch: {
+      ignored: ['**/.vs/**']
+    }
   }
 })
 

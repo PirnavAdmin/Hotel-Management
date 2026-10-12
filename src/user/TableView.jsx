@@ -70,7 +70,7 @@ export function TableView({ tables, onSelectTable }) {
             </span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '3px' }}>
-            Select any table from the floor below to take orders, add biryanis & generate bills in <strong>Rupees (₹)</strong>.
+            Select any table to take orders, add food or beverages, and generate bills in <strong>Rupees (₹)</strong>.
           </p>
         </div>
 
@@ -310,29 +310,20 @@ export function TableView({ tables, onSelectTable }) {
                     </h3>
                   </div>
 
-                  {/* Status Indicator */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    background: statusBg,
-                    border: `1px solid ${statusColor}40`,
-                    padding: '0.15rem 0.45rem',
-                    borderRadius: '12px',
-                    fontSize: '0.66rem',
-                    fontWeight: 700,
-                    color: statusColor,
-                    flexShrink: 0
-                  }}>
-                    <span style={{
-                      width: '5px',
-                      height: '5px',
+                  {/* Minimal Status Dot */}
+                  <span
+                    title={statusText}
+                    style={{
+                      width: '9px',
+                      height: '9px',
                       borderRadius: '50%',
                       background: statusColor,
-                      display: 'inline-block'
-                    }} className={table.status !== 'vacant' ? 'pulse-indicator' : ''} />
-                    <span>{statusText}</span>
-                  </div>
+                      boxShadow: `0 0 6px ${statusColor}80`,
+                      display: 'inline-block',
+                      flexShrink: 0
+                    }}
+                    className={table.status !== 'vacant' ? 'pulse-indicator' : ''}
+                  />
                 </div>
 
                 {/* Section & Capacity */}

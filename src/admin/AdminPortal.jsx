@@ -709,7 +709,7 @@ export function AdminPortal({
               }}
             >
               <ExternalLink size={16} color="var(--accent-amber)" />
-              <span>Full Screen KOT Display ↗</span>
+              <span>Full Screen KOT Display</span>
             </button>
           )}
         </div>
@@ -773,7 +773,7 @@ export function AdminPortal({
                   >
                     {isFullPage ? <ArrowLeft size={16} /> : <X size={16} />}
                     <span>
-                      {isFullPage ? "← Go to User POS" : "Close Admin"}
+                      {isFullPage ? "Go to User POS" : "Close Admin"}
                     </span>
                   </button>
 
@@ -826,7 +826,7 @@ export function AdminPortal({
                   }}
                 >
                   <Plus size={16} />
-                  <span>+ Add New Dish / Biryani</span>
+                  <span>Add New Dish / Biryani</span>
                 </button>
               </div>
 
@@ -1166,7 +1166,7 @@ export function AdminPortal({
                   }}
                 >
                   <Plus size={16} />
-                  <span>+ Add New Table</span>
+                  <span>Add New Table</span>
                 </button>
               </div>
 
@@ -1441,7 +1441,7 @@ export function AdminPortal({
                   }}
                 >
                   <Plus size={16} />
-                  <span>+ Add New Person (Staff)</span>
+                  <span>Add New Person (Staff)</span>
                 </button>
               </div>
 
@@ -1667,7 +1667,7 @@ export function AdminPortal({
                     }}
                   >
                     <ExternalLink size={15} />
-                    <span>Open Full Screen KOT Screen ↗</span>
+                    <span>Open Full Screen KOT Screen</span>
                   </button>
                 )}
               </div>
@@ -2869,7 +2869,7 @@ export function AdminPortal({
                   <span>
                     {isNewServerMode
                       ? "Select Existing Staff"
-                      : "+ Add New Server Name"}
+                      : "Add New Server Name"}
                   </span>
                 </button>
               </div>
@@ -2921,7 +2921,7 @@ export function AdminPortal({
                     value="__add_new__"
                     style={{ color: "var(--accent-amber)", fontWeight: 800 }}
                   >
-                    ➕ + Add New Server Name...
+                    + Add New Server Name...
                   </option>
                 </select>
               ) : (

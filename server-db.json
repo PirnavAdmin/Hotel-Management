@@ -1553,7 +1553,6 @@
       "tipAmount": 50,
       "grandTotal": 1326,
       "paymentMethod": "upi",
-      "paymentMethod": "upi",
       "settledAt": "01:10 PM",
       "invoiceNo": "INV-1048"
     },
@@ -1772,5 +1771,5 @@
     "title": "🔥 Cooking Started",
     "message": "Chef started cooking order for Table 2!"
   },
-  "avsr_last_invoice_counter_v1": "36118"
+  "avsr_last_invoice_counter_v1": "1058"
 }
