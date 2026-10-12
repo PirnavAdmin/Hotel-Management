@@ -4,7 +4,13 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
-const formatOrderDate = (order, fallbackDate) => {
+const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+});
+
+const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
   if (!order) return fallbackDate;
   if (order.date) return order.date;
   if (order.settledDate) return order.settledDate;
@@ -22,9 +28,6 @@ const formatOrderDate = (order, fallbackDate) => {
 };
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
-  const todayDateStr = useMemo(() => {
-    return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  }, []);
 
 
 
@@ -57,9 +60,9 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   // Extract all unique dates from pastOrders sorted newest first
   const availableDates = useMemo(() => {
     const datesSet = new Set();
-    datesSet.add(todayDateStr);
+    datesSet.add(TODAY_DATE_STR);
     pastOrders.forEach(o => {
-      const dStr = formatOrderDate(o, todayDateStr);
+      const dStr = formatOrderDate(o);
       if (dStr) datesSet.add(dStr);
     });
     return Array.from(datesSet).sort((a, b) => {
@@ -67,7 +70,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const timeB = new Date(b).getTime() || 0;
       return timeB - timeA;
     });
-  }, [pastOrders, todayDateStr]);
+  }, [pastOrders]);
 
   // Extract all unique months from pastOrders sorted newest first
   const availableMonths = useMemo(() => {
@@ -85,10 +88,10 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   }, [pastOrders, currentMonthStr]);
 
   const [selectedDate, setSelectedDate] = useState(() => {
-    const hasToday = pastOrders && pastOrders.some(o => formatOrderDate(o, todayDateStr) === todayDateStr);
-    if (hasToday) return todayDateStr;
-    if (pastOrders && pastOrders.length > 0) return formatOrderDate(pastOrders[0], todayDateStr);
-    return todayDateStr;
+    const hasToday = pastOrders && pastOrders.some(o => formatOrderDate(o) === TODAY_DATE_STR);
+    if (hasToday) return TODAY_DATE_STR;
+    if (pastOrders && pastOrders.length > 0) return formatOrderDate(pastOrders[0]);
+    return TODAY_DATE_STR;
   });
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [customStartDate, setCustomStartDate] = useState('');
@@ -96,7 +99,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'monthly' | 'custom' | 'grouped_all'
   const [searchTerm, setSearchTerm] = useState('');
   const countForSelectedDate = pastOrders.filter(
-    (order) => formatOrderDate(order, todayDateStr) === selectedDate,
+    (order) => formatOrderDate(order) === selectedDate,
   ).length;
 
   // Convert Date or dateString to "YYYY-MM-DD" for HTML <input type="date">
@@ -170,8 +173,8 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
 
   // Single day filtered orders
   const singleDayOrders = useMemo(() => {
-    return searchFilteredOrders.filter(o => formatOrderDate(o, todayDateStr) === selectedDate);
-  }, [searchFilteredOrders, selectedDate, todayDateStr]);
+    return searchFilteredOrders.filter(o => formatOrderDate(o) === selectedDate);
+  }, [searchFilteredOrders, selectedDate]);
 
   // Monthly filtered orders
   const monthlyOrders = useMemo(() => {
@@ -206,7 +209,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const groupedOrdersByDate = useMemo(() => {
     const map = {};
     searchFilteredOrders.forEach(order => {
-      const d = formatOrderDate(order, todayDateStr);
+      const d = formatOrderDate(order);
       if (!map[d]) map[d] = [];
       map[d].push(order);
     });
@@ -228,7 +231,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         avgValue: orders.length ? totalRev / orders.length : 0
       };
     });
-  }, [searchFilteredOrders, todayDateStr]);
+  }, [searchFilteredOrders]);
 
   // Day navigation step helpers
   const handlePrevDay = () => {
@@ -545,7 +548,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 }}
               >
                 {availableDates.map(d => {
-                  const cnt = pastOrders.filter(o => formatOrderDate(o, todayDateStr) === d).length;
+                  const cnt = pastOrders.filter(o => formatOrderDate(o) === d).length;
                   return (
                     <option key={d} value={d}>
                       📅 {d} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
@@ -592,10 +595,10 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 <ChevronRight size={16} />
               </button>
 
-              {selectedDate !== todayDateStr && (
+              {selectedDate !== TODAY_DATE_STR && (
                 <button
                   onClick={() => {
-                    setSelectedDate(todayDateStr);
+                    setSelectedDate(TODAY_DATE_STR);
                     setViewMode('single_day');
                   }}
                   style={{
@@ -1175,7 +1178,7 @@ function OrderCard({ order, onReprintReceipt }) {
         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
             <Calendar size={11} color="var(--accent-amber)" />
-            {formatOrderDate(order, todayDateStr)}
+            {formatOrderDate(order)}
           </span>
           <span>•</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
