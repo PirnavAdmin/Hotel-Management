@@ -1,170 +1,135 @@
-// ============================================================
-// AVSR FOOD COURT — Authentication Utility
-// Stores user accounts & session in localStorage (no backend)
-// Roles: 'admin' | 'pos' | 'kot'
-// ============================================================
+import { apiGetUsers, apiCreateUser, apiDeleteUser, apiUpdateUserPassword } from '../api/userApi';
+import { apiLogin, apiRegister, apiGetMe } from '../api/authApi';
 
-const STORAGE_KEY_USERS    = 'avsr_auth_users_v1';
 const STORAGE_KEY_SESSION  = 'avsr_auth_session_v1';
 
-// ── Default system accounts (always present across all devices) ──────────────────
-const DEFAULT_USERS = [
-  {
-    id: 'admin-001',
-    username: 'admin',
-    password: 'admin123',
-    role: 'admin',
-    name: 'Administrator',
-    email: 'admin@avsr.com',
-    createdAt: new Date().toISOString(),
-    createdBy: 'system'
-  },
-  {
-    id: 'pos-001',
-    username: 'pos',
-    password: 'pos123',
-    role: 'pos',
-    name: 'Pasupuleti Bhanu (POS)',
-    email: 'pos@avsr.com',
-    createdAt: new Date().toISOString(),
-    createdBy: 'system'
-  },
-  {
-    id: 'kot-001',
-    username: 'kot',
-    password: 'kot123',
-    role: 'kot',
-    name: 'Kitchen Chef (KOT)',
-    email: 'kot@avsr.com',
-    createdAt: new Date().toISOString(),
-    createdBy: 'system'
-  },
-  {
-    id: 'user-001',
-    username: 'user',
-    password: 'user123',
-    role: 'pos',
-    name: 'Floor Staff User',
-    email: 'user@avsr.com',
-    createdAt: new Date().toISOString(),
-    createdBy: 'system'
-  }
-];
-
-// ── Load all users from storage ──────────────────────────────
-export function getUsers() {
+export function parseJwt(token) {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_USERS);
-    if (saved) {
-      let parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        // Ensure default system accounts exist
-        DEFAULT_USERS.forEach(defUser => {
-          if (!parsed.some(u => u.username.toLowerCase() === defUser.username.toLowerCase())) {
-            parsed.unshift(defUser);
-          }
-        });
-        saveUsers(parsed);
-        return parsed;
-      }
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+export const mapRole = (r) => {
+  if (r === undefined || r === null) return 'pos';
+  const str = String(r).toLowerCase().trim();
+  if (str === '0' || str === 'admin' || str.includes('admin') || str.includes('manager')) return 'admin';
+  if (str === '2' || str === 'kot' || str.includes('kitchen') || str.includes('kot') || str.includes('chef') || str.includes('cook')) return 'kot';
+  if (str === '1' || str === 'pos' || str.includes('pos') || str.includes('user') || str.includes('cashier') || str.includes('waiter') || str.includes('staff')) return 'pos';
+  return str;
+};
+
+export async function getUsers() {
+  const res = await apiGetUsers();
+  let list = [];
+  if (res.success && res.data) {
+    if (Array.isArray(res.data)) {
+      list = res.data;
+    } else if (res.data.$values && Array.isArray(res.data.$values)) {
+      list = res.data.$values;
+    } else if (res.data.users && Array.isArray(res.data.users)) {
+      list = res.data.users;
+    } else if (res.data.Users && Array.isArray(res.data.Users)) {
+      list = res.data.Users;
+    } else if (res.data.data && Array.isArray(res.data.data)) {
+      list = res.data.data;
     }
-  } catch {}
-  const initial = [...DEFAULT_USERS];
-  saveUsers(initial);
-  return initial;
-}
-
-// ── Save users list ──────────────────────────────────────────
-export function saveUsers(users) {
-  try {
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-    // Push to server for global network sync across all connected LAN devices
-    fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ avsr_auth_users_v1: users })
-    }).catch(() => {});
-  } catch {}
-}
-
-// ── Create a new user (called by Admin) ─────────────────────
-export function createUser({ username, password, role, name, mobile = '', email = '', createdBy = 'admin' }) {
-  const users = getUsers();
-  // Check duplicate username
-  if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
-    return { success: false, error: 'Username already exists.' };
   }
-  if (!['pos', 'kot', 'admin'].includes(role)) {
-    return { success: false, error: 'Invalid role.' };
-  }
-  const newUser = {
-    id: `${role}-${Date.now()}`,
-    username: username.trim(),
-    password: password.trim(),
-    role,
-    name: name?.trim() || username.trim(),
-    mobile: mobile?.trim() || '',
-    email:  email?.trim() || '',
-    createdAt: new Date().toISOString(),
-    createdBy
-  };
-  users.push(newUser);
-  saveUsers(users);
-  return { success: true, user: newUser };
+
+  return list.map(u => ({
+    id: u.id || u.Id || u.userId || u.UserId || String(Math.random()),
+    username: u.username || u.Username || '',
+    name: u.fullName || u.FullName || u.name || u.Name || u.username || u.Username || 'User',
+    role: mapRole(u.role ?? u.Role ?? u.roleName ?? u.RoleName ?? u.roleId ?? u.RoleId),
+    email: u.email || u.Email || '',
+    mobile: u.phone || u.Phone || u.mobile || u.Mobile || u.phoneNumber || u.PhoneNumber || '',
+    createdAt: u.createdAt || u.CreatedAt || null,
+    raw: u
+  }));
 }
 
-// ── Delete a user (Admin only, cannot delete self/admin) ─────
-export function deleteUser(userId) {
-  let users = getUsers();
-  const target = users.find(u => u.id === userId);
-  if (!target) return { success: false, error: 'User not found.' };
-  if (target.role === 'admin' && target.id === 'admin-001') {
-    return { success: false, error: 'Cannot delete the default admin account.' };
+export async function createUser(userData) {
+  // Use the working auth registration endpoint instead of /api/Users which returns 405
+  const res = await apiRegister(userData);
+  if (res.success) {
+    return { success: true, user: res.data };
   }
-  users = users.filter(u => u.id !== userId);
-  saveUsers(users);
-  return { success: true };
+  return { success: false, error: res.error || 'Failed to create user' };
 }
 
-// ── Update user password ─────────────────────────────────────
-export function updateUserPassword(userId, newPassword) {
-  const users = getUsers();
-  const idx = users.findIndex(u => u.id === userId);
-  if (idx === -1) return { success: false, error: 'User not found.' };
-  users[idx].password = newPassword.trim();
-  saveUsers(users);
-  return { success: true };
+export async function registerUser(userData) {
+  const res = await apiRegister(userData);
+  if (res.success) {
+    return { success: true, user: res.data };
+  }
+  return { success: false, error: res.error || 'Failed to register user' };
 }
 
-// ── Attempt login (accepts username OR email) ───────────────
-export function loginUser(usernameOrEmail, password, expectedRole) {
-  const users = getUsers();
-  const input = usernameOrEmail.trim().toLowerCase();
-  const user = users.find(
-    u => (
-      u.username.toLowerCase() === input ||
-      (u.email && u.email.toLowerCase() === input)    // also match by email
-    ) &&
-    u.password === password &&
-    (!expectedRole || u.role === expectedRole || u.role === 'admin')
-  );
-  if (!user) {
-    return { success: false, error: 'Invalid username/email or password.' };
+export async function deleteUser(userId) {
+  const res = await apiDeleteUser(userId);
+  return { success: res.success, error: res.error };
+}
+
+export async function updateUserPassword(userId, newPassword) {
+  const res = await apiUpdateUserPassword(userId, newPassword);
+  return { success: res.success, error: res.error };
+}
+
+export async function fetchCurrentAuthUser() {
+  const res = await apiGetMe();
+  if (res.success && res.data) {
+    return { success: true, user: res.data };
   }
+  return { success: false, error: res.error || 'Failed to fetch user profile' };
+}
+
+export async function loginUser(usernameOrEmail, password, expectedRole) {
+  const res = await apiLogin(usernameOrEmail.trim(), password.trim());
+  if (!res.success) {
+    return { success: false, error: res.error || 'Invalid credentials' };
+  }
+  
+  // Handle both nested { token, user } and flat { token, role, username } responses
+  const token = res.data?.token || res.data?.Token;
+  const user = res.data?.user || res.data?.User || res.data;
+  const jwt = token ? parseJwt(token) : null;
+
+  if (!token) {
+    return { success: false, error: 'Invalid response from server' };
+  }
+  
+  const rawRole = user?.role ?? user?.Role ?? user?.roleName ?? user?.RoleName ?? user?.roleId ?? user?.RoleId ?? jwt?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ?? jwt?.role ?? jwt?.Role;
+  const actualRole = mapRole(rawRole);
+  const targetExpected = expectedRole ? mapRole(expectedRole) : null;
+  
+  // Verify role if expectedRole is passed
+  if (targetExpected && actualRole !== targetExpected && actualRole !== 'admin') {
+    return { success: false, error: `Unauthorized. Required role: ${expectedRole}` };
+  }
+
   const session = {
-    userId: user.id,
-    username: user.username,
-    name: user.name,
-    role: user.role,
-    email: user.email || '',
-    mobile: user.mobile || '',
+    userId: user?.id || user?.userId || user?.Id || user?.UserId || jwt?.nameid || jwt?.sub || '1',
+    username: user?.username || user?.Username || jwt?.unique_name || jwt?.name || usernameOrEmail,
+    name: user?.name || user?.FullName || user?.fullName || jwt?.name || usernameOrEmail,
+    role: actualRole,
+    email: user?.email || user?.Email || jwt?.email || '',
+    mobile: user?.mobile || user?.Phone || user?.PhoneNumber || '',
     loginAt: new Date().toISOString()
   };
-  setSession(session);
+  
+  setSession(session, token);
   return { success: true, session };
 }
 
-// ── Get current session ──────────────────────────────────────
 export function getSession() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_SESSION);
@@ -173,8 +138,7 @@ export function getSession() {
   return null;
 }
 
-// ── Save session ─────────────────────────────────────────────
-export function setSession(session) {
+export function setSession(session, token = null) {
   try {
     if (session) {
       const sessStr = JSON.stringify(session);
@@ -182,15 +146,9 @@ export function setSession(session) {
       localStorage.setItem('auth_user', sessStr);
       localStorage.setItem('auth_token_timestamp', Date.now().toString());
       
-      const mockHeader = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const mockPayload = btoa(JSON.stringify({ 
-        sub: session.userId, 
-        role: session.role, 
-        name: session.name, 
-        exp: Math.floor(Date.now() / 1000) + 86400 
-      }));
-      const mockSig = "avsr_signature";
-      localStorage.setItem('avsr_jwt_token', `${mockHeader}.${mockPayload}.${mockSig}`);
+      if (token) {
+        localStorage.setItem('avsr_jwt_token', token);
+      }
 
       // Persist to role-specific storage keys
       if (session.role === 'admin') {
@@ -209,7 +167,6 @@ export function setSession(session) {
   } catch {}
 }
 
-// ── Clear session (logout) ───────────────────────────────────
 export function logoutUser() {
   try {
     const keysToRemove = [
@@ -230,7 +187,6 @@ export function logoutUser() {
   } catch {}
 }
 
-// ── Check if a role is allowed on a given route ──────────────
 export function isAllowedForRoute(session, route) {
   if (!session) return false;
   if (route === '/admin') return session.role === 'admin';

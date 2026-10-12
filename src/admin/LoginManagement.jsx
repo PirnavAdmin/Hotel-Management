@@ -29,11 +29,14 @@ export function LoginManagement({ currentAdminSession }) {
   const [pwError, setPwError]           = useState('');
   const [pwSuccess, setPwSuccess]       = useState('');
 
-  const reload = () => setUsers(getUsers());
+  const reload = async () => {
+    const data = await getUsers();
+    setUsers(data);
+  };
 
   useEffect(() => { reload(); }, []);
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setFormError('');
     setFormSuccess('');
@@ -49,31 +52,42 @@ export function LoginManagement({ currentAdminSession }) {
       setFormError('Mobile number must be 10 digits.');
       return;
     }
-    const result = createUser({
-      username: formUser,
-      password: formPass,
-      role: formRole,
-      name: formName || formUser,
-      mobile: formMobile.trim(),
-      createdBy: currentAdminSession?.username || 'admin'
+    const result = await createUser({
+      Username: formUser,
+      Password: formPass,
+      ConfirmPassword: formPass,
+      Role: formRole,
+      FullName: formName || formUser,
+      Phone: formMobile.trim() || '0000000000',
+      Email: `${formUser}@avsr.com`
     });
     if (result.success) {
-      setFormSuccess(`\u2705 ${formRole.toUpperCase()} login "${formUser}" created successfully!`);
+      setFormSuccess(`✅ ${formRole.toUpperCase()} login "${formUser.trim()}" created successfully!`);
+      const createdUserObj = {
+        id: result.user?.id || result.user?.Id || Date.now().toString(),
+        username: formUser.trim(),
+        name: formName.trim() || formUser.trim(),
+        role: formRole,
+        mobile: formMobile.trim(),
+        email: `${formUser.trim()}@avsr.com`,
+        createdAt: new Date().toISOString()
+      };
+      setUsers(prev => [createdUserObj, ...prev.filter(u => u.username !== formUser.trim())]);
       setFormUser(''); setFormPass(''); setFormName(''); setFormMobile('');
-      reload();
-      setTimeout(() => { setFormSuccess(''); setShowForm(false); }, 2000);
+      await reload();
+      setTimeout(() => { setFormSuccess(''); setShowForm(false); }, 1500);
     } else {
       setFormError(result.error);
     }
   };
 
-  const handleDelete = (userId) => {
-    const result = deleteUser(userId);
-    if (result.success) reload();
+  const handleDelete = async (userId) => {
+    const result = await deleteUser(userId);
+    if (result.success) await reload();
     setDeletingId(null);
   };
 
-  const handleChangePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
     setPwError('');
     setPwSuccess('');
@@ -81,20 +95,20 @@ export function LoginManagement({ currentAdminSession }) {
       setPwError('Password must be at least 4 characters.');
       return;
     }
-    const result = updateUserPassword(changePwUser.id, newPw);
+    const result = await updateUserPassword(changePwUser.id, newPw);
     if (result.success) {
       setPwSuccess('✅ Password updated!');
       setNewPw('');
-      reload();
+      await reload();
       setTimeout(() => { setPwSuccess(''); setChangePwUser(null); }, 1500);
     } else {
       setPwError(result.error);
     }
   };
 
-  const posUsers   = users.filter(u => u.role === 'pos');
-  const kotUsers   = users.filter(u => u.role === 'kot');
-  const adminUsers = users.filter(u => u.role === 'admin');
+  const posUsers   = users.filter(u => (u.role || '').toLowerCase() === 'pos');
+  const kotUsers   = users.filter(u => (u.role || '').toLowerCase() === 'kot');
+  const adminUsers = users.filter(u => (u.role || '').toLowerCase() === 'admin');
 
   const roleConfig = {
     pos: {

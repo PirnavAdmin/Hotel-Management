@@ -6,8 +6,8 @@ import {
   Phone, Send, RefreshCw, ArrowLeft,
   KeyRound
 } from 'lucide-react';
-import { loginUser, createUser, updateUserPassword, getUsers } from '../utils/auth';
-import { apiForgotPassword, apiResetPassword } from '../utils/apiService';
+import { loginUser, createUser, registerUser, updateUserPassword, getUsers } from '../utils/auth';
+import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '../api/authApi';
 
 /**
  * LoginPage — role-specific login/register screen.
@@ -36,22 +36,10 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
   const [regConfirm, setRegConfirm] = useState('');
   const [showRegPw,  setShowRegPw]  = useState(false);
 
-  // OTP state
-  const [otpStep,      setOtpStep]      = useState(false);   // true = show OTP entry
-  const [generatedOtp, setGeneratedOtp] = useState('');       // the OTP we generated
-  const [otpInput,     setOtpInput]     = useState(['','','','','','']); // 6 boxes
-  const [otpVerified,  setOtpVerified]  = useState(false);
-  const [otpSent,      setOtpSent]      = useState(false);
-  const [otpError,     setOtpError]     = useState('');
-  const [otpCountdown, setOtpCountdown] = useState(0);
-  const countdownRef = useRef(null);
-  const otpRefs      = useRef([]);
-
   // Forgot Password state
   const [forgotEmail,        setForgotEmail]        = useState('');
   const [forgotOtpStep,      setForgotOtpStep]      = useState(false);
   const [forgotOtp,          setForgotOtp]          = useState('');
-  const [generatedResetOtp,  setGeneratedResetOtp]  = useState('');
   const [newPassword,        setNewPassword]        = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
@@ -107,91 +95,22 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
   const clearRegForm = () => {
     setRegName(''); setRegUser(''); setRegMobile(''); setRegEmail('');
     setRegPass(''); setRegConfirm('');
-    setOtpStep(false); setOtpInput(['','','','','','']);
-    setGeneratedOtp(''); setOtpVerified(false); setOtpSent(false);
-    setOtpError(''); setOtpCountdown(0);
-    if (countdownRef.current) clearInterval(countdownRef.current);
   };
   const clearAll = () => { setError(''); setSuccess(''); setUsername(''); setPassword(''); clearRegForm(); };
 
-  // ── Generate & "send" OTP ─────────────────────────────────
-  const handleSendOtp = () => {
-    if (!regEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
-      setError('Please enter a valid email address first.'); triggerShake(); return;
-    }
-    setError('');
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    setGeneratedOtp(otp);
-    setOtpStep(true);
-    setOtpSent(true);
-    setOtpInput(['','','','','','']);
-    setOtpVerified(false);
-    setOtpError('');
-    // Countdown 120s
-    setOtpCountdown(120);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    countdownRef.current = setInterval(() => {
-      setOtpCountdown(prev => {
-        if (prev <= 1) { clearInterval(countdownRef.current); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    // Focus first OTP box
-    setTimeout(() => otpRefs.current[0]?.focus(), 100);
-  };
-
-  const handleOtpChange = (idx, val) => {
-    const v = val.replace(/\D/g, '').slice(-1);
-    const next = [...otpInput];
-    next[idx] = v;
-    setOtpInput(next);
-    setOtpError('');
-    if (v && idx < 5) otpRefs.current[idx + 1]?.focus();
-  };
-  const handleOtpKey = (idx, e) => {
-    if (e.key === 'Backspace' && !otpInput[idx] && idx > 0) {
-      otpRefs.current[idx - 1]?.focus();
-    }
-    if (e.key === 'v' && (e.ctrlKey || e.metaKey)) return; // allow paste
-  };
-  const handleOtpPaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const next = ['','','','','',''];
-    for (let i = 0; i < pasted.length; i++) next[i] = pasted[i];
-    setOtpInput(next);
-    const focusIdx = Math.min(pasted.length, 5);
-    otpRefs.current[focusIdx]?.focus();
-  };
-
-  const handleVerifyOtp = () => {
-    const entered = otpInput.join('');
-    if (entered.length < 6) { setOtpError('Enter all 6 digits.'); return; }
-    if (entered === generatedOtp) {
-      setOtpVerified(true);
-      setOtpError('');
-    } else {
-      setOtpError('❌ Incorrect OTP. Please try again.');
-      setOtpInput(['','','','','','']);
-      otpRefs.current[0]?.focus();
-    }
-  };
-
   // ── LOGIN ─────────────────────────────────────────────────
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) { setError('Please enter username and password.'); triggerShake(); return; }
     setLoading(true); setError('');
-    setTimeout(() => {
-      const r = loginUser(username.trim(), password.trim(), currentRole);
-      setLoading(false);
-      if (r.success) onLoginSuccess(r.session, currentRole);
-      else { setError(r.error || 'Login failed.'); triggerShake(); }
-    }, 380);
+    const r = await loginUser(username.trim(), password.trim(), currentRole);
+    setLoading(false);
+    if (r.success) onLoginSuccess(r.session, currentRole);
+    else { setError(r.error || 'Login failed.'); triggerShake(); }
   };
 
   // ── REGISTER ──────────────────────────────────────────────
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
     if (!regName.trim())   { setError('Full name is required.'); triggerShake(); return; }
@@ -202,44 +121,39 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
     if (!regEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
       setError('Enter a valid email address.'); triggerShake(); return;
     }
-    if (!otpVerified) { setError('Please verify your email with OTP first.'); triggerShake(); return; }
     if (regPass.length < 6) { setError('Password must be at least 6 characters.'); triggerShake(); return; }
     if (regPass !== regConfirm) { setError('Passwords do not match.'); triggerShake(); return; }
 
     setLoading(true);
-    setTimeout(() => {
-      const r = createUser({
-        username: regUser.trim(),
-        password: regPass.trim(),
-        role: 'admin',
-        name: regName.trim(),
-        mobile: regMobile.trim(),
-        email: regEmail.trim(),
-        createdBy: 'self-register'
-      });
-      setLoading(false);
-      if (r.success) {
-        // ✅ AUTO-LOGIN immediately after registration
-        setSuccess(`✅ Account created! Signing you in as "${regName.trim()}"...`);
-        setTimeout(() => {
-          const loginResult = loginUser(regUser.trim(), regPass.trim(), 'admin');
-          if (loginResult.success) {
-            onLoginSuccess(loginResult.session, 'admin');
-          } else {
-            // Fallback: switch to login tab with fields pre-filled
-            setSuccess('');
-            setMode('login');
-            setUsername(regUser.trim());
-            setPassword(regPass.trim());
-            clearRegForm();
-          }
-        }, 1000);
-      } else { setError(r.error || 'Registration failed.'); triggerShake(); }
-    }, 450);
+    const r = await registerUser({
+      Username: regUser.trim(),
+      Email: regEmail.trim(),
+      Phone: regMobile.trim(),
+      FullName: regName.trim(),
+      Password: regPass.trim(),
+      ConfirmPassword: regConfirm.trim(),
+      Role: 'admin'
+    });
+    setLoading(false);
+    if (r.success) {
+      setSuccess(`✅ Account created! Signing you in as "${regName.trim()}"...`);
+      setTimeout(async () => {
+        const loginResult = await loginUser(regUser.trim(), regPass.trim(), 'admin');
+        if (loginResult.success) {
+          onLoginSuccess(loginResult.session, 'admin');
+        } else {
+          setSuccess('');
+          setMode('login');
+          setUsername(regUser.trim());
+          setPassword(regPass.trim());
+          clearRegForm();
+        }
+      }, 1000);
+    } else { setError(r.error || 'Registration failed.'); triggerShake(); }
   };
 
   // ── FORGOT PASSWORD HANDLERS ──────────────────────────────
-  const handleSendResetOtp = (e) => {
+  const handleSendResetOtp = async (e) => {
     e.preventDefault();
     const inputEmail = forgotEmail.trim();
     if (!inputEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail)) {
@@ -251,28 +165,24 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
     setError('');
     setSuccess('');
     
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedResetOtp(code);
-    setForgotOtp(code); // Pre-fill for instant testing
+    // We shouldn't mock OTP, we should let backend do it
+    const res = await apiForgotPassword(inputEmail);
+    setLoading(false);
 
-    setTimeout(() => {
-      setLoading(false);
+    if (res.success) {
       setForgotOtpStep(true);
-      setSuccess(`📩 [VERIFICATION OTP]: ${code} (Sent to ${inputEmail}). Enter code & new password below.`);
-      apiForgotPassword(inputEmail).catch(() => {});
-    }, 400);
+      setSuccess(`📩 OTP sent to ${inputEmail}. Enter code & new password below.`);
+    } else {
+      setError(res.error || 'Failed to send OTP.');
+      triggerShake();
+    }
   };
 
-  const handleResetPasswordSubmit = (e) => {
+  const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
     const enteredOtp = forgotOtp.trim();
     if (!enteredOtp || enteredOtp.length < 4) {
       setError('Please enter the verification OTP code.');
-      triggerShake();
-      return;
-    }
-    if (generatedResetOtp && enteredOtp !== generatedResetOtp) {
-      setError('❌ Incorrect OTP code. Please check the code generated above.');
       triggerShake();
       return;
     }
@@ -291,26 +201,22 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
     setError('');
     setSuccess('');
 
-    const targetEmail = forgotEmail.trim().toLowerCase();
-    const users = getUsers();
-    const user = users.find(u => (u.email && u.email.toLowerCase() === targetEmail) || u.username.toLowerCase() === targetEmail);
-    if (user) {
-      updateUserPassword(user.id, newPassword.trim());
-    }
+    const res = await apiResetPassword(forgotEmail.trim(), enteredOtp, newPassword.trim());
+    setLoading(false);
 
-    apiResetPassword(forgotEmail.trim(), enteredOtp, newPassword.trim()).catch(() => {});
-
-    setTimeout(() => {
-      setLoading(false);
+    if (res.success) {
       setSuccess('✅ Password updated successfully! Signing you in with new password...');
       setTimeout(() => {
         setMode('login');
         setPassword(newPassword.trim());
-        if (user) setUsername(user.username);
+        setUsername(forgotEmail.trim());
         setSuccess('');
         setForgotOtpStep(false);
       }, 1200);
-    }, 400);
+    } else {
+      setError(res.error || 'Failed to reset password.');
+      triggerShake();
+    }
   };
 
   // Password strength
@@ -487,7 +393,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
             {mode === 'register' ? 'Create Admin Account' : mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
           </h1>
           <p style={{ fontSize: '0.67rem', color: '#64748b', margin: 0, fontWeight: 600 }}>
-            {mode === 'register' ? 'Set up your administrator account with OTP verification' : mode === 'forgot' ? (forgotOtpStep ? 'Enter verification OTP & set new password' : 'Enter email to receive OTP verification code') : loginSub}
+            {mode === 'register' ? 'Set up your administrator account' : mode === 'forgot' ? (forgotOtpStep ? 'Enter verification OTP & set new password' : 'Enter email to receive OTP verification code') : loginSub}
           </p>
         </div>
 
@@ -686,55 +592,15 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
                 />
               </Fld>
 
-              {/* ─ Row 2 Right: Email + OTP button */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.64rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.24rem' }}>
-                  Email * {otpVerified && <span style={{ color: '#10b981', fontSize: '0.6rem', textTransform: 'none' }}>✓ Verified</span>}
-                </label>
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <div style={{ position: 'relative', flex: 1 }}>
-                    <Mail size={13} color="#475569" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-                    <input type="email" placeholder="your@email.com"
-                      value={regEmail} onChange={e => { setRegEmail(e.target.value); setError(''); setOtpVerified(false); setOtpStep(false); setOtpSent(false); }}
-                      disabled={otpVerified}
-                      style={{
-                        ...inp(regEmail),
-                        borderColor: otpVerified ? '#10b981' : (regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'),
-                        opacity: otpVerified ? 0.7 : 1
-                      }}
-                      onFocus={e => e.target.style.borderColor = cfg.accent}
-                      onBlur={e => e.target.style.borderColor = otpVerified ? '#10b981' : (regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)')}
-                    />
-                  </div>
-                  {!otpVerified && (
-                    <button type="button" onClick={handleSendOtp}
-                      disabled={!regEmail || otpCountdown > 0}
-                      style={{
-                        padding: '0 0.6rem', borderRadius: '8px', flexShrink: 0,
-                        background: (!regEmail || otpCountdown > 0) ? 'rgba(255,255,255,0.06)' : cfg.btnBg,
-                        border: (!regEmail || otpCountdown > 0) ? '1.5px solid rgba(255,255,255,0.1)' : 'none',
-                        color: (!regEmail || otpCountdown > 0) ? '#475569' : '#fff',
-                        fontSize: '0.7rem', fontWeight: 800, cursor: (!regEmail || otpCountdown > 0) ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap',
-                        boxShadow: (!regEmail || otpCountdown > 0) ? 'none' : cfg.btnShadow,
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {otpCountdown > 0 ? `${otpCountdown}s` : (otpSent ? 'Resend' : 'Send OTP')}
-                    </button>
-                  )}
-                  {otpVerified && (
-                    <div style={{
-                      padding: '0 0.5rem', borderRadius: '8px', flexShrink: 0,
-                      background: 'rgba(16,185,129,0.15)', border: '1.5px solid rgba(16,185,129,0.4)',
-                      color: '#10b981', fontSize: '0.68rem', fontWeight: 800,
-                      display: 'flex', alignItems: 'center', gap: '3px'
-                    }}>
-                      ✓ Verified
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* ─ Row 2 Right: Email */}
+              <Fld label="Email *" icon={<Mail size={13} color="#475569" />} mb="0">
+                <input type="email" placeholder="your@email.com"
+                  value={regEmail} onChange={e => { setRegEmail(e.target.value); setError(''); }}
+                  style={inp(regEmail)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
 
               {/* ─ Row 3 Left: Password */}
               <Fld label="Password *" icon={<Lock size={13} color="#475569" />} mb="0">
@@ -759,45 +625,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
                 />
               </Fld>
             </div>
-
-            {/* OTP Step Box */}
-            {otpStep && !otpVerified && (
-              <div style={{
-                marginTop: '0.2rem',
-                background: 'rgba(0,0,0,0.4)',
-                border: `1.5px solid ${cfg.accent}40`,
-                borderRadius: '8px', padding: '0.45rem 0.65rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                  <div style={{ fontSize: '0.62rem', color: '#fbbf24', fontWeight: 800 }}>
-                    📧 Demo OTP: <strong style={{ color: '#ffffff', fontFamily: 'monospace', fontSize: '0.85rem', marginLeft: '4px' }}>{generatedOtp}</strong>
-                  </div>
-                  <button type="button" onClick={handleVerifyOtp} disabled={otpInput.join('').length < 6}
-                    style={{
-                      padding: '3px 10px', borderRadius: '5px',
-                      background: otpInput.join('').length === 6 ? cfg.btnBg : 'rgba(255,255,255,0.08)',
-                      color: '#fff', fontSize: '0.68rem', fontWeight: 800, border: 'none', cursor: 'pointer'
-                    }}>
-                    Verify OTP
-                  </button>
-                </div>
-                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }} onPaste={handleOtpPaste}>
-                  {otpInput.map((digit, i) => (
-                    <input key={i} ref={el => otpRefs.current[i] = el}
-                      type="text" inputMode="numeric" maxLength={1} value={digit}
-                      onChange={e => handleOtpChange(i, e.target.value)}
-                      onKeyDown={e => handleOtpKey(i, e)}
-                      style={{
-                        width: '30px', height: '32px', textAlign: 'center', fontSize: '1rem', fontWeight: 900,
-                        fontFamily: 'monospace', color: '#fff', background: digit ? `${cfg.accent}20` : 'rgba(255,255,255,0.06)',
-                        border: `1.5px solid ${digit ? cfg.accent : 'rgba(255,255,255,0.15)'}`, borderRadius: '6px', outline: 'none'
-                      }}
-                    />
-                  ))}
-                </div>
-                {otpError && <div style={{ color: '#f87171', fontSize: '0.65rem', fontWeight: 700, textAlign: 'center', marginTop: '2px' }}>{otpError}</div>}
-              </div>
-            )}
 
             <div style={{ marginTop: '0.35rem' }}>
               <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Create Admin Account" icon={<UserPlus size={15} />} />
