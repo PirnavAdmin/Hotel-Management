@@ -2782,7 +2782,8 @@ export function TableDetailView({
               display: "flex",
               alignItems: "center",
               gap: "0.75rem",
-              flexWrap: "wrap",
+              flexWrap: "nowrap",
+              overflowX: "auto",
               background: "var(--bg-secondary)",
               flexShrink: 0,
             }}
@@ -2791,9 +2792,9 @@ export function TableDetailView({
             <div
               style={{
                 position: "relative",
-                flex: "1 1 320px",
+                flex: "1 1 180px",
                 maxWidth: "440px",
-                minWidth: "min(100%, 260px)",
+                minWidth: "180px",
               }}
             >
               <Search
@@ -2835,12 +2836,13 @@ export function TableDetailView({
             </div>
             <div
               role="group"
-              aria-label="Dietary filters"
+              aria-label="Menu filters"
               style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}
             >
               {[
                 { id: "veg", label: "Veg", color: "#22c55e" },
                 { id: "non-veg", label: "Non-Veg", color: "#ef4444" },
+                { id: "special", label: "Chef Specials", color: "#f59e0b" },
               ].map((filter) => {
                 const isActive = dietaryFilter === filter.id;
                 return (
