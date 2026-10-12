@@ -1,64 +1,151 @@
 // ============================================================
-// AVSR FOOD COURT — Sequential Invoice Counter Utility
-// Guarantees strictly ascending invoice numbers (INV-1001, INV-1002...)
+// AVSR FOOD COURT — Daily Sequential Invoice Counter Utility
+// Guarantees strictly serial invoice numbers per day (INV-001, INV-002...)
+// Automatically refreshes / resets back to INV-001 on each new day!
 // ============================================================
 
-const INVOICE_COUNTER_KEY = 'avsr_last_invoice_counter_v1';
-let memoryInvoiceCounter = 1000;
+const LAST_DATE_KEY = 'avsr_last_invoice_date_v2';
+const DAILY_COUNTER_PREFIX = 'avsr_daily_inv_cnt_';
+const LEGACY_STORAGE_ORDERS = 'gourmet_pos_past_orders_v2_inr';
 
-export function getNextInvoiceNumber() {
+// Format helper to get date string in Indian locale: e.g. "12 Oct 2026"
+export function getTodayDateString(dateObj = new Date()) {
   try {
-    let currentCounter = memoryInvoiceCounter;
-    
-    // Check saved counter in localStorage
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(INVOICE_COUNTER_KEY);
-      if (saved && !isNaN(parseInt(saved, 10))) {
-        currentCounter = Math.max(currentCounter, parseInt(saved, 10));
-      } else {
-        // Check existing past orders to find maximum existing sequential invoice
-        const pastOrders = localStorage.getItem('gourmet_pos_past_orders_v2_inr');
-        if (pastOrders) {
-          try {
-            const parsed = JSON.parse(pastOrders);
-            if (Array.isArray(parsed)) {
-              parsed.forEach(o => {
-                if (o && o.invoiceNo) {
-                  const match = String(o.invoiceNo).match(/INV-(\d+)/i);
-                  if (match && match[1]) {
-                    const num = parseInt(match[1], 10);
-                    if (!isNaN(num) && num > currentCounter && num < 900000) {
-                      currentCounter = num;
-                    }
-                  }
-                }
-              });
-            }
-          } catch {}
+    return dateObj.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  } catch {
+    const d = new Date();
+    return `${String(d.getDate()).padStart(2, '0')} Oct ${d.getFullYear()}`;
+  }
+}
+
+// Convert "12 Oct 2026" into a safe key "12_Oct_2026"
+function getDateKey(dateStr) {
+  return String(dateStr || getTodayDateString()).trim().replace(/\s+/g, '_');
+}
+
+/**
+ * Scans past orders from localStorage to find the highest serial invoice number for a given date.
+ */
+function getHighestSerialFromExistingOrders(targetDateStr) {
+  let highest = 0;
+  if (typeof localStorage === 'undefined') return 0;
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_ORDERS);
+    if (!raw) return 0;
+    const orders = JSON.parse(raw);
+    if (!Array.isArray(orders)) return 0;
+
+    orders.forEach(o => {
+      const oDate = o.date || o.settledDate;
+      if (oDate === targetDateStr && o.invoiceNo) {
+        const match = String(o.invoiceNo).match(/INV-(\d+)/i);
+        if (match && match[1]) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > highest && num < 100000) {
+            highest = num;
+          }
         }
+      }
+    });
+  } catch {}
+  return highest;
+}
+
+/**
+ * Generate next sequential invoice number for today (or specified date).
+ * Resets daily to INV-001 on each new date!
+ */
+export function getNextInvoiceNumber(targetDateStr) {
+  try {
+    const today = targetDateStr || getTodayDateString();
+    const dateKey = getDateKey(today);
+    const storageCounterKey = `${DAILY_COUNTER_PREFIX}${dateKey}`;
+
+    let currentCounter = 0;
+
+    if (typeof localStorage !== 'undefined') {
+      // 1. Check if we have a recorded counter for this day
+      const savedCount = localStorage.getItem(storageCounterKey);
+      if (savedCount && !isNaN(parseInt(savedCount, 10))) {
+        currentCounter = parseInt(savedCount, 10);
+      }
+
+      // 2. Cross-check against actual past orders for this day (in case of sync or reset)
+      const existingHighest = getHighestSerialFromExistingOrders(today);
+      if (existingHighest > currentCounter) {
+        currentCounter = existingHighest;
       }
     }
 
     const nextCounter = currentCounter + 1;
-    memoryInvoiceCounter = nextCounter;
 
+    // Save updated counter for this day and record last date
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(INVOICE_COUNTER_KEY, nextCounter.toString());
+      localStorage.setItem(LAST_DATE_KEY, today);
+      localStorage.setItem(storageCounterKey, nextCounter.toString());
     }
 
-    // Broadcast via global sync for multi-device harmony
+    // Broadcast update across LAN / other terminals
     try {
       fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [INVOICE_COUNTER_KEY]: nextCounter.toString() })
+        body: JSON.stringify({
+          [LAST_DATE_KEY]: today,
+          [storageCounterKey]: nextCounter.toString()
+        })
       }).catch(() => {});
     } catch {}
 
-    return `INV-${nextCounter}`;
+    // Format as 3-digit padded sequential serial (INV-001, INV-002, ..., INV-999, INV-1000)
+    const padded = String(nextCounter).padStart(3, '0');
+    return `INV-${padded}`;
   } catch {
-    memoryInvoiceCounter += 1;
-    return `INV-${memoryInvoiceCounter}`;
+    return 'INV-001';
   }
 }
 
+/**
+ * Peek at what the next invoice number will be without incrementing the counter.
+ */
+export function peekNextInvoiceNumber(targetDateStr) {
+  try {
+    const today = targetDateStr || getTodayDateString();
+    const dateKey = getDateKey(today);
+    const storageCounterKey = `${DAILY_COUNTER_PREFIX}${dateKey}`;
+
+    let currentCounter = 0;
+    if (typeof localStorage !== 'undefined') {
+      const savedCount = localStorage.getItem(storageCounterKey);
+      if (savedCount && !isNaN(parseInt(savedCount, 10))) {
+        currentCounter = parseInt(savedCount, 10);
+      }
+      const existingHighest = getHighestSerialFromExistingOrders(today);
+      if (existingHighest > currentCounter) {
+        currentCounter = existingHighest;
+      }
+    }
+    const nextCounter = currentCounter + 1;
+    return `INV-${String(nextCounter).padStart(3, '0')}`;
+  } catch {
+    return 'INV-001';
+  }
+}
+
+/**
+ * Manually reset daily counter for a date back to 0 (so next is INV-001).
+ */
+export function resetDailyInvoiceCounter(targetDateStr) {
+  try {
+    const today = targetDateStr || getTodayDateString();
+    const dateKey = getDateKey(today);
+    const storageCounterKey = `${DAILY_COUNTER_PREFIX}${dateKey}`;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(storageCounterKey, '0');
+    }
+  } catch {}
+}

@@ -1769,6 +1769,7 @@ export function TableDetailView({
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
   const [tableStatusFilter, setTableStatusFilter] = useState('all'); // 'all' | 'vacant' | 'occupied' | 'billed'
   const [expandedCategory, setExpandedCategory] = useState('all');
+  const [isMobileOrderSlipOpen, setIsMobileOrderSlipOpen] = useState(false);
 
   // Filtered menu items with spelling tolerance for biriyani / biryani
   const filteredMenuItems = useMemo(() => {
@@ -2290,7 +2291,7 @@ export function TableDetailView({
             <span>Transfer</span>
           </button>
 
-          {table.items.length > 0 && (
+          {safeItems.length > 0 && (
             <button
               onClick={() => onClearOrder(table.id)}
               style={{
@@ -2313,7 +2314,7 @@ export function TableDetailView({
           )}
 
           {/* Cart Icon in vacant place */}
-          {table.items.length > 0 && (
+          {safeItems.length > 0 && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -2326,7 +2327,7 @@ export function TableDetailView({
               fontWeight: 800
             }}>
               <Receipt size={14} />
-              <span>{table.items.reduce((s, i) => s + i.quantity, 0)} Items</span>
+              <span>{safeItems.reduce((s, i) => s + i.quantity, 0)} Items</span>
             </div>
           )}
 
@@ -2521,11 +2522,11 @@ export function TableDetailView({
       </div>
 
       {/* Main Workspace: Left Menu & Right Bill Cart */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+      <div className="pos-workspace-container" style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
 
 
-        {/* Left Sidebar: Categories & Subcategories */}
-        <div style={{
+        {/* Left Sidebar: Categories & Subcategories (Horizontal pills on Mobile) */}
+        <div className="pos-categories-sidebar" style={{
           width: '240px',
           background: 'var(--bg-primary)',
           borderRight: '1px solid var(--border-subtle)',
@@ -2534,10 +2535,10 @@ export function TableDetailView({
           flexShrink: 0,
           overflowY: 'auto'
         }}>
-          <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div className="pos-categories-header" style={{ padding: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
             <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Categories</h4>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', padding: '0.5rem' }}>
+          <div className="pos-categories-list" style={{ display: 'flex', flexDirection: 'column', padding: '0.5rem' }}>
             {MENU_CATEGORIES.map(category => {
               const isSelected = selectedCategory === category.id;
               const isExpanded = expandedCategory === category.id;
@@ -2546,6 +2547,7 @@ export function TableDetailView({
               return (
                 <div key={category.id}>
                   <button
+                    className="pos-category-btn"
                     onClick={() => {
                       setSelectedCategory(category.id);
                       setExpandedCategory(isExpanded && isSelected ? null : category.id);
@@ -2855,8 +2857,8 @@ export function TableDetailView({
         </div>
 
         {/* Right Side: Order Slip (Only shown when items exist) */}
-        {table.items.length > 0 && (
-          <div style={{
+        {safeItems.length > 0 && (
+          <div className="pos-order-slip-desktop" style={{
               width: '300px',
               background: 'var(--bg-secondary)',
               display: 'flex',
@@ -2884,7 +2886,7 @@ export function TableDetailView({
                     </h3>
                   </div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
-                    <span>{table.items.length} items</span>
+                    <span>{safeItems.length} items</span>
                     <span>•</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
                       <Clock size={10} color="var(--accent-amber)" />
@@ -2901,7 +2903,7 @@ export function TableDetailView({
                   fontWeight: 700,
                   whiteSpace: 'nowrap'
                 }}>
-                  #{table.id}0{table.items.length}
+                  #{table.id}0{safeItems.length}
                 </div>
               </div>
 
@@ -2916,11 +2918,11 @@ export function TableDetailView({
                 gap: '0.4rem'
               }}>
                 {/* Live Kitchen Status Banner */}
-                {table.items.length > 0 && (() => {
-                  const allReady = table.items.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
-                  const hasCooking = table.items.some(i => i.kotStatus === 'cooking');
-                  const hasReady = table.items.some(i => i.kotStatus === 'ready');
-                  const readyCount = table.items.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length;
+                {safeItems.length > 0 && (() => {
+                  const allReady = safeItems.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
+                  const hasCooking = safeItems.some(i => i.kotStatus === 'cooking');
+                  const hasReady = safeItems.some(i => i.kotStatus === 'ready');
+                  const readyCount = safeItems.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length;
 
                   if (allReady) {
                     return (
@@ -2967,7 +2969,7 @@ export function TableDetailView({
                         <span style={{ fontSize: '1.2rem' }}>🔥</span>
                         <div>
                           <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#fb923c', letterSpacing: '0.02em' }}>
-                            {readyCount > 0 ? `CHEF IS COOKING (${readyCount}/${table.items.length} PREPARED)` : 'CHEF IS COOKING ORDER'}
+                            {readyCount > 0 ? `CHEF IS COOKING (${readyCount}/${safeItems.length} PREPARED)` : 'CHEF IS COOKING ORDER'}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
                             {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes in pan` : 'Kitchen started preparing dishes • Live in pan'}
@@ -2991,7 +2993,7 @@ export function TableDetailView({
                         <span style={{ fontSize: '1.1rem' }}>🔔</span>
                         <div>
                           <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#34d399' }}>
-                            Some Dishes Prepared ({readyCount}/{table.items.length})
+                            Some Dishes Prepared ({readyCount}/{safeItems.length})
                           </div>
                           <div style={{ fontSize: '0.66rem', color: '#6ee7b7' }}>
                             Partial items are ready to serve to guests
@@ -3004,7 +3006,7 @@ export function TableDetailView({
                   return null;
                 })()}
 
-                {table.items.length === 0 ? (
+                {safeItems.length === 0 ? (
                   <div style={{
                     textAlign: 'center',
                     padding: '3rem 1rem',
@@ -3023,7 +3025,7 @@ export function TableDetailView({
                     </p>
                   </div>
                 ) : (
-                  table.items.map(item => (
+                  safeItems.map(item => (
                     <div
                       key={item.id}
                       style={{
@@ -3304,16 +3306,16 @@ export function TableDetailView({
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
                     <button
                       onClick={() => onSendKOT(table.id)}
-                      disabled={table.items.length === 0}
+                      disabled={safeItems.length === 0}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         gap: '0.3rem', padding: '0.5rem',
                         borderRadius: '6px',
                         background: 'var(--bg-tertiary)',
-                        color: table.items.length === 0 ? 'var(--text-dim)' : 'var(--text-main)',
+                        color: safeItems.length === 0 ? 'var(--text-dim)' : 'var(--text-main)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: '0.74rem', fontWeight: 700,
-                        cursor: table.items.length === 0 ? 'not-allowed' : 'pointer'
+                        cursor: safeItems.length === 0 ? 'not-allowed' : 'pointer'
                       }}
                     >
                       <ChefHat size={13} color="var(--accent-amber)" />
@@ -3321,16 +3323,16 @@ export function TableDetailView({
                     </button>
                     <button
                       onClick={() => onOpenReceipt(table.id)}
-                      disabled={table.items.length === 0}
+                      disabled={safeItems.length === 0}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         gap: '0.3rem', padding: '0.5rem',
                         borderRadius: '6px',
                         background: 'var(--bg-tertiary)',
-                        color: table.items.length === 0 ? 'var(--text-dim)' : 'var(--text-main)',
+                        color: safeItems.length === 0 ? 'var(--text-dim)' : 'var(--text-main)',
                         border: '1px solid var(--border-subtle)',
                         fontSize: '0.74rem', fontWeight: 700,
-                        cursor: table.items.length === 0 ? 'not-allowed' : 'pointer'
+                        cursor: safeItems.length === 0 ? 'not-allowed' : 'pointer'
                       }}
                     >
                       <Receipt size={13} color="var(--accent-amber)" />
@@ -3340,19 +3342,19 @@ export function TableDetailView({
 
                   <button
                     onClick={() => onOpenSettlement(table.id)}
-                    disabled={table.items.length === 0}
+                    disabled={safeItems.length === 0}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       gap: '0.4rem', padding: '0.65rem',
                       borderRadius: '8px',
-                      background: table.items.length === 0
+                      background: safeItems.length === 0
                         ? 'rgba(245, 158, 11, 0.2)'
                         : 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-                      color: table.items.length === 0 ? 'var(--text-dim)' : '#ffffff',
+                      color: safeItems.length === 0 ? 'var(--text-dim)' : '#ffffff',
                       fontSize: '0.82rem',
                       fontWeight: 800,
-                      boxShadow: table.items.length === 0 ? 'none' : '0 3px 10px rgba(245, 158, 11, 0.4)',
-                      cursor: table.items.length === 0 ? 'not-allowed' : 'pointer'
+                      boxShadow: safeItems.length === 0 ? 'none' : '0 3px 10px rgba(245, 158, 11, 0.4)',
+                      cursor: safeItems.length === 0 ? 'not-allowed' : 'pointer'
                     }}
                   >
                     <CreditCard size={15} />
@@ -3363,6 +3365,253 @@ export function TableDetailView({
           </div>
         )}
       </div>
+
+      {/* Mobile Floating Cart Trigger (Sticky at bottom on phones) */}
+      {safeItems.length > 0 && !isMobileOrderSlipOpen && (
+        <div
+          className="pos-mobile-cart-bar"
+          onClick={() => setIsMobileOrderSlipOpen(true)}
+          style={{
+            display: 'none',
+            position: 'fixed',
+            bottom: '12px',
+            left: '12px',
+            right: '12px',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+            color: '#ffffff',
+            borderRadius: '12px',
+            padding: '0.75rem 1rem',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 8px 24px rgba(234, 88, 12, 0.45)',
+            zIndex: 90,
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Receipt size={18} color="#ffffff" />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.88rem' }}>
+                {safeItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} Items • {formatCurrency(grandTotal)}
+              </div>
+              <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>
+                {table.name} • Tap to view bill & actions
+              </div>
+            </div>
+          </div>
+          <div style={{
+            background: '#ffffff',
+            color: '#000000',
+            padding: '0.4rem 0.8rem',
+            borderRadius: '8px',
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem'
+          }}>
+            <span>View Bill</span>
+            <span>❯</span>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Slide-Up Order Slip Modal Drawer */}
+      {isMobileOrderSlipOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end'
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setIsMobileOrderSlipOpen(false);
+        }}
+        >
+          <div style={{
+            background: 'var(--bg-secondary)',
+            borderTop: '2px solid var(--accent-amber)',
+            borderTopLeftRadius: '16px',
+            borderTopRightRadius: '16px',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
+            overflow: 'hidden'
+          }}>
+            {/* Drawer Header */}
+            <div style={{
+              padding: '0.75rem 1rem',
+              background: 'var(--bg-tertiary)',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  {table.name} — Order Slip
+                </h3>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  {safeItems.length} items ordered
+                </span>
+              </div>
+              <button
+                onClick={() => setIsMobileOrderSlipOpen(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--text-main)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Scrollable Items List */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '0.75rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              maxHeight: '40vh'
+            }}>
+              {safeItems.map(item => (
+                <div
+                  key={item.id}
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    padding: '0.55rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      {item.name}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--accent-amber-light)' }}>
+                      {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(item.price * item.quantity)}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <button
+                      onClick={() => onUpdateItemQuantity(table.id, item.id, item.quantity - 1)}
+                      style={{
+                        width: '26px', height: '26px', borderRadius: '6px',
+                        background: 'rgba(255, 255, 255, 0.08)', color: 'var(--text-main)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.9rem', fontWeight: 800
+                      }}
+                    >
+                      -
+                    </button>
+                    <span style={{ fontWeight: 800, minWidth: '18px', textAlign: 'center' }}>
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => onUpdateItemQuantity(table.id, item.id, item.quantity + 1)}
+                      style={{
+                        width: '26px', height: '26px', borderRadius: '6px',
+                        background: 'var(--accent-amber)', color: '#000000',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.9rem', fontWeight: 800
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Financial Summary & Actions */}
+            <div style={{
+              background: 'var(--bg-tertiary)',
+              borderTop: '1px solid var(--border-subtle)',
+              padding: '0.75rem 1rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                <span>Subtotal</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                <span>Taxes & Charges</span>
+                <span>{formatCurrency(taxAmount + serviceChargeAmount)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', fontWeight: 900, color: 'var(--accent-amber-light)', marginBottom: '0.65rem' }}>
+                <span>Total Payable</span>
+                <span>{formatCurrency(grandTotal)}</span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                <button
+                  onClick={() => {
+                    setIsMobileOrderSlipOpen(false);
+                    onSendKOT(table.id);
+                  }}
+                  style={{
+                    padding: '0.55rem', borderRadius: '8px',
+                    background: 'var(--bg-primary)', color: 'var(--text-main)',
+                    border: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: '0.78rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
+                  }}
+                >
+                  <ChefHat size={14} color="var(--accent-amber)" />
+                  <span>Send KOT</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileOrderSlipOpen(false);
+                    onOpenReceipt(table.id);
+                  }}
+                  style={{
+                    padding: '0.55rem', borderRadius: '8px',
+                    background: 'var(--bg-primary)', color: 'var(--text-main)',
+                    border: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: '0.78rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
+                  }}
+                >
+                  <Receipt size={14} color="var(--accent-amber)" />
+                  <span>Print Bill</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsMobileOrderSlipOpen(false);
+                  onOpenSettlement(table.id);
+                }}
+                style={{
+                  width: '100%', padding: '0.7rem',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                  color: '#ffffff', fontWeight: 800, fontSize: '0.88rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)'
+                }}
+              >
+                <CreditCard size={16} />
+                <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

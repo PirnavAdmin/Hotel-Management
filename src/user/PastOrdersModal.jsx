@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { X, Receipt, Search, Eye, Calendar, Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2 } from 'lucide-react';
+import { 
+  X, Receipt, Search, Eye, Calendar, CalendarDays, CalendarRange,
+  Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
+} from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
@@ -7,12 +10,52 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   }, []);
 
+  // Helper to get date string from order safely
+  const getOrderDateStr = (order) => {
+    if (!order) return todayDateStr;
+    if (order.date) return order.date;
+    if (order.settledDate) return order.settledDate;
+    if (order.orderTimestamp) {
+      const d = new Date(Number(order.orderTimestamp));
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+    }
+    return todayDateStr;
+  };
+
+  // Helper to parse date from order safely
+  const parseOrderDate = (order) => {
+    if (order.date) {
+      const d = new Date(order.date);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (order.settledDate) {
+      const d = new Date(order.settledDate);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (order.orderTimestamp) {
+      const d = new Date(Number(order.orderTimestamp));
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  };
+
+  const getMonthStr = (d) => {
+    return d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  };
+
+  const currentMonthStr = useMemo(() => {
+    return new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  }, []);
+
   // Extract all unique dates from pastOrders sorted newest first
   const availableDates = useMemo(() => {
     const datesSet = new Set();
     datesSet.add(todayDateStr);
     pastOrders.forEach(o => {
-      if (o.date) datesSet.add(o.date);
+      const dStr = getOrderDateStr(o);
+      if (dStr) datesSet.add(dStr);
     });
     return Array.from(datesSet).sort((a, b) => {
       const timeA = new Date(a).getTime() || 0;
@@ -21,20 +64,56 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     });
   }, [pastOrders, todayDateStr]);
 
-  const [selectedDate, setSelectedDate] = useState(todayDateStr);
-  const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'grouped_all'
+  // Extract all unique months from pastOrders sorted newest first
+  const availableMonths = useMemo(() => {
+    const monthsSet = new Set();
+    monthsSet.add(currentMonthStr);
+    pastOrders.forEach(o => {
+      const d = parseOrderDate(o);
+      monthsSet.add(getMonthStr(d));
+    });
+    return Array.from(monthsSet).sort((a, b) => {
+      const timeA = new Date(a).getTime() || 0;
+      const timeB = new Date(b).getTime() || 0;
+      return timeB - timeA;
+    });
+  }, [pastOrders, currentMonthStr]);
+
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const hasToday = pastOrders && pastOrders.some(o => getOrderDateStr(o) === todayDateStr);
+    if (hasToday) return todayDateStr;
+    if (pastOrders && pastOrders.length > 0) return getOrderDateStr(pastOrders[0]);
+    return todayDateStr;
+  });
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'monthly' | 'custom' | 'grouped_all'
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Convert "DD MMM YYYY" string to "YYYY-MM-DD" for HTML <input type="date">
-  const getYYYYMMDD = (dateString) => {
-    if (!dateString) return '';
+  // Convert Date or dateString to "YYYY-MM-DD" for HTML <input type="date">
+  const getYYYYMMDD = (input) => {
+    if (!input) return '';
     try {
-      const d = new Date(dateString);
+      const d = input instanceof Date ? input : new Date(input);
       if (!isNaN(d.getTime())) {
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+      }
+    } catch {}
+    return '';
+  };
+
+  // Convert "Oct 2026" to "2026-10" for HTML <input type="month">
+  const getYYYYMM = (monthStr) => {
+    try {
+      const d = new Date(monthStr);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
       }
     } catch {}
     return '';
@@ -50,6 +129,19 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const formatted = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
       setSelectedDate(formatted);
       setViewMode('single_day');
+    } catch {}
+  };
+
+  // Convert "YYYY-MM" input value back to "MMM YYYY"
+  const handleMonthInputChange = (e) => {
+    const val = e.target.value;
+    if (!val) return;
+    try {
+      const [y, m] = val.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, 1);
+      const formatted = getMonthStr(dateObj);
+      setSelectedMonth(formatted);
+      setViewMode('monthly');
     } catch {}
   };
 
@@ -70,14 +162,43 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
 
   // Single day filtered orders
   const singleDayOrders = useMemo(() => {
-    return searchFilteredOrders.filter(o => (o.date || todayDateStr) === selectedDate);
+    return searchFilteredOrders.filter(o => getOrderDateStr(o) === selectedDate);
   }, [searchFilteredOrders, selectedDate, todayDateStr]);
+
+  // Monthly filtered orders
+  const monthlyOrders = useMemo(() => {
+    return searchFilteredOrders.filter(o => {
+      const d = parseOrderDate(o);
+      return getMonthStr(d) === selectedMonth;
+    });
+  }, [searchFilteredOrders, selectedMonth]);
+
+  // Custom date range filtered orders
+  const customRangeOrders = useMemo(() => {
+    return searchFilteredOrders.filter(o => {
+      if (!customStartDate && !customEndDate) return true;
+      const orderDate = parseOrderDate(o);
+      const orderTime = orderDate.getTime();
+
+      if (customStartDate) {
+        const start = new Date(customStartDate);
+        start.setHours(0, 0, 0, 0);
+        if (orderTime < start.getTime()) return false;
+      }
+      if (customEndDate) {
+        const end = new Date(customEndDate);
+        end.setHours(23, 59, 59, 999);
+        if (orderTime > end.getTime()) return false;
+      }
+      return true;
+    });
+  }, [searchFilteredOrders, customStartDate, customEndDate]);
 
   // Grouped orders by date
   const groupedOrdersByDate = useMemo(() => {
     const map = {};
     searchFilteredOrders.forEach(order => {
-      const d = order.date || todayDateStr;
+      const d = getOrderDateStr(order);
       if (!map[d]) map[d] = [];
       map[d].push(order);
     });
@@ -101,7 +222,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     });
   }, [searchFilteredOrders, todayDateStr]);
 
-  // Navigation step helper
+  // Day navigation step helpers
   const handlePrevDay = () => {
     const idx = availableDates.indexOf(selectedDate);
     if (idx !== -1 && idx < availableDates.length - 1) {
@@ -132,14 +253,78 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     setViewMode('single_day');
   };
 
-  // Active view stats calculation
-  const activeOrders = viewMode === 'single_day' ? singleDayOrders : searchFilteredOrders;
+  // Month navigation step helpers
+  const handlePrevMonth = () => {
+    const idx = availableMonths.indexOf(selectedMonth);
+    if (idx !== -1 && idx < availableMonths.length - 1) {
+      setSelectedMonth(availableMonths[idx + 1]);
+    } else {
+      try {
+        const d = new Date(selectedMonth);
+        d.setMonth(d.getMonth() - 1);
+        setSelectedMonth(getMonthStr(d));
+      } catch {}
+    }
+    setViewMode('monthly');
+  };
+
+  const handleNextMonth = () => {
+    const idx = availableMonths.indexOf(selectedMonth);
+    if (idx > 0) {
+      setSelectedMonth(availableMonths[idx - 1]);
+    } else {
+      try {
+        const d = new Date(selectedMonth);
+        d.setMonth(d.getMonth() + 1);
+        setSelectedMonth(getMonthStr(d));
+      } catch {}
+    }
+    setViewMode('monthly');
+  };
+
+  // Custom date preset handlers
+  const handlePreset = (preset) => {
+    const now = new Date();
+    if (preset === 'today') {
+      const todayStr = getYYYYMMDD(now);
+      setCustomStartDate(todayStr);
+      setCustomEndDate(todayStr);
+    } else if (preset === '7days') {
+      const start = new Date();
+      start.setDate(now.getDate() - 6);
+      setCustomStartDate(getYYYYMMDD(start));
+      setCustomEndDate(getYYYYMMDD(now));
+    } else if (preset === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setCustomStartDate(getYYYYMMDD(start));
+      setCustomEndDate(getYYYYMMDD(end));
+    } else if (preset === '30days') {
+      const start = new Date();
+      start.setDate(now.getDate() - 29);
+      setCustomStartDate(getYYYYMMDD(start));
+      setCustomEndDate(getYYYYMMDD(now));
+    } else if (preset === 'all') {
+      setCustomStartDate('');
+      setCustomEndDate('');
+    }
+    setViewMode('custom');
+  };
+
+  // Active view orders
+  const activeOrders = useMemo(() => {
+    if (viewMode === 'single_day') return singleDayOrders;
+    if (viewMode === 'monthly') return monthlyOrders;
+    if (viewMode === 'custom') return customRangeOrders;
+    return searchFilteredOrders;
+  }, [viewMode, singleDayOrders, monthlyOrders, customRangeOrders, searchFilteredOrders]);
+
   const totalCollected = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
   const averageTicket = activeOrders.length ? totalCollected / activeOrders.length : 0;
 
   // Count invoices for selected date vs overall
   const countForSelectedDate = useMemo(() => {
-    return pastOrders.filter(o => (o.date || todayDateStr) === selectedDate).length;
+    return pastOrders.filter(o => getOrderDateStr(o) === selectedDate).length;
   }, [pastOrders, selectedDate, todayDateStr]);
 
   return (
@@ -158,17 +343,18 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         background: 'var(--bg-secondary)',
         border: '1px solid var(--border-subtle)',
         width: '100%',
-        maxWidth: '820px',
+        maxWidth: '920px',
         borderRadius: 'var(--radius-lg)',
         boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: '88vh'
+        maxHeight: '94vh',
+        height: '92vh'
       }}>
-        {/* Header */}
+        {/* Compact Header */}
         <div style={{
-          padding: '1rem 1.5rem',
+          padding: '0.65rem 1.25rem',
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--bg-tertiary)',
           display: 'flex',
@@ -176,19 +362,19 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Receipt size={22} color="var(--accent-amber)" />
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                Day-by-Day Sales Invoices & Settled Orders
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Receipt size={18} color="var(--accent-amber)" />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                Sales Invoices & Settled Orders
               </h3>
             </div>
-            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Calendar size={13} color="var(--accent-amber)" />
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Calendar size={12} color="var(--accent-amber)" />
               <span>
-                {viewMode === 'single_day' 
-                  ? `Selected Date: ${selectedDate} (${countForSelectedDate} Invoices)`
-                  : `All Dates Grouped Breakdown (${pastOrders.length} Total Invoices)`
-                }
+                {viewMode === 'single_day' && `Selected Date: ${selectedDate} (${countForSelectedDate} Invoices)`}
+                {viewMode === 'monthly' && `Selected Month: ${selectedMonth} (${monthlyOrders.length} Invoices)`}
+                {viewMode === 'custom' && `Custom Range: ${customStartDate ? customStartDate : 'All Start'} to ${customEndDate ? customEndDate : 'Present'} (${customRangeOrders.length} Invoices)`}
+                {viewMode === 'grouped_all' && `All Dates Grouped Breakdown (${pastOrders.length} Total Invoices)`}
               </span>
             </div>
           </div>
@@ -199,238 +385,486 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
               border: '1px solid var(--border-subtle)',
               color: 'var(--text-muted)',
               display: 'flex',
-              padding: '6px',
+              padding: '5px',
               borderRadius: '6px',
               cursor: 'pointer'
             }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* View Mode & Day Navigation Bar */}
+        {/* View Mode & Filter Navigation Bar */}
         <div style={{
-          padding: '0.75rem 1.5rem',
+          padding: '0.45rem 1.25rem',
           background: 'rgba(0, 0, 0, 0.25)',
           borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem'
+          flexDirection: 'column',
+          gap: '0.45rem'
         }}>
-          {/* Mode Switcher */}
-          <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-primary)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-            <button
-              onClick={() => setViewMode('single_day')}
-              style={{
-                padding: '0.4rem 0.85rem',
-                borderRadius: '6px',
-                border: 'none',
-                background: viewMode === 'single_day' ? 'var(--accent-amber)' : 'transparent',
-                color: viewMode === 'single_day' ? '#000' : 'var(--text-muted)',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Calendar size={14} />
-              Daily View
-            </button>
-            <button
-              onClick={() => setViewMode('grouped_all')}
-              style={{
-                padding: '0.4rem 0.85rem',
-                borderRadius: '6px',
-                border: 'none',
-                background: viewMode === 'grouped_all' ? 'var(--accent-amber)' : 'transparent',
-                color: viewMode === 'grouped_all' ? '#000' : 'var(--text-muted)',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Layers size={14} />
-              Day-by-Day Breakdown
-            </button>
+          {/* Top Row: Mode Switcher Tabs */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '3px', background: 'var(--bg-primary)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setViewMode('single_day')}
+                style={{
+                  padding: '0.3rem 0.65rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: viewMode === 'single_day' ? 'var(--accent-amber)' : 'transparent',
+                  color: viewMode === 'single_day' ? '#000' : 'var(--text-muted)',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Calendar size={13} />
+                Daily View
+              </button>
+              <button
+                onClick={() => setViewMode('monthly')}
+                style={{
+                  padding: '0.3rem 0.65rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: viewMode === 'monthly' ? 'var(--accent-amber)' : 'transparent',
+                  color: viewMode === 'monthly' ? '#000' : 'var(--text-muted)',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <CalendarDays size={13} />
+                Monthly View
+              </button>
+              <button
+                onClick={() => setViewMode('custom')}
+                style={{
+                  padding: '0.3rem 0.65rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: viewMode === 'custom' ? 'var(--accent-amber)' : 'transparent',
+                  color: viewMode === 'custom' ? '#000' : 'var(--text-muted)',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <CalendarRange size={13} />
+                Custom Range
+              </button>
+              <button
+                onClick={() => setViewMode('grouped_all')}
+                style={{
+                  padding: '0.3rem 0.65rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: viewMode === 'grouped_all' ? 'var(--accent-amber)' : 'transparent',
+                  color: viewMode === 'grouped_all' ? '#000' : 'var(--text-muted)',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Layers size={13} />
+                Day-by-Day Breakdown
+              </button>
+            </div>
+
+            {/* Quick summary badge on right */}
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 600 }}>
+              {viewMode === 'single_day' && `Date: ${selectedDate}`}
+              {viewMode === 'monthly' && `Month: ${selectedMonth}`}
+              {viewMode === 'custom' && (customStartDate || customEndDate ? `Filtered Range` : `All Range`)}
+              {viewMode === 'grouped_all' && `${groupedOrdersByDate.length} Active Days`}
+            </div>
           </div>
 
-          {/* Date Selector & Navigation Controls (Enabled in single_day mode) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={handlePrevDay}
-              title="Previous Day"
-              style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-main)',
-                padding: '0.4rem 0.6rem',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.76rem',
-                fontWeight: 700
-              }}
-            >
-              <ChevronLeft size={16} />
-              Prev Day
-            </button>
-
-            {/* Quick Date Select Dropdown */}
-            <select
-              value={selectedDate}
-              onChange={e => {
-                setSelectedDate(e.target.value);
-                setViewMode('single_day');
-              }}
-              style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--accent-amber)',
-                color: 'var(--text-main)',
-                padding: '0.4rem 0.75rem',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              {availableDates.map(d => {
-                const cnt = pastOrders.filter(o => (o.date || todayDateStr) === d).length;
-                return (
-                  <option key={d} value={d}>
-                    📅 {d} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
-                  </option>
-                );
-              })}
-            </select>
-
-            {/* Native HTML DatePicker */}
-            <input
-              type="date"
-              value={getYYYYMMDD(selectedDate)}
-              onChange={handleDateInputChange}
-              style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-main)',
-                padding: '0.35rem 0.5rem',
-                borderRadius: '6px',
-                fontSize: '0.78rem',
-                cursor: 'pointer'
-              }}
-              title="Pick specific date calendar"
-            />
-
-            <button
-              onClick={handleNextDay}
-              title="Next Day"
-              style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-main)',
-                padding: '0.4rem 0.6rem',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.76rem',
-                fontWeight: 700
-              }}
-            >
-              Next Day
-              <ChevronRight size={16} />
-            </button>
-
-            {selectedDate !== todayDateStr && (
+          {/* Bottom Row: Controls Specific to Selected Tab */}
+          {viewMode === 'single_day' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
-                onClick={() => {
-                  setSelectedDate(todayDateStr);
+                onClick={handlePrevDay}
+                title="Previous Day"
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-main)',
+                  padding: '0.4rem 0.6rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700
+                }}
+              >
+                <ChevronLeft size={16} />
+                Prev Day
+              </button>
+
+              {/* Quick Date Select Dropdown */}
+              <select
+                value={selectedDate}
+                onChange={e => {
+                  setSelectedDate(e.target.value);
                   setViewMode('single_day');
                 }}
                 style={{
-                  background: 'rgba(245, 158, 11, 0.15)',
+                  background: 'var(--bg-tertiary)',
                   border: '1px solid var(--accent-amber)',
-                  color: '#fbbf24',
+                  color: 'var(--text-main)',
                   padding: '0.4rem 0.75rem',
                   borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.76rem',
-                  fontWeight: 800
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
                 }}
               >
-                Today
+                {availableDates.map(d => {
+                  const cnt = pastOrders.filter(o => getOrderDateStr(o) === d).length;
+                  return (
+                    <option key={d} value={d}>
+                      📅 {d} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
+                    </option>
+                  );
+                })}
+              </select>
+
+              {/* Native HTML DatePicker */}
+              <input
+                type="date"
+                value={getYYYYMMDD(selectedDate)}
+                onChange={handleDateInputChange}
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-main)',
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer'
+                }}
+                title="Pick specific date calendar"
+              />
+
+              <button
+                onClick={handleNextDay}
+                title="Next Day"
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-main)',
+                  padding: '0.4rem 0.6rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700
+                }}
+              >
+                Next Day
+                <ChevronRight size={16} />
               </button>
-            )}
-          </div>
+
+              {selectedDate !== todayDateStr && (
+                <button
+                  onClick={() => {
+                    setSelectedDate(todayDateStr);
+                    setViewMode('single_day');
+                  }}
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid var(--accent-amber)',
+                    color: '#fbbf24',
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.76rem',
+                    fontWeight: 800
+                  }}
+                >
+                  Today
+                </button>
+              )}
+            </div>
+          )}
+
+          {viewMode === 'monthly' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={handlePrevMonth}
+                title="Previous Month"
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-main)',
+                  padding: '0.4rem 0.6rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700
+                }}
+              >
+                <ChevronLeft size={16} />
+                Prev Month
+              </button>
+
+              {/* Month Select Dropdown */}
+              <select
+                value={selectedMonth}
+                onChange={e => {
+                  setSelectedMonth(e.target.value);
+                  setViewMode('monthly');
+                }}
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--accent-amber)',
+                  color: 'var(--text-main)',
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {availableMonths.map(m => {
+                  const cnt = pastOrders.filter(o => getMonthStr(parseOrderDate(o)) === m).length;
+                  return (
+                    <option key={m} value={m}>
+                      🗓️ {m} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
+                    </option>
+                  );
+                })}
+              </select>
+
+              {/* Native HTML Month Picker */}
+              <input
+                type="month"
+                value={getYYYYMM(selectedMonth)}
+                onChange={handleMonthInputChange}
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-main)',
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer'
+                }}
+                title="Pick specific month"
+              />
+
+              <button
+                onClick={handleNextMonth}
+                title="Next Month"
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-main)',
+                  padding: '0.4rem 0.6rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700
+                }}
+              >
+                Next Month
+                <ChevronRight size={16} />
+              </button>
+
+              {selectedMonth !== currentMonthStr && (
+                <button
+                  onClick={() => {
+                    setSelectedMonth(currentMonthStr);
+                    setViewMode('monthly');
+                  }}
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid var(--accent-amber)',
+                    color: '#fbbf24',
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.76rem',
+                    fontWeight: 800
+                  }}
+                >
+                  This Month
+                </button>
+              )}
+            </div>
+          )}
+
+          {viewMode === 'custom' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 700 }}>From:</span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={e => setCustomStartDate(e.target.value)}
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--accent-amber)',
+                    color: 'var(--text-main)',
+                    padding: '0.35rem 0.55rem',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 700 }}>To:</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={e => setCustomEndDate(e.target.value)}
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--accent-amber)',
+                    color: 'var(--text-main)',
+                    padding: '0.35rem 0.55rem',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {[
+                  { id: 'today', label: 'Today' },
+                  { id: '7days', label: 'Last 7 Days' },
+                  { id: 'month', label: 'This Month' },
+                  { id: '30days', label: 'Last 30 Days' },
+                  { id: 'all', label: 'All History' }
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => handlePreset(p.id)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-main)',
+                      padding: '0.32rem 0.6rem',
+                      borderRadius: '5px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Dynamic Stats Row */}
+        {/* Dynamic Compact Stats Row */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1rem',
-          padding: '1rem 1.5rem',
+          gap: '0.5rem',
+          padding: '0.35rem 1.25rem',
           background: 'var(--bg-primary)',
           borderBottom: '1px solid var(--border-subtle)'
         }}>
           <div style={{
             background: 'var(--bg-secondary)',
-            padding: '0.85rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)'
+            padding: '0.35rem 0.75rem',
+            borderRadius: '6px',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
           }}>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              {viewMode === 'single_day' ? `Invoices Settled (${selectedDate})` : 'Total Invoices (All Dates)'}
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {viewMode === 'single_day' && `Bills Settled`}
+              {viewMode === 'monthly' && `Monthly Bills`}
+              {viewMode === 'custom' && `Range Bills`}
+              {viewMode === 'grouped_all' && 'Total Bills'}
             </span>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+            <div style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main)' }}>
               {activeOrders.length} {activeOrders.length === 1 ? 'Bill' : 'Bills'}
             </div>
           </div>
 
           <div style={{
             background: 'var(--bg-secondary)',
-            padding: '0.85rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)'
+            padding: '0.35rem 0.75rem',
+            borderRadius: '6px',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
           }}>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              {viewMode === 'single_day' ? `Daily Revenue (${selectedDate})` : 'Total Revenue'}
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {viewMode === 'single_day' && `Daily Revenue`}
+              {viewMode === 'monthly' && `Monthly Revenue`}
+              {viewMode === 'custom' && `Total Revenue`}
+              {viewMode === 'grouped_all' && 'Total Revenue'}
             </span>
-            <div className="font-mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--accent-amber-light)', marginTop: '2px' }}>
+            <div className="font-mono" style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--accent-amber-light)' }}>
               {formatCurrency(totalCollected)}
             </div>
           </div>
 
           <div style={{
             background: 'var(--bg-secondary)',
-            padding: '0.85rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)'
+            padding: '0.35rem 0.75rem',
+            borderRadius: '6px',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
           }}>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Average Invoice Value
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {viewMode === 'single_day' && `Avg Value`}
+              {viewMode === 'monthly' && `Monthly Avg`}
+              {viewMode === 'custom' && `Range Avg`}
+              {viewMode === 'grouped_all' && 'Avg Value'}
             </span>
-            <div className="font-mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--status-vacant)', marginTop: '2px' }}>
+            <div className="font-mono" style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--status-vacant)' }}>
               {formatCurrency(averageTicket)}
             </div>
           </div>
         </div>
 
-        {/* Search */}
-        <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)' }}>
+        {/* Compact Search */}
+        <div style={{ padding: '0.35rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)' }}>
           <div style={{ position: 'relative' }}>
-            <Search size={15} color="var(--text-dim)" style={{ position: 'absolute', left: '12px', top: '10px' }} />
+            <Search size={14} color="var(--text-dim)" style={{ position: 'absolute', left: '10px', top: '8px' }} />
             <input
               type="text"
               placeholder="Search by invoice #, table name, server, payment method..."
@@ -441,54 +875,136 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 background: 'var(--bg-tertiary)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
-                padding: '0.5rem 0.85rem 0.5rem 2.2rem',
+                padding: '0.32rem 0.75rem 0.32rem 1.95rem',
                 color: 'var(--text-main)',
-                fontSize: '0.82rem'
+                fontSize: '0.78rem'
               }}
             />
           </div>
         </div>
 
         {/* Main Orders Display */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem' }}>
-          {viewMode === 'single_day' ? (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 1.25rem' }}>
+          {viewMode === 'single_day' && (
             /* Single Day View */
             <div>
               <div style={{
-                marginBottom: '0.75rem',
+                marginBottom: '0.35rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                paddingBottom: '0.5rem',
+                paddingBottom: '0.25rem',
                 borderBottom: '1px dashed var(--border-subtle)'
               }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-amber)' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-amber)' }}>
                   📅 Showing Invoices for {selectedDate}
                 </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                   Total Invoices: <strong>{singleDayOrders.length}</strong>
                 </span>
               </div>
 
               {singleDayOrders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-dim)' }}>
-                  <Calendar size={36} color="var(--border-subtle)" style={{ marginBottom: '0.5rem' }} />
-                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-dim)' }}>
+                  <Calendar size={32} color="var(--border-subtle)" style={{ marginBottom: '0.35rem' }} />
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     No invoices found for {selectedDate}
                   </div>
-                  <div style={{ fontSize: '0.8rem', marginTop: '4px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '0.76rem', marginTop: '3px', color: 'var(--text-muted)' }}>
                     Use the date navigation controls or dropdown above to select another date.
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   {singleDayOrders.map((order, idx) => (
                     <OrderCard key={idx} order={order} onReprintReceipt={onReprintReceipt} />
                   ))}
                 </div>
               )}
             </div>
-          ) : (
+          )}
+
+          {viewMode === 'monthly' && (
+            /* Monthly View */
+            <div>
+              <div style={{
+                marginBottom: '0.35rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '0.25rem',
+                borderBottom: '1px dashed var(--border-subtle)'
+              }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-amber)' }}>
+                  🗓️ Showing Invoices for Month: {selectedMonth}
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Total Invoices: <strong>{monthlyOrders.length}</strong> • Total: <strong className="font-mono" style={{ color: 'var(--accent-amber-light)' }}>{formatCurrency(totalCollected)}</strong>
+                </span>
+              </div>
+
+              {monthlyOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-dim)' }}>
+                  <CalendarDays size={32} color="var(--border-subtle)" style={{ marginBottom: '0.35rem' }} />
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    No invoices recorded for {selectedMonth}
+                  </div>
+                  <div style={{ fontSize: '0.76rem', marginTop: '3px', color: 'var(--text-muted)' }}>
+                    Use the month navigation buttons or dropdown above to view past months.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {monthlyOrders.map((order, idx) => (
+                    <OrderCard key={idx} order={order} onReprintReceipt={onReprintReceipt} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {viewMode === 'custom' && (
+            /* Custom Date Range View */
+            <div>
+              <div style={{
+                marginBottom: '0.35rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '0.25rem',
+                borderBottom: '1px dashed var(--border-subtle)',
+                flexWrap: 'wrap',
+                gap: '0.35rem'
+              }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-amber)' }}>
+                  📅 Showing Invoices from {customStartDate ? customStartDate : 'All History'} to {customEndDate ? customEndDate : 'Present'}
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Found <strong>{customRangeOrders.length}</strong> Invoices • Total: <strong className="font-mono" style={{ color: 'var(--accent-amber-light)' }}>{formatCurrency(totalCollected)}</strong>
+                </span>
+              </div>
+
+              {customRangeOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-dim)' }}>
+                  <CalendarRange size={32} color="var(--border-subtle)" style={{ marginBottom: '0.35rem' }} />
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    No invoices match the selected date range
+                  </div>
+                  <div style={{ fontSize: '0.76rem', marginTop: '3px', color: 'var(--text-muted)' }}>
+                    Adjust the "From" and "To" dates or click quick presets like "This Month" or "All History".
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {customRangeOrders.map((order, idx) => (
+                    <OrderCard key={idx} order={order} onReprintReceipt={onReprintReceipt} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {viewMode === 'grouped_all' && (
             /* Grouped Day-by-Day View */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {groupedOrdersByDate.length === 0 ? (
@@ -560,7 +1076,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                     </div>
 
                     {/* Group Orders List */}
-                    <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ padding: '0.45rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       {group.orders.map((order, idx) => (
                         <OrderCard key={idx} order={order} onReprintReceipt={onReprintReceipt} />
                       ))}
@@ -572,26 +1088,26 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
           )}
         </div>
 
-        {/* Footer */}
+        {/* Compact Footer */}
         <div style={{
-          padding: '0.85rem 1.5rem',
+          padding: '0.45rem 1.25rem',
           background: 'var(--bg-tertiary)',
           borderTop: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             Showing <strong>{activeOrders.length}</strong> of <strong>{pastOrders.length}</strong> total settled invoices
           </span>
           <button
             onClick={onClose}
             style={{
-              padding: '0.5rem 1.35rem',
+              padding: '0.35rem 1.1rem',
               borderRadius: 'var(--radius-sm)',
               background: 'var(--bg-secondary)',
               color: 'var(--text-main)',
-              fontSize: '0.82rem',
+              fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer',
               border: '1px solid var(--border-subtle)'
@@ -605,15 +1121,15 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   );
 }
 
-// Subcomponent for individual invoice item card
+// Compact Subcomponent for individual invoice item card (fits 5-6 invoices concurrently)
 function OrderCard({ order, onReprintReceipt }) {
   return (
     <div
       onClick={() => onReprintReceipt(order)}
       style={{
         background: 'var(--bg-tertiary)',
-        borderRadius: 'var(--radius-sm)',
-        padding: '0.85rem 1rem',
+        borderRadius: '6px',
+        padding: '0.42rem 0.85rem',
         border: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
@@ -631,8 +1147,8 @@ function OrderCard({ order, onReprintReceipt }) {
       }}
     >
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.92rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.86rem' }}>
             {order.tableName}
           </span>
           <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-amber-light)', fontWeight: 800 }}>
@@ -641,9 +1157,9 @@ function OrderCard({ order, onReprintReceipt }) {
           <span style={{
             background: 'rgba(16, 185, 129, 0.15)',
             color: 'var(--status-vacant)',
-            fontSize: '0.68rem',
+            fontSize: '0.64rem',
             fontWeight: 700,
-            padding: '1px 6px',
+            padding: '1px 5px',
             borderRadius: '4px',
             textTransform: 'uppercase'
           }}>
@@ -651,25 +1167,25 @@ function OrderCard({ order, onReprintReceipt }) {
           </span>
         </div>
 
-        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
-            <Calendar size={12} color="var(--accent-amber)" />
-            {order.date || new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            <Calendar size={11} color="var(--accent-amber)" />
+            {getOrderDateStr(order)}
           </span>
           <span>•</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
-            <Clock size={12} color="var(--accent-amber)" />
+            <Clock size={11} color="var(--accent-amber)" />
             {order.settledAt}
           </span>
           <span>•</span>
           <span>Server: <strong>{order.server}</strong></span>
           <span>•</span>
-          <span>{order.items ? order.items.length : 0} dishes</span>
+          <span>{order.items ? order.items.length : 0} items</span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div className="font-mono" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        <div className="font-mono" style={{ fontSize: '1.02rem', fontWeight: 800, color: 'var(--text-main)' }}>
           {formatCurrency(order.grandTotal)}
         </div>
 
@@ -679,24 +1195,23 @@ function OrderCard({ order, onReprintReceipt }) {
             onReprintReceipt(order);
           }}
           style={{
-            padding: '0.45rem 0.85rem',
-            borderRadius: 'var(--radius-sm)',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '4px',
             background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(234, 88, 12, 0.18))',
             color: '#fbbf24',
-            border: '1.5px solid rgba(245, 158, 11, 0.45)',
-            fontSize: '0.78rem',
+            border: '1px solid rgba(245, 158, 11, 0.45)',
+            fontSize: '0.72rem',
             fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
-            gap: '0.38rem',
+            gap: '0.3rem',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
             transition: 'all 0.15s ease'
           }}
           title="Open Receipt Pop-up"
         >
-          <Eye size={14} />
-          <span>View Receipt</span>
+          <Eye size={13} />
+          <span>Receipt</span>
         </button>
       </div>
     </div>
