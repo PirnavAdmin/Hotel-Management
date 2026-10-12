@@ -1268,7 +1268,7 @@
 //                         {readyCount > 0 ? `CHEF IS COOKING (${readyCount}/${table.items.length} PREPARED)` : 'CHEF IS COOKING ORDER'}
 //                       </div>
 //                       <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
-//                         {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes in pan` : 'Kitchen started preparing dishes • Live in pan'}
+//                         {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
 //                       </div>
 //                     </div>
 //                   </div>
@@ -2909,8 +2909,9 @@ export function TableDetailView({
 
               {/* Ordered Items List */}
               <div style={{
-                flex: 1,
-                minHeight: 0,
+                flex: "0 1 auto",
+                maxHeight: "calc(100vh - 360px)",
+                minHeight: "0",
                 overflowY: "auto",
                 padding: "0.5rem 0.75rem",
                 display: "flex",
@@ -2973,7 +2974,7 @@ export function TableDetailView({
                         background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(245, 158, 11, 0.1))',
                         border: '1.5px solid #ea580c',
                         borderRadius: '8px',
-                        padding: '0.65rem 0.85rem',
+                        padding: '0.45rem 0.75rem',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem'
@@ -2984,7 +2985,7 @@ export function TableDetailView({
                             {readyCount > 0 ? `CHEF IS COOKING (${readyCount}/${safeItems.length} PREPARED)` : 'CHEF IS COOKING ORDER'}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
-                            {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes in pan` : 'Kitchen started preparing dishes • Live in pan'}
+                            {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
                           </div>
                         </div>
                       </div>

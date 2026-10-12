@@ -424,35 +424,21 @@ export function TableView({ tables, onSelectTable }) {
                       Table {table.id}
                     </h3>
                   </div>
-                  <div
+                  <span
+                    title={statusText}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.25rem",
-                      background: statusBg,
-                      border: `1px solid ${statusColor}40`,
-                      padding: "0.15rem 0.45rem",
-                      borderRadius: "12px",
-                      fontSize: "0.66rem",
-                      fontWeight: 700,
-                      color: statusColor,
+                      width: "9px",
+                      height: "9px",
+                      borderRadius: "50%",
+                      background: statusColor,
+                      boxShadow: `0 0 6px ${statusColor}80`,
+                      display: "inline-block",
                       flexShrink: 0,
                     }}
-                  >
-                    <span
-                      style={{
-                        width: "5px",
-                        height: "5px",
-                        borderRadius: "50%",
-                        background: statusColor,
-                        display: "inline-block",
-                      }}
-                      className={
-                        table.status !== "vacant" ? "pulse-indicator" : ""
-                      }
-                    />
-                    <span>{statusText}</span>
-                  </div>
+                    className={
+                      table.status !== "vacant" ? "pulse-indicator" : ""
+                    }
+                  />
                 </div>
 
                 {/* Section & Capacity */}
@@ -543,7 +529,7 @@ export function TableView({ tables, onSelectTable }) {
                           padding: "3px 6px",
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "space-between",
+                          justifyContent: "center",
                         }}
                       >
                         <span
@@ -559,15 +545,6 @@ export function TableView({ tables, onSelectTable }) {
                           {readyCount > 0
                             ? `🔥 Cooking (${readyCount}/${items.length} Ready)`
                             : "🔥 Cooking in Kitchen"}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "0.6rem",
-                            color: "#fed7aa",
-                            fontWeight: 700,
-                          }}
-                        >
-                          In Pan
                         </span>
                       </div>
                     ) : hasReady ? (

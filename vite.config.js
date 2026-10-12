@@ -349,7 +349,14 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
-      strictPort: false,
+      watch: {
+        ignored: [
+          '**/.vs/**',
+          '**/.git/**',
+          /[\\/]\.vs[\\/]/,
+          '**/server-db.json',
+        ],
+      },
       proxy: {
         "/uploads": {
           target:
