@@ -4,6 +4,22 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+const formatOrderDate = (order, fallbackDate) => {
+  if (!order) return fallbackDate;
+  if (order.date) return order.date;
+  if (order.settledDate) return order.settledDate;
+  if (order.orderTimestamp) {
+    const date = new Date(Number(order.orderTimestamp));
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+  }
+  return fallbackDate;
+};
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
   const todayDateStr = useMemo(() => {
@@ -11,19 +27,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   }, []);
 
 
-  // Helper to get date string from order safely
-  const getOrderDateStr = (order) => {
-    if (!order) return todayDateStr;
-    if (order.date) return order.date;
-    if (order.settledDate) return order.settledDate;
-    if (order.orderTimestamp) {
-      const d = new Date(Number(order.orderTimestamp));
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
-    }
-    return todayDateStr;
-  };
+
 
   // Helper to parse date from order safely
   const parseOrderDate = (order) => {
@@ -55,7 +59,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     const datesSet = new Set();
     datesSet.add(todayDateStr);
     pastOrders.forEach(o => {
-      const dStr = getOrderDateStr(o);
+      const dStr = formatOrderDate(o, todayDateStr);
       if (dStr) datesSet.add(dStr);
     });
     return Array.from(datesSet).sort((a, b) => {
@@ -81,9 +85,9 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   }, [pastOrders, currentMonthStr]);
 
   const [selectedDate, setSelectedDate] = useState(() => {
-    const hasToday = pastOrders && pastOrders.some(o => getOrderDateStr(o) === todayDateStr);
+    const hasToday = pastOrders && pastOrders.some(o => formatOrderDate(o, todayDateStr) === todayDateStr);
     if (hasToday) return todayDateStr;
-    if (pastOrders && pastOrders.length > 0) return getOrderDateStr(pastOrders[0]);
+    if (pastOrders && pastOrders.length > 0) return formatOrderDate(pastOrders[0], todayDateStr);
     return todayDateStr;
   });
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
@@ -92,7 +96,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'monthly' | 'custom' | 'grouped_all'
   const [searchTerm, setSearchTerm] = useState('');
   const countForSelectedDate = pastOrders.filter(
-    (order) => getOrderDateStr(order) === selectedDate,
+    (order) => formatOrderDate(order, todayDateStr) === selectedDate,
   ).length;
 
   // Convert Date or dateString to "YYYY-MM-DD" for HTML <input type="date">
@@ -166,7 +170,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
 
   // Single day filtered orders
   const singleDayOrders = useMemo(() => {
-    return searchFilteredOrders.filter(o => getOrderDateStr(o) === selectedDate);
+    return searchFilteredOrders.filter(o => formatOrderDate(o, todayDateStr) === selectedDate);
   }, [searchFilteredOrders, selectedDate, todayDateStr]);
 
   // Monthly filtered orders
@@ -202,7 +206,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const groupedOrdersByDate = useMemo(() => {
     const map = {};
     searchFilteredOrders.forEach(order => {
-      const d = getOrderDateStr(order);
+      const d = formatOrderDate(order, todayDateStr);
       if (!map[d]) map[d] = [];
       map[d].push(order);
     });
@@ -541,7 +545,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 }}
               >
                 {availableDates.map(d => {
-                  const cnt = pastOrders.filter(o => getOrderDateStr(o) === d).length;
+                  const cnt = pastOrders.filter(o => formatOrderDate(o, todayDateStr) === d).length;
                   return (
                     <option key={d} value={d}>
                       📅 {d} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
@@ -1171,7 +1175,7 @@ function OrderCard({ order, onReprintReceipt }) {
         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
             <Calendar size={11} color="var(--accent-amber)" />
-            {getOrderDateStr(order)}
+            {formatOrderDate(order, todayDateStr)}
           </span>
           <span>•</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
