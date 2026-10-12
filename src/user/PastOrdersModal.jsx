@@ -10,10 +10,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   }, []);
 
-  // Count invoices for selected date vs overall
-  const countForSelectedDate = useMemo(() => {
-    return pastOrders.filter(o => getOrderDateStr(o) === selectedDate).length;
-  }, [pastOrders, selectedDate, todayDateStr]);
+
   // Helper to get date string from order safely
   const getOrderDateStr = (order) => {
     if (!order) return todayDateStr;
@@ -94,6 +91,9 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const [customEndDate, setCustomEndDate] = useState('');
   const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'monthly' | 'custom' | 'grouped_all'
   const [searchTerm, setSearchTerm] = useState('');
+  const countForSelectedDate = pastOrders.filter(
+    (order) => getOrderDateStr(order) === selectedDate,
+  ).length;
 
   // Convert Date or dateString to "YYYY-MM-DD" for HTML <input type="date">
   const getYYYYMMDD = (input) => {
