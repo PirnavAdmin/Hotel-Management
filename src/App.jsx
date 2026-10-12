@@ -50,7 +50,10 @@ const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const getDeletedTableIds = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
     // Auto-detect any initially deleted tables already missing from saved tables
     const savedTables = localStorage.getItem(STORAGE_KEY_TABLES);
     if (savedTables) {
@@ -87,24 +90,33 @@ export function App() {
   }, [theme]);
 
   // Track permanently deleted table IDs so cross-tabs or reloads never resurrect them
-  const [deletedTableIds, setDeletedTableIds] = useState(getDeletedTableIds);
+  const [deletedTableIds, setDeletedTableIds] = useState(() => {
+    const initial = getDeletedTableIds();
+    return Array.isArray(initial) ? initial : [];
+  });
 
   // Load saved tables or fallback to INITIAL_TABLES (filtering out any deleted tables)
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
-    const isDeleted = (id) => deleted.some((d) => String(d) === String(id));
+    const delList = Array.isArray(deleted) ? deleted : [];
+    const isDeleted = (id) => delList.some((d) => String(d) === String(id));
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TABLES);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter((t) => !isDeleted(t.id));
+          return parsed
+            .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+            .filter((t) => !isDeleted(t.id));
         }
       }
     } catch {
       // Fallback
     }
-    return INITIAL_TABLES.filter((t) => !isDeleted(t.id));
+    return INITIAL_TABLES.map((t) => ({
+      ...t,
+      items: Array.isArray(t.items) ? t.items : [],
+    })).filter((t) => !isDeleted(t.id));
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -154,13 +166,22 @@ export function App() {
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
     // 1. Load live tables from backend API
-    apiGetTables().then((backendTables) => {
-      if (backendTables && backendTables.length > 0) {
-        setTables(backendTables);
+    apiGetTables().then((response) => {
+      const backendTables = Array.isArray(response)
+        ? response
+        : response?.success && Array.isArray(response.data)
+          ? response.data
+          : null;
+      if (Array.isArray(backendTables) && backendTables.length > 0) {
+        const normalized = backendTables.map((t) => ({
+          ...t,
+          items: Array.isArray(t.items) ? t.items : [],
+        }));
+        setTables(normalized);
         try {
           localStorage.setItem(
             STORAGE_KEY_TABLES,
-            JSON.stringify(backendTables),
+            JSON.stringify(normalized),
           );
         } catch {}
       }
@@ -394,8 +415,12 @@ export function App() {
   useEffect(() => {
     try {
       const isDeleted = (id) =>
-        deletedTableIds.some((d) => String(d) === String(id));
-      const cleanTables = tables.filter((t) => !isDeleted(t.id));
+        (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
+          (d) => String(d) === String(id),
+        );
+      const cleanTables = (Array.isArray(tables) ? tables : [])
+        .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+        .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
       pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
     } catch {}
@@ -431,11 +456,12 @@ export function App() {
       .then((res) => res.json())
       .then((data) => {
         if (!data) return;
-        if (data[STORAGE_KEY_TABLES]) {
+        if (data[STORAGE_KEY_TABLES] && Array.isArray(data[STORAGE_KEY_TABLES])) {
           const freshDel = getDeletedTableIds();
-          const clean = data[STORAGE_KEY_TABLES].filter(
-            (t) => !freshDel.some((d) => String(d) === String(t.id)),
-          );
+          const delList = Array.isArray(freshDel) ? freshDel : [];
+          const clean = data[STORAGE_KEY_TABLES]
+            .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+            .filter((t) => !delList.some((d) => String(d) === String(t.id)));
           setTables(clean);
           try {
             localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
@@ -491,11 +517,12 @@ export function App() {
           const payload = parsedMsg.payload;
           if (!payload) return;
 
-          if (payload[STORAGE_KEY_TABLES]) {
+          if (payload[STORAGE_KEY_TABLES] && Array.isArray(payload[STORAGE_KEY_TABLES])) {
             const freshDel = getDeletedTableIds();
-            const clean = payload[STORAGE_KEY_TABLES].filter(
-              (t) => !freshDel.some((d) => String(d) === String(t.id)),
-            );
+            const delList = Array.isArray(freshDel) ? freshDel : [];
+            const clean = payload[STORAGE_KEY_TABLES]
+              .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+              .filter((t) => !delList.some((d) => String(d) === String(t.id)));
             setTables(clean);
             try {
               localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
@@ -1083,8 +1110,12 @@ export function App() {
     setTables(updatedTables);
     try {
       const isDeleted = (id) =>
-        deletedTableIds.some((d) => String(d) === String(id));
-      const cleanTables = updatedTables.filter((t) => !isDeleted(t.id));
+        (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
+          (d) => String(d) === String(id),
+        );
+      const cleanTables = updatedTables
+        .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+        .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
     } catch {}
 

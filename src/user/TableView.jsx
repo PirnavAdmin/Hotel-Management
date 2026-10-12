@@ -224,10 +224,11 @@ export function TableView({ tables, onSelectTable }) {
           }
 
           const isOccupied = table.status !== 'vacant';
-          const hasCooking = isOccupied && table.items.some(i => i.kotStatus === 'cooking');
-          const allReady = isOccupied && table.items.length > 0 && table.items.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
-          const hasReady = isOccupied && table.items.some(i => i.kotStatus === 'ready');
-          const readyCount = isOccupied ? table.items.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length : 0;
+          const tableItems = Array.isArray(table.items) ? table.items : [];
+          const hasCooking = isOccupied && tableItems.some(i => i.kotStatus === 'cooking');
+          const allReady = isOccupied && tableItems.length > 0 && tableItems.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
+          const hasReady = isOccupied && tableItems.some(i => i.kotStatus === 'ready');
+          const readyCount = isOccupied ? tableItems.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length : 0;
 
           const isTable5 = table.id === 5;
 

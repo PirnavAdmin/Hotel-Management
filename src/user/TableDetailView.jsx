@@ -3208,22 +3208,23 @@ export function TableDetailView({
                 gap: "0.4rem",
               }}
             >
-              {/* Live Kitchen Status Banner */}
-              {table.items.length > 0 &&
+              {Array.isArray(table?.items) &&
+                table.items.length > 0 &&
                 (() => {
-                  const allReady = table.items.every(
+                  const tableItems = table.items;
+                  const allReady = tableItems.every(
                     (i) =>
                       i.kotStatus === "ready" ||
                       i.kotStatus === "served" ||
                       i.kotStatus === "completed",
                   );
-                  const hasCooking = table.items.some(
+                  const hasCooking = tableItems.some(
                     (i) => i.kotStatus === "cooking",
                   );
-                  const hasReady = table.items.some(
+                  const hasReady = tableItems.some(
                     (i) => i.kotStatus === "ready",
                   );
-                  const readyCount = table.items.filter(
+                  const readyCount = tableItems.filter(
                     (i) => i.kotStatus === "ready" || i.kotStatus === "served",
                   ).length;
 

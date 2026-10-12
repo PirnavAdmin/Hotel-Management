@@ -538,22 +538,23 @@ export function Header({
             }}
             title="Kitchen Cooking Status Updates"
           >
-            {kitchenNotifications.some(
+            {(Array.isArray(kitchenNotifications) ? kitchenNotifications : []).some(
               (n) => n.type === "cooking_completed",
             ) ? (
               <BellRing size={16} color="#10b981" />
             ) : (
               <Bell size={16} />
             )}
-            {kitchenNotifications.length > 0 && (
+            {(kitchenNotifications?.length || 0) > 0 && (
               <span
                 style={{
                   position: "absolute",
                   top: "-4px",
                   right: "-4px",
-                  background: kitchenNotifications.some(
-                    (n) => n.type === "cooking_completed",
-                  )
+                  background: (Array.isArray(kitchenNotifications)
+                    ? kitchenNotifications
+                    : []
+                  ).some((n) => n.type === "cooking_completed")
                     ? "#10b981"
                     : "#f59e0b",
                   color: "#000000",

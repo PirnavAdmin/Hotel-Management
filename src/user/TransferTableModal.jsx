@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ArrowRightLeft, Check } from 'lucide-react';
+import { X, ArrowRightLeft } from 'lucide-react';
 
 export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmTransfer }) {
   const [targetTableId, setTargetTableId] = useState('');

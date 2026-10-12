@@ -20,6 +20,12 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { getNextInvoiceNumber } from '../utils/invoiceCounter';
 
 export function SettlementModal({ table, onClose, onConfirmPayment }) {
+  // 'upi' | 'cash' | 'card' | 'wallet'
+  const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [cashTendered, setCashTendered] = useState(0);
+  const [selectedWallet, setSelectedWallet] = useState('paytm');
+  const [isProcessing, setIsProcessing] = useState(false);
+
   if (!table) return null;
 
   const safeItems = Array.isArray(table?.items) ? table.items : [];
@@ -31,14 +37,8 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
   const serviceChargeAmount = table?.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0;
   const grandTotal = Math.round(taxableAmount + taxAmount + serviceChargeAmount);
 
-
-  // 'upi' | 'cash' | 'card' | 'wallet'
-  const [paymentMethod, setPaymentMethod] = useState('upi');
-  const [cashTendered, setCashTendered] = useState(grandTotal);
-  const [selectedWallet, setSelectedWallet] = useState('paytm');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const changeDue = Math.max(0, (parseFloat(cashTendered) || 0) - grandTotal);
+  const effectiveCash = cashTendered || grandTotal;
+  const changeDue = Math.max(0, (parseFloat(effectiveCash) || 0) - grandTotal);
 
   const handleSettle = () => {
     setIsProcessing(true);
