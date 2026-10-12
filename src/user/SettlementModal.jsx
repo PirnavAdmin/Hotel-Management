@@ -18,6 +18,7 @@ import {
 import { sounds } from '../utils/audio';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getNextInvoiceNumber } from '../utils/invoiceCounter';
+import paymentQrImage from '../assets/payment-qr.png';
 
 export function SettlementModal({ table, onClose, onConfirmPayment }) {
   if (!table) return null;
@@ -373,69 +374,27 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
               <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid #f59e0b', borderLeft: '2.5px solid #f59e0b', borderRadius: '0 0 0 4px' }} />
               <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid #f59e0b', borderRight: '2.5px solid #f59e0b', borderRadius: '0 0 4px 0' }} />
 
-              {/* Crisp High-Res QR SVG */}
+              {/* Real Payment QR */}
               <div style={{
                 background: '#ffffff',
-                padding: '10px',
+                padding: '6px',
                 borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
               }}>
-                <svg width="105" height="105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Top-Left Position Detection Pattern */}
-                  <rect x="5" y="5" width="28" height="28" rx="4" fill="#0f172a" />
-                  <rect x="9" y="9" width="20" height="20" rx="2" fill="#ffffff" />
-                  <rect x="13" y="13" width="12" height="12" rx="2" fill="#0f172a" />
-
-                  {/* Top-Right Position Detection Pattern */}
-                  <rect x="67" y="5" width="28" height="28" rx="4" fill="#0f172a" />
-                  <rect x="71" y="9" width="20" height="20" rx="2" fill="#ffffff" />
-                  <rect x="75" y="13" width="12" height="12" rx="2" fill="#0f172a" />
-
-                  {/* Bottom-Left Position Detection Pattern */}
-                  <rect x="5" y="67" width="28" height="28" rx="4" fill="#0f172a" />
-                  <rect x="9" y="71" width="20" height="20" rx="2" fill="#ffffff" />
-                  <rect x="13" y="75" width="12" height="12" rx="2" fill="#0f172a" />
-
-                  {/* High-Tech QR Data Matrix Elements */}
-                  <rect x="38" y="8" width="6" height="6" rx="1" fill="#0f172a" />
-                  <rect x="48" y="8" width="12" height="6" rx="1" fill="#0f172a" />
-                  <rect x="38" y="18" width="12" height="6" rx="1" fill="#0f172a" />
-                  <rect x="54" y="18" width="6" height="6" rx="1" fill="#0f172a" />
-                  <rect x="42" y="28" width="6" height="6" rx="1" fill="#0f172a" />
-                  <rect x="52" y="28" width="8" height="6" rx="1" fill="#0f172a" />
-
-                  <rect x="8" y="38" width="6" height="12" rx="1" fill="#0f172a" />
-                  <rect x="18" y="42" width="8" height="6" rx="1" fill="#0f172a" />
-                  <rect x="30" y="38" width="6" height="6" rx="1" fill="#0f172a" />
-                  <rect x="40" y="38" width="8" height="8" rx="1" fill="#0f172a" />
-                  <rect x="52" y="40" width="10" height="6" rx="1" fill="#0f172a" />
-                  <rect x="66" y="38" width="6" height="10" rx="1" fill="#0f172a" />
-                  <rect x="76" y="42" width="16" height="6" rx="1" fill="#0f172a" />
-
-                  <rect x="8" y="54" width="14" height="6" rx="1" fill="#0f172a" />
-                  <rect x="26" y="50" width="8" height="10" rx="1" fill="#0f172a" />
-                  <rect x="38" y="50" width="10" height="6" rx="1" fill="#0f172a" />
-                  <rect x="52" y="50" width="6" height="12" rx="1" fill="#0f172a" />
-                  <rect x="62" y="52" width="14" height="6" rx="1" fill="#0f172a" />
-                  <rect x="80" y="52" width="12" height="10" rx="1" fill="#0f172a" />
-
-                  <rect x="38" y="66" width="6" height="12" rx="1" fill="#0f172a" />
-                  <rect x="48" y="66" width="14" height="6" rx="1" fill="#0f172a" />
-                  <rect x="66" y="66" width="10" height="6" rx="1" fill="#0f172a" />
-                  <rect x="80" y="66" width="12" height="6" rx="1" fill="#0f172a" />
-
-                  <rect x="38" y="82" width="14" height="6" rx="1" fill="#0f172a" />
-                  <rect x="56" y="76" width="8" height="12" rx="1" fill="#0f172a" />
-                  <rect x="68" y="76" width="12" height="6" rx="1" fill="#0f172a" />
-                  <rect x="68" y="86" width="6" height="6" rx="1" fill="#0f172a" />
-                  <rect x="78" y="84" width="14" height="8" rx="1" fill="#0f172a" />
-
-                  {/* Center Brand Dot */}
-                  <rect x="46" y="46" width="8" height="8" rx="2" fill="#f59e0b" />
-                </svg>
+                <img
+                  src={paymentQrImage}
+                  alt="Scan to Pay"
+                  style={{
+                    width: '115px',
+                    height: '115px',
+                    objectFit: 'contain',
+                    borderRadius: '4px',
+                    display: 'block'
+                  }}
+                />
               </div>
             </div>
 
