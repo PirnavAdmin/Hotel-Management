@@ -1711,6 +1711,8 @@ import {
   IceCream,
   Percent,
   X,
+  Circle,
+  Star,
   ChevronDown,
   Filter,
 } from "lucide-react";
@@ -2856,15 +2858,25 @@ export function TableDetailView({
                 alignItems: "center",
                 gap: "0.35rem",
                 flexWrap: "wrap",
-                marginLeft: "auto",
               }}
             >
               {[
-                { id: "veg", label: "Veg" },
-                { id: "non-veg", label: "Non-Veg" },
-                { id: "special", label: "Specials" },
+                { id: "veg", label: "Veg", icon: Circle, color: "#16a34a" },
+                {
+                  id: "non-veg",
+                  label: "Non-Veg",
+                  icon: Circle,
+                  color: "#dc2626",
+                },
+                {
+                  id: "special",
+                  label: "Specials",
+                  icon: Star,
+                  color: "#f59e0b",
+                },
               ].map((filter) => {
                 const isActive = dietaryFilter === filter.id;
+                const FilterIcon = filter.icon;
                 return (
                   <button
                     key={filter.id}
@@ -2885,8 +2897,17 @@ export function TableDetailView({
                       fontWeight: isActive ? 700 : 500,
                       whiteSpace: "nowrap",
                       cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
                     }}
                   >
+                    <FilterIcon
+                      size={14}
+                      color={filter.color}
+                      fill={filter.color}
+                      aria-hidden="true"
+                    />
                     {filter.label}
                   </button>
                 );
@@ -3207,18 +3228,31 @@ export function TableDetailView({
               style={{
                 flex: 1,
                 minHeight: 0,
-                overflowY: 'auto',
-                padding: '0.5rem 0.75rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.4rem'
-              }}>
-                {/* Live Kitchen Status Banner */}
-                {safeItems.length > 0 && (() => {
-                  const allReady = safeItems.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
-                  const hasCooking = safeItems.some(i => i.kotStatus === 'cooking');
-                  const hasReady = safeItems.some(i => i.kotStatus === 'ready');
-                  const readyCount = safeItems.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length;
+                overflowY: "auto",
+                padding: "0.5rem 0.75rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.4rem",
+              }}
+            >
+              {/* Live Kitchen Status Banner */}
+              {safeItems.length > 0 &&
+                (() => {
+                  const allReady = safeItems.every(
+                    (i) =>
+                      i.kotStatus === "ready" ||
+                      i.kotStatus === "served" ||
+                      i.kotStatus === "completed",
+                  );
+                  const hasCooking = safeItems.some(
+                    (i) => i.kotStatus === "cooking",
+                  );
+                  const hasReady = safeItems.some(
+                    (i) => i.kotStatus === "ready",
+                  );
+                  const readyCount = safeItems.filter(
+                    (i) => i.kotStatus === "ready" || i.kotStatus === "served",
+                  ).length;
 
                   if (allReady) {
                     return (
