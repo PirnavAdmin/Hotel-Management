@@ -1109,6 +1109,7 @@ export function App() {
       cookingStartedAt: tableObj?.cookingStartedAt || tableObj?.orderTime || settlementData.settledAt,
       completedAt: tableObj?.completedAt || settlementData.settledAt,
       completedDuration: finalDuration || "12m 30s",
+      guests: tableObj?.guests ?? settlementData.guests ?? tableObj?.capacity ?? 1,
       orderTime: tableObj?.orderTime || settlementData.settledAt,
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
@@ -1151,10 +1152,19 @@ export function App() {
       name: settlementData.tableName,
       section: settlementData.section,
       server: settlementData.server,
-      guests: 2,
+      guests: enrichedSettlement.guests,
+      orderTime: enrichedSettlement.orderTime,
+      settledAt: enrichedSettlement.settledAt,
       items: settlementData.items,
       discountPercent: 0,
       serviceCharge: 5,
+      subtotal: settlementData.subtotal,
+      taxAmount: settlementData.taxAmount,
+      serviceChargeAmount: settlementData.serviceChargeAmount,
+      grandTotal: settlementData.grandTotal,
+      paymentMethod: settlementData.paymentMethod,
+      invoiceNo: settlementData.invoiceNo,
+      date: enrichedSettlement.date,
     });
     setIsReceiptOpen(true);
   };
@@ -1698,7 +1708,8 @@ export function App() {
               name: order.tableName,
               section: order.section,
               server: order.server,
-              guests: order.guests || 2,
+              guests: order.guests ?? order.occupiedChairs ?? 0,
+              orderTime: order.orderTime || order.cookingStartedAt || order.orderTimestamp,
               items: order.items,
               discountPercent: order.discountPercent || 0,
               discountAmount: order.discountAmount || 0,

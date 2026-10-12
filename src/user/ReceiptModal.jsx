@@ -1,7 +1,17 @@
 import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Printer, X } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getNextInvoiceNumber } from '../utils/invoiceCounter';
+
+const formatReceiptTime = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isFinite(date.getTime()) && (typeof value === 'number' || /^\d{4}-\d{2}-\d{2}T/.test(String(value)))) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return String(value);
+};
 
 export function ReceiptModal({ table, onClose, onPrint }) {
   if (!table) return null;
@@ -39,8 +49,14 @@ export function ReceiptModal({ table, onClose, onPrint }) {
     month: 'short',
     year: 'numeric'
   });
-  const currentTime = table.settledAt || table.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
+  const paidTime = formatReceiptTime(table.settledAt || table.time);
+  const guestCount = table.guests ?? table.occupiedChairs ?? table.capacity ?? 0;
   const paymentMethod = table.paymentMethod ? table.paymentMethod.toUpperCase() : null;
+  const upiId = (import.meta.env.VITE_UPI_ID || '').trim();
+  const upiPaymentUri = upiId
+    ? `upi://pay?${new URLSearchParams({ pa: upiId, pn: 'AVSR FOOD COURT', am: grandTotal.toFixed(2), cu: 'INR', tn: `Invoice ${invoiceNumber}` }).toString()}`
+    : '';
 
   const handlePrint = () => {
     window.print();
@@ -131,31 +147,16 @@ export function ReceiptModal({ table, onClose, onPrint }) {
             <p style={{ fontSize: '0.64rem', color: '#64748b', margin: 0 }}>GSTIN: 36AAJCS8214M1ZV</p>
           </div>
 
-          {/* Bill Meta */}
-          <div style={{ borderBottom: '1px dashed #cbd5e1', paddingBottom: '0.45rem', marginBottom: '0.45rem', fontSize: '0.72rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-              <span>Table: <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></span>
-              <span>Inv: <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{invoiceNumber}</strong></span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Server: <strong>{table.server || 'Staff'}</strong> • Guests: {table.guests || 2}</span>
-              <span style={{ fontSize: '0.7rem', color: '#475569' }}>
-                {currentDate} {currentTime}
-                {paymentMethod && (
-                  <span style={{
-                    marginLeft: '4px',
-                    background: '#dcfce7',
-                    color: '#15803d',
-                    padding: '1px 5px',
-                    borderRadius: '3px',
-                    fontWeight: 800,
-                    fontSize: '0.65rem'
-                  }}>
-                    {paymentMethod}
-                  </span>
-                )}
-              </span>
-            </div>
+          {/* Bill details use separate grid cells to prevent wrapping guest counts and times */}
+          <div style={{ borderBottom: '1px dashed #cbd5e1', paddingBottom: '0.45rem', marginBottom: '0.45rem', fontSize: '0.7rem', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, auto)', gap: '4px 10px' }}>
+            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Table: <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></span>
+            <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Inv: <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{invoiceNumber}</strong></span>
+            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Server: <strong>{table.server || 'Staff'}</strong></span>
+            <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Guests: <strong>{guestCount}</strong></span>
+            <span>Date: <strong>{currentDate}</strong></span>
+            {orderTime && <span style={{ textAlign: 'right' }}>Order: <strong>{orderTime}</strong></span>}
+            {paidTime && <span>Paid: <strong>{paidTime}</strong></span>}
+            {paymentMethod && <span style={{ textAlign: 'right', color: '#15803d', fontWeight: 800 }}>{paymentMethod}</span>}
           </div>
 
           {/* Itemized Table */}
@@ -254,33 +255,20 @@ export function ReceiptModal({ table, onClose, onPrint }) {
             </div>
           </div>
 
-          {/* Compact Payment QR & Thank You message */}
+          {/* Scannable UPI payment QR, encoded with this invoice total */}
           <div style={{ textAlign: 'center', marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed #cbd5e1' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '2px 8px',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '4px',
-              marginBottom: '3px'
-            }}>
-              <div style={{
-                width: '18px',
-                height: '18px',
-                background: 'repeating-linear-gradient(45deg, #0f172a, #0f172a 2px, #ffffff 2px, #ffffff 4px)',
-                borderRadius: '2px'
-              }} />
-              <span style={{ fontSize: '0.62rem', color: '#475569', fontWeight: 600 }}>
-                Scan UPI QR (GPay / PhonePe / Paytm)
-              </span>
-            </div>
-
-            <p style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0f172a', margin: '2px 0 0 0' }}>
+            {upiPaymentUri ? (
+              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff' }}>
+                <QRCodeSVG value={upiPaymentUri} size={112} level="M" marginSize={2} title={`UPI payment of ${formatCurrency(grandTotal)}`} />
+                <span style={{ fontSize: '0.58rem', color: '#475569', fontWeight: 700 }}>Scan to pay {formatCurrency(grandTotal)}</span>
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.62rem', color: '#b45309', margin: 0 }}>UPI QR unavailable — configure VITE_UPI_ID</p>
+            )}
+            <p style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 0' }}>
               THANK YOU FOR DINING AT AVSR FOOD COURT!
             </p>
-            <p style={{ fontSize: '0.62rem', color: '#64748b', margin: '1px 0 0 0' }}>
+            <p style={{ fontSize: '0.62rem', color: '#64748b', margin: '1px 0 0' }}>
               Please visit again • For bulk orders: +91 98490 12345
             </p>
           </div>
