@@ -42,7 +42,7 @@ export function TableView({ tables, onSelectTable }) {
   });
 
   return (
-    <div style={{ padding: '1.25rem 1.5rem', maxWidth: '100%', margin: '0 auto' }}>
+    <div className="mobile-container" style={{ padding: '1.25rem 1.5rem', maxWidth: '100%', margin: '0 auto' }}>
       {/* Floor Plan Title & Controls */}
       <div style={{
         display: 'flex',
@@ -50,7 +50,7 @@ export function TableView({ tables, onSelectTable }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '1rem',
-        marginBottom: '1.5rem'
+        marginBottom: '1rem'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -196,10 +196,10 @@ export function TableView({ tables, onSelectTable }) {
         })}
       </div>
 
-      {/* 6 Tables Per Row Grid (Auto Responsive on Mobile) */}
+      {/* Tables Grid (Auto Responsive: 2 cols on Mobile, 4-6 cols on Desktop) */}
       <div className="responsive-table-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))',
         gap: '0.75rem'
       }}>
 
@@ -208,26 +208,27 @@ export function TableView({ tables, onSelectTable }) {
           const subtotal = items.reduce((sum, item) => sum + ((Number(item?.price) || 0) * (Number(item?.quantity) || 1)), 0);
           const totalItemsCount = items.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
 
+          const isOccupied = table.status !== 'vacant' && items.length > 0;
 
           let statusColor = 'var(--status-vacant)';
           let statusText = 'Available';
           let statusBg = 'var(--status-vacant-bg)';
 
-          if (table.status === 'occupied') {
-            statusColor = 'var(--status-occupied)';
-            statusText = 'Dining';
-            statusBg = 'var(--status-occupied-bg)';
-          } else if (table.status === 'billed') {
-            statusColor = 'var(--status-billed)';
-            statusText = 'Billed';
-            statusBg = 'var(--status-billed-bg)';
+          if (isOccupied) {
+            if (table.status === 'billed') {
+              statusColor = 'var(--status-billed)';
+              statusText = 'Billed';
+              statusBg = 'var(--status-billed-bg)';
+            } else {
+              statusColor = 'var(--status-occupied)';
+              statusText = 'Dining';
+              statusBg = 'var(--status-occupied-bg)';
+            }
           }
-
-          const isOccupied = table.status !== 'vacant';
-          const hasCooking = isOccupied && table.items.some(i => i.kotStatus === 'cooking');
-          const allReady = isOccupied && table.items.length > 0 && table.items.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
-          const hasReady = isOccupied && table.items.some(i => i.kotStatus === 'ready');
-          const readyCount = isOccupied ? table.items.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length : 0;
+          const hasCooking = isOccupied && items.some(i => i.kotStatus === 'cooking');
+          const allReady = isOccupied && items.length > 0 && items.every(i => i.kotStatus === 'ready' || i.kotStatus === 'served' || i.kotStatus === 'completed');
+          const hasReady = isOccupied && items.some(i => i.kotStatus === 'ready');
+          const readyCount = isOccupied ? items.filter(i => i.kotStatus === 'ready' || i.kotStatus === 'served').length : 0;
 
           const isTable5 = table.id === 5;
 
@@ -273,22 +274,23 @@ export function TableView({ tables, onSelectTable }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '0.35rem',
-                  marginBottom: '0.2rem'
+                  gap: '0.4rem',
+                  marginBottom: '0.25rem'
                 }}>
-                  {/* Prominent High-Contrast Table Number */}
+                  {/* Table Badge & Name with Overflow Protection */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.4rem',
-                    minWidth: 0
+                    gap: '0.35rem',
+                    minWidth: 0,
+                    overflow: 'hidden'
                   }}>
                     <span style={{
-                      background: table.status !== 'vacant'
+                      background: isOccupied
                         ? 'linear-gradient(135deg, #f59e0b, #ea580c)'
                         : 'var(--bg-tertiary)',
-                      color: table.status !== 'vacant' ? '#ffffff' : 'var(--text-main)',
-                      border: table.status !== 'vacant' ? 'none' : '1px solid var(--border-subtle)',
+                      color: isOccupied ? '#ffffff' : 'var(--text-main)',
+                      border: isOccupied ? 'none' : '1px solid var(--border-subtle)',
                       fontWeight: 900,
                       fontSize: '0.74rem',
                       padding: '2px 6px',
@@ -299,12 +301,14 @@ export function TableView({ tables, onSelectTable }) {
                       T{table.id}
                     </span>
                     <h3 style={{
-                      fontSize: '1rem',
-                      fontWeight: 900,
-                      color: table.status !== 'vacant' ? 'var(--accent-amber-light)' : 'var(--text-main)',
-                      lineHeight: 1.1,
+                      fontSize: '0.94rem',
+                      fontWeight: 850,
+                      color: isOccupied ? 'var(--accent-amber-light)' : 'var(--text-main)',
+                      lineHeight: 1.15,
                       letterSpacing: '-0.02em',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}>
                       Table {table.id}
                     </h3>
@@ -341,12 +345,12 @@ export function TableView({ tables, onSelectTable }) {
                   </span>
                   <span>•</span>
                   <span style={{ whiteSpace: 'nowrap' }}>
-                    {table.capacity} Seats ({table.status !== 'vacant' ? `${table.guests} Seated` : 'Vacant'})
+                    {table.capacity} Seats ({isOccupied ? `${table.guests} Seated` : 'Vacant'})
                   </span>
                 </div>
 
                 {/* Kitchen Cooking Status Live Badge */}
-                {isOccupied && table.items.length > 0 && (
+                {isOccupied && items.length > 0 && (
                   <div style={{ marginTop: '0.32rem' }}>
                     {allReady ? (
                       <div style={{
@@ -376,7 +380,7 @@ export function TableView({ tables, onSelectTable }) {
                         justifyContent: 'space-between'
                       }}>
                         <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#fb923c', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          {readyCount > 0 ? `🔥 Cooking (${readyCount}/${table.items.length} Ready)` : '🔥 Cooking in Kitchen'}
+                          {readyCount > 0 ? `🔥 Cooking (${readyCount}/${items.length} Ready)` : '🔥 Cooking in Kitchen'}
                         </span>
                         <span style={{ fontSize: '0.6rem', color: '#fed7aa', fontWeight: 700 }}>In Pan</span>
                       </div>
@@ -391,7 +395,7 @@ export function TableView({ tables, onSelectTable }) {
                         justifyContent: 'space-between'
                       }}>
                         <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#34d399' }}>
-                          🔔 Dishes Ready ({readyCount}/{table.items.length})
+                          🔔 Dishes Ready ({readyCount}/${items.length})
                         </span>
                       </div>
                     ) : (
@@ -415,26 +419,7 @@ export function TableView({ tables, onSelectTable }) {
 
               {/* Order Status & Financial Snapshot */}
               <div>
-                {table.status === 'vacant' ? (
-                  <div style={{
-                    padding: '0.35rem 0',
-                    textAlign: 'center',
-                    color: 'var(--text-dim)',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.3rem',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px dashed rgba(255, 255, 255, 0.07)',
-                    marginTop: '0.25rem'
-                  }}>
-                    <Plus size={12} color="var(--status-vacant)" />
-                    <span>Ready for Guests</span>
-                  </div>
-                ) : (
+                {isOccupied && (
                   <div style={{ marginTop: '0.25rem' }}>
                     <div style={{ 
                       display: 'flex', 
@@ -465,7 +450,7 @@ export function TableView({ tables, onSelectTable }) {
                       flexDirection: 'column',
                       gap: '0.15rem'
                     }}>
-                      {table.items.slice(0, 1).map((item, idx) => (
+                      {items.slice(0, 1).map((item, idx) => (
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.3rem', alignItems: 'center' }}>
                           <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
                             {item.quantity}x {item.name}
@@ -473,9 +458,9 @@ export function TableView({ tables, onSelectTable }) {
                           <span className="font-mono" style={{ flexShrink: 0, fontSize: '0.7rem' }}>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
                       ))}
-                      {table.items.length > 1 && (
+                      {items.length > 1 && (
                         <div style={{ color: 'var(--text-dim)', fontSize: '0.64rem', fontStyle: 'italic' }}>
-                          + {table.items.length - 1} more dish{table.items.length > 2 ? 'es' : ''}...
+                          + {items.length - 1} more dish{items.length > 2 ? 'es' : ''}...
                         </div>
                       )}
                     </div>
@@ -489,11 +474,11 @@ export function TableView({ tables, onSelectTable }) {
                     marginTop: '0.45rem',
                     padding: '0.42rem 0.6rem',
                     borderRadius: 'var(--radius-sm)',
-                    background: table.status === 'vacant'
+                    background: !isOccupied
                       ? 'rgba(255, 255, 255, 0.05)'
                       : 'linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.12))',
-                    color: table.status === 'vacant' ? 'var(--text-main)' : 'var(--accent-amber-light)',
-                    border: table.status === 'vacant' 
+                    color: !isOccupied ? 'var(--text-main)' : 'var(--accent-amber-light)',
+                    border: !isOccupied 
                       ? '1px solid var(--border-subtle)' 
                       : '1px solid var(--accent-amber)',
                     fontSize: '0.76rem',
@@ -508,7 +493,7 @@ export function TableView({ tables, onSelectTable }) {
                 >
                   <Utensils size={12} />
                   <span>
-                    {table.status === 'vacant' ? 'Take Order' : 'Manage Bill'}
+                    {!isOccupied ? 'Take Order' : 'Manage Bill'}
                   </span>
                   <ChevronRight size={12} />
                 </button>

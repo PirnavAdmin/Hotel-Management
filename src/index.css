@@ -266,6 +266,10 @@ input, select, textarea {
   .no-print {
     display: none !important;
   }
+  .receipt-items-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
 }
 
 @keyframes pulse-ring {
@@ -288,20 +292,76 @@ input, select, textarea {
 
   /* Compact padding for mobile view */
   .mobile-container {
-    padding: 0.5rem 0.75rem !important;
+    padding: 0.6rem 0.65rem !important;
   }
 
   /* Table Floor Grid - auto fit 2 columns on mobile */
   .responsive-table-grid {
-    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)) !important;
-    gap: 0.5rem !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.55rem !important;
   }
 
-  /* Table Detail Order View Stack vertically on mobile */
-  .responsive-order-detail-layout {
+  /* Hide verbose desktop widgets on mobile */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Navigation Header compact on mobile */
+  .mobile-header-nav {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.4rem !important;
+  }
+
+  /* Table Detail / Order Screen Responsive Styles */
+  .pos-workspace-container {
     flex-direction: column !important;
+    overflow-y: auto !important;
+  }
+
+  .pos-categories-sidebar {
+    width: 100% !important;
     height: auto !important;
-    min-height: calc(100vh - 60px) !important;
+    max-height: 52px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    padding: 0.35rem 0.5rem !important;
+    display: flex !important;
+    flex-shrink: 0 !important;
+    background: var(--bg-secondary) !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pos-categories-header {
+    display: none !important;
+  }
+
+  .pos-categories-list {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.4rem !important;
+    padding: 0 !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+  }
+
+  .pos-category-btn {
+    padding: 0.35rem 0.7rem !important;
+    font-size: 0.76rem !important;
+    white-space: nowrap !important;
+    border-radius: 20px !important;
+    margin-bottom: 0 !important;
+    display: inline-flex !important;
+  }
+
+  .pos-order-slip-desktop {
+    display: none !important;
+  }
+
+  .pos-mobile-cart-bar {
+    display: flex !important;
   }
 
   /* Modals full width on mobile */
@@ -310,12 +370,6 @@ input, select, textarea {
     max-width: 100vw !important;
     border-radius: 12px !important;
     margin: 0.5rem !important;
-  }
-
-  /* Navigation Header compact on mobile */
-  .mobile-header-nav {
-    padding: 0.5rem 0.75rem !important;
-    gap: 0.5rem !important;
   }
 
   .mobile-hide {
@@ -331,6 +385,11 @@ input, select, textarea {
   /* Ultra-compact for small phone screens */
   .responsive-table-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+  }
+
+  .mobile-container {
+    padding: 0.45rem 0.5rem !important;
   }
 }
 
