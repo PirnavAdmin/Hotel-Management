@@ -325,8 +325,11 @@ export function AdminInventory() {
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: "0.75rem",
               flexWrap: "wrap",
+              flex: "1 1 100%",
+              width: "100%",
             }}
           >
             {/* Search Input */}
@@ -370,26 +373,101 @@ export function AdminInventory() {
               />
             </div>
 
+            {/* Inventory Filters */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                flex: "1 1 480px",
+                gap: "0.65rem",
+                minWidth: 0,
+              }}
+            >
+              {[
+                {
+                  label: "Filter by category",
+                  value: selectedCategory,
+                  onChange: setSelectedCategory,
+                  options: categories.map((category) => ({
+                    value: category,
+                    label: category === "all" ? "All Categories" : category,
+                  })),
+                },
+                {
+                  label: "Filter by status",
+                  value: selectedStatus,
+                  onChange: setSelectedStatus,
+                  options: [
+                    { value: "all", label: "All Status" },
+                    { value: "in-stock", label: "In Stock" },
+                    { value: "low-stock", label: "Low Stock" },
+                    { value: "out-of-stock", label: "Out of Stock" },
+                  ],
+                },
+                {
+                  label: "Filter by supplier",
+                  value: selectedSupplier,
+                  onChange: setSelectedSupplier,
+                  options: [
+                    { value: "all", label: "All Suppliers" },
+                    ...suppliers.map((supplier) => ({
+                      value: supplier,
+                      label: supplier,
+                    })),
+                  ],
+                },
+              ].map(({ label, value, onChange, options }) => (
+                <select
+                  key={label}
+                  aria-label={label}
+                  value={value}
+                  onChange={(e) => {
+                    onChange(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    height: "40px",
+                    padding: "0 0.75rem",
+                    color: "#cbd5e1",
+                    background: "#080d1a",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    fontSize: "0.8rem",
+                    outline: "none",
+                  }}
+                >
+                  {options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ))}
+            </div>
+
             {/* Add New Stock Item */}
             <button
               onClick={() => setIsAddModalOpen(true)}
               style={{
-                height: "40px",
+                height: "36px",
                 background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "9px",
-                padding: "0 1.25rem",
+                padding: "0 0.9rem",
                 fontWeight: 700,
-                fontSize: "0.82rem",
+                fontSize: "0.78rem",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.45rem",
+                marginLeft: "auto",
                 cursor: "pointer",
                 boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
               }}
             >
-              <Plus size={16} />
+              <Plus size={15} />
               <span>Add Stock Item</span>
             </button>
           </div>
@@ -634,7 +712,7 @@ export function AdminInventory() {
                             : isLowStock
                               ? "#f59e0b"
                               : "#10b981",
-                          fontSize: "0.95rem",
+                          fontSize: "0.85rem",
                         }}
                       >
                         {item.stock} {item.unit}
