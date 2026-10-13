@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users, Plus, Trash2, Eye, EyeOff, ShieldCheck,
+  Users, Plus, Trash2, Eye, EyeOff, ShieldCheck, Pencil,
   Utensils, ChefHat, Key, RefreshCw, UserCheck, X, AlertCircle, Phone
 } from 'lucide-react';
-import { getUsers, createUser, deleteUser, updateUserPassword } from '../utils/auth';
+import { getUsers, createUser, deleteUser, updateUserPassword, updateUserDetails } from '../utils/auth';
 
 /**
  * LoginManagement — Admin panel tab for managing POS & KOT logins.
@@ -16,7 +16,9 @@ export function LoginManagement({ currentAdminSession }) {
   const [formName, setFormName]     = useState('');
   const [formUser, setFormUser]     = useState('');
   const [formMobile, setFormMobile] = useState('');
+  const [formEmail, setFormEmail] = useState('');
   const [formPass, setFormPass]     = useState('');
+  const [editingUser, setEditingUser] = useState(null);
   const [showPass, setShowPass]     = useState(false);
   const [formError, setFormError]   = useState('');
   const [formSuccess, setFormSuccess] = useState('');
@@ -36,15 +38,35 @@ export function LoginManagement({ currentAdminSession }) {
 
   useEffect(() => { reload(); }, []);
 
+  const openEditForm = (user) => {
+    setEditingUser(user);
+    setFormRole(user.role || 'pos');
+    setFormName(user.name || '');
+    setFormUser(user.username || '');
+    setFormMobile(user.mobile || '');
+    setFormEmail(user.email || '');
+    setFormPass('');
+    setFormError('');
+    setFormSuccess('');
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingUser(null);
+    setFormError('');
+    setFormPass('');
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setFormError('');
     setFormSuccess('');
-    if (!formUser.trim() || !formPass.trim()) {
-      setFormError('Username and password are required.');
+    if (!formUser.trim() || (!editingUser && !formPass.trim())) {
+      setFormError(editingUser ? 'Username is required.' : 'Username and password are required.');
       return;
     }
-    if (formPass.length < 4) {
+    if (!editingUser && formPass.length < 4) {
       setFormError('Password must be at least 4 characters.');
       return;
     }
@@ -52,6 +74,30 @@ export function LoginManagement({ currentAdminSession }) {
       setFormError('Mobile number must be 10 digits.');
       return;
     }
+    if (editingUser) {
+      const updatedUser = {
+        Id: editingUser.id,
+        UserId: editingUser.id,
+        Username: formUser.trim(),
+        FullName: formName.trim() || formUser.trim(),
+        Role: formRole,
+        Phone: formMobile.trim() || '0000000000',
+        Email: formEmail.trim() || `${formUser.trim()}@avsr.com`,
+      };
+      const result = await updateUserDetails(editingUser.id, updatedUser);
+      if (!result.success) {
+        setFormError(result.error || 'Could not update this login.');
+        return;
+      }
+      setUsers((current) => current.map((user) => user.id === editingUser.id
+        ? { ...user, username: updatedUser.Username, name: updatedUser.FullName, role: formRole, mobile: formMobile.trim(), email: updatedUser.Email }
+        : user));
+      setFormSuccess(`Login "${updatedUser.Username}" updated successfully.`);
+      await reload();
+      setTimeout(closeForm, 1200);
+      return;
+    }
+
     const result = await createUser({
       Username: formUser,
       Password: formPass,
@@ -73,7 +119,7 @@ export function LoginManagement({ currentAdminSession }) {
         createdAt: new Date().toISOString()
       };
       setUsers(prev => [createdUserObj, ...prev.filter(u => u.username !== formUser.trim())]);
-      setFormUser(''); setFormPass(''); setFormName(''); setFormMobile('');
+      setFormUser(''); setFormPass(''); setFormName(''); setFormMobile(''); setFormEmail('');
       await reload();
       setTimeout(() => { setFormSuccess(''); setShowForm(false); }, 1500);
     } else {
@@ -210,6 +256,18 @@ export function LoginManagement({ currentAdminSession }) {
         {/* Actions */}
         <div style={{ display: 'flex', gap: '0.45rem', flexShrink: 0 }}>
           <button
+            onClick={() => openEditForm(user)}
+            title="Edit login details"
+            style={{
+              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+              color: '#fbbf24', padding: '5px 8px', borderRadius: '7px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+              fontSize: '0.72rem', fontWeight: 700
+            }}
+          >
+            <Pencil size={13} /> <span>Edit</span>
+          </button>
+          <button
             onClick={() => { setChangePwUser(user); setNewPw(''); setPwError(''); setPwSuccess(''); }}
             title="Change Password"
             style={{
@@ -298,7 +356,7 @@ export function LoginManagement({ currentAdminSession }) {
             <RefreshCw size={14} /> Refresh
           </button>
           <button
-            onClick={() => { setShowForm(true); setFormError(''); setFormSuccess(''); }}
+            onClick={() => { setEditingUser(null); setFormRole('pos'); setFormName(''); setFormUser(''); setFormMobile(''); setFormEmail(''); setFormPass(''); setShowForm(true); setFormError(''); setFormSuccess(''); }}
             style={{
               background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
               border: 'none', color: '#ffffff',
@@ -356,10 +414,10 @@ export function LoginManagement({ currentAdminSession }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
-              ➕ Create New Login
+              {editingUser ? 'Edit Login Details' : 'Create New Login'}
             </h3>
             <button
-              onClick={() => setShowForm(false)}
+              onClick={closeForm}
               style={{
                 background: 'rgba(255,255,255,0.06)', border: 'none',
                 color: '#94a3b8', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer'
@@ -481,8 +539,23 @@ export function LoginManagement({ currentAdminSession }) {
               )}
             </div>
 
+            {editingUser && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={formEmail}
+                  onChange={e => setFormEmail(e.target.value)}
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+                />
+              </div>
+            )}
+
             {/* Password */}
-            <div>
+            {!editingUser && <div>
               <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 Password *
               </label>
@@ -503,7 +576,7 @@ export function LoginManagement({ currentAdminSession }) {
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-            </div>
+            </div>}
 
             <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.25rem' }}>
               <button
@@ -517,11 +590,11 @@ export function LoginManagement({ currentAdminSession }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
-                <UserCheck size={16} />
-                Create Login Account
+                {editingUser ? <Pencil size={16} /> : <UserCheck size={16} />}
+                {editingUser ? 'Save Changes' : 'Create Login Account'}
               </button>
               <button
-                type="button" onClick={() => setShowForm(false)}
+                type="button" onClick={closeForm}
                 style={{
                   flex: 1, padding: '0.65rem', borderRadius: '10px',
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
