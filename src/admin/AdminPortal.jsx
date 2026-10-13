@@ -100,7 +100,7 @@ export function AdminPortal({
   onChangeTheme = null,
   pastOrders = [],
 }) {
-  const [activeTab, setActiveTab] = useState("menu");
+  const [activeTab, setActiveTab] = useState("overview");
   const [searchFilter, setSearchFilter] = useState("");
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
   const [currentTime, setCurrentTime] = useState(new Date());

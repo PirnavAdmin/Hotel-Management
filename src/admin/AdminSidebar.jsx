@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   ChefHat,
   LayoutDashboard,
@@ -10,9 +10,6 @@ import {
   BarChart3,
   ShieldCheck,
   Settings,
-  ChevronRight,
-  ArrowLeft,
-  LogOut,
 } from "lucide-react";
 
 export function AdminSidebar({
@@ -26,9 +23,6 @@ export function AdminSidebar({
   staffCount = 0,
   activeKOTCount = 0,
 }) {
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const adminName = currentSession?.name || currentSession?.username || "Admin";
-  const adminRole = currentSession?.role || "Admin";
 
   const navSections = [
     {
@@ -302,213 +296,6 @@ export function AdminSidebar({
             </div>
           </div>
         ))}
-      </div>
-      {/* Return to POS Quick Link Button */}
-      {onClose && (
-        <button
-          onClick={onClose}
-          style={{
-            margin: "0.75rem 0 0.5rem 0",
-            padding: "0.55rem 0.85rem",
-            background: "var(--bg-tertiary)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "9px",
-            color: "var(--text-muted)",
-            fontSize: "0.78rem",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.45rem",
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--bg-card-hover)";
-            e.currentTarget.style.color = "var(--text-main)";
-            e.currentTarget.style.borderColor = "var(--border-card)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "var(--bg-tertiary)";
-            e.currentTarget.style.color = "var(--text-muted)";
-            e.currentTarget.style.borderColor = "var(--border-subtle)";
-          }}
-          title="Return to dining tables & order floor"
-        >
-          <ArrowLeft size={14} color="var(--accent-amber)" />
-          <span>Go to User POS</span>
-        </button>
-      )}
-
-      {/* Bottom Profile Card */}
-      <div style={{ position: "relative" }}>
-        <div
-          onClick={() => setShowProfileMenu((prev) => !prev)}
-          style={{
-            background: "var(--bg-tertiary)",
-            border: "1px solid var(--border-card)",
-            borderRadius: "13px",
-            padding: "0.55rem 0.75rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.65rem",
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "var(--accent-amber)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "var(--border-card)";
-          }}
-        >
-          {/* Avatar with active green dot */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ffffff",
-                fontWeight: 800,
-                fontSize: "0.95rem",
-                boxShadow: "0 2px 8px rgba(99, 102, 241, 0.4)",
-              }}
-            >
-              {adminName.charAt(0).toUpperCase()}
-            </div>
-            {/* Green Online Dot */}
-            <div
-              style={{
-                position: "absolute",
-                bottom: "-1px",
-                right: "-1px",
-                width: "10px",
-                height: "10px",
-                borderRadius: "50%",
-                background: "#10b981",
-                border: "2px solid var(--bg-secondary)",
-              }}
-            />
-          </div>
-
-          {/* Name & Role */}
-          <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
-            <div
-              style={{
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                color: "var(--text-main)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                lineHeight: 1.2,
-              }}
-            >
-              {adminName}
-            </div>
-            <div
-              style={{
-                fontSize: "0.7rem",
-                color: "var(--text-dim)",
-                fontWeight: 500,
-              }}
-            >
-              {adminRole}
-            </div>
-          </div>
-
-          <ChevronRight size={15} color="var(--text-dim)" style={{ flexShrink: 0 }} />
-        </div>
-
-        {/* Profile Popover Menu */}
-        {showProfileMenu && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "110%",
-              left: 0,
-              right: 0,
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-card)",
-              borderRadius: "10px",
-              padding: "0.5rem",
-              boxShadow: "var(--shadow-md)",
-              zIndex: 100,
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-            }}
-          >
-            {onClose && (
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  onClose();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.5rem 0.65rem",
-                  background: "transparent",
-                  border: "none",
-                  borderRadius: "6px",
-                  color: "var(--text-main)",
-                  fontSize: "0.78rem",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "var(--bg-tertiary)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <ArrowLeft size={14} color="#f59e0b" />
-                <span>Return to POS Floor</span>
-              </button>
-            )}
-
-            {onLogout && (
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  onLogout();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.5rem 0.65rem",
-                  background: "transparent",
-                  border: "none",
-                  borderRadius: "6px",
-                  color: "#ef4444",
-                  fontSize: "0.78rem",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "rgba(239, 68, 68, 0.12)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <LogOut size={14} color="#ef4444" />
-                <span>Logout Session</span>
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </aside>
   );

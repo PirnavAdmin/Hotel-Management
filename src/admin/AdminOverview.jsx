@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Utensils,
@@ -13,8 +13,49 @@ import {
   CheckCircle2,
   AlertCircle,
   IndianRupee,
+  ShoppingBag,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+
+function parseOrderToYMD(order) {
+  if (!order) return "";
+  const months = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  };
+
+  if (order.date) {
+    const s = String(order.date).trim();
+    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
+    }
+    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (dmyMatch) {
+      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
+    }
+    const textMatch = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3,})[\s\-]+(\d{4})/);
+    if (textMatch) {
+      const mon = textMatch[2].slice(0, 3).toLowerCase();
+      if (months[mon]) {
+        return `${textMatch[3]}-${months[mon]}-${textMatch[1].padStart(2, "0")}`;
+      }
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+
+  const ts = order.orderTimestamp || order.timestamp || order.createdAt;
+  if (ts) {
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  return "";
+}
 
 export function AdminOverview({
   menuItems = [],
@@ -25,9 +66,51 @@ export function AdminOverview({
   onOpenKOTView,
   onOpenItemModal,
 }) {
-  // Financial calculations
-  const totalRevenue = pastOrders.reduce(
-    (sum, order) => sum + (Number(order.grandTotal) || 0),
+  // Dynamically load orders from localStorage or props
+  const [ordersList, setOrdersList] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return pastOrders && pastOrders.length > 0 ? pastOrders : [];
+  });
+
+  useEffect(() => {
+    if (pastOrders && pastOrders.length > 0) {
+      setOrdersList(pastOrders);
+    }
+  }, [pastOrders]);
+
+  useEffect(() => {
+    const syncFromStorage = () => {
+      try {
+        const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setOrdersList(parsed);
+          }
+        }
+      } catch {}
+    };
+
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener("focus", syncFromStorage);
+    return () => {
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener("focus", syncFromStorage);
+    };
+  }, []);
+
+  const now = new Date();
+  const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  const todayOrders = ordersList.filter((o) => parseOrderToYMD(o) === todayYMD);
+  const todayRevenue = todayOrders.reduce(
+    (sum, order) => sum + (Number(order.grandTotal || order.total) || 0),
     0
   );
 
@@ -161,9 +244,9 @@ export function AdminOverview({
           gap: "0.65rem",
         }}
       >
-        {/* Total Revenue */}
+        {/* Today Orders */}
         <div
-          onClick={() => onNavigateTab("invoices")}
+          onClick={() => onNavigateTab("reports")}
           style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
@@ -180,6 +263,7 @@ export function AdminOverview({
             e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
+          title="Click to view today's sales and order analytics"
         >
           <div
             style={{
@@ -190,7 +274,7 @@ export function AdminOverview({
             }}
           >
             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Settled Collections
+              Today Orders
             </span>
             <div
               style={{
@@ -203,11 +287,11 @@ export function AdminOverview({
                 justifyContent: "center",
               }}
             >
-              <TrendingUp size={13} color="#f59e0b" />
+              <ShoppingBag size={13} color="#f59e0b" />
             </div>
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--accent-amber)" }}>
-            {formatCurrency(totalRevenue)}
+            {todayOrders.length} Orders
           </div>
           <div
             style={{
@@ -216,7 +300,7 @@ export function AdminOverview({
               marginTop: "2px",
             }}
           >
-            {pastOrders.length} completed customer bills
+            {formatCurrency(todayRevenue)} collected today
           </div>
         </div>
 
