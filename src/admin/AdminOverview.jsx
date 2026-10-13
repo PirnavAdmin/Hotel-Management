@@ -89,7 +89,7 @@ export function AdminOverview({
               style={{
                 fontSize: "1.15rem",
                 fontWeight: 800,
-                color: "#ffffff",
+                color: "var(--text-main)",
                 margin: 0,
               }}
             >
@@ -98,7 +98,7 @@ export function AdminOverview({
             <p
               style={{
                 fontSize: "0.76rem",
-                color: "#94a3b8",
+                color: "var(--text-muted)",
                 margin: "2px 0 0 0",
               }}
             >
@@ -132,9 +132,9 @@ export function AdminOverview({
           <button
             onClick={() => onNavigateTab("tables")}
             style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              color: "#ffffff",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              color: "var(--text-main)",
               borderRadius: "8px",
               padding: "0.42rem 0.85rem",
               fontSize: "0.76rem",
@@ -144,19 +144,20 @@ export function AdminOverview({
               gap: "0.35rem",
               cursor: "pointer",
               height: "32px",
+              boxShadow: "var(--shadow-sm)",
             }}
           >
-            <Armchair size={14} />
+            <Armchair size={14} color="var(--accent-amber)" />
             <span>Floor Plan</span>
           </button>
         </div>
       </div>
 
-      {/* 5 Core Metric Cards */}
+      {/* 4 Core Metric Cards (Aligned) */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "0.65rem",
         }}
       >
@@ -164,19 +165,19 @@ export function AdminOverview({
         <div
           onClick={() => onNavigateTab("invoices")}
           style={{
-            background: "#0d1527",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
             borderRadius: "10px",
             padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.4)";
+            e.currentTarget.style.borderColor = "var(--accent-amber)";
             e.currentTarget.style.transform = "translateY(-2px)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+            e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
         >
@@ -188,7 +189,7 @@ export function AdminOverview({
               marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
               Settled Collections
             </span>
             <div
@@ -205,13 +206,13 @@ export function AdminOverview({
               <TrendingUp size={13} color="#f59e0b" />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#f59e0b" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--accent-amber)" }}>
             {formatCurrency(totalRevenue)}
           </div>
           <div
             style={{
               fontSize: "0.68rem",
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginTop: "2px",
             }}
           >
@@ -223,19 +224,19 @@ export function AdminOverview({
         <div
           onClick={() => onNavigateTab("menu")}
           style={{
-            background: "#0d1527",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
             borderRadius: "10px",
             padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.4)";
+            e.currentTarget.style.borderColor = "var(--accent-amber)";
             e.currentTarget.style.transform = "translateY(-2px)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+            e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
         >
@@ -247,7 +248,7 @@ export function AdminOverview({
               marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
               Active Menu Catalog
             </span>
             <div
@@ -264,13 +265,13 @@ export function AdminOverview({
               <Utensils size={13} color="#ea580c" />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-main)" }}>
             {menuItems.length} Dishes
           </div>
           <div
             style={{
               fontSize: "0.68rem",
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginTop: "2px",
             }}
           >
@@ -282,19 +283,19 @@ export function AdminOverview({
         <div
           onClick={() => onNavigateTab("tables")}
           style={{
-            background: "#0d1527",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
             borderRadius: "10px",
             padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.4)";
+            e.currentTarget.style.borderColor = "var(--accent-amber)";
             e.currentTarget.style.transform = "translateY(-2px)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+            e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
         >
@@ -306,7 +307,7 @@ export function AdminOverview({
               marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
               Dining Tables & Chairs
             </span>
             <div
@@ -323,13 +324,14 @@ export function AdminOverview({
               <Armchair size={13} color="#10b981" />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-main)" }}>
             {tables.length} Tables
           </div>
           <div
             style={{
               fontSize: "0.68rem",
-              color: "#10b981",
+              color: "var(--status-vacant)",
+              fontWeight: 600,
               marginTop: "2px",
             }}
           >
@@ -337,84 +339,23 @@ export function AdminOverview({
           </div>
         </div>
 
-        {/* Kitchen KOT */}
-        <div
-          onClick={() => onNavigateTab("kot")}
-          style={{
-            background: "#0d1527",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.4)";
-            e.currentTarget.style.transform = "translateY(-2px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "0.45rem",
-            }}
-          >
-            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
-              Kitchen KOT Status
-            </span>
-            <div
-              style={{
-                width: "26px",
-                height: "26px",
-                borderRadius: "6px",
-                background: "rgba(239, 68, 68, 0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <ChefHat size={13} color="#ef4444" />
-            </div>
-          </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
-            {pendingKOTCount} Active Orders
-          </div>
-          <div
-            style={{
-              fontSize: "0.68rem",
-              color: pendingKOTCount > 0 ? "#ef4444" : "#10b981",
-              marginTop: "2px",
-            }}
-          >
-            {pendingKOTCount > 0
-              ? "Live kitchen preparation in progress"
-              : "All kitchen orders clear"}
-          </div>
-        </div>
-
         {/* Staff on Duty */}
         <div
           onClick={() => onNavigateTab("staff")}
           style={{
-            background: "#0d1527",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
             borderRadius: "10px",
             padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.4)";
+            e.currentTarget.style.borderColor = "var(--accent-amber)";
             e.currentTarget.style.transform = "translateY(-2px)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+            e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
         >
@@ -426,7 +367,7 @@ export function AdminOverview({
               marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
               Staff & Waiters
             </span>
             <div
@@ -443,13 +384,13 @@ export function AdminOverview({
               <Users size={13} color="#818cf8" />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-main)" }}>
             {staffList.length} Persons
           </div>
           <div
             style={{
               fontSize: "0.68rem",
-              color: "#64748b",
+              color: "var(--text-muted)",
               marginTop: "2px",
             }}
           >
@@ -469,8 +410,8 @@ export function AdminOverview({
         {/* Floor Tables Status Card */}
         <div
           style={{
-            background: "#0d1527",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
             borderRadius: "12px",
             padding: "0.85rem 1rem",
           }}
@@ -489,7 +430,7 @@ export function AdminOverview({
                 style={{
                   fontSize: "0.92rem",
                   fontWeight: 700,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   margin: 0,
                 }}
               >
@@ -501,7 +442,7 @@ export function AdminOverview({
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#f59e0b",
+                color: "var(--accent-amber)",
                 fontSize: "0.74rem",
                 fontWeight: 700,
                 cursor: "pointer",
@@ -532,11 +473,11 @@ export function AdminOverview({
                   key={tbl.id}
                   style={{
                     background: isOccupied
-                      ? "rgba(245, 158, 11, 0.08)"
-                      : "rgba(255, 255, 255, 0.03)",
+                      ? "rgba(245, 158, 11, 0.12)"
+                      : "var(--bg-tertiary)",
                     border: isOccupied
-                      ? "1px solid rgba(245, 158, 11, 0.3)"
-                      : "1px solid rgba(255, 255, 255, 0.06)",
+                      ? "1px solid rgba(245, 158, 11, 0.35)"
+                      : "1px solid var(--border-subtle)",
                     borderRadius: "8px",
                     padding: "0.45rem 0.4rem",
                     textAlign: "center",
@@ -546,7 +487,7 @@ export function AdminOverview({
                     style={{
                       fontSize: "0.8rem",
                       fontWeight: 800,
-                      color: isOccupied ? "#fbbf24" : "#ffffff",
+                      color: isOccupied ? "var(--accent-amber)" : "var(--text-main)",
                     }}
                   >
                     {tbl.name}
@@ -554,9 +495,10 @@ export function AdminOverview({
                   <div
                     style={{
                       fontSize: "0.64rem",
-                      color: isOccupied ? "#f59e0b" : "#64748b",
+                      color: isOccupied ? "var(--status-occupied)" : "var(--text-muted)",
                       marginTop: "1px",
                       textTransform: "capitalize",
+                      fontWeight: 600,
                     }}
                   >
                     {isOccupied ? `${tbl.guests || 2} Guests` : "Vacant"}
@@ -564,7 +506,7 @@ export function AdminOverview({
                   <div
                     style={{
                       fontSize: "0.6rem",
-                      color: "#94a3b8",
+                      color: "var(--text-muted)",
                       marginTop: "2px",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -582,8 +524,8 @@ export function AdminOverview({
         {/* Top Biryanis & Popular Items */}
         <div
           style={{
-            background: "#0d1527",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
             borderRadius: "12px",
             padding: "0.85rem 1rem",
           }}
@@ -602,7 +544,7 @@ export function AdminOverview({
                 style={{
                   fontSize: "0.92rem",
                   fontWeight: 700,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   margin: 0,
                 }}
               >
@@ -647,8 +589,8 @@ export function AdminOverview({
                   gap: "0.65rem",
                   padding: "0.42rem 0.55rem",
                   borderRadius: "8px",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
                 }}
               >
                 <img
@@ -667,7 +609,7 @@ export function AdminOverview({
                     style={{
                       fontSize: "0.8rem",
                       fontWeight: 700,
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -678,7 +620,7 @@ export function AdminOverview({
                   <div
                     style={{
                       fontSize: "0.66rem",
-                      color: "#64748b",
+                      color: "var(--text-dim)",
                       marginTop: "1px",
                     }}
                   >
@@ -689,7 +631,7 @@ export function AdminOverview({
                   style={{
                     fontSize: "0.82rem",
                     fontWeight: 800,
-                    color: "#f59e0b",
+                    color: "var(--accent-amber)",
                     whiteSpace: "nowrap",
                   }}
                 >

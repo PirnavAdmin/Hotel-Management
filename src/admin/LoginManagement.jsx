@@ -143,8 +143,8 @@ export function LoginManagement({ currentAdminSession }) {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: '0.85rem',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--bg-tertiary)',
+        border: '1px solid var(--border-card)',
         borderRadius: '10px', padding: '0.7rem 0.9rem',
         transition: 'background 0.15s'
       }}>
@@ -165,12 +165,12 @@ export function LoginManagement({ currentAdminSession }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: '0.88rem', fontWeight: 800,
-            color: '#ffffff', whiteSpace: 'nowrap',
+            color: 'var(--text-main)', whiteSpace: 'nowrap',
             overflow: 'hidden', textOverflow: 'ellipsis'
           }}>
             {user.name || user.username}
           </div>
-          <div style={{ fontSize: '0.73rem', color: '#64748b', fontWeight: 600 }}>
+          <div style={{ fontSize: '0.73rem', color: 'var(--text-dim)', fontWeight: 600 }}>
             @{user.username}
             {user.createdAt && (
               <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
@@ -243,17 +243,17 @@ export function LoginManagement({ currentAdminSession }) {
 
   const Section = ({ title, icon, color, users: list, emptyMsg }) => (
     <div style={{
-      background: 'rgba(0,0,0,0.25)',
-      border: `1px solid ${color}25`,
+      background: 'var(--bg-card)',
+      border: `1px solid var(--border-card)`,
       borderRadius: '12px', overflow: 'hidden'
     }}>
       <div style={{
         padding: '0.75rem 1rem',
-        borderBottom: `1px solid ${color}20`,
+        borderBottom: `1px solid var(--border-subtle)`,
         display: 'flex', alignItems: 'center', gap: '0.5rem'
       }}>
         <span style={{ color }}>{icon}</span>
-        <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#ffffff' }}>{title}</span>
+        <span style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--text-main)' }}>{title}</span>
         <span style={{
           background: `${color}20`, border: `1px solid ${color}40`,
           color, fontSize: '0.68rem', fontWeight: 900,
@@ -264,7 +264,7 @@ export function LoginManagement({ currentAdminSession }) {
       </div>
       <div style={{ padding: '0.65rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
         {list.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '1rem', color: '#475569', fontSize: '0.8rem', fontWeight: 600 }}>
+          <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 600 }}>
             {emptyMsg}
           </div>
         ) : (
@@ -279,10 +279,10 @@ export function LoginManagement({ currentAdminSession }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
             🔐 Login Management
           </h2>
-          <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '3px 0 0', fontWeight: 600 }}>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', margin: '3px 0 0', fontWeight: 600 }}>
             Create and manage POS & KOT user accounts. Admin creates all logins.
           </p>
         </div>
@@ -290,8 +290,8 @@ export function LoginManagement({ currentAdminSession }) {
           <button
             onClick={reload}
             style={{
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-              color: '#94a3b8', padding: '0.45rem 0.8rem', borderRadius: '8px',
+              background: 'var(--bg-tertiary)', border: '1px solid var(--border-card)',
+              color: 'var(--text-dim)', padding: '0.45rem 0.8rem', borderRadius: '8px',
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700
             }}
           >
@@ -321,8 +321,8 @@ export function LoginManagement({ currentAdminSession }) {
           { label: 'Admins', count: adminUsers.length, color: '#818cf8', icon: <ShieldCheck size={18} /> }
         ].map(stat => (
           <div key={stat.label} style={{
-            background: 'rgba(0,0,0,0.3)',
-            border: `1px solid ${stat.color}25`,
+            background: 'var(--bg-tertiary)',
+            border: `1px solid var(--border-subtle)`,
             borderRadius: '10px', padding: '0.85rem 1rem',
             display: 'flex', alignItems: 'center', gap: '0.75rem'
           }}>
@@ -335,10 +335,10 @@ export function LoginManagement({ currentAdminSession }) {
               {stat.icon}
             </div>
             <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-main)', lineHeight: 1 }}>
                 {stat.count}
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700 }}>
                 {stat.label}
               </div>
             </div>
@@ -349,13 +349,13 @@ export function LoginManagement({ currentAdminSession }) {
       {/* Create Login Form */}
       {showForm && (
         <div style={{
-          background: 'rgba(0,0,0,0.4)',
-          border: '1.5px solid rgba(245,158,11,0.35)',
+          background: 'var(--bg-card)',
+          border: '1.5px solid var(--border-subtle)',
           borderRadius: '14px', padding: '1.25rem',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.4)'
+          boxShadow: 'var(--shadow-md)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
               ➕ Create New Login
             </h3>
             <button

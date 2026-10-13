@@ -229,8 +229,8 @@ export function AdminInventory() {
       {/* Outer Card Matching Design */}
       <div
         style={{
-          background: "#0d1527",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
           borderRadius: "16px",
           padding: "1.5rem",
         }}
@@ -272,7 +272,7 @@ export function AdminInventory() {
                   style={{
                     fontSize: "1.35rem",
                     fontWeight: 800,
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     margin: 0,
                   }}
                 >
@@ -310,7 +310,7 @@ export function AdminInventory() {
               <p
                 style={{
                   fontSize: "0.8rem",
-                  color: "#94a3b8",
+                  color: "var(--text-dim)",
                   margin: "3px 0 0 0",
                 }}
               >
@@ -341,7 +341,7 @@ export function AdminInventory() {
             >
               <Search
                 size={16}
-                color="#64748b"
+                color="var(--text-dim)"
                 style={{
                   position: "absolute",
                   left: "12px",
@@ -359,11 +359,11 @@ export function AdminInventory() {
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: "#080d1a",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-card)",
                   borderRadius: "9px",
                   padding: "0 12px 0 36px",
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   fontSize: "0.82rem",
                   outline: "none",
                 }}
@@ -438,8 +438,8 @@ export function AdminInventory() {
                 gap: "0.75rem",
                 minWidth: 0,
                 padding: "0.85rem 1rem",
-                background: "rgba(255, 255, 255, 0.025)",
-                border: "1px solid rgba(255, 255, 255, 0.07)",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
                 borderRadius: "10px",
               }}
             >
@@ -458,7 +458,7 @@ export function AdminInventory() {
                 <Icon size={20} />
               </div>
               <div>
-                <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
+                <div style={{ color: "var(--text-muted)", fontSize: "0.72rem", fontWeight: 600 }}>
                   {label}
                 </div>
                 <div style={{ color, fontSize: "1.15rem", fontWeight: 800 }}>
@@ -525,9 +525,9 @@ export function AdminInventory() {
                 minWidth: 0,
                 height: "40px",
                 padding: "0 0.75rem",
-                color: "#cbd5e1",
-                background: "#080d1a",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                color: "var(--text-main)",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-card)",
                 borderRadius: "8px",
                 fontSize: "0.8rem",
                 outline: "none",
@@ -547,7 +547,7 @@ export function AdminInventory() {
           style={{
             overflowX: "auto",
             borderRadius: "12px",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: "1px solid var(--border-card)",
           }}
         >
           <table
@@ -561,11 +561,11 @@ export function AdminInventory() {
             <thead>
               <tr
                 style={{
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  color: "#94a3b8",
+                  borderBottom: "1px solid var(--border-subtle)",
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-muted)",
                   fontSize: "0.8rem",
-                  fontWeight: 600,
+                  fontWeight: 700,
                 }}
               >
                 <th style={{ padding: "0.85rem 1rem" }}>Ingredient / Supply</th>
@@ -592,12 +592,12 @@ export function AdminInventory() {
                   <tr
                     key={item.id}
                     style={{
-                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                      borderBottom: "1px solid var(--border-subtle)",
                       transition: "background 0.15s ease",
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
-                        "rgba(255, 255, 255, 0.02)")
+                        "var(--bg-tertiary)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
@@ -605,13 +605,13 @@ export function AdminInventory() {
                   >
                     {/* Item Name */}
                     <td style={{ padding: "1rem" }}>
-                      <div style={{ fontWeight: 700, color: "#ffffff" }}>
+                      <div style={{ fontWeight: 800, color: "var(--text-main)", fontSize: "0.92rem" }}>
                         {item.name}
                       </div>
                       <div
                         style={{
                           fontSize: "0.72rem",
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           marginTop: "2px",
                         }}
                       >
@@ -620,7 +620,7 @@ export function AdminInventory() {
                     </td>
 
                     {/* Category */}
-                    <td style={{ padding: "1rem", color: "#cbd5e1" }}>
+                    <td style={{ padding: "1rem", color: "var(--text-main)", fontWeight: 600 }}>
                       {item.category}
                     </td>
 
@@ -642,7 +642,7 @@ export function AdminInventory() {
                     </td>
 
                     {/* Min Threshold */}
-                    <td style={{ padding: "1rem", color: "#94a3b8" }}>
+                    <td style={{ padding: "1rem", color: "var(--text-muted)", fontWeight: 600 }}>
                       {item.minThreshold} {item.unit}
                     </td>
 
@@ -761,25 +761,25 @@ export function AdminInventory() {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "0.5rem 0.85rem",
-              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-              background: "rgba(255, 255, 255, 0.015)",
+              borderTop: "1px solid var(--border-subtle)",
+              background: "var(--bg-tertiary)",
               fontSize: "0.74rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               flexWrap: "wrap",
               gap: "0.5rem",
             }}
           >
             <span>
               Showing{" "}
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filtered.length === 0 ? 0 : pageStart + 1}
               </strong>
               –
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {Math.min(pageStart + itemsPerPage, filtered.length)}
               </strong>{" "}
               of{" "}
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filtered.length}
               </strong>{" "}
               items
@@ -790,7 +790,7 @@ export function AdminInventory() {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
               >
-                <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                   Per page:
                 </span>
                 <select
@@ -801,9 +801,9 @@ export function AdminInventory() {
                     setCurrentPage(1);
                   }}
                   style={{
-                    background: "#080d1a",
-                    color: "#cbd5e1",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-main)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "5px",
                     padding: "2px 6px",
                     fontSize: "0.72rem",
@@ -941,20 +941,20 @@ export function AdminInventory() {
         >
           <div
             style={{
-              background: "#0f172a",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
               borderRadius: "16px",
               padding: "1.5rem",
               width: "100%",
               maxWidth: "460px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
+              boxShadow: "var(--shadow-lg)",
             }}
           >
             <h3
               style={{
                 fontSize: "1.2rem",
                 fontWeight: 800,
-                color: "#ffffff",
+                color: "var(--text-main)",
                 marginBottom: "1rem",
               }}
             >
@@ -974,7 +974,7 @@ export function AdminInventory() {
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -990,11 +990,11 @@ export function AdminInventory() {
                   }
                   style={{
                     width: "100%",
-                    background: "#080d1a",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -1011,11 +1011,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: "4px",
-                    }}
+                    display: "block",
+                    fontSize: "0.75rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "4px",
+                  }}
                   >
                     Category
                   </label>
@@ -1026,11 +1026,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1047,11 +1047,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: "4px",
-                    }}
+                    display: "block",
+                    fontSize: "0.75rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "4px",
+                  }}
                   >
                     Unit
                   </label>
@@ -1062,11 +1062,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1090,11 +1090,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: "4px",
-                    }}
+                    display: "block",
+                    fontSize: "0.75rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "4px",
+                  }}
                   >
                     Starting Stock
                   </label>
@@ -1106,11 +1106,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1120,11 +1120,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: "4px",
-                    }}
+                    display: "block",
+                    fontSize: "0.75rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "4px",
+                  }}
                   >
                     Low Stock Threshold
                   </label>
@@ -1136,11 +1136,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}

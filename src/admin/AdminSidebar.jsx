@@ -117,8 +117,8 @@ export function AdminSidebar({
         minWidth: "250px",
         maxWidth: "250px",
         height: "100%",
-        background: "#0b111e",
-        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
+        background: "var(--bg-secondary)",
+        borderRight: "1px solid var(--border-subtle)",
         display: "flex",
         flexDirection: "column",
         padding: "1.25rem 0.95rem",
@@ -135,7 +135,7 @@ export function AdminSidebar({
           alignItems: "center",
           gap: "0.75rem",
           padding: "0.25rem 0.5rem 1.25rem 0.5rem",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+          borderBottom: "1px solid var(--border-subtle)",
         }}
       >
         <div
@@ -162,7 +162,7 @@ export function AdminSidebar({
               whiteSpace: "nowrap",
             }}
           >
-            <span style={{ color: "#ffffff", letterSpacing: "0.2px" }}>
+            <span style={{ color: "var(--text-main)", letterSpacing: "0.2px" }}>
               AVSR{" "}
             </span>
             <span
@@ -248,7 +248,7 @@ export function AdminSidebar({
                       background: isActive
                         ? "linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)"
                         : "transparent",
-                      color: isActive ? "#ffffff" : "#94a3b8",
+                      color: isActive ? "#ffffff" : "var(--text-muted)",
                       boxShadow: isActive
                         ? "0 4px 14px rgba(245, 158, 11, 0.38)"
                         : "none",
@@ -256,14 +256,14 @@ export function AdminSidebar({
                     onMouseEnter={(e) => {
                       if (!isActive) {
                         e.currentTarget.style.background =
-                          "rgba(255, 255, 255, 0.05)";
-                        e.currentTarget.style.color = "#ffffff";
+                          "var(--bg-tertiary)";
+                        e.currentTarget.style.color = "var(--text-main)";
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isActive) {
                         e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#94a3b8";
+                        e.currentTarget.style.color = "var(--text-muted)";
                       }
                     }}
                   >
@@ -326,10 +326,10 @@ export function AdminSidebar({
           style={{
             margin: "0.75rem 0 0.5rem 0",
             padding: "0.55rem 0.85rem",
-            background: "rgba(255, 255, 255, 0.04)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-tertiary)",
+            border: "1px solid var(--border-subtle)",
             borderRadius: "9px",
-            color: "#94a3b8",
+            color: "var(--text-muted)",
             fontSize: "0.78rem",
             fontWeight: 600,
             display: "flex",
@@ -340,16 +340,18 @@ export function AdminSidebar({
             transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-            e.currentTarget.style.color = "#ffffff";
+            e.currentTarget.style.background = "var(--bg-card-hover)";
+            e.currentTarget.style.color = "var(--text-main)";
+            e.currentTarget.style.borderColor = "var(--border-card)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
-            e.currentTarget.style.color = "#94a3b8";
+            e.currentTarget.style.background = "var(--bg-tertiary)";
+            e.currentTarget.style.color = "var(--text-muted)";
+            e.currentTarget.style.borderColor = "var(--border-subtle)";
           }}
           title="Return to dining tables & order floor"
         >
-          <ArrowLeft size={14} />
+          <ArrowLeft size={14} color="var(--accent-amber)" />
           <span>Go to User POS</span>
         </button>
       )}
@@ -359,8 +361,8 @@ export function AdminSidebar({
         <div
           onClick={() => setShowProfileMenu((prev) => !prev)}
           style={{
-            background: "rgba(255, 255, 255, 0.03)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-tertiary)",
+            border: "1px solid var(--border-card)",
             borderRadius: "13px",
             padding: "0.55rem 0.75rem",
             display: "flex",
@@ -370,12 +372,10 @@ export function AdminSidebar({
             transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)";
-            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+            e.currentTarget.style.borderColor = "var(--accent-amber)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+            e.currentTarget.style.borderColor = "var(--border-card)";
           }}
         >
           {/* Avatar with active green dot */}
@@ -407,7 +407,7 @@ export function AdminSidebar({
                 height: "10px",
                 borderRadius: "50%",
                 background: "#10b981",
-                border: "2px solid #0b111e",
+                border: "2px solid var(--bg-secondary)",
               }}
             />
           </div>
@@ -418,7 +418,7 @@ export function AdminSidebar({
               style={{
                 fontSize: "0.82rem",
                 fontWeight: 700,
-                color: "#ffffff",
+                color: "var(--text-main)",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -430,7 +430,7 @@ export function AdminSidebar({
             <div
               style={{
                 fontSize: "0.7rem",
-                color: "#64748b",
+                color: "var(--text-dim)",
                 fontWeight: 500,
               }}
             >
@@ -438,7 +438,7 @@ export function AdminSidebar({
             </div>
           </div>
 
-          <ChevronRight size={15} color="#64748b" style={{ flexShrink: 0 }} />
+          <ChevronRight size={15} color="var(--text-dim)" style={{ flexShrink: 0 }} />
         </div>
 
         {/* Profile Popover Menu */}
@@ -449,11 +449,11 @@ export function AdminSidebar({
               bottom: "110%",
               left: 0,
               right: 0,
-              background: "#111827",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
               borderRadius: "10px",
               padding: "0.5rem",
-              boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+              boxShadow: "var(--shadow-md)",
               zIndex: 100,
               display: "flex",
               flexDirection: "column",
@@ -474,14 +474,14 @@ export function AdminSidebar({
                   background: "transparent",
                   border: "none",
                   borderRadius: "6px",
-                  color: "#e2e8f0",
+                  color: "var(--text-main)",
                   fontSize: "0.78rem",
                   cursor: "pointer",
                   textAlign: "left",
                 }}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.background =
-                    "rgba(255, 255, 255, 0.08)")
+                    "var(--bg-tertiary)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")

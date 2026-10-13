@@ -74,8 +74,8 @@ export function AdminInvoices({ pastOrders = [] }) {
       {/* Outer Card Matching Design */}
       <div
         style={{
-          background: "#0d1527",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
           borderRadius: "16px",
           padding: "1.5rem",
         }}
@@ -117,7 +117,7 @@ export function AdminInvoices({ pastOrders = [] }) {
                   style={{
                     fontSize: "1.35rem",
                     fontWeight: 800,
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     margin: 0,
                   }}
                 >
@@ -140,7 +140,7 @@ export function AdminInvoices({ pastOrders = [] }) {
               <p
                 style={{
                   fontSize: "0.8rem",
-                  color: "#94a3b8",
+                  color: "var(--text-dim)",
                   margin: "3px 0 0 0",
                 }}
               >
@@ -162,7 +162,7 @@ export function AdminInvoices({ pastOrders = [] }) {
           >
             <Search
               size={16}
-              color="#64748b"
+              color="var(--text-dim)"
               style={{
                 position: "absolute",
                 left: "12px",
@@ -180,11 +180,11 @@ export function AdminInvoices({ pastOrders = [] }) {
               style={{
                 width: "100%",
                 height: "100%",
-                background: "#080d1a",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-card)",
                 borderRadius: "9px",
                 padding: "0 12px 0 36px",
-                color: "#ffffff",
+                color: "var(--text-main)",
                 fontSize: "0.82rem",
                 outline: "none",
               }}
@@ -215,13 +215,13 @@ export function AdminInvoices({ pastOrders = [] }) {
                 style={{
                   background:
                     paymentFilter === mode
-                      ? "rgba(245, 158, 11, 0.2)"
-                      : "rgba(255, 255, 255, 0.03)",
+                      ? "rgba(245, 158, 11, 0.15)"
+                      : "var(--bg-tertiary)",
                   border:
                     paymentFilter === mode
-                      ? "1px solid #f59e0b"
-                      : "1px solid rgba(255, 255, 255, 0.08)",
-                  color: paymentFilter === mode ? "#fbbf24" : "#94a3b8",
+                      ? "1px solid var(--accent-amber)"
+                      : "1px solid var(--border-card)",
+                  color: paymentFilter === mode ? "var(--accent-amber)" : "var(--text-muted)",
                   padding: "0.35rem 0.85rem",
                   borderRadius: "20px",
                   fontSize: "0.75rem",
@@ -238,7 +238,7 @@ export function AdminInvoices({ pastOrders = [] }) {
           <div
             style={{
               fontSize: "0.82rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               display: "flex",
               gap: "1rem",
             }}
@@ -269,7 +269,7 @@ export function AdminInvoices({ pastOrders = [] }) {
           style={{
             overflowX: "auto",
             borderRadius: "12px",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: "1px solid var(--border-card)",
           }}
         >
           <table
@@ -283,11 +283,11 @@ export function AdminInvoices({ pastOrders = [] }) {
             <thead>
               <tr
                 style={{
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  color: "#94a3b8",
+                  borderBottom: "1px solid var(--border-subtle)",
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-muted)",
                   fontSize: "0.8rem",
-                  fontWeight: 600,
+                  fontWeight: 700,
                 }}
               >
                 <th style={{ padding: "0.85rem 1rem" }}>Invoice No</th>
@@ -316,12 +316,12 @@ export function AdminInvoices({ pastOrders = [] }) {
                   <tr
                     key={order.invoiceNo || orderIndex}
                     style={{
-                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                      borderBottom: "1px solid var(--border-subtle)",
                       transition: "background 0.15s ease",
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
-                        "rgba(255, 255, 255, 0.02)")
+                        "var(--bg-tertiary)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
@@ -333,7 +333,7 @@ export function AdminInvoices({ pastOrders = [] }) {
                         style={{
                           fontFamily: "monospace",
                           fontWeight: 800,
-                          color: "#ffffff",
+                          color: "var(--text-main)",
                           fontSize: "0.88rem",
                         }}
                       >
@@ -343,13 +343,13 @@ export function AdminInvoices({ pastOrders = [] }) {
 
                     {/* Table & Server */}
                     <td style={{ padding: "1rem" }}>
-                      <div style={{ fontWeight: 700, color: "#ffffff" }}>
+                      <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
                         {order.tableName || `Table ${order.tableId || 1}`}
                       </div>
                       <div
                         style={{
                           fontSize: "0.72rem",
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           marginTop: "2px",
                         }}
                       >
@@ -359,13 +359,13 @@ export function AdminInvoices({ pastOrders = [] }) {
 
                     {/* Date & Time */}
                     <td style={{ padding: "1rem" }}>
-                      <div style={{ color: "#cbd5e1" }}>
+                      <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
                         {order.settledDate || order.date || "Today"}
                       </div>
                       <div
                         style={{
                           fontSize: "0.72rem",
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           marginTop: "2px",
                         }}
                       >
@@ -374,12 +374,12 @@ export function AdminInvoices({ pastOrders = [] }) {
                     </td>
 
                     {/* Items */}
-                    <td style={{ padding: "1rem", color: "#94a3b8" }}>
-                      <span>{itemCount} items</span>
+                    <td style={{ padding: "1rem", color: "var(--text-main)" }}>
+                      <span style={{ fontWeight: 600 }}>{itemCount} items</span>
                       <div
                         style={{
                           fontSize: "0.7rem",
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           maxWidth: "180px",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -508,25 +508,25 @@ export function AdminInvoices({ pastOrders = [] }) {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "0.5rem 0.85rem",
-              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-              background: "rgba(255, 255, 255, 0.015)",
+              borderTop: "1px solid var(--border-subtle)",
+              background: "var(--bg-tertiary)",
               fontSize: "0.74rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               flexWrap: "wrap",
               gap: "0.5rem",
             }}
           >
             <span>
               Showing{" "}
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filteredOrders.length === 0 ? 0 : pageStart + 1}
               </strong>
               –
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {Math.min(pageStart + itemsPerPage, filteredOrders.length)}
               </strong>{" "}
               of{" "}
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filteredOrders.length}
               </strong>{" "}
               invoices
@@ -537,7 +537,7 @@ export function AdminInvoices({ pastOrders = [] }) {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
               >
-                <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                   Per page:
                 </span>
                 <select
@@ -548,9 +548,9 @@ export function AdminInvoices({ pastOrders = [] }) {
                     setCurrentPage(1);
                   }}
                   style={{
-                    background: "#080d1a",
-                    color: "#cbd5e1",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-main)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "5px",
                     padding: "2px 6px",
                     fontSize: "0.72rem",

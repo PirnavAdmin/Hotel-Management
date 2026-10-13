@@ -372,7 +372,7 @@ export function AdminPortal({
               display: "flex",
               height: "100vh",
               width: "100%",
-              background: "#080d1a",
+              background: "var(--bg-primary)",
               overflow: "hidden",
             }
           : {
@@ -399,13 +399,13 @@ export function AdminPortal({
                 overflow: "hidden",
               }
             : {
-                background: "#0b111e",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-card)",
                 width: "100%",
                 maxWidth: "1400px",
                 height: "92vh",
                 borderRadius: "16px",
-                boxShadow: "0 25px 60px rgba(0,0,0,0.8)",
+                boxShadow: "var(--shadow-lg)",
                 display: "flex",
                 flexDirection: "row",
                 overflow: "hidden",
@@ -433,7 +433,7 @@ export function AdminPortal({
             flexDirection: "column",
             height: "100%",
             overflow: "hidden",
-            background: "#070c16",
+            background: "var(--bg-primary)",
             minWidth: 0,
           }}
         >
@@ -471,8 +471,8 @@ export function AdminPortal({
             {activeTab === "menu" && (
               <div
                 style={{
-                  background: "#0d1527",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-card)",
                   borderRadius: "12px",
                   padding: "0.75rem 0.85rem",
                 }}
@@ -510,7 +510,7 @@ export function AdminPortal({
                           style={{
                             fontSize: "1.2rem",
                             fontWeight: 800,
-                            color: "#ffffff",
+                            color: "var(--text-main)",
                             margin: 0,
                           }}
                         >
@@ -533,7 +533,7 @@ export function AdminPortal({
                       <p
                         style={{
                           fontSize: "0.78rem",
-                          color: "#94a3b8",
+                          color: "var(--text-dim)",
                           margin: "2px 0 0 0",
                         }}
                       >
@@ -562,7 +562,7 @@ export function AdminPortal({
                     >
                       <Search
                         size={15}
-                        color="#64748b"
+                        color="var(--text-dim)"
                         style={{
                           position: "absolute",
                           left: "12px",
@@ -577,11 +577,11 @@ export function AdminPortal({
                         style={{
                           width: "100%",
                           height: "100%",
-                          background: "#080d1a",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          background: "var(--bg-tertiary)",
+                          border: "1px solid var(--border-card)",
                           borderRadius: "8px",
                           padding: "0 10px 0 34px",
-                          color: "#ffffff",
+                          color: "var(--text-main)",
                           fontSize: "0.82rem",
                           outline: "none",
                         }}
@@ -616,7 +616,7 @@ export function AdminPortal({
                 <div
                   style={{
                     borderRadius: "10px",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    border: "1px solid var(--border-card)",
                     overflowX: "auto",
                   }}
                 >
@@ -631,11 +631,11 @@ export function AdminPortal({
                     <thead>
                       <tr
                         style={{
-                          background: "rgba(255, 255, 255, 0.02)",
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-                          color: "#94a3b8",
+                          background: "var(--bg-tertiary)",
+                          borderBottom: "1px solid var(--border-subtle)",
+                          color: "var(--text-muted)",
                           fontSize: "0.76rem",
-                          fontWeight: 600,
+                          fontWeight: 700,
                         }}
                       >
                         <th style={{ padding: "0.6rem 0.85rem", width: "44%" }}>
@@ -669,7 +669,7 @@ export function AdminPortal({
                             style={{
                               padding: "2rem",
                               textAlign: "center",
-                              color: "#94a3b8",
+                              color: "var(--text-muted)",
                               fontSize: "0.85rem",
                             }}
                           >
@@ -681,12 +681,12 @@ export function AdminPortal({
                           <tr
                             key={item.id}
                             style={{
-                              borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                              borderBottom: "1px solid var(--border-subtle)",
                               transition: "background 0.15s ease",
                             }}
                             onMouseEnter={(e) =>
                               (e.currentTarget.style.background =
-                                "rgba(255, 255, 255, 0.02)")
+                                "var(--bg-tertiary)")
                             }
                             onMouseLeave={(e) =>
                               (e.currentTarget.style.background = "transparent")
@@ -708,7 +708,7 @@ export function AdminPortal({
                                     height: "52px",
                                     borderRadius: "10px",
                                     objectFit: "cover",
-                                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                                    border: "1px solid var(--border-card)",
                                     flexShrink: 0,
                                   }}
                                   onError={(e) =>
@@ -718,9 +718,9 @@ export function AdminPortal({
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div
                                     style={{
-                                      fontWeight: 700,
-                                      color: "#ffffff",
-                                      fontSize: "0.9rem",
+                                      fontWeight: 800,
+                                      color: "var(--text-main)",
+                                      fontSize: "0.92rem",
                                       lineHeight: 1.3,
                                     }}
                                   >
@@ -729,7 +729,7 @@ export function AdminPortal({
                                   <div
                                     style={{
                                       fontSize: "0.72rem",
-                                      color: "#94a3b8",
+                                      color: "var(--text-muted)",
                                       lineHeight: 1.35,
                                       marginTop: "2px",
                                       display: "-webkit-box",
@@ -747,8 +747,9 @@ export function AdminPortal({
                               style={{
                                 padding: "0.6rem 0.85rem",
                                 textTransform: "capitalize",
-                                color: "#cbd5e1",
+                                color: "var(--text-main)",
                                 fontSize: "0.84rem",
+                                fontWeight: 600,
                                 whiteSpace: "nowrap",
                               }}
                             >
@@ -904,10 +905,10 @@ export function AdminPortal({
                         justifyContent: "space-between",
                         alignItems: "center",
                         padding: "0.5rem 0.85rem",
-                        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-                        background: "rgba(255, 255, 255, 0.015)",
+                        borderTop: "1px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
                         fontSize: "0.74rem",
-                        color: "#94a3b8",
+                        color: "var(--text-muted)",
                         flexWrap: "wrap",
                         gap: "0.5rem",
                       }}
@@ -916,15 +917,15 @@ export function AdminPortal({
                       <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                         <span>
                           Showing{" "}
-                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {startIdx + 1}
                           </strong>
                           –
-                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {Math.min(startIdx + menuPageSize, filteredItems.length)}
                           </strong>{" "}
                           of{" "}
-                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {filteredItems.length}
                           </strong>{" "}
                           items
@@ -935,7 +936,7 @@ export function AdminPortal({
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         {/* Per-page selector (small) */}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                          <span style={{ fontSize: "0.7rem", color: "#64748b" }}>Per page:</span>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Per page:</span>
                           <select
                             value={menuPageSize}
                             onChange={(e) => {
@@ -943,9 +944,9 @@ export function AdminPortal({
                               setMenuPage(1);
                             }}
                             style={{
-                              background: "#080d1a",
-                              color: "#cbd5e1",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              background: "var(--bg-tertiary)",
+                              color: "var(--text-main)",
+                              border: "1px solid var(--border-card)",
                               borderRadius: "5px",
                               padding: "2px 6px",
                               fontSize: "0.72rem",
@@ -1832,7 +1833,7 @@ export function AdminPortal({
                           ? "#ffffff"
                           : hasOrders
                             ? "var(--text-main)"
-                            : "var(--text-dim)",
+                            : "var(--text-muted)",
                         border: isSelected
                           ? "1px solid #ea580c"
                           : "1px solid var(--border-subtle)",

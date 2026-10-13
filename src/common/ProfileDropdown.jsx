@@ -73,27 +73,27 @@ export function ProfileDropdown({
   const roleConfig = {
     admin: {
       label: 'System Administrator',
-      badgeBg: 'rgba(99, 102, 241, 0.2)',
-      badgeBorder: 'rgba(99, 102, 241, 0.4)',
-      badgeColor: '#a5b4fc',
-      avatarGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-      avatarGlow: '0 0 12px rgba(99, 102, 241, 0.4)'
+      badgeBg: 'rgba(99, 102, 241, 0.12)',
+      badgeBorder: 'rgba(99, 102, 241, 0.35)',
+      badgeColor: '#4f46e5',
+      avatarGradient: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+      avatarGlow: '0 0 12px rgba(99, 102, 241, 0.25)'
     },
     pos: {
       label: 'POS Billing Operator',
-      badgeBg: 'rgba(245, 158, 11, 0.2)',
-      badgeBorder: 'rgba(245, 158, 11, 0.4)',
-      badgeColor: '#fbbf24',
+      badgeBg: 'rgba(245, 158, 11, 0.12)',
+      badgeBorder: 'rgba(245, 158, 11, 0.35)',
+      badgeColor: 'var(--accent-amber)',
       avatarGradient: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-      avatarGlow: '0 0 12px rgba(245, 158, 11, 0.4)'
+      avatarGlow: '0 0 12px rgba(245, 158, 11, 0.25)'
     },
     kot: {
       label: 'Kitchen Head / Chef',
-      badgeBg: 'rgba(234, 88, 12, 0.2)',
-      badgeBorder: 'rgba(234, 88, 12, 0.4)',
-      badgeColor: '#fb923c',
+      badgeBg: 'rgba(234, 88, 12, 0.12)',
+      badgeBorder: 'rgba(234, 88, 12, 0.35)',
+      badgeColor: '#ea580c',
       avatarGradient: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
-      avatarGlow: '0 0 12px rgba(234, 88, 12, 0.4)'
+      avatarGlow: '0 0 12px rgba(234, 88, 12, 0.25)'
     }
   };
 
@@ -114,12 +114,12 @@ export function ProfileDropdown({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: isOpen ? '#152035' : '#0d1527',
-          border: isOpen ? '2px solid var(--accent-amber)' : '2px solid rgba(245, 158, 11, 0.45)',
+          background: 'var(--bg-tertiary)',
+          border: isOpen ? '2px solid var(--accent-amber)' : '2px solid var(--border-subtle)',
           padding: 0,
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          boxShadow: isOpen ? '0 0 16px rgba(245, 158, 11, 0.4)' : '0 2px 10px rgba(0,0,0,0.35)',
+          boxShadow: 'var(--shadow-sm)',
           outline: 'none',
           position: 'relative'
         }}
@@ -160,7 +160,7 @@ export function ProfileDropdown({
           height: '10px',
           borderRadius: '50%',
           background: '#10b981',
-          border: '2px solid #0d1527',
+          border: '2px solid var(--bg-secondary)',
           boxShadow: '0 0 6px #10b981',
           zIndex: 3
         }} />
@@ -175,10 +175,10 @@ export function ProfileDropdown({
           right: coords ? 'auto' : '16px',
           width: coords ? `${coords.width}px` : '300px',
           maxWidth: 'calc(100vw - 24px)',
-          background: 'linear-gradient(145deg, #0d1527 0%, #152035 100%)',
-          border: '1.5px solid rgba(245, 158, 11, 0.45)',
+          background: 'var(--bg-card)',
+          border: '1.5px solid var(--border-card)',
           borderRadius: '16px',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.85), 0 0 25px rgba(245, 158, 11, 0.25)',
+          boxShadow: 'var(--shadow-lg)',
           zIndex: 99999,
           overflow: 'hidden',
           animation: 'fadeIn 0.15s ease'
@@ -186,7 +186,8 @@ export function ProfileDropdown({
           {/* Header Card Banner */}
           <div style={{
             padding: '1.25rem 1rem 1rem 1rem',
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.25) 100%)',
+            background: 'var(--bg-tertiary)',
+            borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -207,7 +208,7 @@ export function ProfileDropdown({
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: currentRoleCfg.avatarGlow,
-                border: '2.5px solid rgba(255,255,255,0.3)',
+                border: '2.5px solid rgba(255,255,255,0.4)',
                 overflow: 'hidden'
               }}>
                 {profileImage ? (
@@ -230,19 +231,19 @@ export function ProfileDropdown({
                 height: '14px',
                 borderRadius: '50%',
                 background: '#10b981',
-                border: '2.5px solid #0d1527',
+                border: '2.5px solid var(--bg-card)',
                 boxShadow: '0 0 8px #10b981',
                 zIndex: 3
               }} />
             </div>
 
             {/* Full Display Name */}
-            <div style={{ fontSize: '1.08rem', fontWeight: 800, color: '#ffffff', marginBottom: '2px' }}>
+            <div style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '2px' }}>
               {displayName}
             </div>
             
             {/* Username handle */}
-            <div style={{ fontSize: '0.78rem', color: 'var(--accent-amber-light)', marginBottom: '8px', fontFamily: 'monospace', fontWeight: 700 }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--accent-amber)', marginBottom: '8px', fontFamily: 'monospace', fontWeight: 700 }}>
               @{username}
             </div>
 
@@ -271,10 +272,11 @@ export function ProfileDropdown({
             flexDirection: 'column',
             gap: '0.55rem',
             fontSize: '0.8rem',
-            background: 'rgba(0,0,0,0.15)'
+            background: 'var(--bg-card)',
+            borderBottom: '1px solid var(--border-subtle)'
           }}>
             {email && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#cbd5e1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-muted)' }}>
                 <Mail size={14} color="var(--accent-amber)" />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {email}
@@ -283,14 +285,14 @@ export function ProfileDropdown({
             )}
 
             {mobile && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#cbd5e1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-muted)' }}>
                 <Phone size={14} color="var(--accent-amber)" />
                 <span>{mobile}</span>
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#10b981', fontSize: '0.75rem', fontWeight: 700 }}>
-              <CheckCircle2 size={13} color="#10b981" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--status-vacant)', fontSize: '0.75rem', fontWeight: 700 }}>
+              <CheckCircle2 size={13} color="var(--status-vacant)" />
               <span>Active Session Connected</span>
             </div>
           </div>
@@ -298,8 +300,8 @@ export function ProfileDropdown({
           {/* Action / Logout Section */}
           <div style={{
             padding: '0.85rem 1rem',
-            background: 'rgba(0,0,0,0.3)',
-            borderTop: '1px solid rgba(255,255,255,0.08)'
+            background: 'var(--bg-tertiary)',
+            borderTop: '1px solid var(--border-subtle)'
           }}>
             {onLogout ? (
               <button
@@ -310,10 +312,10 @@ export function ProfileDropdown({
                 style={{
                   width: '100%',
                   padding: '0.65rem 1rem',
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.35) 100%)',
-                  border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                  background: 'var(--danger-bg)',
+                  border: '1.5px solid var(--danger)',
                   borderRadius: '10px',
-                  color: '#fca5a5',
+                  color: 'var(--danger)',
                   fontSize: '0.86rem',
                   fontWeight: 800,
                   cursor: 'pointer',
@@ -322,15 +324,15 @@ export function ProfileDropdown({
                   justifyContent: 'center',
                   gap: '0.5rem',
                   transition: 'all 0.15s ease',
-                  boxShadow: '0 4px 14px rgba(239,68,68,0.25)'
+                  boxShadow: 'var(--shadow-sm)'
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                  e.currentTarget.style.background = 'var(--danger)';
                   e.currentTarget.style.color = '#ffffff';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.35) 100%)';
-                  e.currentTarget.style.color = '#fca5a5';
+                  e.currentTarget.style.background = 'var(--danger-bg)';
+                  e.currentTarget.style.color = 'var(--danger)';
                 }}
               >
                 <LogOut size={16} />
