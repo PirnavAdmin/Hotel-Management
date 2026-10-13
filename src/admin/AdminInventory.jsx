@@ -472,23 +472,75 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             </div>
           </div>
 
-          {/* Right Controls: Search & Add Item Button */}
+          {/* Top Right Corner Actions */}
+          <div style={{ display: "flex", gap: "0.55rem", alignItems: "center", flexWrap: "wrap", marginLeft: "auto" }}>
+            <button
+              type="button"
+              onClick={exportInventory}
+              title="Download all inventory as an Excel-compatible CSV"
+              style={{
+                height: "36px",
+                background: "var(--bg-tertiary)",
+                color: "#34d399",
+                border: "1px solid rgba(52, 211, 153, 0.4)",
+                borderRadius: "9px",
+                padding: "0 0.85rem",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Download size={15} />
+              <span>Export Excel</span>
+            </button>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              style={{
+                height: "36px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "9px",
+                padding: "0 0.95rem",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                cursor: "pointer",
+                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Plus size={15} />
+              <span>Add Stock Item</span>
+            </button>
+          </div>
+
+          {/* Filter Bar: Search & Inventory Dropdowns */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
               gap: "0.75rem",
               flexWrap: "wrap",
               flex: "1 1 100%",
               width: "100%",
+              marginTop: "0.25rem",
             }}
           >
             {/* Search Input */}
             <div
               style={{
                 position: "relative",
-                width: "230px",
+                flex: "1 1 240px",
+                minWidth: "220px",
                 height: "36px",
                 display: "flex",
                 alignItems: "center",
@@ -530,9 +582,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                flex: "1 1 480px",
+                flex: "2 1 480px",
                 gap: "0.65rem",
-                minWidth: 0,
+                minWidth: "300px",
               }}
             >
               {[
@@ -616,36 +668,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   />
                 </div>
               ))}
-            </div>
-
-            <div style={{ display: "flex", gap: "0.55rem", marginLeft: "auto", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={exportInventory}
-                title="Download all inventory as an Excel-compatible CSV"
-                style={{
-                  height: "33px", background: "var(--bg-tertiary)", color: "#34d399",
-                  border: "1px solid rgba(52, 211, 153, 0.4)", borderRadius: "9px", padding: "0 0.8rem",
-                  fontWeight: 700, fontSize: "0.78rem", display: "flex", alignItems: "center",
-                  gap: "0.4rem", cursor: "pointer", whiteSpace: "nowrap",
-                }}
-              >
-                <Download size={15} />
-                <span>Export Excel</span>
-              </button>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                style={{
-                  height: "33px", background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                  color: "#ffffff", border: "none", borderRadius: "9px", padding: "0 0.9rem",
-                  fontWeight: 700, fontSize: "0.78rem", display: "flex", alignItems: "center",
-                  gap: "0.45rem", cursor: "pointer", boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Plus size={15} />
-                <span>Add Stock Item</span>
-              </button>
             </div>
           </div>
         </div>
