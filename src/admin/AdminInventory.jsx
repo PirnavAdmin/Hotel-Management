@@ -9,6 +9,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 const INITIAL_INVENTORY = [
@@ -190,7 +191,6 @@ export function AdminInventory() {
     "Packaging",
     "Beverages",
   ];
-
   const suppliers = [...new Set(inventory.map((item) => item.supplier))].sort();
   const inStockCount = inventory.filter(
     (item) => item.stock > item.minThreshold,
@@ -417,33 +417,52 @@ export function AdminInventory() {
                   ],
                 },
               ].map(({ label, value, onChange, options }) => (
-                <select
-                  key={label}
-                  aria-label={label}
-                  value={value}
-                  onChange={(e) => {
-                    onChange(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    width: "100%",
-                    minWidth: 0,
-                    height: "40px",
-                    padding: "0 0.75rem",
-                    color: "#cbd5e1",
-                    background: "#080d1a",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "8px",
-                    fontSize: "0.8rem",
-                    outline: "none",
-                  }}
-                >
-                  {options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div key={label} style={{ position: "relative", minWidth: 0 }}>
+                  <select
+                    aria-label={label}
+                    value={value}
+                    onChange={(e) => {
+                      onChange(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      width: "100%",
+                      minWidth: 0,
+                      height: "40px",
+                      padding: "0 2.25rem 0 0.85rem",
+                      color: "var(--text-main)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
+                      borderRadius: "8px",
+                      fontSize: "0.8rem",
+                      outline: "none",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      cursor: "pointer",
+                      transition:
+                        "border-color 0.15s ease, box-shadow 0.15s ease",
+                    }}
+                  >
+                    {options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    strokeWidth={2.2}
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      right: "0.75rem",
+                      transform: "translateY(-50%)",
+                      color: "var(--text-muted)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </div>
               ))}
             </div>
 
@@ -536,7 +555,13 @@ export function AdminInventory() {
                 <Icon size={20} />
               </div>
               <div>
-                <div style={{ color: "var(--text-muted)", fontSize: "0.72rem", fontWeight: 600 }}>
+                <div
+                  style={{
+                    color: "var(--text-muted)",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                  }}
+                >
                   {label}
                 </div>
                 <div style={{ color, fontSize: "1.15rem", fontWeight: 800 }}>
@@ -544,79 +569,6 @@ export function AdminInventory() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Dropdown Filters */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
-            gap: "0.65rem",
-            marginBottom: "1rem",
-          }}
-        >
-          {[
-            {
-              label: "Filter by category",
-              value: selectedCategory,
-              onChange: setSelectedCategory,
-              options: categories.map((category) => ({
-                value: category,
-                label: category === "all" ? "All Categories" : category,
-              })),
-            },
-            {
-              label: "Filter by status",
-              value: selectedStatus,
-              onChange: setSelectedStatus,
-              options: [
-                { value: "all", label: "All Status" },
-                { value: "in-stock", label: "In Stock" },
-                { value: "low-stock", label: "Low Stock" },
-                { value: "out-of-stock", label: "Out of Stock" },
-              ],
-            },
-            {
-              label: "Filter by supplier",
-              value: selectedSupplier,
-              onChange: setSelectedSupplier,
-              options: [
-                { value: "all", label: "All Suppliers" },
-                ...suppliers.map((supplier) => ({
-                  value: supplier,
-                  label: supplier,
-                })),
-              ],
-            },
-          ].map(({ label, value, onChange, options }) => (
-            <select
-              key={label}
-              aria-label={label}
-              value={value}
-              onChange={(e) => {
-                onChange(e.target.value);
-                setCurrentPage(1);
-              }}
-              style={{
-                width: "100%",
-                minWidth: 0,
-                height: "40px",
-                padding: "0 0.75rem",
-                color: "var(--text-main)",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-card)",
-                borderRadius: "8px",
-                fontSize: "0.8rem",
-                outline: "none",
-              }}
-            >
-              {options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
           ))}
         </div>
 
@@ -674,8 +626,7 @@ export function AdminInventory() {
                       transition: "background 0.15s ease",
                     }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "var(--bg-tertiary)")
+                      (e.currentTarget.style.background = "var(--bg-tertiary)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
@@ -683,7 +634,13 @@ export function AdminInventory() {
                   >
                     {/* Item Name */}
                     <td style={{ padding: "1rem" }}>
-                      <div style={{ fontWeight: 800, color: "var(--text-main)", fontSize: "0.92rem" }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          color: "var(--text-main)",
+                          fontSize: "0.92rem",
+                        }}
+                      >
                         {item.name}
                       </div>
                       <div
@@ -698,7 +655,13 @@ export function AdminInventory() {
                     </td>
 
                     {/* Category */}
-                    <td style={{ padding: "1rem", color: "var(--text-main)", fontWeight: 600 }}>
+                    <td
+                      style={{
+                        padding: "1rem",
+                        color: "var(--text-main)",
+                        fontWeight: 600,
+                      }}
+                    >
                       {item.category}
                     </td>
 
@@ -720,7 +683,13 @@ export function AdminInventory() {
                     </td>
 
                     {/* Min Threshold */}
-                    <td style={{ padding: "1rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                    <td
+                      style={{
+                        padding: "1rem",
+                        color: "var(--text-muted)",
+                        fontWeight: 600,
+                      }}
+                    >
                       {item.minThreshold} {item.unit}
                     </td>
 
@@ -868,7 +837,9 @@ export function AdminInventory() {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
               >
-                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                <span
+                  style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                >
                   Per page:
                 </span>
                 <select
@@ -1089,11 +1060,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "4px",
-                  }}
+                      display: "block",
+                      fontSize: "0.75rem",
+                      color: "var(--text-dim)",
+                      marginBottom: "4px",
+                    }}
                   >
                     Category
                   </label>
@@ -1125,11 +1096,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "4px",
-                  }}
+                      display: "block",
+                      fontSize: "0.75rem",
+                      color: "var(--text-dim)",
+                      marginBottom: "4px",
+                    }}
                   >
                     Unit
                   </label>
@@ -1168,11 +1139,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "4px",
-                  }}
+                      display: "block",
+                      fontSize: "0.75rem",
+                      color: "var(--text-dim)",
+                      marginBottom: "4px",
+                    }}
                   >
                     Starting Stock
                   </label>
@@ -1198,11 +1169,11 @@ export function AdminInventory() {
                 <div>
                   <label
                     style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "4px",
-                  }}
+                      display: "block",
+                      fontSize: "0.75rem",
+                      color: "var(--text-dim)",
+                      marginBottom: "4px",
+                    }}
                   >
                     Low Stock Threshold
                   </label>
