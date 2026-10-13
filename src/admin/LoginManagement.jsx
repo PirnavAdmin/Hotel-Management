@@ -19,11 +19,12 @@ export function LoginManagement({ currentAdminSession }) {
   const [formEmail, setFormEmail] = useState('');
   const [formPass, setFormPass]     = useState('');
   const [editingUser, setEditingUser] = useState(null);
-  const [accountRoleFilter, setAccountRoleFilter] = useState('pos');
   const [showPass, setShowPass]     = useState(false);
   const [formError, setFormError]   = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState('');
 
   // Password change modal
   const [changePwUser, setChangePwUser] = useState(null);
@@ -33,8 +34,23 @@ export function LoginManagement({ currentAdminSession }) {
   const [pwSuccess, setPwSuccess]       = useState('');
 
   const reload = async () => {
-    const data = await getUsers();
-    setUsers(data);
+    setIsRefreshing(true);
+    setRefreshMessage('');
+    try {
+      const result = await getUsers();
+      setUsers(result.users);
+      setRefreshMessage(result.error || `Loaded ${result.users.length} account${result.users.length === 1 ? '' : 's'}.`);
+    } catch (error) {
+      setRefreshMessage(error?.message || 'Could not refresh accounts.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const saveUsersCache = (nextUsers) => {
+    try {
+      localStorage.setItem('avsr_auth_users_v1', JSON.stringify(nextUsers));
+    } catch {}
   };
 
   useEffect(() => { reload(); }, []);
@@ -90,9 +106,11 @@ export function LoginManagement({ currentAdminSession }) {
         setFormError(result.error || 'Could not update this login.');
         return;
       }
-      setUsers((current) => current.map((user) => user.id === editingUser.id
+      const nextUsers = users.map((user) => user.id === editingUser.id
         ? { ...user, username: updatedUser.Username, name: updatedUser.FullName, role: formRole, mobile: formMobile.trim(), email: updatedUser.Email }
-        : user));
+        : user);
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
       setFormSuccess(`Login "${updatedUser.Username}" updated successfully.`);
       await reload();
       setTimeout(closeForm, 1200);
@@ -119,7 +137,9 @@ export function LoginManagement({ currentAdminSession }) {
         email: `${formUser.trim()}@avsr.com`,
         createdAt: new Date().toISOString()
       };
-      setUsers(prev => [createdUserObj, ...prev.filter(u => u.username !== formUser.trim())]);
+      const nextUsers = [createdUserObj, ...users.filter(u => u.username.toLowerCase() !== formUser.trim().toLowerCase())];
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
       setFormUser(''); setFormPass(''); setFormName(''); setFormMobile(''); setFormEmail('');
       await reload();
       setTimeout(() => { setFormSuccess(''); setShowForm(false); }, 1500);
@@ -130,7 +150,12 @@ export function LoginManagement({ currentAdminSession }) {
 
   const handleDelete = async (userId) => {
     const result = await deleteUser(userId);
-    if (result.success) await reload();
+    if (result.success) {
+      const nextUsers = users.filter((user) => user.id !== userId);
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
+      await reload();
+    }
     setDeletingId(null);
   };
 
@@ -156,12 +181,6 @@ export function LoginManagement({ currentAdminSession }) {
   const posUsers   = users.filter(u => (u.role || '').toLowerCase() === 'pos');
   const kotUsers   = users.filter(u => (u.role || '').toLowerCase() === 'kot');
   const adminUsers = users.filter(u => (u.role || '').toLowerCase() === 'admin');
-  const accountRoleViews = {
-    pos: { label: 'User POS Accounts', users: posUsers, color: '#f59e0b', icon: <Utensils size={16} />, emptyMsg: 'No POS users yet. Create one above.' },
-    kot: { label: 'Kitchen KOT Accounts', users: kotUsers, color: '#fb923c', icon: <ChefHat size={16} />, emptyMsg: 'No KOT users yet. Create one above.' },
-    admin: { label: 'Admin Accounts', users: adminUsers, color: '#818cf8', icon: <ShieldCheck size={16} />, emptyMsg: 'No admin users found.' },
-  };
-  const selectedAccountView = accountRoleViews[accountRoleFilter];
 
   const roleConfig = {
     pos: {
@@ -354,13 +373,15 @@ export function LoginManagement({ currentAdminSession }) {
         <div style={{ display: 'flex', gap: '0.6rem' }}>
           <button
             onClick={reload}
+            disabled={isRefreshing}
             style={{
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
               color: '#94a3b8', padding: '0.45rem 0.8rem', borderRadius: '8px',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700
+              cursor: isRefreshing ? 'wait' : 'pointer', opacity: isRefreshing ? 0.7 : 1,
+              display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700
             }}
           >
-            <RefreshCw size={14} /> Refresh
+            <RefreshCw size={14} /> {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
             onClick={() => { setEditingUser(null); setFormRole('pos'); setFormName(''); setFormUser(''); setFormMobile(''); setFormEmail(''); setFormPass(''); setShowForm(true); setFormError(''); setFormSuccess(''); }}
@@ -377,6 +398,12 @@ export function LoginManagement({ currentAdminSession }) {
           </button>
         </div>
       </div>
+
+      {refreshMessage && (
+        <div role="status" style={{ color: refreshMessage.toLowerCase().includes('could not') || refreshMessage.toLowerCase().includes('failed') ? '#fca5a5' : '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
+          {refreshMessage}
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
@@ -456,34 +483,20 @@ export function LoginManagement({ currentAdminSession }) {
           )}
 
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {/* Role selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+              <label htmlFor="new-login-role" style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 Account Role *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                {[
-                  { value: 'pos', label: '🍽️ User POS', sub: 'Billing & floor orders', color: '#f59e0b' },
-                  { value: 'kot', label: '🔥 Kitchen KOT', sub: 'Kitchen display system', color: '#fb923c' }
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setFormRole(opt.value)}
-                    style={{
-                      padding: '0.65rem 0.8rem', borderRadius: '10px', textAlign: 'left',
-                      background: formRole === opt.value ? `${opt.color}20` : 'rgba(255,255,255,0.04)',
-                      border: formRole === opt.value ? `1.5px solid ${opt.color}` : '1.5px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer', transition: 'all 0.15s'
-                    }}
-                  >
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: formRole === opt.value ? opt.color : '#ffffff' }}>
-                      {opt.label}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{opt.sub}</div>
-                  </button>
-                ))}
-              </div>
+              <select
+                id="new-login-role"
+                value={formRole}
+                onChange={(event) => setFormRole(event.target.value)}
+                style={{ width: '100%', padding: '0.7rem 0.8rem', background: '#111827', border: '1.5px solid rgba(245,158,11,0.55)', borderRadius: '9px', color: '#fff', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
+              >
+                <option value="pos">User POS - Billing &amp; floor orders</option>
+                <option value="kot">Kitchen KOT - Kitchen display system</option>
+                {editingUser?.role === 'admin' && <option value="admin">Admin</option>}
+              </select>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -615,29 +628,9 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      {/* Account list with a single role dropdown */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.65rem' }}>
-        <label htmlFor="login-account-role" style={{ color: '#94a3b8', fontSize: '0.78rem', fontWeight: 800 }}>
-          Show accounts
-        </label>
-        <select
-          id="login-account-role"
-          value={accountRoleFilter}
-          onChange={(event) => setAccountRoleFilter(event.target.value)}
-          style={{ background: '#111827', border: '1px solid rgba(245,158,11,0.45)', borderRadius: '8px', color: '#fff', padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 700, minWidth: '190px' }}
-        >
-          <option value="pos">User POS</option>
-          <option value="kot">Kitchen KOT</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-      <Section
-        title={selectedAccountView.label}
-        icon={selectedAccountView.icon}
-        color={selectedAccountView.color}
-        users={selectedAccountView.users}
-        emptyMsg={selectedAccountView.emptyMsg}
-      />
+      <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />
+      <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
+      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="#818cf8" users={adminUsers} emptyMsg="No admin accounts found." />
 
       {/* Delete Confirm Overlay */}
       {deletingId && (
