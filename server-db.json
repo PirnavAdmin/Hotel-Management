@@ -779,7 +779,9 @@
       "completedAt": "02:38 PM",
       "completedDuration": "01m 46s",
       "orderTime": "02:37 PM",
-      "orderTimestamp": 1791450462818
+      "orderTimestamp": 1791450462818,
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 20,
@@ -813,7 +815,9 @@
       "completedAt": "02:52 PM",
       "completedDuration": "10m 00s",
       "orderTime": "02:42 PM",
-      "orderTimestamp": 1791018722417
+      "orderTimestamp": 1791018722417,
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 2,
@@ -856,7 +860,9 @@
       "completedAt": "10:40 AM",
       "completedDuration": "16h 42m 09s",
       "orderTime": "05:58 PM",
-      "orderTimestamp": 1790831278175
+      "orderTimestamp": 1790831278175,
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 1,
@@ -899,7 +905,9 @@
       "completedAt": "03:01 PM",
       "completedDuration": "16m 11s",
       "orderTime": "12:23 PM",
-      "orderTimestamp": 1790750977884
+      "orderTimestamp": 1790750977884,
+      "capacity": 2,
+      "guests": 2
     },
     {
       "tableId": 1,
@@ -932,7 +940,9 @@
       "completedAt": "12:19 PM",
       "completedDuration": "00m 59s",
       "orderTime": "12:19 PM",
-      "orderTimestamp": 1790750977884
+      "orderTimestamp": 1790750977884,
+      "capacity": 2,
+      "guests": 2
     },
     {
       "tableId": 4,
@@ -974,7 +984,9 @@
       "completedAt": "12:07 PM",
       "completedDuration": "01m 40s",
       "orderTime": "12:06 PM",
-      "orderTimestamp": 1790750204522
+      "orderTimestamp": 1790750204522,
+      "capacity": 6,
+      "guests": 4
     },
     {
       "tableId": 1,
@@ -1013,7 +1025,9 @@
       "date": "12 Oct 2026",
       "settledDate": "12 Oct 2026",
       "orderTimestamp": 1791790800000,
-      "id": "ord_12_Oct_2026_003"
+      "id": "ord_12_Oct_2026_003",
+      "capacity": 2,
+      "guests": 2
     },
     {
       "tableId": 1,
@@ -1058,7 +1072,9 @@
       "orderTimestamp": 1791789840000,
       "date": "12 Oct 2026",
       "settledDate": "12 Oct 2026",
-      "id": "ord_12_Oct_2026_002"
+      "id": "ord_12_Oct_2026_002",
+      "capacity": 2,
+      "guests": 2
     },
     {
       "tableId": 4,
@@ -1103,7 +1119,9 @@
       "orderTimestamp": 1791787740000,
       "date": "12 Oct 2026",
       "settledDate": "12 Oct 2026",
-      "id": "ord_12_Oct_2026_001"
+      "id": "ord_12_Oct_2026_001",
+      "capacity": 6,
+      "guests": 4
     },
     {
       "tableId": 2,
@@ -1144,7 +1162,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791719880000,
-      "id": "ord_11_Oct_2026_014"
+      "id": "ord_11_Oct_2026_014",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 1,
@@ -1176,7 +1196,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791717840000,
-      "id": "ord_11_Oct_2026_013"
+      "id": "ord_11_Oct_2026_013",
+      "capacity": 2,
+      "guests": 2
     },
     {
       "tableId": 14,
@@ -1208,7 +1230,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791716340000,
-      "id": "ord_11_Oct_2026_012"
+      "id": "ord_11_Oct_2026_012",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 14,
@@ -1267,7 +1291,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791715200000,
-      "id": "ord_11_Oct_2026_008"
+      "id": "ord_11_Oct_2026_008",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 15,
@@ -1317,7 +1343,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791715200000,
-      "id": "ord_11_Oct_2026_009"
+      "id": "ord_11_Oct_2026_009",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 10,
@@ -1358,7 +1386,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791715200000,
-      "id": "ord_11_Oct_2026_010"
+      "id": "ord_11_Oct_2026_010",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 9,
@@ -1408,7 +1438,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791715200000,
-      "id": "ord_11_Oct_2026_011"
+      "id": "ord_11_Oct_2026_011",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 3,
@@ -1458,7 +1490,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791715140000,
-      "id": "ord_11_Oct_2026_005"
+      "id": "ord_11_Oct_2026_005",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 2,
@@ -1499,7 +1533,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791715140000,
-      "id": "ord_11_Oct_2026_006"
+      "id": "ord_11_Oct_2026_006",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 1,
@@ -1531,7 +1567,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791715140000,
-      "id": "ord_11_Oct_2026_007"
+      "id": "ord_11_Oct_2026_007",
+      "capacity": 2,
+      "guests": 2
     },
     {
       "tableId": 2,
@@ -1581,7 +1619,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791711960000,
-      "id": "ord_11_Oct_2026_004"
+      "id": "ord_11_Oct_2026_004",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 5,
@@ -1631,7 +1671,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791710340000,
-      "id": "ord_11_Oct_2026_003"
+      "id": "ord_11_Oct_2026_003",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 1,
@@ -1672,7 +1714,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791710100000,
-      "id": "ord_11_Oct_2026_002"
+      "id": "ord_11_Oct_2026_002",
+      "capacity": 2,
+      "guests": 2
     },
     {
       "tableId": 3,
@@ -1704,7 +1748,9 @@
       "date": "11 Oct 2026",
       "settledDate": "11 Oct 2026",
       "orderTimestamp": 1791708420000,
-      "id": "ord_11_Oct_2026_001"
+      "id": "ord_11_Oct_2026_001",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 21,
@@ -1740,7 +1786,9 @@
       "orderTime": "02:37 PM",
       "orderTimestamp": 1791450540000,
       "settledDate": "08 Oct 2026",
-      "id": "ord_08_Oct_2026_001"
+      "id": "ord_08_Oct_2026_001",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 20,
@@ -1776,7 +1824,9 @@
       "orderTime": "02:42 PM",
       "orderTimestamp": 1791019320000,
       "settledDate": "03 Oct 2026",
-      "id": "ord_03_Oct_2026_003"
+      "id": "ord_03_Oct_2026_003",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 2,
@@ -1821,7 +1871,9 @@
       "orderTime": "05:58 PM",
       "orderTimestamp": 1791016140000,
       "settledDate": "03 Oct 2026",
-      "id": "ord_03_Oct_2026_001"
+      "id": "ord_03_Oct_2026_001",
+      "capacity": 4,
+      "guests": 3
     },
     {
       "tableId": 1,
@@ -1866,7 +1918,9 @@
       "orderTime": "12:23 PM",
       "orderTimestamp": 1791016140000,
       "settledDate": "03 Oct 2026",
-      "id": "ord_03_Oct_2026_002"
+      "id": "ord_03_Oct_2026_002",
+      "capacity": 2,
+      "guests": 2
     }
   ],
   "avsr_auth_users_v1": [

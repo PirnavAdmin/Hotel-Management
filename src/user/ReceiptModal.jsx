@@ -51,8 +51,12 @@ export function ReceiptModal({ table, onClose, onPrint }) {
     year: 'numeric'
   });
   const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
-  const paidTime = formatReceiptTime(table.settledAt || table.time);
-  const guestCount = table.guests ?? table.occupiedChairs ?? table.capacity ?? 0;
+  const tableCapacity = Number(table.capacity) || 0;
+  const guestCount =
+    (Number(table.guests) > 0 ? Number(table.guests) : null) ??
+    (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+    (tableCapacity > 0 ? tableCapacity : null) ??
+    2;
   const paymentMethod = table.paymentMethod ? table.paymentMethod.toUpperCase() : null;
   const upiId = (import.meta.env.VITE_UPI_ID || '').trim();
   const upiPaymentUri = upiId

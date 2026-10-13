@@ -1303,7 +1303,11 @@ export function App() {
       completedAt: tableObj?.completedAt || settlementData.settledAt,
       completedDuration: finalDuration || "12m 30s",
       guests:
-        tableObj?.guests ?? settlementData.guests ?? tableObj?.capacity ?? 1,
+        (Number(tableObj?.guests) > 0 ? Number(tableObj.guests) : null) ??
+        (Number(settlementData.guests) > 0 ? Number(settlementData.guests) : null) ??
+        (Number(tableObj?.capacity) > 0 ? Number(tableObj.capacity) : null) ??
+        2,
+      capacity: tableObj?.capacity || settlementData.capacity || 4,
       orderTime: tableObj?.orderTime || settlementData.settledAt,
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
@@ -1917,12 +1921,20 @@ export function App() {
           pastOrders={pastOrders}
           onClose={() => setIsPastOrdersOpen(false)}
           onReprintReceipt={(order) => {
+            const matchedTable = tables.find(t => t.id === order.tableId || t.name === order.tableName);
+            const resolvedCapacity = order.capacity || matchedTable?.capacity || 4;
+            const resolvedGuests =
+              (Number(order.guests) > 0 ? Number(order.guests) : null) ??
+              (Number(order.occupiedChairs) > 0 ? Number(order.occupiedChairs) : null) ??
+              resolvedCapacity;
+
             setReprintReceiptData({
               id: order.tableId,
               name: order.tableName,
               section: order.section,
               server: order.server,
-              guests: order.guests ?? order.occupiedChairs ?? 0,
+              capacity: resolvedCapacity,
+              guests: resolvedGuests,
               orderTime:
                 order.orderTime ||
                 order.cookingStartedAt ||

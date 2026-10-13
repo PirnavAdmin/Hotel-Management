@@ -1,5 +1,246 @@
 export const INITIAL_ORDERS = [
   {
+    "tableId": 21,
+    "tableName": "Table 21",
+    "section": "Main Hall",
+    "server": "SHYAM",
+    "items": [
+      {
+        "id": "custom-1791450343762",
+        "name": "EGG BIRIYANI",
+        "price": 250,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "02:37 PM",
+        "kotStatus": "ready"
+      }
+    ],
+    "subtotal": 250,
+    "discountAmount": 0,
+    "taxAmount": 12.5,
+    "serviceChargeAmount": 12.5,
+    "tipAmount": 0,
+    "grandTotal": 275,
+    "paymentMethod": "cash",
+    "cashTendered": 275,
+    "changeDue": 0,
+    "settledAt": "02:39 PM",
+    "date": "08 Oct 2026",
+    "invoiceNo": "INV-214148",
+    "cookingStartedAt": "02:38 PM",
+    "completedAt": "02:38 PM",
+    "completedDuration": "01m 46s",
+    "orderTime": "02:37 PM",
+    "orderTimestamp": 1791450462818,
+    "capacity": 4,
+    "guests": 3
+  },
+  {
+    "tableId": 20,
+    "tableName": "Table 20",
+    "section": "Main Hall",
+    "server": "A V SURESH REDDY",
+    "items": [
+      {
+        "id": "custom-1791018497290",
+        "name": "panner biriyani",
+        "price": 245,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "02:42 PM",
+        "kotStatus": "received"
+      }
+    ],
+    "subtotal": 245,
+    "discountAmount": 0,
+    "taxAmount": 12.25,
+    "serviceChargeAmount": 12.25,
+    "tipAmount": 0,
+    "grandTotal": 270,
+    "paymentMethod": "upi",
+    "cashTendered": 270,
+    "changeDue": 0,
+    "settledAt": "02:52 PM",
+    "date": "03 Oct 2026",
+    "invoiceNo": "INV-205227",
+    "cookingStartedAt": "02:42 PM",
+    "completedAt": "02:52 PM",
+    "completedDuration": "10m 00s",
+    "orderTime": "02:42 PM",
+    "orderTimestamp": 1791018722417,
+    "capacity": 4,
+    "guests": 3
+  },
+  {
+    "tableId": 2,
+    "tableName": "Table 2",
+    "section": "Main Hall",
+    "server": "A V SURESH REDDY",
+    "items": [
+      {
+        "id": "bir-8",
+        "name": "Egg Dum Biryani (Double Egg)",
+        "price": 220,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "05:58 PM",
+        "kotStatus": "ready"
+      },
+      {
+        "id": "custom-1790678725402",
+        "name": "AVSR SPL",
+        "price": 250,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "10:38 AM",
+        "kotStatus": "ready"
+      }
+    ],
+    "subtotal": 470,
+    "discountAmount": 23.5,
+    "taxAmount": 22.325000000000003,
+    "serviceChargeAmount": 22.325000000000003,
+    "tipAmount": 0,
+    "grandTotal": 491,
+    "paymentMethod": "cash",
+    "cashTendered": 491,
+    "changeDue": 0,
+    "settledAt": "01:59 PM",
+    "date": "03 Oct 2026",
+    "invoiceNo": "INV-22530",
+    "cookingStartedAt": "06:40 PM",
+    "completedAt": "10:40 AM",
+    "completedDuration": "16h 42m 09s",
+    "orderTime": "05:58 PM",
+    "orderTimestamp": 1790831278175,
+    "capacity": 4,
+    "guests": 3
+  },
+  {
+    "tableId": 1,
+    "tableName": "Table 1",
+    "section": "Main Hall",
+    "server": "Rajesh K.",
+    "items": [
+      {
+        "id": "st-5",
+        "name": "Apollo Fish Fry",
+        "price": 340,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "12:23 PM",
+        "kotStatus": "ready"
+      },
+      {
+        "id": "st-3",
+        "name": "Chilli Chicken Dry",
+        "price": 280,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "12:23 PM",
+        "kotStatus": "ready"
+      }
+    ],
+    "subtotal": 620,
+    "discountAmount": 0,
+    "taxAmount": 31,
+    "serviceChargeAmount": 31,
+    "tipAmount": 0,
+    "grandTotal": 682,
+    "paymentMethod": "upi",
+    "cashTendered": 682,
+    "changeDue": 0,
+    "settledAt": "01:59 PM",
+    "date": "03 Oct 2026",
+    "invoiceNo": "INV-17200",
+    "cookingStartedAt": "12:19 PM",
+    "completedAt": "03:01 PM",
+    "completedDuration": "16m 11s",
+    "orderTime": "12:23 PM",
+    "orderTimestamp": 1790750977884,
+    "capacity": 2,
+    "guests": 2
+  },
+  {
+    "tableId": 1,
+    "tableName": "Table 1",
+    "section": "Main Hall",
+    "server": "Rajesh K.",
+    "items": [
+      {
+        "id": "bir-2",
+        "name": "Royal Mutton Dum Biryani",
+        "price": 440,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "12:19 PM",
+        "kotStatus": "ready"
+      }
+    ],
+    "subtotal": 440,
+    "discountAmount": 0,
+    "taxAmount": 22,
+    "serviceChargeAmount": 22,
+    "tipAmount": 0,
+    "grandTotal": 484,
+    "paymentMethod": "upi",
+    "cashTendered": 484,
+    "changeDue": 0,
+    "settledAt": "12:54 PM",
+    "invoiceNo": "INV-10317",
+    "cookingStartedAt": "12:19 PM",
+    "completedAt": "12:19 PM",
+    "completedDuration": "00m 59s",
+    "orderTime": "12:19 PM",
+    "orderTimestamp": 1790750977884,
+    "capacity": 2,
+    "guests": 2
+  },
+  {
+    "tableId": 4,
+    "tableName": "Table 4",
+    "section": "Main Hall",
+    "server": "Pooja M.",
+    "items": [
+      {
+        "id": "bir-1",
+        "name": "Hyderabadi Chicken Dum Biryani",
+        "price": 320,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "12:06 PM",
+        "kotStatus": "ready"
+      },
+      {
+        "id": "custom-1790679317565",
+        "name": "PALAK PANEER",
+        "price": 250,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "12:06 PM",
+        "kotStatus": "ready"
+      }
+    ],
+    "subtotal": 570,
+    "discountAmount": 0,
+    "taxAmount": 28.5,
+    "serviceChargeAmount": 28.5,
+    "tipAmount": 0,
+    "grandTotal": 627,
+    "paymentMethod": "upi",
+    "cashTendered": 627,
+    "changeDue": 0,
+    "settledAt": "12:19 PM",
+    "invoiceNo": "INV-41123",
+    "cookingStartedAt": "12:07 PM",
+    "completedAt": "12:07 PM",
+    "completedDuration": "01m 40s",
+    "orderTime": "12:06 PM",
+    "orderTimestamp": 1790750204522,
+    "capacity": 6,
+    "guests": 4
+  },
+  {
     "tableId": 1,
     "tableName": "Table 1",
     "section": "Main Hall",
@@ -36,7 +277,9 @@ export const INITIAL_ORDERS = [
     "date": "12 Oct 2026",
     "settledDate": "12 Oct 2026",
     "orderTimestamp": 1791790800000,
-    "id": "ord_12_Oct_2026_003"
+    "id": "ord_12_Oct_2026_003",
+    "capacity": 2,
+    "guests": 2
   },
   {
     "tableId": 1,
@@ -44,6 +287,15 @@ export const INITIAL_ORDERS = [
     "section": "Main Hall",
     "server": "Rajesh K.",
     "items": [
+      {
+        "id": "bir-1",
+        "name": "Hyderabadi Chicken Dum Biryani",
+        "price": 320,
+        "quantity": 1,
+        "notes": "",
+        "timeAdded": "03:50 PM",
+        "kotStatus": "ready"
+      },
       {
         "id": "bir-2",
         "name": "Royal Mutton Dum Biryani",
@@ -72,7 +324,9 @@ export const INITIAL_ORDERS = [
     "orderTimestamp": 1791789840000,
     "date": "12 Oct 2026",
     "settledDate": "12 Oct 2026",
-    "id": "ord_12_Oct_2026_002"
+    "id": "ord_12_Oct_2026_002",
+    "capacity": 2,
+    "guests": 2
   },
   {
     "tableId": 4,
@@ -117,7 +371,9 @@ export const INITIAL_ORDERS = [
     "orderTimestamp": 1791787740000,
     "date": "12 Oct 2026",
     "settledDate": "12 Oct 2026",
-    "id": "ord_12_Oct_2026_001"
+    "id": "ord_12_Oct_2026_001",
+    "capacity": 6,
+    "guests": 4
   },
   {
     "tableId": 2,
@@ -158,7 +414,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791719880000,
-    "id": "ord_11_Oct_2026_014"
+    "id": "ord_11_Oct_2026_014",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 1,
@@ -190,7 +448,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791717840000,
-    "id": "ord_11_Oct_2026_013"
+    "id": "ord_11_Oct_2026_013",
+    "capacity": 2,
+    "guests": 2
   },
   {
     "tableId": 14,
@@ -222,7 +482,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791716340000,
-    "id": "ord_11_Oct_2026_012"
+    "id": "ord_11_Oct_2026_012",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 14,
@@ -281,7 +543,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791715200000,
-    "id": "ord_11_Oct_2026_008"
+    "id": "ord_11_Oct_2026_008",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 15,
@@ -331,7 +595,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791715200000,
-    "id": "ord_11_Oct_2026_009"
+    "id": "ord_11_Oct_2026_009",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 10,
@@ -372,7 +638,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791715200000,
-    "id": "ord_11_Oct_2026_010"
+    "id": "ord_11_Oct_2026_010",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 9,
@@ -422,7 +690,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791715200000,
-    "id": "ord_11_Oct_2026_011"
+    "id": "ord_11_Oct_2026_011",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 3,
@@ -472,7 +742,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791715140000,
-    "id": "ord_11_Oct_2026_005"
+    "id": "ord_11_Oct_2026_005",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 2,
@@ -513,7 +785,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791715140000,
-    "id": "ord_11_Oct_2026_006"
+    "id": "ord_11_Oct_2026_006",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 1,
@@ -545,7 +819,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791715140000,
-    "id": "ord_11_Oct_2026_007"
+    "id": "ord_11_Oct_2026_007",
+    "capacity": 2,
+    "guests": 2
   },
   {
     "tableId": 2,
@@ -595,7 +871,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791711960000,
-    "id": "ord_11_Oct_2026_004"
+    "id": "ord_11_Oct_2026_004",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 5,
@@ -645,7 +923,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791710340000,
-    "id": "ord_11_Oct_2026_003"
+    "id": "ord_11_Oct_2026_003",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 1,
@@ -686,7 +966,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791710100000,
-    "id": "ord_11_Oct_2026_002"
+    "id": "ord_11_Oct_2026_002",
+    "capacity": 2,
+    "guests": 2
   },
   {
     "tableId": 3,
@@ -718,7 +1000,9 @@ export const INITIAL_ORDERS = [
     "date": "11 Oct 2026",
     "settledDate": "11 Oct 2026",
     "orderTimestamp": 1791708420000,
-    "id": "ord_11_Oct_2026_001"
+    "id": "ord_11_Oct_2026_001",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 21,
@@ -754,7 +1038,9 @@ export const INITIAL_ORDERS = [
     "orderTime": "02:37 PM",
     "orderTimestamp": 1791450540000,
     "settledDate": "08 Oct 2026",
-    "id": "ord_08_Oct_2026_001"
+    "id": "ord_08_Oct_2026_001",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 20,
@@ -790,7 +1076,9 @@ export const INITIAL_ORDERS = [
     "orderTime": "02:42 PM",
     "orderTimestamp": 1791019320000,
     "settledDate": "03 Oct 2026",
-    "id": "ord_03_Oct_2026_003"
+    "id": "ord_03_Oct_2026_003",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 2,
@@ -835,7 +1123,9 @@ export const INITIAL_ORDERS = [
     "orderTime": "05:58 PM",
     "orderTimestamp": 1791016140000,
     "settledDate": "03 Oct 2026",
-    "id": "ord_03_Oct_2026_001"
+    "id": "ord_03_Oct_2026_001",
+    "capacity": 4,
+    "guests": 3
   },
   {
     "tableId": 1,
@@ -880,6 +1170,8 @@ export const INITIAL_ORDERS = [
     "orderTime": "12:23 PM",
     "orderTimestamp": 1791016140000,
     "settledDate": "03 Oct 2026",
-    "id": "ord_03_Oct_2026_002"
+    "id": "ord_03_Oct_2026_002",
+    "capacity": 2,
+    "guests": 2
   }
 ];
