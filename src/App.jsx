@@ -46,7 +46,7 @@ import {
   apiDeleteStaff,
 } from "./api/staffApi";
 import { apiGetOrders, apiCreateOrder } from "./api/orderApi";
-import { dedupeOrders } from "./utils/orderDedupe";
+import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -316,17 +316,10 @@ export function App() {
           ? response.data
           : [];
       if (backendOrders.length > 0) {
-        const mergedOrders = dedupeOrders([...pastOrders, ...backendOrders]);
-        setPastOrders(mergedOrders);
-        try {
-          localStorage.setItem(
-            STORAGE_KEY_ORDERS,
-            JSON.stringify(mergedOrders),
-          );
-        } catch {}
+        setPastOrders((current) => mergeSettledOrders(current, backendOrders));
       }
     });
-  }, [pastOrders]);
+  }, []);
 
   // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
@@ -569,14 +562,7 @@ export function App() {
         const incomingOrders =
           data.pastOrders || data.data?.pastOrders || data[STORAGE_KEY_ORDERS];
         if (Array.isArray(incomingOrders) && incomingOrders.length > 0) {
-          const mergedOrders = dedupeOrders([...pastOrders, ...incomingOrders]);
-          setPastOrders(mergedOrders);
-          try {
-            localStorage.setItem(
-              STORAGE_KEY_ORDERS,
-              JSON.stringify(mergedOrders),
-            );
-          } catch {}
+          setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
         }
 
         const incomingMenu =
@@ -706,14 +692,7 @@ export function App() {
           const incomingOrders =
             payload.pastOrders || payload[STORAGE_KEY_ORDERS];
           if (incomingOrders && incomingOrders.length > 0) {
-            const mergedOrders = dedupeOrders([...pastOrders, ...incomingOrders]);
-            setPastOrders(mergedOrders);
-            try {
-              localStorage.setItem(
-                STORAGE_KEY_ORDERS,
-                JSON.stringify(mergedOrders),
-              );
-            } catch {}
+            setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
           }
           const incomingMenu = payload.menuItems || payload[STORAGE_KEY_MENU];
           if (incomingMenu && incomingMenu.length > 0) {
@@ -810,10 +789,22 @@ export function App() {
       }
     };
 
+    const handleOrdersStorageUpdate = (event) => {
+      if (event.key !== STORAGE_KEY_ORDERS || !event.newValue) return;
+      try {
+        const incomingOrders = JSON.parse(event.newValue);
+        if (Array.isArray(incomingOrders)) {
+          setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
+        }
+      } catch {}
+    };
+
     window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("storage", handleOrdersStorageUpdate);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("storage", handleOrdersStorageUpdate);
       if (es) es.close();
     };
   }, []);

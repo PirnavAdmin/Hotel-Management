@@ -1,4 +1,4 @@
-import { apiGetUsers, apiDeleteUser, apiUpdateUserPassword } from '../api/userApi';
+import { apiGetUsers, apiUpdateUser, apiDeleteUser, apiUpdateUserPassword } from '../api/userApi';
 import { apiLogin, apiRegister, apiGetMe } from '../api/authApi';
 
 const STORAGE_KEY_SESSION  = 'avsr_auth_session_v1';
@@ -77,6 +77,11 @@ export async function registerUser(userData) {
 export async function deleteUser(userId) {
   const res = await apiDeleteUser(userId);
   return { success: res.success, error: res.error };
+}
+
+export async function updateUserDetails(userId, userData) {
+  const res = await apiUpdateUser(userId, userData);
+  return { success: res.success, error: res.error || null, data: res.data };
 }
 
 export async function updateUserPassword(userId, newPassword) {

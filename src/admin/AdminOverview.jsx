@@ -53,40 +53,41 @@ export function AdminOverview({
   const nonVegCount = menuItems.filter((i) => !i.isVeg).length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
       {/* Overview Header Banner */}
       <div
         style={{
           background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)",
           border: "1px solid rgba(245, 158, 11, 0.25)",
-          borderRadius: "16px",
-          padding: "1.5rem 1.75rem",
+          borderRadius: "12px",
+          padding: "0.85rem 1.15rem",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: "1rem",
+          gap: "0.75rem",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <div
             style={{
-              width: "50px",
-              height: "50px",
-              borderRadius: "14px",
+              width: "38px",
+              height: "38px",
+              borderRadius: "10px",
               background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 16px rgba(245, 158, 11, 0.4)",
+              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+              flexShrink: 0,
             }}
           >
-            <LayoutDashboard size={26} color="#ffffff" />
+            <LayoutDashboard size={20} color="#ffffff" />
           </div>
           <div>
             <h2
               style={{
-                fontSize: "1.4rem",
+                fontSize: "1.15rem",
                 fontWeight: 800,
                 color: "#ffffff",
                 margin: 0,
@@ -96,9 +97,9 @@ export function AdminOverview({
             </h2>
             <p
               style={{
-                fontSize: "0.85rem",
+                fontSize: "0.76rem",
                 color: "#94a3b8",
-                margin: "4px 0 0 0",
+                margin: "2px 0 0 0",
               }}
             >
               Real-time snapshot of AVSR Food Court dining floor, kitchen, and menu
@@ -106,25 +107,26 @@ export function AdminOverview({
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "0.6rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             onClick={() => onNavigateTab("menu")}
             style={{
               background: "linear-gradient(135deg, #f59e0b, #ea580c)",
               color: "#ffffff",
               border: "none",
-              borderRadius: "10px",
-              padding: "0.6rem 1.1rem",
-              fontSize: "0.82rem",
+              borderRadius: "8px",
+              padding: "0.42rem 0.85rem",
+              fontSize: "0.76rem",
               fontWeight: 700,
               display: "flex",
               alignItems: "center",
-              gap: "0.45rem",
+              gap: "0.35rem",
               cursor: "pointer",
-              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+              boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+              height: "32px",
             }}
           >
-            <Utensils size={15} />
+            <Utensils size={14} />
             <span>Manage Menu</span>
           </button>
           <button
@@ -133,17 +135,18 @@ export function AdminOverview({
               background: "rgba(255, 255, 255, 0.08)",
               border: "1px solid rgba(255, 255, 255, 0.15)",
               color: "#ffffff",
-              borderRadius: "10px",
-              padding: "0.6rem 1.1rem",
-              fontSize: "0.82rem",
+              borderRadius: "8px",
+              padding: "0.42rem 0.85rem",
+              fontSize: "0.76rem",
               fontWeight: 600,
               display: "flex",
               alignItems: "center",
-              gap: "0.45rem",
+              gap: "0.35rem",
               cursor: "pointer",
+              height: "32px",
             }}
           >
-            <Armchair size={15} />
+            <Armchair size={14} />
             <span>Floor Plan</span>
           </button>
         </div>
@@ -153,8 +156,8 @@ export function AdminOverview({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-          gap: "1rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+          gap: "0.65rem",
         }}
       >
         {/* Total Revenue */}
@@ -163,8 +166,8 @@ export function AdminOverview({
           style={{
             background: "#0d1527",
             border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "14px",
-            padding: "1.25rem",
+            borderRadius: "10px",
+            padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
@@ -182,34 +185,34 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.6rem",
+              marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
               Settled Collections
             </span>
             <div
               style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
+                width: "26px",
+                height: "26px",
+                borderRadius: "6px",
                 background: "rgba(245, 158, 11, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <TrendingUp size={16} color="#f59e0b" />
+              <TrendingUp size={13} color="#f59e0b" />
             </div>
           </div>
-          <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#f59e0b" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#f59e0b" }}>
             {formatCurrency(totalRevenue)}
           </div>
           <div
             style={{
-              fontSize: "0.72rem",
+              fontSize: "0.68rem",
               color: "#64748b",
-              marginTop: "4px",
+              marginTop: "2px",
             }}
           >
             {pastOrders.length} completed customer bills
@@ -222,8 +225,8 @@ export function AdminOverview({
           style={{
             background: "#0d1527",
             border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "14px",
-            padding: "1.25rem",
+            borderRadius: "10px",
+            padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
@@ -241,34 +244,34 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.6rem",
+              marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
               Active Menu Catalog
             </span>
             <div
               style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
+                width: "26px",
+                height: "26px",
+                borderRadius: "6px",
                 background: "rgba(234, 88, 12, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Utensils size={16} color="#ea580c" />
+              <Utensils size={13} color="#ea580c" />
             </div>
           </div>
-          <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
             {menuItems.length} Dishes
           </div>
           <div
             style={{
-              fontSize: "0.72rem",
+              fontSize: "0.68rem",
               color: "#64748b",
-              marginTop: "4px",
+              marginTop: "2px",
             }}
           >
             {nonVegCount} Non-Veg • {vegCount} Veg
@@ -281,8 +284,8 @@ export function AdminOverview({
           style={{
             background: "#0d1527",
             border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "14px",
-            padding: "1.25rem",
+            borderRadius: "10px",
+            padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
@@ -300,37 +303,37 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.6rem",
+              marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
               Dining Tables & Chairs
             </span>
             <div
               style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
+                width: "26px",
+                height: "26px",
+                borderRadius: "6px",
                 background: "rgba(16, 185, 129, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Armchair size={16} color="#10b981" />
+              <Armchair size={13} color="#10b981" />
             </div>
           </div>
-          <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
             {tables.length} Tables
           </div>
           <div
             style={{
-              fontSize: "0.72rem",
+              fontSize: "0.68rem",
               color: "#10b981",
-              marginTop: "4px",
+              marginTop: "2px",
             }}
           >
-            {occupiedTables.length} currently occupied ({occupiedChairs}/{totalChairs} seats)
+            {occupiedTables.length} occupied ({occupiedChairs}/{totalChairs} seats)
           </div>
         </div>
 
@@ -340,8 +343,8 @@ export function AdminOverview({
           style={{
             background: "#0d1527",
             border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "14px",
-            padding: "1.25rem",
+            borderRadius: "10px",
+            padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
@@ -359,34 +362,34 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.6rem",
+              marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
               Kitchen KOT Status
             </span>
             <div
               style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
+                width: "26px",
+                height: "26px",
+                borderRadius: "6px",
                 background: "rgba(239, 68, 68, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <ChefHat size={16} color="#ef4444" />
+              <ChefHat size={13} color="#ef4444" />
             </div>
           </div>
-          <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
             {pendingKOTCount} Active Orders
           </div>
           <div
             style={{
-              fontSize: "0.72rem",
+              fontSize: "0.68rem",
               color: pendingKOTCount > 0 ? "#ef4444" : "#10b981",
-              marginTop: "4px",
+              marginTop: "2px",
             }}
           >
             {pendingKOTCount > 0
@@ -401,8 +404,8 @@ export function AdminOverview({
           style={{
             background: "#0d1527",
             border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "14px",
-            padding: "1.25rem",
+            borderRadius: "10px",
+            padding: "0.75rem 0.85rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
           }}
@@ -420,34 +423,34 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.6rem",
+              marginBottom: "0.45rem",
             }}
           >
-            <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>
               Staff & Waiters
             </span>
             <div
               style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
+                width: "26px",
+                height: "26px",
+                borderRadius: "6px",
                 background: "rgba(99, 102, 241, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Users size={16} color="#818cf8" />
+              <Users size={13} color="#818cf8" />
             </div>
           </div>
-          <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#ffffff" }}>
             {staffList.length} Persons
           </div>
           <div
             style={{
-              fontSize: "0.72rem",
+              fontSize: "0.68rem",
               color: "#64748b",
-              marginTop: "4px",
+              marginTop: "2px",
             }}
           >
             Assigned to dining halls & service
@@ -459,8 +462,8 @@ export function AdminOverview({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
-          gap: "1.25rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: "0.75rem",
         }}
       >
         {/* Floor Tables Status Card */}
@@ -468,8 +471,8 @@ export function AdminOverview({
           style={{
             background: "#0d1527",
             border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "16px",
-            padding: "1.25rem 1.5rem",
+            borderRadius: "12px",
+            padding: "0.85rem 1rem",
           }}
         >
           <div
@@ -477,14 +480,14 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "1rem",
+              marginBottom: "0.65rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Armchair size={18} color="#f59e0b" />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+              <Armchair size={16} color="#f59e0b" />
               <h3
                 style={{
-                  fontSize: "1rem",
+                  fontSize: "0.92rem",
                   fontWeight: 700,
                   color: "#ffffff",
                   margin: 0,
@@ -499,7 +502,7 @@ export function AdminOverview({
                 background: "transparent",
                 border: "none",
                 color: "#f59e0b",
-                fontSize: "0.78rem",
+                fontSize: "0.74rem",
                 fontWeight: 700,
                 cursor: "pointer",
                 display: "flex",
@@ -508,7 +511,7 @@ export function AdminOverview({
               }}
             >
               <span>View All</span>
-              <ArrowRight size={13} />
+              <ArrowRight size={12} />
             </button>
           </div>
 
@@ -516,9 +519,9 @@ export function AdminOverview({
             className="no-scrollbar"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(105px, 1fr))",
-              gap: "0.65rem",
-              maxHeight: "260px",
+              gridTemplateColumns: "repeat(auto-fill, minmax(95px, 1fr))",
+              gap: "0.5rem",
+              maxHeight: "220px",
               overflowY: "auto",
               scrollbarWidth: "none",
               msOverflowStyle: "none",
@@ -536,14 +539,14 @@ export function AdminOverview({
                     border: isOccupied
                       ? "1px solid rgba(245, 158, 11, 0.3)"
                       : "1px solid rgba(255, 255, 255, 0.06)",
-                    borderRadius: "10px",
-                    padding: "0.6rem 0.5rem",
+                    borderRadius: "8px",
+                    padding: "0.45rem 0.4rem",
                     textAlign: "center",
                   }}
                 >
                   <div
                     style={{
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       fontWeight: 800,
                       color: isOccupied ? "#fbbf24" : "#ffffff",
                     }}
@@ -552,9 +555,9 @@ export function AdminOverview({
                   </div>
                   <div
                     style={{
-                      fontSize: "0.68rem",
+                      fontSize: "0.64rem",
                       color: isOccupied ? "#f59e0b" : "#64748b",
-                      marginTop: "2px",
+                      marginTop: "1px",
                       textTransform: "capitalize",
                     }}
                   >
@@ -562,9 +565,9 @@ export function AdminOverview({
                   </div>
                   <div
                     style={{
-                      fontSize: "0.62rem",
+                      fontSize: "0.6rem",
                       color: "#94a3b8",
-                      marginTop: "3px",
+                      marginTop: "2px",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -583,8 +586,8 @@ export function AdminOverview({
           style={{
             background: "#0d1527",
             border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "16px",
-            padding: "1.25rem 1.5rem",
+            borderRadius: "12px",
+            padding: "0.85rem 1rem",
           }}
         >
           <div
@@ -592,14 +595,14 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "1rem",
+              marginBottom: "0.65rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Utensils size={18} color="#ea580c" />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+              <Utensils size={16} color="#ea580c" />
               <h3
                 style={{
-                  fontSize: "1rem",
+                  fontSize: "0.92rem",
                   fontWeight: 700,
                   color: "#ffffff",
                   margin: 0,
@@ -614,7 +617,7 @@ export function AdminOverview({
                 background: "transparent",
                 border: "none",
                 color: "#ea580c",
-                fontSize: "0.78rem",
+                fontSize: "0.74rem",
                 fontWeight: 700,
                 cursor: "pointer",
                 display: "flex",
@@ -623,7 +626,7 @@ export function AdminOverview({
               }}
             >
               <span>Manage Menu</span>
-              <ArrowRight size={13} />
+              <ArrowRight size={12} />
             </button>
           </div>
 
@@ -632,8 +635,8 @@ export function AdminOverview({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "0.65rem",
-              maxHeight: "260px",
+              gap: "0.5rem",
+              maxHeight: "220px",
               overflowY: "auto",
               scrollbarWidth: "none",
               msOverflowStyle: "none",
@@ -645,9 +648,9 @@ export function AdminOverview({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.75rem",
-                  padding: "0.55rem 0.65rem",
-                  borderRadius: "10px",
+                  gap: "0.65rem",
+                  padding: "0.42rem 0.55rem",
+                  borderRadius: "8px",
                   background: "rgba(255, 255, 255, 0.02)",
                   border: "1px solid rgba(255, 255, 255, 0.05)",
                 }}
@@ -656,9 +659,9 @@ export function AdminOverview({
                   src={dish.image}
                   alt={dish.name}
                   style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "8px",
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "7px",
                     objectFit: "cover",
                   }}
                   onError={(e) => (e.target.style.display = "none")}
@@ -666,7 +669,7 @@ export function AdminOverview({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: "0.85rem",
+                      fontSize: "0.8rem",
                       fontWeight: 700,
                       color: "#ffffff",
                       whiteSpace: "nowrap",
@@ -678,7 +681,7 @@ export function AdminOverview({
                   </div>
                   <div
                     style={{
-                      fontSize: "0.7rem",
+                      fontSize: "0.66rem",
                       color: "#64748b",
                       marginTop: "1px",
                     }}
@@ -688,7 +691,7 @@ export function AdminOverview({
                 </div>
                 <div
                   style={{
-                    fontSize: "0.88rem",
+                    fontSize: "0.82rem",
                     fontWeight: 800,
                     color: "#f59e0b",
                     whiteSpace: "nowrap",
