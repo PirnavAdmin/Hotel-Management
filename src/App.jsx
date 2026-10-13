@@ -46,6 +46,7 @@ import {
   apiDeleteStaff,
 } from "./api/staffApi";
 import { apiGetOrders, apiCreateOrder } from "./api/orderApi";
+import { dedupeOrders } from "./utils/orderDedupe";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -211,7 +212,7 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_ORDERS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeOrders(parsed);
       }
     } catch {
       // Fallback
@@ -308,17 +309,14 @@ export function App() {
     });
 
     // 4. Load live past settled orders from backend API merged with INITIAL_ORDERS
-    apiGetOrders().then((backendOrders) => {
-      if (backendOrders && backendOrders.length > 0) {
-        const map = new Map();
-        const getOrderKey = (o) =>
-          o.id ||
-          `${o.invoiceNo || "INV"}_${o.date || o.settledDate || ""}_${o.orderTimestamp || ""}`;
-        INITIAL_ORDERS.forEach((o) => map.set(getOrderKey(o), o));
-        backendOrders.forEach((o) => map.set(getOrderKey(o), o));
-        const mergedOrders = Array.from(map.values()).sort(
-          (a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0),
-        );
+    apiGetOrders().then((response) => {
+      const backendOrders = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+          ? response.data
+          : [];
+      if (backendOrders.length > 0) {
+        const mergedOrders = dedupeOrders([...pastOrders, ...backendOrders]);
         setPastOrders(mergedOrders);
         try {
           localStorage.setItem(
@@ -328,7 +326,7 @@ export function App() {
         } catch {}
       }
     });
-  }, []);
+  }, [pastOrders]);
 
   // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
@@ -570,16 +568,8 @@ export function App() {
 
         const incomingOrders =
           data.pastOrders || data.data?.pastOrders || data[STORAGE_KEY_ORDERS];
-        if (incomingOrders && incomingOrders.length > 0) {
-          const map = new Map();
-          const getOrderKey = (o) =>
-            o.id ||
-            `${o.invoiceNo || "INV"}_${o.date || o.settledDate || ""}_${o.orderTimestamp || ""}`;
-          INITIAL_ORDERS.forEach((o) => map.set(getOrderKey(o), o));
-          incomingOrders.forEach((o) => map.set(getOrderKey(o), o));
-          const mergedOrders = Array.from(map.values()).sort(
-            (a, b) => (b.orderTimestamp || 0) - (a.orderTimestamp || 0),
-          );
+        if (Array.isArray(incomingOrders) && incomingOrders.length > 0) {
+          const mergedOrders = dedupeOrders([...pastOrders, ...incomingOrders]);
           setPastOrders(mergedOrders);
           try {
             localStorage.setItem(
@@ -716,11 +706,12 @@ export function App() {
           const incomingOrders =
             payload.pastOrders || payload[STORAGE_KEY_ORDERS];
           if (incomingOrders && incomingOrders.length > 0) {
-            setPastOrders(incomingOrders);
+            const mergedOrders = dedupeOrders([...pastOrders, ...incomingOrders]);
+            setPastOrders(mergedOrders);
             try {
               localStorage.setItem(
                 STORAGE_KEY_ORDERS,
-                JSON.stringify(incomingOrders),
+                JSON.stringify(mergedOrders),
               );
             } catch {}
           }
@@ -1317,7 +1308,7 @@ export function App() {
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
 
-    const updatedPastOrders = [enrichedSettlement, ...pastOrders];
+    const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);
     apiCreateOrder(enrichedSettlement).catch(() => {});
     try {

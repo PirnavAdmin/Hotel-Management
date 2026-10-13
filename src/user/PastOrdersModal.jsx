@@ -4,6 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+import { dedupeOrders, getOrderTimestamp } from '../utils/orderDedupe';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -27,21 +28,50 @@ const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
   return fallbackDate;
 };
 
+const parseDisplayDate = (value) => {
+  if (!value) return null;
+  const text = String(value).trim();
+  const localized = text.match(/^(\d{1,2})\s+([a-z]{3,})\s+(\d{4})$/i);
+  if (localized) {
+    const [, day, monthName, year] = localized;
+    const month = new Date(`${monthName} 1, ${year}`).getMonth();
+    if (!Number.isNaN(month)) return new Date(Number(year), month, Number(day));
+  }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const compareDatesNewestFirst = (a, b) =>
+  (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
+
+const getDisplayedTime = (order) => {
+  const value = String(order?.settledAt || order?.paidAt || order?.completedAt || '').trim();
+  const match = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (match) {
+    let hours = Number(match[1]) % 12;
+    if (match[4].toUpperCase() === 'PM') hours += 12;
+    return hours * 3600 + Number(match[2]) * 60 + Number(match[3] || 0);
+  }
+  return getOrderTimestamp(order);
+};
+
+const compareOrdersNewestFirst = (a, b) => {
+  const dateDifference = compareDatesNewestFirst(
+    formatOrderDate(a, ''),
+    formatOrderDate(b, ''),
+  );
+  if (dateDifference) return dateDifference;
+  return getDisplayedTime(b) - getDisplayedTime(a);
+};
+
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
-
-
+  const uniquePastOrders = useMemo(() => dedupeOrders(pastOrders), [pastOrders]);
 
 
   // Helper to parse date from order safely
   const parseOrderDate = (order) => {
-    if (order.date) {
-      const d = new Date(order.date);
-      if (!isNaN(d.getTime())) return d;
-    }
-    if (order.settledDate) {
-      const d = new Date(order.settledDate);
-      if (!isNaN(d.getTime())) return d;
-    }
+    const storedDate = parseDisplayDate(order.settledDate || order.date);
+    if (storedDate) return storedDate;
     if (order.orderTimestamp) {
       const d = new Date(Number(order.orderTimestamp));
       if (!isNaN(d.getTime())) return d;
@@ -61,44 +91,40 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const availableDates = useMemo(() => {
     const datesSet = new Set();
     datesSet.add(TODAY_DATE_STR);
-    pastOrders.forEach(o => {
+    uniquePastOrders.forEach(o => {
       const dStr = formatOrderDate(o);
       if (dStr) datesSet.add(dStr);
     });
-    return Array.from(datesSet).sort((a, b) => {
-      const timeA = new Date(a).getTime() || 0;
-      const timeB = new Date(b).getTime() || 0;
-      return timeB - timeA;
-    });
-  }, [pastOrders]);
+    return Array.from(datesSet).sort(compareDatesNewestFirst);
+  }, [uniquePastOrders]);
 
   // Extract all unique months from pastOrders sorted newest first
   const availableMonths = useMemo(() => {
     const monthsSet = new Set();
     monthsSet.add(currentMonthStr);
-    pastOrders.forEach(o => {
+    uniquePastOrders.forEach(o => {
       const d = parseOrderDate(o);
       monthsSet.add(getMonthStr(d));
     });
-    return Array.from(monthsSet).sort((a, b) => {
-      const timeA = new Date(a).getTime() || 0;
-      const timeB = new Date(b).getTime() || 0;
-      return timeB - timeA;
-    });
-  }, [pastOrders, currentMonthStr]);
+    return Array.from(monthsSet).sort((a, b) =>
+      compareDatesNewestFirst(`01 ${a}`, `01 ${b}`),
+    );
+  }, [uniquePastOrders, currentMonthStr]);
 
   const [selectedDate, setSelectedDate] = useState(() => {
-    const hasToday = pastOrders && pastOrders.some(o => formatOrderDate(o) === TODAY_DATE_STR);
+    const hasToday = uniquePastOrders && uniquePastOrders.some(o => formatOrderDate(o) === TODAY_DATE_STR);
     if (hasToday) return TODAY_DATE_STR;
-    if (pastOrders && pastOrders.length > 0) return formatOrderDate(pastOrders[0]);
+    if (uniquePastOrders && uniquePastOrders.length > 0) return formatOrderDate(uniquePastOrders[0]);
     return TODAY_DATE_STR;
   });
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [customStartDateText, setCustomStartDateText] = useState('');
+  const [customEndDateText, setCustomEndDateText] = useState('');
   const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'monthly' | 'custom' | 'grouped_all'
   const [searchTerm, setSearchTerm] = useState('');
-  const countForSelectedDate = pastOrders.filter(
+  const countForSelectedDate = uniquePastOrders.filter(
     (order) => formatOrderDate(order) === selectedDate,
   ).length;
 
@@ -115,6 +141,35 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       }
     } catch {}
     return '';
+  };
+
+  const formatDateForInput = (isoDate) => {
+    if (!isoDate) return '';
+    const [year, month, day] = isoDate.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : '';
+  };
+
+  const parseDateInput = (value) => {
+    const match = value.trim().match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
+    if (!match) return '';
+    const [, dayText, monthText, yearText] = match;
+    const day = Number(dayText);
+    const month = Number(monthText);
+    const year = Number(yearText);
+    const parsed = new Date(year, month - 1, day);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) return '';
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const handleCustomDateTextChange = (value, setText, setDate) => {
+    setText(value);
+    const parsed = parseDateInput(value);
+    if (parsed) setDate(parsed);
+    else if (!value.trim()) setDate('');
   };
 
   // Convert "Oct 2026" to "2026-10" for HTML <input type="month">
@@ -158,7 +213,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
 
   // Search filtered orders across all history
   const searchFilteredOrders = useMemo(() => {
-    return pastOrders.filter(o => {
+    return uniquePastOrders.filter(o => {
       const search = searchTerm.toLowerCase().trim();
       if (!search) return true;
       return (
@@ -169,11 +224,13 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         (o.date || '').toLowerCase().includes(search)
       );
     });
-  }, [pastOrders, searchTerm]);
+  }, [uniquePastOrders, searchTerm]);
 
   // Single day filtered orders
   const singleDayOrders = useMemo(() => {
-    return searchFilteredOrders.filter(o => formatOrderDate(o) === selectedDate);
+    return searchFilteredOrders
+      .filter(o => formatOrderDate(o) === selectedDate)
+      .sort(compareOrdersNewestFirst);
   }, [searchFilteredOrders, selectedDate]);
 
   // Monthly filtered orders
@@ -181,7 +238,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     return searchFilteredOrders.filter(o => {
       const d = parseOrderDate(o);
       return getMonthStr(d) === selectedMonth;
-    });
+    }).sort(compareOrdersNewestFirst);
   }, [searchFilteredOrders, selectedMonth]);
 
   // Custom date range filtered orders
@@ -202,7 +259,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         if (orderTime > end.getTime()) return false;
       }
       return true;
-    });
+    }).sort(compareOrdersNewestFirst);
   }, [searchFilteredOrders, customStartDate, customEndDate]);
 
   // Grouped orders by date
@@ -214,14 +271,10 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       map[d].push(order);
     });
 
-    const sortedKeys = Object.keys(map).sort((a, b) => {
-      const timeA = new Date(a).getTime() || 0;
-      const timeB = new Date(b).getTime() || 0;
-      return timeB - timeA;
-    });
+    const sortedKeys = Object.keys(map).sort(compareDatesNewestFirst);
 
     return sortedKeys.map(dateKey => {
-      const orders = map[dateKey];
+      const orders = map[dateKey].sort(compareOrdersNewestFirst);
       const totalRev = orders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
       return {
         date: dateKey,
@@ -300,24 +353,34 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const todayStr = getYYYYMMDD(now);
       setCustomStartDate(todayStr);
       setCustomEndDate(todayStr);
+      setCustomStartDateText(formatDateForInput(todayStr));
+      setCustomEndDateText(formatDateForInput(todayStr));
     } else if (preset === '7days') {
       const start = new Date();
       start.setDate(now.getDate() - 6);
       setCustomStartDate(getYYYYMMDD(start));
       setCustomEndDate(getYYYYMMDD(now));
+      setCustomStartDateText(formatDateForInput(getYYYYMMDD(start)));
+      setCustomEndDateText(formatDateForInput(getYYYYMMDD(now)));
     } else if (preset === 'month') {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       setCustomStartDate(getYYYYMMDD(start));
       setCustomEndDate(getYYYYMMDD(end));
+      setCustomStartDateText(formatDateForInput(getYYYYMMDD(start)));
+      setCustomEndDateText(formatDateForInput(getYYYYMMDD(end)));
     } else if (preset === '30days') {
       const start = new Date();
       start.setDate(now.getDate() - 29);
       setCustomStartDate(getYYYYMMDD(start));
       setCustomEndDate(getYYYYMMDD(now));
+      setCustomStartDateText(formatDateForInput(getYYYYMMDD(start)));
+      setCustomEndDateText(formatDateForInput(getYYYYMMDD(now)));
     } else if (preset === 'all') {
       setCustomStartDate('');
       setCustomEndDate('');
+      setCustomStartDateText('');
+      setCustomEndDateText('');
     }
     setViewMode('custom');
   };
@@ -327,7 +390,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     if (viewMode === 'single_day') return singleDayOrders;
     if (viewMode === 'monthly') return monthlyOrders;
     if (viewMode === 'custom') return customRangeOrders;
-    return searchFilteredOrders;
+    return [...searchFilteredOrders].sort(compareOrdersNewestFirst);
   }, [viewMode, singleDayOrders, monthlyOrders, customRangeOrders, searchFilteredOrders]);
 
   const totalCollected = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
@@ -382,7 +445,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 {viewMode === 'single_day' && `Selected Date: ${selectedDate} (${countForSelectedDate} Invoices)`}
                 {viewMode === 'monthly' && `Selected Month: ${selectedMonth} (${monthlyOrders.length} Invoices)`}
                 {viewMode === 'custom' && `Custom Range: ${customStartDate ? customStartDate : 'All Start'} to ${customEndDate ? customEndDate : 'Present'} (${customRangeOrders.length} Invoices)`}
-                {viewMode === 'grouped_all' && `All Dates Grouped Breakdown (${pastOrders.length} Total Invoices)`}
+                {viewMode === 'grouped_all' && `All Dates Grouped Breakdown (${uniquePastOrders.length} Total Invoices)`}
               </span>
             </div>
           </div>
@@ -548,7 +611,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 }}
               >
                 {availableDates.map(d => {
-                  const cnt = pastOrders.filter(o => formatOrderDate(o) === d).length;
+                  const cnt = uniquePastOrders.filter(o => formatOrderDate(o) === d).length;
                   return (
                     <option key={d} value={d}>
                       📅 {d} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
@@ -660,7 +723,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 }}
               >
                 {availableMonths.map(m => {
-                  const cnt = pastOrders.filter(o => getMonthStr(parseOrderDate(o)) === m).length;
+                  const cnt = uniquePastOrders.filter(o => getMonthStr(parseOrderDate(o)) === m).length;
                   return (
                     <option key={m} value={m}>
                       🗓️ {m} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
@@ -734,38 +797,70 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 700 }}>From:</span>
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={e => setCustomStartDate(e.target.value)}
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--accent-amber)',
-                    color: 'var(--text-main)',
-                    padding: '0.35rem 0.55rem',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer'
-                  }}
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="dd/mm/yyyy"
+                    aria-label="From date (day/month/year)"
+                    value={customStartDateText || formatDateForInput(customStartDate)}
+                    onChange={e => handleCustomDateTextChange(e.target.value, setCustomStartDateText, setCustomStartDate)}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--accent-amber)',
+                      color: 'var(--text-main)',
+                      padding: '0.35rem 2rem 0.35rem 0.55rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      width: '135px',
+                    }}
+                  />
+                  <input
+                    type="date"
+                    aria-label="Choose from date"
+                    value={customStartDate}
+                    onChange={e => {
+                      setCustomStartDate(e.target.value);
+                      setCustomStartDateText(formatDateForInput(e.target.value));
+                    }}
+                    style={{ position: 'absolute', right: '0.35rem', width: '1.25rem', opacity: 0, cursor: 'pointer' }}
+                  />
+                  <CalendarDays size={15} style={{ position: 'absolute', right: '0.5rem', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 700 }}>To:</span>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={e => setCustomEndDate(e.target.value)}
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--accent-amber)',
-                    color: 'var(--text-main)',
-                    padding: '0.35rem 0.55rem',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer'
-                  }}
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="dd/mm/yyyy"
+                    aria-label="To date (day/month/year)"
+                    value={customEndDateText || formatDateForInput(customEndDate)}
+                    onChange={e => handleCustomDateTextChange(e.target.value, setCustomEndDateText, setCustomEndDate)}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--accent-amber)',
+                      color: 'var(--text-main)',
+                      padding: '0.35rem 2rem 0.35rem 0.55rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      width: '135px',
+                    }}
+                  />
+                  <input
+                    type="date"
+                    aria-label="Choose to date"
+                    value={customEndDate}
+                    onChange={e => {
+                      setCustomEndDate(e.target.value);
+                      setCustomEndDateText(formatDateForInput(e.target.value));
+                    }}
+                    style={{ position: 'absolute', right: '0.35rem', width: '1.25rem', opacity: 0, cursor: 'pointer' }}
+                  />
+                  <CalendarDays size={15} style={{ position: 'absolute', right: '0.5rem', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                </div>
               </div>
 
               {/* Quick Preset Buttons */}
@@ -1106,7 +1201,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
           justifyContent: 'space-between'
         }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Showing <strong>{activeOrders.length}</strong> of <strong>{pastOrders.length}</strong> total settled invoices
+            Showing <strong>{activeOrders.length}</strong> of <strong>{uniquePastOrders.length}</strong> total settled invoices
           </span>
           <button
             onClick={onClose}
