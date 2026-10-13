@@ -45,6 +45,17 @@ const invoiceDateKey = (order) => {
   return Number.isNaN(parsed.getTime()) ? "" : localDateInputValue(parsed);
 };
 
+const parseDisplayDateInput = (displayDate) => {
+  const match = String(displayDate || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return "";
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};
+
 export function AdminInvoices({ pastOrders = [] }) {
   const allOrders = sortOrdersBySettlementTime(
     dedupeOrders(
@@ -58,16 +69,24 @@ export function AdminInvoices({ pastOrders = [] }) {
   const [selectedMonth, setSelectedMonth] = useState(() => localDateInputValue().slice(0, 7));
   const [customFromDate, setCustomFromDate] = useState("");
   const [customToDate, setCustomToDate] = useState("");
+  const [customFromDateText, setCustomFromDateText] = useState("");
+  const [customToDateText, setCustomToDateText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+
+  const invalidCustomDate = dateFilter === "custom" && (
+    (customFromDateText && !customFromDate) ||
+    (customToDateText && !customToDate) ||
+    (customFromDate && customToDate && customFromDate > customToDate)
+  );
 
   const filteredOrders = allOrders.filter((order) => {
     const orderDate = invoiceDateKey(order);
     const matchesDate = dateFilter === "all" ||
       (dateFilter === "daily" && orderDate === selectedDate) ||
       (dateFilter === "monthly" && orderDate.startsWith(selectedMonth)) ||
-      (dateFilter === "custom" && !!orderDate &&
+      (dateFilter === "custom" && !invalidCustomDate && !!orderDate &&
         (!customFromDate || orderDate >= customFromDate) &&
         (!customToDate || orderDate <= customToDate));
     const matchesPayment =
@@ -261,14 +280,15 @@ export function AdminInvoices({ pastOrders = [] }) {
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
                 From
-                <input type="date" value={customFromDate} onChange={(event) => { setCustomFromDate(event.target.value); setCurrentPage(1); }} style={{ height: "36px", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="From date (day/month/year)" value={customFromDateText} onChange={(event) => { const text = event.target.value; setCustomFromDateText(text); setCustomFromDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "112px", height: "36px", boxSizing: "border-box", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
               </label>
               <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
                 To
-                <input type="date" value={customToDate} min={customFromDate || undefined} onChange={(event) => { setCustomToDate(event.target.value); setCurrentPage(1); }} style={{ height: "36px", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="To date (day/month/year)" value={customToDateText} onChange={(event) => { const text = event.target.value; setCustomToDateText(text); setCustomToDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "112px", height: "36px", boxSizing: "border-box", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
               </label>
             </div>
           )}
+          {invalidCustomDate && <span role="alert" style={{ color: "#fca5a5", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
           <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem" }}>Showing {filteredOrders.length} invoices</span>
         </div>
 
