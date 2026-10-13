@@ -25,11 +25,23 @@ import {
   ArrowLeft,
   Sun,
   Moon,
+  ChevronRight,
+  Package,
+  FileText,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { formatCurrency } from "../utils/formatCurrency";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
+import { AdminSidebar } from "./AdminSidebar";
+import { AdminHeader } from "./AdminHeader";
+import { AdminOverview } from "./AdminOverview";
+import { AdminInventory } from "./AdminInventory";
+import { AdminInvoices } from "./AdminInvoices";
+import { AdminReports } from "./AdminReports";
+import { AdminSettings } from "./AdminSettings";
 
 export function AdminPortal({
   onClose,
@@ -53,8 +65,9 @@ export function AdminPortal({
   onLogout = null,
   currentTheme = "royal-saffron",
   onChangeTheme = null,
+  pastOrders = [],
 }) {
-  const [activeTab, setActiveTab] = useState("menu"); // 'menu' | 'tables' | 'staff' | 'kot'
+  const [activeTab, setActiveTab] = useState("menu");
   const [searchFilter, setSearchFilter] = useState("");
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -343,9 +356,9 @@ export function AdminPortal({
         isFullPage
           ? {
               display: "flex",
-              flexDirection: "column",
-              height: "calc(100vh - 68px)",
-              background: "var(--bg-primary)",
+              height: "100vh",
+              width: "100%",
+              background: "#080d1a",
               overflow: "hidden",
             }
           : {
@@ -365,795 +378,496 @@ export function AdminPortal({
         style={
           isFullPage
             ? {
-                background: "var(--bg-secondary)",
                 width: "100%",
                 height: "100%",
                 display: "flex",
-                flexDirection: "column",
+                flexDirection: "row",
                 overflow: "hidden",
               }
             : {
-                background: "var(--bg-secondary)",
-                border: "1px solid var(--border-subtle)",
+                background: "#0b111e",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
                 width: "100%",
-                maxWidth: "1100px",
-                height: "90vh",
-                borderRadius: "var(--radius-lg)",
-                boxShadow: "var(--shadow-lg)",
+                maxWidth: "1400px",
+                height: "92vh",
+                borderRadius: "16px",
+                boxShadow: "0 25px 60px rgba(0,0,0,0.8)",
                 display: "flex",
-                flexDirection: "column",
+                flexDirection: "row",
                 overflow: "hidden",
               }
         }
       >
-        {/* Admin Header */}
-        <div
-          style={{
-            padding: "0.65rem 1.25rem",
-            borderBottom: "1px solid var(--border-subtle)",
-            background: "var(--bg-tertiary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "nowrap",
-            gap: "0.75rem",
-            flexShrink: 0,
-            width: "100%",
-            boxSizing: "border-box",
-            overflow: "visible",
-            position: "relative",
-            zIndex: 100,
-          }}
-        >
-          {/* Left Brand Title */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.6rem",
-              flexShrink: 1,
-              minWidth: 0,
-            }}
-          >
-            <div
-              style={{
-                background: "linear-gradient(135deg, #f59e0b, #ea580c)",
-                color: "#ffffff",
-                padding: "6px",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.4)",
-                flexShrink: 0,
-              }}
-            >
-              <ShieldCheck size={20} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <h2
-                style={{
-                  fontSize: "1.1rem",
-                  fontWeight: 800,
-                  color: "var(--text-main)",
-                  lineHeight: 1.1,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                Restaurant Admin & Management Portal
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.7rem",
-                  color: "var(--text-muted)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                Configure Menu Items, Dining Tables & Staff Persons
-              </p>
-            </div>
-          </div>
+        {/* Left Sidebar */}
+        <AdminSidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          currentSession={currentSession}
+          onClose={onClose}
+          onLogout={onLogout}
+          menuCount={menuItems.length}
+          tablesCount={tables.length}
+          staffCount={staffList.length}
+          activeKOTCount={activeKOTCount}
+        />
 
-          {/* Right Controls Row — Single Line, Uniform Heights */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              flexWrap: "nowrap",
-              flexShrink: 0,
-              marginLeft: "auto",
-            }}
-          >
-            {/* Live Restaurant Date & Time Widget */}
-            <div
-              style={{
-                height: "36px",
-                boxSizing: "border-box",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.45rem",
-                background: "var(--bg-secondary)",
-                border: "1.5px solid var(--border-subtle)",
-                padding: "0 0.65rem",
-                borderRadius: "9px",
-                color: "var(--accent-amber-light)",
-                fontSize: "0.76rem",
-                fontWeight: 800,
-                fontFamily: "monospace",
-                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.12)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                  color: "var(--text-main)",
-                }}
-              >
-                <Calendar size={13} color="var(--accent-amber)" />
-                <span>
-                  {currentTime.toLocaleDateString("en-IN", {
-                    weekday: "short",
-                    day: "2-digit",
-                    month: "short",
-                  })}
-                </span>
-              </div>
-              <span style={{ color: "var(--border-subtle)", opacity: 0.6 }}>
-                •
-              </span>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                  color: "var(--accent-amber-light)",
-                }}
-              >
-                <Clock
-                  size={13}
-                  color="var(--accent-amber)"
-                  className="pulse-indicator"
-                />
-                <span>
-                  {currentTime.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </span>
-              </div>
-            </div>
-
-            {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
-            <button
-              onClick={() => {
-                const nextTheme =
-                  currentTheme === "light-bistro"
-                    ? "royal-saffron"
-                    : "light-bistro";
-                handleThemeChange(nextTheme);
-              }}
-              style={{
-                width: "36px",
-                height: "36px",
-                boxSizing: "border-box",
-                borderRadius: "50%",
-                background: "var(--bg-tertiary)",
-                border: "1.5px solid var(--border-subtle)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                flexShrink: 0,
-              }}
-              title={
-                currentTheme === "light-bistro"
-                  ? "Switch to Dark Theme"
-                  : "Switch to Light Theme"
-              }
-            >
-              {currentTheme === "light-bistro" ? (
-                <Sun size={18} color="#ea580c" />
-              ) : (
-                <Moon size={18} color="#fbbf24" />
-              )}
-            </button>
-
-            {/* Profile Avatar with Name Details & Logout (Safely inside Right Corner) */}
-            <ProfileDropdown
-              currentSession={currentSession}
-              onLogout={onLogout}
-              role="admin"
-            />
-          </div>
-        </div>
-
-        {/* Tab Navigation Strip */}
-        <div
-          style={{
-            display: "flex",
-            gap: "1rem",
-            padding: "0.75rem 1.75rem",
-            background: "var(--bg-primary)",
-            borderBottom: "1px solid var(--border-subtle)",
-            flexShrink: 0,
-          }}
-        >
-          <button
-            onClick={() => setActiveTab("menu")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              padding: "0.6rem 1.1rem",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.85rem",
-              fontWeight: activeTab === "menu" ? 700 : 500,
-              background:
-                activeTab === "menu"
-                  ? "var(--accent-amber)"
-                  : "var(--bg-secondary)",
-              color: activeTab === "menu" ? "#000000" : "var(--text-muted)",
-              border:
-                activeTab === "menu"
-                  ? "1px solid var(--accent-amber)"
-                  : "1px solid var(--border-subtle)",
-            }}
-          >
-            <Utensils size={16} />
-            <span>Menu Items ({menuItems.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("tables")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              padding: "0.6rem 1.1rem",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.85rem",
-              fontWeight: activeTab === "tables" ? 700 : 500,
-              background:
-                activeTab === "tables"
-                  ? "var(--accent-amber)"
-                  : "var(--bg-secondary)",
-              color: activeTab === "tables" ? "#000000" : "var(--text-muted)",
-              border:
-                activeTab === "tables"
-                  ? "1px solid var(--accent-amber)"
-                  : "1px solid var(--border-subtle)",
-            }}
-          >
-            <Armchair size={16} />
-            <span>
-              Tables & Chairs ({tables.length} Tables / {totalChairs} Chairs)
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("staff")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              padding: "0.6rem 1.1rem",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.85rem",
-              fontWeight: activeTab === "staff" ? 700 : 500,
-              background:
-                activeTab === "staff"
-                  ? "var(--accent-amber)"
-                  : "var(--bg-secondary)",
-              color: activeTab === "staff" ? "#000000" : "var(--text-muted)",
-              border:
-                activeTab === "staff"
-                  ? "1px solid var(--accent-amber)"
-                  : "1px solid var(--border-subtle)",
-            }}
-          >
-            <Users size={16} />
-            <span>Staff & Persons ({staffList.length})</span>
-          </button>
-
-          {/* DEDICATED ADMIN KOT TAB */}
-          <button
-            onClick={() => setActiveTab("kot")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              padding: "0.6rem 1.1rem",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.85rem",
-              fontWeight: activeTab === "kot" ? 700 : 500,
-              background:
-                activeTab === "kot"
-                  ? "var(--accent-amber)"
-                  : "var(--bg-secondary)",
-              color: activeTab === "kot" ? "#000000" : "var(--text-muted)",
-              border:
-                activeTab === "kot"
-                  ? "1px solid var(--accent-amber)"
-                  : "1px solid var(--border-subtle)",
-              cursor: "pointer",
-            }}
-          >
-            <ChefHat size={16} />
-            <span>Kitchen KOT</span>
-            {activeKOTCount > 0 && (
-              <span
-                style={{
-                  background: activeTab === "kot" ? "#000000" : "#ea580c",
-                  color:
-                    activeTab === "kot"
-                      ? "var(--accent-amber-light)"
-                      : "#ffffff",
-                  padding: "1px 6px",
-                  borderRadius: "8px",
-                  fontSize: "0.7rem",
-                  fontWeight: 800,
-                }}
-              >
-                {activeKOTCount}
-              </span>
-            )}
-          </button>
-
-          {/* LOGINS MANAGEMENT TAB */}
-          <button
-            onClick={() => setActiveTab("logins")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              padding: "0.6rem 1.1rem",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.85rem",
-              fontWeight: activeTab === "logins" ? 700 : 500,
-              background:
-                activeTab === "logins" ? "#6366f1" : "var(--bg-secondary)",
-              color: activeTab === "logins" ? "#ffffff" : "var(--text-muted)",
-              border:
-                activeTab === "logins"
-                  ? "1px solid #6366f1"
-                  : "1px solid var(--border-subtle)",
-              cursor: "pointer",
-            }}
-          >
-            <ShieldCheck size={16} />
-            <span>🔐 Login Management</span>
-          </button>
-
-          {onOpenKOTView && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenKOTView();
-              }}
-              style={{
-                marginLeft: "auto",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.45rem",
-                padding: "0.6rem 1.1rem",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                background:
-                  "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.25))",
-                color: "var(--accent-amber-light)",
-                border: "1px solid var(--accent-amber)",
-                cursor: "pointer",
-              }}
-            >
-              <ExternalLink size={16} color="var(--accent-amber)" />
-              <span>Full Screen KOT Display</span>
-            </button>
-          )}
-        </div>
-
-        {/* Tab Content Work Area */}
+        {/* Right Main Content Pane */}
         <div
           style={{
             flex: 1,
-            overflowY: "auto",
-            padding: activeTab === "logins" ? "0" : "1.5rem 1.75rem",
-            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            overflow: "hidden",
+            background: "#070c16",
+            minWidth: 0,
           }}
         >
-          {/* ================= TAB: LOGINS MANAGEMENT ================= */}
-          {activeTab === "logins" && (
-            <LoginManagement currentAdminSession={currentSession} />
-          )}
+          {/* Top Bar Header */}
+          <AdminHeader
+            currentSession={currentSession}
+            onLogout={onLogout}
+            currentTheme={currentTheme}
+            onChangeTheme={handleThemeChange}
+          />
 
-          {/* ================= TAB 1: MENU ITEMS ================= */}
-          {activeTab === "menu" && (
-            <div>
+          {/* Scrollable Work Area */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: activeTab === "logins" ? "1rem" : "1.5rem 2rem",
+              minHeight: 0,
+            }}
+          >
+            {/* OVERVIEW TAB */}
+            {activeTab === "overview" && (
+              <AdminOverview
+                menuItems={menuItems}
+                tables={tables}
+                staffList={staffList}
+                pastOrders={pastOrders}
+                onNavigateTab={setActiveTab}
+                onOpenKOTView={onOpenKOTView}
+                onOpenItemModal={handleOpenItemModal}
+              />
+            )}
+
+            {/* TAB 1: MENU ITEMS */}
+            {activeTab === "menu" && (
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1.25rem",
-                  flexWrap: "wrap",
-                  gap: "0.75rem",
+                  background: "#0d1527",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
                 }}
               >
+                {/* Header inside Card */}
                 <div
                   style={{
                     display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    gap: "0.75rem",
                     flexWrap: "wrap",
+                    gap: "0.75rem",
+                    marginBottom: "1.25rem",
                   }}
                 >
-                  {/* Return to POS Navigation Button */}
-                  <button
-                    onClick={onClose}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Utensils size={22} color="#ffffff" strokeWidth={2.3} />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                        <h2
+                          style={{
+                            fontSize: "1.35rem",
+                            fontWeight: 800,
+                            color: "#ffffff",
+                            margin: 0,
+                          }}
+                        >
+                          Menu Items
+                        </h2>
+                        <span
+                          style={{
+                            background: "rgba(245, 158, 11, 0.15)",
+                            border: "1px solid rgba(245, 158, 11, 0.3)",
+                            color: "#f59e0b",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            padding: "3px 10px",
+                            borderRadius: "16px",
+                          }}
+                        >
+                          {filteredItems.length} items
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          fontSize: "0.85rem",
+                          color: "#94a3b8",
+                          margin: "4px 0 0 0",
+                        }}
+                      >
+                        Manage your restaurant menu items, categories and pricing
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: Search & Add button */}
+                  <div
                     style={{
-                      height: "38px",
-                      boxSizing: "border-box",
-                      background: "rgba(255,255,255,0.06)",
-                      color: "var(--text-main)",
-                      padding: "0 0.95rem",
-                      borderRadius: "var(--radius-sm)",
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.4rem",
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      border: "1px solid var(--border-subtle)",
-                      whiteSpace: "nowrap",
-                      transition: "all 0.15s ease",
+                      gap: "0.75rem",
+                      flexWrap: "wrap",
                     }}
-                    title="Return to User POS"
                   >
-                    {isFullPage ? <ArrowLeft size={16} /> : <X size={16} />}
-                    <span>
-                      {isFullPage ? "Go to User POS" : "Close Admin"}
-                    </span>
-                  </button>
+                    <div
+                      style={{
+                        position: "relative",
+                        width: "280px",
+                        height: "42px",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Search
+                        size={16}
+                        color="#64748b"
+                        style={{
+                          position: "absolute",
+                          left: "14px",
+                          pointerEvents: "none",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Search dishes to edit, delete..."
+                        value={searchFilter}
+                        onChange={(e) => setSearchFilter(e.target.value)}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          background: "#080d1a",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "10px",
+                          padding: "0 12px 0 38px",
+                          color: "#ffffff",
+                          fontSize: "0.88rem",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
 
-                  {/* Search dishes input */}
-                  <div style={{ position: "relative", width: "300px" }}>
-                    <Search
-                      size={16}
-                      color="var(--text-dim)"
+                    <button
+                      onClick={() => handleOpenItemModal()}
                       style={{
-                        position: "absolute",
-                        left: "12px",
-                        top: "11px",
+                        height: "42px",
+                        background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "10px",
+                        padding: "0 1.25rem",
+                        fontWeight: 700,
+                        fontSize: "0.88rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
                       }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search dishes to edit/delete..."
-                      value={searchFilter}
-                      onChange={(e) => setSearchFilter(e.target.value)}
-                      style={{
-                        width: "100%",
-                        height: "38px",
-                        boxSizing: "border-box",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: "var(--radius-sm)",
-                        padding: "0 1rem 0 2.25rem",
-                        color: "var(--text-main)",
-                        fontSize: "0.85rem",
-                      }}
-                    />
+                    >
+                      <Plus size={18} strokeWidth={2.5} />
+                      <span>Add New Dish / Biryani</span>
+                    </button>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleOpenItemModal()}
+                {/* Items Table List */}
+                <div
                   style={{
-                    height: "38px",
-                    boxSizing: "border-box",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.45rem",
-                    padding: "0 1.25rem",
-                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
-                    color: "#ffffff",
-                    borderRadius: "var(--radius-sm)",
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    overflowX: "auto",
                   }}
                 >
-                  <Plus size={16} />
-                  <span>Add New Dish / Biryani</span>
-                </button>
-              </div>
-
-              {/* Items Table List */}
-              <div
-                style={{
-                  background: "var(--bg-tertiary)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
-                  overflow: "hidden",
-                }}
-              >
-                <table
-                  style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    tableLayout: "fixed",
-                    textAlign: "left",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  <thead>
-                    <tr
-                      style={{
-                        background: "rgba(0,0,0,0.2)",
-                        borderBottom: "1px solid var(--border-subtle)",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      <th
-                        style={{
-                          padding: "0.75rem 1rem",
-                          width: "42%",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        Dish Name
-                      </th>
-                      <th
-                        style={{
-                          padding: "0.75rem 1rem",
-                          width: "15%",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        Category
-                      </th>
-                      <th
-                        style={{
-                          padding: "0.75rem 1rem",
-                          width: "14%",
-                          textAlign: "center",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        Dietary
-                      </th>
-                      <th
-                        style={{
-                          padding: "0.75rem 1rem",
-                          width: "13%",
-                          textAlign: "left",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        Price (₹)
-                      </th>
-                      <th
-                        style={{
-                          padding: "0.75rem 1rem",
-                          width: "16%",
-                          textAlign: "center",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItems.map((item) => (
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      textAlign: "left",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    <thead>
                       <tr
-                        key={item.id}
                         style={{
-                          borderBottom: "1px solid var(--border-subtle)",
+                          background: "rgba(255, 255, 255, 0.02)",
+                          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                          color: "#94a3b8",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
                         }}
                       >
-                        <td
+                        <th style={{ padding: "0.85rem 1.15rem", width: "44%" }}>
+                          Dish Name
+                        </th>
+                        <th style={{ padding: "0.85rem 1.15rem", width: "14%" }}>
+                          Category
+                        </th>
+                        <th style={{ padding: "0.85rem 1.15rem", width: "14%" }}>
+                          Dietary
+                        </th>
+                        <th style={{ padding: "0.85rem 1.15rem", width: "12%" }}>
+                          Price (₹)
+                        </th>
+                        <th
                           style={{
-                            padding: "0.75rem 1rem",
-                            verticalAlign: "middle",
+                            padding: "0.85rem 1.15rem",
+                            width: "16%",
+                            textAlign: "center",
                           }}
                         >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.65rem",
-                              minWidth: 0,
-                            }}
-                          >
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredItems.map((item) => (
+                        <tr
+                          key={item.id}
+                          style={{
+                            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                            transition: "background 0.15s ease",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background =
+                              "rgba(255, 255, 255, 0.02)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          <td style={{ padding: "0.85rem 1.15rem" }}>
                             <div
                               style={{
-                                width: "36px",
-                                height: "36px",
-                                borderRadius: "6px",
-                                overflow: "hidden",
-                                background: "#222",
-                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.85rem",
                               }}
                             >
                               <img
                                 src={item.image}
                                 alt={item.name}
                                 style={{
-                                  width: "100%",
-                                  height: "100%",
+                                  width: "62px",
+                                  height: "62px",
+                                  borderRadius: "12px",
                                   objectFit: "cover",
+                                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                                  flexShrink: 0,
                                 }}
                                 onError={(e) =>
                                   (e.target.style.display = "none")
                                 }
                               />
-                            </div>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div
-                                style={{
-                                  fontWeight: 700,
-                                  color: "var(--text-main)",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {item.name}
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 700,
+                                    color: "#ffffff",
+                                    fontSize: "0.95rem",
+                                    lineHeight: 1.35,
+                                  }}
+                                >
+                                  {item.name}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#94a3b8",
+                                    lineHeight: 1.4,
+                                    marginTop: "3px",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  {item.prepTime || "15 mins"} • {item.description}
+                                </div>
                               </div>
-                              <div
-                                style={{
-                                  fontSize: "0.72rem",
-                                  color: "var(--text-muted)",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {item.prepTime} • {item.description}
-                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td
-                          style={{
-                            padding: "0.75rem 1rem",
-                            textTransform: "capitalize",
-                            color: "var(--text-muted)",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          {item.category.replace("-", " ")}
-                        </td>
-                        <td
-                          style={{
-                            padding: "0.75rem 1rem",
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          <span
+                          </td>
+                          <td
                             style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "5px",
-                              padding: "3px 8px",
-                              borderRadius: "4px",
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
+                              padding: "0.85rem 1.15rem",
+                              textTransform: "capitalize",
+                              color: "#cbd5e1",
+                              fontSize: "0.88rem",
                               whiteSpace: "nowrap",
-                              background: item.isVeg
-                                ? "rgba(16, 185, 129, 0.15)"
-                                : "rgba(239, 68, 68, 0.15)",
-                              color: item.isVeg ? "#10b981" : "#ef4444",
                             }}
                           >
-                            <span>{item.isVeg ? "VEG" : "NON-VEG"}</span>
-                            <span
-                              style={{
-                                width: "7px",
-                                height: "7px",
-                                borderRadius: "50%",
-                                background: item.isVeg ? "#10b981" : "#ef4444",
-                                display: "inline-block",
-                                flexShrink: 0,
-                              }}
-                            />
-                          </span>
-                        </td>
-                        <td
-                          style={{
-                            padding: "0.75rem 1rem",
-                            fontWeight: 800,
-                            color: "var(--accent-amber-light)",
-                            textAlign: "left",
-                            verticalAlign: "middle",
-                          }}
-                          className="font-mono"
-                        >
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td
-                          style={{
-                            padding: "0.75rem 1rem",
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          <div
+                            {item.category.replace("-", " ")}
+                          </td>
+                          <td style={{ padding: "0.85rem 1.15rem" }}>
+                            {item.isVeg ? (
+                              <span
+                                style={{
+                                  background: "rgba(16, 185, 129, 0.12)",
+                                  border: "1px solid rgba(16, 185, 129, 0.28)",
+                                  color: "#10b981",
+                                  borderRadius: "16px",
+                                  padding: "4px 12px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                <span>VEG</span>
+                                <span
+                                  style={{
+                                    width: "6px",
+                                    height: "6px",
+                                    borderRadius: "50%",
+                                    background: "#10b981",
+                                    display: "inline-block",
+                                  }}
+                                />
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  background: "rgba(239, 68, 68, 0.12)",
+                                  border: "1px solid rgba(239, 68, 68, 0.28)",
+                                  color: "#ef4444",
+                                  borderRadius: "16px",
+                                  padding: "4px 12px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                <span>NON-VEG</span>
+                                <span
+                                  style={{
+                                    width: "6px",
+                                    height: "6px",
+                                    borderRadius: "50%",
+                                    background: "#ef4444",
+                                    display: "inline-block",
+                                  }}
+                                />
+                              </span>
+                            )}
+                          </td>
+                          <td
                             style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.45rem",
+                              padding: "0.85rem 1.15rem",
+                              fontWeight: 800,
+                              color: "#f59e0b",
+                              fontSize: "0.98rem",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            <button
-                              onClick={() => handleOpenItemModal(item)}
+                            ₹{Number(item.price).toFixed(2)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.85rem 1.15rem",
+                              textAlign: "center",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            <div
                               style={{
-                                padding: "4px 8px",
-                                background: "var(--bg-secondary)",
-                                color: "var(--accent-amber-light)",
-                                border: "1px solid var(--border-subtle)",
-                                borderRadius: "4px",
-                                fontSize: "0.76rem",
-                                display: "flex",
+                                display: "inline-flex",
                                 alignItems: "center",
-                                gap: "3px",
+                                justifyContent: "center",
+                                gap: "0.5rem",
                               }}
-                              title="Edit item"
                             >
-                              <Edit3 size={13} />
-                              <span>Edit</span>
-                            </button>
+                              <button
+                                onClick={() => handleOpenItemModal(item)}
+                                style={{
+                                  border: "1px solid rgba(245, 158, 11, 0.45)",
+                                  background: "rgba(245, 158, 11, 0.06)",
+                                  color: "#f59e0b",
+                                  borderRadius: "7px",
+                                  padding: "5px 14px",
+                                  fontSize: "0.82rem",
+                                  fontWeight: 700,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  cursor: "pointer",
+                                  transition: "all 0.15s ease",
+                                }}
+                                title="Edit item"
+                              >
+                                <SquarePen size={14} />
+                                <span>Edit</span>
+                              </button>
 
-                            <button
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Delete "${item.name}" from restaurant menu?`,
-                                  )
-                                ) {
-                                  onDeleteMenuItem(item.id);
-                                }
-                              }}
-                              style={{
-                                padding: "4px 8px",
-                                background: "var(--danger-bg)",
-                                color: "var(--danger)",
-                                border: "1px solid rgba(239, 68, 68, 0.3)",
-                                borderRadius: "4px",
-                                fontSize: "0.76rem",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "3px",
-                              }}
-                              title="Delete item"
-                            >
-                              <Trash2 size={13} />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                              <button
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      `Delete "${item.name}" from restaurant menu?`
+                                    )
+                                  ) {
+                                    onDeleteMenuItem(item.id);
+                                  }
+                                }}
+                                style={{
+                                  border: "1px solid rgba(239, 68, 68, 0.45)",
+                                  background: "rgba(239, 68, 68, 0.06)",
+                                  color: "#ef4444",
+                                  borderRadius: "7px",
+                                  padding: "5px 14px",
+                                  fontSize: "0.82rem",
+                                  fontWeight: 700,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  cursor: "pointer",
+                                  transition: "all 0.15s ease",
+                                }}
+                                title="Delete item"
+                              >
+                                <Trash2 size={14} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* ================= TAB 2: TABLES & CHAIRS (PERSONS CAPACITY) ================= */}
           {activeTab === "tables" && (
@@ -2305,8 +2019,38 @@ export function AdminPortal({
               })()}
             </div>
           )}
+
+          {/* ================= TAB 5: INVENTORY ================= */}
+          {activeTab === "inventory" && <AdminInventory />}
+
+          {/* ================= TAB 6: INVOICES ================= */}
+          {activeTab === "invoices" && (
+            <AdminInvoices pastOrders={pastOrders} />
+          )}
+
+          {/* ================= TAB 7: REPORTS ================= */}
+          {activeTab === "reports" && (
+            <AdminReports
+              pastOrders={pastOrders}
+              menuItems={menuItems}
+            />
+          )}
+
+          {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
+          {activeTab === "logins" && (
+            <LoginManagement currentAdminSession={currentSession} />
+          )}
+
+          {/* ================= TAB 9: SETTINGS ================= */}
+          {activeTab === "settings" && (
+            <AdminSettings
+              currentTheme={currentTheme}
+              onChangeTheme={handleThemeChange}
+            />
+          )}
         </div>
       </div>
+    </div>
 
       {/* ================= MODAL: ADD / EDIT MENU ITEM ================= */}
       {isItemModalOpen && (

@@ -1674,6 +1674,7 @@ export function App() {
               onLogout={handleAdminLogout}
               currentTheme={theme}
               onChangeTheme={setTheme}
+              pastOrders={pastOrders}
             />
           ) : (
             <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} />
@@ -1935,6 +1936,7 @@ export function App() {
           onCompleteTableKot={handleCompleteTableKot}
           currentTheme={theme}
           onChangeTheme={setTheme}
+          pastOrders={pastOrders}
         />
       )}
 
