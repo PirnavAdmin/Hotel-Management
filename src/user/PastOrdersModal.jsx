@@ -28,9 +28,6 @@ const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
   return fallbackDate;
 };
 
-const compareOrdersNewestFirst = (a, b) =>
-  getOrderTimestamp(b) - getOrderTimestamp(a);
-
 const parseDisplayDate = (value) => {
   if (!value) return null;
   const text = String(value).trim();
@@ -46,6 +43,26 @@ const parseDisplayDate = (value) => {
 
 const compareDatesNewestFirst = (a, b) =>
   (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
+
+const getDisplayedTime = (order) => {
+  const value = String(order?.settledAt || order?.paidAt || order?.completedAt || '').trim();
+  const match = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (match) {
+    let hours = Number(match[1]) % 12;
+    if (match[4].toUpperCase() === 'PM') hours += 12;
+    return hours * 3600 + Number(match[2]) * 60 + Number(match[3] || 0);
+  }
+  return getOrderTimestamp(order);
+};
+
+const compareOrdersNewestFirst = (a, b) => {
+  const dateDifference = compareDatesNewestFirst(
+    formatOrderDate(a, ''),
+    formatOrderDate(b, ''),
+  );
+  if (dateDifference) return dateDifference;
+  return getDisplayedTime(b) - getDisplayedTime(a);
+};
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
   const uniquePastOrders = useMemo(() => dedupeOrders(pastOrders), [pastOrders]);
