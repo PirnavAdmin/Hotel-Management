@@ -25,6 +25,7 @@ import {
   ArrowLeft,
   Sun,
   Moon,
+  ChevronLeft,
   ChevronRight,
   Package,
   FileText,
@@ -334,6 +335,19 @@ export function AdminPortal({
       item.category.toLowerCase().includes(searchFilter.toLowerCase()),
   );
 
+  // Small Pagination for Menu Items
+  const [menuPage, setMenuPage] = useState(1);
+  const [menuPageSize, setMenuPageSize] = useState(6);
+
+  useEffect(() => {
+    setMenuPage(1);
+  }, [searchFilter]);
+
+  const totalMenuPages = Math.ceil(filteredItems.length / menuPageSize) || 1;
+  const safeMenuPage = Math.min(Math.max(menuPage, 1), totalMenuPages);
+  const startIdx = (safeMenuPage - 1) * menuPageSize;
+  const paginatedItems = filteredItems.slice(startIdx, startIdx + menuPageSize);
+
   // Total capacity calculations
   const totalChairs = tables.reduce(
     (sum, t) => sum + (Number(t.capacity) || 0),
@@ -436,7 +450,7 @@ export function AdminPortal({
             style={{
               flex: 1,
               overflowY: "auto",
-              padding: activeTab === "logins" ? "1rem" : "1.5rem 2rem",
+              padding: activeTab === "logins" ? "0.75rem" : "0.75rem 1rem",
               minHeight: 0,
             }}
           >
@@ -459,8 +473,8 @@ export function AdminPortal({
                 style={{
                   background: "#0d1527",
                   border: "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: "16px",
-                  padding: "1.5rem",
+                  borderRadius: "12px",
+                  padding: "0.75rem 0.85rem",
                 }}
               >
                 {/* Header inside Card */}
@@ -470,31 +484,31 @@ export function AdminPortal({
                     justifyContent: "space-between",
                     alignItems: "center",
                     flexWrap: "wrap",
-                    gap: "0.75rem",
-                    marginBottom: "1.25rem",
+                    gap: "0.65rem",
+                    marginBottom: "0.75rem",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
                     <div
                       style={{
-                        width: "44px",
-                        height: "44px",
-                        borderRadius: "12px",
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "10px",
                         background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                        boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
                         flexShrink: 0,
                       }}
                     >
-                      <Utensils size={22} color="#ffffff" strokeWidth={2.3} />
+                      <Utensils size={18} color="#ffffff" strokeWidth={2.3} />
                     </div>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <h2
                           style={{
-                            fontSize: "1.35rem",
+                            fontSize: "1.2rem",
                             fontWeight: 800,
                             color: "#ffffff",
                             margin: 0,
@@ -507,9 +521,9 @@ export function AdminPortal({
                             background: "rgba(245, 158, 11, 0.15)",
                             border: "1px solid rgba(245, 158, 11, 0.3)",
                             color: "#f59e0b",
-                            fontSize: "0.78rem",
+                            fontSize: "0.74rem",
                             fontWeight: 700,
-                            padding: "3px 10px",
+                            padding: "2px 8px",
                             borderRadius: "16px",
                           }}
                         >
@@ -518,9 +532,9 @@ export function AdminPortal({
                       </div>
                       <p
                         style={{
-                          fontSize: "0.85rem",
+                          fontSize: "0.78rem",
                           color: "#94a3b8",
-                          margin: "4px 0 0 0",
+                          margin: "2px 0 0 0",
                         }}
                       >
                         Manage your restaurant menu items, categories and pricing
@@ -533,25 +547,25 @@ export function AdminPortal({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.75rem",
+                      gap: "0.65rem",
                       flexWrap: "wrap",
                     }}
                   >
                     <div
                       style={{
                         position: "relative",
-                        width: "280px",
-                        height: "42px",
+                        width: "250px",
+                        height: "36px",
                         display: "flex",
                         alignItems: "center",
                       }}
                     >
                       <Search
-                        size={16}
+                        size={15}
                         color="#64748b"
                         style={{
                           position: "absolute",
-                          left: "14px",
+                          left: "12px",
                           pointerEvents: "none",
                         }}
                       />
@@ -565,10 +579,10 @@ export function AdminPortal({
                           height: "100%",
                           background: "#080d1a",
                           border: "1px solid rgba(255, 255, 255, 0.1)",
-                          borderRadius: "10px",
-                          padding: "0 12px 0 38px",
+                          borderRadius: "8px",
+                          padding: "0 10px 0 34px",
                           color: "#ffffff",
-                          fontSize: "0.88rem",
+                          fontSize: "0.82rem",
                           outline: "none",
                         }}
                       />
@@ -577,22 +591,22 @@ export function AdminPortal({
                     <button
                       onClick={() => handleOpenItemModal()}
                       style={{
-                        height: "42px",
+                        height: "36px",
                         background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                         color: "#ffffff",
                         border: "none",
-                        borderRadius: "10px",
-                        padding: "0 1.25rem",
+                        borderRadius: "8px",
+                        padding: "0 1.1rem",
                         fontWeight: 700,
-                        fontSize: "0.88rem",
+                        fontSize: "0.82rem",
                         display: "flex",
                         alignItems: "center",
-                        gap: "0.5rem",
+                        gap: "0.45rem",
                         cursor: "pointer",
-                        boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                        boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
                       }}
                     >
-                      <Plus size={18} strokeWidth={2.5} />
+                      <Plus size={16} strokeWidth={2.5} />
                       <span>Add New Dish / Biryani</span>
                     </button>
                   </div>
@@ -601,7 +615,7 @@ export function AdminPortal({
                 {/* Items Table List */}
                 <div
                   style={{
-                    borderRadius: "12px",
+                    borderRadius: "10px",
                     border: "1px solid rgba(255, 255, 255, 0.08)",
                     overflowX: "auto",
                   }}
@@ -611,7 +625,7 @@ export function AdminPortal({
                       width: "100%",
                       borderCollapse: "collapse",
                       textAlign: "left",
-                      fontSize: "0.88rem",
+                      fontSize: "0.84rem",
                     }}
                   >
                     <thead>
@@ -620,25 +634,25 @@ export function AdminPortal({
                           background: "rgba(255, 255, 255, 0.02)",
                           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
                           color: "#94a3b8",
-                          fontSize: "0.8rem",
+                          fontSize: "0.76rem",
                           fontWeight: 600,
                         }}
                       >
-                        <th style={{ padding: "0.85rem 1.15rem", width: "44%" }}>
+                        <th style={{ padding: "0.6rem 0.85rem", width: "44%" }}>
                           Dish Name
                         </th>
-                        <th style={{ padding: "0.85rem 1.15rem", width: "14%" }}>
+                        <th style={{ padding: "0.6rem 0.85rem", width: "14%" }}>
                           Category
                         </th>
-                        <th style={{ padding: "0.85rem 1.15rem", width: "14%" }}>
+                        <th style={{ padding: "0.6rem 0.85rem", width: "14%" }}>
                           Dietary
                         </th>
-                        <th style={{ padding: "0.85rem 1.15rem", width: "12%" }}>
+                        <th style={{ padding: "0.6rem 0.85rem", width: "12%" }}>
                           Price (₹)
                         </th>
                         <th
                           style={{
-                            padding: "0.85rem 1.15rem",
+                            padding: "0.6rem 0.85rem",
                             width: "16%",
                             textAlign: "center",
                           }}
@@ -648,223 +662,399 @@ export function AdminPortal({
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredItems.map((item) => (
-                        <tr
-                          key={item.id}
-                          style={{
-                            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                            transition: "background 0.15s ease",
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.background =
-                              "rgba(255, 255, 255, 0.02)")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = "transparent")
-                          }
-                        >
-                          <td style={{ padding: "0.85rem 1.15rem" }}>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.85rem",
-                              }}
-                            >
-                              <img
-                                src={item.image}
-                                alt={item.name}
-                                style={{
-                                  width: "62px",
-                                  height: "62px",
-                                  borderRadius: "12px",
-                                  objectFit: "cover",
-                                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                                  flexShrink: 0,
-                                }}
-                                onError={(e) =>
-                                  (e.target.style.display = "none")
-                                }
-                              />
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <div
-                                  style={{
-                                    fontWeight: 700,
-                                    color: "#ffffff",
-                                    fontSize: "0.95rem",
-                                    lineHeight: 1.35,
-                                  }}
-                                >
-                                  {item.name}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: "0.75rem",
-                                    color: "#94a3b8",
-                                    lineHeight: 1.4,
-                                    marginTop: "3px",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
-                                  }}
-                                >
-                                  {item.prepTime || "15 mins"} • {item.description}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
+                      {paginatedItems.length === 0 ? (
+                        <tr>
                           <td
+                            colSpan={5}
                             style={{
-                              padding: "0.85rem 1.15rem",
-                              textTransform: "capitalize",
-                              color: "#cbd5e1",
-                              fontSize: "0.88rem",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {item.category.replace("-", " ")}
-                          </td>
-                          <td style={{ padding: "0.85rem 1.15rem" }}>
-                            {item.isVeg ? (
-                              <span
-                                style={{
-                                  background: "rgba(16, 185, 129, 0.12)",
-                                  border: "1px solid rgba(16, 185, 129, 0.28)",
-                                  color: "#10b981",
-                                  borderRadius: "16px",
-                                  padding: "4px 12px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "5px",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                <span>VEG</span>
-                                <span
-                                  style={{
-                                    width: "6px",
-                                    height: "6px",
-                                    borderRadius: "50%",
-                                    background: "#10b981",
-                                    display: "inline-block",
-                                  }}
-                                />
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  background: "rgba(239, 68, 68, 0.12)",
-                                  border: "1px solid rgba(239, 68, 68, 0.28)",
-                                  color: "#ef4444",
-                                  borderRadius: "16px",
-                                  padding: "4px 12px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "5px",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                <span>NON-VEG</span>
-                                <span
-                                  style={{
-                                    width: "6px",
-                                    height: "6px",
-                                    borderRadius: "50%",
-                                    background: "#ef4444",
-                                    display: "inline-block",
-                                  }}
-                                />
-                              </span>
-                            )}
-                          </td>
-                          <td
-                            style={{
-                              padding: "0.85rem 1.15rem",
-                              fontWeight: 800,
-                              color: "#f59e0b",
-                              fontSize: "0.98rem",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            ₹{Number(item.price).toFixed(2)}
-                          </td>
-                          <td
-                            style={{
-                              padding: "0.85rem 1.15rem",
+                              padding: "2rem",
                               textAlign: "center",
-                              whiteSpace: "nowrap",
+                              color: "#94a3b8",
+                              fontSize: "0.85rem",
                             }}
                           >
-                            <div
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "0.5rem",
-                              }}
-                            >
-                              <button
-                                onClick={() => handleOpenItemModal(item)}
-                                style={{
-                                  border: "1px solid rgba(245, 158, 11, 0.45)",
-                                  background: "rgba(245, 158, 11, 0.06)",
-                                  color: "#f59e0b",
-                                  borderRadius: "7px",
-                                  padding: "5px 14px",
-                                  fontSize: "0.82rem",
-                                  fontWeight: 700,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "5px",
-                                  cursor: "pointer",
-                                  transition: "all 0.15s ease",
-                                }}
-                                title="Edit item"
-                              >
-                                <SquarePen size={14} />
-                                <span>Edit</span>
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      `Delete "${item.name}" from restaurant menu?`
-                                    )
-                                  ) {
-                                    onDeleteMenuItem(item.id);
-                                  }
-                                }}
-                                style={{
-                                  border: "1px solid rgba(239, 68, 68, 0.45)",
-                                  background: "rgba(239, 68, 68, 0.06)",
-                                  color: "#ef4444",
-                                  borderRadius: "7px",
-                                  padding: "5px 14px",
-                                  fontSize: "0.82rem",
-                                  fontWeight: 700,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "5px",
-                                  cursor: "pointer",
-                                  transition: "all 0.15s ease",
-                                }}
-                                title="Delete item"
-                              >
-                                <Trash2 size={14} />
-                                <span>Delete</span>
-                              </button>
-                            </div>
+                            No menu items found matching "{searchFilter}"
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        paginatedItems.map((item) => (
+                          <tr
+                            key={item.id}
+                            style={{
+                              borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                              transition: "background 0.15s ease",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.background =
+                                "rgba(255, 255, 255, 0.02)")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.background = "transparent")
+                            }
+                          >
+                            <td style={{ padding: "0.6rem 0.85rem" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.75rem",
+                                }}
+                              >
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  style={{
+                                    width: "52px",
+                                    height: "52px",
+                                    borderRadius: "10px",
+                                    objectFit: "cover",
+                                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                                    flexShrink: 0,
+                                  }}
+                                  onError={(e) =>
+                                    (e.target.style.display = "none")
+                                  }
+                                />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div
+                                    style={{
+                                      fontWeight: 700,
+                                      color: "#ffffff",
+                                      fontSize: "0.9rem",
+                                      lineHeight: 1.3,
+                                    }}
+                                  >
+                                    {item.name}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.72rem",
+                                      color: "#94a3b8",
+                                      lineHeight: 1.35,
+                                      marginTop: "2px",
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {item.prepTime || "15 mins"} • {item.description}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td
+                              style={{
+                                padding: "0.6rem 0.85rem",
+                                textTransform: "capitalize",
+                                color: "#cbd5e1",
+                                fontSize: "0.84rem",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.category.replace("-", " ")}
+                            </td>
+                            <td style={{ padding: "0.6rem 0.85rem" }}>
+                              {item.isVeg ? (
+                                <span
+                                  style={{
+                                    background: "rgba(16, 185, 129, 0.12)",
+                                    border: "1px solid rgba(16, 185, 129, 0.28)",
+                                    color: "#10b981",
+                                    borderRadius: "14px",
+                                    padding: "3px 10px",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <span>VEG</span>
+                                  <span
+                                    style={{
+                                      width: "5px",
+                                      height: "5px",
+                                      borderRadius: "50%",
+                                      background: "#10b981",
+                                      display: "inline-block",
+                                    }}
+                                  />
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    background: "rgba(239, 68, 68, 0.12)",
+                                    border: "1px solid rgba(239, 68, 68, 0.28)",
+                                    color: "#ef4444",
+                                    borderRadius: "14px",
+                                    padding: "3px 10px",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <span>NON-VEG</span>
+                                  <span
+                                    style={{
+                                      width: "5px",
+                                      height: "5px",
+                                      borderRadius: "50%",
+                                      background: "#ef4444",
+                                      display: "inline-block",
+                                    }}
+                                  />
+                                </span>
+                              )}
+                            </td>
+                            <td
+                              style={{
+                                padding: "0.6rem 0.85rem",
+                                fontWeight: 800,
+                                color: "#f59e0b",
+                                fontSize: "0.92rem",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              ₹{Number(item.price).toFixed(2)}
+                            </td>
+                            <td
+                              style={{
+                                padding: "0.6rem 0.85rem",
+                                textAlign: "center",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "0.45rem",
+                                }}
+                              >
+                                <button
+                                  onClick={() => handleOpenItemModal(item)}
+                                  style={{
+                                    border: "1px solid rgba(245, 158, 11, 0.45)",
+                                    background: "rgba(245, 158, 11, 0.06)",
+                                    color: "#f59e0b",
+                                    borderRadius: "6px",
+                                    padding: "4px 12px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title="Edit item"
+                                >
+                                  <SquarePen size={13} />
+                                  <span>Edit</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      window.confirm(
+                                        `Delete "${item.name}" from restaurant menu?`
+                                      )
+                                    ) {
+                                      onDeleteMenuItem(item.id);
+                                    }
+                                  }}
+                                  style={{
+                                    border: "1px solid rgba(239, 68, 68, 0.45)",
+                                    background: "rgba(239, 68, 68, 0.06)",
+                                    color: "#ef4444",
+                                    borderRadius: "6px",
+                                    padding: "4px 12px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title="Delete item"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
+
+                  {/* Small Compact Pagination at Bottom */}
+                  {filteredItems.length > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0.5rem 0.85rem",
+                        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                        background: "rgba(255, 255, 255, 0.015)",
+                        fontSize: "0.74rem",
+                        color: "#94a3b8",
+                        flexWrap: "wrap",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      {/* Left: Range text */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                        <span>
+                          Showing{" "}
+                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                            {startIdx + 1}
+                          </strong>
+                          –
+                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                            {Math.min(startIdx + menuPageSize, filteredItems.length)}
+                          </strong>{" "}
+                          of{" "}
+                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                            {filteredItems.length}
+                          </strong>{" "}
+                          items
+                        </span>
+                      </div>
+
+                      {/* Right: Small Controls */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        {/* Per-page selector (small) */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                          <span style={{ fontSize: "0.7rem", color: "#64748b" }}>Per page:</span>
+                          <select
+                            value={menuPageSize}
+                            onChange={(e) => {
+                              setMenuPageSize(Number(e.target.value));
+                              setMenuPage(1);
+                            }}
+                            style={{
+                              background: "#080d1a",
+                              color: "#cbd5e1",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              borderRadius: "5px",
+                              padding: "2px 6px",
+                              fontSize: "0.72rem",
+                              outline: "none",
+                              cursor: "pointer",
+                              height: "24px",
+                            }}
+                          >
+                            <option value={5}>5</option>
+                            <option value={6}>6</option>
+                            <option value={8}>8</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                          </select>
+                        </div>
+
+                        {/* Page Buttons */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                          <button
+                            onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+                            disabled={safeMenuPage === 1}
+                            style={{
+                              height: "24px",
+                              padding: "0 6px",
+                              borderRadius: "5px",
+                              background:
+                                safeMenuPage === 1
+                                  ? "rgba(255, 255, 255, 0.02)"
+                                  : "rgba(255, 255, 255, 0.06)",
+                              border: "1px solid rgba(255, 255, 255, 0.08)",
+                              color: safeMenuPage === 1 ? "#475569" : "#cbd5e1",
+                              cursor: safeMenuPage === 1 ? "not-allowed" : "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "2px",
+                              fontSize: "0.72rem",
+                              fontWeight: 600,
+                              transition: "all 0.15s ease",
+                            }}
+                            title="Previous page"
+                          >
+                            <ChevronLeft size={13} />
+                            <span>Prev</span>
+                          </button>
+
+                          {Array.from({ length: totalMenuPages }, (_, i) => i + 1).map((page) => {
+                            const isActive = page === safeMenuPage;
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => setMenuPage(page)}
+                                style={{
+                                  height: "24px",
+                                  minWidth: "24px",
+                                  padding: "0 5px",
+                                  borderRadius: "5px",
+                                  background: isActive
+                                    ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                                    : "transparent",
+                                  border: isActive
+                                    ? "none"
+                                    : "1px solid rgba(255, 255, 255, 0.08)",
+                                  color: isActive ? "#ffffff" : "#94a3b8",
+                                  cursor: "pointer",
+                                  fontSize: "0.72rem",
+                                  fontWeight: isActive ? 800 : 500,
+                                  boxShadow: isActive
+                                    ? "0 2px 8px rgba(245, 158, 11, 0.35)"
+                                    : "none",
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                {page}
+                              </button>
+                            );
+                          })}
+
+                          <button
+                            onClick={() => setMenuPage((p) => Math.min(totalMenuPages, p + 1))}
+                            disabled={safeMenuPage === totalMenuPages}
+                            style={{
+                              height: "24px",
+                              padding: "0 6px",
+                              borderRadius: "5px",
+                              background:
+                                safeMenuPage === totalMenuPages
+                                  ? "rgba(255, 255, 255, 0.02)"
+                                  : "rgba(255, 255, 255, 0.06)",
+                              border: "1px solid rgba(255, 255, 255, 0.08)",
+                              color:
+                                safeMenuPage === totalMenuPages ? "#475569" : "#cbd5e1",
+                              cursor:
+                                safeMenuPage === totalMenuPages ? "not-allowed" : "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "2px",
+                              fontSize: "0.72rem",
+                              fontWeight: 600,
+                              transition: "all 0.15s ease",
+                            }}
+                            title="Next page"
+                          >
+                            <span>Next</span>
+                            <ChevronRight size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -877,26 +1067,26 @@ export function AdminPortal({
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: "1rem",
-                  marginBottom: "1.5rem",
+                  gap: "0.65rem",
+                  marginBottom: "0.85rem",
                 }}
               >
                 <div
                   style={{
                     background: "var(--bg-tertiary)",
-                    padding: "1rem",
-                    borderRadius: "var(--radius-md)",
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "var(--radius-sm)",
                     border: "1px solid var(--border-subtle)",
                   }}
                 >
                   <div
-                    style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
                   >
                     Total Tables
                   </div>
                   <div
                     style={{
-                      fontSize: "1.6rem",
+                      fontSize: "1.3rem",
                       fontWeight: 800,
                       color: "var(--text-main)",
                     }}
@@ -908,19 +1098,19 @@ export function AdminPortal({
                 <div
                   style={{
                     background: "var(--bg-tertiary)",
-                    padding: "1rem",
-                    borderRadius: "var(--radius-md)",
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "var(--radius-sm)",
                     border: "1px solid var(--border-subtle)",
                   }}
                 >
                   <div
-                    style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
                   >
                     Total Dining Chairs
                   </div>
                   <div
                     style={{
-                      fontSize: "1.6rem",
+                      fontSize: "1.3rem",
                       fontWeight: 800,
                       color: "var(--accent-amber-light)",
                     }}
@@ -932,19 +1122,19 @@ export function AdminPortal({
                 <div
                   style={{
                     background: "var(--bg-tertiary)",
-                    padding: "1rem",
-                    borderRadius: "var(--radius-md)",
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "var(--radius-sm)",
                     border: "1px solid var(--border-subtle)",
                   }}
                 >
                   <div
-                    style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
                   >
                     Occupied Chairs (Dining)
                   </div>
                   <div
                     style={{
-                      fontSize: "1.6rem",
+                      fontSize: "1.3rem",
                       fontWeight: 800,
                       color: "var(--status-occupied)",
                     }}
@@ -956,19 +1146,19 @@ export function AdminPortal({
                 <div
                   style={{
                     background: "var(--bg-tertiary)",
-                    padding: "1rem",
-                    borderRadius: "var(--radius-md)",
+                    padding: "0.65rem 0.85rem",
+                    borderRadius: "var(--radius-sm)",
                     border: "1px solid var(--border-subtle)",
                   }}
                 >
                   <div
-                    style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
                   >
                     Available Chairs
                   </div>
                   <div
                     style={{
-                      fontSize: "1.6rem",
+                      fontSize: "1.3rem",
                       fontWeight: 800,
                       color: "var(--status-vacant)",
                     }}
@@ -984,14 +1174,15 @@ export function AdminPortal({
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  marginBottom: "1.25rem",
+                  marginBottom: "0.75rem",
                 }}
               >
                 <h3
                   style={{
-                    fontSize: "1.1rem",
+                    fontSize: "0.98rem",
                     fontWeight: 800,
                     color: "var(--text-main)",
+                    margin: 0,
                   }}
                 >
                   Floor Tables & Chair Configuration
@@ -1002,17 +1193,20 @@ export function AdminPortal({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.45rem",
-                    padding: "0.6rem 1.25rem",
+                    gap: "0.35rem",
+                    padding: "0.45rem 1rem",
                     background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                     color: "#ffffff",
                     borderRadius: "var(--radius-sm)",
                     fontWeight: 700,
-                    fontSize: "0.85rem",
+                    fontSize: "0.78rem",
                     boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
+                    border: "none",
+                    cursor: "pointer",
+                    height: "32px",
                   }}
                 >
-                  <Plus size={16} />
+                  <Plus size={15} />
                   <span>Add New Table</span>
                 </button>
               </div>
@@ -1021,8 +1215,8 @@ export function AdminPortal({
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: "1rem",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(235px, 1fr))",
+                  gap: "0.75rem",
                 }}
               >
                 {tables.map((tbl) => (
@@ -1030,9 +1224,9 @@ export function AdminPortal({
                     key={tbl.id}
                     style={{
                       background: "var(--bg-tertiary)",
-                      borderRadius: "var(--radius-md)",
+                      borderRadius: "10px",
                       border: "1px solid var(--border-subtle)",
-                      padding: "1rem",
+                      padding: "0.75rem 0.85rem",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
@@ -1045,28 +1239,29 @@ export function AdminPortal({
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "flex-start",
-                          marginBottom: "0.5rem",
+                          marginBottom: "0.4rem",
                         }}
                       >
                         <div
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.5rem",
+                            gap: "0.45rem",
                           }}
                         >
                           <div
                             style={{
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "8px",
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "7px",
                               background: "rgba(245, 158, 11, 0.18)",
                               color: "var(--accent-amber-light)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               fontWeight: 800,
-                              fontSize: "0.95rem",
+                              fontSize: "0.82rem",
+                              flexShrink: 0,
                             }}
                           >
                             T{tbl.id}
@@ -1076,14 +1271,15 @@ export function AdminPortal({
                               style={{
                                 fontWeight: 800,
                                 color: "var(--text-main)",
-                                fontSize: "1rem",
+                                fontSize: "0.9rem",
+                                margin: 0,
                               }}
                             >
                               {tbl.name}
                             </h4>
                             <span
                               style={{
-                                fontSize: "0.72rem",
+                                fontSize: "0.68rem",
                                 color: "var(--text-dim)",
                               }}
                             >
@@ -1094,9 +1290,9 @@ export function AdminPortal({
 
                         <span
                           style={{
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            fontSize: "0.68rem",
+                            padding: "2px 7px",
+                            borderRadius: "10px",
+                            fontSize: "0.64rem",
                             fontWeight: 700,
                             textTransform: "uppercase",
                             background:
@@ -1118,12 +1314,12 @@ export function AdminPortal({
                         style={{
                           background: "var(--bg-secondary)",
                           borderRadius: "var(--radius-sm)",
-                          padding: "0.65rem 0.75rem",
-                          marginTop: "0.65rem",
+                          padding: "0.45rem 0.65rem",
+                          marginTop: "0.45rem",
                           display: "flex",
                           flexDirection: "column",
-                          gap: "0.35rem",
-                          fontSize: "0.8rem",
+                          gap: "0.25rem",
+                          fontSize: "0.74rem",
                         }}
                       >
                         <div
@@ -1138,16 +1334,17 @@ export function AdminPortal({
                               color: "var(--text-muted)",
                               display: "flex",
                               alignItems: "center",
-                              gap: "0.3rem",
+                              gap: "0.25rem",
+                              fontSize: "0.72rem",
                             }}
                           >
-                            <Armchair size={14} color="var(--accent-amber)" />
+                            <Armchair size={13} color="var(--accent-amber)" />
                             <span>Chairs (Capacity):</span>
                           </span>
                           <strong
                             style={{
                               color: "var(--text-main)",
-                              fontSize: "0.9rem",
+                              fontSize: "0.82rem",
                             }}
                           >
                             {tbl.capacity} Chairs ({tbl.capacity} Persons)
@@ -1161,13 +1358,14 @@ export function AdminPortal({
                             alignItems: "center",
                           }}
                         >
-                          <span style={{ color: "var(--text-muted)" }}>
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
                             Assigned Server:
                           </span>
                           <span
                             style={{
                               color: "var(--text-main)",
                               fontWeight: 600,
+                              fontSize: "0.74rem",
                             }}
                           >
                             {tbl.server}
@@ -1180,9 +1378,9 @@ export function AdminPortal({
                     <div
                       style={{
                         display: "flex",
-                        gap: "0.5rem",
-                        marginTop: "1rem",
-                        paddingTop: "0.75rem",
+                        gap: "0.4rem",
+                        marginTop: "0.65rem",
+                        paddingTop: "0.55rem",
                         borderTop: "1px solid var(--border-subtle)",
                       }}
                     >
@@ -1190,20 +1388,21 @@ export function AdminPortal({
                         onClick={() => handleOpenTableModal(tbl)}
                         style={{
                           flex: 1,
-                          padding: "0.45rem",
+                          padding: "0.35rem 0.5rem",
                           background: "var(--bg-secondary)",
                           color: "var(--accent-amber-light)",
                           border: "1px solid var(--border-subtle)",
                           borderRadius: "var(--radius-sm)",
-                          fontSize: "0.78rem",
+                          fontSize: "0.74rem",
                           fontWeight: 700,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: "0.3rem",
+                          gap: "0.25rem",
+                          cursor: "pointer",
                         }}
                       >
-                        <Edit3 size={13} />
+                        <Edit3 size={12} />
                         <span>Edit Chairs / Area</span>
                       </button>
 
@@ -1222,19 +1421,20 @@ export function AdminPortal({
                           }
                         }}
                         style={{
-                          padding: "0.45rem 0.65rem",
+                          padding: "0.35rem 0.55rem",
                           background: "var(--danger-bg)",
                           color: "var(--danger)",
                           border: "1px solid rgba(239,68,68,0.3)",
                           borderRadius: "var(--radius-sm)",
-                          fontSize: "0.78rem",
+                          fontSize: "0.74rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          cursor: "pointer",
                         }}
                         title="Delete table"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
