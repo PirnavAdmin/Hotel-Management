@@ -52,6 +52,47 @@ export const getOrderTimestamp = (order) => {
   return 0;
 };
 
+const getCalendarDateTimestamp = (order) => {
+  const value = order?.settledDate || order?.date;
+  if (value) {
+    const text = String(value).trim();
+    const localized = text.match(/^(\d{1,2})\s+([a-z]{3,})\s+(\d{4})$/i);
+    const parsed = localized
+      ? new Date(`${localized[2]} ${localized[1]}, ${localized[3]}`)
+      : new Date(text);
+    if (!Number.isNaN(parsed.getTime())) {
+      return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime();
+    }
+  }
+  const timestamp = getOrderTimestamp(order);
+  if (timestamp) {
+    const date = new Date(timestamp);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  }
+  return 0;
+};
+
+const getSettlementTime = (order) => {
+  const value = String(order?.settledAt || order?.paidAt || order?.completedAt || '').trim();
+  const match = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (match) {
+    let hours = Number(match[1]) % 12;
+    if (match[4].toUpperCase() === 'PM') hours += 12;
+    return hours * 3600 + Number(match[2]) * 60 + Number(match[3] || 0);
+  }
+  const timestamp = getOrderTimestamp(order);
+  if (!timestamp) return 0;
+  const date = new Date(timestamp);
+  return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+};
+
+export const sortOrdersBySettlementTime = (orders = []) =>
+  [...orders].sort((a, b) => {
+    const dateDifference = getCalendarDateTimestamp(b) - getCalendarDateTimestamp(a);
+    if (dateDifference) return dateDifference;
+    return getSettlementTime(b) - getSettlementTime(a);
+  });
+
 /** Collapse copies of one settled sale even when a sync assigned each copy a different id/invoice number. */
 export function dedupeOrders(orders = []) {
   const result = [];

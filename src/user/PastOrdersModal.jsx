@@ -4,7 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
-import { dedupeOrders, getOrderTimestamp } from '../utils/orderDedupe';
+import { dedupeOrders, sortOrdersBySettlementTime } from '../utils/orderDedupe';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -43,26 +43,6 @@ const parseDisplayDate = (value) => {
 
 const compareDatesNewestFirst = (a, b) =>
   (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
-
-const getDisplayedTime = (order) => {
-  const value = String(order?.settledAt || order?.paidAt || order?.completedAt || '').trim();
-  const match = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
-  if (match) {
-    let hours = Number(match[1]) % 12;
-    if (match[4].toUpperCase() === 'PM') hours += 12;
-    return hours * 3600 + Number(match[2]) * 60 + Number(match[3] || 0);
-  }
-  return getOrderTimestamp(order);
-};
-
-const compareOrdersNewestFirst = (a, b) => {
-  const dateDifference = compareDatesNewestFirst(
-    formatOrderDate(a, ''),
-    formatOrderDate(b, ''),
-  );
-  if (dateDifference) return dateDifference;
-  return getDisplayedTime(b) - getDisplayedTime(a);
-};
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
   const uniquePastOrders = useMemo(() => dedupeOrders(pastOrders), [pastOrders]);
@@ -228,22 +208,23 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
 
   // Single day filtered orders
   const singleDayOrders = useMemo(() => {
-    return searchFilteredOrders
-      .filter(o => formatOrderDate(o) === selectedDate)
-      .sort(compareOrdersNewestFirst);
+    return sortOrdersBySettlementTime(
+      searchFilteredOrders.filter(o => formatOrderDate(o) === selectedDate),
+    );
   }, [searchFilteredOrders, selectedDate]);
 
   // Monthly filtered orders
   const monthlyOrders = useMemo(() => {
-    return searchFilteredOrders.filter(o => {
+    const filtered = searchFilteredOrders.filter(o => {
       const d = parseOrderDate(o);
       return getMonthStr(d) === selectedMonth;
-    }).sort(compareOrdersNewestFirst);
+    });
+    return sortOrdersBySettlementTime(filtered);
   }, [searchFilteredOrders, selectedMonth]);
 
   // Custom date range filtered orders
   const customRangeOrders = useMemo(() => {
-    return searchFilteredOrders.filter(o => {
+    const filtered = searchFilteredOrders.filter(o => {
       if (!customStartDate && !customEndDate) return true;
       const orderDate = parseOrderDate(o);
       const orderTime = orderDate.getTime();
@@ -259,7 +240,8 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         if (orderTime > end.getTime()) return false;
       }
       return true;
-    }).sort(compareOrdersNewestFirst);
+    });
+    return sortOrdersBySettlementTime(filtered);
   }, [searchFilteredOrders, customStartDate, customEndDate]);
 
   // Grouped orders by date
@@ -274,7 +256,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     const sortedKeys = Object.keys(map).sort(compareDatesNewestFirst);
 
     return sortedKeys.map(dateKey => {
-      const orders = map[dateKey].sort(compareOrdersNewestFirst);
+      const orders = sortOrdersBySettlementTime(map[dateKey]);
       const totalRev = orders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
       return {
         date: dateKey,
@@ -390,7 +372,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     if (viewMode === 'single_day') return singleDayOrders;
     if (viewMode === 'monthly') return monthlyOrders;
     if (viewMode === 'custom') return customRangeOrders;
-    return [...searchFilteredOrders].sort(compareOrdersNewestFirst);
+    return sortOrdersBySettlementTime(searchFilteredOrders);
   }, [viewMode, singleDayOrders, monthlyOrders, customRangeOrders, searchFilteredOrders]);
 
   const totalCollected = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
@@ -1283,7 +1265,7 @@ function OrderCard({ order, onReprintReceipt }) {
           <span>•</span>
           <span>Server: <strong>{order.server}</strong></span>
           <span>•</span>
-          <span>{order.items ? order.items.length : 0} items</span>
+          <span>{(order.items || []).reduce((sum, item) => sum + Number(item.quantity || 1), 0)} items</span>
         </div>
       </div>
 
