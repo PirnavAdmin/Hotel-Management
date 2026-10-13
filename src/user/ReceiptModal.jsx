@@ -1,9 +1,7 @@
 import React from 'react';
-import { QRCodeSVG } from 'qrcode.react';
 import { Printer, X } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getNextInvoiceNumber } from '../utils/invoiceCounter';
-import paymentQrImage from '../assets/payment-qr.png';
 
 const formatReceiptTime = (value) => {
   if (!value) return '';
@@ -51,6 +49,7 @@ export function ReceiptModal({ table, onClose, onPrint }) {
     year: 'numeric'
   });
   const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
+  const paidTime = formatReceiptTime(table.settledAt || table.time);
   const tableCapacity = Number(table.capacity) || 0;
   const guestCount =
     (Number(table.guests) > 0 ? Number(table.guests) : null) ??
@@ -58,10 +57,6 @@ export function ReceiptModal({ table, onClose, onPrint }) {
     (tableCapacity > 0 ? tableCapacity : null) ??
     2;
   const paymentMethod = table.paymentMethod ? table.paymentMethod.toUpperCase() : null;
-  const upiId = (import.meta.env.VITE_UPI_ID || '').trim();
-  const upiPaymentUri = upiId
-    ? `upi://pay?${new URLSearchParams({ pa: upiId, pn: 'AVSR FOOD COURT', am: grandTotal.toFixed(2), cu: 'INR', tn: `Invoice ${invoiceNumber}` }).toString()}`
-    : '';
 
   const handlePrint = () => {
     window.print();
@@ -140,7 +135,9 @@ export function ReceiptModal({ table, onClose, onPrint }) {
           lineHeight: '1.35',
           color: '#1e293b',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          minHeight: 0,
+          overflowY: 'auto'
         }}>
           {/* Restaurant Header */}
           <div style={{ textAlign: 'center', borderBottom: '1px dashed #cbd5e1', paddingBottom: '0.45rem', marginBottom: '0.45rem' }}>
@@ -260,24 +257,12 @@ export function ReceiptModal({ table, onClose, onPrint }) {
             </div>
           </div>
 
-          {/* Scannable payment QR */}
           <div style={{ textAlign: 'center', marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed #cbd5e1' }}>
-            {upiPaymentUri ? (
-              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff' }}>
-                <QRCodeSVG value={upiPaymentUri} size={112} level="M" marginSize={2} title={`UPI payment of ${formatCurrency(grandTotal)}`} />
-                <span style={{ fontSize: '0.58rem', color: '#475569', fontWeight: 700 }}>Scan to pay {formatCurrency(grandTotal)}</span>
-              </div>
-            ) : (
-              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff' }}>
-                <img src={paymentQrImage} alt="Scan to Pay" style={{ width: '100px', height: '100px', objectFit: 'contain' }} />
-                <span style={{ fontSize: '0.58rem', color: '#475569', fontWeight: 700 }}>Scan to pay {formatCurrency(grandTotal)}</span>
-              </div>
-            )}
-            <p style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 0' }}>
+            <p style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0f172a', margin: '2px 0 0' }}>
               THANK YOU FOR DINING AT AVSR FOOD COURT!
             </p>
             <p style={{ fontSize: '0.62rem', color: '#64748b', margin: '1px 0 0' }}>
-              Please visit again • For bulk orders: +91 98490 12345
+              Please visit again â€¢ For bulk orders: +91 98490 12345
             </p>
           </div>
         </div>
