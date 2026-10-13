@@ -24,6 +24,7 @@ export function LoginManagement({ currentAdminSession }) {
   const [formSuccess, setFormSuccess] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState('');
 
   // Password change modal
@@ -117,15 +118,23 @@ export function LoginManagement({ currentAdminSession }) {
       return;
     }
 
-    const result = await createUser({
-      Username: formUser,
-      Password: formPass,
-      ConfirmPassword: formPass,
-      Role: formRole,
-      FullName: formName || formUser,
-      Phone: formMobile.trim() || '0000000000',
-      Email: `${formUser}@avsr.com`
-    });
+    setIsSubmitting(true);
+    let result;
+    try {
+      result = await createUser({
+        Username: formUser.trim(),
+        Password: formPass,
+        ConfirmPassword: formPass,
+        Role: formRole,
+        FullName: formName.trim() || formUser.trim(),
+        Phone: formMobile.trim() || '0000000000',
+        Email: `${formUser.trim()}@avsr.com`
+      });
+    } catch (error) {
+      result = { success: false, error: error?.message || 'Could not create this login.' };
+    } finally {
+      setIsSubmitting(false);
+    }
     if (result.success) {
       setFormSuccess(`✅ ${formRole.toUpperCase()} login "${formUser.trim()}" created successfully!`);
       const createdUserObj = {
@@ -601,17 +610,18 @@ export function LoginManagement({ currentAdminSession }) {
             <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.25rem' }}>
               <button
                 type="submit"
+                disabled={isSubmitting}
                 style={{
                   flex: 2, padding: '0.65rem', borderRadius: '10px',
                   background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
                   color: '#ffffff', fontWeight: 800, fontSize: '0.85rem',
-                  border: 'none', cursor: 'pointer',
+                  border: 'none', cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.75 : 1,
                   boxShadow: '0 3px 12px rgba(245,158,11,0.4)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
                 {editingUser ? <Pencil size={16} /> : <UserCheck size={16} />}
-                {editingUser ? 'Save Changes' : 'Create Login Account'}
+                {isSubmitting ? 'Creating Account...' : editingUser ? 'Save Changes' : 'Create Login Account'}
               </button>
               <button
                 type="button" onClick={closeForm}

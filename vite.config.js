@@ -94,6 +94,72 @@ function globalSyncPlugin() {
           return;
         }
 
+        // Local account list used by Login Management in development mode.
+        if (req.url === "/api/Users" && req.method === "GET") {
+          db = loadDb();
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify(db.avsr_auth_users_v1 || []));
+        }
+
+        // Register POS, KOT, and admin accounts in the shared local database.
+        if (req.url === "/api/v1/auth/register" && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => {
+            body += chunk;
+          });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const username = String(payload.username || payload.Username || "").trim();
+              const email = String(payload.email || payload.Email || "").trim();
+              const phone = String(payload.phone || payload.Phone || payload.phoneNumber || payload.PhoneNumber || "").trim();
+              const fullName = String(payload.fullName || payload.FullName || payload.name || payload.Name || username).trim();
+              const password = String(payload.password || payload.Password || "");
+              const role = String(payload.role || payload.Role || "pos").trim().toLowerCase();
+
+              if (!username || !password) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Username and password are required." }));
+              }
+              if (password.length < 4) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Password must be at least 4 characters." }));
+              }
+
+              db = loadDb();
+              const users = db.avsr_auth_users_v1 || [];
+              const duplicate = users.find((user) =>
+                user.username?.toLowerCase() === username.toLowerCase() ||
+                (email && user.email?.toLowerCase() === email.toLowerCase()),
+              );
+              if (duplicate) {
+                res.writeHead(409, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "That username or email is already in use." }));
+              }
+
+              const user = {
+                id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                username,
+                email,
+                phone,
+                fullName,
+                password,
+                role,
+                createdAt: new Date().toISOString(),
+              };
+              db.avsr_auth_users_v1 = [user, ...users];
+              saveDb(db);
+              broadcast({ avsr_auth_users_v1: db.avsr_auth_users_v1 });
+              res.writeHead(201, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, user }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
         // REST API: /api/v1/tables
         if (req.url.startsWith("/api/v1/tables") && req.method === "GET") {
           db = loadDb();
