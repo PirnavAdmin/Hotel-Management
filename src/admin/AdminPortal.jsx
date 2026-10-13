@@ -36,6 +36,7 @@ import { MENU_CATEGORIES } from "../data/menuData";
 import { formatCurrency } from "../utils/formatCurrency";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
+import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { AdminOverview } from "./AdminOverview";
@@ -43,6 +44,37 @@ import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
+
+const STORAGE_KEY_CUSTOM_CATEGORIES = "pos_custom_menu_categories";
+const STORAGE_KEY_CUSTOM_SECTIONS = "pos_custom_table_sections";
+const STORAGE_KEY_CUSTOM_ROLES = "pos_custom_staff_roles";
+const STORAGE_KEY_CUSTOM_SHIFTS = "pos_custom_staff_shifts";
+
+const DEFAULT_SECTIONS = [
+  "Main Hall",
+  "Window Side",
+  "Garden Terrace",
+  "AC Family Hall",
+  "VIP Lounge",
+];
+
+const DEFAULT_ROLES = [
+  "Senior Captain",
+  "VIP Lounge Captain",
+  "Captain",
+  "Head Waiter",
+  "Server / Waiter",
+  "Steward",
+  "Stewardess",
+  "Cashier",
+];
+
+const DEFAULT_SHIFTS = [
+  "Morning Shift (10 AM - 4 PM)",
+  "Evening Shift (5 PM - 11 PM)",
+  "Full Day (11 AM - 11 PM)",
+  "General Shift",
+];
 
 export function AdminPortal({
   onClose,
@@ -94,12 +126,182 @@ export function AdminPortal({
     return () => clearInterval(timer);
   }, []);
 
+  // --- CUSTOM DROPDOWN OPTIONS PERSISTENT STATE ---
+  const [customCategories, setCustomCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_CATEGORIES);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customSections, setCustomSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_SECTIONS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customRoles, setCustomRoles] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_ROLES);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customShifts, setCustomShifts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_SHIFTS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persistent save helpers
+  const saveCustomCategory = (newCat) => {
+    if (!newCat || !newCat.trim()) return;
+    const trimmed = newCat.trim();
+    setCustomCategories((prev) => {
+      if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomSection = (newSec) => {
+    if (!newSec || !newSec.trim()) return;
+    const trimmed = newSec.trim();
+    setCustomSections((prev) => {
+      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_SECTIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomRole = (newRole) => {
+    if (!newRole || !newRole.trim()) return;
+    const trimmed = newRole.trim();
+    setCustomRoles((prev) => {
+      if (prev.some((r) => r.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_ROLES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomShift = (newShift) => {
+    if (!newShift || !newShift.trim()) return;
+    const trimmed = newShift.trim();
+    setCustomShifts((prev) => {
+      if (prev.some((sh) => sh.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_SHIFTS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Dynamic option lists for combobox dropdowns
+  const allCategoryOptions = React.useMemo(() => {
+    const map = new Map();
+    MENU_CATEGORIES.filter((c) => c.id !== "all").forEach((c) => {
+      map.set(c.name.toLowerCase(), { value: c.name, label: c.name });
+    });
+    customCategories.forEach((cat) => {
+      const name = typeof cat === "string" ? cat : cat.name || cat.label || cat.value;
+      if (name && !map.has(name.toLowerCase())) {
+        map.set(name.toLowerCase(), { value: name, label: name });
+      }
+    });
+    (menuItems || []).forEach((item) => {
+      if (item.category) {
+        const matched = MENU_CATEGORIES.find(
+          (c) => c.id === item.category || c.name.toLowerCase() === item.category.toLowerCase()
+        );
+        const name = matched ? matched.name : item.category;
+        if (!map.has(name.toLowerCase())) {
+          map.set(name.toLowerCase(), { value: name, label: name });
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [customCategories, menuItems]);
+
+  const allSectionOptions = React.useMemo(() => {
+    const map = new Map();
+    DEFAULT_SECTIONS.forEach((s) => {
+      map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    customSections.forEach((s) => {
+      if (s && !map.has(s.toLowerCase())) {
+        map.set(s.toLowerCase(), { value: s, label: s });
+      }
+    });
+    (tables || []).forEach((tbl) => {
+      if (tbl.section && !map.has(tbl.section.toLowerCase())) {
+        map.set(tbl.section.toLowerCase(), { value: tbl.section, label: tbl.section });
+      }
+    });
+    return Array.from(map.values());
+  }, [customSections, tables]);
+
+  const allRoleOptions = React.useMemo(() => {
+    const map = new Map();
+    DEFAULT_ROLES.forEach((r) => {
+      map.set(r.toLowerCase(), { value: r, label: r });
+    });
+    customRoles.forEach((r) => {
+      if (r && !map.has(r.toLowerCase())) {
+        map.set(r.toLowerCase(), { value: r, label: r });
+      }
+    });
+    (staffList || []).forEach((st) => {
+      if (st.role && !map.has(st.role.toLowerCase())) {
+        map.set(st.role.toLowerCase(), { value: st.role, label: st.role });
+      }
+    });
+    return Array.from(map.values());
+  }, [customRoles, staffList]);
+
+  const allShiftOptions = React.useMemo(() => {
+    const map = new Map();
+    DEFAULT_SHIFTS.forEach((sh) => {
+      map.set(sh.toLowerCase(), { value: sh, label: sh });
+    });
+    customShifts.forEach((sh) => {
+      if (sh && !map.has(sh.toLowerCase())) {
+        map.set(sh.toLowerCase(), { value: sh, label: sh });
+      }
+    });
+    (staffList || []).forEach((st) => {
+      if (st.shift && !map.has(st.shift.toLowerCase())) {
+        map.set(st.shift.toLowerCase(), { value: st.shift, label: st.shift });
+      }
+    });
+    return Array.from(map.values());
+  }, [customShifts, staffList]);
+
   // --- ITEM MODAL STATE ---
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [itemForm, setItemForm] = useState({
     name: "",
-    category: "biryani",
+    category: "Biryanis & Rice Special",
     price: 250,
     isVeg: false,
     isChefSpecial: false,
@@ -136,9 +338,13 @@ export function AdminPortal({
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
+      const matchedCat = MENU_CATEGORIES.find(
+        (c) => c.id === item.category || c.name.toLowerCase() === item.category.toLowerCase()
+      );
+      const categoryName = matchedCat ? matchedCat.name : item.category;
       setItemForm({
         name: item.name,
-        category: item.category,
+        category: categoryName || "Biryanis & Rice Special",
         price: item.price,
         isVeg: item.isVeg,
         isChefSpecial: item.isChefSpecial,
@@ -151,7 +357,7 @@ export function AdminPortal({
       setEditingItem(null);
       setItemForm({
         name: "",
-        category: "biryani",
+        category: "Biryanis & Rice Special",
         price: 250,
         isVeg: false,
         isChefSpecial: false,
@@ -167,6 +373,10 @@ export function AdminPortal({
   const handleSaveItem = async (e) => {
     e.preventDefault();
     if (!itemForm.name.trim()) return;
+
+    if (itemForm.category) {
+      saveCustomCategory(itemForm.category);
+    }
 
     let saved;
     if (editingItem) {
@@ -217,6 +427,10 @@ export function AdminPortal({
   const handleSaveTable = (e) => {
     e.preventDefault();
     if (!tableForm.name.trim()) return;
+
+    if (tableForm.section) {
+      saveCustomSection(tableForm.section);
+    }
 
     let assignedServer = tableForm.server;
     if (isNewServerMode && newServerName.trim()) {
@@ -296,6 +510,13 @@ export function AdminPortal({
     e.preventDefault();
     if (!staffForm.name.trim()) return;
 
+    if (staffForm.role) {
+      saveCustomRole(staffForm.role);
+    }
+    if (staffForm.shift) {
+      saveCustomShift(staffForm.shift);
+    }
+
     let saved;
     if (editingStaff) {
       if (onUpdateStaff) {
@@ -372,7 +593,7 @@ export function AdminPortal({
               display: "flex",
               height: "100vh",
               width: "100%",
-              background: "#080d1a",
+              background: "var(--bg-primary)",
               overflow: "hidden",
             }
           : {
@@ -400,13 +621,13 @@ export function AdminPortal({
                 overflow: "hidden",
               }
             : {
-                background: "#0b111e",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-card)",
                 width: "100%",
                 maxWidth: "1400px",
                 height: "92vh",
                 borderRadius: "16px",
-                boxShadow: "0 25px 60px rgba(0,0,0,0.8)",
+                boxShadow: "var(--shadow-lg)",
                 display: "flex",
                 flexDirection: "row",
                 overflow: "hidden",
@@ -434,7 +655,7 @@ export function AdminPortal({
             flexDirection: "column",
             height: "100%",
             overflow: "hidden",
-            background: "#070c16",
+            background: "var(--bg-primary)",
             minWidth: 0,
           }}
         >
@@ -476,8 +697,8 @@ export function AdminPortal({
             {activeTab === "menu" && (
               <div
                 style={{
-                  background: "#0d1527",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-card)",
                   borderRadius: "12px",
                   padding: "0.75rem 0.85rem",
                 }}
@@ -515,7 +736,7 @@ export function AdminPortal({
                           style={{
                             fontSize: "1.2rem",
                             fontWeight: 800,
-                            color: "#ffffff",
+                            color: "var(--text-main)",
                             margin: 0,
                           }}
                         >
@@ -538,7 +759,7 @@ export function AdminPortal({
                       <p
                         style={{
                           fontSize: "0.78rem",
-                          color: "#94a3b8",
+                          color: "var(--text-dim)",
                           margin: "2px 0 0 0",
                         }}
                       >
@@ -567,7 +788,7 @@ export function AdminPortal({
                     >
                       <Search
                         size={15}
-                        color="#64748b"
+                        color="var(--text-dim)"
                         style={{
                           position: "absolute",
                           left: "12px",
@@ -582,11 +803,11 @@ export function AdminPortal({
                         style={{
                           width: "100%",
                           height: "100%",
-                          background: "#080d1a",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          background: "var(--bg-tertiary)",
+                          border: "1px solid var(--border-card)",
                           borderRadius: "8px",
                           padding: "0 10px 0 34px",
-                          color: "#ffffff",
+                          color: "var(--text-main)",
                           fontSize: "0.82rem",
                           outline: "none",
                         }}
@@ -621,7 +842,7 @@ export function AdminPortal({
                 <div
                   style={{
                     borderRadius: "10px",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    border: "1px solid var(--border-card)",
                     overflowX: "auto",
                   }}
                 >
@@ -636,11 +857,11 @@ export function AdminPortal({
                     <thead>
                       <tr
                         style={{
-                          background: "rgba(255, 255, 255, 0.02)",
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-                          color: "#94a3b8",
+                          background: "var(--bg-tertiary)",
+                          borderBottom: "1px solid var(--border-subtle)",
+                          color: "var(--text-muted)",
                           fontSize: "0.76rem",
-                          fontWeight: 600,
+                          fontWeight: 700,
                         }}
                       >
                         <th style={{ padding: "0.6rem 0.85rem", width: "44%" }}>
@@ -674,7 +895,7 @@ export function AdminPortal({
                             style={{
                               padding: "2rem",
                               textAlign: "center",
-                              color: "#94a3b8",
+                              color: "var(--text-muted)",
                               fontSize: "0.85rem",
                             }}
                           >
@@ -686,12 +907,12 @@ export function AdminPortal({
                           <tr
                             key={item.id}
                             style={{
-                              borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                              borderBottom: "1px solid var(--border-subtle)",
                               transition: "background 0.15s ease",
                             }}
                             onMouseEnter={(e) =>
                               (e.currentTarget.style.background =
-                                "rgba(255, 255, 255, 0.02)")
+                                "var(--bg-tertiary)")
                             }
                             onMouseLeave={(e) =>
                               (e.currentTarget.style.background = "transparent")
@@ -713,7 +934,7 @@ export function AdminPortal({
                                     height: "52px",
                                     borderRadius: "10px",
                                     objectFit: "cover",
-                                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                                    border: "1px solid var(--border-card)",
                                     flexShrink: 0,
                                   }}
                                   onError={(e) =>
@@ -723,9 +944,9 @@ export function AdminPortal({
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div
                                     style={{
-                                      fontWeight: 700,
-                                      color: "#ffffff",
-                                      fontSize: "0.9rem",
+                                      fontWeight: 800,
+                                      color: "var(--text-main)",
+                                      fontSize: "0.92rem",
                                       lineHeight: 1.3,
                                     }}
                                   >
@@ -734,7 +955,7 @@ export function AdminPortal({
                                   <div
                                     style={{
                                       fontSize: "0.72rem",
-                                      color: "#94a3b8",
+                                      color: "var(--text-muted)",
                                       lineHeight: 1.35,
                                       marginTop: "2px",
                                       display: "-webkit-box",
@@ -752,8 +973,9 @@ export function AdminPortal({
                               style={{
                                 padding: "0.6rem 0.85rem",
                                 textTransform: "capitalize",
-                                color: "#cbd5e1",
+                                color: "var(--text-main)",
                                 fontSize: "0.84rem",
+                                fontWeight: 600,
                                 whiteSpace: "nowrap",
                               }}
                             >
@@ -909,10 +1131,10 @@ export function AdminPortal({
                         justifyContent: "space-between",
                         alignItems: "center",
                         padding: "0.5rem 0.85rem",
-                        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-                        background: "rgba(255, 255, 255, 0.015)",
+                        borderTop: "1px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
                         fontSize: "0.74rem",
-                        color: "#94a3b8",
+                        color: "var(--text-muted)",
                         flexWrap: "wrap",
                         gap: "0.5rem",
                       }}
@@ -921,15 +1143,15 @@ export function AdminPortal({
                       <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                         <span>
                           Showing{" "}
-                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {startIdx + 1}
                           </strong>
                           –
-                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {Math.min(startIdx + menuPageSize, filteredItems.length)}
                           </strong>{" "}
                           of{" "}
-                          <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {filteredItems.length}
                           </strong>{" "}
                           items
@@ -940,7 +1162,7 @@ export function AdminPortal({
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         {/* Per-page selector (small) */}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                          <span style={{ fontSize: "0.7rem", color: "#64748b" }}>Per page:</span>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Per page:</span>
                           <select
                             value={menuPageSize}
                             onChange={(e) => {
@@ -948,9 +1170,9 @@ export function AdminPortal({
                               setMenuPage(1);
                             }}
                             style={{
-                              background: "#080d1a",
-                              color: "#cbd5e1",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              background: "var(--bg-tertiary)",
+                              color: "var(--text-main)",
+                              border: "1px solid var(--border-card)",
                               borderRadius: "5px",
                               padding: "2px 6px",
                               fontSize: "0.72rem",
@@ -1837,7 +2059,7 @@ export function AdminPortal({
                           ? "#ffffff"
                           : hasOrders
                             ? "var(--text-main)"
-                            : "var(--text-dim)",
+                            : "var(--text-muted)",
                         border: isSelected
                           ? "1px solid #ea580c"
                           : "1px solid var(--border-subtle)",
@@ -2381,30 +2603,17 @@ export function AdminPortal({
                 >
                   Category <span style={{ color: "#ea580c" }}>*</span>
                 </label>
-                <select
+                <CustomCreatableDropdown
                   value={itemForm.category}
-                  onChange={(e) =>
-                    setItemForm({ ...itemForm, category: e.target.value })
+                  onChange={(val) =>
+                    setItemForm({ ...itemForm, category: val })
                   }
-                  style={{
-                    width: "100%",
-                    background: "var(--bg-tertiary)",
-                    border: "1.5px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0.65rem 0.85rem",
-                    color: "var(--text-main)",
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {MENU_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
+                  options={allCategoryOptions}
+                  placeholder="Select or type custom category..."
+                  required
+                  allowCustom
+                  onSaveCustomOption={saveCustomCategory}
+                />
               </div>
 
               <div>
@@ -2820,30 +3029,17 @@ export function AdminPortal({
                 Dining Section / Area{" "}
                 <span style={{ color: "#ea580c" }}>*</span>
               </label>
-              <select
+              <CustomCreatableDropdown
                 value={tableForm.section}
-                onChange={(e) =>
-                  setTableForm({ ...tableForm, section: e.target.value })
+                onChange={(val) =>
+                  setTableForm({ ...tableForm, section: val })
                 }
-                style={{
-                  width: "100%",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <option value="Main Hall">Main Hall</option>
-                <option value="Window Side">Window Side</option>
-                <option value="Garden Terrace">Garden Terrace</option>
-                <option value="AC Family Hall">AC Family Hall</option>
-                <option value="VIP Lounge">VIP Lounge</option>
-              </select>
+                options={allSectionOptions}
+                placeholder="Select or type custom dining section..."
+                required
+                allowCustom
+                onSaveCustomOption={saveCustomSection}
+              />
             </div>
 
             <div>
@@ -2979,55 +3175,54 @@ export function AdminPortal({
               </div>
 
               {!isNewServerMode ? (
-                <select
+                <CustomCreatableDropdown
                   value={tableForm.server}
-                  onChange={(e) => {
-                    if (e.target.value === "__add_new__") {
+                  onChange={(val) => {
+                    if (val === "__add_new__") {
                       setIsNewServerMode(true);
                       setNewServerName("");
                     } else {
-                      setTableForm({ ...tableForm, server: e.target.value });
+                      setTableForm({ ...tableForm, server: val });
                     }
                   }}
-                  style={{
-                    width: "100%",
-                    background: "var(--bg-tertiary)",
-                    border: "1.5px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0.65rem 0.85rem",
-                    color: "var(--text-main)",
-                    fontWeight: 600,
-                    fontSize: "0.92rem",
-                    outline: "none",
-                    cursor: "pointer",
+                  options={[
+                    ...staffList.map((staff) => {
+                      const staffName = String(
+                        staff?.name ||
+                          staff?.fullName ||
+                          staff?.FullName ||
+                          staff?.username ||
+                          "Unnamed staff",
+                      );
+                      const staffRole =
+                        staff?.role || staff?.roleTitle || "Staff";
+                      return {
+                        value: staffName,
+                        label: `${staffName} (${staffRole})`,
+                      };
+                    }),
+                    {
+                      value: "__add_new__",
+                      label: "+ Add New Server Name...",
+                    },
+                  ]}
+                  placeholder="Select or type server name..."
+                  allowCustom
+                  onSaveCustomOption={(newServer) => {
+                    if (newServer && newServer !== "__add_new__") {
+                      setTableForm({ ...tableForm, server: newServer });
+                      if (!staffList.some((s) => s.name?.toLowerCase() === newServer.toLowerCase())) {
+                        onAddStaff({
+                          id: Date.now(),
+                          name: newServer,
+                          role: "Server / Waiter",
+                          phone: "+91 98450 00000",
+                          shift: "General Shift",
+                        });
+                      }
+                    }
                   }}
-                >
-                  {staffList.map((staff) => {
-                    const staffName = String(
-                      staff?.name ||
-                        staff?.fullName ||
-                        staff?.FullName ||
-                        staff?.username ||
-                        "Unnamed staff",
-                    );
-                    const staffRole =
-                      staff?.role || staff?.roleTitle || "Staff";
-                    return (
-                      <option
-                        key={staff?.id ?? staff?.staffId ?? staffName}
-                        value={staffName}
-                      >
-                        {staffName} ({staffRole})
-                      </option>
-                    );
-                  })}
-                  <option
-                    value="__add_new__"
-                    style={{ color: "var(--accent-amber)", fontWeight: 800 }}
-                  >
-                    + Add New Server Name...
-                  </option>
-                </select>
+                />
               ) : (
                 <div
                   style={{
@@ -3060,30 +3255,15 @@ export function AdminPortal({
                         outline: "none",
                       }}
                     />
-                    <select
+                    <CustomCreatableDropdown
                       value={newServerRole}
-                      onChange={(e) => setNewServerRole(e.target.value)}
-                      style={{
-                        flex: 1,
-                        background: "var(--bg-secondary)",
-                        border: "1.5px solid var(--border-subtle)",
-                        borderRadius: "6px",
-                        padding: "0.6rem",
-                        color: "var(--text-main)",
-                        fontWeight: 600,
-                        fontSize: "0.85rem",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="Server / Waiter">Server / Waiter</option>
-                      <option value="Captain">Captain</option>
-                      <option value="Senior Captain">Senior Captain</option>
-                      <option value="Stewardess">Stewardess</option>
-                      <option value="VIP Lounge Captain">
-                        VIP Lounge Captain
-                      </option>
-                    </select>
+                      onChange={(val) => setNewServerRole(val)}
+                      options={allRoleOptions}
+                      placeholder="Select or type role..."
+                      allowCustom
+                      onSaveCustomOption={saveCustomRole}
+                      style={{ flex: 1 }}
+                    />
                   </div>
                   <p
                     style={{
@@ -3261,46 +3441,17 @@ export function AdminPortal({
               >
                 Role / Designation
               </label>
-              <select
+              <CustomCreatableDropdown
                 value={staffForm.role}
-                onChange={(e) =>
-                  setStaffForm({ ...staffForm, role: e.target.value })
+                onChange={(val) =>
+                  setStaffForm({ ...staffForm, role: val })
                 }
-                style={{
-                  width: "100%",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {![
-                  "Senior Captain",
-                  "VIP Lounge Captain",
-                  "Captain",
-                  "Head Waiter",
-                  "Server / Waiter",
-                  "Steward",
-                  "Stewardess",
-                  "Cashier",
-                ].includes(staffForm.role) &&
-                  staffForm.role && (
-                    <option value={staffForm.role}>{staffForm.role}</option>
-                  )}
-                <option value="Senior Captain">Senior Captain</option>
-                <option value="VIP Lounge Captain">VIP Lounge Captain</option>
-                <option value="Captain">Captain</option>
-                <option value="Head Waiter">Head Waiter</option>
-                <option value="Server / Waiter">Server / Waiter</option>
-                <option value="Steward">Steward</option>
-                <option value="Stewardess">Stewardess</option>
-                <option value="Cashier">Cashier</option>
-              </select>
+                options={allRoleOptions}
+                placeholder="Select or type custom role..."
+                required
+                allowCustom
+                onSaveCustomOption={saveCustomRole}
+              />
             </div>
 
             <div>
@@ -3348,44 +3499,16 @@ export function AdminPortal({
               >
                 Shift
               </label>
-              <select
+              <CustomCreatableDropdown
                 value={staffForm.shift}
-                onChange={(e) =>
-                  setStaffForm({ ...staffForm, shift: e.target.value })
+                onChange={(val) =>
+                  setStaffForm({ ...staffForm, shift: val })
                 }
-                style={{
-                  width: "100%",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {![
-                  "Morning Shift (10 AM - 4 PM)",
-                  "Evening Shift (5 PM - 11 PM)",
-                  "Full Day (11 AM - 11 PM)",
-                  "General Shift",
-                ].includes(staffForm.shift) &&
-                  staffForm.shift && (
-                    <option value={staffForm.shift}>{staffForm.shift}</option>
-                  )}
-                <option value="Morning Shift (10 AM - 4 PM)">
-                  Morning Shift (10 AM - 4 PM)
-                </option>
-                <option value="Evening Shift (5 PM - 11 PM)">
-                  Evening Shift (5 PM - 11 PM)
-                </option>
-                <option value="Full Day (11 AM - 11 PM)">
-                  Full Day (11 AM - 11 PM)
-                </option>
-                <option value="General Shift">General Shift</option>
-              </select>
+                options={allShiftOptions}
+                placeholder="Select or type custom shift..."
+                allowCustom
+                onSaveCustomOption={saveCustomShift}
+              />
             </div>
 
             <div

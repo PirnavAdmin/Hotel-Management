@@ -200,8 +200,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
       {/* Outer Card Matching Design */}
       <div
         style={{
-          background: "#0d1527",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
           borderRadius: "16px",
           padding: "1.5rem",
         }}
@@ -239,7 +239,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                   style={{
                     fontSize: "1.35rem",
                     fontWeight: 800,
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     margin: 0,
                   }}
                 >
@@ -418,8 +418,9 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               />
               <span
                 style={{
-                  color: "#94a3b8",
                   fontSize: "0.72rem",
+                  color: "var(--text-dim)",
+                  margin: "3px 0 0 0",
                   fontWeight: 600,
                   userSelect: "none",
                 }}
@@ -507,13 +508,13 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
         >
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "12px",
               padding: "1.1rem",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
               Total Gross Revenue
             </div>
             <div
@@ -526,46 +527,46 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
             >
               {formatCurrency(totalRevenue)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "3px" }}>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
               Across {filteredOrders.length} settled tickets
             </div>
           </div>
 
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "12px",
               padding: "1.1rem",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
               Total Orders
             </div>
             <div
               style={{
                 fontSize: "1.4rem",
                 fontWeight: 800,
-                color: "#ffffff",
+                color: "var(--text-main)",
                 marginTop: "4px",
               }}
             >
               {filteredOrders.length}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "3px" }}>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
               Settled dining orders
             </div>
           </div>
 
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "12px",
               padding: "1.1rem",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
               GST & Tax Collected
             </div>
             <div
@@ -578,20 +579,20 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
             >
               {formatCurrency(totalTax)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "3px" }}>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
               Standard 5% Food GST
             </div>
           </div>
 
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "12px",
               padding: "1.1rem",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
               Service Charges
             </div>
             <div
@@ -604,7 +605,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
             >
               {formatCurrency(totalService)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "3px" }}>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
               Staff & facility tips
             </div>
           </div>
@@ -621,8 +622,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
           {/* Payment Methods Breakdown */}
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "14px",
               padding: "1.25rem",
               display: "flex",
@@ -634,7 +635,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               style={{
                 fontSize: "0.95rem",
                 fontWeight: 700,
-                color: "#ffffff",
+                color: "var(--text-main)",
                 marginBottom: "1rem",
               }}
             >
@@ -662,7 +663,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 >
                   <Smartphone size={14} /> UPI Payments ({upiPercent}%)
                 </span>
-                <span style={{ color: "#ffffff", fontWeight: 800 }}>
+                <span style={{ color: "var(--text-main)", fontWeight: 800 }}>
                   {formatCurrency(paymentStats.upi)}
                 </span>
               </div>
@@ -670,7 +671,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 style={{
                   width: "100%",
                   height: "8px",
-                  background: "rgba(255,255,255,0.06)",
+                  background: "var(--border-subtle)",
                   borderRadius: "4px",
                   overflow: "hidden",
                 }}
@@ -706,7 +707,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 >
                   <Banknote size={14} /> Cash ({cashPercent}%)
                 </span>
-                <span style={{ color: "#ffffff", fontWeight: 800 }}>
+                <span style={{ color: "var(--text-main)", fontWeight: 800 }}>
                   {formatCurrency(paymentStats.cash)}
                 </span>
               </div>
@@ -714,7 +715,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 style={{
                   width: "100%",
                   height: "8px",
-                  background: "rgba(255,255,255,0.06)",
+                  background: "var(--border-subtle)",
                   borderRadius: "4px",
                   overflow: "hidden",
                 }}
@@ -750,7 +751,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 >
                   <CreditCard size={14} /> Card & POS Terminal ({cardPercent}%)
                 </span>
-                <span style={{ color: "#ffffff", fontWeight: 800 }}>
+                <span style={{ color: "var(--text-main)", fontWeight: 800 }}>
                   {formatCurrency(paymentStats.card)}
                 </span>
               </div>
@@ -758,7 +759,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 style={{
                   width: "100%",
                   height: "8px",
-                  background: "rgba(255,255,255,0.06)",
+                  background: "var(--border-subtle)",
                   borderRadius: "4px",
                   overflow: "hidden",
                 }}
@@ -777,8 +778,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
           {/* Top Selling Items Ranking */}
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "14px",
               padding: "1.25rem",
               display: "flex",
@@ -858,7 +859,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                     justifyContent: "space-between",
                     padding: "0.5rem 0.65rem",
                     borderRadius: "8px",
-                    background: "rgba(255, 255, 255, 0.02)",
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-subtle)",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -872,8 +874,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                             ? "#f59e0b"
                             : index === 1
                             ? "#64748b"
-                            : "rgba(255,255,255,0.1)",
-                        color: index <= 1 ? "#000000" : "#ffffff",
+                            : "var(--border-card)",
+                        color: index <= 1 ? "#000000" : "var(--text-main)",
                         fontWeight: 800,
                         fontSize: "0.72rem",
                         display: "flex",
@@ -886,8 +888,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                     <span
                       style={{
                         fontSize: "0.85rem",
-                        fontWeight: 600,
-                        color: "#ffffff",
+                        fontWeight: 700,
+                        color: "var(--text-main)",
                       }}
                     >
                       {name}

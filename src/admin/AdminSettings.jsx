@@ -63,8 +63,8 @@ export function AdminSettings({
       {/* Outer Card Matching Design */}
       <div
         style={{
-          background: "#0d1527",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
           borderRadius: "16px",
           padding: "1.5rem",
         }}
@@ -102,7 +102,7 @@ export function AdminSettings({
                   style={{
                     fontSize: "1.35rem",
                     fontWeight: 800,
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     margin: 0,
                   }}
                 >
@@ -112,7 +112,7 @@ export function AdminSettings({
               <p
                 style={{
                   fontSize: "0.8rem",
-                  color: "#94a3b8",
+                  color: "var(--text-dim)",
                   margin: "3px 0 0 0",
                 }}
               >
@@ -150,8 +150,8 @@ export function AdminSettings({
           {/* Section 1: Business Identity */}
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "14px",
               padding: "1.25rem",
             }}
@@ -169,7 +169,7 @@ export function AdminSettings({
                 style={{
                   fontSize: "0.98rem",
                   fontWeight: 700,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   margin: 0,
                 }}
               >
@@ -189,7 +189,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -203,11 +203,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -219,7 +219,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -233,11 +233,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -249,7 +249,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -263,11 +263,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -279,7 +279,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -293,11 +293,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -309,8 +309,8 @@ export function AdminSettings({
           {/* Section 2: Tax & Rates */}
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "14px",
               padding: "1.25rem",
             }}
@@ -328,7 +328,7 @@ export function AdminSettings({
                 style={{
                   fontSize: "0.98rem",
                   fontWeight: 700,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   margin: 0,
                 }}
               >
@@ -348,7 +348,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -366,11 +366,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -382,7 +382,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -400,11 +400,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -416,7 +416,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -430,11 +430,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -446,8 +446,8 @@ export function AdminSettings({
           {/* Section 3: Receipt Template */}
           <div
             style={{
-              background: "#080d1a",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "14px",
               padding: "1.25rem",
             }}
@@ -465,7 +465,7 @@ export function AdminSettings({
                 style={{
                   fontSize: "0.98rem",
                   fontWeight: 700,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   margin: 0,
                 }}
               >
@@ -485,7 +485,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -499,11 +499,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -515,7 +515,7 @@ export function AdminSettings({
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -529,11 +529,11 @@ export function AdminSettings({
                   }
                   style={{
                     width: "100%",
-                    background: "#0d1527",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}

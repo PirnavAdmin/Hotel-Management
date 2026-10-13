@@ -19,13 +19,12 @@ export function AdminHeader({
   const handleToggleTheme = () => {
     const nextTheme =
       currentTheme === "light-bistro" ? "royal-saffron" : "light-bistro";
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    try {
+      localStorage.setItem("gourmet_pos_theme_v2", nextTheme);
+    } catch {}
     if (onChangeTheme) {
       onChangeTheme(nextTheme);
-    } else {
-      document.documentElement.setAttribute("data-theme", nextTheme);
-      try {
-        localStorage.setItem("gourmet_pos_theme_v2", nextTheme);
-      } catch {}
     }
   };
 
@@ -47,8 +46,8 @@ export function AdminHeader({
     <header
       style={{
         padding: "0.85rem 1.75rem",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.07)",
-        background: "#080d1a",
+        borderBottom: "1px solid var(--border-subtle)",
+        background: "var(--bg-secondary)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -87,7 +86,7 @@ export function AdminHeader({
             style={{
               fontSize: "1.2rem",
               fontWeight: 800,
-              color: "#ffffff",
+              color: "var(--text-main)",
               lineHeight: 1.2,
               margin: 0,
               whiteSpace: "nowrap",
@@ -100,7 +99,7 @@ export function AdminHeader({
           <p
             style={{
               fontSize: "0.78rem",
-              color: "#94a3b8",
+              color: "var(--text-dim)",
               margin: 0,
               marginTop: "2px",
               whiteSpace: "nowrap",
@@ -128,22 +127,22 @@ export function AdminHeader({
             display: "flex",
             alignItems: "center",
             gap: "0.55rem",
-            background: "rgba(255, 255, 255, 0.03)",
-            border: "1.5px solid rgba(245, 158, 11, 0.28)",
+            background: "var(--bg-tertiary)",
+            border: "1.5px solid var(--border-subtle)",
             padding: "0.45rem 0.95rem",
             borderRadius: "10px",
             fontSize: "0.78rem",
             fontFamily: "monospace",
             whiteSpace: "nowrap",
-            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
           }}
         >
           <Calendar size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
-          <span style={{ color: "#ffffff", fontWeight: 700 }}>
+          <span style={{ color: "var(--text-main)", fontWeight: 700 }}>
             {formattedDate}
           </span>
-          <span style={{ color: "#64748b", margin: "0 2px" }}>|</span>
-          <span style={{ color: "#fbbf24", fontWeight: 800 }}>
+          <span style={{ color: "var(--text-dim)", margin: "0 2px" }}>|</span>
+          <span style={{ color: "var(--accent-amber-light)", fontWeight: 800 }}>
             {formattedTime}
           </span>
         </div>
@@ -155,14 +154,14 @@ export function AdminHeader({
             width: "38px",
             height: "38px",
             borderRadius: "50%",
-            background: "rgba(255, 255, 255, 0.04)",
-            border: "1.5px solid rgba(255, 255, 255, 0.12)",
+            background: "var(--bg-tertiary)",
+            border: "1.5px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
             transition: "all 0.2s ease",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             flexShrink: 0,
           }}
           title={
@@ -170,14 +169,6 @@ export function AdminHeader({
               ? "Switch to Dark Theme"
               : "Switch to Light Theme"
           }
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.12)";
-          }}
         >
           {currentTheme === "light-bistro" ? (
             <Sun size={17} color="#ea580c" />

@@ -9,6 +9,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 const INITIAL_INVENTORY = [
@@ -190,7 +191,6 @@ export function AdminInventory() {
     "Packaging",
     "Beverages",
   ];
-
   const suppliers = [...new Set(inventory.map((item) => item.supplier))].sort();
   const inStockCount = inventory.filter(
     (item) => item.stock > item.minThreshold,
@@ -229,8 +229,8 @@ export function AdminInventory() {
       {/* Outer Card Matching Design */}
       <div
         style={{
-          background: "#0d1527",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
           borderRadius: "16px",
           padding: "1.5rem",
         }}
@@ -272,7 +272,7 @@ export function AdminInventory() {
                   style={{
                     fontSize: "1.35rem",
                     fontWeight: 800,
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     margin: 0,
                   }}
                 >
@@ -310,7 +310,7 @@ export function AdminInventory() {
               <p
                 style={{
                   fontSize: "0.8rem",
-                  color: "#94a3b8",
+                  color: "var(--text-dim)",
                   margin: "3px 0 0 0",
                 }}
               >
@@ -325,8 +325,11 @@ export function AdminInventory() {
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: "0.75rem",
               flexWrap: "wrap",
+              flex: "1 1 100%",
+              width: "100%",
             }}
           >
             {/* Search Input */}
@@ -341,7 +344,7 @@ export function AdminInventory() {
             >
               <Search
                 size={16}
-                color="#64748b"
+                color="var(--text-dim)"
                 style={{
                   position: "absolute",
                   left: "12px",
@@ -359,37 +362,131 @@ export function AdminInventory() {
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: "#080d1a",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-card)",
                   borderRadius: "9px",
                   padding: "0 12px 0 36px",
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   fontSize: "0.82rem",
                   outline: "none",
                 }}
               />
             </div>
 
+            {/* Inventory Filters */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                flex: "1 1 480px",
+                gap: "0.65rem",
+                minWidth: 0,
+              }}
+            >
+              {[
+                {
+                  label: "Filter by category",
+                  value: selectedCategory,
+                  onChange: setSelectedCategory,
+                  options: categories.map((category) => ({
+                    value: category,
+                    label: category === "all" ? "All Categories" : category,
+                  })),
+                },
+                {
+                  label: "Filter by status",
+                  value: selectedStatus,
+                  onChange: setSelectedStatus,
+                  options: [
+                    { value: "all", label: "All Status" },
+                    { value: "in-stock", label: "In Stock" },
+                    { value: "low-stock", label: "Low Stock" },
+                    { value: "out-of-stock", label: "Out of Stock" },
+                  ],
+                },
+                {
+                  label: "Filter by supplier",
+                  value: selectedSupplier,
+                  onChange: setSelectedSupplier,
+                  options: [
+                    { value: "all", label: "All Suppliers" },
+                    ...suppliers.map((supplier) => ({
+                      value: supplier,
+                      label: supplier,
+                    })),
+                  ],
+                },
+              ].map(({ label, value, onChange, options }) => (
+                <div key={label} style={{ position: "relative", minWidth: 0 }}>
+                  <select
+                    aria-label={label}
+                    value={value}
+                    onChange={(e) => {
+                      onChange(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      width: "100%",
+                      minWidth: 0,
+                      height: "40px",
+                      padding: "0 2.25rem 0 0.85rem",
+                      color: "var(--text-main)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
+                      borderRadius: "8px",
+                      fontSize: "0.8rem",
+                      outline: "none",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      cursor: "pointer",
+                      transition:
+                        "border-color 0.15s ease, box-shadow 0.15s ease",
+                    }}
+                  >
+                    {options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    strokeWidth={2.2}
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      right: "0.75rem",
+                      transform: "translateY(-50%)",
+                      color: "var(--text-muted)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
             {/* Add New Stock Item */}
             <button
               onClick={() => setIsAddModalOpen(true)}
               style={{
-                height: "40px",
+                height: "36px",
                 background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "9px",
-                padding: "0 1.25rem",
+                padding: "0 0.9rem",
                 fontWeight: 700,
-                fontSize: "0.82rem",
+                fontSize: "0.78rem",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.45rem",
+                marginLeft: "auto",
                 cursor: "pointer",
                 boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
               }}
             >
-              <Plus size={16} />
+              <Plus size={15} />
               <span>Add Stock Item</span>
             </button>
           </div>
@@ -438,8 +535,8 @@ export function AdminInventory() {
                 gap: "0.75rem",
                 minWidth: 0,
                 padding: "0.85rem 1rem",
-                background: "rgba(255, 255, 255, 0.025)",
-                border: "1px solid rgba(255, 255, 255, 0.07)",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
                 borderRadius: "10px",
               }}
             >
@@ -458,7 +555,13 @@ export function AdminInventory() {
                 <Icon size={20} />
               </div>
               <div>
-                <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
+                <div
+                  style={{
+                    color: "var(--text-muted)",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                  }}
+                >
                   {label}
                 </div>
                 <div style={{ color, fontSize: "1.15rem", fontWeight: 800 }}>
@@ -469,85 +572,12 @@ export function AdminInventory() {
           ))}
         </div>
 
-        {/* Dropdown Filters */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
-            gap: "0.65rem",
-            marginBottom: "1rem",
-          }}
-        >
-          {[
-            {
-              label: "Filter by category",
-              value: selectedCategory,
-              onChange: setSelectedCategory,
-              options: categories.map((category) => ({
-                value: category,
-                label: category === "all" ? "All Categories" : category,
-              })),
-            },
-            {
-              label: "Filter by status",
-              value: selectedStatus,
-              onChange: setSelectedStatus,
-              options: [
-                { value: "all", label: "All Status" },
-                { value: "in-stock", label: "In Stock" },
-                { value: "low-stock", label: "Low Stock" },
-                { value: "out-of-stock", label: "Out of Stock" },
-              ],
-            },
-            {
-              label: "Filter by supplier",
-              value: selectedSupplier,
-              onChange: setSelectedSupplier,
-              options: [
-                { value: "all", label: "All Suppliers" },
-                ...suppliers.map((supplier) => ({
-                  value: supplier,
-                  label: supplier,
-                })),
-              ],
-            },
-          ].map(({ label, value, onChange, options }) => (
-            <select
-              key={label}
-              aria-label={label}
-              value={value}
-              onChange={(e) => {
-                onChange(e.target.value);
-                setCurrentPage(1);
-              }}
-              style={{
-                width: "100%",
-                minWidth: 0,
-                height: "40px",
-                padding: "0 0.75rem",
-                color: "#cbd5e1",
-                background: "#080d1a",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "8px",
-                fontSize: "0.8rem",
-                outline: "none",
-              }}
-            >
-              {options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ))}
-        </div>
-
         {/* Inventory Items Table */}
         <div
           style={{
             overflowX: "auto",
             borderRadius: "12px",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: "1px solid var(--border-card)",
           }}
         >
           <table
@@ -561,11 +591,11 @@ export function AdminInventory() {
             <thead>
               <tr
                 style={{
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  color: "#94a3b8",
+                  borderBottom: "1px solid var(--border-subtle)",
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-muted)",
                   fontSize: "0.8rem",
-                  fontWeight: 600,
+                  fontWeight: 700,
                 }}
               >
                 <th style={{ padding: "0.85rem 1rem" }}>Ingredient / Supply</th>
@@ -592,12 +622,11 @@ export function AdminInventory() {
                   <tr
                     key={item.id}
                     style={{
-                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                      borderBottom: "1px solid var(--border-subtle)",
                       transition: "background 0.15s ease",
                     }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(255, 255, 255, 0.02)")
+                      (e.currentTarget.style.background = "var(--bg-tertiary)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
@@ -605,13 +634,19 @@ export function AdminInventory() {
                   >
                     {/* Item Name */}
                     <td style={{ padding: "1rem" }}>
-                      <div style={{ fontWeight: 700, color: "#ffffff" }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          color: "var(--text-main)",
+                          fontSize: "0.92rem",
+                        }}
+                      >
                         {item.name}
                       </div>
                       <div
                         style={{
                           fontSize: "0.72rem",
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           marginTop: "2px",
                         }}
                       >
@@ -620,7 +655,13 @@ export function AdminInventory() {
                     </td>
 
                     {/* Category */}
-                    <td style={{ padding: "1rem", color: "#cbd5e1" }}>
+                    <td
+                      style={{
+                        padding: "1rem",
+                        color: "var(--text-main)",
+                        fontWeight: 600,
+                      }}
+                    >
                       {item.category}
                     </td>
 
@@ -634,7 +675,7 @@ export function AdminInventory() {
                             : isLowStock
                               ? "#f59e0b"
                               : "#10b981",
-                          fontSize: "0.95rem",
+                          fontSize: "0.85rem",
                         }}
                       >
                         {item.stock} {item.unit}
@@ -642,7 +683,13 @@ export function AdminInventory() {
                     </td>
 
                     {/* Min Threshold */}
-                    <td style={{ padding: "1rem", color: "#94a3b8" }}>
+                    <td
+                      style={{
+                        padding: "1rem",
+                        color: "var(--text-muted)",
+                        fontWeight: 600,
+                      }}
+                    >
                       {item.minThreshold} {item.unit}
                     </td>
 
@@ -761,25 +808,25 @@ export function AdminInventory() {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "0.5rem 0.85rem",
-              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-              background: "rgba(255, 255, 255, 0.015)",
+              borderTop: "1px solid var(--border-subtle)",
+              background: "var(--bg-tertiary)",
               fontSize: "0.74rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               flexWrap: "wrap",
               gap: "0.5rem",
             }}
           >
             <span>
               Showing{" "}
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filtered.length === 0 ? 0 : pageStart + 1}
               </strong>
               –
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {Math.min(pageStart + itemsPerPage, filtered.length)}
               </strong>{" "}
               of{" "}
-              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filtered.length}
               </strong>{" "}
               items
@@ -790,7 +837,9 @@ export function AdminInventory() {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
               >
-                <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                <span
+                  style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                >
                   Per page:
                 </span>
                 <select
@@ -801,9 +850,9 @@ export function AdminInventory() {
                     setCurrentPage(1);
                   }}
                   style={{
-                    background: "#080d1a",
-                    color: "#cbd5e1",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-main)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "5px",
                     padding: "2px 6px",
                     fontSize: "0.72rem",
@@ -941,20 +990,20 @@ export function AdminInventory() {
         >
           <div
             style={{
-              background: "#0f172a",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
               borderRadius: "16px",
               padding: "1.5rem",
               width: "100%",
               maxWidth: "460px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
+              boxShadow: "var(--shadow-lg)",
             }}
           >
             <h3
               style={{
                 fontSize: "1.2rem",
                 fontWeight: 800,
-                color: "#ffffff",
+                color: "var(--text-main)",
                 marginBottom: "1rem",
               }}
             >
@@ -974,7 +1023,7 @@ export function AdminInventory() {
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "#94a3b8",
+                    color: "var(--text-dim)",
                     marginBottom: "4px",
                   }}
                 >
@@ -990,11 +1039,11 @@ export function AdminInventory() {
                   }
                   style={{
                     width: "100%",
-                    background: "#080d1a",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
-                    color: "#ffffff",
+                    color: "var(--text-main)",
                     fontSize: "0.85rem",
                     outline: "none",
                   }}
@@ -1013,7 +1062,7 @@ export function AdminInventory() {
                     style={{
                       display: "block",
                       fontSize: "0.75rem",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       marginBottom: "4px",
                     }}
                   >
@@ -1026,11 +1075,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1049,7 +1098,7 @@ export function AdminInventory() {
                     style={{
                       display: "block",
                       fontSize: "0.75rem",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       marginBottom: "4px",
                     }}
                   >
@@ -1062,11 +1111,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1092,7 +1141,7 @@ export function AdminInventory() {
                     style={{
                       display: "block",
                       fontSize: "0.75rem",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       marginBottom: "4px",
                     }}
                   >
@@ -1106,11 +1155,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}
@@ -1122,7 +1171,7 @@ export function AdminInventory() {
                     style={{
                       display: "block",
                       fontSize: "0.75rem",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       marginBottom: "4px",
                     }}
                   >
@@ -1136,11 +1185,11 @@ export function AdminInventory() {
                     }
                     style={{
                       width: "100%",
-                      background: "#080d1a",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       fontSize: "0.85rem",
                       outline: "none",
                     }}

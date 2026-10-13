@@ -23,6 +23,9 @@ export function LoginManagement({ currentAdminSession }) {
   const [formError, setFormError]   = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState('');
 
   // Password change modal
   const [changePwUser, setChangePwUser] = useState(null);
@@ -32,8 +35,23 @@ export function LoginManagement({ currentAdminSession }) {
   const [pwSuccess, setPwSuccess]       = useState('');
 
   const reload = async () => {
-    const data = await getUsers();
-    setUsers(data);
+    setIsRefreshing(true);
+    setRefreshMessage('');
+    try {
+      const result = await getUsers();
+      setUsers(result.users);
+      setRefreshMessage(result.error || `Loaded ${result.users.length} account${result.users.length === 1 ? '' : 's'}.`);
+    } catch (error) {
+      setRefreshMessage(error?.message || 'Could not refresh accounts.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const saveUsersCache = (nextUsers) => {
+    try {
+      localStorage.setItem('avsr_auth_users_v1', JSON.stringify(nextUsers));
+    } catch {}
   };
 
   useEffect(() => { reload(); }, []);
@@ -89,24 +107,34 @@ export function LoginManagement({ currentAdminSession }) {
         setFormError(result.error || 'Could not update this login.');
         return;
       }
-      setUsers((current) => current.map((user) => user.id === editingUser.id
+      const nextUsers = users.map((user) => user.id === editingUser.id
         ? { ...user, username: updatedUser.Username, name: updatedUser.FullName, role: formRole, mobile: formMobile.trim(), email: updatedUser.Email }
-        : user));
+        : user);
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
       setFormSuccess(`Login "${updatedUser.Username}" updated successfully.`);
       await reload();
       setTimeout(closeForm, 1200);
       return;
     }
 
-    const result = await createUser({
-      Username: formUser,
-      Password: formPass,
-      ConfirmPassword: formPass,
-      Role: formRole,
-      FullName: formName || formUser,
-      Phone: formMobile.trim() || '0000000000',
-      Email: `${formUser}@avsr.com`
-    });
+    setIsSubmitting(true);
+    let result;
+    try {
+      result = await createUser({
+        Username: formUser.trim(),
+        Password: formPass,
+        ConfirmPassword: formPass,
+        Role: formRole,
+        FullName: formName.trim() || formUser.trim(),
+        Phone: formMobile.trim() || '0000000000',
+        Email: `${formUser.trim()}@avsr.com`
+      });
+    } catch (error) {
+      result = { success: false, error: error?.message || 'Could not create this login.' };
+    } finally {
+      setIsSubmitting(false);
+    }
     if (result.success) {
       setFormSuccess(`✅ ${formRole.toUpperCase()} login "${formUser.trim()}" created successfully!`);
       const createdUserObj = {
@@ -118,7 +146,9 @@ export function LoginManagement({ currentAdminSession }) {
         email: `${formUser.trim()}@avsr.com`,
         createdAt: new Date().toISOString()
       };
-      setUsers(prev => [createdUserObj, ...prev.filter(u => u.username !== formUser.trim())]);
+      const nextUsers = [createdUserObj, ...users.filter(u => u.username.toLowerCase() !== formUser.trim().toLowerCase())];
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
       setFormUser(''); setFormPass(''); setFormName(''); setFormMobile(''); setFormEmail('');
       await reload();
       setTimeout(() => { setFormSuccess(''); setShowForm(false); }, 1500);
@@ -129,7 +159,12 @@ export function LoginManagement({ currentAdminSession }) {
 
   const handleDelete = async (userId) => {
     const result = await deleteUser(userId);
-    if (result.success) await reload();
+    if (result.success) {
+      const nextUsers = users.filter((user) => user.id !== userId);
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
+      await reload();
+    }
     setDeletingId(null);
   };
 
@@ -189,8 +224,8 @@ export function LoginManagement({ currentAdminSession }) {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: '0.85rem',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--bg-tertiary)',
+        border: '1px solid var(--border-card)',
         borderRadius: '10px', padding: '0.7rem 0.9rem',
         transition: 'background 0.15s'
       }}>
@@ -211,12 +246,12 @@ export function LoginManagement({ currentAdminSession }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: '0.88rem', fontWeight: 800,
-            color: '#ffffff', whiteSpace: 'nowrap',
+            color: 'var(--text-main)', whiteSpace: 'nowrap',
             overflow: 'hidden', textOverflow: 'ellipsis'
           }}>
             {user.name || user.username}
           </div>
-          <div style={{ fontSize: '0.73rem', color: '#64748b', fontWeight: 600 }}>
+          <div style={{ fontSize: '0.73rem', color: 'var(--text-dim)', fontWeight: 600 }}>
             @{user.username}
             {user.createdAt && (
               <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
@@ -301,17 +336,17 @@ export function LoginManagement({ currentAdminSession }) {
 
   const Section = ({ title, icon, color, users: list, emptyMsg }) => (
     <div style={{
-      background: 'rgba(0,0,0,0.25)',
-      border: `1px solid ${color}25`,
+      background: 'var(--bg-card)',
+      border: `1px solid var(--border-card)`,
       borderRadius: '12px', overflow: 'hidden'
     }}>
       <div style={{
         padding: '0.75rem 1rem',
-        borderBottom: `1px solid ${color}20`,
+        borderBottom: `1px solid var(--border-subtle)`,
         display: 'flex', alignItems: 'center', gap: '0.5rem'
       }}>
         <span style={{ color }}>{icon}</span>
-        <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#ffffff' }}>{title}</span>
+        <span style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--text-main)' }}>{title}</span>
         <span style={{
           background: `${color}20`, border: `1px solid ${color}40`,
           color, fontSize: '0.68rem', fontWeight: 900,
@@ -322,7 +357,7 @@ export function LoginManagement({ currentAdminSession }) {
       </div>
       <div style={{ padding: '0.65rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
         {list.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '1rem', color: '#475569', fontSize: '0.8rem', fontWeight: 600 }}>
+          <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 600 }}>
             {emptyMsg}
           </div>
         ) : (
@@ -337,23 +372,25 @@ export function LoginManagement({ currentAdminSession }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
             🔐 Login Management
           </h2>
-          <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '3px 0 0', fontWeight: 600 }}>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', margin: '3px 0 0', fontWeight: 600 }}>
             Create and manage POS & KOT user accounts. Admin creates all logins.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem' }}>
           <button
             onClick={reload}
+            disabled={isRefreshing}
             style={{
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-              color: '#94a3b8', padding: '0.45rem 0.8rem', borderRadius: '8px',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700
+              background: 'var(--bg-tertiary)', border: '1px solid var(--border-card)',
+              color: 'var(--text-dim)', padding: '0.45rem 0.8rem', borderRadius: '8px',
+              cursor: isRefreshing ? 'wait' : 'pointer', opacity: isRefreshing ? 0.7 : 1,
+              display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700
             }}
           >
-            <RefreshCw size={14} /> Refresh
+            <RefreshCw size={14} /> {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
             onClick={() => { setEditingUser(null); setFormRole('pos'); setFormName(''); setFormUser(''); setFormMobile(''); setFormEmail(''); setFormPass(''); setShowForm(true); setFormError(''); setFormSuccess(''); }}
@@ -371,6 +408,12 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       </div>
 
+      {refreshMessage && (
+        <div role="status" style={{ color: refreshMessage.toLowerCase().includes('could not') || refreshMessage.toLowerCase().includes('failed') ? '#fca5a5' : '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
+          {refreshMessage}
+        </div>
+      )}
+
       {/* Quick Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
         {[
@@ -379,8 +422,8 @@ export function LoginManagement({ currentAdminSession }) {
           { label: 'Admins', count: adminUsers.length, color: '#818cf8', icon: <ShieldCheck size={18} /> }
         ].map(stat => (
           <div key={stat.label} style={{
-            background: 'rgba(0,0,0,0.3)',
-            border: `1px solid ${stat.color}25`,
+            background: 'var(--bg-tertiary)',
+            border: `1px solid var(--border-subtle)`,
             borderRadius: '10px', padding: '0.85rem 1rem',
             display: 'flex', alignItems: 'center', gap: '0.75rem'
           }}>
@@ -393,10 +436,10 @@ export function LoginManagement({ currentAdminSession }) {
               {stat.icon}
             </div>
             <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-main)', lineHeight: 1 }}>
                 {stat.count}
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700 }}>
                 {stat.label}
               </div>
             </div>
@@ -407,13 +450,13 @@ export function LoginManagement({ currentAdminSession }) {
       {/* Create Login Form */}
       {showForm && (
         <div style={{
-          background: 'rgba(0,0,0,0.4)',
-          border: '1.5px solid rgba(245,158,11,0.35)',
+          background: 'var(--bg-card)',
+          border: '1.5px solid var(--border-subtle)',
           borderRadius: '14px', padding: '1.25rem',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.4)'
+          boxShadow: 'var(--shadow-md)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
               {editingUser ? 'Edit Login Details' : 'Create New Login'}
             </h3>
             <button
@@ -449,34 +492,20 @@ export function LoginManagement({ currentAdminSession }) {
           )}
 
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {/* Role selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+              <label htmlFor="new-login-role" style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 Account Role *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                {[
-                  { value: 'pos', label: '🍽️ User POS', sub: 'Billing & floor orders', color: '#f59e0b' },
-                  { value: 'kot', label: '🔥 Kitchen KOT', sub: 'Kitchen display system', color: '#fb923c' }
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setFormRole(opt.value)}
-                    style={{
-                      padding: '0.65rem 0.8rem', borderRadius: '10px', textAlign: 'left',
-                      background: formRole === opt.value ? `${opt.color}20` : 'rgba(255,255,255,0.04)',
-                      border: formRole === opt.value ? `1.5px solid ${opt.color}` : '1.5px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer', transition: 'all 0.15s'
-                    }}
-                  >
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: formRole === opt.value ? opt.color : '#ffffff' }}>
-                      {opt.label}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{opt.sub}</div>
-                  </button>
-                ))}
-              </div>
+              <select
+                id="new-login-role"
+                value={formRole}
+                onChange={(event) => setFormRole(event.target.value)}
+                style={{ width: '100%', padding: '0.7rem 0.8rem', background: '#111827', border: '1.5px solid rgba(245,158,11,0.55)', borderRadius: '9px', color: '#fff', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
+              >
+                <option value="pos">User POS - Billing &amp; floor orders</option>
+                <option value="kot">Kitchen KOT - Kitchen display system</option>
+                {editingUser?.role === 'admin' && <option value="admin">Admin</option>}
+              </select>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -581,17 +610,18 @@ export function LoginManagement({ currentAdminSession }) {
             <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.25rem' }}>
               <button
                 type="submit"
+                disabled={isSubmitting}
                 style={{
                   flex: 2, padding: '0.65rem', borderRadius: '10px',
                   background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
                   color: '#ffffff', fontWeight: 800, fontSize: '0.85rem',
-                  border: 'none', cursor: 'pointer',
+                  border: 'none', cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.75 : 1,
                   boxShadow: '0 3px 12px rgba(245,158,11,0.4)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
                 {editingUser ? <Pencil size={16} /> : <UserCheck size={16} />}
-                {editingUser ? 'Save Changes' : 'Create Login Account'}
+                {isSubmitting ? 'Creating Account...' : editingUser ? 'Save Changes' : 'Create Login Account'}
               </button>
               <button
                 type="button" onClick={closeForm}
@@ -608,28 +638,9 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      {/* User sections */}
-      <Section
-        title="🍽️ User POS Accounts"
-        icon={<Utensils size={16} />}
-        color="#f59e0b"
-        users={posUsers}
-        emptyMsg="No POS users yet. Create one above ↑"
-      />
-      <Section
-        title="🔥 Kitchen KOT Accounts"
-        icon={<ChefHat size={16} />}
-        color="#fb923c"
-        users={kotUsers}
-        emptyMsg="No KOT users yet. Create one above ↑"
-      />
-      <Section
-        title="⚙️ Admin Accounts"
-        icon={<ShieldCheck size={16} />}
-        color="#818cf8"
-        users={adminUsers}
-        emptyMsg="No admin accounts found."
-      />
+      <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />
+      <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
+      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="#818cf8" users={adminUsers} emptyMsg="No admin accounts found." />
 
       {/* Delete Confirm Overlay */}
       {deletingId && (
