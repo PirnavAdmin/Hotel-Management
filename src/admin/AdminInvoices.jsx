@@ -11,6 +11,8 @@ import {
   Smartphone,
   Banknote,
   Receipt,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { INITIAL_ORDERS } from "../data/initialOrders";
@@ -18,16 +20,21 @@ import { dedupeOrders, sortOrdersBySettlementTime } from "../utils/orderDedupe";
 
 export function AdminInvoices({ pastOrders = [] }) {
   const allOrders = sortOrdersBySettlementTime(
-    dedupeOrders(pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS),
+    dedupeOrders(
+      pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS,
+    ),
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
   const filteredOrders = allOrders.filter((order) => {
     const matchesPayment =
       paymentFilter === "all" ||
-      String(order.paymentMethod || "").toLowerCase() === paymentFilter.toLowerCase();
+      String(order.paymentMethod || "").toLowerCase() ===
+        paymentFilter.toLowerCase();
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
@@ -38,9 +45,20 @@ export function AdminInvoices({ pastOrders = [] }) {
     return matchesPayment && matchesSearch;
   });
 
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredOrders.length / itemsPerPage),
+  );
+  const visiblePage = Math.min(currentPage, pageCount);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(
+    pageStart,
+    pageStart + itemsPerPage,
+  );
+
   const totalCollected = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.grandTotal) || 0),
-    0
+    0,
   );
 
   const upiTotal = filteredOrders
@@ -74,7 +92,9 @@ export function AdminInvoices({ pastOrders = [] }) {
           }}
         >
           {/* Left Title with Orange Squircle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
+          >
             <div
               style={{
                 width: "44px",
@@ -90,7 +110,9 @@ export function AdminInvoices({ pastOrders = [] }) {
               <FileText size={22} color="#ffffff" />
             </div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+              >
                 <h2
                   style={{
                     fontSize: "1.35rem",
@@ -122,7 +144,8 @@ export function AdminInvoices({ pastOrders = [] }) {
                   margin: "3px 0 0 0",
                 }}
               >
-                Detailed receipts, taxes, payment modes and customer settlement records
+                Detailed receipts, taxes, payment modes and customer settlement
+                records
               </p>
             </div>
           </div>
@@ -150,7 +173,10 @@ export function AdminInvoices({ pastOrders = [] }) {
               type="text"
               placeholder="Search invoice #, table, waiter..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               style={{
                 width: "100%",
                 height: "100%",
@@ -182,7 +208,10 @@ export function AdminInvoices({ pastOrders = [] }) {
             {["all", "upi", "cash", "card"].map((mode) => (
               <button
                 key={mode}
-                onClick={() => setPaymentFilter(mode)}
+                onClick={() => {
+                  setPaymentFilter(mode);
+                  setCurrentPage(1);
+                }}
                 style={{
                   background:
                     paymentFilter === mode
@@ -273,8 +302,11 @@ export function AdminInvoices({ pastOrders = [] }) {
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((order, idx) => {
-                const pMode = String(order.paymentMethod || "cash").toLowerCase();
+              {paginatedOrders.map((order, idx) => {
+                const orderIndex = pageStart + idx;
+                const pMode = String(
+                  order.paymentMethod || "cash",
+                ).toLowerCase();
                 const itemCount = (order.items || []).reduce(
                   (sum, i) => sum + Number(i.quantity || 1),
                   0,
@@ -282,7 +314,7 @@ export function AdminInvoices({ pastOrders = [] }) {
 
                 return (
                   <tr
-                    key={order.invoiceNo || idx}
+                    key={order.invoiceNo || orderIndex}
                     style={{
                       borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
                       transition: "background 0.15s ease",
@@ -305,7 +337,7 @@ export function AdminInvoices({ pastOrders = [] }) {
                           fontSize: "0.88rem",
                         }}
                       >
-                        {order.invoiceNo || `INV-${1000 + idx}`}
+                        {order.invoiceNo || `INV-${1000 + orderIndex}`}
                       </span>
                     </td>
 
@@ -454,8 +486,188 @@ export function AdminInvoices({ pastOrders = [] }) {
                   </tr>
                 );
               })}
+              {paginatedOrders.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    style={{
+                      padding: "2rem 1rem",
+                      color: "#94a3b8",
+                      textAlign: "center",
+                    }}
+                  >
+                    No invoices match these filters.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "0.5rem 0.85rem",
+              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "rgba(255, 255, 255, 0.015)",
+              fontSize: "0.74rem",
+              color: "#94a3b8",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+            }}
+          >
+            <span>
+              Showing{" "}
+              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                {filteredOrders.length === 0 ? 0 : pageStart + 1}
+              </strong>
+              –
+              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                {Math.min(pageStart + itemsPerPage, filteredOrders.length)}
+              </strong>{" "}
+              of{" "}
+              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                {filteredOrders.length}
+              </strong>{" "}
+              invoices
+            </span>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                  Per page:
+                </span>
+                <select
+                  aria-label="Invoices per page"
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    background: "#080d1a",
+                    color: "#cbd5e1",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "5px",
+                    padding: "2px 6px",
+                    fontSize: "0.72rem",
+                    outline: "none",
+                    cursor: "pointer",
+                    height: "24px",
+                  }}
+                >
+                  {[5, 6, 8, 10, 20].map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      {pageSize}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label="Previous page"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={visiblePage === 1}
+                  style={{
+                    height: "24px",
+                    padding: "0 6px",
+                    borderRadius: "5px",
+                    background:
+                      visiblePage === 1
+                        ? "rgba(255, 255, 255, 0.02)"
+                        : "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    color: visiblePage === 1 ? "#475569" : "#cbd5e1",
+                    cursor: visiblePage === 1 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <ChevronLeft size={13} />
+                  <span>Prev</span>
+                </button>
+                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
+                  (page) => {
+                    const isActive = page === visiblePage;
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        aria-label={`Page ${page}`}
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={() => setCurrentPage(page)}
+                        style={{
+                          height: "24px",
+                          minWidth: "24px",
+                          padding: "0 5px",
+                          borderRadius: "5px",
+                          background: isActive
+                            ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                            : "transparent",
+                          border: isActive
+                            ? "none"
+                            : "1px solid rgba(255, 255, 255, 0.08)",
+                          color: isActive ? "#ffffff" : "#94a3b8",
+                          cursor: "pointer",
+                          fontSize: "0.72rem",
+                          fontWeight: isActive ? 800 : 500,
+                          boxShadow: isActive
+                            ? "0 2px 8px rgba(245, 158, 11, 0.35)"
+                            : "none",
+                        }}
+                      >
+                        {page}
+                      </button>
+                    );
+                  },
+                )}
+                <button
+                  type="button"
+                  aria-label="Next page"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(pageCount, page + 1))
+                  }
+                  disabled={visiblePage === pageCount}
+                  style={{
+                    height: "24px",
+                    padding: "0 6px",
+                    borderRadius: "5px",
+                    background:
+                      visiblePage === pageCount
+                        ? "rgba(255, 255, 255, 0.02)"
+                        : "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
+                    cursor:
+                      visiblePage === pageCount ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>Next</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -602,7 +814,9 @@ export function AdminInvoices({ pastOrders = [] }) {
                 <span>{formatCurrency(selectedReceipt.taxAmount || 0)}</span>
               </div>
               {Number(selectedReceipt.serviceChargeAmount) > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between" }}
+                >
                   <span>Service Charge</span>
                   <span>
                     {formatCurrency(selectedReceipt.serviceChargeAmount)}
