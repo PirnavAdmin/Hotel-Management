@@ -5,7 +5,6 @@ import {
   Utensils,
   ChevronRight,
   Search,
-  Plus,
   Flame,
   Hourglass,
 } from "lucide-react";
@@ -598,28 +597,7 @@ export function TableView({ tables, onSelectTable }) {
 
               {/* Order Status & Financial Snapshot */}
               <div>
-                {table.status === "vacant" ? (
-                  <div
-                    style={{
-                      padding: "0.35rem 0",
-                      textAlign: "center",
-                      color: "var(--text-dim)",
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.3rem",
-                      background: "rgba(255, 255, 255, 0.02)",
-                      borderRadius: "var(--radius-sm)",
-                      border: "1px dashed rgba(255, 255, 255, 0.07)",
-                      marginTop: "0.25rem",
-                    }}
-                  >
-                    <Plus size={12} color="var(--status-vacant)" />
-                    <span>Ready for Guests</span>
-                  </div>
-                ) : (
+                {table.status !== "vacant" && (
                   <div style={{ marginTop: "0.25rem" }}>
                     <div
                       style={{
@@ -703,7 +681,7 @@ export function TableView({ tables, onSelectTable }) {
                           + {items.length - 1} more dish
                           {items.length > 2 ? "es" : ""}...
                         </div>
-                      )}
+                )}
                     </div>
                   </div>
                 )}
