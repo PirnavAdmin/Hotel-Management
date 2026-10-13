@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Download,
 } from "lucide-react";
 
 const INITIAL_INVENTORY = [
@@ -121,6 +122,7 @@ export function AdminInventory() {
   const [selectedSupplier, setSelectedSupplier] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [exportMessage, setExportMessage] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
@@ -142,11 +144,53 @@ export function AdminInventory() {
     const updated = inventory.map((item) => {
       if (item.id === id) {
         const nextStock = Math.max(0, Number((item.stock + delta).toFixed(2)));
-        return { ...item, stock: nextStock };
+        const adjustedAmount = Math.abs(nextStock - item.stock);
+        return {
+          ...item,
+          stock: nextStock,
+          totalUsed: Number(item.totalUsed || 0) + (delta < 0 ? adjustedAmount : 0),
+          totalRestocked: Number(item.totalRestocked || 0) + (delta > 0 ? adjustedAmount : 0),
+          lastRestocked: delta > 0 ? new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : item.lastRestocked,
+        };
       }
       return item;
     });
     saveInventory(updated);
+  };
+
+  const exportInventory = () => {
+    const csvCell = (value) => {
+      const text = String(value ?? "");
+      const safeText = /^[=+@\-\t\r]/.test(text) ? `'${text}` : text;
+      return `"${safeText.replaceAll('"', '""')}"`;
+    };
+    const rows = [
+      ["Item", "Category", "Supplier", "Available Quantity", "Unit", "Quantity Used (tracked)", "Quantity Restocked (tracked)", "Low Stock Threshold", "Status", "Last Restocked"],
+      ...inventory.map((item) => [
+        item.name,
+        item.category,
+        item.supplier,
+        item.stock,
+        item.unit,
+        Number(item.totalUsed || 0),
+        Number(item.totalRestocked || 0),
+        item.minThreshold,
+        item.stock <= 0 ? "Out of Stock" : item.stock <= item.minThreshold ? "Low Stock" : "In Stock",
+        item.lastRestocked,
+      ]),
+    ];
+    const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setExportMessage("Inventory exported. Usage and restock totals track adjustments from this update onward.");
+    window.setTimeout(() => setExportMessage(""), 5000);
   };
 
   const handleAddItem = (e) => {
@@ -158,6 +202,8 @@ export function AdminInventory() {
       name: newItem.name.trim(),
       category: newItem.category,
       stock: Number(newItem.stock) || 0,
+      totalUsed: 0,
+      totalRestocked: Number(newItem.stock) || 0,
       minThreshold: Number(newItem.minThreshold) || 5,
       unit: newItem.unit,
       supplier: newItem.supplier || "Local Vendor",
@@ -466,31 +512,43 @@ export function AdminInventory() {
               ))}
             </div>
 
-            {/* Add New Stock Item */}
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              style={{
-                height: "36px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "9px",
-                padding: "0 0.9rem",
-                fontWeight: 700,
-                fontSize: "0.78rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.45rem",
-                marginLeft: "auto",
-                cursor: "pointer",
-                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
-              }}
-            >
-              <Plus size={15} />
-              <span>Add Stock Item</span>
-            </button>
+            <div style={{ display: "flex", gap: "0.55rem", marginLeft: "auto", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={exportInventory}
+                title="Download all inventory as an Excel-compatible CSV"
+                style={{
+                  height: "36px", background: "var(--bg-tertiary)", color: "#34d399",
+                  border: "1px solid rgba(52, 211, 153, 0.4)", borderRadius: "9px", padding: "0 0.8rem",
+                  fontWeight: 700, fontSize: "0.78rem", display: "flex", alignItems: "center",
+                  gap: "0.4rem", cursor: "pointer", whiteSpace: "nowrap",
+                }}
+              >
+                <Download size={15} />
+                <span>Export Excel</span>
+              </button>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                style={{
+                  height: "36px", background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  color: "#ffffff", border: "none", borderRadius: "9px", padding: "0 0.9rem",
+                  fontWeight: 700, fontSize: "0.78rem", display: "flex", alignItems: "center",
+                  gap: "0.45rem", cursor: "pointer", boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <Plus size={15} />
+                <span>Add Stock Item</span>
+              </button>
+            </div>
           </div>
         </div>
+
+        {exportMessage && (
+          <div role="status" style={{ color: "#34d399", fontSize: "0.76rem", fontWeight: 600, margin: "-0.75rem 0 1rem" }}>
+            {exportMessage}
+          </div>
+        )}
 
         {/* Stock Summary */}
         <div
