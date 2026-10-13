@@ -6,8 +6,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   TrendingDown,
-  RefreshCw,
-  Edit2,
   Trash2,
 } from "lucide-react";
 
@@ -116,6 +114,8 @@ export function AdminInventory() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedSupplier, setSelectedSupplier] = useState("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
@@ -187,17 +187,32 @@ export function AdminInventory() {
     "Beverages",
   ];
 
+  const suppliers = [...new Set(inventory.map((item) => item.supplier))].sort();
+  const inStockCount = inventory.filter(
+    (item) => item.stock > item.minThreshold,
+  ).length;
+  const outOfStockCount = inventory.filter((item) => item.stock <= 0).length;
+
   const filtered = inventory.filter((item) => {
     const matchesCategory =
       selectedCategory === "all" || item.category === selectedCategory;
     const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "in-stock" && item.stock > item.minThreshold) ||
+      (selectedStatus === "low-stock" &&
+        item.stock > 0 &&
+        item.stock <= item.minThreshold) ||
+      (selectedStatus === "out-of-stock" && item.stock <= 0);
+    const matchesSupplier =
+      selectedSupplier === "all" || item.supplier === selectedSupplier;
+    return matchesCategory && matchesSearch && matchesStatus && matchesSupplier;
   });
 
   const lowStockCount = inventory.filter(
-    (item) => item.stock <= item.minThreshold
+    (item) => item.stock > 0 && item.stock <= item.minThreshold,
   ).length;
 
   return (
@@ -223,7 +238,9 @@ export function AdminInventory() {
           }}
         >
           {/* Left Title with Orange Squircle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
+          >
             <div
               style={{
                 width: "44px",
@@ -239,7 +256,9 @@ export function AdminInventory() {
               <Package size={22} color="#ffffff" />
             </div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+              >
                 <h2
                   style={{
                     fontSize: "1.35rem",
@@ -286,7 +305,8 @@ export function AdminInventory() {
                   margin: "3px 0 0 0",
                 }}
               >
-                Track restaurant raw ingredients, meat stock, spices and packaging units
+                Track restaurant raw ingredients, meat stock, spices and
+                packaging units
               </p>
             </div>
           </div>
@@ -363,39 +383,147 @@ export function AdminInventory() {
           </div>
         </div>
 
-        {/* Category Pills Strip */}
+        {/* Stock Summary */}
         <div
           style={{
-            display: "flex",
-            gap: "0.5rem",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
+            gap: "0.75rem",
             marginBottom: "1.25rem",
-            flexWrap: "wrap",
           }}
         >
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+          {[
+            {
+              label: "Total Items",
+              value: inventory.length,
+              color: "#38bdf8",
+              icon: Package,
+            },
+            {
+              label: "In Stock",
+              value: inStockCount,
+              color: "#10b981",
+              icon: CheckCircle2,
+            },
+            {
+              label: "Low Stock",
+              value: lowStockCount,
+              color: "#f59e0b",
+              icon: AlertTriangle,
+            },
+            {
+              label: "Out of Stock",
+              value: outOfStockCount,
+              color: "#ef4444",
+              icon: TrendingDown,
+            },
+          ].map(({ label, value, color, icon: Icon }) => (
+            <div
+              key={label}
               style={{
-                background:
-                  selectedCategory === cat
-                    ? "rgba(245, 158, 11, 0.2)"
-                    : "rgba(255, 255, 255, 0.03)",
-                border:
-                  selectedCategory === cat
-                    ? "1px solid #f59e0b"
-                    : "1px solid rgba(255, 255, 255, 0.08)",
-                color: selectedCategory === cat ? "#fbbf24" : "#94a3b8",
-                padding: "0.35rem 0.85rem",
-                borderRadius: "20px",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                textTransform: "capitalize",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                minWidth: 0,
+                padding: "0.85rem 1rem",
+                background: "rgba(255, 255, 255, 0.025)",
+                border: "1px solid rgba(255, 255, 255, 0.07)",
+                borderRadius: "10px",
               }}
             >
-              {cat === "all" ? "All Supplies" : cat}
-            </button>
+              <div
+                style={{
+                  width: "38px",
+                  height: "38px",
+                  flexShrink: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  color,
+                  background: `${color}20`,
+                  borderRadius: "9px",
+                }}
+              >
+                <Icon size={20} />
+              </div>
+              <div>
+                <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
+                  {label}
+                </div>
+                <div style={{ color, fontSize: "1.15rem", fontWeight: 800 }}>
+                  {value}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Dropdown Filters */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))",
+            gap: "0.65rem",
+            marginBottom: "1rem",
+          }}
+        >
+          {[
+            {
+              label: "Filter by category",
+              value: selectedCategory,
+              onChange: setSelectedCategory,
+              options: categories.map((category) => ({
+                value: category,
+                label: category === "all" ? "All Categories" : category,
+              })),
+            },
+            {
+              label: "Filter by status",
+              value: selectedStatus,
+              onChange: setSelectedStatus,
+              options: [
+                { value: "all", label: "All Status" },
+                { value: "in-stock", label: "In Stock" },
+                { value: "low-stock", label: "Low Stock" },
+                { value: "out-of-stock", label: "Out of Stock" },
+              ],
+            },
+            {
+              label: "Filter by supplier",
+              value: selectedSupplier,
+              onChange: setSelectedSupplier,
+              options: [
+                { value: "all", label: "All Suppliers" },
+                ...suppliers.map((supplier) => ({
+                  value: supplier,
+                  label: supplier,
+                })),
+              ],
+            },
+          ].map(({ label, value, onChange, options }) => (
+            <select
+              key={label}
+              aria-label={label}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              style={{
+                width: "100%",
+                minWidth: 0,
+                height: "40px",
+                padding: "0 0.75rem",
+                color: "#cbd5e1",
+                background: "#080d1a",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "8px",
+                fontSize: "0.8rem",
+                outline: "none",
+              }}
+            >
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           ))}
         </div>
 
@@ -437,7 +565,14 @@ export function AdminInventory() {
             </thead>
             <tbody>
               {filtered.map((item) => {
-                const isCritical = item.stock <= item.minThreshold;
+                const isOutOfStock = item.stock <= 0;
+                const isLowStock =
+                  !isOutOfStock && item.stock <= item.minThreshold;
+                const statusColor = isOutOfStock
+                  ? "#ef4444"
+                  : isLowStock
+                    ? "#f59e0b"
+                    : "#10b981";
                 return (
                   <tr
                     key={item.id}
@@ -479,7 +614,11 @@ export function AdminInventory() {
                       <div
                         style={{
                           fontWeight: 800,
-                          color: isCritical ? "#ef4444" : "#fbbf24",
+                          color: isOutOfStock
+                            ? "#ef4444"
+                            : isLowStock
+                              ? "#f59e0b"
+                              : "#10b981",
                           fontSize: "0.95rem",
                         }}
                       >
@@ -494,57 +633,34 @@ export function AdminInventory() {
 
                     {/* Status Badge */}
                     <td style={{ padding: "1rem" }}>
-                      {isCritical ? (
+                      <span
+                        style={{
+                          background: `${statusColor}1f`,
+                          border: `1px solid ${statusColor}4d`,
+                          color: statusColor,
+                          borderRadius: "20px",
+                          padding: "3px 10px",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
+                      >
                         <span
                           style={{
-                            background: "rgba(239, 68, 68, 0.12)",
-                            border: "1px solid rgba(239, 68, 68, 0.3)",
-                            color: "#ef4444",
-                            borderRadius: "20px",
-                            padding: "3px 10px",
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
+                            width: 6,
+                            height: 6,
+                            borderRadius: "50%",
+                            background: statusColor,
                           }}
-                        >
-                          <span
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: "50%",
-                              background: "#ef4444",
-                            }}
-                          />
-                          Low Stock
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            background: "rgba(16, 185, 129, 0.12)",
-                            border: "1px solid rgba(16, 185, 129, 0.3)",
-                            color: "#10b981",
-                            borderRadius: "20px",
-                            padding: "3px 10px",
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: "50%",
-                              background: "#10b981",
-                            }}
-                          />
-                          In Stock
-                        </span>
-                      )}
+                        />
+                        {isOutOfStock
+                          ? "Out of Stock"
+                          : isLowStock
+                            ? "Low Stock"
+                            : "In Stock"}
+                      </span>
                     </td>
 
                     {/* Actions */}
@@ -652,7 +768,11 @@ export function AdminInventory() {
 
             <form
               onSubmit={handleAddItem}
-              style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.85rem",
+              }}
             >
               <div>
                 <label
