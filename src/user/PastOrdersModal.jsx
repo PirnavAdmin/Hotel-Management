@@ -4,6 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
+import { dedupeOrders } from '../utils/orderDedupe';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -28,8 +29,7 @@ const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
 };
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
-
-
+  const uniquePastOrders = useMemo(() => dedupeOrders(pastOrders), [pastOrders]);
 
 
   // Helper to parse date from order safely
@@ -61,7 +61,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const availableDates = useMemo(() => {
     const datesSet = new Set();
     datesSet.add(TODAY_DATE_STR);
-    pastOrders.forEach(o => {
+    uniquePastOrders.forEach(o => {
       const dStr = formatOrderDate(o);
       if (dStr) datesSet.add(dStr);
     });
@@ -70,13 +70,13 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const timeB = new Date(b).getTime() || 0;
       return timeB - timeA;
     });
-  }, [pastOrders]);
+  }, [uniquePastOrders]);
 
   // Extract all unique months from pastOrders sorted newest first
   const availableMonths = useMemo(() => {
     const monthsSet = new Set();
     monthsSet.add(currentMonthStr);
-    pastOrders.forEach(o => {
+    uniquePastOrders.forEach(o => {
       const d = parseOrderDate(o);
       monthsSet.add(getMonthStr(d));
     });
@@ -85,12 +85,12 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const timeB = new Date(b).getTime() || 0;
       return timeB - timeA;
     });
-  }, [pastOrders, currentMonthStr]);
+  }, [uniquePastOrders, currentMonthStr]);
 
   const [selectedDate, setSelectedDate] = useState(() => {
-    const hasToday = pastOrders && pastOrders.some(o => formatOrderDate(o) === TODAY_DATE_STR);
+    const hasToday = uniquePastOrders && uniquePastOrders.some(o => formatOrderDate(o) === TODAY_DATE_STR);
     if (hasToday) return TODAY_DATE_STR;
-    if (pastOrders && pastOrders.length > 0) return formatOrderDate(pastOrders[0]);
+    if (uniquePastOrders && uniquePastOrders.length > 0) return formatOrderDate(uniquePastOrders[0]);
     return TODAY_DATE_STR;
   });
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
@@ -98,7 +98,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const [customEndDate, setCustomEndDate] = useState('');
   const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'monthly' | 'custom' | 'grouped_all'
   const [searchTerm, setSearchTerm] = useState('');
-  const countForSelectedDate = pastOrders.filter(
+  const countForSelectedDate = uniquePastOrders.filter(
     (order) => formatOrderDate(order) === selectedDate,
   ).length;
 
@@ -158,7 +158,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
 
   // Search filtered orders across all history
   const searchFilteredOrders = useMemo(() => {
-    return pastOrders.filter(o => {
+    return uniquePastOrders.filter(o => {
       const search = searchTerm.toLowerCase().trim();
       if (!search) return true;
       return (
@@ -169,7 +169,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         (o.date || '').toLowerCase().includes(search)
       );
     });
-  }, [pastOrders, searchTerm]);
+  }, [uniquePastOrders, searchTerm]);
 
   // Single day filtered orders
   const singleDayOrders = useMemo(() => {
@@ -382,7 +382,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 {viewMode === 'single_day' && `Selected Date: ${selectedDate} (${countForSelectedDate} Invoices)`}
                 {viewMode === 'monthly' && `Selected Month: ${selectedMonth} (${monthlyOrders.length} Invoices)`}
                 {viewMode === 'custom' && `Custom Range: ${customStartDate ? customStartDate : 'All Start'} to ${customEndDate ? customEndDate : 'Present'} (${customRangeOrders.length} Invoices)`}
-                {viewMode === 'grouped_all' && `All Dates Grouped Breakdown (${pastOrders.length} Total Invoices)`}
+                {viewMode === 'grouped_all' && `All Dates Grouped Breakdown (${uniquePastOrders.length} Total Invoices)`}
               </span>
             </div>
           </div>
@@ -548,7 +548,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 }}
               >
                 {availableDates.map(d => {
-                  const cnt = pastOrders.filter(o => formatOrderDate(o) === d).length;
+                  const cnt = uniquePastOrders.filter(o => formatOrderDate(o) === d).length;
                   return (
                     <option key={d} value={d}>
                       📅 {d} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
@@ -660,7 +660,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                 }}
               >
                 {availableMonths.map(m => {
-                  const cnt = pastOrders.filter(o => getMonthStr(parseOrderDate(o)) === m).length;
+                  const cnt = uniquePastOrders.filter(o => getMonthStr(parseOrderDate(o)) === m).length;
                   return (
                     <option key={m} value={m}>
                       🗓️ {m} ({cnt} {cnt === 1 ? 'invoice' : 'invoices'})
@@ -1106,7 +1106,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
           justifyContent: 'space-between'
         }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Showing <strong>{activeOrders.length}</strong> of <strong>{pastOrders.length}</strong> total settled invoices
+            Showing <strong>{activeOrders.length}</strong> of <strong>{uniquePastOrders.length}</strong> total settled invoices
           </span>
           <button
             onClick={onClose}
