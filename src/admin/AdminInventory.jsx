@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   TrendingDown,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const INITIAL_INVENTORY = [
@@ -116,6 +118,8 @@ export function AdminInventory() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedSupplier, setSelectedSupplier] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
@@ -210,6 +214,11 @@ export function AdminInventory() {
       selectedSupplier === "all" || item.supplier === selectedSupplier;
     return matchesCategory && matchesSearch && matchesStatus && matchesSupplier;
   });
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const visiblePage = Math.min(currentPage, pageCount);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const visibleItems = filtered.slice(pageStart, pageStart + itemsPerPage);
 
   const lowStockCount = inventory.filter(
     (item) => item.stock > 0 && item.stock <= item.minThreshold,
@@ -343,7 +352,10 @@ export function AdminInventory() {
                 type="text"
                 placeholder="Search raw items or suppliers..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 style={{
                   width: "100%",
                   height: "100%",
@@ -504,7 +516,10 @@ export function AdminInventory() {
               key={label}
               aria-label={label}
               value={value}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={(e) => {
+                onChange(e.target.value);
+                setCurrentPage(1);
+              }}
               style={{
                 width: "100%",
                 minWidth: 0,
@@ -564,7 +579,7 @@ export function AdminInventory() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item) => {
+              {visibleItems.map((item) => {
                 const isOutOfStock = item.stock <= 0;
                 const isLowStock =
                   !isOutOfStock && item.stock <= item.minThreshold;
@@ -724,8 +739,146 @@ export function AdminInventory() {
                   </tr>
                 );
               })}
+              {visibleItems.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      padding: "2rem 1rem",
+                      color: "#94a3b8",
+                      textAlign: "center",
+                    }}
+                  >
+                    No inventory items match these filters.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+            paddingTop: "0.85rem",
+            color: "#94a3b8",
+            fontSize: "0.78rem",
+          }}
+        >
+          <span>
+            Showing {filtered.length === 0 ? 0 : pageStart + 1} to{" "}
+            {Math.min(pageStart + itemsPerPage, filtered.length)} of{" "}
+            {filtered.length} items
+          </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.35rem",
+            }}
+          >
+            <span style={{ marginRight: "0.15rem" }}>Per page:</span>
+            <select
+              aria-label="Items per page"
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                height: "36px",
+                marginRight: "0.35rem",
+                padding: "0 0.55rem",
+                color: "#cbd5e1",
+                background: "#080d1a",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "7px",
+                fontSize: "0.8rem",
+              }}
+            >
+              {[6, 12, 24].map((pageSize) => (
+                <option key={pageSize} value={pageSize}>
+                  {pageSize}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              aria-label="Previous page"
+              disabled={visiblePage === 1}
+              onClick={() => setCurrentPage(visiblePage - 1)}
+              style={{
+                minWidth: "78px",
+                height: "36px",
+                color: visiblePage === 1 ? "#475569" : "#cbd5e1",
+                background: "#111b2d",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "7px",
+                padding: "0 0.65rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                cursor: visiblePage === 1 ? "not-allowed" : "pointer",
+              }}
+            >
+              <ChevronLeft size={16} />
+              <span>Prev</span>
+            </button>
+            {Array.from({ length: pageCount }, (_, index) => index + 1).map(
+              (page) => (
+                <button
+                  key={page}
+                  type="button"
+                  aria-label={`Page ${page}`}
+                  aria-current={visiblePage === page ? "page" : undefined}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    minWidth: "34px",
+                    height: "34px",
+                    padding: "0 0.5rem",
+                    color: visiblePage === page ? "#111827" : "#cbd5e1",
+                    background: visiblePage === page ? "#f59e0b" : "#111b2d",
+                    border:
+                      visiblePage === page
+                        ? "1px solid #f59e0b"
+                        : "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: "7px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {page}
+                </button>
+              ),
+            )}
+            <button
+              type="button"
+              aria-label="Next page"
+              disabled={visiblePage === pageCount}
+              onClick={() => setCurrentPage(visiblePage + 1)}
+              style={{
+                minWidth: "78px",
+                height: "36px",
+                color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
+                background: "#111b2d",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "7px",
+                padding: "0 0.65rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                cursor: visiblePage === pageCount ? "not-allowed" : "pointer",
+              }}
+            >
+              <span>Next</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
