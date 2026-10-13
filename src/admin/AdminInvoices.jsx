@@ -14,9 +14,12 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { INITIAL_ORDERS } from "../data/initialOrders";
+import { dedupeOrders, sortOrdersBySettlementTime } from "../utils/orderDedupe";
 
 export function AdminInvoices({ pastOrders = [] }) {
-  const allOrders = pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS;
+  const allOrders = sortOrdersBySettlementTime(
+    dedupeOrders(pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS),
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [selectedReceipt, setSelectedReceipt] = useState(null);
@@ -273,8 +276,8 @@ export function AdminInvoices({ pastOrders = [] }) {
               {filteredOrders.map((order, idx) => {
                 const pMode = String(order.paymentMethod || "cash").toLowerCase();
                 const itemCount = (order.items || []).reduce(
-                  (sum, i) => sum + (i.quantity || 1),
-                  0
+                  (sum, i) => sum + Number(i.quantity || 1),
+                  0,
                 );
 
                 return (
@@ -325,7 +328,7 @@ export function AdminInvoices({ pastOrders = [] }) {
                     {/* Date & Time */}
                     <td style={{ padding: "1rem" }}>
                       <div style={{ color: "#cbd5e1" }}>
-                        {order.date || "Today"}
+                        {order.settledDate || order.date || "Today"}
                       </div>
                       <div
                         style={{
