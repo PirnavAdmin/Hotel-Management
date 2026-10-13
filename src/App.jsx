@@ -39,7 +39,12 @@ import {
   apiCreateKotOrder,
   apiUpdateKotStatus,
 } from "./api/kotApi";
-import { apiGetStaff, apiCreateStaff, apiDeleteStaff } from "./api/staffApi";
+import {
+  apiGetStaff,
+  apiCreateStaff,
+  apiUpdateStaff,
+  apiDeleteStaff,
+} from "./api/staffApi";
 import { apiGetOrders, apiCreateOrder } from "./api/orderApi";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
@@ -1508,6 +1513,47 @@ export function App() {
     return true;
   };
 
+  const handleUpdateStaff = async (updatedPerson) => {
+    const personId = updatedPerson.id ?? updatedPerson.staffId;
+    const oldPerson = staffList.find(
+      (p) => String(p.id ?? p.staffId) === String(personId),
+    );
+    const oldName =
+      oldPerson?.name || oldPerson?.fullName || oldPerson?.FullName;
+    const newName = updatedPerson.name;
+
+    setStaffList((prev) =>
+      prev.map((p) =>
+        String(p.id ?? p.staffId) === String(personId)
+          ? { ...p, ...updatedPerson }
+          : p,
+      ),
+    );
+
+    if (oldName && newName && oldName !== newName) {
+      setTables((prev) => {
+        const updated = prev.map((t) =>
+          t.server === oldName ? { ...t, server: newName } : t,
+        );
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+    }
+
+    apiUpdateStaff(personId, {
+      name: updatedPerson.name,
+      role: updatedPerson.role || "Waiter",
+      phone: updatedPerson.phone || "",
+      email: updatedPerson.email || "",
+      shift: updatedPerson.shift || "Full Day",
+    }).catch(() => {});
+
+    showToast(`✅ Updated staff details for "${updatedPerson.name}"`);
+    return true;
+  };
+
   const handleDeleteStaff = (personId) => {
     const person = staffList.find((p) => (p.id ?? p.staffId) === personId);
     setStaffList((prev) =>
@@ -1619,6 +1665,7 @@ export function App() {
               onDeleteTable={handleDeleteTable}
               staffList={staffList}
               onAddStaff={handleAddStaff}
+              onUpdateStaff={handleUpdateStaff}
               onDeleteStaff={handleDeleteStaff}
               onOpenKOTView={() => navigate("/kot")}
               onUpdateItemKotStatus={handleUpdateItemKotStatus}
@@ -1878,6 +1925,7 @@ export function App() {
           onDeleteTable={handleDeleteTable}
           staffList={staffList}
           onAddStaff={handleAddStaff}
+          onUpdateStaff={handleUpdateStaff}
           onDeleteStaff={handleDeleteStaff}
           onOpenKOTView={() => {
             setIsAdminOpen(false);

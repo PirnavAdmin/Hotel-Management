@@ -4,6 +4,7 @@ import {
   Plus,
   Trash2,
   Edit3,
+  SquarePen,
   Utensils,
   Users,
   LayoutGrid,
@@ -42,6 +43,7 @@ export function AdminPortal({
   onDeleteTable,
   staffList,
   onAddStaff,
+  onUpdateStaff,
   onDeleteStaff,
   onOpenKOTView,
   onUpdateItemKotStatus,
@@ -108,6 +110,7 @@ export function AdminPortal({
 
   // --- STAFF (PERSONS) MODAL STATE ---
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
   const [staffForm, setStaffForm] = useState({
     name: "",
     role: "Server / Waiter",
@@ -242,20 +245,66 @@ export function AdminPortal({
     setNewServerName("");
   };
 
-  // Save Staff Person
+  // Open staff modal for Add or Edit
+  const handleOpenStaffModal = (person = null) => {
+    if (person) {
+      const personName = String(
+        person?.name ||
+          person?.fullName ||
+          person?.FullName ||
+          person?.username ||
+          "",
+      );
+      const personRole = String(
+        person?.role || person?.roleTitle || "Server / Waiter",
+      );
+      setEditingStaff(person);
+      setStaffForm({
+        name: personName,
+        role: personRole,
+        phone: person.phone || "",
+        shift: person.shift || "General Shift",
+      });
+    } else {
+      setEditingStaff(null);
+      setStaffForm({
+        name: "",
+        role: "Server / Waiter",
+        phone: "",
+        shift: "General Shift",
+      });
+    }
+    setIsStaffModalOpen(true);
+  };
+
+  // Save Staff Person (Add or Edit)
   const handleSaveStaff = async (e) => {
     e.preventDefault();
     if (!staffForm.name.trim()) return;
 
-    const saved = await onAddStaff({
-      id: Date.now(),
-      name: staffForm.name,
-      role: staffForm.role,
-      phone: staffForm.phone || "+91 98450 00000",
-      shift: staffForm.shift,
-    });
+    let saved;
+    if (editingStaff) {
+      if (onUpdateStaff) {
+        saved = await onUpdateStaff({
+          ...editingStaff,
+          name: staffForm.name.trim(),
+          role: staffForm.role,
+          phone: staffForm.phone || "+91 98450 00000",
+          shift: staffForm.shift,
+        });
+      }
+    } else {
+      saved = await onAddStaff({
+        id: Date.now(),
+        name: staffForm.name.trim(),
+        role: staffForm.role,
+        phone: staffForm.phone || "+91 98450 00000",
+        shift: staffForm.shift,
+      });
+    }
     if (saved === false) return;
 
+    setEditingStaff(null);
     setStaffForm({
       name: "",
       role: "Server / Waiter",
@@ -843,6 +892,7 @@ export function AdminPortal({
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
+                    tableLayout: "fixed",
                     textAlign: "left",
                     fontSize: "0.85rem",
                   }}
@@ -855,12 +905,51 @@ export function AdminPortal({
                         color: "var(--text-muted)",
                       }}
                     >
-                      <th style={{ padding: "0.75rem 1rem" }}>Dish Name</th>
-                      <th style={{ padding: "0.75rem 1rem" }}>Category</th>
-                      <th style={{ padding: "0.75rem 1rem" }}>Dietary</th>
-                      <th style={{ padding: "0.75rem 1rem" }}>Price (₹)</th>
                       <th
-                        style={{ padding: "0.75rem 1rem", textAlign: "right" }}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          width: "42%",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        Dish Name
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem 1rem",
+                          width: "15%",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        Category
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem 1rem",
+                          width: "14%",
+                          textAlign: "center",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        Dietary
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem 1rem",
+                          width: "13%",
+                          textAlign: "left",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        Price (₹)
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem 1rem",
+                          width: "16%",
+                          textAlign: "center",
+                          verticalAlign: "middle",
+                        }}
                       >
                         Actions
                       </th>
@@ -877,49 +966,63 @@ export function AdminPortal({
                         <td
                           style={{
                             padding: "0.75rem 1rem",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.65rem",
+                            verticalAlign: "middle",
                           }}
                         >
                           <div
                             style={{
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "6px",
-                              overflow: "hidden",
-                              background: "#222",
-                              flexShrink: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.65rem",
+                              minWidth: 0,
                             }}
                           >
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
-                              }}
-                              onError={(e) => (e.target.style.display = "none")}
-                            />
-                          </div>
-                          <div>
                             <div
                               style={{
-                                fontWeight: 700,
-                                color: "var(--text-main)",
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "6px",
+                                overflow: "hidden",
+                                background: "#222",
+                                flexShrink: 0,
                               }}
                             >
-                              {item.name}
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                }}
+                                onError={(e) =>
+                                  (e.target.style.display = "none")
+                                }
+                              />
                             </div>
-                            <div
-                              style={{
-                                fontSize: "0.72rem",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              {item.prepTime} • {item.description?.slice(0, 45)}
-                              ...
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  color: "var(--text-main)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {item.name}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.72rem",
+                                  color: "var(--text-muted)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {item.prepTime} • {item.description}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -928,24 +1031,46 @@ export function AdminPortal({
                             padding: "0.75rem 1rem",
                             textTransform: "capitalize",
                             color: "var(--text-muted)",
+                            verticalAlign: "middle",
                           }}
                         >
                           {item.category.replace("-", " ")}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem" }}>
+                        <td
+                          style={{
+                            padding: "0.75rem 1rem",
+                            textAlign: "center",
+                            verticalAlign: "middle",
+                          }}
+                        >
                           <span
                             style={{
-                              padding: "2px 8px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "5px",
+                              padding: "3px 8px",
                               borderRadius: "4px",
                               fontSize: "0.72rem",
                               fontWeight: 700,
+                              whiteSpace: "nowrap",
                               background: item.isVeg
                                 ? "rgba(16, 185, 129, 0.15)"
                                 : "rgba(239, 68, 68, 0.15)",
                               color: item.isVeg ? "#10b981" : "#ef4444",
                             }}
                           >
-                            {item.isVeg ? "VEG 🟢" : "NON-VEG 🔴"}
+                            <span>{item.isVeg ? "VEG" : "NON-VEG"}</span>
+                            <span
+                              style={{
+                                width: "7px",
+                                height: "7px",
+                                borderRadius: "50%",
+                                background: item.isVeg ? "#10b981" : "#ef4444",
+                                display: "inline-block",
+                                flexShrink: 0,
+                              }}
+                            />
                           </span>
                         </td>
                         <td
@@ -953,6 +1078,8 @@ export function AdminPortal({
                             padding: "0.75rem 1rem",
                             fontWeight: 800,
                             color: "var(--accent-amber-light)",
+                            textAlign: "left",
+                            verticalAlign: "middle",
                           }}
                           className="font-mono"
                         >
@@ -961,11 +1088,17 @@ export function AdminPortal({
                         <td
                           style={{
                             padding: "0.75rem 1rem",
-                            textAlign: "right",
+                            textAlign: "center",
+                            verticalAlign: "middle",
                           }}
                         >
                           <div
-                            style={{ display: "inline-flex", gap: "0.45rem" }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "0.45rem",
+                            }}
                           >
                             <button
                               onClick={() => handleOpenItemModal(item)}
@@ -1426,7 +1559,7 @@ export function AdminPortal({
                 </div>
 
                 <button
-                  onClick={() => setIsStaffModalOpen(true)}
+                  onClick={() => handleOpenStaffModal()}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -1535,25 +1668,47 @@ export function AdminPortal({
                             </div>
                           </div>
 
-                          <button
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Remove ${personName} from staff list?`,
-                                )
-                              ) {
-                                onDeleteStaff(personId);
-                              }
-                            }}
+                          <div
                             style={{
-                              background: "transparent",
-                              color: "var(--text-dim)",
-                              padding: "4px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
                             }}
-                            title="Remove staff member"
                           >
-                            <Trash2 size={14} />
-                          </button>
+                            <button
+                              onClick={() => handleOpenStaffModal(person)}
+                              style={{
+                                background: "transparent",
+                                color: "var(--text-dim)",
+                                padding: "4px",
+                                cursor: "pointer",
+                              }}
+                              title="Edit staff details"
+                            >
+                              <SquarePen size={14} />
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Remove ${personName} from staff list?`,
+                                  )
+                                ) {
+                                  onDeleteStaff(personId);
+                                }
+                              }}
+                              style={{
+                                background: "transparent",
+                                color: "var(--text-dim)",
+                                padding: "4px",
+                                cursor: "pointer",
+                              }}
+                              title="Remove staff member"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
 
                         <div
@@ -3039,7 +3194,7 @@ export function AdminPortal({
         </div>
       )}
 
-      {/* ================= MODAL: ADD STAFF PERSON ================= */}
+      {/* ================= MODAL: ADD / EDIT STAFF PERSON ================= */}
       {isStaffModalOpen && (
         <div
           style={{
@@ -3086,11 +3241,14 @@ export function AdminPortal({
                   letterSpacing: "-0.01em",
                 }}
               >
-                Add New Staff Person
+                {editingStaff ? "Edit Staff Details" : "Add New Staff Person"}
               </h3>
               <button
                 type="button"
-                onClick={() => setIsStaffModalOpen(false)}
+                onClick={() => {
+                  setEditingStaff(null);
+                  setIsStaffModalOpen(false);
+                }}
                 style={{
                   background: "var(--bg-tertiary)",
                   border: "1px solid var(--border-subtle)",
@@ -3172,10 +3330,26 @@ export function AdminPortal({
                   cursor: "pointer",
                 }}
               >
+                {![
+                  "Senior Captain",
+                  "VIP Lounge Captain",
+                  "Captain",
+                  "Head Waiter",
+                  "Server / Waiter",
+                  "Steward",
+                  "Stewardess",
+                  "Cashier",
+                ].includes(staffForm.role) &&
+                  staffForm.role && (
+                    <option value={staffForm.role}>{staffForm.role}</option>
+                  )}
+                <option value="Senior Captain">Senior Captain</option>
+                <option value="VIP Lounge Captain">VIP Lounge Captain</option>
                 <option value="Captain">Captain</option>
                 <option value="Head Waiter">Head Waiter</option>
                 <option value="Server / Waiter">Server / Waiter</option>
                 <option value="Steward">Steward</option>
+                <option value="Stewardess">Stewardess</option>
                 <option value="Cashier">Cashier</option>
               </select>
             </div>
@@ -3243,6 +3417,15 @@ export function AdminPortal({
                   cursor: "pointer",
                 }}
               >
+                {![
+                  "Morning Shift (10 AM - 4 PM)",
+                  "Evening Shift (5 PM - 11 PM)",
+                  "Full Day (11 AM - 11 PM)",
+                  "General Shift",
+                ].includes(staffForm.shift) &&
+                  staffForm.shift && (
+                    <option value={staffForm.shift}>{staffForm.shift}</option>
+                  )}
                 <option value="Morning Shift (10 AM - 4 PM)">
                   Morning Shift (10 AM - 4 PM)
                 </option>
@@ -3252,6 +3435,7 @@ export function AdminPortal({
                 <option value="Full Day (11 AM - 11 PM)">
                   Full Day (11 AM - 11 PM)
                 </option>
+                <option value="General Shift">General Shift</option>
               </select>
             </div>
 
@@ -3260,7 +3444,10 @@ export function AdminPortal({
             >
               <button
                 type="button"
-                onClick={() => setIsStaffModalOpen(false)}
+                onClick={() => {
+                  setEditingStaff(null);
+                  setIsStaffModalOpen(false);
+                }}
                 style={{
                   flex: 1,
                   padding: "0.7rem",
@@ -3291,7 +3478,7 @@ export function AdminPortal({
                   boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
                 }}
               >
-                Add Person
+                {editingStaff ? "Save Changes" : "Add Person"}
               </button>
             </div>
           </form>

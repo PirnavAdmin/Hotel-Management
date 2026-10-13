@@ -2040,13 +2040,11 @@ export function TableDetailView({
           z-index: 2;
           background: linear-gradient(135deg, #f59e0b, #ea580c);
           color: #fff;
-          padding: 2px 5px;
-          border-radius: 3px;
-          font-size: 0.5rem;
-          font-weight: 800;
+          padding: 3px;
+          border-radius: 4px;
           display: flex;
           align-items: center;
-          gap: 2px;
+          justify-content: center;
           box-shadow: 0 2px 5px rgba(0,0,0,0.35);
         }
 
@@ -3027,9 +3025,8 @@ export function TableDetailView({
 
                       {/* Chef Special Badge */}
                       {item.isChefSpecial && (
-                        <div className="pos-menu-chef">
-                          <Sparkles size={10} />
-                          <span>CHEF'S PICK</span>
+                        <div className="pos-menu-chef" title="Chef's Pick">
+                          <Sparkles size={11} />
                         </div>
                       )}
 
