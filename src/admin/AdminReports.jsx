@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   BarChart3,
   TrendingUp,
@@ -8,38 +8,134 @@ import {
   Utensils,
   Award,
   Calendar,
+  ArrowRight,
+  RefreshCw,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { INITIAL_ORDERS } from "../data/initialOrders";
 
-export function AdminReports({ pastOrders = [], menuItems = [] }) {
-  const allOrders =
-    pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS;
+function parseOrderToYMD(order) {
+  if (!order) return "";
+  const months = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  };
 
-  const totalRevenue = allOrders.reduce(
+  if (order.date) {
+    const s = String(order.date).trim();
+    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
+    }
+    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (dmyMatch) {
+      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
+    }
+    const textMatch = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3,})[\s\-]+(\d{4})/);
+    if (textMatch) {
+      const mon = textMatch[2].slice(0, 3).toLowerCase();
+      if (months[mon]) {
+        return `${textMatch[3]}-${months[mon]}-${textMatch[1].padStart(2, "0")}`;
+      }
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+
+  const ts = order.orderTimestamp || order.timestamp;
+  if (ts) {
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  return "";
+}
+
+export function AdminReports({ pastOrders = [], menuItems = [] }) {
+  const now = new Date();
+  const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const sevenDaysYMD = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, "0")}-${String(sevenDaysAgo.getDate()).padStart(2, "0")}`;
+  const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthStartYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+  const [showAllDishes, setShowAllDishes] = useState(false);
+  const [filterPeriod, setFilterPeriod] = useState("today");
+  const [startDate, setStartDate] = useState(todayYMD);
+  const [endDate, setEndDate] = useState(todayYMD);
+  const [isFetching, setIsFetching] = useState(false);
+  const startInputRef = useRef(null);
+  const [ordersData, setOrdersData] = useState(() => {
+    return pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS;
+  });
+
+  useEffect(() => {
+    if (pastOrders && pastOrders.length > 0) {
+      setOrdersData(pastOrders);
+    }
+  }, [pastOrders]);
+
+  const allOrders = ordersData;
+
+  const filteredOrders = ordersData.filter((order) => {
+    if (filterPeriod === "all") return true;
+
+    const orderYMD = parseOrderToYMD(order);
+    if (!orderYMD) return false;
+
+    if (filterPeriod === "today") {
+      return orderYMD === todayYMD;
+    }
+    if (filterPeriod === "week") {
+      return orderYMD >= sevenDaysYMD && orderYMD <= todayYMD;
+    }
+    if (filterPeriod === "month") {
+      return orderYMD.startsWith(currentMonthPrefix);
+    }
+    if (filterPeriod === "custom") {
+      if (startDate && endDate) {
+        const from = startDate <= endDate ? startDate : endDate;
+        const to = startDate <= endDate ? endDate : startDate;
+        return orderYMD >= from && orderYMD <= to;
+      }
+      if (startDate) {
+        return orderYMD >= startDate;
+      }
+      if (endDate) {
+        return orderYMD <= endDate;
+      }
+      return true;
+    }
+    return true;
+  });
+
+  const totalRevenue = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.grandTotal) || 0),
     0
   );
 
-  const totalTax = allOrders.reduce(
+  const totalTax = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.taxAmount) || 0),
     0
   );
 
-  const totalService = allOrders.reduce(
+  const totalService = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.serviceChargeAmount) || 0),
     0
   );
 
   // Payment breakdown
   const paymentStats = {
-    upi: allOrders
+    upi: filteredOrders
       .filter((o) => (o.paymentMethod || "").toLowerCase() === "upi")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
-    cash: allOrders
+    cash: filteredOrders
       .filter((o) => (o.paymentMethod || "").toLowerCase() === "cash")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
-    card: allOrders
+    card: filteredOrders
       .filter((o) => (o.paymentMethod || "").toLowerCase() === "card")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
   };
@@ -50,20 +146,38 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
 
   // Top selling dishes across settled orders
   const dishCounts = {};
-  allOrders.forEach((o) => {
+  filteredOrders.forEach((o) => {
     (o.items || []).forEach((item) => {
       const name = item.name || "Dish";
       dishCounts[name] = (dishCounts[name] || 0) + (item.quantity || 1);
     });
   });
 
-  const sortedDishes = Object.entries(dishCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+  const sortedDishes = Object.entries(dishCounts).sort((a, b) => b[1] - a[1]);
+  const displayedDishes = showAllDishes
+    ? sortedDishes
+    : sortedDishes.slice(0, 3);
 
-  const averageBill = allOrders.length
-    ? Math.round(totalRevenue / allOrders.length)
+  const averageBill = filteredOrders.length
+    ? Math.round(totalRevenue / filteredOrders.length)
     : 0;
+
+  const handleFetchData = () => {
+    setIsFetching(true);
+    try {
+      const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setOrdersData(parsed);
+        }
+      }
+    } catch {}
+
+    setTimeout(() => {
+      setIsFetching(false);
+    }, 450);
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -115,30 +229,219 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 >
                   Sales Analytics & Revenue Reports
                 </h2>
-                <span
-                  style={{
-                    background: "rgba(245, 158, 11, 0.15)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
-                    color: "#f59e0b",
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    padding: "2px 10px",
-                    borderRadius: "20px",
-                  }}
-                >
-                  Period: All Time
-                </span>
               </div>
-              <p
+            </div>
+          </div>
+
+          {/* Right Action Bar: Quick Filter Buttons, Calendar Picker, and Fetch Button */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.55rem",
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Quick Period Buttons */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "10px",
+                padding: "3px",
+                gap: "3px",
+              }}
+            >
+              {[
+                { id: "today", label: "Today" },
+                { id: "week", label: "7 Days" },
+                { id: "month", label: "This Month" },
+                { id: "all", label: "All Time" },
+              ].map((p) => {
+                const active = filterPeriod === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setFilterPeriod(p.id);
+                      if (p.id === "today") {
+                        setStartDate(todayYMD);
+                        setEndDate(todayYMD);
+                      } else if (p.id === "week") {
+                        setStartDate(sevenDaysYMD);
+                        setEndDate(todayYMD);
+                      } else if (p.id === "month") {
+                        setStartDate(monthStartYMD);
+                        setEndDate(todayYMD);
+                      } else if (p.id === "all") {
+                        setStartDate("");
+                        setEndDate("");
+                      }
+                    }}
+                    style={{
+                      background: active
+                        ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                        : "transparent",
+                      color: active ? "#ffffff" : "#94a3b8",
+                      border: "none",
+                      borderRadius: "7px",
+                      padding: "0.38rem 0.65rem",
+                      fontSize: "0.76rem",
+                      fontWeight: active ? 700 : 500,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) e.currentTarget.style.color = "#ffffff";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) e.currentTarget.style.color = "#94a3b8";
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Calendar Date-to-Date Range Picker */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                background:
+                  filterPeriod === "custom"
+                    ? "rgba(245, 158, 11, 0.12)"
+                    : "rgba(255, 255, 255, 0.04)",
+                border:
+                  filterPeriod === "custom"
+                    ? "1.5px solid rgba(245, 158, 11, 0.5)"
+                    : "1px solid rgba(255, 255, 255, 0.09)",
+                borderRadius: "10px",
+                padding: "0.32rem 0.65rem",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span
+                onClick={() => {
+                  try {
+                    startInputRef.current?.showPicker();
+                  } catch {}
+                }}
+                style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+                title="Click to select dates"
+              >
+                <Calendar size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
+              </span>
+              <input
+                ref={startInputRef}
+                type="date"
+                className="clean-date-input"
+                value={startDate}
+                max={endDate && endDate < todayYMD ? endDate : todayYMD}
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker();
+                  } catch {}
+                }}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const capped = val && val > todayYMD ? todayYMD : val;
+                  setStartDate(capped);
+                  setFilterPeriod("custom");
+                }}
                 style={{
-                  fontSize: "0.8rem",
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "#ffffff",
+                  fontSize: "0.76rem",
+                  fontFamily: "inherit",
+                  colorScheme: "dark",
+                  cursor: "pointer",
+                }}
+                title="From Date (Future dates disabled)"
+              />
+              <span
+                style={{
                   color: "#94a3b8",
-                  margin: "3px 0 0 0",
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  userSelect: "none",
                 }}
               >
-                Comprehensive breakdown of restaurant earnings, payment channels, and popular biryanis
-              </p>
+                to
+              </span>
+              <input
+                type="date"
+                className="clean-date-input"
+                value={endDate}
+                min={startDate || undefined}
+                max={todayYMD}
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker();
+                  } catch {}
+                }}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const capped = val && val > todayYMD ? todayYMD : val;
+                  setEndDate(capped);
+                  setFilterPeriod("custom");
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "#ffffff",
+                  fontSize: "0.76rem",
+                  fontFamily: "inherit",
+                  colorScheme: "dark",
+                  cursor: "pointer",
+                }}
+                title="To Date (Future dates disabled)"
+              />
             </div>
+
+            {/* Fetch Data Button */}
+            <button
+              onClick={handleFetchData}
+              style={{
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                border: "none",
+                borderRadius: "10px",
+                padding: "0.45rem 0.85rem",
+                color: "#ffffff",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                boxShadow: "0 3px 10px rgba(245, 158, 11, 0.35)",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "0.92";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <RefreshCw
+                size={13}
+                style={{
+                  transition: "transform 0.45s ease",
+                  transform: isFetching ? "rotate(360deg)" : "none",
+                }}
+              />
+              <span>Fetch Data</span>
+            </button>
           </div>
         </div>
 
@@ -173,7 +476,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               {formatCurrency(totalRevenue)}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "3px" }}>
-              Across {allOrders.length} settled tickets
+              Across {filteredOrders.length} settled tickets
             </div>
           </div>
 
@@ -186,7 +489,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
             }}
           >
             <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-              Average Ticket Value
+              Total Orders
             </div>
             <div
               style={{
@@ -196,10 +499,10 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 marginTop: "4px",
               }}
             >
-              {formatCurrency(averageBill)}
+              {filteredOrders.length}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "3px" }}>
-              Per dining table order
+              Settled dining orders
             </div>
           </div>
 
@@ -271,6 +574,9 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               border: "1px solid rgba(255, 255, 255, 0.08)",
               borderRadius: "14px",
               padding: "1.25rem",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
             }}
           >
             <h3
@@ -424,23 +730,75 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               border: "1px solid rgba(255, 255, 255, 0.08)",
               borderRadius: "14px",
               padding: "1.25rem",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <h3
+            <div
               style={{
-                fontSize: "0.95rem",
-                fontWeight: 700,
-                color: "#ffffff",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
                 marginBottom: "1rem",
               }}
             >
-              Top Selling Dishes & Biryanis
-            </h3>
+              <h3
+                style={{
+                  fontSize: "0.95rem",
+                  fontWeight: 700,
+                  color: "#ffffff",
+                  margin: 0,
+                }}
+              >
+                Top Selling Items
+              </h3>
+              {sortedDishes.length > 3 && (
+                <button
+                  onClick={() => setShowAllDishes((prev) => !prev)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#f59e0b",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "3px",
+                    padding: 0,
+                  }}
+                >
+                  <span>{showAllDishes ? "Show Top 3" : "View All"}</span>
+                  <ArrowRight size={13} />
+                </button>
+              )}
+            </div>
 
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}
+              className="no-scrollbar"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.6rem",
+                maxHeight: "155px",
+                overflowY: "auto",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
             >
-              {sortedDishes.map(([name, qty], index) => (
+              {displayedDishes.length === 0 ? (
+                <div
+                  style={{
+                    padding: "2rem 1rem",
+                    textAlign: "center",
+                    color: "#64748b",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  No orders recorded for this period
+                </div>
+              ) : (
+                displayedDishes.map(([name, qty], index) => (
                 <div
                   key={name}
                   style={{
@@ -494,7 +852,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                     {qty} orders
                   </span>
                 </div>
-              ))}
+              )))}
             </div>
           </div>
         </div>

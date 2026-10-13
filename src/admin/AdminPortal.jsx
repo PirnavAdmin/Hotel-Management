@@ -375,6 +375,7 @@ export function AdminPortal({
       }
     >
       <div
+        className="no-scrollbar"
         style={
           isFullPage
             ? {
@@ -427,15 +428,19 @@ export function AdminPortal({
           <AdminHeader
             currentSession={currentSession}
             onLogout={onLogout}
+            onClose={onClose}
             currentTheme={currentTheme}
             onChangeTheme={handleThemeChange}
           />
 
           {/* Scrollable Work Area */}
           <div
+            className="no-scrollbar"
             style={{
               flex: 1,
               overflowY: "auto",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
               padding: activeTab === "logins" ? "1rem" : "1.5rem 2rem",
               minHeight: 0,
             }}

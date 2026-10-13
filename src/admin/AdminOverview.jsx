@@ -92,7 +92,7 @@ export function AdminOverview({
                 margin: 0,
               }}
             >
-              Executive Restaurant Dashboard
+              Restaurant Dashboard
             </h2>
             <p
               style={{
@@ -513,13 +513,15 @@ export function AdminOverview({
           </div>
 
           <div
+            className="no-scrollbar"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(105px, 1fr))",
               gap: "0.65rem",
               maxHeight: "260px",
               overflowY: "auto",
-              paddingRight: "4px",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
             }}
           >
             {tables.slice(0, 15).map((tbl) => {
@@ -626,13 +628,15 @@ export function AdminOverview({
           </div>
 
           <div
+            className="no-scrollbar"
             style={{
               display: "flex",
               flexDirection: "column",
               gap: "0.65rem",
               maxHeight: "260px",
               overflowY: "auto",
-              paddingRight: "4px",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
             }}
           >
             {menuItems.slice(0, 5).map((dish) => (

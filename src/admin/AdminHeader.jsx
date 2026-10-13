@@ -5,6 +5,7 @@ import { ProfileDropdown } from "../common/ProfileDropdown";
 export function AdminHeader({
   currentSession,
   onLogout,
+  onClose,
   currentTheme = "royal-saffron",
   onChangeTheme,
 }) {
@@ -94,7 +95,7 @@ export function AdminHeader({
               textOverflow: "ellipsis",
             }}
           >
-            Restaurant Admin & Management Portal
+            Welcome to Admin & Management Portal
           </h1>
           <p
             style={{
@@ -189,6 +190,7 @@ export function AdminHeader({
         <ProfileDropdown
           currentSession={currentSession}
           onLogout={onLogout}
+          onReturnToPOS={onClose}
           role="admin"
         />
       </div>

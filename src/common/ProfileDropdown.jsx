@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, ChevronDown, ShieldCheck, Mail, Phone, CheckCircle2 } from 'lucide-react';
+import { User, LogOut, ChevronDown, ShieldCheck, Mail, Phone, CheckCircle2, ArrowLeft } from 'lucide-react';
 
 export function ProfileDropdown({ 
   currentSession = null, 
   onLogout = null,
+  onReturnToPOS = null,
   role = 'pos'
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -299,8 +300,47 @@ export function ProfileDropdown({
           <div style={{
             padding: '0.85rem 1rem',
             background: 'rgba(0,0,0,0.3)',
-            borderTop: '1px solid rgba(255,255,255,0.08)'
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.55rem'
           }}>
+            {onReturnToPOS ? (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onReturnToPOS();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 1rem',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1.5px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: '10px',
+                  color: '#fbbf24',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(245, 158, 11, 0.15)';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.color = '#fbbf24';
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Go to User POS</span>
+              </button>
+            ) : null}
+
             {onLogout ? (
               <button
                 onClick={() => {
