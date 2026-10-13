@@ -291,7 +291,7 @@ export function AdminOverview({
             </div>
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--accent-amber)" }}>
-            {todayOrders.length} Orders
+            {todayOrders.length} {todayOrders.length === 1 ? "Order" : "Orders"}
           </div>
           <div
             style={{
@@ -300,7 +300,7 @@ export function AdminOverview({
               marginTop: "2px",
             }}
           >
-            {formatCurrency(todayRevenue)} collected today
+            Settled customer bills
           </div>
         </div>
 
