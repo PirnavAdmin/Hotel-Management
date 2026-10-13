@@ -251,13 +251,13 @@ export function AdminInvoices({ pastOrders = [] }) {
         </div>
 
         {/* Invoice date filters */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap", padding: "0.7rem 0.8rem", marginBottom: "0.9rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
-          <Calendar size={16} color="#f59e0b" />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "0.65rem", flexWrap: "wrap", minHeight: "54px", boxSizing: "border-box", padding: "0.55rem 0.8rem", marginBottom: "0.9rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <Calendar size={16} color="#f59e0b" style={{ flex: "0 0 auto" }} />
           <select
             aria-label="Filter invoices by date"
             value={dateFilter}
             onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
-            style={{ height: "36px", minWidth: "145px", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
+            style={{ height: "38px", minWidth: "190px", boxSizing: "border-box", padding: "0 0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
           >
             <option value="all">All Dates</option>
             <option value="daily">Daily</option>
@@ -265,31 +265,31 @@ export function AdminInvoices({ pastOrders = [] }) {
             <option value="custom">Custom Date Range</option>
           </select>
           {dateFilter === "daily" && (
-            <label style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
               Date
-              <input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setCurrentPage(1); }} style={{ height: "36px", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+              <input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setCurrentPage(1); }} style={{ width: "148px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
             </label>
           )}
           {dateFilter === "monthly" && (
-            <label style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
               Month
-              <input type="month" value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); setCurrentPage(1); }} style={{ height: "36px", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+              <input type="month" value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); setCurrentPage(1); }} style={{ width: "148px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
             </label>
           )}
           {dateFilter === "custom" && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
                 From
-                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="From date (day/month/year)" value={customFromDateText} onChange={(event) => { const text = event.target.value; setCustomFromDateText(text); setCustomFromDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "112px", height: "36px", boxSizing: "border-box", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="From date (day/month/year)" value={customFromDateText} onChange={(event) => { const text = event.target.value; setCustomFromDateText(text); setCustomFromDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
               </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
                 To
-                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="To date (day/month/year)" value={customToDateText} onChange={(event) => { const text = event.target.value; setCustomToDateText(text); setCustomToDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "112px", height: "36px", boxSizing: "border-box", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="To date (day/month/year)" value={customToDateText} onChange={(event) => { const text = event.target.value; setCustomToDateText(text); setCustomToDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
               </label>
             </div>
           )}
           {invalidCustomDate && <span role="alert" style={{ color: "#fca5a5", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
-          <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem" }}>Showing {filteredOrders.length} invoices</span>
+          <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Showing {filteredOrders.length} invoices</span>
         </div>
 
         {/* Filter Strip & Mini Metrics */}
