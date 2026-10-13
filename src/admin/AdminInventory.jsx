@@ -278,7 +278,7 @@ export function AdminInventory() {
           background: "var(--bg-card)",
           border: "1px solid var(--border-card)",
           borderRadius: "16px",
-          padding: "1.5rem",
+          padding: "1.1rem",
         }}
       >
         {/* Header Strip inside Card */}
@@ -288,18 +288,18 @@ export function AdminInventory() {
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: "1rem",
-            marginBottom: "1.5rem",
+            gap: "0.75rem",
+            marginBottom: "1rem",
           }}
         >
           {/* Left Title with Orange Squircle */}
           <div
-            style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
+            style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}
           >
             <div
               style={{
-                width: "44px",
-                height: "44px",
+                width: "40px",
+                height: "40px",
                 borderRadius: "12px",
                 background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                 display: "flex",
@@ -308,7 +308,7 @@ export function AdminInventory() {
                 boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
               }}
             >
-              <Package size={22} color="#ffffff" />
+              <Package size={19} color="#ffffff" />
             </div>
             <div>
               <div
@@ -316,7 +316,7 @@ export function AdminInventory() {
               >
                 <h2
                   style={{
-                    fontSize: "1.35rem",
+                    fontSize: "1.18rem",
                     fontWeight: 800,
                     color: "var(--text-main)",
                     margin: 0,
@@ -355,7 +355,7 @@ export function AdminInventory() {
               </div>
               <p
                 style={{
-                  fontSize: "0.8rem",
+                  fontSize: "0.74rem",
                   color: "var(--text-dim)",
                   margin: "3px 0 0 0",
                 }}
@@ -382,8 +382,8 @@ export function AdminInventory() {
             <div
               style={{
                 position: "relative",
-                width: "260px",
-                height: "40px",
+                width: "230px",
+                height: "36px",
                 display: "flex",
                 alignItems: "center",
               }}
@@ -474,7 +474,7 @@ export function AdminInventory() {
                     style={{
                       width: "100%",
                       minWidth: 0,
-                      height: "40px",
+                      height: "36px",
                       padding: "0 2.25rem 0 0.85rem",
                       color: "var(--text-main)",
                       background: "var(--bg-tertiary)",
@@ -518,7 +518,7 @@ export function AdminInventory() {
                 onClick={exportInventory}
                 title="Download all inventory as an Excel-compatible CSV"
                 style={{
-                  height: "36px", background: "var(--bg-tertiary)", color: "#34d399",
+                  height: "33px", background: "var(--bg-tertiary)", color: "#34d399",
                   border: "1px solid rgba(52, 211, 153, 0.4)", borderRadius: "9px", padding: "0 0.8rem",
                   fontWeight: 700, fontSize: "0.78rem", display: "flex", alignItems: "center",
                   gap: "0.4rem", cursor: "pointer", whiteSpace: "nowrap",
@@ -530,7 +530,7 @@ export function AdminInventory() {
               <button
                 onClick={() => setIsAddModalOpen(true)}
                 style={{
-                  height: "36px", background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  height: "33px", background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                   color: "#ffffff", border: "none", borderRadius: "9px", padding: "0 0.9rem",
                   fontWeight: 700, fontSize: "0.78rem", display: "flex", alignItems: "center",
                   gap: "0.45rem", cursor: "pointer", boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
@@ -555,8 +555,8 @@ export function AdminInventory() {
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
-            gap: "0.75rem",
-            marginBottom: "1.25rem",
+            gap: "0.6rem",
+            marginBottom: "0.9rem",
           }}
         >
           {[
@@ -592,7 +592,7 @@ export function AdminInventory() {
                 alignItems: "center",
                 gap: "0.75rem",
                 minWidth: 0,
-                padding: "0.85rem 1rem",
+                padding: "0.65rem 0.8rem",
                 background: "var(--bg-tertiary)",
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "10px",
@@ -600,8 +600,8 @@ export function AdminInventory() {
             >
               <div
                 style={{
-                  width: "38px",
-                  height: "38px",
+                  width: "32px",
+                  height: "32px",
                   flexShrink: 0,
                   display: "grid",
                   placeItems: "center",
@@ -610,7 +610,7 @@ export function AdminInventory() {
                   borderRadius: "9px",
                 }}
               >
-                <Icon size={20} />
+                <Icon size={17} />
               </div>
               <div>
                 <div
@@ -622,7 +622,7 @@ export function AdminInventory() {
                 >
                   {label}
                 </div>
-                <div style={{ color, fontSize: "1.15rem", fontWeight: 800 }}>
+                <div style={{ color, fontSize: "1rem", fontWeight: 800 }}>
                   {value}
                 </div>
               </div>
@@ -656,12 +656,12 @@ export function AdminInventory() {
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.85rem 1rem" }}>Ingredient / Supply</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Category</th>
-                <th style={{ padding: "0.85rem 1rem" }}>In-Stock Level</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Threshold</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Status</th>
-                <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
+                <th style={{ padding: "0.65rem 0.8rem" }}>Ingredient / Supply</th>
+                <th style={{ padding: "0.65rem 0.8rem" }}>Category</th>
+                <th style={{ padding: "0.65rem 0.8rem" }}>In-Stock Level</th>
+                <th style={{ padding: "0.65rem 0.8rem" }}>Threshold</th>
+                <th style={{ padding: "0.65rem 0.8rem" }}>Status</th>
+                <th style={{ padding: "0.65rem 0.8rem", textAlign: "right" }}>
                   Quick Adjust & Actions
                 </th>
               </tr>
@@ -691,12 +691,12 @@ export function AdminInventory() {
                     }
                   >
                     {/* Item Name */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "0.7rem 0.8rem" }}>
                       <div
                         style={{
                           fontWeight: 800,
                           color: "var(--text-main)",
-                          fontSize: "0.92rem",
+                          fontSize: "0.84rem",
                         }}
                       >
                         {item.name}
@@ -715,7 +715,7 @@ export function AdminInventory() {
                     {/* Category */}
                     <td
                       style={{
-                        padding: "1rem",
+                        padding: "0.7rem 0.8rem",
                         color: "var(--text-main)",
                         fontWeight: 600,
                       }}
@@ -724,7 +724,7 @@ export function AdminInventory() {
                     </td>
 
                     {/* In-Stock */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "0.7rem 0.8rem" }}>
                       <div
                         style={{
                           fontWeight: 800,
@@ -743,7 +743,7 @@ export function AdminInventory() {
                     {/* Min Threshold */}
                     <td
                       style={{
-                        padding: "1rem",
+                        padding: "0.7rem 0.8rem",
                         color: "var(--text-muted)",
                         fontWeight: 600,
                       }}
@@ -752,7 +752,7 @@ export function AdminInventory() {
                     </td>
 
                     {/* Status Badge */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "0.7rem 0.8rem" }}>
                       <span
                         style={{
                           background: `${statusColor}1f`,
@@ -784,7 +784,7 @@ export function AdminInventory() {
                     </td>
 
                     {/* Actions */}
-                    <td style={{ padding: "1rem", textAlign: "right" }}>
+                    <td style={{ padding: "0.7rem 0.8rem", textAlign: "right" }}>
                       <div
                         style={{
                           display: "inline-flex",
