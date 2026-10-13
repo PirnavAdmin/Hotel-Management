@@ -3175,55 +3175,54 @@ export function AdminPortal({
               </div>
 
               {!isNewServerMode ? (
-                <select
+                <CustomCreatableDropdown
                   value={tableForm.server}
-                  onChange={(e) => {
-                    if (e.target.value === "__add_new__") {
+                  onChange={(val) => {
+                    if (val === "__add_new__") {
                       setIsNewServerMode(true);
                       setNewServerName("");
                     } else {
-                      setTableForm({ ...tableForm, server: e.target.value });
+                      setTableForm({ ...tableForm, server: val });
                     }
                   }}
-                  style={{
-                    width: "100%",
-                    background: "var(--bg-tertiary)",
-                    border: "1.5px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0.65rem 0.85rem",
-                    color: "var(--text-main)",
-                    fontWeight: 600,
-                    fontSize: "0.92rem",
-                    outline: "none",
-                    cursor: "pointer",
+                  options={[
+                    ...staffList.map((staff) => {
+                      const staffName = String(
+                        staff?.name ||
+                          staff?.fullName ||
+                          staff?.FullName ||
+                          staff?.username ||
+                          "Unnamed staff",
+                      );
+                      const staffRole =
+                        staff?.role || staff?.roleTitle || "Staff";
+                      return {
+                        value: staffName,
+                        label: `${staffName} (${staffRole})`,
+                      };
+                    }),
+                    {
+                      value: "__add_new__",
+                      label: "+ Add New Server Name...",
+                    },
+                  ]}
+                  placeholder="Select or type server name..."
+                  allowCustom
+                  onSaveCustomOption={(newServer) => {
+                    if (newServer && newServer !== "__add_new__") {
+                      setTableForm({ ...tableForm, server: newServer });
+                      if (!staffList.some((s) => s.name?.toLowerCase() === newServer.toLowerCase())) {
+                        onAddStaff({
+                          id: Date.now(),
+                          name: newServer,
+                          role: "Server / Waiter",
+                          phone: "+91 98450 00000",
+                          shift: "General Shift",
+                        });
+                      }
+                    }
                   }}
-                >
-                  {staffList.map((staff) => {
-                    const staffName = String(
-                      staff?.name ||
-                        staff?.fullName ||
-                        staff?.FullName ||
-                        staff?.username ||
-                        "Unnamed staff",
-                    );
-                    const staffRole =
-                      staff?.role || staff?.roleTitle || "Staff";
-                    return (
-                      <option
-                        key={staff?.id ?? staff?.staffId ?? staffName}
-                        value={staffName}
-                      >
-                        {staffName} ({staffRole})
-                      </option>
-                    );
-                  })}
-                  <option
-                    value="__add_new__"
-                    style={{ color: "var(--accent-amber)", fontWeight: 800 }}
-                  >
-                    + Add New Server Name...
-                  </option>
-                </select>
+                />
               ) : (
                 <div
                   style={{
@@ -3256,30 +3255,15 @@ export function AdminPortal({
                         outline: "none",
                       }}
                     />
-                    <select
+                    <CustomCreatableDropdown
                       value={newServerRole}
-                      onChange={(e) => setNewServerRole(e.target.value)}
-                      style={{
-                        flex: 1,
-                        background: "var(--bg-secondary)",
-                        border: "1.5px solid var(--border-subtle)",
-                        borderRadius: "6px",
-                        padding: "0.6rem",
-                        color: "var(--text-main)",
-                        fontWeight: 600,
-                        fontSize: "0.85rem",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="Server / Waiter">Server / Waiter</option>
-                      <option value="Captain">Captain</option>
-                      <option value="Senior Captain">Senior Captain</option>
-                      <option value="Stewardess">Stewardess</option>
-                      <option value="VIP Lounge Captain">
-                        VIP Lounge Captain
-                      </option>
-                    </select>
+                      onChange={(val) => setNewServerRole(val)}
+                      options={allRoleOptions}
+                      placeholder="Select or type role..."
+                      allowCustom
+                      onSaveCustomOption={saveCustomRole}
+                      style={{ flex: 1 }}
+                    />
                   </div>
                   <p
                     style={{
