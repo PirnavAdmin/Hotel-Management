@@ -19,6 +19,7 @@ export function LoginManagement({ currentAdminSession }) {
   const [formEmail, setFormEmail] = useState('');
   const [formPass, setFormPass]     = useState('');
   const [editingUser, setEditingUser] = useState(null);
+  const [accountRoleFilter, setAccountRoleFilter] = useState('pos');
   const [showPass, setShowPass]     = useState(false);
   const [formError, setFormError]   = useState('');
   const [formSuccess, setFormSuccess] = useState('');
@@ -155,6 +156,12 @@ export function LoginManagement({ currentAdminSession }) {
   const posUsers   = users.filter(u => (u.role || '').toLowerCase() === 'pos');
   const kotUsers   = users.filter(u => (u.role || '').toLowerCase() === 'kot');
   const adminUsers = users.filter(u => (u.role || '').toLowerCase() === 'admin');
+  const accountRoleViews = {
+    pos: { label: 'User POS Accounts', users: posUsers, color: '#f59e0b', icon: <Utensils size={16} />, emptyMsg: 'No POS users yet. Create one above.' },
+    kot: { label: 'Kitchen KOT Accounts', users: kotUsers, color: '#fb923c', icon: <ChefHat size={16} />, emptyMsg: 'No KOT users yet. Create one above.' },
+    admin: { label: 'Admin Accounts', users: adminUsers, color: '#818cf8', icon: <ShieldCheck size={16} />, emptyMsg: 'No admin users found.' },
+  };
+  const selectedAccountView = accountRoleViews[accountRoleFilter];
 
   const roleConfig = {
     pos: {
@@ -608,27 +615,28 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      {/* User sections */}
+      {/* Account list with a single role dropdown */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.65rem' }}>
+        <label htmlFor="login-account-role" style={{ color: '#94a3b8', fontSize: '0.78rem', fontWeight: 800 }}>
+          Show accounts
+        </label>
+        <select
+          id="login-account-role"
+          value={accountRoleFilter}
+          onChange={(event) => setAccountRoleFilter(event.target.value)}
+          style={{ background: '#111827', border: '1px solid rgba(245,158,11,0.45)', borderRadius: '8px', color: '#fff', padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 700, minWidth: '190px' }}
+        >
+          <option value="pos">User POS</option>
+          <option value="kot">Kitchen KOT</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
       <Section
-        title="🍽️ User POS Accounts"
-        icon={<Utensils size={16} />}
-        color="#f59e0b"
-        users={posUsers}
-        emptyMsg="No POS users yet. Create one above ↑"
-      />
-      <Section
-        title="🔥 Kitchen KOT Accounts"
-        icon={<ChefHat size={16} />}
-        color="#fb923c"
-        users={kotUsers}
-        emptyMsg="No KOT users yet. Create one above ↑"
-      />
-      <Section
-        title="⚙️ Admin Accounts"
-        icon={<ShieldCheck size={16} />}
-        color="#818cf8"
-        users={adminUsers}
-        emptyMsg="No admin accounts found."
+        title={selectedAccountView.label}
+        icon={selectedAccountView.icon}
+        color={selectedAccountView.color}
+        users={selectedAccountView.users}
+        emptyMsg={selectedAccountView.emptyMsg}
       />
 
       {/* Delete Confirm Overlay */}
