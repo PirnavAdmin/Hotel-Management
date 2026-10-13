@@ -755,129 +755,171 @@ export function AdminInventory() {
               )}
             </tbody>
           </table>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-            paddingTop: "0.85rem",
-            color: "#94a3b8",
-            fontSize: "0.78rem",
-          }}
-        >
-          <span>
-            Showing {filtered.length === 0 ? 0 : pageStart + 1} to{" "}
-            {Math.min(pageStart + itemsPerPage, filtered.length)} of{" "}
-            {filtered.length} items
-          </span>
           <div
             style={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
+              padding: "0.5rem 0.85rem",
+              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "rgba(255, 255, 255, 0.015)",
+              fontSize: "0.74rem",
+              color: "#94a3b8",
               flexWrap: "wrap",
-              gap: "0.35rem",
+              gap: "0.5rem",
             }}
           >
-            <span style={{ marginRight: "0.15rem" }}>Per page:</span>
-            <select
-              aria-label="Items per page"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              style={{
-                height: "36px",
-                marginRight: "0.35rem",
-                padding: "0 0.55rem",
-                color: "#cbd5e1",
-                background: "#080d1a",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "7px",
-                fontSize: "0.8rem",
-              }}
+            <span>
+              Showing{" "}
+              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                {filtered.length === 0 ? 0 : pageStart + 1}
+              </strong>
+              –
+              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                {Math.min(pageStart + itemsPerPage, filtered.length)}
+              </strong>{" "}
+              of{" "}
+              <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                {filtered.length}
+              </strong>{" "}
+              items
+            </span>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
             >
-              {[6, 12, 24].map((pageSize) => (
-                <option key={pageSize} value={pageSize}>
-                  {pageSize}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              aria-label="Previous page"
-              disabled={visiblePage === 1}
-              onClick={() => setCurrentPage(visiblePage - 1)}
-              style={{
-                minWidth: "78px",
-                height: "36px",
-                color: visiblePage === 1 ? "#475569" : "#cbd5e1",
-                background: "#111b2d",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "7px",
-                padding: "0 0.65rem",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.25rem",
-                cursor: visiblePage === 1 ? "not-allowed" : "pointer",
-              }}
-            >
-              <ChevronLeft size={16} />
-              <span>Prev</span>
-            </button>
-            {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-              (page) => (
-                <button
-                  key={page}
-                  type="button"
-                  aria-label={`Page ${page}`}
-                  aria-current={visiblePage === page ? "page" : undefined}
-                  onClick={() => setCurrentPage(page)}
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                  Per page:
+                </span>
+                <select
+                  aria-label="Items per page"
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
                   style={{
-                    minWidth: "34px",
-                    height: "34px",
-                    padding: "0 0.5rem",
-                    color: visiblePage === page ? "#111827" : "#cbd5e1",
-                    background: visiblePage === page ? "#f59e0b" : "#111b2d",
-                    border:
-                      visiblePage === page
-                        ? "1px solid #f59e0b"
-                        : "1px solid rgba(255, 255, 255, 0.08)",
-                    borderRadius: "7px",
-                    fontWeight: 700,
+                    background: "#080d1a",
+                    color: "#cbd5e1",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "5px",
+                    padding: "2px 6px",
+                    fontSize: "0.72rem",
+                    outline: "none",
                     cursor: "pointer",
+                    height: "24px",
                   }}
                 >
-                  {page}
+                  {[5, 6, 8, 10, 20].map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      {pageSize}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label="Previous page"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={visiblePage === 1}
+                  style={{
+                    height: "24px",
+                    padding: "0 6px",
+                    borderRadius: "5px",
+                    background:
+                      visiblePage === 1
+                        ? "rgba(255, 255, 255, 0.02)"
+                        : "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    color: visiblePage === 1 ? "#475569" : "#cbd5e1",
+                    cursor: visiblePage === 1 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <ChevronLeft size={13} />
+                  <span>Prev</span>
                 </button>
-              ),
-            )}
-            <button
-              type="button"
-              aria-label="Next page"
-              disabled={visiblePage === pageCount}
-              onClick={() => setCurrentPage(visiblePage + 1)}
-              style={{
-                minWidth: "78px",
-                height: "36px",
-                color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
-                background: "#111b2d",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "7px",
-                padding: "0 0.65rem",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.25rem",
-                cursor: visiblePage === pageCount ? "not-allowed" : "pointer",
-              }}
-            >
-              <span>Next</span>
-              <ChevronRight size={16} />
-            </button>
+                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
+                  (page) => {
+                    const isActive = page === visiblePage;
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        aria-label={`Page ${page}`}
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={() => setCurrentPage(page)}
+                        style={{
+                          height: "24px",
+                          minWidth: "24px",
+                          padding: "0 5px",
+                          borderRadius: "5px",
+                          background: isActive
+                            ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                            : "transparent",
+                          border: isActive
+                            ? "none"
+                            : "1px solid rgba(255, 255, 255, 0.08)",
+                          color: isActive ? "#ffffff" : "#94a3b8",
+                          cursor: "pointer",
+                          fontSize: "0.72rem",
+                          fontWeight: isActive ? 800 : 500,
+                          boxShadow: isActive
+                            ? "0 2px 8px rgba(245, 158, 11, 0.35)"
+                            : "none",
+                        }}
+                      >
+                        {page}
+                      </button>
+                    );
+                  },
+                )}
+                <button
+                  type="button"
+                  aria-label="Next page"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(pageCount, page + 1))
+                  }
+                  disabled={visiblePage === pageCount}
+                  style={{
+                    height: "24px",
+                    padding: "0 6px",
+                    borderRadius: "5px",
+                    background:
+                      visiblePage === pageCount
+                        ? "rgba(255, 255, 255, 0.02)"
+                        : "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
+                    cursor:
+                      visiblePage === pageCount ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>Next</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
