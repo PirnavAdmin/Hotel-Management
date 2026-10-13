@@ -136,6 +136,7 @@ export function ReceiptModal({ table, onClose, onPrint }) {
           color: '#1e293b',
           display: 'flex',
           flexDirection: 'column',
+          flex: '1 1 auto',
           minHeight: 0,
           overflowY: 'auto'
         }}>
