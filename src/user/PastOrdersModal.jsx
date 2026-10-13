@@ -4,7 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
-import { dedupeOrders } from '../utils/orderDedupe';
+import { dedupeOrders, getOrderTimestamp } from '../utils/orderDedupe';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -28,20 +28,33 @@ const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
   return fallbackDate;
 };
 
+const compareOrdersNewestFirst = (a, b) =>
+  getOrderTimestamp(b) - getOrderTimestamp(a);
+
+const parseDisplayDate = (value) => {
+  if (!value) return null;
+  const text = String(value).trim();
+  const localized = text.match(/^(\d{1,2})\s+([a-z]{3,})\s+(\d{4})$/i);
+  if (localized) {
+    const [, day, monthName, year] = localized;
+    const month = new Date(`${monthName} 1, ${year}`).getMonth();
+    if (!Number.isNaN(month)) return new Date(Number(year), month, Number(day));
+  }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const compareDatesNewestFirst = (a, b) =>
+  (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
+
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
   const uniquePastOrders = useMemo(() => dedupeOrders(pastOrders), [pastOrders]);
 
 
   // Helper to parse date from order safely
   const parseOrderDate = (order) => {
-    if (order.date) {
-      const d = new Date(order.date);
-      if (!isNaN(d.getTime())) return d;
-    }
-    if (order.settledDate) {
-      const d = new Date(order.settledDate);
-      if (!isNaN(d.getTime())) return d;
-    }
+    const storedDate = parseDisplayDate(order.settledDate || order.date);
+    if (storedDate) return storedDate;
     if (order.orderTimestamp) {
       const d = new Date(Number(order.orderTimestamp));
       if (!isNaN(d.getTime())) return d;
@@ -65,11 +78,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const dStr = formatOrderDate(o);
       if (dStr) datesSet.add(dStr);
     });
-    return Array.from(datesSet).sort((a, b) => {
-      const timeA = new Date(a).getTime() || 0;
-      const timeB = new Date(b).getTime() || 0;
-      return timeB - timeA;
-    });
+    return Array.from(datesSet).sort(compareDatesNewestFirst);
   }, [uniquePastOrders]);
 
   // Extract all unique months from pastOrders sorted newest first
@@ -80,11 +89,9 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const d = parseOrderDate(o);
       monthsSet.add(getMonthStr(d));
     });
-    return Array.from(monthsSet).sort((a, b) => {
-      const timeA = new Date(a).getTime() || 0;
-      const timeB = new Date(b).getTime() || 0;
-      return timeB - timeA;
-    });
+    return Array.from(monthsSet).sort((a, b) =>
+      compareDatesNewestFirst(`01 ${a}`, `01 ${b}`),
+    );
   }, [uniquePastOrders, currentMonthStr]);
 
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -173,7 +180,9 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
 
   // Single day filtered orders
   const singleDayOrders = useMemo(() => {
-    return searchFilteredOrders.filter(o => formatOrderDate(o) === selectedDate);
+    return searchFilteredOrders
+      .filter(o => formatOrderDate(o) === selectedDate)
+      .sort(compareOrdersNewestFirst);
   }, [searchFilteredOrders, selectedDate]);
 
   // Monthly filtered orders
@@ -181,7 +190,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     return searchFilteredOrders.filter(o => {
       const d = parseOrderDate(o);
       return getMonthStr(d) === selectedMonth;
-    });
+    }).sort(compareOrdersNewestFirst);
   }, [searchFilteredOrders, selectedMonth]);
 
   // Custom date range filtered orders
@@ -202,7 +211,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         if (orderTime > end.getTime()) return false;
       }
       return true;
-    });
+    }).sort(compareOrdersNewestFirst);
   }, [searchFilteredOrders, customStartDate, customEndDate]);
 
   // Grouped orders by date
@@ -214,14 +223,10 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       map[d].push(order);
     });
 
-    const sortedKeys = Object.keys(map).sort((a, b) => {
-      const timeA = new Date(a).getTime() || 0;
-      const timeB = new Date(b).getTime() || 0;
-      return timeB - timeA;
-    });
+    const sortedKeys = Object.keys(map).sort(compareDatesNewestFirst);
 
     return sortedKeys.map(dateKey => {
-      const orders = map[dateKey];
+      const orders = map[dateKey].sort(compareOrdersNewestFirst);
       const totalRev = orders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
       return {
         date: dateKey,
@@ -327,7 +332,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     if (viewMode === 'single_day') return singleDayOrders;
     if (viewMode === 'monthly') return monthlyOrders;
     if (viewMode === 'custom') return customRangeOrders;
-    return searchFilteredOrders;
+    return [...searchFilteredOrders].sort(compareOrdersNewestFirst);
   }, [viewMode, singleDayOrders, monthlyOrders, customRangeOrders, searchFilteredOrders]);
 
   const totalCollected = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);

@@ -40,9 +40,16 @@ const saleFingerprint = (order) => {
   ].join("::");
 };
 
-const orderTimestamp = (order) => {
+export const getOrderTimestamp = (order) => {
   const timestamp = Number(order?.orderTimestamp ?? order?.createdAt ?? 0);
-  return Number.isFinite(timestamp) ? timestamp : 0;
+  if (Number.isFinite(timestamp) && timestamp > 0) return timestamp;
+
+  const value = order?.settledDate || order?.date;
+  if (value) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+  }
+  return 0;
 };
 
 /** Collapse copies of one settled sale even when a sync assigned each copy a different id/invoice number. */
@@ -64,11 +71,11 @@ export function dedupeOrders(orders = []) {
 
     // Keep the more complete/newer copy, while retaining metadata from both sources.
     const existing = result[existingIndex];
-    const incomingIsNewer = orderTimestamp(order) > orderTimestamp(existing);
+    const incomingIsNewer = getOrderTimestamp(order) > getOrderTimestamp(existing);
     result[existingIndex] = incomingIsNewer
       ? { ...existing, ...order }
       : { ...order, ...existing };
   }
 
-  return result.sort((a, b) => orderTimestamp(b) - orderTimestamp(a));
+  return result.sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));
 }
