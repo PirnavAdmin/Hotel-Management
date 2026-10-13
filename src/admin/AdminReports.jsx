@@ -10,6 +10,7 @@ import {
   Calendar,
   ArrowRight,
   RefreshCw,
+  Printer,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { INITIAL_ORDERS } from "../data/initialOrders";
@@ -179,6 +180,21 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
     }, 450);
   };
 
+  const getFilterPeriodLabel = () => {
+    if (filterPeriod === "today") return `Today (${todayYMD})`;
+    if (filterPeriod === "week") return `Last 7 Days (${sevenDaysYMD} to ${todayYMD})`;
+    if (filterPeriod === "month") return `This Month (${currentMonthPrefix})`;
+    if (filterPeriod === "all") return "All Time";
+    if (filterPeriod === "custom") {
+      if (startDate && endDate) {
+        return startDate === endDate ? startDate : `${startDate} to ${endDate}`;
+      }
+      if (startDate) return `From ${startDate}`;
+      if (endDate) return `Up to ${endDate}`;
+    }
+    return "Custom Period";
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {/* Outer Card Matching Design */}
@@ -233,15 +249,50 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
             </div>
           </div>
 
-          {/* Right Action Bar: Quick Filter Buttons, Calendar Picker, and Fetch Button */}
-          <div
+          {/* Right Corner: Print Report Button */}
+          <button
+            onClick={() => window.print()}
             style={{
+              background: "rgba(255, 255, 255, 0.06)",
+              border: "1px solid rgba(255, 255, 255, 0.14)",
+              borderRadius: "10px",
+              padding: "0.48rem 0.95rem",
+              color: "#ffffff",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: "0.55rem",
-              flexWrap: "wrap",
+              gap: "0.45rem",
+              transition: "all 0.15s ease",
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.12)";
+              e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.4)";
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.14)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            title="Print or export PDF of the report"
           >
+            <Printer size={14} color="#f59e0b" />
+            <span>Print Report</span>
+          </button>
+        </div>
+
+        {/* Filters and Fetch Action Bar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.55rem",
+            flexWrap: "wrap",
+            marginBottom: "1.5rem",
+          }}
+        >
             {/* Quick Period Buttons */}
             <div
               style={{
@@ -449,8 +500,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               />
               <span>Fetch Data</span>
             </button>
+
           </div>
-        </div>
 
         {/* 4 Financial Metric Cards */}
         <div
@@ -660,7 +711,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                     fontWeight: 700,
                   }}
                 >
-                  <Banknote size={14} /> Cash Receipts ({cashPercent}%)
+                  <Banknote size={14} /> Cash ({cashPercent}%)
                 </span>
                 <span style={{ color: "var(--text-main)", fontWeight: 800 }}>
                   {formatCurrency(paymentStats.cash)}
@@ -861,6 +912,339 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                   </span>
                 </div>
               )))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Printable Sales & Revenue Report (Screen hidden, visible in window.print()) */}
+      <div
+        id="printable-report"
+        style={{
+          fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          color: "#0f172a",
+          lineHeight: "1.4",
+          fontSize: "12px",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            borderBottom: "2px solid #0f172a",
+            paddingBottom: "12px",
+            marginBottom: "16px",
+          }}
+        >
+          <div>
+            <h1
+              style={{
+                fontSize: "20px",
+                fontWeight: 900,
+                color: "#0f172a",
+                margin: "0 0 2px 0",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              AVSR FOOD COURT
+            </h1>
+            <div style={{ fontSize: "11px", color: "#475569", fontWeight: 500 }}>
+              Plot 12, Food Street, Jubilee Enclave • Ph: +91 98490 12345 • GSTIN: 36AAJCS8214M1ZV
+            </div>
+            <div
+              style={{
+                fontSize: "13px",
+                fontWeight: 800,
+                color: "#b45309",
+                marginTop: "4px",
+                letterSpacing: "0.02em",
+              }}
+            >
+              SALES & REVENUE ANALYTICS REPORT
+            </div>
+          </div>
+          <div style={{ textAlign: "right", fontSize: "11px", color: "#334155" }}>
+            <div>
+              <strong>Generated:</strong>{" "}
+              {new Date().toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}{" "}
+              {new Date().toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+            <div>
+              <strong>Filter Period:</strong> {getFilterPeriodLabel()}
+            </div>
+            <div>
+              <strong>Total Orders:</strong> {filteredOrders.length}
+            </div>
+          </div>
+        </div>
+
+        {/* Key Financial Metrics Table */}
+        <div style={{ marginBottom: "18px" }}>
+          <h3
+            style={{
+              fontSize: "12.5px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.03em",
+              margin: "0 0 6px 0",
+              color: "#0f172a",
+            }}
+          >
+            1. Executive Financial Summary
+          </h3>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "11px",
+            }}
+          >
+            <thead>
+              <tr style={{ background: "#f1f5f9" }}>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Gross Revenue</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Net Food Sales</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total GST (5%)</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Service Charges</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total Orders</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Avg Ticket</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 800, fontSize: "13px", color: "#047857" }}>
+                  {formatCurrency(totalRevenue)}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                  {formatCurrency(Math.max(0, totalRevenue - totalTax - totalService))}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>
+                  {formatCurrency(totalTax)}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>
+                  {formatCurrency(totalService)}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                  {filteredOrders.length}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                  {formatCurrency(averageBill)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Payment Breakdown & Top Selling in 2 columns */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "16px",
+            marginBottom: "18px",
+          }}
+        >
+          {/* Payment Method Distribution */}
+          <div>
+            <h3
+              style={{
+                fontSize: "12.5px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.03em",
+                margin: "0 0 6px 0",
+                color: "#0f172a",
+              }}
+            >
+              2. Payment Channel Breakdown
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+              <thead>
+                <tr style={{ background: "#f1f5f9" }}>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Channel</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Amount</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Share %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>UPI / QR Pay</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                    {formatCurrency(paymentStats.upi)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{upiPercent}%</td>
+                </tr>
+                <tr>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Cash</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                    {formatCurrency(paymentStats.cash)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cashPercent}%</td>
+                </tr>
+                <tr>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Card / POS Swipe</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                    {formatCurrency(paymentStats.card)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cardPercent}%</td>
+                </tr>
+                <tr style={{ background: "#f8fafc", fontWeight: 800 }}>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>Total Settlement</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>
+                    {formatCurrency(totalRevenue)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>100%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Top Selling Items */}
+          <div>
+            <h3
+              style={{
+                fontSize: "12.5px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.03em",
+                margin: "0 0 6px 0",
+                color: "#0f172a",
+              }}
+            >
+              3. Top Selling Items
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+              <thead>
+                <tr style={{ background: "#f1f5f9" }}>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", width: "35px", textAlign: "center" }}>#</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Dish / Item Name</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Qty Sold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedDishes.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "center", color: "#64748b" }}>
+                      No items sold during this period.
+                    </td>
+                  </tr>
+                ) : (
+                  sortedDishes.slice(0, 7).map(([name, qty], idx) => (
+                    <tr key={name}>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "center", fontWeight: 700 }}>
+                        {idx + 1}
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>{name}</td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                        {qty} orders
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Settled Orders Itemized List */}
+        {filteredOrders.length > 0 && (
+          <div style={{ marginBottom: "20px" }}>
+            <h3
+              style={{
+                fontSize: "12.5px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.03em",
+                margin: "0 0 6px 0",
+                color: "#0f172a",
+              }}
+            >
+              4. Filtered Orders Summary ({filteredOrders.length} records)
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px" }}>
+              <thead>
+                <tr style={{ background: "#f1f5f9" }}>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Order #</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Date / Time</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Table</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Mode</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Items Summary</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "right" }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((ord, idx) => {
+                  const itemSummary = (ord.items || [])
+                    .map((i) => `${i.name || "Item"}${i.quantity > 1 ? ` (x${i.quantity})` : ""}`)
+                    .join(", ");
+                  return (
+                    <tr key={ord.id || idx} style={{ pageBreakInside: "avoid" }}>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", fontFamily: "monospace", fontWeight: 600 }}>
+                        #{ord.id || ord.orderNumber || idx + 1}
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", whiteSpace: "nowrap" }}>
+                        {ord.date || ord.time || "N/A"}
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px" }}>
+                        {ord.table ? `T-${ord.table}` : "Takeaway / Direct"}
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", fontWeight: 600, textTransform: "uppercase" }}>
+                        {ord.paymentMethod || "CASH"}
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "5px 7px",
+                          maxWidth: "260px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {itemSummary || "N/A"}
+                      </td>
+                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "right", fontWeight: 700 }}>
+                        {formatCurrency(ord.grandTotal || ord.total || 0)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Footer Sign-off */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            marginTop: "24px",
+            paddingTop: "12px",
+            borderTop: "1px solid #cbd5e1",
+            fontSize: "11px",
+            color: "#64748b",
+            pageBreakInside: "avoid",
+          }}
+        >
+          <div>
+            <div>System generated via AVSR Management POS Admin Portal.</div>
+            <div>Confidential internal management record.</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ marginBottom: "28px" }}>Authorized Signatory:</div>
+            <div style={{ borderTop: "1px dashed #64748b", width: "180px", textAlign: "center", paddingTop: "4px" }}>
+              Manager / Auditor
             </div>
           </div>
         </div>

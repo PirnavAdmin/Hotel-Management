@@ -2448,7 +2448,9 @@ export function AdminPortal({
           )}
 
           {/* ================= TAB 5: INVENTORY ================= */}
-          {activeTab === "inventory" && <AdminInventory />}
+          {activeTab === "inventory" && (
+            <AdminInventory menuItems={menuItems} onUpdateMenuItem={onUpdateMenuItem} />
+          )}
 
           {/* ================= TAB 6: INVOICES ================= */}
           {activeTab === "invoices" && (

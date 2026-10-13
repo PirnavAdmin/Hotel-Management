@@ -54,6 +54,7 @@ const STORAGE_KEY_ORDERS = "gourmet_pos_past_orders_v2_inr";
 const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
+const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 
 const mergeIncomingTables = (incomingTables, deletedTableIds) => {
   const tablesById = new Map(
@@ -263,7 +264,7 @@ export function App() {
       ].find((candidate) => Array.isArray(candidate));
       if (Array.isArray(backendMenu) && backendMenu.length > 0) {
         const menuByName = new Map(
-          MENU_ITEMS.map(normalizeMenuItem)
+          menuItems.map(normalizeMenuItem)
             .filter((item) => item.name)
             .map((item) => [item.name.toLowerCase().trim(), item]),
         );
@@ -569,7 +570,7 @@ export function App() {
           data.menuItems || data.data?.menuItems || data[STORAGE_KEY_MENU];
         if (incomingMenu && incomingMenu.length > 0) {
           const map = new Map();
-          MENU_ITEMS.forEach((m) =>
+          menuItems.forEach((m) =>
             map.set(String(m.name).toLowerCase().trim(), m),
           );
           incomingMenu.forEach((m) => {
@@ -607,6 +608,7 @@ export function App() {
               isChefSpecial:
                 m.isChefsSpecial ?? existing.isChefSpecial ?? false,
               isAvailable: m.isAvailable !== false,
+              recipe: m.recipe || existing.recipe || [],
               image:
                 m.imageUrl ||
                 m.image ||
@@ -662,6 +664,14 @@ export function App() {
             );
           } catch {}
         }
+
+        const incomingInventory = data[STORAGE_KEY_INVENTORY];
+        if (Array.isArray(incomingInventory)) {
+          try {
+            localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
+            window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
+          } catch {}
+        }
       })
       .catch(() => {});
 
@@ -696,6 +706,10 @@ export function App() {
           }
           const incomingMenu = payload.menuItems || payload[STORAGE_KEY_MENU];
           if (incomingMenu && incomingMenu.length > 0) {
+            let savedMenuForRecipes = [];
+            try {
+              savedMenuForRecipes = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
+            } catch {}
             const normalizedMenu = incomingMenu.map((m) => ({
               id: m.menuItemId ? String(m.menuItemId) : String(m.id),
               name: m.dishName || m.name,
@@ -715,6 +729,10 @@ export function App() {
               prepTimeMinutes: m.prepTimeMinutes || 15,
               isChefSpecial: !!m.isChefsSpecial || !!m.isChefSpecial,
               isAvailable: m.isAvailable !== false,
+              recipe: m.recipe || savedMenuForRecipes.find((item) =>
+                String(item.id) === String(m.menuItemId || m.id) ||
+                item.name?.trim().toLowerCase() === String(m.dishName || m.name || "").trim().toLowerCase(),
+              )?.recipe || [],
               image:
                 m.imageUrl ||
                 m.image ||
@@ -745,6 +763,13 @@ export function App() {
                 STORAGE_KEY_STAFF,
                 JSON.stringify(normalizedStaff),
               );
+            } catch {}
+          }
+          const incomingInventory = payload[STORAGE_KEY_INVENTORY];
+          if (Array.isArray(incomingInventory)) {
+            try {
+              localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
+              window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
             } catch {}
           }
           if (payload["avsr_auth_users_v1"]) {
@@ -1298,6 +1323,43 @@ export function App() {
       orderTime: tableObj?.orderTime || settlementData.settledAt,
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
+
+    // Deduct recipe ingredients once the bill is paid.
+    try {
+      const inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INVENTORY) || "[]");
+      if (Array.isArray(inventory) && inventory.length) {
+        const usageByIngredient = new Map();
+        (settlementData.items || []).forEach((orderedItem) => {
+          const dish = menuItems.find((item) =>
+            String(item.id) === String(orderedItem.id) ||
+            item.name?.trim().toLowerCase() === orderedItem.name?.trim().toLowerCase(),
+          );
+          const dishCount = Number(orderedItem.quantity) || 1;
+          (dish?.recipe || []).forEach((ingredient) => {
+            const ingredientId = String(ingredient.inventoryId);
+            const amount = Number(ingredient.quantity) * dishCount;
+            if (ingredientId && Number.isFinite(amount) && amount > 0) {
+              usageByIngredient.set(ingredientId, (usageByIngredient.get(ingredientId) || 0) + amount);
+            }
+          });
+        });
+
+        if (usageByIngredient.size) {
+          const updatedInventory = inventory.map((ingredient) => {
+            const used = usageByIngredient.get(String(ingredient.id));
+            if (!used) return ingredient;
+            return {
+              ...ingredient,
+              stock: Math.max(0, Number(ingredient.stock || 0) - used),
+              totalUsed: Number(ingredient.totalUsed || 0) + used,
+            };
+          });
+          localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(updatedInventory));
+          pushGlobalSync({ [STORAGE_KEY_INVENTORY]: updatedInventory });
+          window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: updatedInventory }));
+        }
+      }
+    } catch {}
 
     const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);

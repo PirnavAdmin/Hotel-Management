@@ -18,6 +18,44 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { INITIAL_ORDERS } from "../data/initialOrders";
 import { dedupeOrders, sortOrdersBySettlementTime } from "../utils/orderDedupe";
 
+const localDateInputValue = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const invoiceDateKey = (order) => {
+  const value = order.settledDate || order.date || order.settledAt || order.createdAt;
+  if (!value) return "";
+  const text = String(value).trim();
+  const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoDate) return `${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`;
+  const dayMonthYear = text.match(/^(\d{1,2})[\s/-]+([A-Za-z]{3,}|\d{1,2})[\s,-]+(\d{4})/);
+  if (dayMonthYear) {
+    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const month = /^\d+$/.test(dayMonthYear[2])
+      ? Number(dayMonthYear[2])
+      : monthNames.indexOf(dayMonthYear[2].slice(0, 3).toLowerCase()) + 1;
+    if (month >= 1 && month <= 12) return `${dayMonthYear[3]}-${String(month).padStart(2, "0")}-${String(Number(dayMonthYear[1])).padStart(2, "0")}`;
+  }
+  const yearMonthDay = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (yearMonthDay) return `${yearMonthDay[3]}-${String(Number(yearMonthDay[2])).padStart(2, "0")}-${String(Number(yearMonthDay[1])).padStart(2, "0")}`;
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? "" : localDateInputValue(parsed);
+};
+
+const parseDisplayDateInput = (displayDate) => {
+  const match = String(displayDate || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return "";
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};
+
 export function AdminInvoices({ pastOrders = [] }) {
   const allOrders = sortOrdersBySettlementTime(
     dedupeOrders(
@@ -26,11 +64,31 @@ export function AdminInvoices({ pastOrders = [] }) {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [selectedDate, setSelectedDate] = useState(() => localDateInputValue());
+  const [selectedMonth, setSelectedMonth] = useState(() => localDateInputValue().slice(0, 7));
+  const [customFromDate, setCustomFromDate] = useState("");
+  const [customToDate, setCustomToDate] = useState("");
+  const [customFromDateText, setCustomFromDateText] = useState("");
+  const [customToDateText, setCustomToDateText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
+  const invalidCustomDate = dateFilter === "custom" && (
+    (customFromDateText && !customFromDate) ||
+    (customToDateText && !customToDate) ||
+    (customFromDate && customToDate && customFromDate > customToDate)
+  );
+
   const filteredOrders = allOrders.filter((order) => {
+    const orderDate = invoiceDateKey(order);
+    const matchesDate = dateFilter === "all" ||
+      (dateFilter === "daily" && orderDate === selectedDate) ||
+      (dateFilter === "monthly" && orderDate.startsWith(selectedMonth)) ||
+      (dateFilter === "custom" && !invalidCustomDate && !!orderDate &&
+        (!customFromDate || orderDate >= customFromDate) &&
+        (!customToDate || orderDate <= customToDate));
     const matchesPayment =
       paymentFilter === "all" ||
       String(order.paymentMethod || "").toLowerCase() ===
@@ -42,7 +100,7 @@ export function AdminInvoices({ pastOrders = [] }) {
       (order.tableName || "").toLowerCase().includes(query) ||
       (order.server || "").toLowerCase().includes(query);
 
-    return matchesPayment && matchesSearch;
+    return matchesDate && matchesPayment && matchesSearch;
   });
 
   const pageCount = Math.max(
@@ -134,7 +192,7 @@ export function AdminInvoices({ pastOrders = [] }) {
                     borderRadius: "20px",
                   }}
                 >
-                  {allOrders.length} invoices
+                  {filteredOrders.length} invoices
                 </span>
               </div>
               <p
@@ -190,6 +248,48 @@ export function AdminInvoices({ pastOrders = [] }) {
               }}
             />
           </div>
+        </div>
+
+        {/* Invoice date filters */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap", padding: "0.7rem 0.8rem", marginBottom: "0.9rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <Calendar size={16} color="#f59e0b" />
+          <select
+            aria-label="Filter invoices by date"
+            value={dateFilter}
+            onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
+            style={{ height: "36px", minWidth: "145px", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
+          >
+            <option value="all">All Dates</option>
+            <option value="daily">Daily</option>
+            <option value="monthly">Monthly</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+          {dateFilter === "daily" && (
+            <label style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+              Date
+              <input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setCurrentPage(1); }} style={{ height: "36px", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+            </label>
+          )}
+          {dateFilter === "monthly" && (
+            <label style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+              Month
+              <input type="month" value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); setCurrentPage(1); }} style={{ height: "36px", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+            </label>
+          )}
+          {dateFilter === "custom" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+                From
+                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="From date (day/month/year)" value={customFromDateText} onChange={(event) => { const text = event.target.value; setCustomFromDateText(text); setCustomFromDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "112px", height: "36px", boxSizing: "border-box", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 600 }}>
+                To
+                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="To date (day/month/year)" value={customToDateText} onChange={(event) => { const text = event.target.value; setCustomToDateText(text); setCustomToDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "112px", height: "36px", boxSizing: "border-box", padding: "0 0.5rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
+              </label>
+            </div>
+          )}
+          {invalidCustomDate && <span role="alert" style={{ color: "#fca5a5", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
+          <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem" }}>Showing {filteredOrders.length} invoices</span>
         </div>
 
         {/* Filter Strip & Mini Metrics */}
