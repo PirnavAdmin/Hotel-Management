@@ -93,6 +93,21 @@ export const sortOrdersBySettlementTime = (orders = []) =>
     return getSettlementTime(b) - getSettlementTime(a);
   });
 
+export const mergeSettledOrders = (...sources) => {
+  const merged = sortOrdersBySettlementTime(
+    dedupeOrders(sources.flatMap((orders) => (Array.isArray(orders) ? orders : []))),
+  );
+  const current = sources[0];
+  if (
+    Array.isArray(current) &&
+    current.length === merged.length &&
+    current.every((order, index) => JSON.stringify(order) === JSON.stringify(merged[index]))
+  ) {
+    return current;
+  }
+  return merged;
+};
+
 /** Collapse copies of one settled sale even when a sync assigned each copy a different id/invoice number. */
 export function dedupeOrders(orders = []) {
   const result = [];
