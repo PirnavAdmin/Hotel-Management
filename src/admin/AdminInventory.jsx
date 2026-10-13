@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Package,
   Search,
@@ -11,7 +11,13 @@ import {
   ChevronRight,
   ChevronDown,
   Download,
+  ClipboardList,
+  X,
+  PackagePlus,
 } from "lucide-react";
+
+const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+const MENU_RECIPE_UNITS = ["KG", "g", "Litres", "ml", "Pcs", "Cans"];
 
 const INITIAL_INVENTORY = [
   {
@@ -106,10 +112,10 @@ const INITIAL_INVENTORY = [
   },
 ];
 
-export function AdminInventory() {
+export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [inventory, setInventory] = useState(() => {
     try {
-      const saved = localStorage.getItem("gourmet_pos_inventory_v1");
+      const saved = localStorage.getItem(INVENTORY_STORAGE_KEY);
       return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
     } catch {
       return INITIAL_INVENTORY;
@@ -123,6 +129,12 @@ export function AdminInventory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [exportMessage, setExportMessage] = useState("");
+  const [recipeDish, setRecipeDish] = useState(null);
+  const [recipeDraft, setRecipeDraft] = useState([]);
+  const [recipeError, setRecipeError] = useState("");
+  const [restockItem, setRestockItem] = useState(null);
+  const [restockAmount, setRestockAmount] = useState("");
+  const [restockSupplier, setRestockSupplier] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
@@ -136,8 +148,102 @@ export function AdminInventory() {
   const saveInventory = (updated) => {
     setInventory(updated);
     try {
-      localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(updated));
+      localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
+      fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({ [INVENTORY_STORAGE_KEY]: updated }),
+      }).catch(() => {});
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: updated }));
     } catch {}
+  };
+
+  useEffect(() => {
+    const handleInventoryUpdate = (event) => {
+      if (Array.isArray(event.detail)) setInventory(event.detail);
+    };
+    const handleStorageUpdate = (event) => {
+      if (event.key !== INVENTORY_STORAGE_KEY || !event.newValue) return;
+      try {
+        const updated = JSON.parse(event.newValue);
+        if (Array.isArray(updated)) setInventory(updated);
+      } catch {}
+    };
+    window.addEventListener("avsr-inventory-updated", handleInventoryUpdate);
+    window.addEventListener("storage", handleStorageUpdate);
+    return () => {
+      window.removeEventListener("avsr-inventory-updated", handleInventoryUpdate);
+      window.removeEventListener("storage", handleStorageUpdate);
+    };
+  }, []);
+
+  const openRecipeEditor = (dish) => {
+    setRecipeDish(dish);
+    setRecipeDraft(Array.isArray(dish.recipe) ? dish.recipe.map((ingredient) => ({ ...ingredient })) : []);
+    setRecipeError("");
+  };
+
+  const addRecipeIngredient = () => {
+    setRecipeDraft((current) => [...current, { inventoryId: "", name: "", quantity: "", unit: "KG", category: "Grains & Rice" }]);
+  };
+
+  const updateRecipeIngredient = (index, patch) => {
+    setRecipeDraft((current) => current.map((ingredient, rowIndex) => rowIndex === index ? { ...ingredient, ...patch } : ingredient));
+  };
+
+  const saveRecipe = () => {
+    if (!recipeDish || !recipeDraft.length) {
+      setRecipeError("Add at least one ingredient to this recipe.");
+      return;
+    }
+    if (recipeDraft.some((ingredient) => !ingredient.name.trim() || !(Number(ingredient.quantity) > 0))) {
+      setRecipeError("Each ingredient needs a name and a quantity greater than zero.");
+      return;
+    }
+
+    const nextInventory = [...inventory];
+    const recipe = recipeDraft.map((ingredient) => {
+      let stockItem = nextInventory.find((item) => String(item.id) === String(ingredient.inventoryId));
+      if (!stockItem) {
+        stockItem = nextInventory.find((item) => item.name.trim().toLowerCase() === ingredient.name.trim().toLowerCase() && item.unit === ingredient.unit);
+      }
+      if (!stockItem) {
+        stockItem = {
+          id: `recipe-ingredient-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: ingredient.name.trim(), category: ingredient.category, stock: 0,
+          totalUsed: 0, totalRestocked: 0, minThreshold: 0, unit: ingredient.unit,
+          supplier: "Supplier not set", lastRestocked: "Not restocked",
+        };
+        nextInventory.unshift(stockItem);
+      }
+      return { inventoryId: stockItem.id, name: stockItem.name, quantity: Number(ingredient.quantity), unit: stockItem.unit };
+    });
+
+    saveInventory(nextInventory);
+    onUpdateMenuItem?.({ ...recipeDish, recipe });
+    setRecipeDish(null);
+    setRecipeDraft([]);
+    setRecipeError("");
+  };
+
+  const receiveStock = (event) => {
+    event.preventDefault();
+    const amount = Number(restockAmount);
+    if (!restockItem || !Number.isFinite(amount) || amount <= 0) return;
+    const restockedDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const updated = inventory.map((item) => item.id === restockItem.id
+      ? {
+          ...item,
+          stock: Number((Number(item.stock || 0) + amount).toFixed(3)),
+          totalRestocked: Number(item.totalRestocked || 0) + amount,
+          lastRestocked: restockedDate,
+          supplier: restockSupplier.trim() || item.supplier,
+        }
+      : item);
+    saveInventory(updated);
+    setRestockItem(null);
+    setRestockAmount("");
+    setRestockSupplier("");
   };
 
   const handleAdjustStock = (id, delta) => {
@@ -630,6 +736,31 @@ export function AdminInventory() {
           ))}
         </div>
 
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap", padding: "0.75rem 0.9rem", marginBottom: "0.9rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", minWidth: 0 }}>
+            <ClipboardList size={17} color="#f59e0b" />
+            <div>
+              <div style={{ color: "var(--text-main)", fontWeight: 800, fontSize: "0.84rem" }}>Menu Recipes</div>
+              <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Set ingredient quantities per dish once; stock is reduced when its bill is paid.</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flex: "0 1 390px" }}>
+            <select
+              aria-label="Select menu item recipe"
+              value={recipeDish?.id || ""}
+              onChange={(event) => {
+                const dish = menuItems.find((item) => String(item.id) === event.target.value);
+                if (dish) openRecipeEditor(dish);
+              }}
+              style={{ flex: 1, minWidth: 0, height: "36px", padding: "0 0.6rem", color: "var(--text-main)", background: "var(--bg-card)", border: "1px solid var(--border-card)", borderRadius: "7px", fontSize: "0.76rem" }}
+            >
+              <option value="">Choose a menu item…</option>
+              {menuItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <button type="button" disabled={!recipeDish} onClick={() => recipeDish && openRecipeEditor(recipeDish)} style={{ height: "36px", padding: "0 0.75rem", background: recipeDish ? "rgba(245, 158, 11, 0.14)" : "rgba(255,255,255,0.04)", color: recipeDish ? "#f59e0b" : "var(--text-muted)", border: "1px solid rgba(245, 158, 11, 0.35)", borderRadius: "7px", fontWeight: 700, fontSize: "0.75rem", cursor: recipeDish ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}>Set Recipe</button>
+          </div>
+        </div>
+
         {/* Inventory Items Table */}
         <div
           style={{
@@ -659,6 +790,7 @@ export function AdminInventory() {
                 <th style={{ padding: "0.65rem 0.8rem" }}>Ingredient / Supply</th>
                 <th style={{ padding: "0.65rem 0.8rem" }}>Category</th>
                 <th style={{ padding: "0.65rem 0.8rem" }}>In-Stock Level</th>
+                <th style={{ padding: "0.65rem 0.8rem" }}>Used</th>
                 <th style={{ padding: "0.65rem 0.8rem" }}>Threshold</th>
                 <th style={{ padding: "0.65rem 0.8rem" }}>Status</th>
                 <th style={{ padding: "0.65rem 0.8rem", textAlign: "right" }}>
@@ -740,6 +872,11 @@ export function AdminInventory() {
                       </div>
                     </td>
 
+                    {/* Used since recipe tracking started */}
+                    <td style={{ padding: "0.7rem 0.8rem", color: "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {Number(item.totalUsed || 0)} {item.unit}
+                    </td>
+
                     {/* Min Threshold */}
                     <td
                       style={{
@@ -809,20 +946,24 @@ export function AdminInventory() {
                           -5
                         </button>
                         <button
-                          onClick={() => handleAdjustStock(item.id, 10)}
+                          onClick={() => {
+                            setRestockItem(item);
+                            setRestockAmount("");
+                            setRestockSupplier(item.supplier === "Supplier not set" ? "" : item.supplier);
+                          }}
                           style={{
-                            background: "rgba(245, 158, 11, 0.1)",
-                            border: "1px solid rgba(245, 158, 11, 0.3)",
-                            color: "#f59e0b",
+                            background: "rgba(16, 185, 129, 0.1)",
+                            border: "1px solid rgba(16, 185, 129, 0.3)",
+                            color: "#10b981",
                             borderRadius: "6px",
                             padding: "4px 8px",
                             fontSize: "0.75rem",
                             fontWeight: 700,
                             cursor: "pointer",
                           }}
-                          title="Restock +10 units"
+                          title="Record received stock quantity"
                         >
-                          +10
+                          <PackagePlus size={13} style={{ verticalAlign: "middle", marginRight: "3px" }} />Receive
                         </button>
                         <button
                           onClick={() => handleDeleteItem(item.id)}
@@ -847,7 +988,7 @@ export function AdminInventory() {
               {visibleItems.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     style={{
                       padding: "2rem 1rem",
                       color: "#94a3b8",
@@ -1030,6 +1171,88 @@ export function AdminInventory() {
           </div>
         </div>
       </div>
+
+      {recipeDish && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 170, padding: "1rem", background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div role="dialog" aria-modal="true" aria-label={`${recipeDish.name} recipe`} style={{ width: "100%", maxWidth: "720px", maxHeight: "88vh", overflowY: "auto", padding: "1.1rem", borderRadius: "14px", background: "var(--bg-card)", border: "1px solid var(--border-card)", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", marginBottom: "0.75rem" }}>
+              <div>
+                <h3 style={{ margin: 0, color: "var(--text-main)", fontSize: "1rem" }}>Recipe: {recipeDish.name}</h3>
+                <p style={{ margin: "0.25rem 0 0", color: "var(--text-muted)", fontSize: "0.75rem" }}>Enter ingredient quantity needed for one serving. New ingredients are added to inventory with zero stock.</p>
+              </div>
+              <button type="button" aria-label="Close recipe editor" onClick={() => setRecipeDish(null)} style={{ border: 0, color: "var(--text-muted)", background: "transparent", cursor: "pointer" }}><X size={18} /></button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem", marginBottom: "0.8rem" }}>
+              {recipeDraft.map((ingredient, index) => {
+                const existingIngredient = inventory.find((item) => String(item.id) === String(ingredient.inventoryId));
+                const fieldStyle = { width: "100%", minWidth: 0, boxSizing: "border-box", height: "36px", padding: "0 0.55rem", borderRadius: "7px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.76rem" };
+                return (
+                  <div key={`${ingredient.inventoryId || "new"}-${index}`} style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1.5fr) minmax(105px, 0.8fr) minmax(105px, 0.8fr) 34px", gap: "0.45rem", alignItems: "center", padding: "0.55rem", background: "var(--bg-tertiary)", borderRadius: "9px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", minWidth: 0 }}>
+                      <select
+                        aria-label={`Ingredient ${index + 1}`}
+                        value={existingIngredient ? String(existingIngredient.id) : "__new"}
+                        onChange={(event) => {
+                          const stockItem = inventory.find((item) => String(item.id) === event.target.value);
+                          updateRecipeIngredient(index, stockItem
+                            ? { inventoryId: stockItem.id, name: stockItem.name, unit: stockItem.unit, category: stockItem.category }
+                            : { inventoryId: "", name: "", unit: "KG", category: "Grains & Rice" });
+                        }}
+                        style={fieldStyle}
+                      >
+                        <option value="__new">+ New inventory ingredient</option>
+                        {inventory.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>)}
+                      </select>
+                      {!existingIngredient && (
+                        <input aria-label="New ingredient name" placeholder="Ingredient name" value={ingredient.name} onChange={(event) => updateRecipeIngredient(index, { name: event.target.value })} style={fieldStyle} />
+                      )}
+                    </div>
+                    <input aria-label="Quantity per serving" type="number" min="0.001" step="0.001" placeholder="Qty / serving" value={ingredient.quantity} onChange={(event) => updateRecipeIngredient(index, { quantity: event.target.value })} style={fieldStyle} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                      <select aria-label="Recipe unit" value={existingIngredient?.unit || ingredient.unit} disabled={!!existingIngredient} onChange={(event) => updateRecipeIngredient(index, { unit: event.target.value })} style={fieldStyle}>
+                        {MENU_RECIPE_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                      </select>
+                      {!existingIngredient && (
+                        <select aria-label="Ingredient category" value={ingredient.category} onChange={(event) => updateRecipeIngredient(index, { category: event.target.value })} style={fieldStyle}>
+                          {categories.filter((category) => category !== "all").map((category) => <option key={category} value={category}>{category}</option>)}
+                        </select>
+                      )}
+                    </div>
+                    <button type="button" aria-label="Remove ingredient" onClick={() => setRecipeDraft((current) => current.filter((_, rowIndex) => rowIndex !== index))} style={{ width: "32px", height: "32px", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "7px", color: "#ef4444", background: "rgba(239,68,68,0.08)", cursor: "pointer" }}><Trash2 size={14} /></button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {recipeError && <div role="alert" style={{ marginBottom: "0.7rem", color: "#fca5a5", fontSize: "0.76rem" }}>{recipeError}</div>}
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "0.6rem", flexWrap: "wrap" }}>
+              <button type="button" onClick={addRecipeIngredient} style={{ height: "36px", padding: "0 0.8rem", border: "1px solid var(--border-card)", borderRadius: "8px", color: "var(--text-main)", background: "var(--bg-tertiary)", fontWeight: 700, fontSize: "0.76rem", cursor: "pointer" }}><Plus size={14} style={{ verticalAlign: "middle", marginRight: "0.35rem" }} />Add Ingredient</button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button type="button" onClick={() => setRecipeDish(null)} style={{ height: "36px", padding: "0 0.85rem", border: "1px solid var(--border-card)", borderRadius: "8px", color: "var(--text-main)", background: "var(--bg-tertiary)", fontWeight: 700, fontSize: "0.76rem", cursor: "pointer" }}>Cancel</button>
+                <button type="button" onClick={saveRecipe} style={{ height: "36px", padding: "0 0.9rem", border: 0, borderRadius: "8px", color: "#fff", background: "linear-gradient(135deg, #f59e0b, #ea580c)", fontWeight: 800, fontSize: "0.76rem", cursor: "pointer" }}>Save Recipe</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {restockItem && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 175, padding: "1rem", background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <form onSubmit={receiveStock} style={{ width: "100%", maxWidth: "420px", padding: "1.1rem", borderRadius: "14px", background: "var(--bg-card)", border: "1px solid var(--border-card)", boxShadow: "var(--shadow-lg)" }}>
+            <h3 style={{ margin: "0 0 0.25rem", color: "var(--text-main)", fontSize: "1rem" }}>Receive {restockItem.name}</h3>
+            <p style={{ margin: "0 0 0.9rem", color: "var(--text-muted)", fontSize: "0.75rem" }}>Current stock: {restockItem.stock} {restockItem.unit}</p>
+            <label style={{ display: "block", color: "var(--text-muted)", fontSize: "0.74rem", fontWeight: 700, marginBottom: "0.35rem" }}>QUANTITY RECEIVED ({restockItem.unit})</label>
+            <input autoFocus required type="number" min="0.001" step="0.001" value={restockAmount} onChange={(event) => setRestockAmount(event.target.value)} placeholder="Enter quantity" style={{ width: "100%", height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.82rem", marginBottom: "0.7rem" }} />
+            <label style={{ display: "block", color: "var(--text-muted)", fontSize: "0.74rem", fontWeight: 700, marginBottom: "0.35rem" }}>SUPPLIER</label>
+            <input value={restockSupplier} onChange={(event) => setRestockSupplier(event.target.value)} placeholder="Supplier name" style={{ width: "100%", height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.82rem", marginBottom: "0.9rem" }} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+              <button type="button" onClick={() => setRestockItem(null)} style={{ height: "36px", padding: "0 0.85rem", border: "1px solid var(--border-card)", borderRadius: "8px", color: "var(--text-main)", background: "var(--bg-tertiary)", fontWeight: 700, fontSize: "0.76rem", cursor: "pointer" }}>Cancel</button>
+              <button type="submit" style={{ height: "36px", padding: "0 0.9rem", border: 0, borderRadius: "8px", color: "#fff", background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 800, fontSize: "0.76rem", cursor: "pointer" }}>Save Received Stock</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Add Item Modal */}
       {isAddModalOpen && (
