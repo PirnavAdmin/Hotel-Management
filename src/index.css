@@ -310,12 +310,50 @@ input, select, textarea {
   .mobile-header-nav {
     padding: 0.5rem 0.75rem !important;
     gap: 0.4rem !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-header-nav > div:first-of-type {
+    width: 100%;
+    flex-wrap: wrap !important;
+    justify-content: space-between;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-header-nav > div:first-of-type > nav {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mobile-header-nav > div:first-of-type > nav > button {
+    justify-content: center;
+  }
+
+  .mobile-header-nav > div:last-child {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .mobile-container > div:first-child {
+    align-items: stretch !important;
+    gap: 0.7rem !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .mobile-container > div:first-child h2 {
+    font-size: 1.15rem !important;
   }
 
   /* Table Detail / Order Screen Responsive Styles */
   .pos-workspace-container {
     flex-direction: column !important;
     overflow-y: auto !important;
+  }
+
+  .responsive-order-detail-layout {
+    height: calc(100dvh - 64px) !important;
+    min-height: 0 !important;
   }
 
   .pos-categories-sidebar {
@@ -362,6 +400,10 @@ input, select, textarea {
 
   .pos-mobile-cart-bar {
     display: flex !important;
+  }
+
+  .pos-menu-grid {
+    padding-bottom: 5rem !important;
   }
 
   /* Modals full width on mobile */
