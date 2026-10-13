@@ -1,7 +1,17 @@
 const normalize = (value) => String(value ?? "").trim().toLocaleLowerCase();
 
-const dateKey = (order) =>
-  normalize(order?.settledDate || order?.date || order?.createdAt).replace(/\s+/g, " ");
+const dateKey = (order) => {
+  const rawDate = order?.settledDate || order?.date || order?.createdAt;
+  const parsedDate = rawDate ? new Date(rawDate) : null;
+  const timestampDate = Number(order?.orderTimestamp);
+  const date = parsedDate && !Number.isNaN(parsedDate.getTime())
+    ? parsedDate
+    : Number.isFinite(timestampDate) && timestampDate > 0
+      ? new Date(timestampDate)
+      : null;
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 const timeKey = (order) => {
   const value = order?.settledAt || order?.paidAt || order?.completedAt;
@@ -18,7 +28,7 @@ const itemsKey = (order) =>
   (Array.isArray(order?.items) ? order.items : [])
     .map((item) =>
       [
-        normalize(item?.id || item?.menuItemId || item?.name || item?.dishName),
+        normalize(item?.name || item?.dishName || item?.id || item?.menuItemId),
         Number(item?.quantity ?? item?.qty ?? 0),
         Number(item?.price ?? item?.unitPrice ?? 0).toFixed(2),
       ].join(":"),
@@ -31,7 +41,7 @@ const saleFingerprint = (order) => {
   const items = itemsKey(order);
   if (!time || !items) return "";
   return [
-    normalize(order?.tableId ?? order?.tableName),
+    normalize(order?.tableId ?? order?.tableName).replace(/^table\s*/, ""),
     dateKey(order),
     time,
     amountKey(order),
@@ -93,6 +103,21 @@ export const sortOrdersBySettlementTime = (orders = []) =>
     return getSettlementTime(b) - getSettlementTime(a);
   });
 
+export const mergeSettledOrders = (...sources) => {
+  const merged = sortOrdersBySettlementTime(
+    dedupeOrders(sources.flatMap((orders) => (Array.isArray(orders) ? orders : []))),
+  );
+  const current = sources[0];
+  if (
+    Array.isArray(current) &&
+    current.length === merged.length &&
+    current.every((order, index) => JSON.stringify(order) === JSON.stringify(merged[index]))
+  ) {
+    return current;
+  }
+  return merged;
+};
+
 /** Collapse copies of one settled sale even when a sync assigned each copy a different id/invoice number. */
 export function dedupeOrders(orders = []) {
   const result = [];
@@ -101,11 +126,19 @@ export function dedupeOrders(orders = []) {
   for (const order of Array.isArray(orders) ? orders : []) {
     if (!order || typeof order !== "object") continue;
     const fingerprint = saleFingerprint(order);
-    const identity = fingerprint || (order.id ? `id:${order.id}` : "");
-    const existingIndex = identity ? indexByIdentity.get(identity) : undefined;
+    const invoice = normalize(order.invoiceNo);
+    const date = dateKey(order);
+    const identities = [
+      invoice && date ? `invoice:${invoice}:${date}` : "",
+      fingerprint ? `sale:${fingerprint}` : "",
+      order.id ? `id:${normalize(order.id)}` : "",
+    ].filter(Boolean);
+    const existingIndex = identities
+      .map((identity) => indexByIdentity.get(identity))
+      .find((index) => index !== undefined);
 
     if (existingIndex === undefined) {
-      if (identity) indexByIdentity.set(identity, result.length);
+      identities.forEach((identity) => indexByIdentity.set(identity, result.length));
       result.push(order);
       continue;
     }
@@ -116,6 +149,7 @@ export function dedupeOrders(orders = []) {
     result[existingIndex] = incomingIsNewer
       ? { ...existing, ...order }
       : { ...order, ...existing };
+    identities.forEach((identity) => indexByIdentity.set(identity, existingIndex));
   }
 
   return result.sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));

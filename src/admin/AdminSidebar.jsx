@@ -27,6 +27,8 @@ export function AdminSidebar({
   activeKOTCount = 0,
 }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const adminName = currentSession?.name || currentSession?.username || "Admin";
+  const adminRole = currentSession?.role || "Admin";
 
   const navSections = [
     {
@@ -100,15 +102,6 @@ export function AdminSidebar({
       ],
     },
   ];
-
-  const adminName =
-    currentSession?.name ||
-    currentSession?.username ||
-    "PirnavAdmin";
-  const adminRole =
-    currentSession?.role === "admin"
-      ? "Admin"
-      : currentSession?.role || "Admin";
 
   return (
     <aside
@@ -191,11 +184,13 @@ export function AdminSidebar({
 
       {/* Navigation Sections */}
       <div
+        className="no-scrollbar"
         style={{
           flex: 1,
           overflowY: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
           marginTop: "0.85rem",
-          paddingRight: "4px",
           display: "flex",
           flexDirection: "column",
           gap: "1.1rem",
@@ -301,16 +296,6 @@ export function AdminSidebar({
                         {item.badge}
                       </span>
                     )}
-
-                    {/* Active chevron indicator matching design */}
-                    {isActive && (
-                      <ChevronRight
-                        size={16}
-                        color="#ffffff"
-                        strokeWidth={2.5}
-                        style={{ flexShrink: 0, marginLeft: "auto" }}
-                      />
-                    )}
                   </button>
                 );
               })}
@@ -318,7 +303,6 @@ export function AdminSidebar({
           </div>
         ))}
       </div>
-
       {/* Return to POS Quick Link Button */}
       {onClose && (
         <button

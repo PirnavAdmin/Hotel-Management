@@ -1,7 +1,8 @@
-import { apiGetUsers, apiDeleteUser, apiUpdateUserPassword } from '../api/userApi';
+import { apiGetUsers, apiUpdateUser, apiDeleteUser, apiUpdateUserPassword } from '../api/userApi';
 import { apiLogin, apiRegister, apiGetMe } from '../api/authApi';
 
 const STORAGE_KEY_SESSION  = 'avsr_auth_session_v1';
+const STORAGE_KEY_MANAGED_USERS = 'avsr_auth_users_v1';
 
 export function parseJwt(token) {
   try {
@@ -30,31 +31,51 @@ export const mapRole = (r) => {
 
 export async function getUsers() {
   const res = await apiGetUsers();
-  let list = [];
-  if (res.success && res.data) {
-    if (Array.isArray(res.data)) {
-      list = res.data;
-    } else if (res.data.$values && Array.isArray(res.data.$values)) {
-      list = res.data.$values;
-    } else if (res.data.users && Array.isArray(res.data.users)) {
-      list = res.data.users;
-    } else if (res.data.Users && Array.isArray(res.data.Users)) {
-      list = res.data.Users;
-    } else if (res.data.data && Array.isArray(res.data.data)) {
-      list = res.data.data;
+  const extractList = (value, depth = 0) => {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== 'object' || depth > 5) return [];
+    for (const key of ['users', 'Users', '$values', 'data', 'Data', 'items', 'Items', 'results', 'Results']) {
+      const result = extractList(value[key], depth + 1);
+      if (result.length) return result;
     }
-  }
+    return [];
+  };
 
-  return list.map(u => ({
-    id: u.id || u.Id || u.userId || u.UserId || String(Math.random()),
-    username: u.username || u.Username || '',
-    name: u.fullName || u.FullName || u.name || u.Name || u.username || u.Username || 'User',
-    role: mapRole(u.role ?? u.Role ?? u.roleName ?? u.RoleName ?? u.roleId ?? u.RoleId),
-    email: u.email || u.Email || '',
-    mobile: u.phone || u.Phone || u.mobile || u.Mobile || u.phoneNumber || u.PhoneNumber || '',
-    createdAt: u.createdAt || u.CreatedAt || null,
-    raw: u
-  }));
+  const normalizeUser = (u) => {
+    const username = u.username || u.Username || '';
+    return {
+      id: String(u.id || u.Id || u.userId || u.UserId || `username:${username.toLowerCase()}`),
+      username,
+      name: u.fullName || u.FullName || u.name || u.Name || username || 'User',
+      role: mapRole(u.role ?? u.Role ?? u.roleName ?? u.RoleName ?? u.roleId ?? u.RoleId),
+      email: u.email || u.Email || '',
+      mobile: u.phone || u.Phone || u.mobile || u.Mobile || u.phoneNumber || u.PhoneNumber || '',
+      createdAt: u.createdAt || u.CreatedAt || null,
+    };
+  };
+
+  const remoteUsers = res.success ? extractList(res.data).filter((user) => user && typeof user === 'object').map(normalizeUser) : [];
+  let cachedUsers = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
+    cachedUsers = extractList(saved).filter((user) => user && typeof user === 'object').map(normalizeUser);
+  } catch {}
+
+  const byUser = new Map();
+  [...remoteUsers, ...cachedUsers].forEach((user) => {
+    const key = user.id
+      ? `id:${user.id}`
+      : `username:${user.username.trim().toLowerCase()}`;
+    byUser.set(key, { ...(byUser.get(key) || {}), ...user });
+  });
+  const users = Array.from(byUser.values());
+  try {
+    localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(users));
+  } catch {}
+  return {
+    users,
+    error: res.success ? '' : (res.error || 'Could not reach the user service; showing saved accounts.'),
+  };
 }
 
 export async function createUser(userData) {
@@ -77,6 +98,11 @@ export async function registerUser(userData) {
 export async function deleteUser(userId) {
   const res = await apiDeleteUser(userId);
   return { success: res.success, error: res.error };
+}
+
+export async function updateUserDetails(userId, userData) {
+  const res = await apiUpdateUser(userId, userData);
+  return { success: res.success, error: res.error || null, data: res.data };
 }
 
 export async function updateUserPassword(userId, newPassword) {

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users, Plus, Trash2, Eye, EyeOff, ShieldCheck,
+  Users, Plus, Trash2, Eye, EyeOff, ShieldCheck, Pencil,
   Utensils, ChefHat, Key, RefreshCw, UserCheck, X, AlertCircle, Phone
 } from 'lucide-react';
-import { getUsers, createUser, deleteUser, updateUserPassword } from '../utils/auth';
+import { getUsers, createUser, deleteUser, updateUserPassword, updateUserDetails } from '../utils/auth';
 
 /**
  * LoginManagement — Admin panel tab for managing POS & KOT logins.
@@ -16,11 +16,16 @@ export function LoginManagement({ currentAdminSession }) {
   const [formName, setFormName]     = useState('');
   const [formUser, setFormUser]     = useState('');
   const [formMobile, setFormMobile] = useState('');
+  const [formEmail, setFormEmail] = useState('');
   const [formPass, setFormPass]     = useState('');
+  const [editingUser, setEditingUser] = useState(null);
   const [showPass, setShowPass]     = useState(false);
   const [formError, setFormError]   = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState('');
 
   // Password change modal
   const [changePwUser, setChangePwUser] = useState(null);
@@ -30,21 +35,56 @@ export function LoginManagement({ currentAdminSession }) {
   const [pwSuccess, setPwSuccess]       = useState('');
 
   const reload = async () => {
-    const data = await getUsers();
-    setUsers(data);
+    setIsRefreshing(true);
+    setRefreshMessage('');
+    try {
+      const result = await getUsers();
+      setUsers(result.users);
+      setRefreshMessage(result.error || `Loaded ${result.users.length} account${result.users.length === 1 ? '' : 's'}.`);
+    } catch (error) {
+      setRefreshMessage(error?.message || 'Could not refresh accounts.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const saveUsersCache = (nextUsers) => {
+    try {
+      localStorage.setItem('avsr_auth_users_v1', JSON.stringify(nextUsers));
+    } catch {}
   };
 
   useEffect(() => { reload(); }, []);
+
+  const openEditForm = (user) => {
+    setEditingUser(user);
+    setFormRole(user.role || 'pos');
+    setFormName(user.name || '');
+    setFormUser(user.username || '');
+    setFormMobile(user.mobile || '');
+    setFormEmail(user.email || '');
+    setFormPass('');
+    setFormError('');
+    setFormSuccess('');
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingUser(null);
+    setFormError('');
+    setFormPass('');
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     setFormError('');
     setFormSuccess('');
-    if (!formUser.trim() || !formPass.trim()) {
-      setFormError('Username and password are required.');
+    if (!formUser.trim() || (!editingUser && !formPass.trim())) {
+      setFormError(editingUser ? 'Username is required.' : 'Username and password are required.');
       return;
     }
-    if (formPass.length < 4) {
+    if (!editingUser && formPass.length < 4) {
       setFormError('Password must be at least 4 characters.');
       return;
     }
@@ -52,15 +92,49 @@ export function LoginManagement({ currentAdminSession }) {
       setFormError('Mobile number must be 10 digits.');
       return;
     }
-    const result = await createUser({
-      Username: formUser,
-      Password: formPass,
-      ConfirmPassword: formPass,
-      Role: formRole,
-      FullName: formName || formUser,
-      Phone: formMobile.trim() || '0000000000',
-      Email: `${formUser}@avsr.com`
-    });
+    if (editingUser) {
+      const updatedUser = {
+        Id: editingUser.id,
+        UserId: editingUser.id,
+        Username: formUser.trim(),
+        FullName: formName.trim() || formUser.trim(),
+        Role: formRole,
+        Phone: formMobile.trim() || '0000000000',
+        Email: formEmail.trim() || `${formUser.trim()}@avsr.com`,
+      };
+      const result = await updateUserDetails(editingUser.id, updatedUser);
+      if (!result.success) {
+        setFormError(result.error || 'Could not update this login.');
+        return;
+      }
+      const nextUsers = users.map((user) => user.id === editingUser.id
+        ? { ...user, username: updatedUser.Username, name: updatedUser.FullName, role: formRole, mobile: formMobile.trim(), email: updatedUser.Email }
+        : user);
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
+      setFormSuccess(`Login "${updatedUser.Username}" updated successfully.`);
+      await reload();
+      setTimeout(closeForm, 1200);
+      return;
+    }
+
+    setIsSubmitting(true);
+    let result;
+    try {
+      result = await createUser({
+        Username: formUser.trim(),
+        Password: formPass,
+        ConfirmPassword: formPass,
+        Role: formRole,
+        FullName: formName.trim() || formUser.trim(),
+        Phone: formMobile.trim() || '0000000000',
+        Email: `${formUser.trim()}@avsr.com`
+      });
+    } catch (error) {
+      result = { success: false, error: error?.message || 'Could not create this login.' };
+    } finally {
+      setIsSubmitting(false);
+    }
     if (result.success) {
       setFormSuccess(`✅ ${formRole.toUpperCase()} login "${formUser.trim()}" created successfully!`);
       const createdUserObj = {
@@ -72,8 +146,10 @@ export function LoginManagement({ currentAdminSession }) {
         email: `${formUser.trim()}@avsr.com`,
         createdAt: new Date().toISOString()
       };
-      setUsers(prev => [createdUserObj, ...prev.filter(u => u.username !== formUser.trim())]);
-      setFormUser(''); setFormPass(''); setFormName(''); setFormMobile('');
+      const nextUsers = [createdUserObj, ...users.filter(u => u.username.toLowerCase() !== formUser.trim().toLowerCase())];
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
+      setFormUser(''); setFormPass(''); setFormName(''); setFormMobile(''); setFormEmail('');
       await reload();
       setTimeout(() => { setFormSuccess(''); setShowForm(false); }, 1500);
     } else {
@@ -83,7 +159,12 @@ export function LoginManagement({ currentAdminSession }) {
 
   const handleDelete = async (userId) => {
     const result = await deleteUser(userId);
-    if (result.success) await reload();
+    if (result.success) {
+      const nextUsers = users.filter((user) => user.id !== userId);
+      setUsers(nextUsers);
+      saveUsersCache(nextUsers);
+      await reload();
+    }
     setDeletingId(null);
   };
 
@@ -210,6 +291,18 @@ export function LoginManagement({ currentAdminSession }) {
         {/* Actions */}
         <div style={{ display: 'flex', gap: '0.45rem', flexShrink: 0 }}>
           <button
+            onClick={() => openEditForm(user)}
+            title="Edit login details"
+            style={{
+              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+              color: '#fbbf24', padding: '5px 8px', borderRadius: '7px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+              fontSize: '0.72rem', fontWeight: 700
+            }}
+          >
+            <Pencil size={13} /> <span>Edit</span>
+          </button>
+          <button
             onClick={() => { setChangePwUser(user); setNewPw(''); setPwError(''); setPwSuccess(''); }}
             title="Change Password"
             style={{
@@ -289,16 +382,18 @@ export function LoginManagement({ currentAdminSession }) {
         <div style={{ display: 'flex', gap: '0.6rem' }}>
           <button
             onClick={reload}
+            disabled={isRefreshing}
             style={{
               background: 'var(--bg-tertiary)', border: '1px solid var(--border-card)',
               color: 'var(--text-dim)', padding: '0.45rem 0.8rem', borderRadius: '8px',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700
+              cursor: isRefreshing ? 'wait' : 'pointer', opacity: isRefreshing ? 0.7 : 1,
+              display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700
             }}
           >
-            <RefreshCw size={14} /> Refresh
+            <RefreshCw size={14} /> {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
-            onClick={() => { setShowForm(true); setFormError(''); setFormSuccess(''); }}
+            onClick={() => { setEditingUser(null); setFormRole('pos'); setFormName(''); setFormUser(''); setFormMobile(''); setFormEmail(''); setFormPass(''); setShowForm(true); setFormError(''); setFormSuccess(''); }}
             style={{
               background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
               border: 'none', color: '#ffffff',
@@ -312,6 +407,12 @@ export function LoginManagement({ currentAdminSession }) {
           </button>
         </div>
       </div>
+
+      {refreshMessage && (
+        <div role="status" style={{ color: refreshMessage.toLowerCase().includes('could not') || refreshMessage.toLowerCase().includes('failed') ? '#fca5a5' : '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
+          {refreshMessage}
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
@@ -356,10 +457,10 @@ export function LoginManagement({ currentAdminSession }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
-              ➕ Create New Login
+              {editingUser ? 'Edit Login Details' : 'Create New Login'}
             </h3>
             <button
-              onClick={() => setShowForm(false)}
+              onClick={closeForm}
               style={{
                 background: 'rgba(255,255,255,0.06)', border: 'none',
                 color: '#94a3b8', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer'
@@ -391,34 +492,20 @@ export function LoginManagement({ currentAdminSession }) {
           )}
 
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {/* Role selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+              <label htmlFor="new-login-role" style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 Account Role *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                {[
-                  { value: 'pos', label: '🍽️ User POS', sub: 'Billing & floor orders', color: '#f59e0b' },
-                  { value: 'kot', label: '🔥 Kitchen KOT', sub: 'Kitchen display system', color: '#fb923c' }
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setFormRole(opt.value)}
-                    style={{
-                      padding: '0.65rem 0.8rem', borderRadius: '10px', textAlign: 'left',
-                      background: formRole === opt.value ? `${opt.color}20` : 'rgba(255,255,255,0.04)',
-                      border: formRole === opt.value ? `1.5px solid ${opt.color}` : '1.5px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer', transition: 'all 0.15s'
-                    }}
-                  >
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: formRole === opt.value ? opt.color : '#ffffff' }}>
-                      {opt.label}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{opt.sub}</div>
-                  </button>
-                ))}
-              </div>
+              <select
+                id="new-login-role"
+                value={formRole}
+                onChange={(event) => setFormRole(event.target.value)}
+                style={{ width: '100%', padding: '0.7rem 0.8rem', background: '#111827', border: '1.5px solid rgba(245,158,11,0.55)', borderRadius: '9px', color: '#fff', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
+              >
+                <option value="pos">User POS - Billing &amp; floor orders</option>
+                <option value="kot">Kitchen KOT - Kitchen display system</option>
+                {editingUser?.role === 'admin' && <option value="admin">Admin</option>}
+              </select>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -481,8 +568,23 @@ export function LoginManagement({ currentAdminSession }) {
               )}
             </div>
 
+            {editingUser && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={formEmail}
+                  onChange={e => setFormEmail(e.target.value)}
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+                />
+              </div>
+            )}
+
             {/* Password */}
-            <div>
+            {!editingUser && <div>
               <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 Password *
               </label>
@@ -503,25 +605,26 @@ export function LoginManagement({ currentAdminSession }) {
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-            </div>
+            </div>}
 
             <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.25rem' }}>
               <button
                 type="submit"
+                disabled={isSubmitting}
                 style={{
                   flex: 2, padding: '0.65rem', borderRadius: '10px',
                   background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
                   color: '#ffffff', fontWeight: 800, fontSize: '0.85rem',
-                  border: 'none', cursor: 'pointer',
+                  border: 'none', cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.75 : 1,
                   boxShadow: '0 3px 12px rgba(245,158,11,0.4)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
-                <UserCheck size={16} />
-                Create Login Account
+                {editingUser ? <Pencil size={16} /> : <UserCheck size={16} />}
+                {isSubmitting ? 'Creating Account...' : editingUser ? 'Save Changes' : 'Create Login Account'}
               </button>
               <button
-                type="button" onClick={() => setShowForm(false)}
+                type="button" onClick={closeForm}
                 style={{
                   flex: 1, padding: '0.65rem', borderRadius: '10px',
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
@@ -535,28 +638,9 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      {/* User sections */}
-      <Section
-        title="🍽️ User POS Accounts"
-        icon={<Utensils size={16} />}
-        color="#f59e0b"
-        users={posUsers}
-        emptyMsg="No POS users yet. Create one above ↑"
-      />
-      <Section
-        title="🔥 Kitchen KOT Accounts"
-        icon={<ChefHat size={16} />}
-        color="#fb923c"
-        users={kotUsers}
-        emptyMsg="No KOT users yet. Create one above ↑"
-      />
-      <Section
-        title="⚙️ Admin Accounts"
-        icon={<ShieldCheck size={16} />}
-        color="#818cf8"
-        users={adminUsers}
-        emptyMsg="No admin accounts found."
-      />
+      <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />
+      <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
+      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="#818cf8" users={adminUsers} emptyMsg="No admin accounts found." />
 
       {/* Delete Confirm Overlay */}
       {deletingId && (
