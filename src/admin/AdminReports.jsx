@@ -247,8 +247,8 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                background: "rgba(255, 255, 255, 0.04)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
                 borderRadius: "10px",
                 padding: "3px",
                 gap: "3px",
@@ -284,20 +284,26 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                       background: active
                         ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
                         : "transparent",
-                      color: active ? "#ffffff" : "#94a3b8",
+                      color: active ? "#ffffff" : "var(--text-muted)",
                       border: "none",
                       borderRadius: "7px",
                       padding: "0.38rem 0.65rem",
                       fontSize: "0.76rem",
-                      fontWeight: active ? 700 : 500,
+                      fontWeight: active ? 700 : 600,
                       cursor: "pointer",
                       transition: "all 0.15s ease",
                     }}
                     onMouseEnter={(e) => {
-                      if (!active) e.currentTarget.style.color = "#ffffff";
+                      if (!active) {
+                        e.currentTarget.style.color = "var(--text-main)";
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      if (!active) e.currentTarget.style.color = "#94a3b8";
+                      if (!active) {
+                        e.currentTarget.style.color = "var(--text-muted)";
+                        e.currentTarget.style.background = "transparent";
+                      }
                     }}
                   >
                     {p.label}
@@ -311,17 +317,17 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.35rem",
+                gap: "0.4rem",
                 background:
                   filterPeriod === "custom"
-                    ? "rgba(245, 158, 11, 0.12)"
-                    : "rgba(255, 255, 255, 0.04)",
+                    ? "rgba(245, 158, 11, 0.14)"
+                    : "var(--bg-tertiary)",
                 border:
                   filterPeriod === "custom"
-                    ? "1.5px solid rgba(245, 158, 11, 0.5)"
-                    : "1px solid rgba(255, 255, 255, 0.09)",
+                    ? "1.5px solid var(--accent-amber)"
+                    : "1px solid var(--border-subtle)",
                 borderRadius: "10px",
-                padding: "0.32rem 0.65rem",
+                padding: "0.35rem 0.65rem",
                 transition: "all 0.15s ease",
               }}
             >
@@ -334,7 +340,7 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
                 title="Click to select dates"
               >
-                <Calendar size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
+                <Calendar size={15} color="var(--accent-amber)" style={{ flexShrink: 0 }} />
               </span>
               <input
                 ref={startInputRef}
@@ -357,20 +363,20 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                   background: "transparent",
                   border: "none",
                   outline: "none",
-                  color: "#ffffff",
-                  fontSize: "0.76rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
                   fontFamily: "inherit",
-                  colorScheme: "dark",
                   cursor: "pointer",
                 }}
                 title="From Date (Future dates disabled)"
               />
               <span
                 style={{
-                  fontSize: "0.72rem",
-                  color: "var(--text-dim)",
-                  margin: "3px 0 0 0",
-                  fontWeight: 600,
+                  fontSize: "0.74rem",
+                  color: "var(--text-muted)",
+                  margin: "0 2px",
+                  fontWeight: 700,
                   userSelect: "none",
                 }}
               >
@@ -397,10 +403,10 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                   background: "transparent",
                   border: "none",
                   outline: "none",
-                  color: "#ffffff",
-                  fontSize: "0.76rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
                   fontFamily: "inherit",
-                  colorScheme: "dark",
                   cursor: "pointer",
                 }}
                 title="To Date (Future dates disabled)"

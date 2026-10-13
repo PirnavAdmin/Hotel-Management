@@ -2589,6 +2589,7 @@ export function AdminPortal({
                 display: "grid",
                 gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                 gap: "0.85rem",
+                alignItems: "start",
               }}
             >
               <div>
@@ -2609,7 +2610,8 @@ export function AdminPortal({
                     setItemForm({ ...itemForm, category: val })
                   }
                   options={allCategoryOptions}
-                  placeholder="Select or type custom category..."
+                  placeholder="Select Category"
+                  customPlaceholder="Type new category..."
                   required
                   allowCustom
                   onSaveCustomOption={saveCustomCategory}
@@ -2640,10 +2642,12 @@ export function AdminPortal({
                   }
                   style={{
                     width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
                     background: "var(--bg-tertiary)",
                     border: "1.5px solid var(--border-subtle)",
                     borderRadius: "8px",
-                    padding: "0.65rem 0.85rem",
+                    padding: "0 0.85rem",
                     color: "var(--text-main)",
                     fontWeight: 700,
                     fontSize: "0.92rem",
@@ -3035,7 +3039,8 @@ export function AdminPortal({
                   setTableForm({ ...tableForm, section: val })
                 }
                 options={allSectionOptions}
-                placeholder="Select or type custom dining section..."
+                placeholder="Select dining section"
+                customPlaceholder="Type new section..."
                 required
                 allowCustom
                 onSaveCustomOption={saveCustomSection}
@@ -3185,28 +3190,23 @@ export function AdminPortal({
                       setTableForm({ ...tableForm, server: val });
                     }
                   }}
-                  options={[
-                    ...staffList.map((staff) => {
-                      const staffName = String(
-                        staff?.name ||
-                          staff?.fullName ||
-                          staff?.FullName ||
-                          staff?.username ||
-                          "Unnamed staff",
-                      );
-                      const staffRole =
-                        staff?.role || staff?.roleTitle || "Staff";
-                      return {
-                        value: staffName,
-                        label: `${staffName} (${staffRole})`,
-                      };
-                    }),
-                    {
-                      value: "__add_new__",
-                      label: "+ Add New Server Name...",
-                    },
-                  ]}
-                  placeholder="Select or type server name..."
+                  options={staffList.map((staff) => {
+                    const staffName = String(
+                      staff?.name ||
+                        staff?.fullName ||
+                        staff?.FullName ||
+                        staff?.username ||
+                        "Unnamed staff",
+                    );
+                    const staffRole =
+                      staff?.role || staff?.roleTitle || "Staff";
+                    return {
+                      value: staffName,
+                      label: `${staffName} (${staffRole})`,
+                    };
+                  })}
+                  placeholder="Select server"
+                  customPlaceholder="Type new server name..."
                   allowCustom
                   onSaveCustomOption={(newServer) => {
                     if (newServer && newServer !== "__add_new__") {
@@ -3447,7 +3447,8 @@ export function AdminPortal({
                   setStaffForm({ ...staffForm, role: val })
                 }
                 options={allRoleOptions}
-                placeholder="Select or type custom role..."
+                placeholder="Select role"
+                customPlaceholder="Type new role..."
                 required
                 allowCustom
                 onSaveCustomOption={saveCustomRole}
@@ -3475,10 +3476,12 @@ export function AdminPortal({
                 }
                 style={{
                   width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
                   background: "var(--bg-tertiary)",
                   border: "1.5px solid var(--border-subtle)",
                   borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
+                  padding: "0 0.85rem",
                   color: "var(--text-main)",
                   fontWeight: 600,
                   fontSize: "0.92rem",
@@ -3505,7 +3508,8 @@ export function AdminPortal({
                   setStaffForm({ ...staffForm, shift: val })
                 }
                 options={allShiftOptions}
-                placeholder="Select or type custom shift..."
+                placeholder="Select shift"
+                customPlaceholder="Type new shift..."
                 allowCustom
                 onSaveCustomOption={saveCustomShift}
               />

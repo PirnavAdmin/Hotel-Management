@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Package,
   Search,
@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 
 const INITIAL_INVENTORY = [
   {
@@ -104,6 +105,20 @@ const INITIAL_INVENTORY = [
   },
 ];
 
+const STORAGE_KEY_CUSTOM_INV_CATEGORIES = "pos_custom_inventory_categories";
+const STORAGE_KEY_CUSTOM_INV_UNITS = "pos_custom_inventory_units";
+
+const DEFAULT_INV_CATEGORIES = [
+  "Grains & Rice",
+  "Meats & Poultry",
+  "Dairy",
+  "Spices & Oils",
+  "Packaging",
+  "Beverages",
+];
+
+const DEFAULT_INV_UNITS = ["KG", "Litres", "Pcs", "Bags", "Cans"];
+
 export function AdminInventory() {
   const [inventory, setInventory] = useState(() => {
     try {
@@ -113,6 +128,78 @@ export function AdminInventory() {
       return INITIAL_INVENTORY;
     }
   });
+
+  const [customInvCategories, setCustomInvCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_CATEGORIES);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customInvUnits, setCustomInvUnits] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_UNITS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveCustomCategory = (newCat) => {
+    if (!newCat || !newCat.trim()) return;
+    const trimmed = newCat.trim();
+    setCustomInvCategories((prev) => {
+      if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_INV_CATEGORIES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomUnit = (newUnit) => {
+    if (!newUnit || !newUnit.trim()) return;
+    const trimmed = newUnit.trim();
+    setCustomInvUnits((prev) => {
+      if (prev.some((u) => u.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_INV_UNITS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const allCategoryOptions = useMemo(() => {
+    const map = new Map();
+    DEFAULT_INV_CATEGORIES.forEach((c) => map.set(c.toLowerCase(), { value: c, label: c }));
+    customInvCategories.forEach((c) => {
+      if (c && !map.has(c.toLowerCase())) map.set(c.toLowerCase(), { value: c, label: c });
+    });
+    (inventory || []).forEach((item) => {
+      if (item.category && !map.has(item.category.toLowerCase())) {
+        map.set(item.category.toLowerCase(), { value: item.category, label: item.category });
+      }
+    });
+    return Array.from(map.values());
+  }, [customInvCategories, inventory]);
+
+  const allUnitOptions = useMemo(() => {
+    const map = new Map();
+    DEFAULT_INV_UNITS.forEach((u) => map.set(u.toLowerCase(), { value: u, label: u }));
+    customInvUnits.forEach((u) => {
+      if (u && !map.has(u.toLowerCase())) map.set(u.toLowerCase(), { value: u, label: u });
+    });
+    (inventory || []).forEach((item) => {
+      if (item.unit && !map.has(item.unit.toLowerCase())) {
+        map.set(item.unit.toLowerCase(), { value: item.unit, label: item.unit });
+      }
+    });
+    return Array.from(map.values());
+  }, [customInvUnits, inventory]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -151,6 +238,9 @@ export function AdminInventory() {
   const handleAddItem = (e) => {
     e.preventDefault();
     if (!newItem.name.trim()) return;
+
+    if (newItem.category) saveCustomCategory(newItem.category);
+    if (newItem.unit) saveCustomUnit(newItem.unit);
 
     const itemToAdd = {
       id: `inv-${Date.now()}`,
@@ -1084,77 +1174,57 @@ export function AdminInventory() {
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "0.75rem",
+                  alignItems: "start",
                 }}
               >
                 <div>
                   <label
                     style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "4px",
-                  }}
+                      display: "block",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: "var(--text-main)",
+                      marginBottom: "4px",
+                    }}
                   >
                     Category
                   </label>
-                  <select
+                  <CustomCreatableDropdown
                     value={newItem.category}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, category: e.target.value })
+                    onChange={(val) =>
+                      setNewItem({ ...newItem, category: val })
                     }
-                    style={{
-                      width: "100%",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-card)",
-                      borderRadius: "8px",
-                      padding: "0.6rem 0.8rem",
-                      color: "var(--text-main)",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="Grains & Rice">Grains & Rice</option>
-                    <option value="Meats & Poultry">Meats & Poultry</option>
-                    <option value="Dairy">Dairy</option>
-                    <option value="Spices & Oils">Spices & Oils</option>
-                    <option value="Packaging">Packaging</option>
-                    <option value="Beverages">Beverages</option>
-                  </select>
+                    options={allCategoryOptions}
+                    placeholder="Select Category"
+                    customPlaceholder="Type new category..."
+                    allowCustom
+                    onSaveCustomOption={saveCustomCategory}
+                  />
                 </div>
 
                 <div>
                   <label
                     style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "4px",
-                  }}
+                      display: "block",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: "var(--text-main)",
+                      marginBottom: "4px",
+                    }}
                   >
                     Unit
                   </label>
-                  <select
+                  <CustomCreatableDropdown
                     value={newItem.unit}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, unit: e.target.value })
+                    onChange={(val) =>
+                      setNewItem({ ...newItem, unit: val })
                     }
-                    style={{
-                      width: "100%",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-card)",
-                      borderRadius: "8px",
-                      padding: "0.6rem 0.8rem",
-                      color: "var(--text-main)",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="KG">KG</option>
-                    <option value="Litres">Litres</option>
-                    <option value="Pcs">Pcs</option>
-                    <option value="Bags">Bags</option>
-                    <option value="Cans">Cans</option>
-                  </select>
+                    options={allUnitOptions}
+                    placeholder="Select Unit"
+                    customPlaceholder="Type new unit..."
+                    allowCustom
+                    onSaveCustomOption={saveCustomUnit}
+                  />
                 </div>
               </div>
 

@@ -1,27 +1,29 @@
-import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Plus, Check } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, Check, X } from "lucide-react";
 
 /**
  * CustomCreatableDropdown
- * Allows user to type freely from keyboard OR select from existing options.
- * Supports custom entries, keyboard navigation, and theme variables.
+ * Renders a standard native <select> dropdown as usual.
+ * Adds "+ Add Custom..." at the bottom of the dropdown items,
+ * and renders a perfectly contained, cleanly aligned custom input
+ * so users can type custom data from keyboard without layout overflow.
  */
 export function CustomCreatableDropdown({
   value = "",
   onChange,
   options = [],
-  placeholder = "Type or select...",
+  placeholder = "Select an option...",
   required = false,
   allowCustom = true,
   onSaveCustomOption = null,
   style = {},
-  inputStyle = {},
+  selectStyle = {},
   name = undefined,
   id = undefined,
+  customPlaceholder = "Type custom name...",
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-  const inputRef = useRef(null);
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [customText, setCustomText] = useState("");
 
   // Normalize options to { value, label }
   const normalizedOptions = options.map((opt) => {
@@ -29,261 +31,228 @@ export function CustomCreatableDropdown({
       return { value: opt, label: opt };
     }
     return {
-      value: opt.id || opt.value || opt.name,
-      label: opt.name || opt.label || opt.value,
+      value: opt.value ?? opt.id ?? opt.name,
+      label: opt.label ?? opt.name ?? opt.value,
     };
   });
 
-  // Current display label
-  const matchedOpt = normalizedOptions.find(
-    (o) => String(o.value).toLowerCase() === String(value).toLowerCase()
+  // Check if current value already exists in normalized options
+  const valueExists = normalizedOptions.some(
+    (opt) => String(opt.value).toLowerCase() === String(value).toLowerCase()
   );
-  const displayValue = value || "";
 
-  // Close when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+  const handleSelectChange = (e) => {
+    const val = e.target.value;
+    if (val === "__custom__") {
+      setIsCustomMode(true);
+      setCustomText("");
+    } else {
+      setIsCustomMode(false);
+      onChange?.(val);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  const handleInputChange = (e) => {
-    const newVal = e.target.value;
-    onChange(newVal);
-    if (!isOpen) setIsOpen(true);
   };
 
-  const handleSelect = (val) => {
-    onChange(val);
+  const handleApplyCustom = () => {
+    const trimmed = customText.trim();
+    if (!trimmed) return;
+
+    // Save to persistent storage / custom list
     if (onSaveCustomOption) {
-      onSaveCustomOption(val);
+      onSaveCustomOption(trimmed);
     }
-    setIsOpen(false);
+
+    // Set as the current selected value
+    onChange?.(trimmed);
+    setIsCustomMode(false);
+    setCustomText("");
   };
 
-  // Filter options based on current typed input
-  const query = String(displayValue).trim().toLowerCase();
-  const filteredOptions = normalizedOptions.filter((opt) =>
-    String(opt.label).toLowerCase().includes(query)
-  );
-
-  const isExactMatch = normalizedOptions.some(
-    (opt) => String(opt.label).toLowerCase() === query || String(opt.value).toLowerCase() === query
-  );
-
-  const showCustomOption =
-    allowCustom && query.length > 0 && !isExactMatch;
+  const handleCancelCustom = () => {
+    setIsCustomMode(false);
+    setCustomText("");
+  };
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "relative",
-        width: "100%",
-        ...style,
-      }}
-    >
-      {/* Input wrapper */}
-      <div
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", boxSizing: "border-box", ...style }}>
+      {/* Standard / usual native dropdown */}
+      <select
+        id={id}
+        name={name}
+        required={required}
+        value={isCustomMode ? "__custom__" : (value || "")}
+        onChange={handleSelectChange}
         style={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
           width: "100%",
+          height: "38px",
+          background: "var(--bg-tertiary)",
+          border: isCustomMode
+            ? "1.5px solid var(--accent-amber)"
+            : "1.5px solid var(--border-subtle)",
+          borderRadius: "8px",
+          padding: "0 0.85rem",
+          color: "var(--text-main)",
+          fontWeight: 600,
+          fontSize: "0.9rem",
+          outline: "none",
+          cursor: "pointer",
+          boxSizing: "border-box",
+          ...selectStyle,
         }}
       >
-        <input
-          ref={inputRef}
-          id={id}
-          name={name}
-          type="text"
-          required={required}
-          value={displayValue}
-          placeholder={placeholder}
-          onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (displayValue.trim()) {
-                handleSelect(displayValue.trim());
-              }
-            } else if (e.key === "Escape") {
-              setIsOpen(false);
-            }
-          }}
-          style={{
-            width: "100%",
-            background: "var(--bg-tertiary)",
-            border: isOpen
-              ? "1.5px solid var(--accent-amber)"
-              : "1.5px solid var(--border-subtle)",
-            borderRadius: "8px",
-            padding: "0.65rem 2.2rem 0.65rem 0.85rem",
-            color: "var(--text-main)",
-            fontWeight: 600,
-            fontSize: "0.92rem",
-            outline: "none",
-            transition: "all 0.15s ease",
-            boxSizing: "border-box",
-            ...inputStyle,
-          }}
-        />
+        {/* If current value is custom and not yet in normalizedOptions, include it */}
+        {value && !valueExists && !isCustomMode && (
+          <option value={value}>{value}</option>
+        )}
 
-        {/* Dropdown toggle button (chevron) */}
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={() => {
-            setIsOpen((prev) => !prev);
-            if (!isOpen && inputRef.current) {
-              inputRef.current.focus();
-            }
-          }}
-          style={{
-            position: "absolute",
-            right: "8px",
-            background: "transparent",
-            border: "none",
-            color: "var(--text-muted)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "4px",
-            borderRadius: "4px",
-            transition: "transform 0.15s ease, color 0.15s ease",
-            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-          title="Toggle dropdown options"
-        >
-          <ChevronDown size={17} />
-        </button>
-      </div>
+        {normalizedOptions.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
 
-      {/* Popover Dropdown Menu */}
-      {isOpen && (
+        {allowCustom && (
+          <option
+            value="__custom__"
+            style={{
+              color: "var(--accent-amber)",
+              fontWeight: 700,
+              background: "var(--bg-secondary)",
+            }}
+          >
+            + Add Custom...
+          </option>
+        )}
+      </select>
+
+      {/* Custom input at the bottom of the dropdown item */}
+      {isCustomMode ? (
         <div
           style={{
-            position: "absolute",
-            top: "calc(100% + 5px)",
-            left: 0,
-            right: 0,
-            maxHeight: "220px",
-            overflowY: "auto",
-            background: "var(--bg-card)",
-            border: "1.5px solid var(--border-card)",
-            borderRadius: "10px",
-            boxShadow: "var(--shadow-lg)",
-            zIndex: 9999,
-            padding: "4px",
+            marginTop: "6px",
             display: "flex",
-            flexDirection: "column",
-            gap: "2px",
-            animation: "fadeIn 0.12s ease",
+            alignItems: "center",
+            height: "36px",
+            width: "100%",
+            background: "var(--bg-tertiary)",
+            border: "1.5px solid var(--accent-amber)",
+            borderRadius: "8px",
+            padding: "2px 4px 2px 8px",
+            boxSizing: "border-box",
+            overflow: "hidden",
+            boxShadow: "0 0 0 2px rgba(245, 158, 11, 0.15)",
           }}
         >
-          {/* Custom entry button if typed value doesn't match an existing option */}
-          {showCustomOption && (
-            <div
-              onClick={() => handleSelect(displayValue.trim())}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "0.55rem 0.75rem",
-                borderRadius: "6px",
-                background: "rgba(245, 158, 11, 0.12)",
-                border: "1px dashed var(--accent-amber)",
-                color: "var(--accent-amber)",
-                fontWeight: 700,
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                marginBottom: "4px",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--accent-amber)";
-                e.currentTarget.style.color = "#ffffff";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(245, 158, 11, 0.12)";
-                e.currentTarget.style.color = "var(--accent-amber)";
-              }}
-            >
-              <Plus size={14} strokeWidth={2.5} />
-              <span>
-                Use custom: <strong>"{displayValue.trim()}"</strong>
-              </span>
-            </div>
-          )}
-
-          {/* List of matching options */}
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((opt) => {
-              const isSelected =
-                String(opt.value).toLowerCase() === String(displayValue).toLowerCase() ||
-                String(opt.label).toLowerCase() === String(displayValue).toLowerCase();
-
-              return (
-                <div
-                  key={opt.value}
-                  onClick={() => handleSelect(opt.value)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.55rem 0.75rem",
-                    borderRadius: "6px",
-                    background: isSelected
-                      ? "rgba(245, 158, 11, 0.15)"
-                      : "transparent",
-                    color: isSelected
-                      ? "var(--accent-amber)"
-                      : "var(--text-main)",
-                    fontWeight: isSelected ? 700 : 500,
-                    fontSize: "0.86rem",
-                    cursor: "pointer",
-                    transition: "background 0.12s ease, color 0.12s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = "var(--bg-tertiary)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = "transparent";
-                    }
-                  }}
-                >
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {opt.label}
-                  </span>
-                  {isSelected && <Check size={14} color="var(--accent-amber)" strokeWidth={2.5} />}
-                </div>
-              );
-            })
-          ) : !showCustomOption ? (
-            <div
-              style={{
-                padding: "0.75rem",
-                color: "var(--text-muted)",
-                fontSize: "0.82rem",
-                textAlign: "center",
-              }}
-            >
-              No options found. Type to add custom value.
-            </div>
-          ) : null}
+          <input
+            type="text"
+            autoFocus
+            placeholder={customPlaceholder}
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleApplyCustom();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                handleCancelCustom();
+              }
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: "100%",
+              background: "transparent",
+              border: "none",
+              color: "var(--text-main)",
+              fontWeight: 600,
+              fontSize: "0.84rem",
+              outline: "none",
+              padding: 0,
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleApplyCustom}
+            style={{
+              height: "28px",
+              padding: "0 9px",
+              background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              fontWeight: 800,
+              fontSize: "0.76rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "3px",
+              flexShrink: 0,
+              boxShadow: "0 1px 4px rgba(234, 88, 12, 0.3)",
+              whiteSpace: "nowrap",
+            }}
+            title="Add custom option"
+          >
+            <Check size={12} strokeWidth={3} />
+            <span>Add</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleCancelCustom}
+            style={{
+              height: "28px",
+              width: "24px",
+              background: "transparent",
+              border: "none",
+              color: "var(--text-muted)",
+              borderRadius: "4px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              marginLeft: "2px",
+            }}
+            title="Cancel"
+          >
+            <X size={14} />
+          </button>
         </div>
-      )}
+      ) : allowCustom ? (
+        <div
+          style={{
+            marginTop: "3px",
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setIsCustomMode(true);
+              setCustomText("");
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--accent-amber)",
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              padding: "2px 4px",
+              display: "flex",
+              alignItems: "center",
+              gap: "3px",
+              opacity: 0.85,
+              transition: "opacity 0.15s ease",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.85")}
+          >
+            <Plus size={11} />
+            <span>Type custom</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
