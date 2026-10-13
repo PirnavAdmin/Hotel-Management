@@ -103,6 +103,8 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [customStartDateText, setCustomStartDateText] = useState('');
+  const [customEndDateText, setCustomEndDateText] = useState('');
   const [viewMode, setViewMode] = useState('single_day'); // 'single_day' | 'monthly' | 'custom' | 'grouped_all'
   const [searchTerm, setSearchTerm] = useState('');
   const countForSelectedDate = uniquePastOrders.filter(
@@ -122,6 +124,35 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       }
     } catch {}
     return '';
+  };
+
+  const formatDateForInput = (isoDate) => {
+    if (!isoDate) return '';
+    const [year, month, day] = isoDate.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : '';
+  };
+
+  const parseDateInput = (value) => {
+    const match = value.trim().match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
+    if (!match) return '';
+    const [, dayText, monthText, yearText] = match;
+    const day = Number(dayText);
+    const month = Number(monthText);
+    const year = Number(yearText);
+    const parsed = new Date(year, month - 1, day);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) return '';
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const handleCustomDateTextChange = (value, setText, setDate) => {
+    setText(value);
+    const parsed = parseDateInput(value);
+    if (parsed) setDate(parsed);
+    else if (!value.trim()) setDate('');
   };
 
   // Convert "Oct 2026" to "2026-10" for HTML <input type="month">
@@ -305,24 +336,34 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const todayStr = getYYYYMMDD(now);
       setCustomStartDate(todayStr);
       setCustomEndDate(todayStr);
+      setCustomStartDateText(formatDateForInput(todayStr));
+      setCustomEndDateText(formatDateForInput(todayStr));
     } else if (preset === '7days') {
       const start = new Date();
       start.setDate(now.getDate() - 6);
       setCustomStartDate(getYYYYMMDD(start));
       setCustomEndDate(getYYYYMMDD(now));
+      setCustomStartDateText(formatDateForInput(getYYYYMMDD(start)));
+      setCustomEndDateText(formatDateForInput(getYYYYMMDD(now)));
     } else if (preset === 'month') {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       setCustomStartDate(getYYYYMMDD(start));
       setCustomEndDate(getYYYYMMDD(end));
+      setCustomStartDateText(formatDateForInput(getYYYYMMDD(start)));
+      setCustomEndDateText(formatDateForInput(getYYYYMMDD(end)));
     } else if (preset === '30days') {
       const start = new Date();
       start.setDate(now.getDate() - 29);
       setCustomStartDate(getYYYYMMDD(start));
       setCustomEndDate(getYYYYMMDD(now));
+      setCustomStartDateText(formatDateForInput(getYYYYMMDD(start)));
+      setCustomEndDateText(formatDateForInput(getYYYYMMDD(now)));
     } else if (preset === 'all') {
       setCustomStartDate('');
       setCustomEndDate('');
+      setCustomStartDateText('');
+      setCustomEndDateText('');
     }
     setViewMode('custom');
   };
@@ -739,38 +780,70 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 700 }}>From:</span>
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={e => setCustomStartDate(e.target.value)}
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--accent-amber)',
-                    color: 'var(--text-main)',
-                    padding: '0.35rem 0.55rem',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer'
-                  }}
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="dd/mm/yyyy"
+                    aria-label="From date (day/month/year)"
+                    value={customStartDateText || formatDateForInput(customStartDate)}
+                    onChange={e => handleCustomDateTextChange(e.target.value, setCustomStartDateText, setCustomStartDate)}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--accent-amber)',
+                      color: 'var(--text-main)',
+                      padding: '0.35rem 2rem 0.35rem 0.55rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      width: '135px',
+                    }}
+                  />
+                  <input
+                    type="date"
+                    aria-label="Choose from date"
+                    value={customStartDate}
+                    onChange={e => {
+                      setCustomStartDate(e.target.value);
+                      setCustomStartDateText(formatDateForInput(e.target.value));
+                    }}
+                    style={{ position: 'absolute', right: '0.35rem', width: '1.25rem', opacity: 0, cursor: 'pointer' }}
+                  />
+                  <CalendarDays size={15} style={{ position: 'absolute', right: '0.5rem', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 700 }}>To:</span>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={e => setCustomEndDate(e.target.value)}
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--accent-amber)',
-                    color: 'var(--text-main)',
-                    padding: '0.35rem 0.55rem',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer'
-                  }}
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="dd/mm/yyyy"
+                    aria-label="To date (day/month/year)"
+                    value={customEndDateText || formatDateForInput(customEndDate)}
+                    onChange={e => handleCustomDateTextChange(e.target.value, setCustomEndDateText, setCustomEndDate)}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--accent-amber)',
+                      color: 'var(--text-main)',
+                      padding: '0.35rem 2rem 0.35rem 0.55rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      width: '135px',
+                    }}
+                  />
+                  <input
+                    type="date"
+                    aria-label="Choose to date"
+                    value={customEndDate}
+                    onChange={e => {
+                      setCustomEndDate(e.target.value);
+                      setCustomEndDateText(formatDateForInput(e.target.value));
+                    }}
+                    style={{ position: 'absolute', right: '0.35rem', width: '1.25rem', opacity: 0, cursor: 'pointer' }}
+                  />
+                  <CalendarDays size={15} style={{ position: 'absolute', right: '0.5rem', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                </div>
               </div>
 
               {/* Quick Preset Buttons */}
