@@ -9,6 +9,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 
@@ -520,12 +521,14 @@ export function AdminInventory() {
                     minWidth: 0,
                     height: "40px",
                     padding: "0 0.75rem",
-                    color: "#cbd5e1",
-                    background: "#080d1a",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "8px",
-                    fontSize: "0.8rem",
+                    color: "var(--text-main)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "9px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
                     outline: "none",
+                    cursor: "pointer",
                   }}
                 >
                   {options.map((option) => (
@@ -1007,10 +1010,10 @@ export function AdminInventory() {
                     borderRadius: "5px",
                     background:
                       visiblePage === 1
-                        ? "rgba(255, 255, 255, 0.02)"
-                        : "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                    color: visiblePage === 1 ? "#475569" : "#cbd5e1",
+                        ? "var(--bg-card)"
+                        : "var(--bg-tertiary)",
+                    border: "1px solid var(--border-subtle)",
+                    color: visiblePage === 1 ? "var(--text-dim)" : "var(--text-main)",
                     cursor: visiblePage === 1 ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -1039,11 +1042,11 @@ export function AdminInventory() {
                           borderRadius: "5px",
                           background: isActive
                             ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                            : "transparent",
+                            : "var(--bg-tertiary)",
                           border: isActive
                             ? "none"
-                            : "1px solid rgba(255, 255, 255, 0.08)",
-                          color: isActive ? "#ffffff" : "#94a3b8",
+                            : "1px solid var(--border-subtle)",
+                          color: isActive ? "#ffffff" : "var(--text-muted)",
                           cursor: "pointer",
                           fontSize: "0.72rem",
                           fontWeight: isActive ? 800 : 500,
@@ -1070,10 +1073,10 @@ export function AdminInventory() {
                     borderRadius: "5px",
                     background:
                       visiblePage === pageCount
-                        ? "rgba(255, 255, 255, 0.02)"
-                        : "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                    color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
+                        ? "var(--bg-card)"
+                        : "var(--bg-tertiary)",
+                    border: "1px solid var(--border-subtle)",
+                    color: visiblePage === pageCount ? "var(--text-dim)" : "var(--text-main)",
                     cursor:
                       visiblePage === pageCount ? "not-allowed" : "pointer",
                     display: "flex",
@@ -1118,16 +1121,46 @@ export function AdminInventory() {
               boxShadow: "var(--shadow-lg)",
             }}
           >
-            <h3
+            <div
               style={{
-                fontSize: "1.2rem",
-                fontWeight: 800,
-                color: "var(--text-main)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
                 marginBottom: "1rem",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.6rem",
               }}
             >
-              Add New Inventory Supply
-            </h3>
+              <h3
+                style={{
+                  fontSize: "1.2rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                Add New Inventory Supply
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
             <form
               onSubmit={handleAddItem}
@@ -1308,14 +1341,15 @@ export function AdminInventory() {
                   onClick={() => setIsAddModalOpen(false)}
                   style={{
                     flex: 1,
-                    padding: "0.65rem",
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: "none",
+                    padding: "0.7rem",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
                     borderRadius: "8px",
-                    color: "#ffffff",
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
+                    color: "var(--text-main)",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
                     cursor: "pointer",
+                    transition: "all 0.15s ease",
                   }}
                 >
                   Cancel
@@ -1324,14 +1358,15 @@ export function AdminInventory() {
                   type="submit"
                   style={{
                     flex: 2,
-                    padding: "0.65rem",
+                    padding: "0.7rem",
                     background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                     border: "none",
                     borderRadius: "8px",
                     color: "#ffffff",
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
+                    fontSize: "0.88rem",
+                    fontWeight: 800,
                     cursor: "pointer",
+                    boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
                   }}
                 >
                   Save Ingredient
