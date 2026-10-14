@@ -754,6 +754,43 @@
       "server": "Rajesh K.",
       "guests": 2,
       "capacity": 2,
+      "orderTime": "09:26",
+      "items": [
+        {
+          "id": "bir-6",
+          "name": "Paneer Tikka Dum Biryani",
+          "price": 290,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "09:26",
+          "kotStatus": "received"
+        }
+      ],
+      "subtotal": 290,
+      "discountAmount": 0,
+      "taxAmount": 14.5,
+      "serviceChargeAmount": 14.5,
+      "tipAmount": 0,
+      "grandTotal": 319,
+      "paymentMethod": "upi",
+      "cashTendered": 319,
+      "changeDue": 0,
+      "settledAt": "09:27",
+      "date": "14 Oct 2026",
+      "invoiceNo": "INV-001",
+      "id": "ord_1791950228237_2eq21",
+      "cookingStartedAt": "09:26",
+      "completedAt": "09:27",
+      "completedDuration": "01m 00s",
+      "orderTimestamp": 1791950174510
+    },
+    {
+      "tableId": 1,
+      "tableName": "Table 1",
+      "section": "Main Hall",
+      "server": "Rajesh K.",
+      "guests": 2,
+      "capacity": 2,
       "orderTime": "02:47 PM",
       "items": [
         {
@@ -2108,6 +2145,7 @@
   },
   "avsr_last_invoice_counter_v1": "214153",
   "avsr_daily_inv_cnt_12_Oct_2026": "1068",
-  "avsr_last_invoice_date_v2": "13 Oct 2026",
-  "avsr_daily_inv_cnt_13_Oct_2026": "1"
+  "avsr_last_invoice_date_v2": "14 Oct 2026",
+  "avsr_daily_inv_cnt_13_Oct_2026": "1",
+  "avsr_daily_inv_cnt_14_Oct_2026": "1"
 }
