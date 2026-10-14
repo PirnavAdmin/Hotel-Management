@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   X, Receipt, Search, Eye, Calendar, CalendarDays, CalendarRange,
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
@@ -39,6 +39,14 @@ const parseDisplayDate = (value) => {
   }
   const parsed = new Date(text);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatUSDateInput = (value) => {
+  const date = parseDisplayDate(value);
+  if (!date) return '';
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${month}/${day}/${date.getFullYear()}`;
 };
 
 const compareDatesNewestFirst = (a, b) =>
@@ -97,6 +105,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     if (uniquePastOrders && uniquePastOrders.length > 0) return formatOrderDate(uniquePastOrders[0]);
     return TODAY_DATE_STR;
   });
+  const [selectedDateText, setSelectedDateText] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -126,15 +135,15 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
   const formatDateForInput = (isoDate) => {
     if (!isoDate) return '';
     const [year, month, day] = isoDate.split('-');
-    return year && month && day ? `${day}/${month}/${year}` : '';
+    return year && month && day ? `${month}/${day}/${year}` : '';
   };
 
   const parseDateInput = (value) => {
     const match = value.trim().match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
     if (!match) return '';
-    const [, dayText, monthText, yearText] = match;
-    const day = Number(dayText);
+    const [, monthText, dayText, yearText] = match;
     const month = Number(monthText);
+    const day = Number(dayText);
     const year = Number(yearText);
     const parsed = new Date(year, month - 1, day);
     if (
@@ -151,6 +160,10 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     if (parsed) setDate(parsed);
     else if (!value.trim()) setDate('');
   };
+
+  useEffect(() => {
+    setSelectedDateText(formatUSDateInput(selectedDate));
+  }, [selectedDate]);
 
   // Convert "Oct 2026" to "2026-10" for HTML <input type="month">
   const getYYYYMM = (monthStr) => {
@@ -174,6 +187,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       const dateObj = new Date(y, m - 1, d);
       const formatted = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
       setSelectedDate(formatted);
+      setSelectedDateText(formatDateForInput(val));
       setViewMode('single_day');
     } catch {}
   };
@@ -190,6 +204,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
       setViewMode('monthly');
     } catch {}
   };
+
 
   // Search filtered orders across all history
   const searchFilteredOrders = useMemo(() => {
@@ -603,21 +618,41 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
               </select>
 
               {/* Native HTML DatePicker */}
-              <input
-                type="date"
-                value={getYYYYMMDD(selectedDate)}
-                onChange={handleDateInputChange}
-                style={{
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-main)',
-                  padding: '0.35rem 0.5rem',
-                  borderRadius: '6px',
-                  fontSize: '0.78rem',
-                  cursor: 'pointer'
-                }}
-                title="Pick specific date calendar"
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="MM/DD/YYYY"
+                  aria-label="Selected date (month/day/year)"
+                  value={selectedDateText || formatUSDateInput(selectedDate)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSelectedDateText(value);
+                    const isoDate = parseDateInput(value);
+                    if (isoDate) handleDateInputChange({ target: { value: isoDate } });
+                  }}
+                  style={{
+                    width: '142px',
+                    boxSizing: 'border-box',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-main)',
+                    padding: '0.4rem 2rem 0.4rem 0.55rem',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                  }}
+                />
+                <input
+                  type="date"
+                  value={getYYYYMMDD(selectedDate)}
+                  onChange={handleDateInputChange}
+                  onClick={(event) => { try { event.currentTarget.showPicker(); } catch {} }}
+                  aria-label="Open calendar"
+                  title="Pick specific date calendar"
+                  style={{ position: 'absolute', right: '0.35rem', width: '1.25rem', height: '1.5rem', opacity: 0, cursor: 'pointer' }}
+                />
+                <CalendarDays size={15} style={{ position: 'absolute', right: '0.5rem', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+              </div>
 
               <button
                 onClick={handleNextDay}
@@ -783,8 +818,8 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                   <input
                     type="text"
                     inputMode="numeric"
-                    placeholder="dd/mm/yyyy"
-                    aria-label="From date (day/month/year)"
+                    placeholder="MM/DD/YYYY"
+                    aria-label="From date (month/day/year)"
                     value={customStartDateText || formatDateForInput(customStartDate)}
                     onChange={e => handleCustomDateTextChange(e.target.value, setCustomStartDateText, setCustomStartDate)}
                     style={{
@@ -817,8 +852,8 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                   <input
                     type="text"
                     inputMode="numeric"
-                    placeholder="dd/mm/yyyy"
-                    aria-label="To date (day/month/year)"
+                    placeholder="MM/DD/YYYY"
+                    aria-label="To date (month/day/year)"
                     value={customEndDateText || formatDateForInput(customEndDate)}
                     onChange={e => handleCustomDateTextChange(e.target.value, setCustomEndDateText, setCustomEndDate)}
                     style={{

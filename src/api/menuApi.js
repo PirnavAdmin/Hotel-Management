@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiClient } from "./apiConfig";
+﻿import { API_BASE_URL, apiClient } from "./apiConfig";
 
 export function normalizeMenuItem(item = {}) {
   const prepTime = item.prepTime ?? item.prep_time;
@@ -41,6 +41,55 @@ export async function apiGetMenuCategories() {
   return await apiClient("/api/v1/menu-items/categories");
 }
 
+export async function apiCreateMenuCategory(name, displayOrder = 0) {
+  return await apiClient("/api/v1/menu-items/categories", {
+    method: "POST",
+    body: JSON.stringify({ name: String(name || "").trim(), displayOrder }),
+  });
+}
+
+export async function apiUploadMenuImage(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const token = typeof localStorage !== "undefined"
+    ? localStorage.getItem("avsr_jwt_token")
+    : null;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/menu-items/upload-image`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch {}
+    if (!response.ok || data?.success === false) {
+      return {
+        success: false,
+        error: data?.message || data?.error || text || `Image upload failed (HTTP ${response.status}).`,
+      };
+    }
+    const imageUrl =
+      data?.imageUrl || data?.url || data?.fileUrl || data?.imagePath || data?.filePath || data?.path ||
+      data?.data?.imageUrl || data?.data?.url || data?.data?.fileUrl || data?.data?.imagePath || data?.data?.filePath || data?.data?.path || data?.data?.data?.imageUrl || data?.data?.data?.url || (typeof data?.data === "string" ? data.data : undefined);
+    if (!imageUrl || typeof imageUrl !== "string") {
+      return { success: false, error: "Upload completed but the server did not return an image URL." };
+    }
+    return {
+      success: true,
+      imageUrl: imageUrl.startsWith("/") && API_BASE_URL
+        ? `${API_BASE_URL.replace(/\/$/, "")}${imageUrl}`
+        : imageUrl,
+      data,
+    };
+  } catch (error) {
+    return { success: false, error: error?.message || "Image upload failed." };
+  }
+}
+
 export async function apiCreateMenuItem(itemData) {
   return await apiClient("/api/v1/menu-items", {
     method: "POST",
@@ -49,26 +98,26 @@ export async function apiCreateMenuItem(itemData) {
       category: itemData.category || "Main Course",
       price: parseFloat(itemData.price || 0),
       dietaryType: itemData.isVeg ? "VEG" : "NON-VEG",
-      spiceLevel: itemData.spiceLevel || 1,
+      spiceLevel: Number.isFinite(Number(itemData.spiceLevel)) ? Number(itemData.spiceLevel) : 1,
       prepTimeMinutes: parseInt(itemData.prepTime || 15, 10),
       shortDescription: itemData.description || "",
       imageUrl: itemData.image || "",
       isChefsSpecial: !!itemData.isChefSpecial,
-      isAvailable: true,
+      isAvailable: itemData.isAvailable !== false,
     }),
   });
 }
 
 export async function apiUpdateMenuItem(id, itemData) {
-  const cleanId = String(id).replace("m-", "");
-  return await apiClient(`/api/v1/menu-items/${cleanId}`, {
+  const cleanId = String(id).replace(/^m-/, "");
+  return await apiClient(`/api/v1/menu-items/${encodeURIComponent(cleanId)}`, {
     method: "PUT",
     body: JSON.stringify({
       dishName: itemData.name,
       category: itemData.category,
       price: parseFloat(itemData.price || 0),
       dietaryType: itemData.isVeg ? "VEG" : "NON-VEG",
-      spiceLevel: itemData.spiceLevel || 1,
+      spiceLevel: Number.isFinite(Number(itemData.spiceLevel)) ? Number(itemData.spiceLevel) : 1,
       prepTimeMinutes: parseInt(itemData.prepTime || 15, 10),
       shortDescription: itemData.description || "",
       imageUrl: itemData.image || "",
@@ -79,8 +128,24 @@ export async function apiUpdateMenuItem(id, itemData) {
 }
 
 export async function apiDeleteMenuItem(id) {
-  const cleanId = String(id).replace("m-", "");
-  return await apiClient(`/api/v1/menu-items/${cleanId}`, {
+  const cleanId = String(id).replace(/^m-/, "");
+  return await apiClient(`/api/v1/menu-items/${encodeURIComponent(cleanId)}`, {
     method: "DELETE",
+  });
+}
+
+export async function apiSetMenuAvailability(id, isAvailable) {
+  const cleanId = String(id).replace(/^m-/, "");
+  return await apiClient(`/api/v1/menu-items/${encodeURIComponent(cleanId)}/availability`, {
+    method: "PATCH",
+    body: JSON.stringify({ isAvailable: !!isAvailable }),
+  });
+}
+
+export async function apiSetMenuSpecialStatus(id, isSpecial) {
+  const cleanId = String(id).replace(/^m-/, "");
+  return await apiClient(`/api/v1/menu-items/${encodeURIComponent(cleanId)}/special-status`, {
+    method: "PATCH",
+    body: JSON.stringify({ isSpecial: !!isSpecial }),
   });
 }

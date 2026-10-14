@@ -102,12 +102,21 @@ export async function deleteUser(userId) {
 
 export async function updateUserDetails(userId, userData) {
   const res = await apiUpdateUser(userId, userData);
-  return { success: res.success, error: res.error || null, data: res.data };
+  const rejected = res.data?.success === false;
+  return {
+    success: res.success && !rejected,
+    error: res.error || (rejected ? res.data?.error || res.data?.message : null),
+    data: res.data,
+  };
 }
 
 export async function updateUserPassword(userId, newPassword) {
   const res = await apiUpdateUserPassword(userId, newPassword);
-  return { success: res.success, error: res.error };
+  const rejected = res.data?.success === false;
+  return {
+    success: res.success && !rejected,
+    error: res.error || (rejected ? res.data?.error || res.data?.message : null),
+  };
 }
 
 export async function fetchCurrentAuthUser() {

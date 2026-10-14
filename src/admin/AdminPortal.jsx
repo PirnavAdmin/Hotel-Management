@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -45,6 +45,7 @@ import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
 import { API_BASE_URL } from "../api/apiConfig";
+import { apiCreateMenuCategory, apiGetMenuCategories, apiUploadMenuImage } from "../api/menuApi";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
@@ -85,6 +86,8 @@ export function AdminPortal({
   onAddMenuItem,
   onUpdateMenuItem,
   onDeleteMenuItem,
+  onSetMenuAvailability,
+  onSetMenuSpecial,
   tables,
   onAddTable,
   onUpdateTable,
@@ -174,8 +177,8 @@ export function AdminPortal({
   };
 
   const themes = [
-    { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
-    { id: "light-bistro", name: "Light Theme", icon: "☀️", label: "Light" },
+    { id: "royal-saffron", name: "Dark Theme", icon: "ðŸŒ™", label: "Dark" },
+    { id: "light-bistro", name: "Light Theme", icon: "â˜€ï¸", label: "Light" },
   ];
 
   const handleThemeChange = (newTheme) => {
@@ -232,9 +235,17 @@ export function AdminPortal({
   });
 
   // Persistent save helpers
-  const saveCustomCategory = (newCat) => {
+  const saveCustomCategory = async (newCat) => {
     if (!newCat || !newCat.trim()) return;
     const trimmed = newCat.trim();
+    const knownNames = [...MENU_CATEGORIES.map((category) => category.name), ...customCategories.map((category) => typeof category === "string" ? category : category.name || category.label || category.value)];
+    if (!knownNames.some((name) => name?.toLowerCase() === trimmed.toLowerCase())) {
+      const result = await apiCreateMenuCategory(trimmed, knownNames.length);
+      if (!result?.success || result.data?.success === false) {
+        window.alert(`Category was not saved: ${result?.error || result?.data?.message || "API error"}`);
+        return;
+      }
+    }
     setCustomCategories((prev) => {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
       const updated = [...prev, trimmed];
@@ -285,6 +296,25 @@ export function AdminPortal({
   };
 
   // Dynamic option lists for combobox dropdowns
+  useEffect(() => {
+    let active = true;
+    apiGetMenuCategories().then((result) => {
+      if (!active || !result?.success || result.data?.success === false) return;
+      const raw = result.data?.categories || result.data?.data || result.data?.items || result.data;
+      if (!Array.isArray(raw)) return;
+      const names = raw.map((item) => typeof item === "string" ? item : item?.name || item?.categoryName).filter(Boolean);
+      setCustomCategories((previous) => {
+        const merged = [...previous];
+        names.forEach((name) => {
+          if (!merged.some((value) => String(typeof value === "string" ? value : value.name || value.label || value.value).toLowerCase() === name.toLowerCase())) merged.push(name);
+        });
+        try { localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(merged)); } catch {}
+        return merged;
+      });
+    });
+    return () => { active = false; };
+  }, []);
+
   const allCategoryOptions = React.useMemo(() => {
     const map = new Map();
     MENU_CATEGORIES.filter((c) => c.id !== "all").forEach((c) => {
@@ -367,6 +397,7 @@ export function AdminPortal({
   // --- ITEM MODAL STATE ---
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [itemForm, setItemForm] = useState({
     name: "",
     category: "Biryanis & Rice Special",
@@ -440,13 +471,9 @@ export function AdminPortal({
 
   const handleSaveItem = async (e) => {
     e.preventDefault();
-    if (!itemForm.name.trim()) return;
+    if (isImageUploading || !itemForm.name.trim()) return;
 
-    if (itemForm.category) {
-      saveCustomCategory(itemForm.category);
-    }
-
-    let saved;
+        let saved;
     if (editingItem) {
       saved = await onUpdateMenuItem({
         ...editingItem,
@@ -481,7 +508,7 @@ export function AdminPortal({
     } else {
       setEditingTable(null);
       // Auto suggest next table number
-      const maxId = tables.reduce((m, t) => Math.max(m, t.id), 0);
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       setTableForm({
         name: `Table ${maxId + 1}`,
         section: "Main Hall",
@@ -521,7 +548,7 @@ export function AdminPortal({
         server: assignedServer,
       });
     } else {
-      const maxId = tables.reduce((m, t) => Math.max(m, t.id), 0);
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       onAddTable({
         id: maxId + 1,
         name: tableForm.name,
@@ -944,7 +971,7 @@ export function AdminPortal({
                           Dietary
                         </th>
                         <th style={{ padding: "0.6rem 0.85rem", width: "12%" }}>
-                          Price (₹)
+                          Price (â‚¹)
                         </th>
                         <th
                           style={{
@@ -1034,7 +1061,7 @@ export function AdminPortal({
                                       overflow: "hidden",
                                     }}
                                   >
-                                    {item.prepTime || "15 mins"} • {item.description}
+                                    {item.prepTime || "15 mins"} â€¢ {item.description}
                                   </div>
                                 </div>
                               </div>
@@ -1117,7 +1144,7 @@ export function AdminPortal({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              ₹{Number(item.price).toFixed(2)}
+                              â‚¹{Number(item.price).toFixed(2)}
                             </td>
                             <td
                               style={{
@@ -1135,6 +1162,15 @@ export function AdminPortal({
                                 }}
                               >
                                 <button
+                                  onClick={() => onSetMenuAvailability?.(item.id, item.isAvailable === false)}
+                                  title={item.isAvailable === false ? "Make available" : "Mark unavailable"}
+                                  style={{ border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}
+                                >{item.isAvailable === false ? "Unavailable" : "Available"}</button>
+                                <button
+                                  onClick={() => onSetMenuSpecial?.(item.id, !item.isChefSpecial)}
+                                  title={item.isChefSpecial ? "Remove Chef's Special" : "Mark Chef's Special"}
+                                  style={{ border: "1px solid rgba(245, 158, 11, 0.45)", background: "rgba(245, 158, 11, 0.06)", color: "#f59e0b", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}
+                                >{item.isChefSpecial ? "★ Special" : "☆ Special"}</button>                                <button
                                   onClick={() => handleOpenItemModal(item)}
                                   style={{
                                     border: "1px solid rgba(245, 158, 11, 0.45)",
@@ -1216,7 +1252,7 @@ export function AdminPortal({
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {startIdx + 1}
                           </strong>
-                          –
+                          â€“
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {Math.min(startIdx + menuPageSize, filteredItems.length)}
                           </strong>{" "}
@@ -1572,7 +1608,7 @@ export function AdminPortal({
                                 margin: 0,
                               }}
                             >
-                              {tbl.name}
+                              Table {tbl.id}
                             </h4>
                             <span
                               style={{
@@ -2317,7 +2353,7 @@ export function AdminPortal({
                                     color: "var(--text-main)",
                                   }}
                                 >
-                                  {tbl.section} • Server: {tbl.server}
+                                  {tbl.section} â€¢ Server: {tbl.server}
                                 </div>
                                 <div
                                   style={{
@@ -2702,7 +2738,7 @@ export function AdminPortal({
                     marginBottom: "5px",
                   }}
                 >
-                  Price in Rupees (₹){" "}
+                  Price in Rupees (â‚¹){" "}
                   <span style={{ color: "#ea580c" }}>*</span>
                 </label>
                 <input
@@ -2772,8 +2808,8 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 >
-                  <option value="non-veg">Non-Veg 🔴</option>
-                  <option value="veg">Pure Veg 🟢</option>
+                  <option value="non-veg">Non-Veg ðŸ”´</option>
+                  <option value="veg">Pure Veg ðŸŸ¢</option>
                 </select>
               </div>
 
@@ -2864,20 +2900,19 @@ export function AdminPortal({
               <input
                 type="file"
                 accept="image/*"
+                disabled={isImageUploading}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
 
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    if (typeof reader.result === "string") {
-                      setItemForm((current) => ({
-                        ...current,
-                        image: reader.result,
-                      }));
+                  setIsImageUploading(true);
+                  apiUploadMenuImage(file).then((result) => {
+                    if (!result.success) {
+                      window.alert(`Dish image upload failed: ${result.error}`);
+                      return;
                     }
-                  };
-                  reader.readAsDataURL(file);
+                    setItemForm((current) => ({ ...current, image: result.imageUrl }));
+                  }).finally(() => setIsImageUploading(false));
                 }}
                 style={{
                   width: "100%",
@@ -2942,7 +2977,7 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 />
-                <span>Mark as Chef's Special ⭐</span>
+                <span>Mark as Chef's Special â­</span>
               </label>
             </div>
 
@@ -2982,7 +3017,7 @@ export function AdminPortal({
                   boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
                 }}
               >
-                {editingItem ? "Save Item Changes" : "Create Item"}
+                {isImageUploading ? "Uploading image..." : editingItem ? "Save Item Changes" : "Create Item"}
               </button>
             </div>
           </form>
@@ -3347,7 +3382,7 @@ export function AdminPortal({
                       fontWeight: 600,
                     }}
                   >
-                    💡 This new server will be assigned to this table and
+                    ðŸ’¡ This new server will be assigned to this table and
                     automatically saved to your Staff personnel list!
                   </p>
                 </div>
