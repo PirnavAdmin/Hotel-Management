@@ -177,8 +177,8 @@ export function AdminPortal({
   };
 
   const themes = [
-    { id: "royal-saffron", name: "Dark Theme", icon: "ðŸŒ™", label: "Dark" },
-    { id: "light-bistro", name: "Light Theme", icon: "â˜€ï¸", label: "Light" },
+    { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
+    { id: "light-bistro", name: "Light Theme", icon: "☀️", label: "Light" },
   ];
 
   const handleThemeChange = (newTheme) => {
@@ -971,7 +971,7 @@ export function AdminPortal({
                           Dietary
                         </th>
                         <th style={{ padding: "0.6rem 0.85rem", width: "12%" }}>
-                          Price (â‚¹)
+                          Price (₹)
                         </th>
                         <th
                           style={{
@@ -1061,7 +1061,7 @@ export function AdminPortal({
                                       overflow: "hidden",
                                     }}
                                   >
-                                    {item.prepTime || "15 mins"} â€¢ {item.description}
+                                    {item.prepTime || "15 mins"} • {item.description}
                                   </div>
                                 </div>
                               </div>
@@ -1144,7 +1144,7 @@ export function AdminPortal({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              â‚¹{Number(item.price).toFixed(2)}
+                              ₹{Number(item.price).toFixed(2)}
                             </td>
                             <td
                               style={{
@@ -1252,7 +1252,7 @@ export function AdminPortal({
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {startIdx + 1}
                           </strong>
-                          â€“
+                          –
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {Math.min(startIdx + menuPageSize, filteredItems.length)}
                           </strong>{" "}
@@ -2353,7 +2353,7 @@ export function AdminPortal({
                                     color: "var(--text-main)",
                                   }}
                                 >
-                                  {tbl.section} â€¢ Server: {tbl.server}
+                                  {tbl.section} • Server: {tbl.server}
                                 </div>
                                 <div
                                   style={{
@@ -2738,7 +2738,7 @@ export function AdminPortal({
                     marginBottom: "5px",
                   }}
                 >
-                  Price in Rupees (â‚¹){" "}
+                  Price in Rupees (₹){" "}
                   <span style={{ color: "#ea580c" }}>*</span>
                 </label>
                 <input
@@ -2808,8 +2808,8 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 >
-                  <option value="non-veg">Non-Veg ðŸ”´</option>
-                  <option value="veg">Pure Veg ðŸŸ¢</option>
+                  <option value="non-veg">Non-Veg 🔴</option>
+                  <option value="veg">Pure Veg 🟢</option>
                 </select>
               </div>
 
@@ -2977,7 +2977,7 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 />
-                <span>Mark as Chef's Special â­</span>
+                <span>Mark as Chef's Special ⭐</span>
               </label>
             </div>
 
@@ -3382,7 +3382,7 @@ export function AdminPortal({
                       fontWeight: 600,
                     }}
                   >
-                    ðŸ’¡ This new server will be assigned to this table and
+                    💡 This new server will be assigned to this table and
                     automatically saved to your Staff personnel list!
                   </p>
                 </div>
