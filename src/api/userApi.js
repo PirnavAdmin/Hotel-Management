@@ -12,21 +12,21 @@ export async function apiCreateUser(userData) {
 }
 
 export async function apiUpdateUser(id, userData) {
-  return await apiClient(`/api/Users/${id}`, {
+  return await apiClient(`/api/Users/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(userData)
   });
 }
 
 export async function apiDeleteUser(id) {
-  return await apiClient(`/api/Users/${id}`, {
+  return await apiClient(`/api/Users/${encodeURIComponent(id)}`, {
     method: 'DELETE'
   });
 }
 
 export async function apiUpdateUserPassword(id, newPassword) {
-  return await apiClient(`/api/Users/${id}/password`, {
+  return await apiClient(`/api/Users/${encodeURIComponent(id)}/password`, {
     method: 'PUT',
-    body: JSON.stringify({ password: newPassword })
+    body: JSON.stringify({ newPassword })
   });
 }

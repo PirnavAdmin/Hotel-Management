@@ -22,6 +22,7 @@ export function AdminSidebar({
   tablesCount = 0,
   staffCount = 0,
   activeKOTCount = 0,
+  restaurantLogo = "",
 }) {
 
   const navSections = [
@@ -138,7 +139,11 @@ export function AdminSidebar({
             flexShrink: 0,
           }}
         >
-          <ChefHat size={22} color="#ffffff" strokeWidth={2.3} />
+          {restaurantLogo ? (
+            <img src={restaurantLogo} alt="Restaurant logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "10px", padding: "3px" }} />
+          ) : (
+            <ChefHat size={22} color="#ffffff" strokeWidth={2.3} />
+          )}
         </div>
         <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
           <div

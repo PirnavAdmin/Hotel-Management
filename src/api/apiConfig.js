@@ -1,7 +1,6 @@
-export const API_BASE_URL = import.meta.env.DEV
-  ? ""
-  : import.meta.env.VITE_API_BASE_URL ||
-    "https://cultivate-suitable-manmade.ngrok-free.dev";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "" : "https://cultivate-suitable-manmade.ngrok-free.dev");
 
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",

@@ -263,7 +263,7 @@ export function ReceiptModal({ table, onClose, onPrint }) {
               THANK YOU FOR DINING AT AVSR FOOD COURT!
             </p>
             <p style={{ fontSize: '0.62rem', color: '#64748b', margin: '1px 0 0' }}>
-              Please visit again â€¢ For bulk orders: +91 98490 12345
+              Please visit again • For bulk orders: +91 98490 12345
             </p>
           </div>
         </div>

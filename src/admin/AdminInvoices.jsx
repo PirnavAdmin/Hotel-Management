@@ -25,6 +25,20 @@ const localDateInputValue = (date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+const localWeekStartValue = (date = new Date()) => {
+  const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysSinceMonday = (weekStart.getDay() + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+  return localDateInputValue(weekStart);
+};
+
+const localWeekEndValue = (date = new Date()) => {
+  const weekEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysUntilSunday = 6 - ((weekEnd.getDay() + 6) % 7);
+  weekEnd.setDate(weekEnd.getDate() + daysUntilSunday);
+  return localDateInputValue(weekEnd);
+};
+
 const invoiceDateKey = (order) => {
   const value = order.settledDate || order.date || order.settledAt || order.createdAt;
   if (!value) return "";
@@ -56,6 +70,26 @@ const parseDisplayDateInput = (displayDate) => {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 };
 
+const formatInvoiceTime = (value) => {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (match) {
+    let hour = Number(match[1]);
+    const minute = match[2];
+    let suffix = match[3]?.toUpperCase();
+    if (!suffix) {
+      suffix = hour >= 12 ? "PM" : "AM";
+      hour %= 12;
+      if (hour === 0) hour = 12;
+    }
+    return `${String(hour).padStart(2, "0")}:${minute} ${suffix}`;
+  }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime())
+    ? text || "12:00 PM"
+    : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+};
+
 export function AdminInvoices({ pastOrders = [] }) {
   const allOrders = sortOrdersBySettlementTime(
     dedupeOrders(
@@ -66,7 +100,15 @@ export function AdminInvoices({ pastOrders = [] }) {
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(() => localDateInputValue());
+  const [selectedWeek, setSelectedWeek] = useState(() => ({
+    from: localWeekStartValue(),
+    to: localWeekEndValue(),
+  }));
   const [selectedMonth, setSelectedMonth] = useState(() => localDateInputValue().slice(0, 7));
+  const [selectedQuarter, setSelectedQuarter] = useState(() => {
+    const now = new Date();
+    return { quarter: Math.floor(now.getMonth() / 3) + 1, year: now.getFullYear() };
+  });
   const [customFromDate, setCustomFromDate] = useState("");
   const [customToDate, setCustomToDate] = useState("");
   const [customFromDateText, setCustomFromDateText] = useState("");
@@ -81,18 +123,29 @@ export function AdminInvoices({ pastOrders = [] }) {
     (customFromDate && customToDate && customFromDate > customToDate)
   );
 
+  const normalizePaymentMethod = (method) => {
+    const value = String(method || "cash").trim().toLowerCase();
+    if (value === "cash" || value === "upi" || value === "card") return value;
+    if (value.includes("upi") || value.includes("online") || value.includes("gpay") || value.includes("phonepe") || value.includes("paytm")) return "upi";
+    if (value.includes("card") || value.includes("credit") || value.includes("debit")) return "card";
+    return value;
+  };
+
   const filteredOrders = allOrders.filter((order) => {
     const orderDate = invoiceDateKey(order);
     const matchesDate = dateFilter === "all" ||
       (dateFilter === "daily" && orderDate === selectedDate) ||
+      (dateFilter === "weekly" && orderDate >= selectedWeek.from && orderDate <= selectedWeek.to) ||
       (dateFilter === "monthly" && orderDate.startsWith(selectedMonth)) ||
+      (dateFilter === "quarterly" && (() => {
+        const [year, month] = orderDate.split("-").map(Number);
+        return year === selectedQuarter.year && Math.ceil(month / 3) === selectedQuarter.quarter;
+      })()) ||
       (dateFilter === "custom" && !invalidCustomDate && !!orderDate &&
         (!customFromDate || orderDate >= customFromDate) &&
         (!customToDate || orderDate <= customToDate));
-    const matchesPayment =
-      paymentFilter === "all" ||
-      String(order.paymentMethod || "").toLowerCase() ===
-        paymentFilter.toLowerCase();
+    const matchesPayment = paymentFilter === "all" ||
+      normalizePaymentMethod(order.paymentMethod) === paymentFilter;
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
@@ -120,11 +173,11 @@ export function AdminInvoices({ pastOrders = [] }) {
   );
 
   const upiTotal = filteredOrders
-    .filter((o) => (o.paymentMethod || "").toLowerCase() === "upi")
+    .filter((o) => normalizePaymentMethod(o.paymentMethod) === "upi")
     .reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0);
 
   const cashTotal = filteredOrders
-    .filter((o) => (o.paymentMethod || "").toLowerCase() === "cash")
+    .filter((o) => normalizePaymentMethod(o.paymentMethod) === "cash")
     .reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0);
 
   return (
@@ -260,8 +313,10 @@ export function AdminInvoices({ pastOrders = [] }) {
             style={{ height: "38px", minWidth: "190px", boxSizing: "border-box", padding: "0 0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
           >
             <option value="all">All Dates</option>
-            <option value="daily">Daily</option>
+            <option value="daily">Today</option>
+            <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
             <option value="custom">Custom Date Range</option>
           </select>
           {dateFilter === "daily" && (
@@ -276,15 +331,75 @@ export function AdminInvoices({ pastOrders = [] }) {
               <input type="month" value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); setCurrentPage(1); }} style={{ width: "148px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
             </label>
           )}
+          {dateFilter === "quarterly" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+              <label htmlFor="invoice-quarter">Quarter</label>
+              <select
+                id="invoice-quarter"
+                value={selectedQuarter.quarter}
+                onChange={(event) => {
+                  setSelectedQuarter((current) => ({ ...current, quarter: Number(event.target.value) }));
+                  setCurrentPage(1);
+                }}
+                style={{ height: "38px", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }}
+              >
+                {[1, 2, 3, 4].map((quarter) => <option key={quarter} value={quarter}>Q{quarter} ({(quarter - 1) * 3 + 1}–{quarter * 3})</option>)}
+              </select>
+              <label htmlFor="invoice-quarter-year">Year</label>
+              <input
+                id="invoice-quarter-year"
+                type="number"
+                min="2000"
+                max="2100"
+                value={selectedQuarter.year}
+                onChange={(event) => {
+                  setSelectedQuarter((current) => ({ ...current, year: Number(event.target.value) }));
+                  setCurrentPage(1);
+                }}
+                style={{ width: "88px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }}
+              />
+            </div>
+          )}
+          {dateFilter === "weekly" && (
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+              Week of
+              <input
+                type="date"
+                aria-label="Choose week"
+                value={selectedWeek.from}
+                onChange={(event) => {
+                  const from = event.target.value;
+                  if (!from) return;
+                  const weekStart = new Date(`${from}T00:00:00`);
+                  const offset = (weekStart.getDay() + 6) % 7;
+                  weekStart.setDate(weekStart.getDate() - offset);
+                  const weekEnd = new Date(weekStart);
+                  weekEnd.setDate(weekStart.getDate() + 6);
+                  setSelectedWeek({ from: localDateInputValue(weekStart), to: localDateInputValue(weekEnd) });
+                  setCurrentPage(1);
+                }}
+                style={{ width: "148px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }}
+              />
+              <span style={{ fontWeight: 500 }}>{selectedWeek.from} – {selectedWeek.to}</span>
+            </label>
+          )}
           {dateFilter === "custom" && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
                 From
-                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="From date (day/month/year)" value={customFromDateText} onChange={(event) => { const text = event.target.value; setCustomFromDateText(text); setCustomFromDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
+                <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                  <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="From date (day/month/year)" value={customFromDateText} onChange={(event) => { const text = event.target.value; setCustomFromDateText(text); setCustomFromDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 2.1rem 0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
+                  <input type="date" aria-label="Choose from date" value={customFromDate} max={customToDate || undefined} onChange={(event) => { const value = event.target.value; setCustomFromDate(value); setCustomFromDateText(value ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : ""); setCurrentPage(1); }} onClick={(event) => { try { event.currentTarget.showPicker(); } catch {} }} style={{ position: "absolute", right: "5px", width: "28px", height: "30px", opacity: 0, cursor: "pointer" }} />
+                  <Calendar size={16} color="var(--text-muted)" style={{ position: "absolute", right: "10px", pointerEvents: "none" }} />
+                </span>
               </label>
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
                 To
-                <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="To date (day/month/year)" value={customToDateText} onChange={(event) => { const text = event.target.value; setCustomToDateText(text); setCustomToDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
+                <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                  <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="To date (day/month/year)" value={customToDateText} onChange={(event) => { const text = event.target.value; setCustomToDateText(text); setCustomToDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 2.1rem 0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
+                  <input type="date" aria-label="Choose to date" value={customToDate} min={customFromDate || undefined} onChange={(event) => { const value = event.target.value; setCustomToDate(value); setCustomToDateText(value ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : ""); setCurrentPage(1); }} onClick={(event) => { try { event.currentTarget.showPicker(); } catch {} }} style={{ position: "absolute", right: "5px", width: "28px", height: "30px", opacity: 0, cursor: "pointer" }} />
+                  <Calendar size={16} color="var(--text-muted)" style={{ position: "absolute", right: "10px", pointerEvents: "none" }} />
+                </span>
               </label>
             </div>
           )}
@@ -404,9 +519,7 @@ export function AdminInvoices({ pastOrders = [] }) {
             <tbody>
               {paginatedOrders.map((order, idx) => {
                 const orderIndex = pageStart + idx;
-                const pMode = String(
-                  order.paymentMethod || "cash",
-                ).toLowerCase();
+                const pMode = normalizePaymentMethod(order.paymentMethod);
                 const itemCount = (order.items || []).reduce(
                   (sum, i) => sum + Number(i.quantity || 1),
                   0,
@@ -469,7 +582,7 @@ export function AdminInvoices({ pastOrders = [] }) {
                           marginTop: "2px",
                         }}
                       >
-                        {order.settledAt || order.orderTime || "12:00 PM"}
+                        {formatInvoiceTime(order.settledAt || order.orderTime)}
                       </div>
                     </td>
 
@@ -855,7 +968,7 @@ export function AdminInvoices({ pastOrders = [] }) {
               </div>
               <div style={{ textAlign: "right" }}>
                 <div>{selectedReceipt.date || "Today"}</div>
-                <div>{selectedReceipt.settledAt || "12:00 PM"}</div>
+                <div>{formatInvoiceTime(selectedReceipt.settledAt || selectedReceipt.orderTime)}</div>
               </div>
             </div>
 

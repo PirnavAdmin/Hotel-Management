@@ -8,6 +8,7 @@ export function AdminHeader({
   onClose,
   currentTheme = "royal-saffron",
   onChangeTheme,
+  restaurantLogo = "",
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -79,7 +80,11 @@ export function AdminHeader({
             flexShrink: 0,
           }}
         >
-          <ChefHat size={24} color="#ffffff" strokeWidth={2.3} />
+          {restaurantLogo ? (
+            <img src={restaurantLogo} alt="Restaurant logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "12px", padding: "3px" }} />
+          ) : (
+            <ChefHat size={24} color="#ffffff" strokeWidth={2.3} />
+          )}
         </div>
         <div style={{ minWidth: 0 }}>
           <h1

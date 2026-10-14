@@ -16,6 +16,15 @@ const dateKey = (order) => {
 const timeKey = (order) => {
   const value = order?.settledAt || order?.paidAt || order?.completedAt;
   if (value == null) return "";
+  const clock = String(value).trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (clock) {
+    let hours = Number(clock[1]);
+    if (clock[4]) {
+      hours %= 12;
+      if (clock[4].toUpperCase() === "PM") hours += 12;
+    }
+    return `${String(hours).padStart(2, "0")}:${clock[2]}:${clock[3] || "00"}`;
+  }
   const timestamp = Date.parse(value);
   if (Number.isFinite(timestamp)) return String(Math.floor(timestamp / 60_000));
   return normalize(value).replace(/\s+/g, " ");
@@ -45,7 +54,6 @@ const saleFingerprint = (order) => {
     dateKey(order),
     time,
     amountKey(order),
-    normalize(order?.paymentMethod),
     items,
   ].join("::");
 };
@@ -129,7 +137,9 @@ export function dedupeOrders(orders = []) {
     const invoice = normalize(order.invoiceNo);
     const date = dateKey(order);
     const identities = [
-      invoice && date ? `invoice:${invoice}:${date}` : "",
+      invoice && date && itemsKey(order)
+        ? `invoice:${invoice}:${date}:${amountKey(order)}:${itemsKey(order)}`
+        : "",
       fingerprint ? `sale:${fingerprint}` : "",
       order.id ? `id:${normalize(order.id)}` : "",
     ].filter(Boolean);
