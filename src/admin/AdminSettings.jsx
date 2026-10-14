@@ -10,7 +10,27 @@ import {
   Palette,
   Upload,
   X,
+  Package,
 } from "lucide-react";
+
+const DEFAULT_SETTINGS = {
+  restaurantName: "AVSR FOOD COURT",
+  tagline: "Restaurant Management & Fine Dining",
+  phone: "+91 98450 12345",
+  address: "Main Road, Near Tech Park, Hyderabad, India",
+  gstin: "36AABCA1234F1Z5",
+  taxRate: 5,
+  serviceChargeRate: 5,
+  serviceChargeEnabled: true,
+  roundingMode: "rupee",
+  currency: "₹",
+  receiptHeader: "Welcome to AVSR Food Court!",
+  receiptFooter: "Thank you for dining with us. Visit again!",
+  receiptShowLogo: true,
+  receiptShowContact: true,
+  receiptShowTaxBreakdown: true,
+  lowStockAlertsEnabled: true,
+};
 
 export function AdminSettings({
   currentTheme = "royal-saffron",
@@ -21,33 +41,9 @@ export function AdminSettings({
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem("gourmet_pos_settings_v1");
-      return saved
-        ? JSON.parse(saved)
-        : {
-            restaurantName: "AVSR FOOD COURT",
-            tagline: "Restaurant Management & Fine Dining",
-            phone: "+91 98450 12345",
-            address: "Main Road, Near Tech Park, Hyderabad, India",
-            gstin: "36AABCA1234F1Z5",
-            taxRate: 5,
-            serviceChargeRate: 5,
-            currency: "₹",
-            receiptHeader: "Welcome to AVSR Food Court!",
-            receiptFooter: "Thank you for dining with us. Visit again!",
-          };
+      return { ...DEFAULT_SETTINGS, ...(saved ? JSON.parse(saved) : {}) };
     } catch {
-      return {
-        restaurantName: "AVSR FOOD COURT",
-        tagline: "Restaurant Management & Fine Dining",
-        phone: "+91 98450 12345",
-        address: "Main Road, Near Tech Park, Hyderabad, India",
-        gstin: "36AABCA1234F1Z5",
-        taxRate: 5,
-        serviceChargeRate: 5,
-        currency: "₹",
-        receiptHeader: "Welcome to AVSR Food Court!",
-        receiptFooter: "Thank you for dining with us. Visit again!",
-      };
+      return DEFAULT_SETTINGS;
     }
   });
 
@@ -57,7 +53,7 @@ export function AdminSettings({
 
   useEffect(() => {
     if (initialSettings && typeof initialSettings === "object") {
-      setSettings(initialSettings);
+      setSettings({ ...DEFAULT_SETTINGS, ...initialSettings });
     }
   }, [initialSettings]);
 
@@ -71,7 +67,9 @@ export function AdminSettings({
       return;
     }
     if (file.size > 350 * 1024) {
-      setLogoError("Logo must be 350 KB or smaller so it can be saved reliably in browser storage.");
+      setLogoError(
+        "Logo must be 350 KB or smaller so it can be saved reliably in browser storage.",
+      );
       return;
     }
     const reader = new FileReader();
@@ -94,16 +92,22 @@ export function AdminSettings({
       if (onSaveSettings) {
         await onSaveSettings(settings);
       } else {
-        localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(settings));
+        localStorage.setItem(
+          "gourmet_pos_settings_v1",
+          JSON.stringify(settings),
+        );
       }
       setSaveError("");
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     } catch (error) {
       setSavedSuccess(false);
-      setSaveError(error?.name === "QuotaExceededError"
-        ? "Browser storage is full. Try a smaller logo image."
-        : error?.message || "Could not sync settings. Check the server connection and try again.");
+      setSaveError(
+        error?.name === "QuotaExceededError"
+          ? "Browser storage is full. Try a smaller logo image."
+          : error?.message ||
+              "Could not sync settings. Check the server connection and try again.",
+      );
     }
   };
 
@@ -130,7 +134,9 @@ export function AdminSettings({
           }}
         >
           {/* Left Title with Orange Squircle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
+          >
             <div
               style={{
                 width: "44px",
@@ -146,7 +152,9 @@ export function AdminSettings({
               <Settings size={22} color="#ffffff" />
             </div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+              >
                 <h2
                   style={{
                     fontSize: "1.35rem",
@@ -165,7 +173,8 @@ export function AdminSettings({
                   margin: "3px 0 0 0",
                 }}
               >
-                Customize brand profile, tax & service charges, receipt templates and display theme
+                Customize brand profile, tax & service charges, receipt
+                templates and display theme
               </p>
             </div>
           </div>
@@ -190,7 +199,10 @@ export function AdminSettings({
             </div>
           )}
           {saveError && (
-            <div role="alert" style={{ color: "#f87171", fontSize: "0.8rem", fontWeight: 700 }}>
+            <div
+              role="alert"
+              style={{ color: "#f87171", fontSize: "0.8rem", fontWeight: 700 }}
+            >
               {saveError}
             </div>
           )}
@@ -369,27 +381,110 @@ export function AdminSettings({
                 >
                   Restaurant Logo
                 </label>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.85rem",
+                    flexWrap: "wrap",
+                  }}
+                >
                   {settings.logo ? (
-                    <img src={settings.logo} alt="Restaurant logo preview" style={{ width: "64px", height: "64px", objectFit: "contain", background: "var(--bg-secondary)", border: "1px solid var(--border-card)", borderRadius: "10px", padding: "5px" }} />
+                    <img
+                      src={settings.logo}
+                      alt="Restaurant logo preview"
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        objectFit: "contain",
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border-card)",
+                        borderRadius: "10px",
+                        padding: "5px",
+                      }}
+                    />
                   ) : (
-                    <div style={{ width: "64px", height: "64px", display: "grid", placeItems: "center", color: "var(--text-dim)", background: "var(--bg-secondary)", border: "1px dashed var(--border-card)", borderRadius: "10px" }}>
+                    <div
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "var(--text-dim)",
+                        background: "var(--bg-secondary)",
+                        border: "1px dashed var(--border-card)",
+                        borderRadius: "10px",
+                      }}
+                    >
                       <Store size={22} />
                     </div>
                   )}
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", padding: "0.58rem 0.85rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-secondary)", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>
+                  <label
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                      padding: "0.58rem 0.85rem",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-card)",
+                      color: "var(--text-main)",
+                      background: "var(--bg-secondary)",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
                     <Upload size={15} />
                     Upload logo
-                    <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: "none" }} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      style={{ display: "none" }}
+                    />
                   </label>
                   {settings.logo && (
-                    <button type="button" onClick={() => { setSettings((current) => ({ ...current, logo: "" })); setLogoError(""); }} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.58rem 0.75rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", color: "#f87171", background: "transparent", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettings((current) => ({ ...current, logo: "" }));
+                        setLogoError("");
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        padding: "0.58rem 0.75rem",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(239, 68, 68, 0.35)",
+                        color: "#f87171",
+                        background: "transparent",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
                       <X size={15} /> Remove
                     </button>
                   )}
-                  <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>Image file, up to 350 KB. Save settings to keep the logo.</span>
+                  <span
+                    style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}
+                  >
+                    Image file, up to 350 KB. Save settings to keep the logo.
+                  </span>
                 </div>
-                {logoError && <div role="alert" style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.4rem" }}>{logoError}</div>}
+                {logoError && (
+                  <div
+                    role="alert"
+                    style={{
+                      color: "#f87171",
+                      fontSize: "0.75rem",
+                      marginTop: "0.4rem",
+                    }}
+                  >
+                    {logoError}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -497,6 +592,63 @@ export function AdminSettings({
                     outline: "none",
                   }}
                 />
+              </div>
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.55rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={settings.serviceChargeEnabled}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      serviceChargeEnabled: e.target.checked,
+                    })
+                  }
+                  style={{ accentColor: "#f59e0b" }}
+                />
+                Enable service charge option on orders
+              </label>
+
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.75rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Bill Total Rounding
+                </label>
+                <select
+                  value={settings.roundingMode}
+                  onChange={(e) =>
+                    setSettings({ ...settings, roundingMode: e.target.value })
+                  }
+                  style={{
+                    width: "100%",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "8px",
+                    padding: "0.6rem 0.8rem",
+                    color: "var(--text-main)",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                  }}
+                >
+                  <option value="rupee">Nearest ₹1</option>
+                  <option value="five">Nearest ₹5</option>
+                  <option value="none">No rounding</option>
+                </select>
               </div>
 
               <div>
@@ -627,7 +779,99 @@ export function AdminSettings({
                   }}
                 />
               </div>
+
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                }}
+              >
+                {[
+                  ["receiptShowLogo", "Show restaurant logo"],
+                  ["receiptShowContact", "Show address, phone and GSTIN"],
+                  ["receiptShowTaxBreakdown", "Show GST breakdown"],
+                ].map(([key, label]) => (
+                  <label
+                    key={key}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                      color: "var(--text-main)",
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={settings[key]}
+                      onChange={(e) =>
+                        setSettings({ ...settings, [key]: e.target.checked })
+                      }
+                      style={{ accentColor: "#f59e0b" }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
             </div>
+          </div>
+
+          {/* Section 4: Inventory Alerts */}
+          <div
+            style={{
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "14px",
+              padding: "1.25rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "1rem",
+              }}
+            >
+              <Package size={18} color="#f59e0b" />
+              <h3
+                style={{
+                  fontSize: "0.98rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                Inventory Alerts
+              </h3>
+            </div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.55rem",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={settings.lowStockAlertsEnabled}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    lowStockAlertsEnabled: e.target.checked,
+                  })
+                }
+                style={{ accentColor: "#f59e0b" }}
+              />
+              Show low-stock alert in Inventory when items reach their
+              individual thresholds
+            </label>
           </div>
 
           {/* Submit Action */}
