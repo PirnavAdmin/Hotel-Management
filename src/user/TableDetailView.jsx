@@ -1,4 +1,4 @@
-// import React, { useState, useMemo, useEffect, useRef } from 'react';
+﻿// import React, { useState, useMemo, useEffect, useRef } from 'react';
 // import {
 //   ArrowLeft,
 //   Search,
@@ -142,7 +142,7 @@
 //       if (dietaryFilter === 'non-veg') matchDietary = !item.isVeg;
 //       if (dietaryFilter === 'special') matchDietary = item.isChefSpecial;
 
-//       return matchCat && matchSearch && matchDietary;
+//       return matchCat && matchSearch && matchDietary && item.isAvailable !== false;
 //     });
 //   }, [selectedCategory, dietaryFilter, searchQuery, menuItems]);
 
@@ -231,7 +231,7 @@
 //             <div>
 //               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
 //                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{table.section}</span>
-//                 <span style={{ color: 'var(--text-dim)' }}>•</span>
+//                 <span style={{ color: 'var(--text-dim)' }}>â€¢</span>
 //                 <span style={{
 //                   fontSize: '0.72rem',
 //                   fontWeight: 700,
@@ -319,11 +319,11 @@
 //                   <Calendar size={13} color="var(--accent-amber)" />
 //                   <span>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
 //                 </span>
-//                 <span style={{ opacity: 0.5 }}>•</span>
+//                 <span style={{ opacity: 0.5 }}>â€¢</span>
 //                 <Clock size={13} className="pulse-indicator" color={urgency.dot} />
 //                 <span>Seated: <strong>{table.orderTime}</strong></span>
-//                 <span style={{ opacity: 0.5 }}>•</span>
-//                 <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>⏱ {elapsedFormatted}</span>
+//                 <span style={{ opacity: 0.5 }}>â€¢</span>
+//                 <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>â± {elapsedFormatted}</span>
 //               </div>
 //             );
 //           })()}
@@ -754,9 +754,9 @@
 //             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
 //               {[
 //                 { id: 'all', label: 'All Dishes' },
-//                 { id: 'veg', label: 'Pure Veg 🟢' },
-//                 { id: 'non-veg', label: 'Non-Veg 🔴' },
-//                 { id: 'special', label: 'Chef Specials ⭐' }
+//                 { id: 'veg', label: 'Pure Veg ðŸŸ¢' },
+//                 { id: 'non-veg', label: 'Non-Veg ðŸ”´' },
+//                 { id: 'special', label: 'Chef Specials â­' }
 //               ].map(f => (
 //                 <button
 //                   key={f.id}
@@ -1176,14 +1176,14 @@
 //               </div>
 //               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
 //                 <span>Server: <strong>{table.server}</strong></span>
-//                 <span>•</span>
+//                 <span>â€¢</span>
 //                 <span>{table.items.length} items</span>
-//                 <span>•</span>
+//                 <span>â€¢</span>
 //                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
 //                   <Calendar size={11} color="var(--accent-amber)" />
 //                   {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
 //                 </span>
-//                 <span>•</span>
+//                 <span>â€¢</span>
 //                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
 //                   <Clock size={11} color="var(--accent-amber)" />
 //                   {table.orderTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1234,7 +1234,7 @@
 //                     animation: 'pulseGlow 2.5s infinite'
 //                   }}>
 //                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-//                       <span style={{ fontSize: '1.2rem' }}>🔔</span>
+//                       <span style={{ fontSize: '1.2rem' }}>ðŸ””</span>
 //                       <div>
 //                         <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#34d399', letterSpacing: '0.02em' }}>
 //                           FOOD IS READY TO SERVE!
@@ -1262,13 +1262,13 @@
 //                     alignItems: 'center',
 //                     gap: '0.5rem'
 //                   }}>
-//                     <span style={{ fontSize: '1.2rem' }}>🔥</span>
+//                     <span style={{ fontSize: '1.2rem' }}>ðŸ”¥</span>
 //                     <div>
 //                       <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#fb923c', letterSpacing: '0.02em' }}>
 //                         {readyCount > 0 ? `CHEF IS COOKING (${readyCount}/${table.items.length} PREPARED)` : 'CHEF IS COOKING ORDER'}
 //                       </div>
 //                       <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
-//                         {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
+//                         {readyCount > 0 ? `${readyCount} dish(es) ready to serve â€¢ Remaining dishes cooking` : 'Kitchen started preparing dishes'}
 //                       </div>
 //                     </div>
 //                   </div>
@@ -1286,7 +1286,7 @@
 //                     alignItems: 'center',
 //                     gap: '0.5rem'
 //                   }}>
-//                     <span style={{ fontSize: '1.1rem' }}>🔔</span>
+//                     <span style={{ fontSize: '1.1rem' }}>ðŸ””</span>
 //                     <div>
 //                       <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#34d399' }}>
 //                         Some Dishes Prepared ({readyCount}/{table.items.length})
@@ -1373,8 +1373,8 @@
 //                           }`
 //                         }}>
 //                           {(item.kotStatus === 'ready' || item.kotStatus === 'served')
-//                             ? '✓ Prepared'
-//                             : (item.kotStatus === 'cooking' ? '🔥 Cooking' : '📥 Received')}
+//                             ? 'âœ“ Prepared'
+//                             : (item.kotStatus === 'cooking' ? 'ðŸ”¥ Cooking' : 'ðŸ“¥ Received')}
 //                         </div>
 //                       )}
 //                     </div>
@@ -1800,7 +1800,7 @@ export function TableDetailView({
       if (dietaryFilter === "non-veg") matchDietary = !item.isVeg;
       if (dietaryFilter === "special") matchDietary = item.isChefSpecial;
 
-      return matchCat && matchSearch && matchDietary;
+      return matchCat && matchSearch && matchDietary && item.isAvailable !== false;
     });
   }, [selectedCategory, dietaryFilter, searchQuery]);
 
@@ -2194,7 +2194,7 @@ export function TableDetailView({
                 >
                   {table.section}
                 </span>
-                <span style={{ color: "var(--text-dim)" }}>•</span>
+                <span style={{ color: "var(--text-dim)" }}>â€¢</span>
                 <span
                   style={{
                     fontSize: "0.72rem",
@@ -2311,7 +2311,7 @@ export function TableDetailView({
                       })}
                     </span>
                   </span>
-                  <span style={{ opacity: 0.5 }}>•</span>
+                  <span style={{ opacity: 0.5 }}>â€¢</span>
                   <Clock
                     size={13}
                     className="pulse-indicator"
@@ -2320,9 +2320,9 @@ export function TableDetailView({
                   <span>
                     Seated: <strong>{table.orderTime}</strong>
                   </span>
-                  <span style={{ opacity: 0.5 }}>•</span>
+                  <span style={{ opacity: 0.5 }}>â€¢</span>
                   <span style={{ fontFamily: "monospace", fontWeight: 800 }}>
-                    ⏱ {elapsedFormatted}
+                    â± {elapsedFormatted}
                   </span>
                 </div>
               );
@@ -3145,7 +3145,7 @@ export function TableDetailView({
               flexShrink: 0,
             }}
           >
-            {/* Order Header — Compact */}
+            {/* Order Header â€” Compact */}
             <div
               style={{
                 padding: "0.55rem 0.85rem",
@@ -3173,7 +3173,7 @@ export function TableDetailView({
                       color: "var(--text-main)",
                     }}
                   >
-                    {table.name} — Order Slip
+                    {table.name} â€” Order Slip
                   </h3>
                 </div>
                 <div
@@ -3188,7 +3188,7 @@ export function TableDetailView({
                   }}
                 >
                   <span>{safeItems.length} items</span>
-                  <span>•</span>
+                  <span>â€¢</span>
                   <span
                     style={{
                       display: "inline-flex",
@@ -3274,7 +3274,7 @@ export function TableDetailView({
                             gap: "0.5rem",
                           }}
                         >
-                          <span style={{ fontSize: "1.2rem" }}>🔔</span>
+                          <span style={{ fontSize: "1.2rem" }}>ðŸ””</span>
                           <div>
                             <div
                               style={{
@@ -3325,7 +3325,7 @@ export function TableDetailView({
                         alignItems: 'center',
                         gap: '0.5rem'
                       }}>
-                        <span style={{ fontSize: '1.2rem' }}>🔥</span>
+                        <span style={{ fontSize: '1.2rem' }}>ðŸ”¥</span>
                         <div>
                           <div
                             style={{
@@ -3340,7 +3340,7 @@ export function TableDetailView({
                               : "CHEF IS COOKING ORDER"}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
-                            {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
+                            {readyCount > 0 ? `${readyCount} dish(es) ready to serve â€¢ Remaining dishes cooking` : 'Kitchen started preparing dishes'}
                           </div>
                         </div>
                       </div>
@@ -3360,7 +3360,7 @@ export function TableDetailView({
                           gap: "0.5rem",
                         }}
                       >
-                        <span style={{ fontSize: "1.1rem" }}>🔔</span>
+                        <span style={{ fontSize: "1.1rem" }}>ðŸ””</span>
                         <div>
                           <div
                             style={{
@@ -3463,7 +3463,7 @@ export function TableDetailView({
                               color: "var(--text-dim)",
                             }}
                           >
-                            {formatCurrency(item.price)} × {item.quantity}
+                            {formatCurrency(item.price)} Ã— {item.quantity}
                           </span>
                           {item.kotStatus && (
                             <span
@@ -3490,10 +3490,10 @@ export function TableDetailView({
                             >
                               {item.kotStatus === "ready" ||
                               item.kotStatus === "served"
-                                ? "✓ Ready"
+                                ? "âœ“ Ready"
                                 : item.kotStatus === "cooking"
-                                  ? "🔥 Cooking"
-                                  : "📥 KOT"}
+                                  ? "ðŸ”¥ Cooking"
+                                  : "ðŸ“¥ KOT"}
                             </span>
                           )}
                         </div>
@@ -3687,7 +3687,7 @@ export function TableDetailView({
               )}
             </div>
 
-            {/* Financial Breakdown — Compact */}
+            {/* Financial Breakdown â€” Compact */}
             <div
               style={{
                 background: "var(--bg-primary)",
@@ -3712,7 +3712,7 @@ export function TableDetailView({
                 <span className="font-mono">{formatCurrency(subtotal)}</span>
               </div>
 
-              {/* Discount selector — inline compact */}
+              {/* Discount selector â€” inline compact */}
               <div
                 style={{
                   display: "flex",
@@ -3949,7 +3949,7 @@ export function TableDetailView({
                   }}
                 >
                   <CreditCard size={15} />
-                  <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
+                  <span>Settle & Checkout â€” {formatCurrency(grandTotal)}</span>
                 </button>
               </div>
             </div>
@@ -3984,10 +3984,10 @@ export function TableDetailView({
             <div>
               <div style={{ fontWeight: 800, fontSize: "0.88rem" }}>
                 {safeItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} Items
-                • {formatCurrency(grandTotal)}
+                â€¢ {formatCurrency(grandTotal)}
               </div>
               <div style={{ fontSize: "0.68rem", opacity: 0.9 }}>
-                {table.name} • Tap to view bill & actions
+                {table.name} â€¢ Tap to view bill & actions
               </div>
             </div>
           </div>
@@ -4005,7 +4005,7 @@ export function TableDetailView({
             }}
           >
             <span>View Bill</span>
-            <span>❯</span>
+            <span>â¯</span>
           </div>
         </div>
       )}
@@ -4059,7 +4059,7 @@ export function TableDetailView({
                     color: "var(--text-main)",
                   }}
                 >
-                  {table.name} — Order Slip
+                  {table.name} â€” Order Slip
                 </h3>
                 <span
                   style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
@@ -4080,7 +4080,7 @@ export function TableDetailView({
                   cursor: "pointer",
                 }}
               >
-                ✕ Close
+                âœ• Close
               </button>
             </div>
 
@@ -4125,7 +4125,7 @@ export function TableDetailView({
                         color: "var(--accent-amber-light)",
                       }}
                     >
-                      {formatCurrency(item.price)} × {item.quantity} ={" "}
+                      {formatCurrency(item.price)} Ã— {item.quantity} ={" "}
                       {formatCurrency(item.price * item.quantity)}
                     </div>
                   </div>
@@ -4318,7 +4318,7 @@ export function TableDetailView({
                 }}
               >
                 <CreditCard size={16} />
-                <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
+                <span>Settle & Checkout â€” {formatCurrency(grandTotal)}</span>
               </button>
             </div>
           </div>

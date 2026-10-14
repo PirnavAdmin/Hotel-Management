@@ -16,6 +16,7 @@ import {
   PackagePlus,
 } from "lucide-react";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { API_BASE_URL } from "../api/apiConfig";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "Litres", "ml", "Pcs", "Cans"];
@@ -236,7 +237,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     setInventory(updated);
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
-      fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/sync`, {
+      fetch(`${API_BASE_URL}/api/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
         body: JSON.stringify({ [INVENTORY_STORAGE_KEY]: updated }),

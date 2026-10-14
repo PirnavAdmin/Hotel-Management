@@ -93,14 +93,15 @@ export function LoginManagement({ currentAdminSession }) {
       return;
     }
     if (editingUser) {
+      const displayName = formName.trim() || formUser.trim();
+      const phone = formMobile.trim() || '0000000000';
       const updatedUser = {
-        Id: editingUser.id,
-        UserId: editingUser.id,
-        Username: formUser.trim(),
-        FullName: formName.trim() || formUser.trim(),
-        Role: formRole,
-        Phone: formMobile.trim() || '0000000000',
-        Email: formEmail.trim() || `${formUser.trim()}@avsr.com`,
+        name: displayName,
+        fullName: displayName,
+        role: formRole,
+        phone,
+        phoneNumber: phone,
+        email: formEmail.trim() || editingUser.email || `${editingUser.username}@avsr.com`,
       };
       const result = await updateUserDetails(editingUser.id, updatedUser);
       if (!result.success) {
@@ -108,11 +109,11 @@ export function LoginManagement({ currentAdminSession }) {
         return;
       }
       const nextUsers = users.map((user) => user.id === editingUser.id
-        ? { ...user, username: updatedUser.Username, name: updatedUser.FullName, role: formRole, mobile: formMobile.trim(), email: updatedUser.Email }
+        ? { ...user, username: editingUser.username, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
         : user);
       setUsers(nextUsers);
       saveUsersCache(nextUsers);
-      setFormSuccess(`Login "${updatedUser.Username}" updated successfully.`);
+      setFormSuccess(`Login "${editingUser.username}" updated successfully.`);
       await reload();
       setTimeout(closeForm, 1200);
       return;
@@ -291,6 +292,7 @@ export function LoginManagement({ currentAdminSession }) {
         {/* Actions */}
         <div style={{ display: 'flex', gap: '0.45rem', flexShrink: 0 }}>
           <button
+            type="button"
             onClick={() => openEditForm(user)}
             title="Edit login details"
             style={{
@@ -303,6 +305,7 @@ export function LoginManagement({ currentAdminSession }) {
             <Pencil size={13} /> <span>Edit</span>
           </button>
           <button
+            type="button"
             onClick={() => { setChangePwUser(user); setNewPw(''); setPwError(''); setPwSuccess(''); }}
             title="Change Password"
             style={{
@@ -318,6 +321,7 @@ export function LoginManagement({ currentAdminSession }) {
 
           {!isSystemAdmin && (
             <button
+              type="button"
               onClick={() => setDeletingId(user.id)}
               title="Delete user"
               style={{
@@ -535,12 +539,15 @@ export function LoginManagement({ currentAdminSession }) {
                   type="text" placeholder="e.g. ravi.kumar"
                   value={formUser}
                   onChange={e => setFormUser(e.target.value)}
+                  disabled={!!editingUser}
                   style={{
                     width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
+                    background: editingUser ? 'rgba(255,255,255,0.025)' : 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px', color: editingUser ? '#94a3b8' : '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none',
+                    cursor: editingUser ? 'not-allowed' : 'text'
                   }}
                 />
+                {editingUser && <div style={{ marginTop: '4px', color: 'var(--text-dim)', fontSize: '0.68rem' }}>Username cannot be changed through the account update endpoint.</div>}
               </div>
             </div>
 

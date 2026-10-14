@@ -101,6 +101,69 @@ function globalSyncPlugin() {
           return res.end(JSON.stringify(db.avsr_auth_users_v1 || []));
         }
 
+        // Update account details in the shared local database.
+        const userPasswordRoute = req.url.match(/^\/api\/Users\/([^/]+)\/password$/i);
+        const userDetailsRoute = req.url.match(/^\/api\/Users\/([^/]+)$/i);
+        if ((userPasswordRoute && req.method === "PUT") || (userDetailsRoute && req.method === "PUT")) {
+          const route = userPasswordRoute || userDetailsRoute;
+          const userId = decodeURIComponent(route[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const users = db.avsr_auth_users_v1 || [];
+              const userIndex = users.findIndex((user) =>
+                String(user.id || user.Id || user.userId || user.UserId || "") === userId ||
+                String(user.username || user.Username || "").toLowerCase() === userId.toLowerCase(),
+              );
+              if (userIndex < 0) {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Account not found." }));
+              }
+
+              if (userPasswordRoute) {
+                const password = String(payload.password || payload.Password || payload.newPassword || payload.NewPassword || "");
+                if (password.length < 4) {
+                  res.writeHead(400, { "Content-Type": "application/json" });
+                  return res.end(JSON.stringify({ success: false, error: "Password must be at least 4 characters." }));
+                }
+                users[userIndex].password = password;
+              } else {
+                const current = users[userIndex];
+                const username = String(payload.Username || payload.username || current.username || "").trim();
+                const duplicate = users.some((user, index) => index !== userIndex &&
+                  String(user.username || user.Username || "").toLowerCase() === username.toLowerCase(),
+                );
+                if (!username) {
+                  res.writeHead(400, { "Content-Type": "application/json" });
+                  return res.end(JSON.stringify({ success: false, error: "Username is required." }));
+                }
+                if (duplicate) {
+                  res.writeHead(409, { "Content-Type": "application/json" });
+                  return res.end(JSON.stringify({ success: false, error: "That username is already in use." }));
+                }
+                current.username = username;
+                current.fullName = String(payload.FullName || payload.fullName || payload.name || current.fullName || username).trim();
+                current.role = String(payload.Role || payload.role || current.role || "pos").trim().toLowerCase();
+                current.phone = String(payload.Phone || payload.phone || payload.mobile || current.phone || "").trim();
+                current.email = String(payload.Email || payload.email || current.email || "").trim();
+              }
+
+              db.avsr_auth_users_v1 = users;
+              saveDb(db);
+              broadcast({ avsr_auth_users_v1: users });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, user: users[userIndex] }));
+            } catch (error) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: error.message }));
+            }
+          });
+          return;
+        }
+
         // Register POS, KOT, and admin accounts in the shared local database.
         if (req.url === "/api/v1/auth/register" && req.method === "POST") {
           let body = "";
