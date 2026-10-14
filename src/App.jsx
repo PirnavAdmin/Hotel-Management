@@ -1,8 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { INITIAL_TABLES } from "./data/initialTables";
 import { MENU_ITEMS } from "./data/menuData";
-import { INITIAL_STAFF } from "./data/initialStaff";
 import { INITIAL_ORDERS } from "./data/initialOrders";
 // Admin modules
 import { AdminPortal } from "./admin";
@@ -59,23 +57,40 @@ const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 
-const mergeIncomingTables = (incomingTables, deletedTableIds) => {
-  const tablesById = new Map(
-    INITIAL_TABLES.map((table) => [
-      Number(table.id),
-      {
-        ...table,
-        items: Array.isArray(table.items) ? table.items : [],
-      },
-    ]),
-  );
+const dedupeStaff = (staff) => {
+  const byIdentity = new Map();
+  (Array.isArray(staff) ? staff : []).forEach((person, index) => {
+    const id = Number(person.staffId ?? person.id);
+    const name = String(person.name || person.fullName || "").trim();
+    const phone = String(person.phone || "").replace(/\D/g, "");
+    const key = name
+      ? `name:${name.toLowerCase()}`
+      : Number.isFinite(id) && id > 0
+        ? `id:${id}`
+        : `person:unknown:${phone || index}`;
+    const previous = byIdentity.get(key) || {};
+    byIdentity.set(key, {
+      ...previous,
+      ...person,
+      id: Number.isFinite(id) && id > 0 ? id : person.id,
+      name: person.name || person.fullName || previous.name || "Staff",
+    });
+  });
+  return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+};
 
+const mergeIncomingTables = (incomingTables, deletedTableIds) => {
+  // A server response is the authoritative table collection. Start with it so
+  // deleted defaults and extra defaults cannot be reintroduced on every load.
+  const tablesById = new Map();
+
+  const normalizedIncoming = [];
   incomingTables.forEach((table) => {
     const id = Number(table.tableId ?? table.id);
     if (!Number.isFinite(id)) return;
 
     const existing = tablesById.get(id) || {};
-    tablesById.set(id, {
+    const normalized = {
       ...existing,
       ...table,
       id,
@@ -99,7 +114,23 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
       occupiedSince:
         table.occupiedSince || existing.occupiedSince || "10:00 AM",
-    });
+    };
+    tablesById.set(id, normalized);
+    normalizedIncoming.push(normalized);
+  });
+
+  // Older clients sometimes saved generic table names against different IDs.
+  const nameCounts = new Map();
+  normalizedIncoming.forEach((table) => {
+    const key = String(table.name || "").trim().toLowerCase();
+    nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+  });
+  normalizedIncoming.forEach((table) => {
+    const key = String(table.name || "").trim().toLowerCase();
+    if (key && nameCounts.get(key) > 1 && /^table\s+\d+$/i.test(table.name)) {
+      table.name = `Table ${table.id}`;
+      tablesById.set(Number(table.id), table);
+    }
   });
 
   const deletedIds = Array.isArray(deletedTableIds)
@@ -116,26 +147,6 @@ const getDeletedTableIds = () => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) return parsed;
-    }
-    // Auto-detect any initially deleted tables already missing from saved tables
-    const savedTables = localStorage.getItem(STORAGE_KEY_TABLES);
-    if (savedTables) {
-      const parsed = JSON.parse(savedTables);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const existingIds = new Set(parsed.map((t) => String(t.id)));
-        const missingFromInitial = INITIAL_TABLES.filter(
-          (t) => !existingIds.has(String(t.id)),
-        ).map((t) => t.id);
-        if (missingFromInitial.length > 0) {
-          try {
-            localStorage.setItem(
-              STORAGE_KEY_DELETED_TABLES,
-              JSON.stringify(missingFromInitial),
-            );
-          } catch {}
-          return missingFromInitial;
-        }
-      }
     }
   } catch {}
   return [];
@@ -158,7 +169,7 @@ export function App() {
     return Array.isArray(initial) ? initial : [];
   });
 
-  // Load saved tables or fallback to INITIAL_TABLES (filtering out any deleted tables)
+  // Load saved tables only; do not seed demo records into the live list.
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
     const delList = Array.isArray(deleted) ? deleted : [];
@@ -168,7 +179,7 @@ export function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed
+          return mergeIncomingTables(parsed, delList)
             .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
             .filter((t) => !isDeleted(t.id));
         }
@@ -176,10 +187,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return INITIAL_TABLES.map((t) => ({
-      ...t,
-      items: Array.isArray(t.items) ? t.items : [],
-    })).filter((t) => !isDeleted(t.id));
+    return [];
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -207,7 +215,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return INITIAL_STAFF;
+    return [];
   });
 
   // Past settled orders history in Rupees
@@ -243,6 +251,8 @@ export function App() {
         ? response
         : response?.success && Array.isArray(response.data)
           ? response.data
+          : response?.success && Array.isArray(response.tables)
+            ? response.tables
           : null;
       if (Array.isArray(backendTables) && backendTables.length > 0) {
         const merged = mergeIncomingTables(
@@ -295,19 +305,16 @@ export function App() {
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((backendStaff) => {
-      if (backendStaff && backendStaff.length > 0) {
-        const map = new Map();
-        INITIAL_STAFF.forEach((s) => map.set(Number(s.id), s));
-        backendStaff.forEach((s) => {
-          const id = Number(s.staffId || s.id);
-          map.set(id, { ...(map.get(id) || {}), ...s, id });
-        });
-        const mergedStaff = Array.from(map.values()).sort(
-          (a, b) => a.id - b.id,
-        );
-        setStaffList(mergedStaff);
+      if (Array.isArray(backendStaff)) {
+        const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
+          ...s,
+          id: s.staffId ?? s.id,
+          name: s.fullName || s.name,
+          role: s.roleTitle || s.role || "Waiter",
+        })));
+        setStaffList(uniqueStaff);
         try {
-          localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(mergedStaff));
+          localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(uniqueStaff));
         } catch {}
       }
     });
@@ -512,7 +519,10 @@ export function App() {
         (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
           (d) => String(d) === String(id),
         );
-      const cleanTables = (Array.isArray(tables) ? tables : [])
+      const cleanTables = mergeIncomingTables(
+        Array.isArray(tables) ? tables : [],
+        deletedTableIds,
+      )
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
@@ -554,7 +564,7 @@ export function App() {
         if (!data) return;
         const incomingTables =
           data.tables || data.data?.tables || data[STORAGE_KEY_TABLES];
-        if (Array.isArray(incomingTables) && incomingTables.length > 0) {
+      if (Array.isArray(incomingTables)) {
           const freshDel = getDeletedTableIds();
           const clean = mergeIncomingTables(incomingTables, freshDel);
           setTables(clean);
@@ -631,25 +641,16 @@ export function App() {
 
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
-        if (incomingStaff && incomingStaff.length > 0) {
-          const map = new Map();
-          INITIAL_STAFF.forEach((s) => map.set(Number(s.id), s));
-          incomingStaff.forEach((s) => {
-            const id = Number(s.staffId || s.id);
-            map.set(id, {
-              ...(map.get(id) || {}),
-              id,
-              name: s.fullName || s.name,
-              role: s.roleTitle || s.role || "Waiter",
-              phone: s.phone || "",
-              email: s.email || "",
-              shift: s.shift || "Full Day",
-              status: s.isActive === false ? "inactive" : "active",
-            });
-          });
-          const normalizedStaff = Array.from(map.values()).sort(
-            (a, b) => a.id - b.id,
-          );
+        if (Array.isArray(incomingStaff)) {
+          const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
+            id: s.staffId ?? s.id,
+            name: s.fullName || s.name,
+            role: s.roleTitle || s.role || "Waiter",
+            phone: s.phone || "",
+            email: s.email || "",
+            shift: s.shift || "Full Day",
+            status: s.isActive === false ? "inactive" : "active",
+          })));
           setStaffList(normalizedStaff);
           try {
             localStorage.setItem(
@@ -694,7 +695,7 @@ export function App() {
             payload.tables ||
             payload.data?.tables ||
             payload[STORAGE_KEY_TABLES];
-          if (Array.isArray(incomingTables) && incomingTables.length > 0) {
+          if (Array.isArray(incomingTables)) {
             const freshDel = getDeletedTableIds();
             const clean = mergeIncomingTables(incomingTables, freshDel);
             setTables(clean);
@@ -750,8 +751,8 @@ export function App() {
             } catch {}
           }
           const incomingStaff = payload.staff || payload[STORAGE_KEY_STAFF];
-          if (incomingStaff && incomingStaff.length > 0) {
-            const normalizedStaff = incomingStaff.map((s) => ({
+          if (Array.isArray(incomingStaff)) {
+            const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
               id: s.staffId || s.id,
               name: s.fullName || s.name,
               role: s.roleTitle || s.role || "Waiter",
@@ -759,7 +760,7 @@ export function App() {
               email: s.email || "",
               shift: s.shift || "Full Day",
               status: s.isActive === false ? "inactive" : "active",
-            }));
+            })));
             setStaffList(normalizedStaff);
             try {
               localStorage.setItem(
@@ -1496,8 +1497,13 @@ export function App() {
   };
   // 2. Tables & Chairs Admin
   const handleAddTable = (newTable) => {
+    const normalizedTable = {
+      ...newTable,
+      id: Number(newTable.id),
+      name: String(newTable.name || "").trim(),
+    };
     const nextDeleted = deletedTableIds.filter(
-      (id) => String(id) !== String(newTable.id),
+      (id) => String(id) !== String(normalizedTable.id),
     );
     setDeletedTableIds(nextDeleted);
     try {
@@ -1508,14 +1514,18 @@ export function App() {
     } catch {}
 
     setTables((prev) => {
-      const updated = [...prev, newTable];
+      if (prev.some((table) => Number(table.id) === normalizedTable.id)) {
+        showToast(`Table ID ${normalizedTable.id} already exists. Please choose another table number.`);
+        return prev;
+      }
+      const updated = [...prev, normalizedTable];
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
       } catch {}
       return updated;
     });
-    apiCreateTable(newTable).catch(() => {});
-    showToast(`âœ… Created ${newTable.name} with ${newTable.capacity} chairs!`);
+    apiCreateTable(normalizedTable).catch(() => {});
+    showToast(`âœ… Created ${normalizedTable.name} with ${normalizedTable.capacity} chairs!`);
   };
 
   const handleUpdateTable = (updatedTable) => {
@@ -1642,9 +1652,9 @@ export function App() {
       )
     ) {
       setDeletedTableIds([]);
-      setTables(INITIAL_TABLES);
+      setTables([]);
       setMenuItems(MENU_ITEMS);
-      setStaffList(INITIAL_STAFF);
+      setStaffList([]);
       localStorage.removeItem(STORAGE_KEY_TABLES);
       localStorage.removeItem(STORAGE_KEY_DELETED_TABLES);
       localStorage.removeItem(STORAGE_KEY_MENU);

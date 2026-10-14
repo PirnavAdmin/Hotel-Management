@@ -508,7 +508,7 @@ export function AdminPortal({
     } else {
       setEditingTable(null);
       // Auto suggest next table number
-      const maxId = tables.reduce((m, t) => Math.max(m, t.id), 0);
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       setTableForm({
         name: `Table ${maxId + 1}`,
         section: "Main Hall",
@@ -548,7 +548,7 @@ export function AdminPortal({
         server: assignedServer,
       });
     } else {
-      const maxId = tables.reduce((m, t) => Math.max(m, t.id), 0);
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       onAddTable({
         id: maxId + 1,
         name: tableForm.name,
@@ -1608,7 +1608,7 @@ export function AdminPortal({
                                 margin: 0,
                               }}
                             >
-                              {tbl.name}
+                              Table {tbl.id}
                             </h4>
                             <span
                               style={{
