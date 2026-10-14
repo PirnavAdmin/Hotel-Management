@@ -2147,5 +2147,23 @@
   "avsr_daily_inv_cnt_12_Oct_2026": "1068",
   "avsr_last_invoice_date_v2": "14 Oct 2026",
   "avsr_daily_inv_cnt_13_Oct_2026": "1",
-  "avsr_daily_inv_cnt_14_Oct_2026": "1"
+  "avsr_daily_inv_cnt_14_Oct_2026": "1",
+  "gourmet_pos_settings_v1": {
+    "restaurantName": "AVSR FOOD COURT",
+    "tagline": "Restaurant Management & Fine Dining",
+    "phone": "+91 98450 12345",
+    "address": "Main Road, Near Tech Park, Hyderabad, India",
+    "gstin": "36AABCA1234F1Z5",
+    "taxRate": 5,
+    "serviceChargeRate": 5,
+    "serviceChargeEnabled": true,
+    "roundingMode": "rupee",
+    "currency": "₹",
+    "receiptHeader": "Welcome to AVSR Food Court!",
+    "receiptFooter": "Thank you for dining with us. Visit again!",
+    "receiptShowLogo": true,
+    "receiptShowContact": true,
+    "receiptShowTaxBreakdown": true,
+    "lowStockAlertsEnabled": true
+  }
 }
