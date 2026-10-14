@@ -1149,20 +1149,17 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             </select>
             <button
               type="button"
-              disabled={!recipeDish}
               onClick={() => recipeDish && openRecipeEditor(recipeDish)}
               style={{
                 height: "36px",
                 padding: "0 0.75rem",
-                background: recipeDish
-                  ? "rgba(245, 158, 11, 0.14)"
-                  : "rgba(255,255,255,0.04)",
-                color: recipeDish ? "#f59e0b" : "var(--text-muted)",
+                background: "rgba(245, 158, 11, 0.14)",
+                color: "#f59e0b",
                 border: "1px solid rgba(245, 158, 11, 0.35)",
                 borderRadius: "7px",
                 fontWeight: 700,
                 fontSize: "0.75rem",
-                cursor: recipeDish ? "pointer" : "not-allowed",
+                cursor: "pointer",
                 whiteSpace: "nowrap",
               }}
             >
