@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Settings,
   Save,
@@ -11,6 +11,8 @@ import {
   QrCode,
   Upload,
   Trash2,
+  X,
+  Package,
 } from "lucide-react";
 import defaultPaymentQr from "../assets/payment-qr.png";
 
@@ -38,6 +40,8 @@ const DEFAULT_PAYMENT_QRS = [
 export function AdminSettings({
   currentTheme = "royal-saffron",
   onChangeTheme,
+  initialSettings,
+  onSaveSettings,
 }) {
   const [settings, setSettings] = useState(() => {
     const baseDefaults = {
@@ -57,35 +61,96 @@ export function AdminSettings({
 
     try {
       const saved = localStorage.getItem("gourmet_pos_settings_v1");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        let qrs = DEFAULT_PAYMENT_QRS;
-        if (Array.isArray(parsed.paymentQrs) && parsed.paymentQrs.length > 0) {
-          qrs = [0, 1, 2].map((i) => ({
-            ...DEFAULT_PAYMENT_QRS[i],
-            ...(parsed.paymentQrs[i] || {}),
-          }));
-        }
-        const activeQr = qrs.find((q) => q.active) || qrs[0];
-        const selectedId = parsed.selectedQrId || activeQr.id || "qr-1";
-        qrs = qrs.map((q) => ({
-          ...q,
-          active: q.id === selectedId,
+      const parsedSaved = saved ? JSON.parse(saved) : {};
+      const source = initialSettings && Object.keys(initialSettings).length > 0 ? initialSettings : parsedSaved;
+      let qrs = DEFAULT_PAYMENT_QRS;
+      if (Array.isArray(source.paymentQrs) && source.paymentQrs.length > 0) {
+        qrs = [0, 1, 2].map((i) => ({
+          ...DEFAULT_PAYMENT_QRS[i],
+          ...(source.paymentQrs[i] || {}),
         }));
-        return {
-          ...baseDefaults,
-          ...parsed,
-          selectedQrId: selectedId,
-          paymentQrs: qrs,
-        };
+      } else if (Array.isArray(parsedSaved.paymentQrs) && parsedSaved.paymentQrs.length > 0) {
+        qrs = [0, 1, 2].map((i) => ({
+          ...DEFAULT_PAYMENT_QRS[i],
+          ...(parsedSaved.paymentQrs[i] || {}),
+        }));
       }
-      return baseDefaults;
+      const activeQr = qrs.find((q) => q.active) || qrs[0];
+      const selectedId = source.selectedQrId || parsedSaved.selectedQrId || activeQr.id || "qr-1";
+      qrs = qrs.map((q) => ({
+        ...q,
+        active: q.id === selectedId,
+      }));
+      return {
+        ...baseDefaults,
+        ...parsedSaved,
+        ...(initialSettings || {}),
+        selectedQrId: selectedId,
+        paymentQrs: qrs,
+      };
     } catch {
       return baseDefaults;
     }
   });
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [logoError, setLogoError] = useState("");
+
+  const handleLogoUpload = (event) => {
+    const file = event.target.files?.[0];
+    const input = event.currentTarget;
+    setLogoError("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Choose an image file for the restaurant logo.");
+      return;
+    }
+    if (file.size > 350 * 1024) {
+      setLogoError(
+        "Logo must be 350 KB or smaller so it can be saved reliably in browser storage.",
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setSettings((current) => ({ ...current, logo: reader.result }));
+      }
+      input.value = "";
+    };
+    reader.onerror = () => {
+      setLogoError("Could not read this image. Please try another file.");
+      input.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  useEffect(() => {
+    if (initialSettings && Object.keys(initialSettings).length > 0) {
+      setSettings((prev) => {
+        let qrs = prev.paymentQrs || DEFAULT_PAYMENT_QRS;
+        if (Array.isArray(initialSettings.paymentQrs) && initialSettings.paymentQrs.length > 0) {
+          qrs = [0, 1, 2].map((i) => ({
+            ...DEFAULT_PAYMENT_QRS[i],
+            ...(initialSettings.paymentQrs[i] || {}),
+          }));
+        }
+        const activeQr = qrs.find((q) => q.active) || qrs[0];
+        const selectedId = initialSettings.selectedQrId || prev.selectedQrId || activeQr.id || "qr-1";
+        qrs = qrs.map((q) => ({
+          ...q,
+          active: q.id === selectedId,
+        }));
+        return {
+          ...prev,
+          ...initialSettings,
+          selectedQrId: selectedId,
+          paymentQrs: qrs,
+        };
+      });
+    }
+  }, [initialSettings]);
 
   const fileInputRef0 = useRef(null);
   const fileInputRef1 = useRef(null);
@@ -193,7 +258,7 @@ export function AdminSettings({
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     try {
       if (onSaveSettings) {
