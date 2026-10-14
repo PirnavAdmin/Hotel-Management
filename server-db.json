@@ -748,6 +748,52 @@
   ],
   "gourmet_pos_past_orders_v2_inr": [
     {
+      "tableId": 2,
+      "tableName": "Table 2",
+      "section": "Main Hall",
+      "server": "Vikram S.",
+      "guests": 4,
+      "capacity": 4,
+      "orderTime": "11:39 AM",
+      "items": [
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "11:51 AM",
+          "kotStatus": "received"
+        },
+        {
+          "id": "bir-3",
+          "name": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "11:51 AM",
+          "kotStatus": "received"
+        }
+      ],
+      "subtotal": 790,
+      "discountAmount": 0,
+      "taxAmount": 39.5,
+      "serviceChargeAmount": 39.5,
+      "tipAmount": 0,
+      "grandTotal": 869,
+      "paymentMethod": "upi",
+      "cashTendered": 869,
+      "changeDue": 0,
+      "settledAt": "11:20 PM",
+      "date": "14 Oct 2026",
+      "invoiceNo": "INV-001",
+      "id": "ord_1792000251239_m8s8k",
+      "cookingStartedAt": "11:39 AM",
+      "completedAt": "11:20 PM",
+      "completedDuration": "11h 41m 00s",
+      "orderTimestamp": 1791958165235
+    },
+    {
       "tableId": 1,
       "tableName": "Table 1",
       "section": "Main Hall",
@@ -2108,6 +2154,7 @@
   },
   "avsr_last_invoice_counter_v1": "214153",
   "avsr_daily_inv_cnt_12_Oct_2026": "1068",
-  "avsr_last_invoice_date_v2": "13 Oct 2026",
-  "avsr_daily_inv_cnt_13_Oct_2026": "1"
+  "avsr_last_invoice_date_v2": "14 Oct 2026",
+  "avsr_daily_inv_cnt_13_Oct_2026": "1",
+  "avsr_daily_inv_cnt_14_Oct_2026": "3"
 }

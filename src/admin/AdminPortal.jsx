@@ -994,20 +994,10 @@ export function AdminPortal({
                                     fontWeight: 700,
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px",
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  <span>VEG</span>
-                                  <span
-                                    style={{
-                                      width: "5px",
-                                      height: "5px",
-                                      borderRadius: "50%",
-                                      background: "#10b981",
-                                      display: "inline-block",
-                                    }}
-                                  />
+                                  VEG
                                 </span>
                               ) : (
                                 <span
@@ -1021,20 +1011,10 @@ export function AdminPortal({
                                     fontWeight: 700,
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px",
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  <span>NON-VEG</span>
-                                  <span
-                                    style={{
-                                      width: "5px",
-                                      height: "5px",
-                                      borderRadius: "50%",
-                                      background: "#ef4444",
-                                      display: "inline-block",
-                                    }}
-                                  />
+                                  NON-VEG
                                 </span>
                               )}
                             </td>
