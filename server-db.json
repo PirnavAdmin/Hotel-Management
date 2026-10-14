@@ -754,6 +754,43 @@
       "server": "Vikram S.",
       "guests": 4,
       "capacity": 4,
+      "orderTime": "11:32 PM",
+      "items": [
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 2,
+          "notes": "",
+          "timeAdded": "11:32 PM",
+          "kotStatus": "received"
+        }
+      ],
+      "subtotal": 880,
+      "discountAmount": 0,
+      "taxAmount": 44,
+      "serviceChargeAmount": 44,
+      "tipAmount": 0,
+      "grandTotal": 968,
+      "paymentMethod": "upi",
+      "cashTendered": 968,
+      "changeDue": 0,
+      "settledAt": "11:49 PM",
+      "date": "14 Oct 2026",
+      "invoiceNo": "INV-004",
+      "id": "ord_1792001962228_xtx5f",
+      "cookingStartedAt": "11:32 PM",
+      "completedAt": "11:49 PM",
+      "completedDuration": "17m 00s",
+      "orderTimestamp": 1791958165235
+    },
+    {
+      "tableId": 2,
+      "tableName": "Table 2",
+      "section": "Main Hall",
+      "server": "Vikram S.",
+      "guests": 4,
+      "capacity": 4,
       "orderTime": "11:39 AM",
       "items": [
         {
@@ -2156,5 +2193,5 @@
   "avsr_daily_inv_cnt_12_Oct_2026": "1068",
   "avsr_last_invoice_date_v2": "14 Oct 2026",
   "avsr_daily_inv_cnt_13_Oct_2026": "1",
-  "avsr_daily_inv_cnt_14_Oct_2026": "3"
+  "avsr_daily_inv_cnt_14_Oct_2026": "4"
 }
