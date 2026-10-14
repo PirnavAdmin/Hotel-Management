@@ -1,4 +1,4 @@
-﻿// import React, { useState, useMemo, useEffect, useRef } from 'react';
+// import React, { useState, useMemo, useEffect, useRef } from 'react';
 // import {
 //   ArrowLeft,
 //   Search,
@@ -1724,6 +1724,7 @@ import {
   formatElapsedTimer,
   getTimerUrgencyColor,
 } from "../utils/timer";
+import { ItemDetailModal } from "./ItemDetailModal";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1767,6 +1768,7 @@ export function TableDetailView({
   const [searchQuery, setSearchQuery] = useState("");
   const [editingNoteItemId, setEditingNoteItemId] = useState(null);
   const [tempNote, setTempNote] = useState("");
+  const [selectedMenuItemModal, setSelectedMenuItemModal] = useState(null);
 
   // Filter states
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
@@ -1837,6 +1839,18 @@ export function TableDetailView({
     onUpdateItemNotes(table.id, itemId, tempNote.trim());
     setEditingNoteItemId(null);
     setTempNote("");
+  };
+
+  const handleOpenItemModal = (item) => {
+    setSelectedMenuItemModal(item);
+  };
+
+  const handleConfirmItemModal = (customizedItem) => {
+    onAddItemToTable(table.id, customizedItem);
+  };
+
+  const handleRemoveItemFromModal = (itemId) => {
+    onRemoveItemFromTable(table.id, itemId);
   };
 
   return (
@@ -2975,6 +2989,8 @@ export function TableDetailView({
                   <div
                     key={item.id}
                     className={`pos-menu-card ${currentQty > 0 ? "has-qty" : ""}`}
+                    onClick={() => handleOpenItemModal(item)}
+                    style={{ cursor: "pointer" }}
                   >
                     {/* Item Image with culinary tags */}
                     <div className="pos-menu-card-image">
@@ -3072,16 +3088,24 @@ export function TableDetailView({
                         {/* Interactive Add or Qty Controller */}
                         {currentQty === 0 ? (
                           <button
-                            onClick={() => handleAddItem(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenItemModal(item);
+                            }}
                             className="pos-menu-add"
+                            title="Configure & Add Item"
                           >
                             <Plus size={13} />
                             <span>Add</span>
                           </button>
                         ) : (
-                          <div className="pos-menu-qty">
+                          <div
+                            className="pos-menu-qty"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 sounds.playRemoveItem();
                                 onUpdateItemQuantity(
                                   table.id,
@@ -3103,7 +3127,8 @@ export function TableDetailView({
                             </span>
 
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 sounds.playAddItem();
                                 onUpdateItemQuantity(
                                   table.id,
@@ -4361,11 +4386,24 @@ export function TableDetailView({
                 }}
               >
                 <CreditCard size={16} />
-                <span>Settle & Checkout â€” {formatCurrency(grandTotal)}</span>
+                <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Item Customization & Detail Modal */}
+      {selectedMenuItemModal && (
+        <ItemDetailModal
+          item={selectedMenuItemModal}
+          existingCartItem={safeItems.find(
+            (i) => i.id === selectedMenuItemModal.id,
+          )}
+          onClose={() => setSelectedMenuItemModal(null)}
+          onConfirm={handleConfirmItemModal}
+          onRemove={handleRemoveItemFromModal}
+        />
       )}
     </div>
   );
