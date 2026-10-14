@@ -235,7 +235,7 @@ export function App() {
   const isAdminRoute = location.pathname === "/admin";
   const isUserRoute = !isKotRoute && !isAdminRoute;
 
-  // â”€â”€ Live Backend Integration Hook (Ngrok API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
     apiGetTables().then((response) => {
@@ -325,7 +325,7 @@ export function App() {
     });
   }, []);
 
-  // â”€â”€ Authentication sessions per route â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
   // open simultaneously on different browser tabs/screens.
   const SESSION_KEY_POS = "avsr_pos_session";
@@ -426,7 +426,7 @@ export function App() {
     }, 2800);
   };
 
-  // â”€â”€ Kitchen Real-Time Notifications System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Kitchen Real-Time Notifications System ───────────────────
   const STORAGE_KEY_KITCHEN_NOTIFICATIONS = "avsr_kitchen_notifications";
   const STORAGE_KEY_LATEST_ALERT = "avsr_latest_kitchen_alert";
 
@@ -1050,7 +1050,7 @@ export function App() {
     );
     setIsKOTOpen(true);
     showToast(
-      `ðŸ“¥ KOT Sent: Order Received from ${tbl?.name || `Table ${tableId}`}!`,
+      `📥 KOT Sent: Order Received from ${tbl?.name || `Table ${tableId}`}!`,
     );
   };
 
@@ -1141,28 +1141,28 @@ export function App() {
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_started",
-        title: "ðŸ”¥ Cooking Started",
+        title: "🔥 Cooking Started",
         message: itemName
           ? `Chef started cooking "${itemName}" for ${tbl?.name || `Table ${tableId}`}!`
           : `Chef started cooking order for ${tbl?.name || `Table ${tableId}`}!`,
       });
-      showToast(`ðŸ”¥ ${tbl?.name || `Table ${tableId}`}: Chef started cooking!`);
+      showToast(`🔥 ${tbl?.name || `Table ${tableId}`}: Chef started cooking!`);
     } else if (status === "received") {
       showToast(
-        `ðŸ“¥ ${tbl?.name || `Table ${tableId}`}: Reverted to Order Received.`,
+        `📥 ${tbl?.name || `Table ${tableId}`}: Reverted to Order Received.`,
       );
     } else if (status === "ready") {
       triggerKitchenNotification({
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_completed",
-        title: itemName ? `ðŸ”” "${itemName}" Ready!` : "ðŸ”” Food Ready to Serve!",
+        title: itemName ? `🔔 "${itemName}" Ready!` : "🔔 Food Ready to Serve!",
         message: itemName
           ? `"${itemName}" is prepared and ready to serve for ${tbl?.name || `Table ${tableId}`}!`
           : `Order preparation completed for ${tbl?.name || `Table ${tableId}`}! Food is ready to serve.`,
       });
       showToast(
-        `âœ… ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
+        `✅ ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
       );
     }
   };
@@ -1231,16 +1231,16 @@ export function App() {
       tableName: tbl?.name || `Table ${tableId}`,
       type: "cooking_completed",
       title: isSingleItem
-        ? `ðŸ”” Prepared: ${itemObj.name}`
-        : "ðŸ”” Cooking Completed!",
+        ? `🔔 Prepared: ${itemObj.name}`
+        : "🔔 Cooking Completed!",
       message: isSingleItem
         ? `"${itemObj.name}" is prepared! Ready to serve.`
-        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! ðŸ½ï¸`,
+        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! 🍽️`,
     });
     showToast(
       isSingleItem
-        ? `âœ… ${tbl?.name || `Table ${tableId}`}: "${itemObj.name}" marked prepared!`
-        : `âœ… ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to serve.`,
+        ? `✅ ${tbl?.name || `Table ${tableId}`}: "${itemObj.name}" marked prepared!`
+        : `✅ ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to serve.`,
     );
   };
 
@@ -1412,7 +1412,7 @@ export function App() {
 
     setIsSettlementOpen(false);
     showToast(
-      `âœ… ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
+      `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
     );
 
     setReprintReceiptData({
@@ -1443,7 +1443,7 @@ export function App() {
     const result = await apiCreateMenuItem(newItem);
     if (!result?.success || result.data?.success === false) {
       showToast(
-        `âš ï¸ Dish was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️ Dish was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
@@ -1459,7 +1459,7 @@ export function App() {
         newItem.id,
     });
     setMenuItems((prev) => [savedItem, ...prev.filter((item) => String(item.id) !== String(savedItem.id))]);
-    showToast(`âœ… Dish "${newItem.name}" saved to the backend menu!`);
+    showToast(`✅ Dish "${newItem.name}" saved to the backend menu!`);
     return true;
   };
 
@@ -1528,7 +1528,7 @@ export function App() {
       return updated;
     });
     apiCreateTable(newTable).catch(() => {});
-    showToast(`âœ… Created ${newTable.name} with ${newTable.capacity} chairs!`);
+    showToast(`✅ Created ${newTable.name} with ${newTable.capacity} chairs!`);
   };
 
   const handleUpdateTable = (updatedTable) => {
@@ -1543,7 +1543,7 @@ export function App() {
     });
     apiUpdateTable(updatedTable.id, updatedTable).catch(() => {});
     showToast(
-      `âœ… Updated ${updatedTable.name} (${updatedTable.capacity} chairs)`,
+      `✅ Updated ${updatedTable.name} (${updatedTable.capacity} chairs)`,
     );
   };
 
@@ -1579,7 +1579,7 @@ export function App() {
     }
 
     apiDeleteTable(tableId).catch(() => {});
-    showToast(`ðŸ—‘ï¸ Permanently Deleted ${tbl?.name || "Table"}`);
+    showToast(`🗑️ Permanently Deleted ${tbl?.name || "Table"}`);
   };
 
   // 3. Staff & Persons Admin
@@ -1587,13 +1587,13 @@ export function App() {
     const result = await apiCreateStaff(newPerson);
     if (!result?.success) {
       showToast(
-        `âš ï¸ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
 
     setStaffList((prev) => [...prev, newPerson]);
-    showToast(`âœ… Staff member "${newPerson.name}" saved to the backend!`);
+    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
     return true;
   };
 
@@ -1634,7 +1634,7 @@ export function App() {
       shift: updatedPerson.shift || "Full Day",
     }).catch(() => {});
 
-    showToast(`âœ… Updated staff details for "${updatedPerson.name}"`);
+    showToast(`✅ Updated staff details for "${updatedPerson.name}"`);
     return true;
   };
 
@@ -1644,7 +1644,7 @@ export function App() {
       prev.filter((p) => (p.id ?? p.staffId) !== personId),
     );
     apiDeleteStaff(personId).catch(() => {});
-    showToast(`ðŸ—‘ï¸ Removed "${person?.name || person?.fullName || "Staff"}"`);
+    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
@@ -1856,7 +1856,7 @@ export function App() {
                   fontSize: "1.25rem",
                 }}
               >
-                {activeKitchenAlert.type === "cooking_completed" ? "ðŸ””" : "ðŸ”¥"}
+                {activeKitchenAlert.type === "cooking_completed" ? "🔔" : "🔥"}
               </div>
               <div>
                 <div
@@ -1872,8 +1872,8 @@ export function App() {
                   }}
                 >
                   {activeKitchenAlert.type === "cooking_completed"
-                    ? "âœ… Food Ready To Serve"
-                    : "ðŸ”¥ Cooking in Progress"}
+                    ? "✅ Food Ready To Serve"
+                    : "🔥 Cooking in Progress"}
                 </div>
                 <div
                   style={{
@@ -1904,7 +1904,7 @@ export function App() {
               }}
               title="Dismiss"
             >
-              âœ•
+              ✕
             </button>
           </div>
 
@@ -1931,7 +1931,7 @@ export function App() {
             <span
               style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 700 }}
             >
-              â° {activeKitchenAlert.timestamp}
+              ⏰ {activeKitchenAlert.timestamp}
             </span>
             {activeKitchenAlert.tableId && (
               <button
@@ -1965,7 +1965,7 @@ export function App() {
                 View{" "}
                 {activeKitchenAlert.tableName ||
                   `Table ${activeKitchenAlert.tableId}`}{" "}
-                â†’
+                →
               </button>
             )}
           </div>

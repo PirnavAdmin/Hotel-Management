@@ -231,7 +231,7 @@
 //             <div>
 //               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
 //                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{table.section}</span>
-//                 <span style={{ color: 'var(--text-dim)' }}>â€¢</span>
+//                 <span style={{ color: 'var(--text-dim)' }}>•</span>
 //                 <span style={{
 //                   fontSize: '0.72rem',
 //                   fontWeight: 700,
@@ -319,11 +319,11 @@
 //                   <Calendar size={13} color="var(--accent-amber)" />
 //                   <span>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
 //                 </span>
-//                 <span style={{ opacity: 0.5 }}>â€¢</span>
+//                 <span style={{ opacity: 0.5 }}>•</span>
 //                 <Clock size={13} className="pulse-indicator" color={urgency.dot} />
 //                 <span>Seated: <strong>{table.orderTime}</strong></span>
-//                 <span style={{ opacity: 0.5 }}>â€¢</span>
-//                 <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>â± {elapsedFormatted}</span>
+//                 <span style={{ opacity: 0.5 }}>•</span>
+//                 <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>⏱️ {elapsedFormatted}</span>
 //               </div>
 //             );
 //           })()}
@@ -754,9 +754,9 @@
 //             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
 //               {[
 //                 { id: 'all', label: 'All Dishes' },
-//                 { id: 'veg', label: 'Pure Veg ðŸŸ¢' },
-//                 { id: 'non-veg', label: 'Non-Veg ðŸ”´' },
-//                 { id: 'special', label: 'Chef Specials â­' }
+//                 { id: 'veg', label: 'Pure Veg 🟢' },
+//                 { id: 'non-veg', label: 'Non-Veg 🔴' },
+//                 { id: 'special', label: 'Chef Specials ⭐' }
 //               ].map(f => (
 //                 <button
 //                   key={f.id}
@@ -1176,14 +1176,14 @@
 //               </div>
 //               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
 //                 <span>Server: <strong>{table.server}</strong></span>
-//                 <span>â€¢</span>
+//                 <span>•</span>
 //                 <span>{table.items.length} items</span>
-//                 <span>â€¢</span>
+//                 <span>•</span>
 //                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
 //                   <Calendar size={11} color="var(--accent-amber)" />
 //                   {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
 //                 </span>
-//                 <span>â€¢</span>
+//                 <span>•</span>
 //                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
 //                   <Clock size={11} color="var(--accent-amber)" />
 //                   {table.orderTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1234,7 +1234,7 @@
 //                     animation: 'pulseGlow 2.5s infinite'
 //                   }}>
 //                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-//                       <span style={{ fontSize: '1.2rem' }}>ðŸ””</span>
+//                       <span style={{ fontSize: '1.2rem' }}>🔔</span>
 //                       <div>
 //                         <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#34d399', letterSpacing: '0.02em' }}>
 //                           FOOD IS READY TO SERVE!
@@ -1262,13 +1262,13 @@
 //                     alignItems: 'center',
 //                     gap: '0.5rem'
 //                   }}>
-//                     <span style={{ fontSize: '1.2rem' }}>ðŸ”¥</span>
+//                     <span style={{ fontSize: '1.2rem' }}>🔥</span>
 //                     <div>
 //                       <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#fb923c', letterSpacing: '0.02em' }}>
 //                         {readyCount > 0 ? `CHEF IS COOKING (${readyCount}/${table.items.length} PREPARED)` : 'CHEF IS COOKING ORDER'}
 //                       </div>
 //                       <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
-//                         {readyCount > 0 ? `${readyCount} dish(es) ready to serve â€¢ Remaining dishes cooking` : 'Kitchen started preparing dishes'}
+//                         {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
 //                       </div>
 //                     </div>
 //                   </div>
@@ -1286,7 +1286,7 @@
 //                     alignItems: 'center',
 //                     gap: '0.5rem'
 //                   }}>
-//                     <span style={{ fontSize: '1.1rem' }}>ðŸ””</span>
+//                     <span style={{ fontSize: '1.1rem' }}>🔔</span>
 //                     <div>
 //                       <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#34d399' }}>
 //                         Some Dishes Prepared ({readyCount}/{table.items.length})
@@ -1373,8 +1373,8 @@
 //                           }`
 //                         }}>
 //                           {(item.kotStatus === 'ready' || item.kotStatus === 'served')
-//                             ? 'âœ“ Prepared'
-//                             : (item.kotStatus === 'cooking' ? 'ðŸ”¥ Cooking' : 'ðŸ“¥ Received')}
+//                             ? '✓ Prepared'
+//                             : (item.kotStatus === 'cooking' ? '🔥 Cooking' : '📥 Received')}
 //                         </div>
 //                       )}
 //                     </div>
@@ -2208,7 +2208,7 @@ export function TableDetailView({
                 >
                   {table.section}
                 </span>
-                <span style={{ color: "var(--text-dim)" }}>â€¢</span>
+                <span style={{ color: "var(--text-dim)" }}>•</span>
                 <span
                   style={{
                     fontSize: "0.72rem",
@@ -2325,7 +2325,7 @@ export function TableDetailView({
                       })}
                     </span>
                   </span>
-                  <span style={{ opacity: 0.5 }}>â€¢</span>
+                  <span style={{ opacity: 0.5 }}>•</span>
                   <Clock
                     size={13}
                     className="pulse-indicator"
@@ -2334,9 +2334,9 @@ export function TableDetailView({
                   <span>
                     Seated: <strong>{table.orderTime}</strong>
                   </span>
-                  <span style={{ opacity: 0.5 }}>â€¢</span>
+                  <span style={{ opacity: 0.5 }}>•</span>
                   <span style={{ fontFamily: "monospace", fontWeight: 800 }}>
-                    â± {elapsedFormatted}
+                    ⏱️ {elapsedFormatted}
                   </span>
                 </div>
               );
@@ -3090,10 +3090,10 @@ export function TableDetailView({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOpenItemModal(item);
+                              handleAddItem(item);
                             }}
                             className="pos-menu-add"
-                            title="Configure & Add Item"
+                            title="Add to Cart"
                           >
                             <Plus size={13} />
                             <span>Add</span>
@@ -3170,7 +3170,7 @@ export function TableDetailView({
               flexShrink: 0,
             }}
           >
-            {/* Order Header â€” Compact */}
+            {/* Order Header — Compact */}
             <div
               style={{
                 padding: "0.55rem 0.85rem",
@@ -3198,7 +3198,7 @@ export function TableDetailView({
                       color: "var(--text-main)",
                     }}
                   >
-                    {table.name} â€” Order Slip
+                    {table.name} — Order Slip
                   </h3>
                 </div>
                 <div
@@ -3213,7 +3213,7 @@ export function TableDetailView({
                   }}
                 >
                   <span>{safeItems.length} items</span>
-                  <span>â€¢</span>
+                  <span>•</span>
                   <span
                     style={{
                       display: "inline-flex",
@@ -3299,7 +3299,7 @@ export function TableDetailView({
                             gap: "0.5rem",
                           }}
                         >
-                          <span style={{ fontSize: "1.2rem" }}>ðŸ””</span>
+                          <span style={{ fontSize: "1.2rem" }}>🔔</span>
                           <div>
                             <div
                               style={{
@@ -3350,7 +3350,7 @@ export function TableDetailView({
                         alignItems: 'center',
                         gap: '0.5rem'
                       }}>
-                        <span style={{ fontSize: '1.2rem' }}>ðŸ”¥</span>
+                        <span style={{ fontSize: '1.2rem' }}>🔥</span>
                         <div>
                           <div
                             style={{
@@ -3365,7 +3365,7 @@ export function TableDetailView({
                               : "CHEF IS COOKING ORDER"}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
-                            {readyCount > 0 ? `${readyCount} dish(es) ready to serve â€¢ Remaining dishes cooking` : 'Kitchen started preparing dishes'}
+                            {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
                           </div>
                         </div>
                       </div>
@@ -3385,7 +3385,7 @@ export function TableDetailView({
                           gap: "0.5rem",
                         }}
                       >
-                        <span style={{ fontSize: "1.1rem" }}>ðŸ””</span>
+                        <span style={{ fontSize: "1.1rem" }}>🔔</span>
                         <div>
                           <div
                             style={{
@@ -3488,7 +3488,7 @@ export function TableDetailView({
                               color: "var(--text-dim)",
                             }}
                           >
-                            {formatCurrency(item.price)} Ã— {item.quantity}
+                            {formatCurrency(item.price)} × {item.quantity}
                           </span>
                           {item.kotStatus && (
                             <span
@@ -3515,10 +3515,10 @@ export function TableDetailView({
                             >
                               {item.kotStatus === "ready" ||
                               item.kotStatus === "served"
-                                ? "âœ“ Ready"
+                                ? "✓ Ready"
                                 : item.kotStatus === "cooking"
-                                  ? "ðŸ”¥ Cooking"
-                                  : "ðŸ“¥ KOT"}
+                                  ? "🔥 Cooking"
+                                  : "📥 KOT"}
                             </span>
                           )}
                         </div>
@@ -3755,7 +3755,7 @@ export function TableDetailView({
               )}
             </div>
 
-            {/* Financial Breakdown â€” Compact */}
+            {/* Financial Breakdown — Compact */}
             <div
               style={{
                 background: "var(--bg-primary)",
@@ -3780,7 +3780,7 @@ export function TableDetailView({
                 <span className="font-mono">{formatCurrency(subtotal)}</span>
               </div>
 
-              {/* Discount selector â€” inline compact */}
+              {/* Discount selector — inline compact */}
               <div
                 style={{
                   display: "flex",
@@ -4017,7 +4017,7 @@ export function TableDetailView({
                   }}
                 >
                   <CreditCard size={15} />
-                  <span>Settle & Checkout â€” {formatCurrency(grandTotal)}</span>
+                  <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
                 </button>
               </div>
             </div>
@@ -4052,10 +4052,10 @@ export function TableDetailView({
             <div>
               <div style={{ fontWeight: 800, fontSize: "0.88rem" }}>
                 {safeItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} Items
-                â€¢ {formatCurrency(grandTotal)}
+                • {formatCurrency(grandTotal)}
               </div>
               <div style={{ fontSize: "0.68rem", opacity: 0.9 }}>
-                {table.name} â€¢ Tap to view bill & actions
+                {table.name} • Tap to view bill & actions
               </div>
             </div>
           </div>
@@ -4073,7 +4073,7 @@ export function TableDetailView({
             }}
           >
             <span>View Bill</span>
-            <span>â¯</span>
+            <span>›</span>
           </div>
         </div>
       )}
@@ -4127,7 +4127,7 @@ export function TableDetailView({
                     color: "var(--text-main)",
                   }}
                 >
-                  {table.name} â€” Order Slip
+                  {table.name} — Order Slip
                 </h3>
                 <span
                   style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
@@ -4148,7 +4148,7 @@ export function TableDetailView({
                   cursor: "pointer",
                 }}
               >
-                âœ• Close
+                ✕ Close
               </button>
             </div>
 
@@ -4193,7 +4193,7 @@ export function TableDetailView({
                         color: "var(--accent-amber-light)",
                       }}
                     >
-                      {formatCurrency(item.price)} Ã— {item.quantity} ={" "}
+                      {formatCurrency(item.price)} × {item.quantity} ={" "}
                       {formatCurrency(item.price * item.quantity)}
                     </div>
                   </div>
