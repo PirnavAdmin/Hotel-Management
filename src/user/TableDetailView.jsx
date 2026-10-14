@@ -1834,7 +1834,7 @@ export function TableDetailView({
   };
 
   const handleSaveNote = (itemId) => {
-    onUpdateItemNotes(table.id, itemId, tempNote);
+    onUpdateItemNotes(table.id, itemId, tempNote.trim());
     setEditingNoteItemId(null);
     setTempNote("");
   };
@@ -3601,8 +3601,17 @@ export function TableDetailView({
                       >
                         <button
                           onClick={() => {
-                            setEditingNoteItemId(item.id);
-                            setTempNote(item.notes || "");
+                            if (editingNoteItemId === item.id) {
+                              // If closed again with empty input, clear the note
+                              if (!tempNote.trim() && item.notes) {
+                                onUpdateItemNotes(table.id, item.id, "");
+                              }
+                              setEditingNoteItemId(null);
+                              setTempNote("");
+                            } else {
+                              setEditingNoteItemId(item.id);
+                              setTempNote(item.notes || "");
+                            }
                           }}
                           style={{
                             fontSize: "0.72rem",
@@ -3614,6 +3623,7 @@ export function TableDetailView({
                             alignItems: "center",
                             gap: "0.25rem",
                             textDecoration: "underline",
+                            cursor: "pointer",
                           }}
                         >
                           <FileText size={11} />
@@ -3665,6 +3675,13 @@ export function TableDetailView({
                           }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleSaveNote(item.id);
+                            if (e.key === "Escape") {
+                              if (!tempNote.trim() && item.notes) {
+                                onUpdateItemNotes(table.id, item.id, "");
+                              }
+                              setEditingNoteItemId(null);
+                              setTempNote("");
+                            }
                           }}
                         />
                         <button
@@ -3676,9 +3693,35 @@ export function TableDetailView({
                             borderRadius: "4px",
                             fontSize: "0.72rem",
                             fontWeight: 700,
+                            cursor: "pointer",
                           }}
                         >
                           Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!tempNote.trim() && item.notes) {
+                              onUpdateItemNotes(table.id, item.id, "");
+                            }
+                            setEditingNoteItemId(null);
+                            setTempNote("");
+                          }}
+                          style={{
+                            background: "rgba(255, 255, 255, 0.08)",
+                            color: "var(--text-dim)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            padding: "0 0.4rem",
+                            borderRadius: "4px",
+                            fontSize: "0.72rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                          }}
+                          title="Cancel"
+                        >
+                          <X size={12} />
                         </button>
                       </div>
                     )}
