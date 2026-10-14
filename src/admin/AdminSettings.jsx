@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Settings,
   Save,
@@ -8,11 +8,15 @@ import {
   Receipt,
   Percent,
   Palette,
+  Upload,
+  X,
 } from "lucide-react";
 
 export function AdminSettings({
   currentTheme = "royal-saffron",
   onChangeTheme,
+  initialSettings = null,
+  onSaveSettings,
 }) {
   const [settings, setSettings] = useState(() => {
     try {
@@ -48,14 +52,59 @@ export function AdminSettings({
   });
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [logoError, setLogoError] = useState("");
+  const [saveError, setSaveError] = useState("");
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    if (initialSettings && typeof initialSettings === "object") {
+      setSettings(initialSettings);
+    }
+  }, [initialSettings]);
+
+  const handleLogoUpload = (event) => {
+    const file = event.target.files?.[0];
+    const input = event.currentTarget;
+    setLogoError("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Choose an image file for the restaurant logo.");
+      return;
+    }
+    if (file.size > 350 * 1024) {
+      setLogoError("Logo must be 350 KB or smaller so it can be saved reliably in browser storage.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setSettings((current) => ({ ...current, logo: reader.result }));
+      }
+      input.value = "";
+    };
+    reader.onerror = () => {
+      setLogoError("Could not read this image. Please try another file.");
+      input.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
     try {
-      localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(settings));
+      if (onSaveSettings) {
+        await onSaveSettings(settings);
+      } else {
+        localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(settings));
+      }
+      setSaveError("");
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
-    } catch {}
+    } catch (error) {
+      setSavedSuccess(false);
+      setSaveError(error?.name === "QuotaExceededError"
+        ? "Browser storage is full. Try a smaller logo image."
+        : error?.message || "Could not sync settings. Check the server connection and try again.");
+    }
   };
 
   return (
@@ -138,6 +187,11 @@ export function AdminSettings({
             >
               <CheckCircle2 size={15} />
               <span>Settings Saved Successfully</span>
+            </div>
+          )}
+          {saveError && (
+            <div role="alert" style={{ color: "#f87171", fontSize: "0.8rem", fontWeight: 700 }}>
+              {saveError}
             </div>
           )}
         </div>
@@ -302,6 +356,40 @@ export function AdminSettings({
                     outline: "none",
                   }}
                 />
+              </div>
+
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.75rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Restaurant Logo
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", flexWrap: "wrap" }}>
+                  {settings.logo ? (
+                    <img src={settings.logo} alt="Restaurant logo preview" style={{ width: "64px", height: "64px", objectFit: "contain", background: "var(--bg-secondary)", border: "1px solid var(--border-card)", borderRadius: "10px", padding: "5px" }} />
+                  ) : (
+                    <div style={{ width: "64px", height: "64px", display: "grid", placeItems: "center", color: "var(--text-dim)", background: "var(--bg-secondary)", border: "1px dashed var(--border-card)", borderRadius: "10px" }}>
+                      <Store size={22} />
+                    </div>
+                  )}
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", padding: "0.58rem 0.85rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-secondary)", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>
+                    <Upload size={15} />
+                    Upload logo
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: "none" }} />
+                  </label>
+                  {settings.logo && (
+                    <button type="button" onClick={() => { setSettings((current) => ({ ...current, logo: "" })); setLogoError(""); }} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.58rem 0.75rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", color: "#f87171", background: "transparent", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>
+                      <X size={15} /> Remove
+                    </button>
+                  )}
+                  <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>Image file, up to 350 KB. Save settings to keep the logo.</span>
+                </div>
+                {logoError && <div role="alert" style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.4rem" }}>{logoError}</div>}
               </div>
             </div>
           </div>

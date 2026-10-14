@@ -44,6 +44,9 @@ import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
+import { API_BASE_URL } from "../api/apiConfig";
+
+const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
 const STORAGE_KEY_CUSTOM_CATEGORIES = "pos_custom_menu_categories";
 const STORAGE_KEY_CUSTOM_SECTIONS = "pos_custom_table_sections";
@@ -104,6 +107,71 @@ export function AdminPortal({
   const [searchFilter, setSearchFilter] = useState("");
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [restaurantSettings, setRestaurantSettings] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "null");
+    } catch {
+      return null;
+    }
+  });
+  const restaurantLogo = restaurantSettings?.logo || "";
+
+  useEffect(() => {
+    let active = true;
+    const applySettings = (settings) => {
+      if (!settings || typeof settings !== "object") return;
+      try {
+        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
+      } catch {}
+      if (active) setRestaurantSettings(settings);
+    };
+
+    fetch(`${API_BASE_URL}/api/state`, {
+      headers: { "ngrok-skip-browser-warning": "true" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => applySettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
+      .catch(() => {});
+
+    let events;
+    try {
+      events = new EventSource(`${API_BASE_URL}/api/events`);
+      events.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          const settings = message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY];
+          if (settings) applySettings(settings);
+        } catch {}
+      };
+    } catch {}
+
+    return () => {
+      active = false;
+      events?.close();
+    };
+  }, []);
+
+  const handleSaveRestaurantSettings = async (settings) => {
+    const response = await fetch(`${API_BASE_URL}/api/sync`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+      },
+      body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
+    });
+    if (!response.ok) {
+      throw new Error(`Settings sync failed (HTTP ${response.status}).`);
+    }
+    const result = await response.json().catch(() => null);
+    if (result?.success === false) {
+      throw new Error(result.error || result.message || "The server rejected the settings update.");
+    }
+    try {
+      localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
+    } catch {}
+    setRestaurantSettings(settings);
+  };
 
   const themes = [
     { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
@@ -645,6 +713,7 @@ export function AdminPortal({
           tablesCount={tables.length}
           staffCount={staffList.length}
           activeKOTCount={activeKOTCount}
+          restaurantLogo={restaurantLogo}
         />
 
         {/* Right Main Content Pane */}
@@ -666,6 +735,7 @@ export function AdminPortal({
             onClose={onClose}
             currentTheme={currentTheme}
             onChangeTheme={handleThemeChange}
+            restaurantLogo={restaurantLogo}
           />
 
           {/* Scrollable Work Area */}
@@ -2475,6 +2545,8 @@ export function AdminPortal({
             <AdminSettings
               currentTheme={currentTheme}
               onChangeTheme={handleThemeChange}
+              initialSettings={restaurantSettings}
+              onSaveSettings={handleSaveRestaurantSettings}
             />
           )}
         </div>
