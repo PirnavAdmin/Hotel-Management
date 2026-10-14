@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MENU_ITEMS } from "./data/menuData";
 import { INITIAL_ORDERS } from "./data/initialOrders";
@@ -869,10 +869,22 @@ export function App() {
         const existingIndex = t.items.findIndex((i) => i.id === menuItem.id);
         let newItems;
 
-        if (existingIndex > -1) {
+        const specifiedQty =
+          typeof menuItem.quantity === "number" ? menuItem.quantity : null;
+        const specifiedNotes =
+          typeof menuItem.notes === "string" ? menuItem.notes : null;
+
+        if (specifiedQty === 0) {
+          newItems = t.items.filter((i) => i.id !== menuItem.id);
+        } else if (existingIndex > -1) {
           newItems = t.items.map((item, idx) =>
             idx === existingIndex
-              ? { ...item, quantity: item.quantity + 1 }
+              ? {
+                  ...item,
+                  quantity:
+                    specifiedQty !== null ? specifiedQty : item.quantity + 1,
+                  notes: specifiedNotes !== null ? specifiedNotes : item.notes,
+                }
               : item,
           );
         } else {
@@ -882,8 +894,9 @@ export function App() {
               id: menuItem.id,
               name: menuItem.name,
               price: menuItem.price,
-              quantity: 1,
-              notes: "",
+              quantity:
+                specifiedQty !== null && specifiedQty > 0 ? specifiedQty : 1,
+              notes: specifiedNotes !== null ? specifiedNotes : "",
               timeAdded: new Date().toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
