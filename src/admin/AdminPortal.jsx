@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -121,12 +121,27 @@ export function AdminPortal({
 
   useEffect(() => {
     let active = true;
-    const applySettings = (settings) => {
-      if (!settings || typeof settings !== "object") return;
+    const applySettings = (incomingSettings) => {
+      if (!incomingSettings || typeof incomingSettings !== "object") return;
       try {
-        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
-      } catch {}
-      if (active) setRestaurantSettings(settings);
+        let localSaved = {};
+        try {
+          localSaved = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
+        } catch {}
+
+        const merged = {
+          ...localSaved,
+          ...incomingSettings,
+          selectedQrId: incomingSettings.selectedQrId || localSaved.selectedQrId || "qr-1",
+          paymentQrs: (Array.isArray(incomingSettings.paymentQrs) && incomingSettings.paymentQrs.length > 0)
+            ? incomingSettings.paymentQrs
+            : localSaved.paymentQrs,
+        };
+        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged));
+        if (active) setRestaurantSettings(merged);
+      } catch {
+        if (active) setRestaurantSettings(incomingSettings);
+      }
     };
 
     fetch(`${API_BASE_URL}/api/state`, {
@@ -155,25 +170,27 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
-    const response = await fetch(`${API_BASE_URL}/api/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
-    });
-    if (!response.ok) {
-      throw new Error(`Settings sync failed (HTTP ${response.status}).`);
-    }
-    const result = await response.json().catch(() => null);
-    if (result?.success === false) {
-      throw new Error(result.error || result.message || "The server rejected the settings update.");
-    }
     try {
       localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
+      window.dispatchEvent(new Event("storage"));
     } catch {}
     setRestaurantSettings(settings);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
+      });
+      if (!response.ok) {
+        console.warn(`Settings sync failed (HTTP ${response.status}). Local copy saved.`);
+      }
+    } catch (err) {
+      console.warn("Settings sync offline. Local copy saved.", err);
+    }
   };
 
   const themes = [

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Banknote, 
@@ -27,7 +27,7 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
   const [selectedWallet, setSelectedWallet] = useState('paytm');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const { configuredQrs, initialIndex } = (() => {
+  const getQrConfig = () => {
     try {
       const saved = localStorage.getItem("gourmet_pos_settings_v1");
       if (saved) {
@@ -54,9 +54,26 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
       configuredQrs: [{ id: "default", label: "Main Counter UPI", image: paymentQrImage, active: true }],
       initialIndex: 0,
     };
-  })();
+  };
 
-  const [selectedQrIndex, setSelectedQrIndex] = useState(initialIndex);
+  const [qrConfig, setQrConfig] = useState(() => getQrConfig());
+  const [selectedQrIndex, setSelectedQrIndex] = useState(qrConfig.initialIndex);
+
+  useEffect(() => {
+    const syncQrConfig = () => {
+      const latest = getQrConfig();
+      setQrConfig(latest);
+      setSelectedQrIndex(latest.initialIndex);
+    };
+    window.addEventListener("storage", syncQrConfig);
+    window.addEventListener("focus", syncQrConfig);
+    return () => {
+      window.removeEventListener("storage", syncQrConfig);
+      window.removeEventListener("focus", syncQrConfig);
+    };
+  }, []);
+
+  const configuredQrs = qrConfig.configuredQrs;
   const activeQr = configuredQrs[selectedQrIndex] || configuredQrs[0];
 
   const handleSelectQr = (idx) => {
@@ -77,6 +94,7 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
           }
           parsed.selectedQrId = chosenQr.id;
           localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(parsed));
+          window.dispatchEvent(new Event("storage"));
         }
       } catch (err) {
         console.error("Failed to update active QR in settings", err);

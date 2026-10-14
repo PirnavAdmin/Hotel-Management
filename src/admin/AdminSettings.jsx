@@ -62,29 +62,37 @@ export function AdminSettings({
     try {
       const saved = localStorage.getItem("gourmet_pos_settings_v1");
       const parsedSaved = saved ? JSON.parse(saved) : {};
-      const source = initialSettings && Object.keys(initialSettings).length > 0 ? initialSettings : parsedSaved;
-      let qrs = DEFAULT_PAYMENT_QRS;
-      if (Array.isArray(source.paymentQrs) && source.paymentQrs.length > 0) {
-        qrs = [0, 1, 2].map((i) => ({
-          ...DEFAULT_PAYMENT_QRS[i],
-          ...(source.paymentQrs[i] || {}),
-        }));
-      } else if (Array.isArray(parsedSaved.paymentQrs) && parsedSaved.paymentQrs.length > 0) {
-        qrs = [0, 1, 2].map((i) => ({
-          ...DEFAULT_PAYMENT_QRS[i],
-          ...(parsedSaved.paymentQrs[i] || {}),
-        }));
-      }
-      const activeQr = qrs.find((q) => q.active) || qrs[0];
-      const selectedId = source.selectedQrId || parsedSaved.selectedQrId || activeQr.id || "qr-1";
+      const source = {
+        ...parsedSaved,
+        ...(initialSettings || {}),
+      };
+
+      const sourceQrs =
+        (Array.isArray(parsedSaved.paymentQrs) && parsedSaved.paymentQrs.length > 0 && parsedSaved.paymentQrs) ||
+        (Array.isArray(source.paymentQrs) && source.paymentQrs.length > 0 && source.paymentQrs) ||
+        DEFAULT_PAYMENT_QRS;
+
+      let qrs = [0, 1, 2].map((i) => ({
+        ...DEFAULT_PAYMENT_QRS[i],
+        ...(sourceQrs[i] || {}),
+      }));
+
+      const selectedId =
+        parsedSaved.selectedQrId ||
+        source.selectedQrId ||
+        qrs.find((q) => q.active && q.image)?.id ||
+        qrs.find((q) => q.image)?.id ||
+        "qr-1";
+
       qrs = qrs.map((q) => ({
         ...q,
         active: q.id === selectedId,
       }));
+
       return {
         ...baseDefaults,
+        ...source,
         ...parsedSaved,
-        ...(initialSettings || {}),
         selectedQrId: selectedId,
         paymentQrs: qrs,
       };
@@ -129,22 +137,39 @@ export function AdminSettings({
   useEffect(() => {
     if (initialSettings && Object.keys(initialSettings).length > 0) {
       setSettings((prev) => {
-        let qrs = prev.paymentQrs || DEFAULT_PAYMENT_QRS;
-        if (Array.isArray(initialSettings.paymentQrs) && initialSettings.paymentQrs.length > 0) {
-          qrs = [0, 1, 2].map((i) => ({
-            ...DEFAULT_PAYMENT_QRS[i],
-            ...(initialSettings.paymentQrs[i] || {}),
-          }));
-        }
-        const activeQr = qrs.find((q) => q.active) || qrs[0];
-        const selectedId = initialSettings.selectedQrId || prev.selectedQrId || activeQr.id || "qr-1";
+        let localSaved = {};
+        try {
+          localSaved = JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+        } catch {}
+
+        const sourceQrs =
+          (Array.isArray(localSaved.paymentQrs) && localSaved.paymentQrs.length > 0 && localSaved.paymentQrs) ||
+          (Array.isArray(initialSettings.paymentQrs) && initialSettings.paymentQrs.length > 0 && initialSettings.paymentQrs) ||
+          prev.paymentQrs ||
+          DEFAULT_PAYMENT_QRS;
+
+        let qrs = [0, 1, 2].map((i) => ({
+          ...DEFAULT_PAYMENT_QRS[i],
+          ...(sourceQrs[i] || {}),
+        }));
+
+        const selectedId =
+          localSaved.selectedQrId ||
+          initialSettings.selectedQrId ||
+          prev.selectedQrId ||
+          qrs.find((q) => q.active && q.image)?.id ||
+          qrs.find((q) => q.image)?.id ||
+          "qr-1";
+
         qrs = qrs.map((q) => ({
           ...q,
           active: q.id === selectedId,
         }));
+
         return {
           ...prev,
           ...initialSettings,
+          ...localSaved,
           selectedQrId: selectedId,
           paymentQrs: qrs,
         };
@@ -166,19 +191,39 @@ export function AdminSettings({
       return;
     }
 
-    setSettings((prev) => {
-      const qrs = prev.paymentQrs || DEFAULT_PAYMENT_QRS;
-      const targetId = targetQr?.id || `qr-${selectedIndex + 1}`;
-      const nextQrs = qrs.map((q, idx) => ({
-        ...q,
-        active: idx === selectedIndex,
-      }));
-      return {
-        ...prev,
+    const targetId = targetQr?.id || `qr-${selectedIndex + 1}`;
+    const nextQrs = currentQrs.map((q, idx) => ({
+      ...q,
+      active: idx === selectedIndex,
+    }));
+
+    const updated = {
+      ...settings,
+      selectedQrId: targetId,
+      paymentQrs: nextQrs,
+    };
+
+    setSettings(updated);
+
+    // Persist immediately to localStorage so POS billing and page refresh reflect it instantly
+    try {
+      const saved = localStorage.getItem("gourmet_pos_settings_v1");
+      const parsed = saved ? JSON.parse(saved) : {};
+      const toSave = {
+        ...parsed,
+        ...updated,
         selectedQrId: targetId,
         paymentQrs: nextQrs,
       };
-    });
+      localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(toSave));
+      window.dispatchEvent(new Event("storage"));
+    } catch (err) {
+      console.error("Failed to save active QR to localStorage:", err);
+    }
+
+    if (onSaveSettings) {
+      onSaveSettings(updated).catch(() => {});
+    }
   };
 
   const processImageFile = (file, callback) => {
@@ -220,7 +265,22 @@ export function AdminSettings({
           ...nextQrs[index],
           image: dataUrl,
         };
-        return { ...prev, paymentQrs: nextQrs };
+        const updated = { ...prev, paymentQrs: nextQrs };
+        try {
+          const saved = localStorage.getItem("gourmet_pos_settings_v1");
+          const parsed = saved ? JSON.parse(saved) : {};
+          localStorage.setItem(
+            "gourmet_pos_settings_v1",
+            JSON.stringify({ ...parsed, ...updated, paymentQrs: nextQrs })
+          );
+          window.dispatchEvent(new Event("storage"));
+        } catch (err) {
+          console.error("Failed to save uploaded QR:", err);
+        }
+        if (onSaveSettings) {
+          onSaveSettings(updated).catch(() => {});
+        }
+        return updated;
       });
     });
   };
@@ -232,7 +292,19 @@ export function AdminSettings({
         ...nextQrs[index],
         label: newLabel,
       };
-      return { ...prev, paymentQrs: nextQrs };
+      const updated = { ...prev, paymentQrs: nextQrs };
+      try {
+        const saved = localStorage.getItem("gourmet_pos_settings_v1");
+        const parsed = saved ? JSON.parse(saved) : {};
+        localStorage.setItem(
+          "gourmet_pos_settings_v1",
+          JSON.stringify({ ...parsed, ...updated, paymentQrs: nextQrs })
+        );
+        window.dispatchEvent(new Event("storage"));
+      } catch (err) {
+        console.error("Failed to save updated QR label:", err);
+      }
+      return updated;
     });
   };
 
@@ -254,20 +326,44 @@ export function AdminSettings({
         });
         nextSelectedId = nextQrs[activeIdx]?.id || "qr-1";
       }
-      return { ...prev, selectedQrId: nextSelectedId, paymentQrs: nextQrs };
+      const updated = {
+        ...prev,
+        selectedQrId: nextSelectedId,
+        paymentQrs: nextQrs,
+      };
+      try {
+        const saved = localStorage.getItem("gourmet_pos_settings_v1");
+        const parsed = saved ? JSON.parse(saved) : {};
+        localStorage.setItem(
+          "gourmet_pos_settings_v1",
+          JSON.stringify({ ...parsed, ...updated })
+        );
+        window.dispatchEvent(new Event("storage"));
+      } catch (err) {
+        console.error("Failed to save removed QR:", err);
+      }
+      if (onSaveSettings) {
+        onSaveSettings(updated).catch(() => {});
+      }
+      return updated;
     });
   };
 
   const handleSave = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     try {
+      localStorage.setItem(
+        "gourmet_pos_settings_v1",
+        JSON.stringify(settings),
+      );
+      window.dispatchEvent(new Event("storage"));
+
       if (onSaveSettings) {
-        await onSaveSettings(settings);
-      } else {
-        localStorage.setItem(
-          "gourmet_pos_settings_v1",
-          JSON.stringify(settings),
-        );
+        try {
+          await onSaveSettings(settings);
+        } catch (syncErr) {
+          console.warn("Server sync error (local settings saved successfully):", syncErr);
+        }
       }
       setSaveError("");
       setSavedSuccess(true);
@@ -278,7 +374,7 @@ export function AdminSettings({
         error?.name === "QuotaExceededError"
           ? "Browser storage is full. Try a smaller logo image."
           : error?.message ||
-              "Could not sync settings. Check the server connection and try again.",
+              "Could not save settings.",
       );
     }
   };
@@ -926,9 +1022,9 @@ export function AdminSettings({
                 const hasImage = Boolean(qr.image);
                 const isSelected = Boolean(
                   hasImage &&
-                  (qr.active ||
-                    settings.selectedQrId === qr.id ||
-                    (!settings.selectedQrId && index === 0))
+                  (settings.selectedQrId
+                    ? qr.id === settings.selectedQrId
+                    : qr.active)
                 );
 
                 return (
