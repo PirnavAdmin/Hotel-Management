@@ -138,7 +138,7 @@ export function AdminPortal({
       try {
         localSettings = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
       } catch {}
-      const mergedSettings = { ...settings, ...localSettings };
+      // Shared server settings are authoritative across devices.`r`n      const mergedSettings = { ...localSettings, ...settings };
       try {
         localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(mergedSettings));
       } catch {}
@@ -194,8 +194,8 @@ export function AdminPortal({
   };
 
   const themes = [
-    { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
-    { id: "light-bistro", name: "Light Theme", icon: "☀️", label: "Light" },
+    { id: "royal-saffron", name: "Dark Theme", icon: "ðŸŒ™", label: "Dark" },
+    { id: "light-bistro", name: "Light Theme", icon: "â˜€ï¸Â", label: "Light" },
   ];
 
   const handleThemeChange = (newTheme) => {
@@ -1010,7 +1010,7 @@ export function AdminPortal({
                           Dietary
                         </th>
                         <th style={{ padding: "0.6rem 0.85rem", width: "12%" }}>
-                          Price (₹)
+                          Price (â‚¹)
                         </th>
                         <th
                           style={{
@@ -1098,7 +1098,7 @@ export function AdminPortal({
                                       overflow: "hidden",
                                     }}
                                   >
-                                    {item.prepTime || ""} • {item.description}
+                                    {item.prepTime || ""} â€¢ {item.description}
                                   </div>
                                 </div>
                               </div>
@@ -1181,7 +1181,7 @@ export function AdminPortal({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              ₹{Number(item.price).toFixed(2)}
+                              â‚¹{Number(item.price).toFixed(2)}
                             </td>
                             <td
                               style={{
@@ -1207,7 +1207,7 @@ export function AdminPortal({
                                   onClick={() => onSetMenuSpecial?.(item.id, !item.isChefSpecial)}
                                   title={item.isChefSpecial ? "Remove Chef's Special" : "Mark Chef's Special"}
                                   style={{ border: "1px solid rgba(245, 158, 11, 0.45)", background: "rgba(245, 158, 11, 0.06)", color: "#f59e0b", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}
-                                >{item.isChefSpecial ? "★ Special" : "☆ Special"}</button>                                <button
+                                >{item.isChefSpecial ? "â˜… Special" : "â˜† Special"}</button>                                <button
                                   onClick={() => handleOpenItemModal(item)}
                                   style={{
                                     border: "1px solid rgba(245, 158, 11, 0.45)",
@@ -1289,7 +1289,7 @@ export function AdminPortal({
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {startIdx + 1}
                           </strong>
-                          –
+                          â€“
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {Math.min(startIdx + menuPageSize, filteredItems.length)}
                           </strong>{" "}
@@ -2420,7 +2420,7 @@ export function AdminPortal({
                                     color: "var(--text-main)",
                                   }}
                                 >
-                                  {tbl.section} • Server: {tbl.server}
+                                  {tbl.section} â€¢ Server: {tbl.server}
                                 </div>
                                 <div
                                   style={{
@@ -2806,7 +2806,7 @@ export function AdminPortal({
                     marginBottom: "5px",
                   }}
                 >
-                  Price in Rupees (₹){" "}
+                  Price in Rupees (â‚¹){" "}
                   <span style={{ color: "#ea580c" }}>*</span>
                 </label>
                 <input
@@ -2876,8 +2876,8 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 >
-                  <option value="non-veg">Non-Veg 🔴</option>
-                  <option value="veg">Pure Veg 🟢</option>
+                  <option value="non-veg">Non-Veg ðŸ”´</option>
+                  <option value="veg">Pure Veg ðŸŸ¢</option>
                 </select>
               </div>
 
@@ -3108,7 +3108,7 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 />
-                <span>Mark as Chef's Special ⭐</span>
+                <span>Mark as Chef's Special â­</span>
               </label>
             </div>
 
@@ -3513,7 +3513,7 @@ export function AdminPortal({
                       fontWeight: 600,
                     }}
                   >
-                    💡 This new server will be assigned to this table and
+                    ðŸ’¡ This new server will be assigned to this table and
                     automatically saved to your Staff personnel list!
                   </p>
                 </div>

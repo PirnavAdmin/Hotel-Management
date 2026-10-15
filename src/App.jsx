@@ -174,6 +174,38 @@ export function App() {
     };
   }, []);
 
+  // Load shared restaurant settings for every device, keeping local settings as
+  // a fallback when the shared server is unavailable.
+  useEffect(() => {
+    let active = true;
+    const applySharedSettings = (settings) => {
+      if (!settings || typeof settings !== "object") return;
+      let local = {};
+      try { local = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}"); } catch {}
+      const merged = { ...local, ...settings };
+      try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
+      if (active) {
+        setRestaurantSettings(merged);
+        window.dispatchEvent(new Event("restaurant-settings-updated"));
+      }
+    };
+    fetch(`${API_BASE_URL}/api/state`, { headers: { "ngrok-skip-browser-warning": "true" } })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
+      .catch(() => {});
+    let events;
+    try {
+      events = new EventSource(`${API_BASE_URL}/api/events`);
+      events.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+        } catch {}
+      };
+    } catch {}
+    return () => { active = false; events?.close(); };
+  }, []);
+
   // Theme state: 'royal-saffron' | 'emerald-spice' | 'light-bistro'
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem(STORAGE_KEY_THEME) || "royal-saffron";

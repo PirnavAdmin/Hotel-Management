@@ -46,7 +46,7 @@ const getInitialSettings = (initialSettings) => {
     gstin: "",
     taxRate: 5,
     serviceChargeRate: 5,
-    currency: "₹",
+    currency: "â‚¹",
     receiptHeader: "",
     receiptFooter: "",
     selectedQrId: "qr-1",
@@ -770,7 +770,7 @@ export function AdminSettings({
                   <span
                     style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}
                   >
-                    Image file, up to 350 KB. Save settings to keep the logo.
+                    Image file, up to 350 KB. Save settings to share it with your other devices.
                   </span>
                 </div>
                 {logoError && (
@@ -945,8 +945,8 @@ export function AdminSettings({
                     outline: "none",
                   }}
                 >
-                  <option value="rupee">Nearest ₹1</option>
-                  <option value="five">Nearest ₹5</option>
+                  <option value="rupee">Nearest â‚¹1</option>
+                  <option value="five">Nearest â‚¹5</option>
                   <option value="none">No rounding</option>
                 </select>
               </div>
