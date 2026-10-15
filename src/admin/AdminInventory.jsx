@@ -740,21 +740,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 >
                   {inventory.length} items
                 </span>
-                {lowStockCount > 0 && (
-                  <span
-                    style={{
-                      background: "rgba(239, 68, 68, 0.15)",
-                      border: "1px solid rgba(239, 68, 68, 0.35)",
-                      color: "#ef4444",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      padding: "2px 10px",
-                      borderRadius: "20px",
-                    }}
-                  >
-                    {lowStockCount} low stock
-                  </span>
-                )}
               </div>
               <p
                 style={{
@@ -1005,39 +990,54 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             {
               label: "Total Items",
               value: inventory.length,
+              status: "all",
               color: "#38bdf8",
               icon: Package,
             },
             {
               label: "In Stock",
               value: inStockCount,
+              status: "in-stock",
               color: "#10b981",
               icon: CheckCircle2,
             },
             {
               label: "Low Stock",
               value: lowStockCount,
+              status: "low-stock",
               color: "#f59e0b",
               icon: AlertTriangle,
             },
             {
               label: "Out of Stock",
               value: outOfStockCount,
+              status: "out-of-stock",
               color: "#ef4444",
               icon: TrendingDown,
             },
-          ].map(({ label, value, color, icon: Icon }) => (
-            <div
+          ].map(({ label, value, status, color, icon: Icon }) => (
+            <button
+              type="button"
               key={label}
+              aria-label={`Show ${label.toLowerCase()} inventory items`}
+              aria-pressed={selectedStatus === status}
+              onClick={() => {
+                setSelectedStatus(status);
+                setCurrentPage(1);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "0.75rem",
                 minWidth: 0,
+                width: "100%",
                 padding: "0.65rem 0.8rem",
                 background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-subtle)",
+                border: `1px solid ${selectedStatus === status ? color : "var(--border-subtle)"}`,
                 borderRadius: "10px",
+                color: "inherit",
+                textAlign: "left",
+                cursor: "pointer",
               }}
             >
               <div
@@ -1068,7 +1068,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   {value}
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
