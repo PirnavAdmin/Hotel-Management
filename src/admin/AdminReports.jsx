@@ -66,17 +66,42 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState("all");
-  const [startDate, setStartDate] = useState(todayYMD);
-  const [endDate, setEndDate] = useState(todayYMD);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isFetching, setIsFetching] = useState(false);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
   const startInputRef = useRef(null);
   const [ordersData, setOrdersData] = useState(() => Array.isArray(pastOrders) ? pastOrders : []);
 
   useEffect(() => {
-    setOrdersData(Array.isArray(pastOrders) ? pastOrders : []);
+    if (Array.isArray(pastOrders) && pastOrders.length) {
+      setOrdersData(pastOrders);
+      setOrdersLoaded(true);
+    }
   }, [pastOrders]);
 
-  const allOrders = ordersData;
+  useEffect(() => {
+    let active = true;
+    apiGetOrderHistory()
+      .then((response) => {
+        const result = response?.data ?? response;
+        const serverOrders = Array.isArray(result)
+          ? result
+          : Array.isArray(result?.orders)
+            ? result.orders
+            : Array.isArray(result?.data)
+              ? result.data
+              : null;
+        if (active && response?.success && serverOrders) {
+          setOrdersData(serverOrders);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setOrdersLoaded(true);
+      });
+    return () => { active = false; };
+  }, []);
 
   const filteredOrders = ordersData.filter((order) => {
     if (filterPeriod === "all") return true;
@@ -124,6 +149,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     (sum, o) => sum + (Number(o.serviceChargeAmount) || 0),
     0
   );
+  const totalDiscount = filteredOrders.reduce(
+    (sum, order) => sum + (Number(order.discountAmount) || 0),
+    0,
+  );
+  const averageBill = filteredOrders.length
+    ? totalRevenue / filteredOrders.length
+    : 0;
 
   // Payment breakdown
   const paymentStats = {
@@ -156,10 +188,6 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     ? sortedDishes
     : sortedDishes.slice(0, 3);
 
-  const averageBill = filteredOrders.length
-    ? Math.round(totalRevenue / filteredOrders.length)
-    : 0;
-
   const handleFetchData = async () => {
     setIsFetching(true);
     try {
@@ -174,6 +202,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             : null;
       if (response?.success && serverOrders) {
         setOrdersData(serverOrders);
+        setOrdersLoaded(true);
         return;
       }
       const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
@@ -185,6 +214,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
       }
     } catch {}
     finally {
+      setOrdersLoaded(true);
       setIsFetching(false);
     }
   };
@@ -530,7 +560,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             }}
           >
             <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
-              Total Gross Revenue
+              Total Collected
             </div>
             <div
               style={{
@@ -595,7 +625,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               {formatCurrency(totalTax)}
             </div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Standard 5% Food GST
+              Tax collected across settled invoices
             </div>
           </div>
 
@@ -621,7 +651,45 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               {formatCurrency(totalService)}
             </div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Staff & facility tips
+              Service charges on settled invoices
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "1.1rem",
+            }}
+          >
+            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
+              Average Bill
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--text-main)", marginTop: "4px" }}>
+              {formatCurrency(averageBill)}
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+              Average collected per settled order
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "1.1rem",
+            }}
+          >
+            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
+              Discounts Given
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#c084fc", marginTop: "4px" }}>
+              {formatCurrency(totalDiscount)}
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+              Total discounts on settled bills
             </div>
           </div>
         </div>
@@ -862,7 +930,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     fontSize: "0.82rem",
                   }}
                 >
-                  No orders recorded for this period
+              {ordersLoaded ? "No settled invoices recorded for this period" : "Loading settled invoice data..."}
                 </div>
               ) : (
                 displayedDishes.map(([name, qty], index) => (
