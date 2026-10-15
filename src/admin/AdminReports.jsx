@@ -13,6 +13,7 @@ import {
   Printer,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { apiGetOrderHistory } from "../api/orderApi";
 
 function parseOrderToYMD(order) {
   if (!order) return "";
@@ -21,8 +22,9 @@ function parseOrderToYMD(order) {
     jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
   };
 
-  if (order.date) {
-    const s = String(order.date).trim();
+  const dateValue = order.settledDate || order.date || order.settledAt || order.createdAt || order.orderTimestamp || order.timestamp;
+  if (dateValue) {
+    const s = String(dateValue).trim();
     const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) {
       return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
@@ -44,7 +46,7 @@ function parseOrderToYMD(order) {
     }
   }
 
-  const ts = order.orderTimestamp || order.timestamp;
+  const ts = order.orderTimestamp || order.timestamp || order.settledAt || order.createdAt;
   if (ts) {
     const d = new Date(ts);
     if (!isNaN(d.getTime())) {
@@ -63,7 +65,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const monthStartYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
   const [showAllDishes, setShowAllDishes] = useState(false);
-  const [filterPeriod, setFilterPeriod] = useState("today");
+  const [filterPeriod, setFilterPeriod] = useState("all");
   const [startDate, setStartDate] = useState(todayYMD);
   const [endDate, setEndDate] = useState(todayYMD);
   const [isFetching, setIsFetching] = useState(false);
@@ -129,7 +131,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
       .filter((o) => (o.paymentMethod || "").toLowerCase() === "upi")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
     cash: filteredOrders
-      .filter((o) => (o.paymentMethod || "").toLowerCase() === "cash")
+      .filter((o) => String(o.paymentMethod || "cash").toLowerCase() === "cash")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
     card: filteredOrders
       .filter((o) => (o.paymentMethod || "").toLowerCase() === "card")
@@ -158,21 +160,33 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     ? Math.round(totalRevenue / filteredOrders.length)
     : 0;
 
-  const handleFetchData = () => {
+  const handleFetchData = async () => {
     setIsFetching(true);
     try {
+      const response = await apiGetOrderHistory();
+      const result = response?.data ?? response;
+      const serverOrders = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.orders)
+          ? result.orders
+          : Array.isArray(result?.data)
+            ? result.data
+            : null;
+      if (response?.success && serverOrders) {
+        setOrdersData(serverOrders);
+        return;
+      }
       const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           setOrdersData(parsed);
         }
       }
     } catch {}
-
-    setTimeout(() => {
+    finally {
       setIsFetching(false);
-    }, 450);
+    }
   };
 
   const getFilterPeriodLabel = () => {

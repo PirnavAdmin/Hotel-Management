@@ -58,6 +58,13 @@ const invoiceDateKey = (order) => {
   return Number.isNaN(parsed.getTime()) ? "" : localDateInputValue(parsed);
 };
 
+const invoiceDisplayDate = (order) => {
+  const dateKey = invoiceDateKey(order);
+  if (!dateKey) return "—";
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN");
+};
+
 const parseDisplayDateInput = (displayDate) => {
   const match = String(displayDate || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!match) return "";
@@ -570,7 +577,7 @@ export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }
                     {/* Date & Time */}
                     <td style={{ padding: "1rem" }}>
                       <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
-                        {order.settledDate || order.date || "Today"}
+                        {invoiceDisplayDate(order)}
                       </div>
                       <div
                         style={{
@@ -964,7 +971,7 @@ export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div>{selectedReceipt.date || "Today"}</div>
+                <div>{invoiceDisplayDate(selectedReceipt)}</div>
                 <div>{formatInvoiceTime(selectedReceipt.settledAt || selectedReceipt.orderTime)}</div>
               </div>
             </div>
