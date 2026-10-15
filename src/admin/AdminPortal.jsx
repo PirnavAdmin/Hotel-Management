@@ -45,7 +45,11 @@ import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
 import { API_BASE_URL } from "../api/apiConfig";
-import { apiCreateMenuCategory, apiGetMenuCategories, apiUploadMenuImage } from "../api/menuApi";
+import {
+  apiCreateMenuCategory,
+  apiGetMenuCategories,
+  apiUploadMenuImage,
+} from "../api/menuApi";
 import {
   getMenuItemImage,
   handleDishImageError,
@@ -88,7 +92,12 @@ export function AdminPortal({
 }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchFilter, setSearchFilter] = useState("");
-  const emptyMenuFilters = { category: "", dietary: "", availability: "", special: "" };
+  const emptyMenuFilters = {
+    category: "",
+    dietary: "",
+    availability: "",
+    special: "",
+  };
   const [menuFilters, setMenuFilters] = useState(emptyMenuFilters);
   const updateMenuFilter = (key, value) => {
     setMenuFilters((previous) => ({ ...previous, [key]: value }));
@@ -102,31 +111,70 @@ export function AdminPortal({
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
   const emptyTableFilters = { search: "", area: "", status: "", server: "" };
   const [tableFilters, setTableFilters] = useState(emptyTableFilters);
-  const updateTableFilter = (key, value) => setTableFilters((previous) => ({ ...previous, [key]: value }));
-  const normalizeTableFilterText = (value) => String(value ?? "").trim().toLowerCase();
-  const tableAreaOptions = [...new Map(tables.map((table) => String(table.section ?? "").trim()).filter(Boolean).map((area) => [normalizeTableFilterText(area), area])).values()];
-  const tableServerOptions = [...new Map([
-    ...staffList.map((staff) => staff?.name || staff?.fullName || staff?.FullName || staff?.username),
-    ...tables.map((table) => table.server),
-  ].map((name) => String(name ?? "").trim()).filter(Boolean).map((name) => [normalizeTableFilterText(name), name])).values()];
+  const updateTableFilter = (key, value) =>
+    setTableFilters((previous) => ({ ...previous, [key]: value }));
+  const normalizeTableFilterText = (value) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase();
+  const tableAreaOptions = [
+    ...new Map(
+      tables
+        .map((table) => String(table.section ?? "").trim())
+        .filter(Boolean)
+        .map((area) => [normalizeTableFilterText(area), area]),
+    ).values(),
+  ];
+  const tableServerOptions = [
+    ...new Map(
+      [
+        ...staffList.map(
+          (staff) =>
+            staff?.name ||
+            staff?.fullName ||
+            staff?.FullName ||
+            staff?.username,
+        ),
+        ...tables.map((table) => table.server),
+      ]
+        .map((name) => String(name ?? "").trim())
+        .filter(Boolean)
+        .map((name) => [normalizeTableFilterText(name), name]),
+    ).values(),
+  ];
   const filteredTables = tables.filter((table) => {
     const query = normalizeTableFilterText(tableFilters.search);
     const server = normalizeTableFilterText(table.server);
-    return [table.name, table.tableNumber, table.number, table.id].some((value) => normalizeTableFilterText(value).includes(query)) &&
-      (!tableFilters.area || normalizeTableFilterText(table.section) === normalizeTableFilterText(tableFilters.area)) &&
-      (!tableFilters.status || (normalizeTableFilterText(table.status) === "vacant" ? "vacant" : "occupied") === tableFilters.status) &&
-      (!tableFilters.server || (tableFilters.server === "unassigned" ? !server : server === tableFilters.server.slice(5)));
+    return (
+      [table.name, table.tableNumber, table.number, table.id].some((value) =>
+        normalizeTableFilterText(value).includes(query),
+      ) &&
+      (!tableFilters.area ||
+        normalizeTableFilterText(table.section) ===
+          normalizeTableFilterText(tableFilters.area)) &&
+      (!tableFilters.status ||
+        (normalizeTableFilterText(table.status) === "vacant"
+          ? "vacant"
+          : "occupied") === tableFilters.status) &&
+      (!tableFilters.server ||
+        (tableFilters.server === "unassigned"
+          ? !server
+          : server === tableFilters.server.slice(5)))
+    );
   });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [restaurantSettings, setRestaurantSettings] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "null");
+      return JSON.parse(
+        localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "null",
+      );
     } catch {
       return null;
     }
   });
   const restaurantLogo = restaurantSettings?.logo || "";
-  const restaurantName = restaurantSettings?.restaurantName?.trim() || "Restaurant";
+  const restaurantName =
+    restaurantSettings?.restaurantName?.trim() || "Restaurant";
   const restaurantTagline = restaurantSettings?.tagline?.trim() || "";
 
   useEffect(() => {
@@ -135,11 +183,16 @@ export function AdminPortal({
       if (!settings || typeof settings !== "object") return;
       let localSettings = {};
       try {
-        localSettings = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
+        localSettings = JSON.parse(
+          localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}",
+        );
       } catch {}
       // Shared server settings are authoritative across devices.`r`n      const mergedSettings = { ...localSettings, ...settings };
       try {
-        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(mergedSettings));
+        localStorage.setItem(
+          RESTAURANT_SETTINGS_KEY,
+          JSON.stringify(mergedSettings),
+        );
       } catch {}
       if (active) setRestaurantSettings(mergedSettings);
     };
@@ -148,7 +201,12 @@ export function AdminPortal({
       headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => (response.ok ? response.json() : null))
-      .then((data) => applySettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
+      .then((data) =>
+        applySettings(
+          data?.[RESTAURANT_SETTINGS_KEY] ||
+            data?.data?.[RESTAURANT_SETTINGS_KEY],
+        ),
+      )
       .catch(() => {});
 
     let events;
@@ -157,7 +215,9 @@ export function AdminPortal({
       events.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          const settings = message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY];
+          const settings =
+            message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
+            message?.payload?.data?.[RESTAURANT_SETTINGS_KEY];
           if (settings) applySettings(settings);
         } catch {}
       };
@@ -183,7 +243,11 @@ export function AdminPortal({
     }
     const result = await response.json().catch(() => null);
     if (result?.success === false) {
-      throw new Error(result.error || result.message || "The server rejected the settings update.");
+      throw new Error(
+        result.error ||
+          result.message ||
+          "The server rejected the settings update.",
+      );
     }
     try {
       localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
@@ -254,19 +318,33 @@ export function AdminPortal({
   const saveCustomCategory = async (newCat) => {
     if (!newCat || !newCat.trim()) return;
     const trimmed = newCat.trim();
-    const knownNames = [...customCategories.map((category) => typeof category === "string" ? category : category.name || category.label || category.value)];
-    if (!knownNames.some((name) => name?.toLowerCase() === trimmed.toLowerCase())) {
+    const knownNames = [
+      ...customCategories.map((category) =>
+        typeof category === "string"
+          ? category
+          : category.name || category.label || category.value,
+      ),
+    ];
+    if (
+      !knownNames.some((name) => name?.toLowerCase() === trimmed.toLowerCase())
+    ) {
       const result = await apiCreateMenuCategory(trimmed, knownNames.length);
       if (!result?.success || result.data?.success === false) {
-        window.alert(`Category was not saved: ${result?.error || result?.data?.message || "API error"}`);
+        window.alert(
+          `Category was not saved: ${result?.error || result?.data?.message || "API error"}`,
+        );
         return;
       }
     }
     setCustomCategories((prev) => {
-      if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
+      if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
       const updated = [...prev, trimmed];
       try {
-        localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(updated));
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_CATEGORIES,
+          JSON.stringify(updated),
+        );
       } catch {}
       return updated;
     });
@@ -276,10 +354,14 @@ export function AdminPortal({
     if (!newSec || !newSec.trim()) return;
     const trimmed = newSec.trim();
     setCustomSections((prev) => {
-      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase())) return prev;
+      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
       const updated = [...prev, trimmed];
       try {
-        localStorage.setItem(STORAGE_KEY_CUSTOM_SECTIONS, JSON.stringify(updated));
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_SECTIONS,
+          JSON.stringify(updated),
+        );
       } catch {}
       return updated;
     });
@@ -289,7 +371,8 @@ export function AdminPortal({
     if (!newRole || !newRole.trim()) return;
     const trimmed = newRole.trim();
     setCustomRoles((prev) => {
-      if (prev.some((r) => r.toLowerCase() === trimmed.toLowerCase())) return prev;
+      if (prev.some((r) => r.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
       const updated = [...prev, trimmed];
       try {
         localStorage.setItem(STORAGE_KEY_CUSTOM_ROLES, JSON.stringify(updated));
@@ -302,10 +385,14 @@ export function AdminPortal({
     if (!newShift || !newShift.trim()) return;
     const trimmed = newShift.trim();
     setCustomShifts((prev) => {
-      if (prev.some((sh) => sh.toLowerCase() === trimmed.toLowerCase())) return prev;
+      if (prev.some((sh) => sh.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
       const updated = [...prev, trimmed];
       try {
-        localStorage.setItem(STORAGE_KEY_CUSTOM_SHIFTS, JSON.stringify(updated));
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_SHIFTS,
+          JSON.stringify(updated),
+        );
       } catch {}
       return updated;
     });
@@ -316,25 +403,51 @@ export function AdminPortal({
     let active = true;
     apiGetMenuCategories().then((result) => {
       if (!active || !result?.success || result.data?.success === false) return;
-      const raw = result.data?.categories || result.data?.data || result.data?.items || result.data;
+      const raw =
+        result.data?.categories ||
+        result.data?.data ||
+        result.data?.items ||
+        result.data;
       if (!Array.isArray(raw)) return;
-      const names = raw.map((item) => typeof item === "string" ? item : item?.name || item?.categoryName).filter(Boolean);
+      const names = raw
+        .map((item) =>
+          typeof item === "string" ? item : item?.name || item?.categoryName,
+        )
+        .filter(Boolean);
       setCustomCategories((previous) => {
         const merged = [...previous];
         names.forEach((name) => {
-          if (!merged.some((value) => String(typeof value === "string" ? value : value.name || value.label || value.value).toLowerCase() === name.toLowerCase())) merged.push(name);
+          if (
+            !merged.some(
+              (value) =>
+                String(
+                  typeof value === "string"
+                    ? value
+                    : value.name || value.label || value.value,
+                ).toLowerCase() === name.toLowerCase(),
+            )
+          )
+            merged.push(name);
         });
-        try { localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(merged)); } catch {}
+        try {
+          localStorage.setItem(
+            STORAGE_KEY_CUSTOM_CATEGORIES,
+            JSON.stringify(merged),
+          );
+        } catch {}
         return merged;
       });
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const allCategoryOptions = React.useMemo(() => {
     const map = new Map();
     customCategories.forEach((cat) => {
-      const name = typeof cat === "string" ? cat : cat.name || cat.label || cat.value;
+      const name =
+        typeof cat === "string" ? cat : cat.name || cat.label || cat.value;
       if (name && !map.has(name.toLowerCase())) {
         map.set(name.toLowerCase(), { value: name, label: name });
       }
@@ -359,7 +472,10 @@ export function AdminPortal({
     });
     (tables || []).forEach((tbl) => {
       if (tbl.section && !map.has(tbl.section.toLowerCase())) {
-        map.set(tbl.section.toLowerCase(), { value: tbl.section, label: tbl.section });
+        map.set(tbl.section.toLowerCase(), {
+          value: tbl.section,
+          label: tbl.section,
+        });
       }
     });
     return Array.from(map.values());
@@ -443,7 +559,9 @@ export function AdminPortal({
         category: item.category || "",
         price: item.price,
         isVeg: item.isVeg,
-        isChefSpecial: Boolean(item.isChefSpecial ?? item.isChefsSpecial ?? item.isSpecial),
+        isChefSpecial: Boolean(
+          item.isChefSpecial ?? item.isChefsSpecial ?? item.isSpecial,
+        ),
         spiceLevel: item.spiceLevel || 0,
         prepTime: item.prepTime || "12 min",
         description: item.description || "",
@@ -588,9 +706,7 @@ export function AdminPortal({
           person?.username ||
           "",
       );
-      const personRole = String(
-        person?.role || person?.roleTitle || "",
-      );
+      const personRole = String(person?.role || person?.roleTitle || "");
       setEditingStaff(person);
       setStaffForm({
         name: personName,
@@ -657,18 +773,28 @@ export function AdminPortal({
   // Filtered menu items
   const filteredItems = menuItems.filter((item) => {
     const query = searchFilter.trim().toLowerCase();
-    return [item.name, item.description, item.category].some((value) => String(value ?? "").toLowerCase().includes(query)) &&
-      (!menuFilters.category || String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase()) &&
-      (!menuFilters.dietary || Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
-      (!menuFilters.availability || (item.isAvailable !== false) === (menuFilters.availability === "available")) &&
-      (!menuFilters.special || Boolean(item.isChefSpecial) === (menuFilters.special === "special"));
+    return (
+      [item.name, item.description, item.category].some((value) =>
+        String(value ?? "")
+          .toLowerCase()
+          .includes(query),
+      ) &&
+      (!menuFilters.category ||
+        String(item.category ?? "").toLowerCase() ===
+          menuFilters.category.toLowerCase()) &&
+      (!menuFilters.dietary ||
+        Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
+      (!menuFilters.availability ||
+        (item.isAvailable !== false) ===
+          (menuFilters.availability === "available")) &&
+      (!menuFilters.special ||
+        Boolean(item.isChefSpecial) === (menuFilters.special === "special"))
+    );
   });
 
   // Small Pagination for Menu Items
   const [menuPage, setMenuPage] = useState(1);
   const [menuPageSize, setMenuPageSize] = useState(6);
-
-
 
   const totalMenuPages = Math.ceil(filteredItems.length / menuPageSize) || 1;
   const safeMenuPage = Math.min(Math.max(menuPage, 1), totalMenuPages);
@@ -823,13 +949,20 @@ export function AdminPortal({
                     marginBottom: "0.75rem",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.65rem",
+                    }}
+                  >
                     <div
                       style={{
                         width: "38px",
                         height: "38px",
                         borderRadius: "10px",
-                        background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                        background:
+                          "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -840,7 +973,13 @@ export function AdminPortal({
                       <Utensils size={18} color="#ffffff" strokeWidth={2.3} />
                     </div>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
                         <h2
                           style={{
                             fontSize: "1.2rem",
@@ -872,7 +1011,8 @@ export function AdminPortal({
                           margin: "2px 0 0 0",
                         }}
                       >
-                        Manage your restaurant menu items, categories and pricing
+                        Manage your restaurant menu items, categories and
+                        pricing
                       </p>
                     </div>
                   </div>
@@ -890,7 +1030,8 @@ export function AdminPortal({
                       onClick={() => handleOpenItemModal()}
                       style={{
                         height: "36px",
-                        background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                        background:
+                          "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                         color: "#ffffff",
                         border: "none",
                         borderRadius: "8px",
@@ -910,8 +1051,13 @@ export function AdminPortal({
                   </div>
                 </div>
 
-                <div className="menu-filter-toolbar" role="search" aria-label="Menu item filters">
-                  <label className="menu-filter-field menu-filter-search"><span>Search</span>
+                <div
+                  className="menu-filter-toolbar menu-items-filter-toolbar"
+                  role="search"
+                  aria-label="Menu item filters"
+                >
+                  <label className="menu-filter-field menu-filter-search">
+                    <span>Search</span>
                     <div
                       style={{
                         position: "relative",
@@ -934,7 +1080,10 @@ export function AdminPortal({
                         type="text"
                         placeholder="Search dishes to edit, delete..."
                         value={searchFilter}
-                        onChange={(e) => { setSearchFilter(e.target.value); setMenuPage(1); }}
+                        onChange={(e) => {
+                          setSearchFilter(e.target.value);
+                          setMenuPage(1);
+                        }}
                         aria-label="Search dishes"
                         style={{
                           width: "100%",
@@ -949,24 +1098,62 @@ export function AdminPortal({
                         }}
                       />
                     </div>
-
-
                   </label>
                   {[
-                    { key: "category", label: "Category", options: allCategoryOptions },
-                    { key: "dietary", label: "Dietary Type", options: [{ value: "veg", label: "Veg" }, { value: "non-veg", label: "Non-Veg" }] },
-                    { key: "availability", label: "Availability", options: [{ value: "available", label: "Available" }, { value: "unavailable", label: "Unavailable" }] },
-                    { key: "special", label: "Special Dish", options: [{ value: "special", label: "Special" }, { value: "regular", label: "Regular" }] },
+                    {
+                      key: "category",
+                      label: "Category",
+                      options: allCategoryOptions,
+                    },
+                    {
+                      key: "dietary",
+                      label: "Dietary Type",
+                      options: [
+                        { value: "veg", label: "Veg" },
+                        { value: "non-veg", label: "Non-Veg" },
+                      ],
+                    },
+                    {
+                      key: "availability",
+                      label: "Availability",
+                      options: [
+                        { value: "available", label: "Available" },
+                        { value: "unavailable", label: "Unavailable" },
+                      ],
+                    },
+                    {
+                      key: "special",
+                      label: "Special Dish",
+                      options: [
+                        { value: "special", label: "Special" },
+                        { value: "regular", label: "Regular" },
+                      ],
+                    },
                   ].map(({ key, label, options }) => (
                     <label className="menu-filter-field" key={key}>
                       <span>{label}</span>
-                      <select value={menuFilters[key]} onChange={(event) => updateMenuFilter(key, event.target.value)}>
+                      <select
+                        value={menuFilters[key]}
+                        onChange={(event) =>
+                          updateMenuFilter(key, event.target.value)
+                        }
+                      >
                         <option value="">All</option>
-                        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        {options.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </label>
                   ))}
-                  <button type="button" className="menu-filter-clear" onClick={clearMenuFilters}>Clear Filters</button>
+                  <button
+                    type="button"
+                    className="menu-filter-clear"
+                    onClick={clearMenuFilters}
+                  >
+                    Clear Filters
+                  </button>
                 </div>
 
                 {/* Items Table List */}
@@ -1037,278 +1224,326 @@ export function AdminPortal({
                         paginatedItems.map((item) => {
                           const isAvail = item.isAvailable !== false;
                           return (
-                          <tr
-                            key={item.id}
-                            style={{
-                              borderBottom: "1px solid var(--border-subtle)",
-                              transition: "background 0.15s ease, opacity 0.2s ease",
-                              opacity: isAvail ? 1 : 0.6,
-                              background: isAvail ? "transparent" : "rgba(239, 68, 68, 0.03)",
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.background = isAvail
-                                ? "var(--bg-tertiary)"
-                                : "rgba(239, 68, 68, 0.07)")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.background = isAvail
-                                ? "transparent"
-                                : "rgba(239, 68, 68, 0.03)")
-                            }
-                          >
-                            <td style={{ padding: "0.6rem 0.85rem" }}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "0.75rem",
-                                }}
-                              >
-                                <img
-                                  src={getMenuItemImage(item)}
-                                  alt={item.name}
+                            <tr
+                              key={item.id}
+                              style={{
+                                borderBottom: "1px solid var(--border-subtle)",
+                                transition:
+                                  "background 0.15s ease, opacity 0.2s ease",
+                                opacity: isAvail ? 1 : 0.6,
+                                background: isAvail
+                                  ? "transparent"
+                                  : "rgba(239, 68, 68, 0.03)",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.background = isAvail
+                                  ? "var(--bg-tertiary)"
+                                  : "rgba(239, 68, 68, 0.07)")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.background = isAvail
+                                  ? "transparent"
+                                  : "rgba(239, 68, 68, 0.03)")
+                              }
+                            >
+                              <td style={{ padding: "0.6rem 0.85rem" }}>
+                                <div
                                   style={{
-                                    width: "52px",
-                                    height: "52px",
-                                    borderRadius: "10px",
-                                    objectFit: "cover",
-                                    border: isAvail
-                                      ? "1px solid var(--border-card)"
-                                      : "1px solid rgba(239, 68, 68, 0.35)",
-                                    flexShrink: 0,
-                                    filter: isAvail ? "none" : "grayscale(60%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.75rem",
                                   }}
-                                  onError={(e) => handleDishImageError(e, item)}
-                                />
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div
+                                >
+                                  <img
+                                    src={getMenuItemImage(item)}
+                                    alt={item.name}
                                     style={{
-                                      fontWeight: 800,
-                                      color: isAvail
-                                        ? "var(--text-main)"
-                                        : "var(--text-dim)",
-                                      fontSize: "0.92rem",
-                                      lineHeight: 1.3,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "6px",
+                                      width: "52px",
+                                      height: "52px",
+                                      borderRadius: "10px",
+                                      objectFit: "cover",
+                                      border: isAvail
+                                        ? "1px solid var(--border-card)"
+                                        : "1px solid rgba(239, 68, 68, 0.35)",
+                                      flexShrink: 0,
+                                      filter: isAvail
+                                        ? "none"
+                                        : "grayscale(60%)",
                                     }}
-                                  >
-                                    <span>{item.name}</span>
-                                    {Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) && (
-                                      <Star
-                                        size={14}
-                                        fill="#f59e0b"
-                                        color="#f59e0b"
-                                        title="Chef's Special"
-                                        style={{
-                                          flexShrink: 0,
-                                          filter: "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontSize: "0.72rem",
-                                      color: "var(--text-muted)",
-                                      lineHeight: 1.35,
-                                      marginTop: "2px",
-                                      display: "-webkit-box",
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: "vertical",
-                                      overflow: "hidden",
-                                    }}
-                                  >
-                                    {item.prepTime || ""} • {item.description}
+                                    onError={(e) =>
+                                      handleDishImageError(e, item)
+                                    }
+                                  />
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div
+                                      style={{
+                                        fontWeight: 800,
+                                        color: isAvail
+                                          ? "var(--text-main)"
+                                          : "var(--text-dim)",
+                                        fontSize: "0.92rem",
+                                        lineHeight: 1.3,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                      }}
+                                    >
+                                      <span>{item.name}</span>
+                                      {Boolean(
+                                        item.isChefSpecial ||
+                                        item.isChefsSpecial ||
+                                        item.isSpecial,
+                                      ) && (
+                                        <Star
+                                          size={14}
+                                          fill="#f59e0b"
+                                          color="#f59e0b"
+                                          title="Chef's Special"
+                                          style={{
+                                            flexShrink: 0,
+                                            filter:
+                                              "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                          }}
+                                        />
+                                      )}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: "0.72rem",
+                                        color: "var(--text-muted)",
+                                        lineHeight: 1.35,
+                                        marginTop: "2px",
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: "vertical",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      {item.prepTime || ""} • {item.description}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                textTransform: "capitalize",
-                                color: "var(--text-main)",
-                                fontSize: "0.84rem",
-                                fontWeight: 600,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {item.category.replace("-", " ")}
-                            </td>
-                            <td style={{ padding: "0.6rem 0.85rem" }}>
-                              {item.isVeg ? (
-                                <span
-                                  style={{
-                                    background: "rgba(16, 185, 129, 0.12)",
-                                    border: "1px solid rgba(16, 185, 129, 0.28)",
-                                    color: "#10b981",
-                                    borderRadius: "14px",
-                                    padding: "3px 10px",
-                                    fontSize: "0.68rem",
-                                    fontWeight: 700,
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  VEG
-                                </span>
-                              ) : (
-                                <span
-                                  style={{
-                                    background: "rgba(239, 68, 68, 0.12)",
-                                    border: "1px solid rgba(239, 68, 68, 0.28)",
-                                    color: "#ef4444",
-                                    borderRadius: "14px",
-                                    padding: "3px 10px",
-                                    fontSize: "0.68rem",
-                                    fontWeight: 700,
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  NON-VEG
-                                </span>
-                              )}
-                            </td>
-                            <td
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                fontWeight: 800,
-                                color: "#f59e0b",
-                                fontSize: "0.92rem",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              ₹{Number(item.price).toFixed(2)}
-                            </td>
-                            <td
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                textAlign: "center",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              <div
+                              </td>
+                              <td
                                 style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "0.45rem",
+                                  padding: "0.6rem 0.85rem",
+                                  textTransform: "capitalize",
+                                  color: "var(--text-main)",
+                                  fontSize: "0.84rem",
+                                  fontWeight: 600,
+                                  whiteSpace: "nowrap",
                                 }}
                               >
-                                <button
-                                  onClick={() => onSetMenuAvailability?.(item.id, item.isAvailable === false)}
-                                  title={item.isAvailable === false ? "Make available" : "Mark unavailable"}
+                                {item.category.replace("-", " ")}
+                              </td>
+                              <td style={{ padding: "0.6rem 0.85rem" }}>
+                                {item.isVeg ? (
+                                  <span
+                                    style={{
+                                      background: "rgba(16, 185, 129, 0.12)",
+                                      border:
+                                        "1px solid rgba(16, 185, 129, 0.28)",
+                                      color: "#10b981",
+                                      borderRadius: "14px",
+                                      padding: "3px 10px",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    VEG
+                                  </span>
+                                ) : (
+                                  <span
+                                    style={{
+                                      background: "rgba(239, 68, 68, 0.12)",
+                                      border:
+                                        "1px solid rgba(239, 68, 68, 0.28)",
+                                      color: "#ef4444",
+                                      borderRadius: "14px",
+                                      padding: "3px 10px",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    NON-VEG
+                                  </span>
+                                )}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "0.6rem 0.85rem",
+                                  fontWeight: 800,
+                                  color: "#f59e0b",
+                                  fontSize: "0.92rem",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                ₹{Number(item.price).toFixed(2)}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "0.6rem 0.85rem",
+                                  textAlign: "center",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                <div
                                   style={{
-                                    border: item.isAvailable === false
-                                      ? "1px solid rgba(239, 68, 68, 0.45)"
-                                      : "1px solid rgba(16, 185, 129, 0.45)",
-                                    background: item.isAvailable === false
-                                      ? "rgba(239, 68, 68, 0.12)"
-                                      : "rgba(16, 185, 129, 0.12)",
-                                    color: item.isAvailable === false ? "#ef4444" : "#10b981",
-                                    borderRadius: "6px",
-                                    padding: "4px 9px",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = item.isAvailable === false
-                                      ? "rgba(239, 68, 68, 0.22)"
-                                      : "rgba(16, 185, 129, 0.22)";
-                                    e.currentTarget.style.borderColor = item.isAvailable === false
-                                      ? "rgba(239, 68, 68, 0.7)"
-                                      : "rgba(16, 185, 129, 0.7)";
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = item.isAvailable === false
-                                      ? "rgba(239, 68, 68, 0.12)"
-                                      : "rgba(16, 185, 129, 0.12)";
-                                    e.currentTarget.style.borderColor = item.isAvailable === false
-                                      ? "rgba(239, 68, 68, 0.45)"
-                                      : "rgba(16, 185, 129, 0.45)";
-                                  }}
-                                >
-                                  {item.isAvailable === false ? "Unavailable" : "Available"}
-                                </button>
-                                <button
-                                  onClick={() => onSetMenuSpecial?.(item.id, !item.isChefSpecial)}
-                                  title={item.isChefSpecial ? "Remove Chef's Special" : "Mark Chef's Special"}
-                                  style={{
-                                    border: "1px solid rgba(245, 158, 11, 0.45)",
-                                    background: "rgba(245, 158, 11, 0.06)",
-                                    color: "#f59e0b",
-                                    borderRadius: "6px",
-                                    padding: "4px 8px",
-                                    fontSize: "0.72rem",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  {item.isChefSpecial ? "★ Special" : "☆ Special"}
-                                </button>
-                                <button
-                                  onClick={() => handleOpenItemModal(item)}
-                                  style={{
-                                    border: "1px solid rgba(245, 158, 11, 0.45)",
-                                    background: "rgba(245, 158, 11, 0.06)",
-                                    color: "#f59e0b",
-                                    borderRadius: "6px",
-                                    padding: "4px 12px",
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    display: "flex",
+                                    display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
+                                    justifyContent: "center",
+                                    gap: "0.45rem",
                                   }}
-                                  title="Edit item"
                                 >
-                                  <SquarePen size={13} />
-                                  <span>Edit</span>
-                                </button>
-
-                                <button
-                                  onClick={() => {
-                                    if (
-                                      window.confirm(
-                                        `Delete "${item.name}" from restaurant menu?`
+                                  <button
+                                    onClick={() =>
+                                      onSetMenuAvailability?.(
+                                        item.id,
+                                        item.isAvailable === false,
                                       )
-                                    ) {
-                                      onDeleteMenuItem(item.id);
                                     }
-                                  }}
-                                  style={{
-                                    border: "1px solid rgba(239, 68, 68, 0.45)",
-                                    background: "rgba(239, 68, 68, 0.06)",
-                                    color: "#ef4444",
-                                    borderRadius: "6px",
-                                    padding: "4px 12px",
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                  title="Delete item"
-                                >
-                                  <Trash2 size={13} />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
+                                    title={
+                                      item.isAvailable === false
+                                        ? "Make available"
+                                        : "Mark unavailable"
+                                    }
+                                    style={{
+                                      border:
+                                        item.isAvailable === false
+                                          ? "1px solid rgba(239, 68, 68, 0.45)"
+                                          : "1px solid rgba(16, 185, 129, 0.45)",
+                                      background:
+                                        item.isAvailable === false
+                                          ? "rgba(239, 68, 68, 0.12)"
+                                          : "rgba(16, 185, 129, 0.12)",
+                                      color:
+                                        item.isAvailable === false
+                                          ? "#ef4444"
+                                          : "#10b981",
+                                      borderRadius: "6px",
+                                      padding: "4px 9px",
+                                      fontSize: "0.74rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background =
+                                        item.isAvailable === false
+                                          ? "rgba(239, 68, 68, 0.22)"
+                                          : "rgba(16, 185, 129, 0.22)";
+                                      e.currentTarget.style.borderColor =
+                                        item.isAvailable === false
+                                          ? "rgba(239, 68, 68, 0.7)"
+                                          : "rgba(16, 185, 129, 0.7)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background =
+                                        item.isAvailable === false
+                                          ? "rgba(239, 68, 68, 0.12)"
+                                          : "rgba(16, 185, 129, 0.12)";
+                                      e.currentTarget.style.borderColor =
+                                        item.isAvailable === false
+                                          ? "rgba(239, 68, 68, 0.45)"
+                                          : "rgba(16, 185, 129, 0.45)";
+                                    }}
+                                  >
+                                    {item.isAvailable === false
+                                      ? "Unavailable"
+                                      : "Available"}
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      onSetMenuSpecial?.(
+                                        item.id,
+                                        !item.isChefSpecial,
+                                      )
+                                    }
+                                    title={
+                                      item.isChefSpecial
+                                        ? "Remove Chef's Special"
+                                        : "Mark Chef's Special"
+                                    }
+                                    style={{
+                                      border:
+                                        "1px solid rgba(245, 158, 11, 0.45)",
+                                      background: "rgba(245, 158, 11, 0.06)",
+                                      color: "#f59e0b",
+                                      borderRadius: "6px",
+                                      padding: "4px 8px",
+                                      fontSize: "0.72rem",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    {item.isChefSpecial
+                                      ? "★ Special"
+                                      : "☆ Special"}
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenItemModal(item)}
+                                    style={{
+                                      border:
+                                        "1px solid rgba(245, 158, 11, 0.45)",
+                                      background: "rgba(245, 158, 11, 0.06)",
+                                      color: "#f59e0b",
+                                      borderRadius: "6px",
+                                      padding: "4px 12px",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 700,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title="Edit item"
+                                  >
+                                    <SquarePen size={13} />
+                                    <span>Edit</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      if (
+                                        window.confirm(
+                                          `Delete "${item.name}" from restaurant menu?`,
+                                        )
+                                      ) {
+                                        onDeleteMenuItem(item.id);
+                                      }
+                                    }}
+                                    style={{
+                                      border:
+                                        "1px solid rgba(239, 68, 68, 0.45)",
+                                      background: "rgba(239, 68, 68, 0.06)",
+                                      color: "#ef4444",
+                                      borderRadius: "6px",
+                                      padding: "4px 12px",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 700,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title="Delete item"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
 
@@ -1329,18 +1564,42 @@ export function AdminPortal({
                       }}
                     >
                       {/* Left: Range text */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.4rem",
+                        }}
+                      >
                         <span>
                           Showing{" "}
-                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                          <strong
+                            style={{
+                              color: "var(--text-main)",
+                              fontWeight: 700,
+                            }}
+                          >
                             {startIdx + 1}
                           </strong>
                           –
-                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
-                            {Math.min(startIdx + menuPageSize, filteredItems.length)}
+                          <strong
+                            style={{
+                              color: "var(--text-main)",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {Math.min(
+                              startIdx + menuPageSize,
+                              filteredItems.length,
+                            )}
                           </strong>{" "}
                           of{" "}
-                          <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                          <strong
+                            style={{
+                              color: "var(--text-main)",
+                              fontWeight: 700,
+                            }}
+                          >
                             {filteredItems.length}
                           </strong>{" "}
                           items
@@ -1348,10 +1607,29 @@ export function AdminPortal({
                       </div>
 
                       {/* Right: Small Controls */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
                         {/* Per-page selector (small) */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Per page:</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.3rem",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            Per page:
+                          </span>
                           <select
                             value={menuPageSize}
                             onChange={(e) => {
@@ -1379,9 +1657,17 @@ export function AdminPortal({
                         </div>
 
                         {/* Page Buttons */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                          }}
+                        >
                           <button
-                            onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+                            onClick={() =>
+                              setMenuPage((p) => Math.max(1, p - 1))
+                            }
                             disabled={safeMenuPage === 1}
                             style={{
                               height: "24px",
@@ -1393,7 +1679,8 @@ export function AdminPortal({
                                   : "rgba(255, 255, 255, 0.06)",
                               border: "1px solid rgba(255, 255, 255, 0.08)",
                               color: safeMenuPage === 1 ? "#475569" : "#cbd5e1",
-                              cursor: safeMenuPage === 1 ? "not-allowed" : "pointer",
+                              cursor:
+                                safeMenuPage === 1 ? "not-allowed" : "pointer",
                               display: "flex",
                               alignItems: "center",
                               gap: "2px",
@@ -1407,7 +1694,10 @@ export function AdminPortal({
                             <span>Prev</span>
                           </button>
 
-                          {Array.from({ length: totalMenuPages }, (_, i) => i + 1).map((page) => {
+                          {Array.from(
+                            { length: totalMenuPages },
+                            (_, i) => i + 1,
+                          ).map((page) => {
                             const isActive = page === safeMenuPage;
                             return (
                               <button
@@ -1440,7 +1730,11 @@ export function AdminPortal({
                           })}
 
                           <button
-                            onClick={() => setMenuPage((p) => Math.min(totalMenuPages, p + 1))}
+                            onClick={() =>
+                              setMenuPage((p) =>
+                                Math.min(totalMenuPages, p + 1),
+                              )
+                            }
                             disabled={safeMenuPage === totalMenuPages}
                             style={{
                               height: "24px",
@@ -1452,9 +1746,13 @@ export function AdminPortal({
                                   : "rgba(255, 255, 255, 0.06)",
                               border: "1px solid rgba(255, 255, 255, 0.08)",
                               color:
-                                safeMenuPage === totalMenuPages ? "#475569" : "#cbd5e1",
+                                safeMenuPage === totalMenuPages
+                                  ? "#475569"
+                                  : "#cbd5e1",
                               cursor:
-                                safeMenuPage === totalMenuPages ? "not-allowed" : "pointer",
+                                safeMenuPage === totalMenuPages
+                                  ? "not-allowed"
+                                  : "pointer",
                               display: "flex",
                               alignItems: "center",
                               gap: "2px",
@@ -1475,498 +1773,262 @@ export function AdminPortal({
               </div>
             )}
 
-          {/* ================= TAB 2: TABLES & CHAIRS (PERSONS CAPACITY) ================= */}
-          {activeTab === "tables" && (
-            <div>
-              {/* Tables & Chairs Overview Cards */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: "0.65rem",
-                  marginBottom: "0.85rem",
-                }}
-              >
+            {/* ================= TAB 2: TABLES & CHAIRS (PERSONS CAPACITY) ================= */}
+            {activeTab === "tables" && (
+              <div>
+                {/* Tables & Chairs Overview Cards */}
                 <div
                   style={{
-                    background: "var(--bg-tertiary)",
-                    padding: "0.65rem 0.85rem",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--border-subtle)",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "0.65rem",
+                    marginBottom: "0.85rem",
                   }}
                 >
                   <div
-                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
-                  >
-                    Total Tables
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "1.3rem",
-                      fontWeight: 800,
-                      color: "var(--text-main)",
-                    }}
-                  >
-                    {tables.length}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    background: "var(--bg-tertiary)",
-                    padding: "0.65rem 0.85rem",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  <div
-                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
-                  >
-                    Total Dining Chairs
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "1.3rem",
-                      fontWeight: 800,
-                      color: "var(--accent-amber-light)",
-                    }}
-                  >
-                    {totalChairs} Chairs
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    background: "var(--bg-tertiary)",
-                    padding: "0.65rem 0.85rem",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  <div
-                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
-                  >
-                    Occupied Chairs (Dining)
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "1.3rem",
-                      fontWeight: 800,
-                      color: "var(--status-occupied)",
-                    }}
-                  >
-                    {occupiedChairs} Persons
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    background: "var(--bg-tertiary)",
-                    padding: "0.65rem 0.85rem",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  <div
-                    style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
-                  >
-                    Available Chairs
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "1.3rem",
-                      fontWeight: 800,
-                      color: "var(--status-vacant)",
-                    }}
-                  >
-                    {totalChairs - occupiedChairs} Empty
-                  </div>
-                </div>
-              </div>
-
-              <div className="menu-filter-toolbar" role="search" aria-label="Table filters">
-                <label className="menu-filter-field menu-filter-search">
-                  <span>Search Table</span>
-                  <input type="search" placeholder="Table number or name..." value={tableFilters.search} onChange={(event) => updateTableFilter("search", event.target.value)} />
-                </label>
-                {[
-                  { key: "area", label: "Area / Location", options: tableAreaOptions.map((area) => ({ value: area, label: area })) },
-                  { key: "status", label: "Table Status", options: [{ value: "vacant", label: "Vacant" }, { value: "occupied", label: "Occupied" }] },
-                  { key: "server", label: "Assigned Server", options: [{ value: "unassigned", label: "Unassigned" }, ...tableServerOptions.map((name) => ({ value: 'name:' + normalizeTableFilterText(name), label: name }))] },
-                ].map(({ key, label, options }) => (
-                  <label className="menu-filter-field" key={key}>
-                    <span>{label}</span>
-                    <select value={tableFilters[key]} onChange={(event) => updateTableFilter(key, event.target.value)}>
-                      <option value="">All</option>
-                      {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
-                  </label>
-                ))}
-                <button type="button" className="menu-filter-clear" onClick={() => setTableFilters(emptyTableFilters)}>Clear Filters</button>
-              </div>
-
-              {/* Action Bar */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: "0.98rem",
-                    fontWeight: 800,
-                    color: "var(--text-main)",
-                    margin: 0,
-                  }}
-                >
-                  Floor Tables & Chair Configuration
-                </h3>
-
-                <button
-                  onClick={() => handleOpenTableModal()}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.35rem",
-                    padding: "0.45rem 1rem",
-                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
-                    color: "#ffffff",
-                    borderRadius: "var(--radius-sm)",
-                    fontWeight: 700,
-                    fontSize: "0.78rem",
-                    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
-                    border: "none",
-                    cursor: "pointer",
-                    height: "32px",
-                  }}
-                >
-                  <Plus size={15} />
-                  <span>Add New Table</span>
-                </button>
-              </div>
-
-              {/* Tables Grid with Chairs Management */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(235px, 1fr))",
-                  gap: "0.75rem",
-                }}
-              >
-                {filteredTables.length === 0 && (
-                  <p role="status" style={{ color: "var(--text-muted)", gridColumn: "1 / -1", margin: "0.75rem 0" }}>No tables match the selected filters.</p>
-                )}
-                {filteredTables.map((tbl) => (
-                  <div
-                    key={tbl.id}
                     style={{
                       background: "var(--bg-tertiary)",
-                      borderRadius: "10px",
+                      padding: "0.65rem 0.85rem",
+                      borderRadius: "var(--radius-sm)",
                       border: "1px solid var(--border-subtle)",
-                      padding: "0.75rem 0.85rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      position: "relative",
                     }}
                   >
-                    <div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          marginBottom: "0.4rem",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.45rem",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "7px",
-                              background: "rgba(245, 158, 11, 0.18)",
-                              color: "var(--accent-amber-light)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontWeight: 800,
-                              fontSize: "0.82rem",
-                              flexShrink: 0,
-                            }}
-                          >
-                            T{tbl.id}
-                          </div>
-                          <div>
-                            <h4
-                              style={{
-                                fontWeight: 800,
-                                color: "var(--text-main)",
-                                fontSize: "0.9rem",
-                                margin: 0,
-                              }}
-                            >
-                              Table {tbl.id}
-                            </h4>
-                            <span
-                              style={{
-                                fontSize: "0.68rem",
-                                color: "var(--text-dim)",
-                              }}
-                            >
-                              {tbl.section}
-                            </span>
-                          </div>
-                        </div>
-
-                        <span
-                          style={{
-                            padding: "2px 7px",
-                            borderRadius: "10px",
-                            fontSize: "0.64rem",
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            background:
-                              tbl.status === "vacant"
-                                ? "var(--status-vacant-bg)"
-                                : "var(--status-occupied-bg)",
-                            color:
-                              tbl.status === "vacant"
-                                ? "var(--status-vacant)"
-                                : "var(--status-occupied)",
-                          }}
-                        >
-                          {tbl.status}
-                        </span>
-                      </div>
-
-                      {/* Chairs and Persons Capacity */}
-                      <div
-                        style={{
-                          background: "var(--bg-secondary)",
-                          borderRadius: "var(--radius-sm)",
-                          padding: "0.45rem 0.65rem",
-                          marginTop: "0.45rem",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.25rem",
-                          fontSize: "0.74rem",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <span
-                            style={{
-                              color: "var(--text-muted)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.25rem",
-                              fontSize: "0.72rem",
-                            }}
-                          >
-                            <Armchair size={13} color="var(--accent-amber)" />
-                            <span>Chairs (Capacity):</span>
-                          </span>
-                          <strong
-                            style={{
-                              color: "var(--text-main)",
-                              fontSize: "0.82rem",
-                            }}
-                          >
-                            {tbl.capacity} Chairs ({tbl.capacity} Persons)
-                          </strong>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
-                            Assigned Server:
-                          </span>
-                          <span
-                            style={{
-                              color: "var(--text-main)",
-                              fontWeight: 600,
-                              fontSize: "0.74rem",
-                            }}
-                          >
-                            {tbl.server}
-                          </span>
-                        </div>
-                      </div>
+                    <div
+                      style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                    >
+                      Total Tables
                     </div>
-
-                    {/* Table Actions: Edit Chairs / Delete Table */}
                     <div
                       style={{
-                        display: "flex",
-                        gap: "0.4rem",
-                        marginTop: "0.65rem",
-                        paddingTop: "0.55rem",
-                        borderTop: "1px solid var(--border-subtle)",
+                        fontSize: "1.3rem",
+                        fontWeight: 800,
+                        color: "var(--text-main)",
                       }}
                     >
-                      <button
-                        onClick={() => handleOpenTableModal(tbl)}
-                        style={{
-                          flex: 1,
-                          padding: "0.35rem 0.5rem",
-                          background: "var(--bg-secondary)",
-                          color: "var(--accent-amber-light)",
-                          border: "1px solid var(--border-subtle)",
-                          borderRadius: "var(--radius-sm)",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "0.25rem",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Edit3 size={12} />
-                        <span>Edit Chairs / Area</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          if (tbl.status !== "vacant") {
-                            alert(
-                              `Cannot delete ${tbl.name} because it is currently occupied with diners. Clear or settle bill first.`,
-                            );
-                            return;
-                          }
-                          if (
-                            window.confirm(`Delete ${tbl.name} permanently?`)
-                          ) {
-                            onDeleteTable(tbl.id);
-                          }
-                        }}
-                        style={{
-                          padding: "0.35rem 0.55rem",
-                          background: "var(--danger-bg)",
-                          color: "var(--danger)",
-                          border: "1px solid rgba(239,68,68,0.3)",
-                          borderRadius: "var(--radius-sm)",
-                          fontSize: "0.74rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                        }}
-                        title="Delete table"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      {tables.length}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* ================= TAB 3: STAFF & PERSONS ================= */}
-          {activeTab === "staff" && (
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1.25rem",
-                }}
-              >
-                <div>
-                  <h3
+                  <div
                     style={{
-                      fontSize: "1.1rem",
-                      fontWeight: 800,
-                      color: "var(--text-main)",
+                      background: "var(--bg-tertiary)",
+                      padding: "0.65rem 0.85rem",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border-subtle)",
                     }}
                   >
-                    Restaurant Staff & Serving Personnel
-                  </h3>
-                  <p
-                    style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}
+                    <div
+                      style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                    >
+                      Total Dining Chairs
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "1.3rem",
+                        fontWeight: 800,
+                        color: "var(--accent-amber-light)",
+                      }}
+                    >
+                      {totalChairs} Chairs
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: "var(--bg-tertiary)",
+                      padding: "0.65rem 0.85rem",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border-subtle)",
+                    }}
                   >
-                    Manage waiters, table captains and servers handling dining
-                    guests
-                  </p>
+                    <div
+                      style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                    >
+                      Occupied Chairs (Dining)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "1.3rem",
+                        fontWeight: 800,
+                        color: "var(--status-occupied)",
+                      }}
+                    >
+                      {occupiedChairs} Persons
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: "var(--bg-tertiary)",
+                      padding: "0.65rem 0.85rem",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border-subtle)",
+                    }}
+                  >
+                    <div
+                      style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                    >
+                      Available Chairs
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "1.3rem",
+                        fontWeight: 800,
+                        color: "var(--status-vacant)",
+                      }}
+                    >
+                      {totalChairs - occupiedChairs} Empty
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => handleOpenStaffModal()}
+                <div
+                  className="menu-filter-toolbar"
+                  role="search"
+                  aria-label="Table filters"
+                >
+                  <label className="menu-filter-field menu-filter-search">
+                    <span>Search Table</span>
+                    <input
+                      type="search"
+                      placeholder="Table number or name..."
+                      value={tableFilters.search}
+                      onChange={(event) =>
+                        updateTableFilter("search", event.target.value)
+                      }
+                    />
+                  </label>
+                  {[
+                    {
+                      key: "area",
+                      label: "Area / Location",
+                      options: tableAreaOptions.map((area) => ({
+                        value: area,
+                        label: area,
+                      })),
+                    },
+                    {
+                      key: "status",
+                      label: "Table Status",
+                      options: [
+                        { value: "vacant", label: "Vacant" },
+                        { value: "occupied", label: "Occupied" },
+                      ],
+                    },
+                    {
+                      key: "server",
+                      label: "Assigned Server",
+                      options: [
+                        { value: "unassigned", label: "Unassigned" },
+                        ...tableServerOptions.map((name) => ({
+                          value: "name:" + normalizeTableFilterText(name),
+                          label: name,
+                        })),
+                      ],
+                    },
+                  ].map(({ key, label, options }) => (
+                    <label className="menu-filter-field" key={key}>
+                      <span>{label}</span>
+                      <select
+                        value={tableFilters[key]}
+                        onChange={(event) =>
+                          updateTableFilter(key, event.target.value)
+                        }
+                      >
+                        <option value="">All</option>
+                        {options.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    className="menu-filter-clear"
+                    onClick={() => setTableFilters(emptyTableFilters)}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+
+                {/* Action Bar */}
+                <div
                   style={{
                     display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    gap: "0.45rem",
-                    padding: "0.6rem 1.25rem",
-                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
-                    color: "#ffffff",
-                    borderRadius: "var(--radius-sm)",
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
+                    marginBottom: "0.75rem",
                   }}
                 >
-                  <Plus size={16} />
-                  <span>Add New Person (Staff)</span>
-                </button>
-              </div>
+                  <h3
+                    style={{
+                      fontSize: "0.98rem",
+                      fontWeight: 800,
+                      color: "var(--text-main)",
+                      margin: 0,
+                    }}
+                  >
+                    Floor Tables & Chair Configuration
+                  </h3>
 
-              {/* Staff Cards Grid */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: "1rem",
-                }}
-              >
-                {staffList.map((person) => {
-                  const personName = String(
-                    person?.name ||
-                      person?.fullName ||
-                      person?.FullName ||
-                      person?.username ||
-                      "Unnamed staff",
-                  );
-                  const personRole = String(
-                    person?.role || person?.roleTitle || "Staff",
-                  );
-                  const personId = person?.id ?? person?.staffId;
-                  const assignedCount = tables.filter(
-                    (t) => t.server === personName,
-                  ).length;
+                  <button
+                    onClick={() => handleOpenTableModal()}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.45rem 1rem",
+                      background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                      color: "#ffffff",
+                      borderRadius: "var(--radius-sm)",
+                      fontWeight: 700,
+                      fontSize: "0.78rem",
+                      boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
+                      border: "none",
+                      cursor: "pointer",
+                      height: "32px",
+                    }}
+                  >
+                    <Plus size={15} />
+                    <span>Add New Table</span>
+                  </button>
+                </div>
 
-                  return (
+                {/* Tables Grid with Chairs Management */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(235px, 1fr))",
+                    gap: "0.75rem",
+                  }}
+                >
+                  {filteredTables.length === 0 && (
+                    <p
+                      role="status"
+                      style={{
+                        color: "var(--text-muted)",
+                        gridColumn: "1 / -1",
+                        margin: "0.75rem 0",
+                      }}
+                    >
+                      No tables match the selected filters.
+                    </p>
+                  )}
+                  {filteredTables.map((tbl) => (
                     <div
-                      key={personId ?? personName}
+                      key={tbl.id}
                       style={{
                         background: "var(--bg-tertiary)",
-                        borderRadius: "var(--radius-md)",
+                        borderRadius: "10px",
                         border: "1px solid var(--border-subtle)",
-                        padding: "1.1rem",
+                        padding: "0.75rem 0.85rem",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
+                        position: "relative",
                       }}
                     >
                       <div>
@@ -1975,460 +2037,311 @@ export function AdminPortal({
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "flex-start",
+                            marginBottom: "0.4rem",
                           }}
                         >
                           <div
                             style={{
                               display: "flex",
                               alignItems: "center",
-                              gap: "0.65rem",
+                              gap: "0.45rem",
                             }}
                           >
                             <div
                               style={{
-                                width: "40px",
-                                height: "40px",
-                                borderRadius: "50%",
-                                background: "var(--accent-amber)",
-                                color: "#000000",
-                                fontWeight: 800,
+                                width: "30px",
+                                height: "30px",
+                                borderRadius: "7px",
+                                background: "rgba(245, 158, 11, 0.18)",
+                                color: "var(--accent-amber-light)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: "1rem",
+                                fontWeight: 800,
+                                fontSize: "0.82rem",
+                                flexShrink: 0,
                               }}
                             >
-                              {personName.charAt(0).toUpperCase()}
+                              T{tbl.id}
                             </div>
                             <div>
                               <h4
                                 style={{
                                   fontWeight: 800,
                                   color: "var(--text-main)",
-                                  fontSize: "1rem",
+                                  fontSize: "0.9rem",
+                                  margin: 0,
                                 }}
                               >
-                                {personName}
+                                Table {tbl.id}
                               </h4>
                               <span
                                 style={{
-                                  fontSize: "0.74rem",
-                                  color: "var(--accent-amber-light)",
-                                  fontWeight: 600,
+                                  fontSize: "0.68rem",
+                                  color: "var(--text-dim)",
                                 }}
                               >
-                                {personRole}
+                                {tbl.section}
                               </span>
                             </div>
                           </div>
 
+                          <span
+                            style={{
+                              padding: "2px 7px",
+                              borderRadius: "10px",
+                              fontSize: "0.64rem",
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              background:
+                                tbl.status === "vacant"
+                                  ? "var(--status-vacant-bg)"
+                                  : "var(--status-occupied-bg)",
+                              color:
+                                tbl.status === "vacant"
+                                  ? "var(--status-vacant)"
+                                  : "var(--status-occupied)",
+                            }}
+                          >
+                            {tbl.status}
+                          </span>
+                        </div>
+
+                        {/* Chairs and Persons Capacity */}
+                        <div
+                          style={{
+                            background: "var(--bg-secondary)",
+                            borderRadius: "var(--radius-sm)",
+                            padding: "0.45rem 0.65rem",
+                            marginTop: "0.45rem",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.25rem",
+                            fontSize: "0.74rem",
+                          }}
+                        >
                           <div
                             style={{
                               display: "flex",
+                              justifyContent: "space-between",
                               alignItems: "center",
-                              gap: "0.25rem",
                             }}
                           >
-                            <button
-                              onClick={() => handleOpenStaffModal(person)}
+                            <span
                               style={{
-                                background: "transparent",
-                                color: "var(--text-dim)",
-                                padding: "4px",
-                                cursor: "pointer",
+                                color: "var(--text-muted)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                fontSize: "0.72rem",
                               }}
-                              title="Edit staff details"
                             >
-                              <SquarePen size={14} />
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Remove ${personName} from staff list?`,
-                                  )
-                                ) {
-                                  onDeleteStaff(personId);
-                                }
-                              }}
+                              <Armchair size={13} color="var(--accent-amber)" />
+                              <span>Chairs (Capacity):</span>
+                            </span>
+                            <strong
                               style={{
-                                background: "transparent",
-                                color: "var(--text-dim)",
-                                padding: "4px",
-                                cursor: "pointer",
+                                color: "var(--text-main)",
+                                fontSize: "0.82rem",
                               }}
-                              title="Remove staff member"
                             >
-                              <Trash2 size={14} />
-                            </button>
+                              {tbl.capacity} Chairs ({tbl.capacity} Persons)
+                            </strong>
                           </div>
-                        </div>
 
-                        <div
-                          style={{
-                            marginTop: "0.85rem",
-                            fontSize: "0.78rem",
-                            color: "var(--text-muted)",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.3rem",
-                          }}
-                        >
-                          <div>
-                            Phone:{" "}
-                            <strong style={{ color: "var(--text-main)" }}>
-                              {person.phone}
-                            </strong>
-                          </div>
-                          <div>
-                            Shift:{" "}
-                            <strong style={{ color: "var(--text-main)" }}>
-                              {person.shift}
-                            </strong>
-                          </div>
-                          <div>
-                            Tables Assigned:{" "}
-                            <strong style={{ color: "var(--status-vacant)" }}>
-                              {assignedCount} Tables
-                            </strong>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: "var(--text-muted)",
+                                fontSize: "0.72rem",
+                              }}
+                            >
+                              Assigned Server:
+                            </span>
+                            <span
+                              style={{
+                                color: "var(--text-main)",
+                                fontWeight: 600,
+                                fontSize: "0.74rem",
+                              }}
+                            >
+                              {tbl.server}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
-          {/* ================= TAB 4: KITCHEN KOT (ORDERS RECEIVED) ================= */}
-          {activeTab === "kot" && (
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1.25rem",
-                  flexWrap: "wrap",
-                  gap: "0.75rem",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
+                      {/* Table Actions: Edit Chairs / Delete Table */}
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.4rem",
+                          marginTop: "0.65rem",
+                          paddingTop: "0.55rem",
+                          borderTop: "1px solid var(--border-subtle)",
+                        }}
+                      >
+                        <button
+                          onClick={() => handleOpenTableModal(tbl)}
+                          style={{
+                            flex: 1,
+                            padding: "0.35rem 0.5rem",
+                            background: "var(--bg-secondary)",
+                            color: "var(--accent-amber-light)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.25rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit Chairs / Area</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (tbl.status !== "vacant") {
+                              alert(
+                                `Cannot delete ${tbl.name} because it is currently occupied with diners. Clear or settle bill first.`,
+                              );
+                              return;
+                            }
+                            if (
+                              window.confirm(`Delete ${tbl.name} permanently?`)
+                            ) {
+                              onDeleteTable(tbl.id);
+                            }
+                          }}
+                          style={{
+                            padding: "0.35rem 0.55rem",
+                            background: "var(--danger-bg)",
+                            color: "var(--danger)",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "0.74rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                          }}
+                          title="Delete table"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ================= TAB 3: STAFF & PERSONS ================= */}
+            {activeTab === "staff" && (
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1.25rem",
+                  }}
+                >
+                  <div>
                     <h3
                       style={{
-                        fontSize: "1.15rem",
+                        fontSize: "1.1rem",
                         fontWeight: 800,
                         color: "var(--text-main)",
                       }}
                     >
-                      Kitchen Order Tickets (KOT) Dispatch
+                      Restaurant Staff & Serving Personnel
                     </h3>
-                    <span
+                    <p
                       style={{
-                        background: "rgba(245, 158, 11, 0.2)",
-                        color: "var(--accent-amber-light)",
-                        border: "1px solid rgba(245, 158, 11, 0.4)",
-                        fontSize: "0.7rem",
-                        fontWeight: 800,
-                        padding: "2px 8px",
-                        borderRadius: "12px",
+                        fontSize: "0.76rem",
+                        color: "var(--text-muted)",
                       }}
                     >
-                      ADMIN MONITOR
-                    </span>
+                      Manage waiters, table captains and servers handling dining
+                      guests
+                    </p>
                   </div>
-                  <p
-                    style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}
-                  >
-                    Select any table number to inspect orders received from
-                    table and preparation completed status
-                  </p>
-                </div>
 
-                {onOpenKOTView && (
                   <button
-                    onClick={() => {
-                      onClose();
-                      onOpenKOTView();
-                    }}
+                    onClick={() => handleOpenStaffModal()}
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.4rem",
-                      padding: "0.55rem 1rem",
-                      borderRadius: "var(--radius-sm)",
+                      gap: "0.45rem",
+                      padding: "0.6rem 1.25rem",
                       background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                       color: "#ffffff",
-                      fontWeight: 800,
-                      fontSize: "0.82rem",
-                      border: "none",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 10px rgba(245, 158, 11, 0.35)",
+                      borderRadius: "var(--radius-sm)",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
                     }}
                   >
-                    <ExternalLink size={15} />
-                    <span>Open Full Screen KOT Screen</span>
+                    <Plus size={16} />
+                    <span>Add New Person (Staff)</span>
                   </button>
-                )}
-              </div>
-
-              {/* Table Number Selector Strip */}
-              <div
-                style={{
-                  background: "var(--bg-primary)",
-                  padding: "0.65rem 1rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
-                  marginBottom: "1.25rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  overflowX: "auto",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.35rem",
-                    fontSize: "0.76rem",
-                    fontWeight: 800,
-                    color: "var(--accent-amber-light)",
-                    marginRight: "0.5rem",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Filter size={14} />
-                  <span>TABLE NO:</span>
                 </div>
 
-                <button
-                  onClick={() => setAdminKotTableFilter("all")}
+                {/* Staff Cards Grid */}
+                <div
                   style={{
-                    padding: "0.4rem 0.8rem",
-                    borderRadius: "5px",
-                    fontSize: "0.78rem",
-                    fontWeight: adminKotTableFilter === "all" ? 800 : 500,
-                    background:
-                      adminKotTableFilter === "all"
-                        ? "var(--accent-amber)"
-                        : "var(--bg-secondary)",
-                    color:
-                      adminKotTableFilter === "all"
-                        ? "#000000"
-                        : "var(--text-muted)",
-                    border:
-                      adminKotTableFilter === "all"
-                        ? "1px solid var(--accent-amber)"
-                        : "1px solid var(--border-subtle)",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(280px, 1fr))",
+                    gap: "1rem",
                   }}
                 >
-                  All Active Tables ({tablesWithOrders.length})
-                </button>
-
-                {tables.map((tbl) => {
-                  const hasOrders = tbl.items && tbl.items.length > 0;
-                  const isCompleted =
-                    hasOrders &&
-                    tbl.items.every(
-                      (i) =>
-                        i.kotStatus === "served" || i.kotStatus === "ready",
+                  {staffList.map((person) => {
+                    const personName = String(
+                      person?.name ||
+                        person?.fullName ||
+                        person?.FullName ||
+                        person?.username ||
+                        "Unnamed staff",
                     );
-                  const isSelected =
-                    adminKotTableFilter === tbl.id ||
-                    adminKotTableFilter === tbl.name;
-                  const dotColor = isCompleted
-                    ? "#10b981"
-                    : hasOrders
-                      ? "#f59e0b"
-                      : "#64748b";
+                    const personRole = String(
+                      person?.role || person?.roleTitle || "Staff",
+                    );
+                    const personId = person?.id ?? person?.staffId;
+                    const assignedCount = tables.filter(
+                      (t) => t.server === personName,
+                    ).length;
 
-                  return (
-                    <button
-                      key={tbl.id}
-                      onClick={() => setAdminKotTableFilter(tbl.id)}
-                      style={{
-                        padding: "0.4rem 0.75rem",
-                        borderRadius: "5px",
-                        fontSize: "0.78rem",
-                        fontWeight: isSelected ? 800 : 500,
-                        background: isSelected
-                          ? "linear-gradient(135deg, #f59e0b, #ea580c)"
-                          : hasOrders
-                            ? "rgba(245, 158, 11, 0.12)"
-                            : "var(--bg-secondary)",
-                        color: isSelected
-                          ? "#ffffff"
-                          : hasOrders
-                            ? "var(--text-main)"
-                            : "var(--text-muted)",
-                        border: isSelected
-                          ? "1px solid #ea580c"
-                          : "1px solid var(--border-subtle)",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.35rem",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "6px",
-                          height: "6px",
-                          borderRadius: "50%",
-                          background: dotColor,
-                        }}
-                      />
-                      <span>{tbl.name}</span>
-                      {hasOrders && (
-                        <span
-                          style={{
-                            background: isSelected
-                              ? "#000000"
-                              : "rgba(0,0,0,0.3)",
-                            color: isSelected
-                              ? "#ffffff"
-                              : isCompleted
-                                ? "#10b981"
-                                : "#f59e0b",
-                            padding: "1px 5px",
-                            borderRadius: "6px",
-                            fontSize: "0.65rem",
-                            fontWeight: 800,
-                          }}
-                        >
-                          {tbl.items.length}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Table KOT Cards */}
-              {(() => {
-                const kotDisplayTables = tables.filter((t) => {
-                  if (adminKotTableFilter !== "all") {
                     return (
-                      t.id === Number(adminKotTableFilter) ||
-                      t.name === adminKotTableFilter
-                    );
-                  }
-                  return t.items && t.items.length > 0;
-                });
-
-                if (kotDisplayTables.length === 0) {
-                  return (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: "3.5rem 1rem",
-                        color: "var(--text-dim)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                      }}
-                    >
-                      <ChefHat size={38} color="var(--accent-amber)" />
-                      <h4
+                      <div
+                        key={personId ?? personName}
                         style={{
-                          fontSize: "1.1rem",
-                          fontWeight: 700,
-                          color: "var(--text-main)",
+                          background: "var(--bg-tertiary)",
+                          borderRadius: "var(--radius-md)",
+                          border: "1px solid var(--border-subtle)",
+                          padding: "1.1rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
                         }}
                       >
-                        {adminKotTableFilter !== "all"
-                          ? `No Active Orders for Table ${adminKotTableFilter}`
-                          : "No Active Kitchen Tickets"}
-                      </h4>
-                      <p
-                        style={{
-                          fontSize: "0.82rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Orders dispatched from dining tables will appear here
-                        live.
-                      </p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        adminKotTableFilter !== "all"
-                          ? "minmax(320px, 620px)"
-                          : "repeat(auto-fill, minmax(320px, 1fr))",
-                      gap: "1.25rem",
-                      justifyContent:
-                        adminKotTableFilter !== "all" ? "center" : "stretch",
-                    }}
-                  >
-                    {kotDisplayTables.map((tbl) => {
-                      const allCompleted =
-                        tbl.items &&
-                        tbl.items.length > 0 &&
-                        tbl.items.every(
-                          (i) =>
-                            i.kotStatus === "served" || i.kotStatus === "ready",
-                        );
-                      const isCooking =
-                        tbl.items &&
-                        tbl.items.some((i) => i.kotStatus === "cooking");
-
-                      let statusBadge = "ORDER RECEIVED FROM TABLE";
-                      let statusColor = "#f59e0b";
-                      let statusBg = "rgba(245, 158, 11, 0.15)";
-
-                      if (allCompleted) {
-                        statusBadge = "PREPARATION COMPLETED";
-                        statusColor = "#10b981";
-                        statusBg = "rgba(16, 185, 129, 0.15)";
-                      } else if (isCooking) {
-                        statusBadge = "PREPARING / COOKING";
-                        statusColor = "#ea580c";
-                        statusBg = "rgba(234, 88, 12, 0.15)";
-                      }
-
-                      return (
-                        <div
-                          key={tbl.id}
-                          style={{
-                            background: "var(--bg-secondary)",
-                            borderRadius: "var(--radius-md)",
-                            border: allCompleted
-                              ? "2px solid rgba(16, 185, 129, 0.5)"
-                              : "2px solid var(--accent-amber)",
-                            overflow: "hidden",
-                            display: "flex",
-                            flexDirection: "column",
-                          }}
-                        >
-                          {/* Table Number Header */}
+                        <div>
                           <div
                             style={{
-                              padding: "0.85rem 1.1rem",
-                              background: "var(--bg-primary)",
-                              borderBottom: "1px solid var(--border-subtle)",
                               display: "flex",
-                              alignItems: "center",
                               justifyContent: "space-between",
+                              alignItems: "flex-start",
                             }}
                           >
                             <div
@@ -2440,262 +2353,727 @@ export function AdminPortal({
                             >
                               <div
                                 style={{
-                                  background: allCompleted
-                                    ? "var(--status-vacant)"
-                                    : "linear-gradient(135deg, #f59e0b, #ea580c)",
-                                  color: "#ffffff",
-                                  padding: "0.35rem 0.75rem",
-                                  borderRadius: "8px",
-                                  fontWeight: 900,
-                                  fontSize: "1.15rem",
+                                  width: "40px",
+                                  height: "40px",
+                                  borderRadius: "50%",
+                                  background: "var(--accent-amber)",
+                                  color: "#000000",
+                                  fontWeight: 800,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "1rem",
                                 }}
                               >
-                                {tbl.name}
+                                {personName.charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div
+                                <h4
                                   style={{
-                                    fontSize: "0.8rem",
-                                    fontWeight: 700,
+                                    fontWeight: 800,
                                     color: "var(--text-main)",
+                                    fontSize: "1rem",
                                   }}
                                 >
-                                  {tbl.section} • Server: {tbl.server}
-                                </div>
-                                <div
+                                  {personName}
+                                </h4>
+                                <span
                                   style={{
-                                    fontSize: "0.72rem",
+                                    fontSize: "0.74rem",
                                     color: "var(--accent-amber-light)",
+                                    fontWeight: 600,
                                   }}
                                 >
-                                  Order Received: {tbl.orderTime || "Just Now"}
-                                </div>
+                                  {personRole}
+                                </span>
                               </div>
                             </div>
 
-                            <span
-                              style={{
-                                padding: "3px 8px",
-                                borderRadius: "10px",
-                                fontSize: "0.68rem",
-                                fontWeight: 800,
-                                background: statusBg,
-                                color: statusColor,
-                                border: `1px solid ${statusColor}40`,
-                              }}
-                            >
-                              {statusBadge}
-                            </span>
-                          </div>
-
-                          {/* Ordered Items List */}
-                          <div
-                            style={{
-                              padding: "0.9rem 1.1rem",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "0.5rem",
-                              maxHeight: "280px",
-                              overflowY: "auto",
-                            }}
-                          >
-                            {tbl.items && tbl.items.length > 0 ? (
-                              tbl.items.map((item, idx) => (
-                                <div
-                                  key={idx}
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    padding: "0.5rem 0.65rem",
-                                    borderRadius: "var(--radius-sm)",
-                                    background: "var(--bg-primary)",
-                                    border: "1px solid var(--border-subtle)",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "0.6rem",
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        background: "var(--accent-amber)",
-                                        color: "#000000",
-                                        padding: "1px 6px",
-                                        borderRadius: "4px",
-                                        fontWeight: 900,
-                                        fontSize: "0.82rem",
-                                      }}
-                                    >
-                                      {item.quantity}x
-                                    </span>
-                                    <div>
-                                      <div
-                                        style={{
-                                          fontSize: "0.88rem",
-                                          fontWeight: 700,
-                                          color: "var(--text-main)",
-                                        }}
-                                      >
-                                        {item.name}
-                                      </div>
-                                      {item.notes && (
-                                        <div
-                                          style={{
-                                            fontSize: "0.72rem",
-                                            color: "#f87171",
-                                            fontWeight: 600,
-                                          }}
-                                        >
-                                          Note: {item.notes}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <span
-                                    style={{
-                                      fontSize: "0.68rem",
-                                      fontWeight: 700,
-                                      textTransform: "uppercase",
-                                      color:
-                                        item.kotStatus === "served" ||
-                                        item.kotStatus === "ready"
-                                          ? "#10b981"
-                                          : "#f59e0b",
-                                    }}
-                                  >
-                                    {item.kotStatus === "served" ||
-                                    item.kotStatus === "ready"
-                                      ? "Ready"
-                                      : "In Prep"}
-                                  </span>
-                                </div>
-                              ))
-                            ) : (
-                              <p
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color: "var(--text-muted)",
-                                }}
-                              >
-                                No items currently ordered for this table.
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Footer Action: Preparation Completed */}
-                          {tbl.items && tbl.items.length > 0 && (
                             <div
                               style={{
-                                padding: "0.75rem 1.1rem",
-                                borderTop: "1px solid var(--border-subtle)",
-                                background: "var(--bg-primary)",
                                 display: "flex",
-                                gap: "0.5rem",
+                                alignItems: "center",
+                                gap: "0.25rem",
                               }}
                             >
-                              {!allCompleted ? (
-                                <button
-                                  onClick={() =>
-                                    onCompleteTableKot &&
-                                    onCompleteTableKot(tbl.id)
+                              <button
+                                onClick={() => handleOpenStaffModal(person)}
+                                style={{
+                                  background: "transparent",
+                                  color: "var(--text-dim)",
+                                  padding: "4px",
+                                  cursor: "pointer",
+                                }}
+                                title="Edit staff details"
+                              >
+                                <SquarePen size={14} />
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      `Remove ${personName} from staff list?`,
+                                    )
+                                  ) {
+                                    onDeleteStaff(personId);
                                   }
-                                  style={{
-                                    width: "100%",
-                                    padding: "0.65rem",
-                                    borderRadius: "var(--radius-sm)",
-                                    background:
-                                      "linear-gradient(135deg, #10b981, #059669)",
-                                    color: "#ffffff",
-                                    fontWeight: 800,
-                                    fontSize: "0.84rem",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "0.4rem",
-                                    boxShadow:
-                                      "0 3px 10px rgba(16, 185, 129, 0.3)",
-                                  }}
-                                >
-                                  <CheckCircle2 size={16} />
-                                  <span>Mark Preparation Completed</span>
-                                </button>
-                              ) : (
+                                }}
+                                style={{
+                                  background: "transparent",
+                                  color: "var(--text-dim)",
+                                  padding: "4px",
+                                  cursor: "pointer",
+                                }}
+                                title="Remove staff member"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop: "0.85rem",
+                              fontSize: "0.78rem",
+                              color: "var(--text-muted)",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.3rem",
+                            }}
+                          >
+                            <div>
+                              Phone:{" "}
+                              <strong style={{ color: "var(--text-main)" }}>
+                                {person.phone}
+                              </strong>
+                            </div>
+                            <div>
+                              Shift:{" "}
+                              <strong style={{ color: "var(--text-main)" }}>
+                                {person.shift}
+                              </strong>
+                            </div>
+                            <div>
+                              Tables Assigned:{" "}
+                              <strong style={{ color: "var(--status-vacant)" }}>
+                                {assignedCount} Tables
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ================= TAB 4: KITCHEN KOT (ORDERS RECEIVED) ================= */}
+            {activeTab === "kot" && (
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1.25rem",
+                    flexWrap: "wrap",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontSize: "1.15rem",
+                          fontWeight: 800,
+                          color: "var(--text-main)",
+                        }}
+                      >
+                        Kitchen Order Tickets (KOT) Dispatch
+                      </h3>
+                      <span
+                        style={{
+                          background: "rgba(245, 158, 11, 0.2)",
+                          color: "var(--accent-amber-light)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          fontSize: "0.7rem",
+                          fontWeight: 800,
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                        }}
+                      >
+                        ADMIN MONITOR
+                      </span>
+                    </div>
+                    <p
+                      style={{
+                        fontSize: "0.76rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Select any table number to inspect orders received from
+                      table and preparation completed status
+                    </p>
+                  </div>
+
+                  {onOpenKOTView && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenKOTView();
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.55rem 1rem",
+                        borderRadius: "var(--radius-sm)",
+                        background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                        color: "#ffffff",
+                        fontWeight: 800,
+                        fontSize: "0.82rem",
+                        border: "none",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 10px rgba(245, 158, 11, 0.35)",
+                      }}
+                    >
+                      <ExternalLink size={15} />
+                      <span>Open Full Screen KOT Screen</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Table Number Selector Strip */}
+                <div
+                  style={{
+                    background: "var(--bg-primary)",
+                    padding: "0.65rem 1rem",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-subtle)",
+                    marginBottom: "1.25rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    overflowX: "auto",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      fontSize: "0.76rem",
+                      fontWeight: 800,
+                      color: "var(--accent-amber-light)",
+                      marginRight: "0.5rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Filter size={14} />
+                    <span>TABLE NO:</span>
+                  </div>
+
+                  <button
+                    onClick={() => setAdminKotTableFilter("all")}
+                    style={{
+                      padding: "0.4rem 0.8rem",
+                      borderRadius: "5px",
+                      fontSize: "0.78rem",
+                      fontWeight: adminKotTableFilter === "all" ? 800 : 500,
+                      background:
+                        adminKotTableFilter === "all"
+                          ? "var(--accent-amber)"
+                          : "var(--bg-secondary)",
+                      color:
+                        adminKotTableFilter === "all"
+                          ? "#000000"
+                          : "var(--text-muted)",
+                      border:
+                        adminKotTableFilter === "all"
+                          ? "1px solid var(--accent-amber)"
+                          : "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    All Active Tables ({tablesWithOrders.length})
+                  </button>
+
+                  {tables.map((tbl) => {
+                    const hasOrders = tbl.items && tbl.items.length > 0;
+                    const isCompleted =
+                      hasOrders &&
+                      tbl.items.every(
+                        (i) =>
+                          i.kotStatus === "served" || i.kotStatus === "ready",
+                      );
+                    const isSelected =
+                      adminKotTableFilter === tbl.id ||
+                      adminKotTableFilter === tbl.name;
+                    const dotColor = isCompleted
+                      ? "#10b981"
+                      : hasOrders
+                        ? "#f59e0b"
+                        : "#64748b";
+
+                    return (
+                      <button
+                        key={tbl.id}
+                        onClick={() => setAdminKotTableFilter(tbl.id)}
+                        style={{
+                          padding: "0.4rem 0.75rem",
+                          borderRadius: "5px",
+                          fontSize: "0.78rem",
+                          fontWeight: isSelected ? 800 : 500,
+                          background: isSelected
+                            ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                            : hasOrders
+                              ? "rgba(245, 158, 11, 0.12)"
+                              : "var(--bg-secondary)",
+                          color: isSelected
+                            ? "#ffffff"
+                            : hasOrders
+                              ? "var(--text-main)"
+                              : "var(--text-muted)",
+                          border: isSelected
+                            ? "1px solid #ea580c"
+                            : "1px solid var(--border-subtle)",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.35rem",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "6px",
+                            height: "6px",
+                            borderRadius: "50%",
+                            background: dotColor,
+                          }}
+                        />
+                        <span>{tbl.name}</span>
+                        {hasOrders && (
+                          <span
+                            style={{
+                              background: isSelected
+                                ? "#000000"
+                                : "rgba(0,0,0,0.3)",
+                              color: isSelected
+                                ? "#ffffff"
+                                : isCompleted
+                                  ? "#10b981"
+                                  : "#f59e0b",
+                              padding: "1px 5px",
+                              borderRadius: "6px",
+                              fontSize: "0.65rem",
+                              fontWeight: 800,
+                            }}
+                          >
+                            {tbl.items.length}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Table KOT Cards */}
+                {(() => {
+                  const kotDisplayTables = tables.filter((t) => {
+                    if (adminKotTableFilter !== "all") {
+                      return (
+                        t.id === Number(adminKotTableFilter) ||
+                        t.name === adminKotTableFilter
+                      );
+                    }
+                    return t.items && t.items.length > 0;
+                  });
+
+                  if (kotDisplayTables.length === 0) {
+                    return (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "3.5rem 1rem",
+                          color: "var(--text-dim)",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                        }}
+                      >
+                        <ChefHat size={38} color="var(--accent-amber)" />
+                        <h4
+                          style={{
+                            fontSize: "1.1rem",
+                            fontWeight: 700,
+                            color: "var(--text-main)",
+                          }}
+                        >
+                          {adminKotTableFilter !== "all"
+                            ? `No Active Orders for Table ${adminKotTableFilter}`
+                            : "No Active Kitchen Tickets"}
+                        </h4>
+                        <p
+                          style={{
+                            fontSize: "0.82rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          Orders dispatched from dining tables will appear here
+                          live.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          adminKotTableFilter !== "all"
+                            ? "minmax(320px, 620px)"
+                            : "repeat(auto-fill, minmax(320px, 1fr))",
+                        gap: "1.25rem",
+                        justifyContent:
+                          adminKotTableFilter !== "all" ? "center" : "stretch",
+                      }}
+                    >
+                      {kotDisplayTables.map((tbl) => {
+                        const allCompleted =
+                          tbl.items &&
+                          tbl.items.length > 0 &&
+                          tbl.items.every(
+                            (i) =>
+                              i.kotStatus === "served" ||
+                              i.kotStatus === "ready",
+                          );
+                        const isCooking =
+                          tbl.items &&
+                          tbl.items.some((i) => i.kotStatus === "cooking");
+
+                        let statusBadge = "ORDER RECEIVED FROM TABLE";
+                        let statusColor = "#f59e0b";
+                        let statusBg = "rgba(245, 158, 11, 0.15)";
+
+                        if (allCompleted) {
+                          statusBadge = "PREPARATION COMPLETED";
+                          statusColor = "#10b981";
+                          statusBg = "rgba(16, 185, 129, 0.15)";
+                        } else if (isCooking) {
+                          statusBadge = "PREPARING / COOKING";
+                          statusColor = "#ea580c";
+                          statusBg = "rgba(234, 88, 12, 0.15)";
+                        }
+
+                        return (
+                          <div
+                            key={tbl.id}
+                            style={{
+                              background: "var(--bg-secondary)",
+                              borderRadius: "var(--radius-md)",
+                              border: allCompleted
+                                ? "2px solid rgba(16, 185, 129, 0.5)"
+                                : "2px solid var(--accent-amber)",
+                              overflow: "hidden",
+                              display: "flex",
+                              flexDirection: "column",
+                            }}
+                          >
+                            {/* Table Number Header */}
+                            <div
+                              style={{
+                                padding: "0.85rem 1.1rem",
+                                background: "var(--bg-primary)",
+                                borderBottom: "1px solid var(--border-subtle)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.65rem",
+                                }}
+                              >
                                 <div
                                   style={{
-                                    width: "100%",
-                                    padding: "0.6rem",
-                                    borderRadius: "var(--radius-sm)",
-                                    background: "rgba(16, 185, 129, 0.15)",
-                                    color: "#10b981",
-                                    fontWeight: 800,
-                                    fontSize: "0.82rem",
-                                    textAlign: "center",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "0.35rem",
+                                    background: allCompleted
+                                      ? "var(--status-vacant)"
+                                      : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                    color: "#ffffff",
+                                    padding: "0.35rem 0.75rem",
+                                    borderRadius: "8px",
+                                    fontWeight: 900,
+                                    fontSize: "1.15rem",
                                   }}
                                 >
-                                  <CheckCircle2 size={15} />
-                                  <span>
-                                    Preparation Completed (Ready to Serve)
-                                  </span>
+                                  {tbl.name}
                                 </div>
+                                <div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.8rem",
+                                      fontWeight: 700,
+                                      color: "var(--text-main)",
+                                    }}
+                                  >
+                                    {tbl.section} • Server: {tbl.server}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.72rem",
+                                      color: "var(--accent-amber-light)",
+                                    }}
+                                  >
+                                    Order Received:{" "}
+                                    {tbl.orderTime || "Just Now"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <span
+                                style={{
+                                  padding: "3px 8px",
+                                  borderRadius: "10px",
+                                  fontSize: "0.68rem",
+                                  fontWeight: 800,
+                                  background: statusBg,
+                                  color: statusColor,
+                                  border: `1px solid ${statusColor}40`,
+                                }}
+                              >
+                                {statusBadge}
+                              </span>
+                            </div>
+
+                            {/* Ordered Items List */}
+                            <div
+                              style={{
+                                padding: "0.9rem 1.1rem",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "0.5rem",
+                                maxHeight: "280px",
+                                overflowY: "auto",
+                              }}
+                            >
+                              {tbl.items && tbl.items.length > 0 ? (
+                                tbl.items.map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      padding: "0.5rem 0.65rem",
+                                      borderRadius: "var(--radius-sm)",
+                                      background: "var(--bg-primary)",
+                                      border: "1px solid var(--border-subtle)",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "0.6rem",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          background: "var(--accent-amber)",
+                                          color: "#000000",
+                                          padding: "1px 6px",
+                                          borderRadius: "4px",
+                                          fontWeight: 900,
+                                          fontSize: "0.82rem",
+                                        }}
+                                      >
+                                        {item.quantity}x
+                                      </span>
+                                      <div>
+                                        <div
+                                          style={{
+                                            fontSize: "0.88rem",
+                                            fontWeight: 700,
+                                            color: "var(--text-main)",
+                                          }}
+                                        >
+                                          {item.name}
+                                        </div>
+                                        {item.notes && (
+                                          <div
+                                            style={{
+                                              fontSize: "0.72rem",
+                                              color: "#f87171",
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            Note: {item.notes}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <span
+                                      style={{
+                                        fontSize: "0.68rem",
+                                        fontWeight: 700,
+                                        textTransform: "uppercase",
+                                        color:
+                                          item.kotStatus === "served" ||
+                                          item.kotStatus === "ready"
+                                            ? "#10b981"
+                                            : "#f59e0b",
+                                      }}
+                                    >
+                                      {item.kotStatus === "served" ||
+                                      item.kotStatus === "ready"
+                                        ? "Ready"
+                                        : "In Prep"}
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <p
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    color: "var(--text-muted)",
+                                  }}
+                                >
+                                  No items currently ordered for this table.
+                                </p>
                               )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
 
-          {/* ================= TAB 5: INVENTORY ================= */}
-          {activeTab === "inventory" && (
-            <AdminInventory menuItems={menuItems} onUpdateMenuItem={onUpdateMenuItem} />
-          )}
+                            {/* Footer Action: Preparation Completed */}
+                            {tbl.items && tbl.items.length > 0 && (
+                              <div
+                                style={{
+                                  padding: "0.75rem 1.1rem",
+                                  borderTop: "1px solid var(--border-subtle)",
+                                  background: "var(--bg-primary)",
+                                  display: "flex",
+                                  gap: "0.5rem",
+                                }}
+                              >
+                                {!allCompleted ? (
+                                  <button
+                                    onClick={() =>
+                                      onCompleteTableKot &&
+                                      onCompleteTableKot(tbl.id)
+                                    }
+                                    style={{
+                                      width: "100%",
+                                      padding: "0.65rem",
+                                      borderRadius: "var(--radius-sm)",
+                                      background:
+                                        "linear-gradient(135deg, #10b981, #059669)",
+                                      color: "#ffffff",
+                                      fontWeight: 800,
+                                      fontSize: "0.84rem",
+                                      border: "none",
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "0.4rem",
+                                      boxShadow:
+                                        "0 3px 10px rgba(16, 185, 129, 0.3)",
+                                    }}
+                                  >
+                                    <CheckCircle2 size={16} />
+                                    <span>Mark Preparation Completed</span>
+                                  </button>
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: "100%",
+                                      padding: "0.6rem",
+                                      borderRadius: "var(--radius-sm)",
+                                      background: "rgba(16, 185, 129, 0.15)",
+                                      color: "#10b981",
+                                      fontWeight: 800,
+                                      fontSize: "0.82rem",
+                                      textAlign: "center",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "0.35rem",
+                                    }}
+                                  >
+                                    <CheckCircle2 size={15} />
+                                    <span>
+                                      Preparation Completed (Ready to Serve)
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
-          {/* ================= TAB 6: INVOICES ================= */}
-          {activeTab === "invoices" && (
-            <AdminInvoices pastOrders={pastOrders} restaurantName={restaurantName} />
-          )}
+            {/* ================= TAB 5: INVENTORY ================= */}
+            {activeTab === "inventory" && (
+              <AdminInventory
+                menuItems={menuItems}
+                onUpdateMenuItem={onUpdateMenuItem}
+              />
+            )}
 
-          {/* ================= TAB 7: REPORTS ================= */}
-          {activeTab === "reports" && (
-            <AdminReports
-              pastOrders={pastOrders}
-              menuItems={menuItems}
-              restaurantSettings={restaurantSettings}
-            />
-          )}
+            {/* ================= TAB 6: INVOICES ================= */}
+            {activeTab === "invoices" && (
+              <AdminInvoices
+                pastOrders={pastOrders}
+                restaurantName={restaurantName}
+              />
+            )}
 
-          {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
-          {activeTab === "logins" && (
-            <LoginManagement currentAdminSession={currentSession} />
-          )}
+            {/* ================= TAB 7: REPORTS ================= */}
+            {activeTab === "reports" && (
+              <AdminReports
+                pastOrders={pastOrders}
+                menuItems={menuItems}
+                restaurantSettings={restaurantSettings}
+              />
+            )}
 
-          {/* ================= TAB 9: SETTINGS ================= */}
-          {activeTab === "settings" && (
-            <AdminSettings
-              currentTheme={currentTheme}
-              onChangeTheme={handleThemeChange}
-              initialSettings={restaurantSettings}
-              onSaveSettings={handleSaveRestaurantSettings}
-            />
-          )}
+            {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
+            {activeTab === "logins" && (
+              <LoginManagement currentAdminSession={currentSession} />
+            )}
+
+            {/* ================= TAB 9: SETTINGS ================= */}
+            {activeTab === "settings" && (
+              <AdminSettings
+                currentTheme={currentTheme}
+                onChangeTheme={handleThemeChange}
+                initialSettings={restaurantSettings}
+                onSaveSettings={handleSaveRestaurantSettings}
+              />
+            )}
+          </div>
         </div>
       </div>
-    </div>
 
       {/* ================= MODAL: ADD / EDIT MENU ITEM ================= */}
       {isItemModalOpen && (
@@ -2846,7 +3224,7 @@ export function AdminPortal({
                     marginBottom: "5px",
                   }}
                 >
-                  Price in Rupees (₹){" "}{" "}
+                  Price in Rupees (₹){" "}
                   <span style={{ color: "#ea580c" }}>*</span>
                 </label>
                 <input
@@ -3008,7 +3386,14 @@ export function AdminPortal({
 
               {/* Local Presets Pill Selector */}
               <div style={{ marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
                   Select from local asset presets:
                 </span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
@@ -3018,15 +3403,26 @@ export function AdminPortal({
                       <button
                         key={preset.id}
                         type="button"
-                        onClick={() => setItemForm((curr) => ({ ...curr, image: preset.path }))}
+                        onClick={() =>
+                          setItemForm((curr) => ({
+                            ...curr,
+                            image: preset.path,
+                          }))
+                        }
                         style={{
                           fontSize: "0.74rem",
                           fontWeight: 600,
                           padding: "4px 8px",
                           borderRadius: "6px",
-                          border: isSelected ? "1.5px solid var(--color-primary, #ea580c)" : "1px solid var(--border-subtle)",
-                          background: isSelected ? "rgba(234, 88, 12, 0.15)" : "var(--bg-tertiary)",
-                          color: isSelected ? "var(--color-primary, #ea580c)" : "var(--text-main)",
+                          border: isSelected
+                            ? "1.5px solid var(--color-primary, #ea580c)"
+                            : "1px solid var(--border-subtle)",
+                          background: isSelected
+                            ? "rgba(234, 88, 12, 0.15)"
+                            : "var(--bg-tertiary)",
+                          color: isSelected
+                            ? "var(--color-primary, #ea580c)"
+                            : "var(--text-main)",
                           cursor: "pointer",
                           display: "inline-flex",
                           alignItems: "center",
@@ -3055,7 +3451,10 @@ export function AdminPortal({
                   reader.onload = (uploadEvent) => {
                     const base64Data = uploadEvent.target?.result;
                     if (base64Data) {
-                      setItemForm((current) => ({ ...current, image: base64Data }));
+                      setItemForm((current) => ({
+                        ...current,
+                        image: base64Data,
+                      }));
                     }
                   };
                   reader.readAsDataURL(file);
@@ -3065,7 +3464,10 @@ export function AdminPortal({
                   apiUploadMenuImage(file)
                     .then((result) => {
                       if (result && result.success && result.imageUrl) {
-                        setItemForm((current) => ({ ...current, image: result.imageUrl }));
+                        setItemForm((current) => ({
+                          ...current,
+                          image: result.imageUrl,
+                        }));
                       }
                     })
                     .catch(() => {})
@@ -3111,8 +3513,12 @@ export function AdminPortal({
                     flexShrink: 0,
                   }}
                 />
-                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
-                  <div style={{ fontWeight: 600, color: "var(--text-main)" }}>Live Preview</div>
+                <div
+                  style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}
+                >
+                  <div style={{ fontWeight: 600, color: "var(--text-main)" }}>
+                    Live Preview
+                  </div>
                   <div>Relevant image saved locally for all devices</div>
                 </div>
               </div>
@@ -3188,7 +3594,11 @@ export function AdminPortal({
                   boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
                 }}
               >
-                {isImageUploading ? "Uploading image..." : editingItem ? "Save Item Changes" : "Create Item"}
+                {isImageUploading
+                  ? "Uploading image..."
+                  : editingItem
+                    ? "Save Item Changes"
+                    : "Create Item"}
               </button>
             </div>
           </form>
@@ -3315,9 +3725,7 @@ export function AdminPortal({
               </label>
               <CustomCreatableDropdown
                 value={tableForm.section}
-                onChange={(val) =>
-                  setTableForm({ ...tableForm, section: val })
-                }
+                onChange={(val) => setTableForm({ ...tableForm, section: val })}
                 options={allSectionOptions}
                 placeholder="Select dining section"
                 customPlaceholder="Type new section..."
@@ -3491,7 +3899,12 @@ export function AdminPortal({
                   onSaveCustomOption={(newServer) => {
                     if (newServer && newServer !== "__add_new__") {
                       setTableForm({ ...tableForm, server: newServer });
-                      if (!staffList.some((s) => s.name?.toLowerCase() === newServer.toLowerCase())) {
+                      if (
+                        !staffList.some(
+                          (s) =>
+                            s.name?.toLowerCase() === newServer.toLowerCase(),
+                        )
+                      ) {
                         onAddStaff({
                           id: Date.now(),
                           name: newServer,
@@ -3723,9 +4136,7 @@ export function AdminPortal({
               </label>
               <CustomCreatableDropdown
                 value={staffForm.role}
-                onChange={(val) =>
-                  setStaffForm({ ...staffForm, role: val })
-                }
+                onChange={(val) => setStaffForm({ ...staffForm, role: val })}
                 options={allRoleOptions}
                 placeholder="Select role"
                 customPlaceholder="Type new role..."
@@ -3784,9 +4195,7 @@ export function AdminPortal({
               </label>
               <CustomCreatableDropdown
                 value={staffForm.shift}
-                onChange={(val) =>
-                  setStaffForm({ ...staffForm, shift: val })
-                }
+                onChange={(val) => setStaffForm({ ...staffForm, shift: val })}
                 options={allShiftOptions}
                 placeholder="Select shift"
                 customPlaceholder="Type new shift..."
