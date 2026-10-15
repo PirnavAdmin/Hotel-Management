@@ -24,7 +24,6 @@ export function AdminSidebar({
   activeKOTCount = 0,
   restaurantLogo = "",
 }) {
-
   const navSections = [
     {
       title: "MAIN MENU",
@@ -140,7 +139,17 @@ export function AdminSidebar({
           }}
         >
           {restaurantLogo ? (
-            <img src={restaurantLogo} alt="Restaurant logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "10px", padding: "3px" }} />
+            <img
+              src={restaurantLogo}
+              alt="Restaurant logo"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                borderRadius: "10px",
+                padding: "3px",
+              }}
+            />
           ) : (
             <ChefHat size={22} color="#ffffff" strokeWidth={2.3} />
           )}
@@ -249,8 +258,7 @@ export function AdminSidebar({
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.background =
-                          "var(--bg-tertiary)";
+                        e.currentTarget.style.background = "var(--bg-tertiary)";
                         e.currentTarget.style.color = "var(--text-main)";
                       }
                     }}
@@ -282,9 +290,7 @@ export function AdminSidebar({
                     {item.badgeAlert && (
                       <span
                         style={{
-                          background: isActive
-                            ? "rgba(0,0,0,0.3)"
-                            : "#ea580c",
+                          background: isActive ? "rgba(0,0,0,0.3)" : "#ea580c",
                           color: "#ffffff",
                           fontSize: "0.68rem",
                           fontWeight: 800,
