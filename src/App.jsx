@@ -564,16 +564,18 @@ export function App() {
           setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
         }
 
+        // Menu items are officially loaded from /api/v1/menu-items (which includes isChefsSpecial).
+        // Only fallback to /api/state if menuItems has not been loaded at all.
         const incomingMenu = data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
-        if (Array.isArray(incomingMenu)) {
-          const normalizedMenu = incomingMenu.map(normalizeMenuItem);
-          setMenuItems(normalizedMenu);
-          try {
-            localStorage.setItem(
-              STORAGE_KEY_MENU,
-              JSON.stringify(normalizedMenu),
-            );
-          } catch {}
+        if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
+          setMenuItems((prev) => {
+            if (prev && prev.length > 0) return prev;
+            const normalizedMenu = incomingMenu.map(normalizeMenuItem);
+            try {
+              localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
+            } catch {}
+            return normalizedMenu;
+          });
         }
 
         const incomingStaff =
@@ -647,39 +649,49 @@ export function App() {
             try {
               savedMenuForRecipes = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
             } catch {}
-            const normalizedMenu = incomingMenu.map((m) => ({
-              id: m.menuItemId ? String(m.menuItemId) : String(m.id),
-              name: m.dishName || m.name,
-              category: m.category || "",
-              price: parseFloat(m.price || 0),
-              isVeg: m.dietaryType === "VEG" || m.isVeg === true,
-              spiceLevel:
-                m.spiceLevel === 1
-                  ? "Mild"
-                  : m.spiceLevel === 2
-                    ? "Medium"
-                    : "Spicy",
-              description: m.shortDescription || m.description || "",
-              prepTime: m.prepTimeMinutes ? `${m.prepTimeMinutes} mins` : "",
-              prepTimeMinutes: m.prepTimeMinutes || 0,
-              isChefSpecial: !!m.isChefsSpecial || !!m.isChefSpecial,
-              isAvailable: m.isAvailable !== false,
-              recipe: m.recipe || savedMenuForRecipes.find((item) =>
-                String(item.id) === String(m.menuItemId || m.id) ||
-                item.name?.trim().toLowerCase() === String(m.dishName || m.name || "").trim().toLowerCase(),
-              )?.recipe || [],
-              image:
-                m.imageUrl ||
-                m.image ||
-                getRelevantLocalFallback(m),
-            }));
-            setMenuItems(normalizedMenu);
-            try {
-              localStorage.setItem(
-                STORAGE_KEY_MENU,
-                JSON.stringify(normalizedMenu),
-              );
-            } catch {}
+            setMenuItems((prev) => {
+              const currentList = prev && prev.length > 0 ? prev : savedMenuForRecipes;
+              const normalizedMenu = incomingMenu.map((m) => {
+                const existing = currentList.find(
+                  (item) =>
+                    String(item.id) === String(m.menuItemId || m.id) ||
+                    item.name?.trim().toLowerCase() === String(m.dishName || m.name || "").trim().toLowerCase()
+                );
+                const hasExplicitSpecial = m.isChefSpecial !== undefined || m.isChefsSpecial !== undefined;
+                const isSpecial = hasExplicitSpecial
+                  ? Boolean(m.isChefSpecial ?? m.isChefsSpecial)
+                  : Boolean(existing?.isChefSpecial ?? existing?.isChefsSpecial ?? false);
+
+                return {
+                  id: m.menuItemId ? String(m.menuItemId) : String(m.id),
+                  name: m.dishName || m.name,
+                  category: m.category || "",
+                  price: parseFloat(m.price || 0),
+                  isVeg: m.dietaryType === "VEG" || m.isVeg === true,
+                  spiceLevel:
+                    m.spiceLevel === 1
+                      ? "Mild"
+                      : m.spiceLevel === 2
+                        ? "Medium"
+                        : "Spicy",
+                  description: m.shortDescription || m.description || "",
+                  prepTime: m.prepTimeMinutes ? `${m.prepTimeMinutes} mins` : "",
+                  prepTimeMinutes: m.prepTimeMinutes || 0,
+                  isChefSpecial: isSpecial,
+                  isChefsSpecial: isSpecial,
+                  isAvailable: m.isAvailable !== false,
+                  recipe: m.recipe || existing?.recipe || [],
+                  image:
+                    m.imageUrl ||
+                    m.image ||
+                    getRelevantLocalFallback(m),
+                };
+              });
+              try {
+                localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
+              } catch {}
+              return normalizedMenu;
+            });
           }
           if (payload.deletedMenuItemId) {
             setMenuItems((prev) => {
@@ -1387,7 +1399,15 @@ export function App() {
   // ================= ADMIN ACTIONS =================
   // 1. Menu Items Admin
   const handleAddMenuItem = async (newItem) => {
-    let result = await apiCreateMenuItem(newItem);
+    const isSpecialValue = Boolean(
+      newItem.isChefSpecial ?? newItem.isChefsSpecial ?? newItem.isSpecial
+    );
+    let result = await apiCreateMenuItem({
+      ...newItem,
+      isChefSpecial: isSpecialValue,
+      isChefsSpecial: isSpecialValue,
+      isSpecial: isSpecialValue,
+    });
     let createdItem = {};
     if (result?.success && result.data?.success !== false) {
       createdItem = result.data?.menuItem || result.data?.item || result.data?.data || result.data || {};
@@ -1396,14 +1416,25 @@ export function App() {
       showToast(`✅ Dish "${newItem.name}" saved locally!`);
     }
 
+    const createdId =
+      createdItem.menuItemId ??
+      createdItem.menu_item_id ??
+      createdItem.id ??
+      newItem.id;
+
+    if (isSpecialValue && createdId) {
+      try {
+        await apiSetMenuSpecialStatus(createdId, true);
+      } catch {}
+    }
+
     const savedItem = normalizeMenuItem({
       ...newItem,
       ...createdItem,
-      id:
-        createdItem.menuItemId ??
-        createdItem.menu_item_id ??
-        createdItem.id ??
-        newItem.id,
+      isChefSpecial: isSpecialValue,
+      isChefsSpecial: isSpecialValue,
+      isSpecial: isSpecialValue,
+      id: createdId,
     });
     setMenuItems((prev) => {
       const nextMenu = [savedItem, ...prev.filter((item) => String(item.id) !== String(savedItem.id))];
@@ -1416,9 +1447,35 @@ export function App() {
   };
 
   const handleUpdateMenuItem = async (updatedItem) => {
-    let result = await apiUpdateMenuItem(updatedItem.id, updatedItem);
+    const isSpecialValue = Boolean(
+      updatedItem.isChefSpecial ??
+      updatedItem.isChefsSpecial ??
+      updatedItem.isSpecial
+    );
+
+    // Call update API (PUT)
+    let result = await apiUpdateMenuItem(updatedItem.id, {
+      ...updatedItem,
+      isChefSpecial: isSpecialValue,
+      isChefsSpecial: isSpecialValue,
+      isSpecial: isSpecialValue,
+    });
+
+    // Also persist directly via dedicated special-status endpoint
+    try {
+      await apiSetMenuSpecialStatus(updatedItem.id, isSpecialValue);
+    } catch {}
+
     const responseItem = (result?.success && (result.data?.menuItem || result.data?.item || result.data?.data)) || {};
-    const savedItem = normalizeMenuItem({ ...updatedItem, ...responseItem, id: responseItem.id ?? responseItem.menuItemId ?? updatedItem.id });
+    const savedItem = normalizeMenuItem({
+      ...updatedItem,
+      ...responseItem,
+      isChefSpecial: isSpecialValue,
+      isChefsSpecial: isSpecialValue,
+      isSpecial: isSpecialValue,
+      id: responseItem.id ?? responseItem.menuItemId ?? updatedItem.id,
+    });
+
     setMenuItems((prev) => {
       const nextMenu = prev.map((item) => String(item.id) === String(savedItem.id) ? savedItem : item);
       try {

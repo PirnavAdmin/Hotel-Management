@@ -1800,11 +1800,11 @@ export function TableDetailView({
       let matchDietary = true;
       if (dietaryFilter === "veg") matchDietary = item.isVeg;
       if (dietaryFilter === "non-veg") matchDietary = !item.isVeg;
-      if (dietaryFilter === "special") matchDietary = item.isChefSpecial;
+      if (dietaryFilter === "special") matchDietary = Boolean(item.isChefSpecial || item.isChefsSpecial);
 
-      return matchCat && matchSearch && matchDietary && item.isAvailable !== false;
+      return matchCat && matchSearch && matchDietary;
     });
-  }, [selectedCategory, dietaryFilter, searchQuery]);
+  }, [selectedCategory, dietaryFilter, searchQuery, menuItems]);
 
   // Financial calculations in Rupees
   const safeItems = Array.isArray(table?.items) ? table.items : [];
@@ -1894,6 +1894,23 @@ export function TableDetailView({
           transform: translateY(-2px);
           border-color: rgba(245, 158, 11, 0.65);
           box-shadow: 0 7px 18px rgba(0,0,0,0.24);
+        }
+
+        .pos-menu-card.is-unavailable {
+          opacity: 0.58;
+          cursor: not-allowed;
+          border-color: rgba(239, 68, 68, 0.25);
+          box-shadow: none;
+        }
+
+        .pos-menu-card.is-unavailable:hover {
+          transform: none !important;
+          border-color: rgba(239, 68, 68, 0.35) !important;
+          box-shadow: none !important;
+        }
+
+        .pos-menu-card.is-unavailable:hover .pos-menu-card-image img {
+          transform: none !important;
         }
 
         .pos-menu-card.has-qty {
@@ -2983,23 +3000,36 @@ export function TableDetailView({
               </div>
             ) : (
               filteredMenuItems.map((item) => {
+                const isAvailable = item.isAvailable !== false;
                 const currentQty = getItemQuantityInCart(item.id);
 
                 return (
                   <div
                     key={item.id}
-                    className={`pos-menu-card ${currentQty > 0 ? "has-qty" : ""}`}
-                    onClick={() => handleOpenItemModal(item)}
-                    style={{ cursor: "pointer" }}
+                    className={`pos-menu-card ${currentQty > 0 ? "has-qty" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
+                    onClick={() => {
+                      if (!isAvailable) return;
+                      handleOpenItemModal(item);
+                    }}
+                    style={{
+                      cursor: isAvailable ? "pointer" : "not-allowed",
+                      opacity: isAvailable ? 1 : 0.6,
+                      filter: isAvailable ? "none" : "grayscale(25%)",
+                      position: "relative",
+                      transition: "all 0.2s ease",
+                    }}
                   >
                     {/* Item Image with culinary tags */}
-                    <div className="pos-menu-card-image">
+                    <div className="pos-menu-card-image" style={{ position: "relative" }}>
                       <img
                         src={getMenuItemImage(item)}
                         alt={item.name}
                         loading="lazy"
                         className="pos-menu-card-image-img"
                         onError={(e) => handleDishImageError(e, item)}
+                        style={{
+                          filter: isAvailable ? "none" : "grayscale(35%)",
+                        }}
                       />
 
                       {/* Fallback Icon when image loading */}
@@ -3018,6 +3048,39 @@ export function TableDetailView({
                         <Utensils size={36} color="var(--accent-amber)" />
                       </div>
 
+                      {/* Unavailable Overlay Badge */}
+                      {!isAvailable && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: "rgba(15, 23, 42, 0.65)",
+                            backdropFilter: "blur(1.5px)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 2,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          <span
+                            style={{
+                              background: "rgba(220, 38, 38, 0.95)",
+                              color: "#ffffff",
+                              fontSize: "0.72rem",
+                              fontWeight: 800,
+                              padding: "3px 9px",
+                              borderRadius: "6px",
+                              letterSpacing: "0.06em",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Unavailable
+                          </span>
+                        </div>
+                      )}
+
                       {/* Veg / Non-Veg Indicator badge */}
                       <div className="pos-menu-badge">
                         <span
@@ -3033,7 +3096,7 @@ export function TableDetailView({
                       </div>
 
                       {/* Chef Special Badge */}
-                      {item.isChefSpecial && (
+                      {Boolean(item.isChefSpecial || item.isChefsSpecial) && (
                         <div className="pos-menu-chef" title="Chef's Pick">
                           <Sparkles size={11} />
                         </div>
@@ -3050,13 +3113,21 @@ export function TableDetailView({
                     <div className="pos-menu-card-content">
                       <div>
                         <div className="pos-menu-card-title-row">
-                          <h4 className="pos-menu-card-title">{item.name}</h4>
+                          <h4
+                            className="pos-menu-card-title"
+                            style={{
+                              color: isAvailable ? "var(--text-main)" : "var(--text-dim)",
+                            }}
+                          >
+                            {item.name}
+                          </h4>
                           {item.spiceLevel > 0 && (
                             <div
                               style={{
                                 display: "flex",
                                 color: "#ef4444",
                                 flexShrink: 0,
+                                opacity: isAvailable ? 1 : 0.4,
                               }}
                               title={`Spicy Level: ${item.spiceLevel}`}
                             >
@@ -3067,19 +3138,45 @@ export function TableDetailView({
                           )}
                         </div>
 
-                        <p className="pos-menu-card-description">
+                        <p
+                          className="pos-menu-card-description"
+                          style={{
+                            color: isAvailable ? "var(--text-muted)" : "var(--text-dim)",
+                          }}
+                        >
                           {item.description}
                         </p>
                       </div>
 
                       {/* Price in Rupees and Add / Quantity Control */}
                       <div className="pos-menu-card-footer">
-                        <span className="font-mono pos-menu-card-price">
+                        <span
+                          className="font-mono pos-menu-card-price"
+                          style={{
+                            color: isAvailable ? "var(--accent-amber)" : "var(--text-dim)",
+                          }}
+                        >
                           {formatCurrency(item.price)}
                         </span>
 
                         {/* Interactive Add or Qty Controller */}
-                        {currentQty === 0 ? (
+                        {!isAvailable ? (
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              color: "#ef4444",
+                              background: "rgba(239, 68, 68, 0.12)",
+                              border: "1px solid rgba(239, 68, 68, 0.35)",
+                              borderRadius: "6px",
+                              padding: "4px 9px",
+                              cursor: "not-allowed",
+                            }}
+                            title="This item is currently unavailable"
+                          >
+                            Unavailable
+                          </span>
+                        ) : currentQty === 0 ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

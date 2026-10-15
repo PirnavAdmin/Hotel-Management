@@ -5,6 +5,7 @@ import {
   Trash2,
   Edit3,
   SquarePen,
+  Star,
   Utensils,
   Users,
   LayoutGrid,
@@ -406,7 +407,7 @@ export function AdminPortal({
         category: item.category || "",
         price: item.price,
         isVeg: item.isVeg,
-        isChefSpecial: item.isChefSpecial,
+        isChefSpecial: Boolean(item.isChefSpecial ?? item.isChefsSpecial ?? item.isSpecial),
         spiceLevel: item.spiceLevel || 0,
         prepTime: item.prepTime || "12 min",
         description: item.description || "",
@@ -438,10 +439,14 @@ export function AdminPortal({
       itemImage = getRelevantLocalFallback(itemForm);
     }
 
+    const isSpecialValue = Boolean(itemForm.isChefSpecial);
     const payload = {
       ...itemForm,
       image: itemImage,
       price: Number(itemForm.price) || 0,
+      isChefSpecial: isSpecialValue,
+      isChefsSpecial: isSpecialValue,
+      isSpecial: isSpecialValue,
     };
 
     let saved;
@@ -969,19 +974,26 @@ export function AdminPortal({
                           </td>
                         </tr>
                       ) : (
-                        paginatedItems.map((item) => (
+                        paginatedItems.map((item) => {
+                          const isAvail = item.isAvailable !== false;
+                          return (
                           <tr
                             key={item.id}
                             style={{
                               borderBottom: "1px solid var(--border-subtle)",
-                              transition: "background 0.15s ease",
+                              transition: "background 0.15s ease, opacity 0.2s ease",
+                              opacity: isAvail ? 1 : 0.6,
+                              background: isAvail ? "transparent" : "rgba(239, 68, 68, 0.03)",
                             }}
                             onMouseEnter={(e) =>
-                              (e.currentTarget.style.background =
-                                "var(--bg-tertiary)")
+                              (e.currentTarget.style.background = isAvail
+                                ? "var(--bg-tertiary)"
+                                : "rgba(239, 68, 68, 0.07)")
                             }
                             onMouseLeave={(e) =>
-                              (e.currentTarget.style.background = "transparent")
+                              (e.currentTarget.style.background = isAvail
+                                ? "transparent"
+                                : "rgba(239, 68, 68, 0.03)")
                             }
                           >
                             <td style={{ padding: "0.6rem 0.85rem" }}>
@@ -1000,8 +1012,11 @@ export function AdminPortal({
                                     height: "52px",
                                     borderRadius: "10px",
                                     objectFit: "cover",
-                                    border: "1px solid var(--border-card)",
+                                    border: isAvail
+                                      ? "1px solid var(--border-card)"
+                                      : "1px solid rgba(239, 68, 68, 0.35)",
                                     flexShrink: 0,
+                                    filter: isAvail ? "none" : "grayscale(60%)",
                                   }}
                                   onError={(e) => handleDishImageError(e, item)}
                                 />
@@ -1009,12 +1024,29 @@ export function AdminPortal({
                                   <div
                                     style={{
                                       fontWeight: 800,
-                                      color: "var(--text-main)",
+                                      color: isAvail
+                                        ? "var(--text-main)"
+                                        : "var(--text-dim)",
                                       fontSize: "0.92rem",
                                       lineHeight: 1.3,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "6px",
                                     }}
                                   >
-                                    {item.name}
+                                    <span>{item.name}</span>
+                                    {Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) && (
+                                      <Star
+                                        size={14}
+                                        fill="#f59e0b"
+                                        color="#f59e0b"
+                                        title="Chef's Special"
+                                        style={{
+                                          flexShrink: 0,
+                                          filter: "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                        }}
+                                      />
+                                    )}
                                   </div>
                                   <div
                                     style={{
@@ -1058,20 +1090,10 @@ export function AdminPortal({
                                     fontWeight: 700,
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px",
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  <span>VEG</span>
-                                  <span
-                                    style={{
-                                      width: "5px",
-                                      height: "5px",
-                                      borderRadius: "50%",
-                                      background: "#10b981",
-                                      display: "inline-block",
-                                    }}
-                                  />
+                                  VEG
                                 </span>
                               ) : (
                                 <span
@@ -1085,20 +1107,10 @@ export function AdminPortal({
                                     fontWeight: 700,
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px",
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  <span>NON-VEG</span>
-                                  <span
-                                    style={{
-                                      width: "5px",
-                                      height: "5px",
-                                      borderRadius: "50%",
-                                      background: "#ef4444",
-                                      display: "inline-block",
-                                    }}
-                                  />
+                                  NON-VEG
                                 </span>
                               )}
                             </td>
@@ -1131,13 +1143,41 @@ export function AdminPortal({
                                 <button
                                   onClick={() => onSetMenuAvailability?.(item.id, item.isAvailable === false)}
                                   title={item.isAvailable === false ? "Make available" : "Mark unavailable"}
-                                  style={{ border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}
-                                >{item.isAvailable === false ? "Unavailable" : "Available"}</button>
+                                  style={{
+                                    border: item.isAvailable === false
+                                      ? "1px solid rgba(239, 68, 68, 0.45)"
+                                      : "1px solid rgba(16, 185, 129, 0.45)",
+                                    background: item.isAvailable === false
+                                      ? "rgba(239, 68, 68, 0.12)"
+                                      : "rgba(16, 185, 129, 0.12)",
+                                    color: item.isAvailable === false ? "#ef4444" : "#10b981",
+                                    borderRadius: "6px",
+                                    padding: "4px 9px",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = item.isAvailable === false
+                                      ? "rgba(239, 68, 68, 0.22)"
+                                      : "rgba(16, 185, 129, 0.22)";
+                                    e.currentTarget.style.borderColor = item.isAvailable === false
+                                      ? "rgba(239, 68, 68, 0.7)"
+                                      : "rgba(16, 185, 129, 0.7)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = item.isAvailable === false
+                                      ? "rgba(239, 68, 68, 0.12)"
+                                      : "rgba(16, 185, 129, 0.12)";
+                                    e.currentTarget.style.borderColor = item.isAvailable === false
+                                      ? "rgba(239, 68, 68, 0.45)"
+                                      : "rgba(16, 185, 129, 0.45)";
+                                  }}
+                                >
+                                  {item.isAvailable === false ? "Unavailable" : "Available"}
+                                </button>
                                 <button
-                                  onClick={() => onSetMenuSpecial?.(item.id, !item.isChefSpecial)}
-                                  title={item.isChefSpecial ? "Remove Chef's Special" : "Mark Chef's Special"}
-                                  style={{ border: "1px solid rgba(245, 158, 11, 0.45)", background: "rgba(245, 158, 11, 0.06)", color: "#f59e0b", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}
-                                >{item.isChefSpecial ? "★ Special" : "☆ Special"}</button>                                <button
                                   onClick={() => handleOpenItemModal(item)}
                                   style={{
                                     border: "1px solid rgba(245, 158, 11, 0.45)",
@@ -1191,8 +1231,9 @@ export function AdminPortal({
                               </div>
                             </td>
                           </tr>
-                        ))
-                      )}
+                        );
+                      })
+                    )}
                     </tbody>
                   </table>
 
@@ -2993,7 +3034,7 @@ export function AdminPortal({
               >
                 <input
                   type="checkbox"
-                  checked={itemForm.isChefSpecial}
+                  checked={Boolean(itemForm.isChefSpecial)}
                   onChange={(e) =>
                     setItemForm({
                       ...itemForm,
