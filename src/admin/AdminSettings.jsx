@@ -39,16 +39,16 @@ const DEFAULT_PAYMENT_QRS = [
 
 const getInitialSettings = (initialSettings) => {
   const baseDefaults = {
-    restaurantName: "AVSR FOOD COURT",
-    tagline: "Restaurant Management & Fine Dining",
-    phone: "+91 98450 12345",
-    address: "Main Road, Near Tech Park, Hyderabad, India",
-    gstin: "36AABCA1234F1Z5",
+    restaurantName: "",
+    tagline: "",
+    phone: "",
+    address: "",
+    gstin: "",
     taxRate: 5,
     serviceChargeRate: 5,
     currency: "₹",
-    receiptHeader: "Welcome to AVSR Food Court!",
-    receiptFooter: "Thank you for dining with us. Visit again!",
+    receiptHeader: "",
+    receiptFooter: "",
     selectedQrId: "qr-1",
     paymentQrs: DEFAULT_PAYMENT_QRS,
     showLogoOnReceipt: true,

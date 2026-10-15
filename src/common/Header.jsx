@@ -38,6 +38,7 @@ export function Header({
   kitchenNotifications = [],
   onClearNotifications = null,
   onSelectTable = null,
+  restaurantName = "Restaurant",
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -208,7 +209,7 @@ export function Header({
                   lineHeight: 1.1,
                 }}
               >
-                AVSR FOOD COURT
+                {restaurantName || "Restaurant"}
               </h1>
               <span
                 style={{

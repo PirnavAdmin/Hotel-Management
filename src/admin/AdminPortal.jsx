@@ -97,15 +97,21 @@ export function AdminPortal({
     }
   });
   const restaurantLogo = restaurantSettings?.logo || "";
+  const restaurantName = restaurantSettings?.restaurantName?.trim() || "Restaurant";
 
   useEffect(() => {
     let active = true;
     const applySettings = (settings) => {
       if (!settings || typeof settings !== "object") return;
+      let localSettings = {};
       try {
-        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
+        localSettings = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
       } catch {}
-      if (active) setRestaurantSettings(settings);
+      const mergedSettings = { ...settings, ...localSettings };
+      try {
+        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(mergedSettings));
+      } catch {}
+      if (active) setRestaurantSettings(mergedSettings);
     };
 
     fetch(`${API_BASE_URL}/api/state`, {
@@ -152,6 +158,7 @@ export function AdminPortal({
     try {
       localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
     } catch {}
+    window.dispatchEvent(new Event("restaurant-settings-updated"));
     setRestaurantSettings(settings);
   };
 
@@ -710,6 +717,7 @@ export function AdminPortal({
           staffCount={staffList.length}
           activeKOTCount={activeKOTCount}
           restaurantLogo={restaurantLogo}
+          restaurantName={restaurantName}
         />
 
         {/* Right Main Content Pane */}
@@ -731,7 +739,6 @@ export function AdminPortal({
             onClose={onClose}
             currentTheme={currentTheme}
             onChangeTheme={handleThemeChange}
-            restaurantLogo={restaurantLogo}
           />
 
           {/* Scrollable Work Area */}
@@ -2527,7 +2534,7 @@ export function AdminPortal({
 
           {/* ================= TAB 6: INVOICES ================= */}
           {activeTab === "invoices" && (
-            <AdminInvoices pastOrders={pastOrders} />
+            <AdminInvoices pastOrders={pastOrders} restaurantName={restaurantName} />
           )}
 
           {/* ================= TAB 7: REPORTS ================= */}
@@ -2535,6 +2542,7 @@ export function AdminPortal({
             <AdminReports
               pastOrders={pastOrders}
               menuItems={menuItems}
+              restaurantSettings={restaurantSettings}
             />
           )}
 

@@ -54,7 +54,7 @@ function parseOrderToYMD(order) {
   return "";
 }
 
-export function AdminReports({ pastOrders = [], menuItems = [] }) {
+export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {} }) {
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -944,10 +944,10 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
                 textTransform: "uppercase",
               }}
             >
-              AVSR FOOD COURT
+              {restaurantSettings?.restaurantName?.trim() || "Restaurant"}
             </h1>
             <div style={{ fontSize: "11px", color: "#475569", fontWeight: 500 }}>
-              Plot 12, Food Street, Jubilee Enclave • Ph: +91 98490 12345 • GSTIN: 36AAJCS8214M1ZV
+              {[restaurantSettings?.address, restaurantSettings?.phone, restaurantSettings?.gstin && `GSTIN: ${restaurantSettings.gstin}`].filter(Boolean).join(" • ")}
             </div>
             <div
               style={{
