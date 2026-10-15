@@ -99,6 +99,26 @@ export function AdminPortal({
     setMenuPage(1);
   };
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
+  const emptyTableFilters = { search: "", area: "", status: "", minCapacity: "", maxCapacity: "", server: "" };
+  const [tableFilters, setTableFilters] = useState(emptyTableFilters);
+  const updateTableFilter = (key, value) => setTableFilters((previous) => ({ ...previous, [key]: value }));
+  const normalizeTableFilterText = (value) => String(value ?? "").trim().toLowerCase();
+  const tableAreaOptions = [...new Map(tables.map((table) => String(table.section ?? "").trim()).filter(Boolean).map((area) => [normalizeTableFilterText(area), area])).values()];
+  const tableServerOptions = [...new Map([
+    ...staffList.map((staff) => staff?.name || staff?.fullName || staff?.FullName || staff?.username),
+    ...tables.map((table) => table.server),
+  ].map((name) => String(name ?? "").trim()).filter(Boolean).map((name) => [normalizeTableFilterText(name), name])).values()];
+  const filteredTables = tables.filter((table) => {
+    const query = normalizeTableFilterText(tableFilters.search);
+    const capacity = Number(table.capacity);
+    const server = normalizeTableFilterText(table.server);
+    return [table.name, table.tableNumber, table.number, table.id].some((value) => normalizeTableFilterText(value).includes(query)) &&
+      (!tableFilters.area || normalizeTableFilterText(table.section) === normalizeTableFilterText(tableFilters.area)) &&
+      (!tableFilters.status || (normalizeTableFilterText(table.status) === "vacant" ? "vacant" : "occupied") === tableFilters.status) &&
+      (!tableFilters.server || (tableFilters.server === "unassigned" ? !server : server === tableFilters.server.slice(5))) &&
+      (tableFilters.minCapacity === "" || (Number.isFinite(capacity) && capacity >= Number(tableFilters.minCapacity))) &&
+      (tableFilters.maxCapacity === "" || (Number.isFinite(capacity) && capacity <= Number(tableFilters.maxCapacity)));
+  });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [restaurantSettings, setRestaurantSettings] = useState(() => {
     try {
@@ -1511,6 +1531,33 @@ export function AdminPortal({
                 </div>
               </div>
 
+              <div className="menu-filter-toolbar" role="search" aria-label="Table filters">
+                <label className="menu-filter-field menu-filter-search">
+                  <span>Search Table</span>
+                  <input type="search" placeholder="Table number or name..." value={tableFilters.search} onChange={(event) => updateTableFilter("search", event.target.value)} />
+                </label>
+                {[
+                  { key: "area", label: "Area / Location", options: tableAreaOptions.map((area) => ({ value: area, label: area })) },
+                  { key: "status", label: "Table Status", options: [{ value: "vacant", label: "Vacant" }, { value: "occupied", label: "Occupied" }] },
+                  { key: "server", label: "Assigned Server", options: [{ value: "unassigned", label: "Unassigned" }, ...tableServerOptions.map((name) => ({ value: 'name:' + normalizeTableFilterText(name), label: name }))] },
+                ].map(({ key, label, options }) => (
+                  <label className="menu-filter-field" key={key}>
+                    <span>{label}</span>
+                    <select value={tableFilters[key]} onChange={(event) => updateTableFilter(key, event.target.value)}>
+                      <option value="">All</option>
+                      {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                ))}
+                {[{ key: "minCapacity", label: "Minimum Chairs" }, { key: "maxCapacity", label: "Maximum Chairs" }].map(({ key, label }) => (
+                  <label className="menu-filter-field menu-filter-price" key={key}>
+                    <span>{label}</span>
+                    <input type="number" min="0" step="1" placeholder="Chairs" value={tableFilters[key]} onChange={(event) => updateTableFilter(key, event.target.value)} />
+                  </label>
+                ))}
+                <button type="button" className="menu-filter-clear" onClick={() => setTableFilters(emptyTableFilters)}>Clear Filters</button>
+              </div>
+
               {/* Action Bar */}
               <div
                 style={{
@@ -1562,7 +1609,10 @@ export function AdminPortal({
                   gap: "0.75rem",
                 }}
               >
-                {tables.map((tbl) => (
+                {filteredTables.length === 0 && (
+                  <p role="status" style={{ color: "var(--text-muted)", gridColumn: "1 / -1", margin: "0.75rem 0" }}>No tables match the selected filters.</p>
+                )}
+                {filteredTables.map((tbl) => (
                   <div
                     key={tbl.id}
                     style={{
