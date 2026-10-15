@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -45,6 +45,12 @@ import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
 import { API_BASE_URL } from "../api/apiConfig";
 import { apiCreateMenuCategory, apiGetMenuCategories, apiUploadMenuImage } from "../api/menuApi";
+import {
+  getMenuItemImage,
+  handleDishImageError,
+  getRelevantLocalFallback,
+  LOCAL_IMAGE_PRESETS,
+} from "../utils/menuImageHelper";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
@@ -427,18 +433,27 @@ export function AdminPortal({
     e.preventDefault();
     if (isImageUploading || !itemForm.name.trim()) return;
 
-        let saved;
+    let itemImage = (itemForm.image || "").trim();
+    if (!itemImage || itemImage.includes("photo-1563379091339-03b21ab4a4f8")) {
+      itemImage = getRelevantLocalFallback(itemForm);
+    }
+
+    const payload = {
+      ...itemForm,
+      image: itemImage,
+      price: Number(itemForm.price) || 0,
+    };
+
+    let saved;
     if (editingItem) {
       saved = await onUpdateMenuItem({
         ...editingItem,
-        ...itemForm,
-        price: Number(itemForm.price) || 0,
+        ...payload,
       });
     } else {
       saved = await onAddMenuItem({
         id: `custom-${Date.now()}`,
-        ...itemForm,
-        price: Number(itemForm.price) || 0,
+        ...payload,
       });
     }
     if (saved === false) return;
@@ -978,7 +993,7 @@ export function AdminPortal({
                                 }}
                               >
                                 <img
-                                  src={item.image}
+                                  src={getMenuItemImage(item)}
                                   alt={item.name}
                                   style={{
                                     width: "52px",
@@ -988,9 +1003,7 @@ export function AdminPortal({
                                     border: "1px solid var(--border-card)",
                                     flexShrink: 0,
                                   }}
-                                  onError={(e) =>
-                                    (e.target.style.display = "none")
-                                  }
+                                  onError={(e) => handleDishImageError(e, item)}
                                 />
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div
@@ -2849,8 +2862,45 @@ export function AdminPortal({
                   marginBottom: "5px",
                 }}
               >
-                Dish Image
+                Dish Image (Local Preset or Upload)
               </label>
+
+              {/* Local Presets Pill Selector */}
+              <div style={{ marginBottom: "8px" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+                  Select from local asset presets:
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {LOCAL_IMAGE_PRESETS.map((preset) => {
+                    const isSelected = itemForm.image === preset.path;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setItemForm((curr) => ({ ...curr, image: preset.path }))}
+                        style={{
+                          fontSize: "0.74rem",
+                          fontWeight: 600,
+                          padding: "4px 8px",
+                          borderRadius: "6px",
+                          border: isSelected ? "1.5px solid var(--color-primary, #ea580c)" : "1px solid var(--border-subtle)",
+                          background: isSelected ? "rgba(234, 88, 12, 0.15)" : "var(--bg-tertiary)",
+                          color: isSelected ? "var(--color-primary, #ea580c)" : "var(--text-main)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <span>{preset.icon}</span>
+                        <span>{preset.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* File Upload Input */}
               <input
                 type="file"
                 accept="image/*"
@@ -2859,46 +2909,72 @@ export function AdminPortal({
                   const file = e.target.files?.[0];
                   if (!file) return;
 
-                  setIsImageUploading(true);
-                  apiUploadMenuImage(file).then((result) => {
-                    if (!result.success) {
-                      window.alert(`Dish image upload failed: ${result.error}`);
-                      return;
+                  // 1. Immediately read as Base64 Data URL so it is preserved locally in data across all devices
+                  const reader = new FileReader();
+                  reader.onload = (uploadEvent) => {
+                    const base64Data = uploadEvent.target?.result;
+                    if (base64Data) {
+                      setItemForm((current) => ({ ...current, image: base64Data }));
                     }
-                    setItemForm((current) => ({ ...current, image: result.imageUrl }));
-                  }).finally(() => setIsImageUploading(false));
+                  };
+                  reader.readAsDataURL(file);
+
+                  // 2. Also attempt upload to backend API if available
+                  setIsImageUploading(true);
+                  apiUploadMenuImage(file)
+                    .then((result) => {
+                      if (result && result.success && result.imageUrl) {
+                        setItemForm((current) => ({ ...current, image: result.imageUrl }));
+                      }
+                    })
+                    .catch(() => {})
+                    .finally(() => setIsImageUploading(false));
                 }}
                 style={{
                   width: "100%",
                   background: "var(--bg-tertiary)",
                   border: "1.5px solid var(--border-subtle)",
                   borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
+                  padding: "0.55rem 0.85rem",
                   color: "var(--text-main)",
                   fontWeight: 500,
-                  fontSize: "0.88rem",
+                  fontSize: "0.85rem",
                   outline: "none",
                 }}
               />
-              {itemForm.image && (
+
+              {/* Dish Image Live Preview */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginTop: "8px",
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  background: "var(--bg-tertiary)",
+                  border: "1px dashed var(--border-subtle)",
+                }}
+              >
                 <img
-                  src={itemForm.image}
+                  src={getMenuItemImage(itemForm)}
                   alt="Dish preview"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                  onLoad={(e) => {
-                    e.currentTarget.style.display = "block";
-                  }}
+                  onError={(e) => handleDishImageError(e, itemForm)}
                   style={{
-                    width: "72px",
-                    height: "56px",
+                    width: "56px",
+                    height: "44px",
                     objectFit: "cover",
                     borderRadius: "6px",
-                    marginTop: "8px",
+                    border: "1px solid var(--border-card)",
+                    background: "#0f172a",
+                    flexShrink: 0,
                   }}
                 />
-              )}
+                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                  <div style={{ fontWeight: 600, color: "var(--text-main)" }}>Live Preview</div>
+                  <div>Relevant image saved locally for all devices</div>
+                </div>
+              </div>
             </div>
 
             <div

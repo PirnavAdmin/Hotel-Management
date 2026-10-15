@@ -1,12 +1,22 @@
-﻿import { API_BASE_URL, apiClient } from "./apiConfig";
+import { API_BASE_URL, apiClient } from "./apiConfig";
+import { getMenuItemImage } from "../utils/menuImageHelper";
 
 export function normalizeMenuItem(item = {}) {
   const prepTime = item.prepTime ?? item.prep_time;
   const prepTimeMinutes = item.prepTimeMinutes ?? item.prep_time_minutes;
   const dietaryType = item.dietaryType ?? item.dietary_type;
-  const imagePath = item.image ?? item.imageUrl ?? item.image_url ?? "";
+  const rawImagePath = item.image ?? item.imageUrl ?? item.image_url ?? "";
 
-  return {
+  const resolvedImagePath =
+    typeof rawImagePath === "string" &&
+    rawImagePath.startsWith("/") &&
+    !rawImagePath.startsWith("//") &&
+    !rawImagePath.startsWith("/assets/") &&
+    API_BASE_URL
+      ? `${API_BASE_URL.replace(/\/$/, "")}${rawImagePath}`
+      : rawImagePath;
+
+  const intermediate = {
     ...item,
     id: item.id ?? item.menuItemId ?? item.menu_item_id,
     name: item.name ?? item.dishName ?? item.dish_name ?? "",
@@ -22,14 +32,13 @@ export function normalizeMenuItem(item = {}) {
     prepTime: prepTime ?? `${prepTimeMinutes ?? 15} min`,
     description:
       item.description ?? item.shortDescription ?? item.short_description ?? "",
-    image:
-      typeof imagePath === "string" &&
-      imagePath.startsWith("/") &&
-      !imagePath.startsWith("//") &&
-      API_BASE_URL
-        ? `${API_BASE_URL.replace(/\/$/, "")}${imagePath}`
-        : imagePath,
+    image: resolvedImagePath,
     isAvailable: item.isAvailable ?? item.is_available ?? true,
+  };
+
+  return {
+    ...intermediate,
+    image: getMenuItemImage(intermediate),
   };
 }
 

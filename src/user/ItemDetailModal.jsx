@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { sounds } from "../utils/audio";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 
 const PRESET_NOTES = [
   "Extra Spicy 🌶️",
@@ -148,14 +149,14 @@ export function ItemDetailModal({
           }}
         >
           <img
-            src={item.image || undefined}
+            src={getMenuItemImage(item)}
             alt={item.name}
             style={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
             }}
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
+            onError={(e) => handleDishImageError(e, item)}
           />
 
           {/* Gradient Overlay for Readable Badges */}

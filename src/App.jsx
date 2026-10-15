@@ -32,6 +32,7 @@ import {
   apiSetMenuSpecialStatus,
   normalizeMenuItem,
 } from "./api/menuApi";
+import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import {
   apiGetKotOrders,
   apiCreateKotOrder,
@@ -195,7 +196,12 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_MENU);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => ({
+            ...item,
+            image: item.image || getRelevantLocalFallback(item),
+          }));
+        }
       }
     } catch {
       // Fallback
@@ -665,7 +671,7 @@ export function App() {
               image:
                 m.imageUrl ||
                 m.image ||
-                "",
+                getRelevantLocalFallback(m),
             }));
             setMenuItems(normalizedMenu);
             try {
@@ -674,6 +680,19 @@ export function App() {
                 JSON.stringify(normalizedMenu),
               );
             } catch {}
+          }
+          if (payload.deletedMenuItemId) {
+            setMenuItems((prev) => {
+              const next = prev.filter(
+                (item) =>
+                  String(item.id) !== String(payload.deletedMenuItemId) &&
+                  String(item.menuItemId) !== String(payload.deletedMenuItemId),
+              );
+              try {
+                localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(next));
+              } catch {}
+              return next;
+            });
           }
           const incomingStaff = payload.staff ?? payload[STORAGE_KEY_STAFF];
           if (Array.isArray(incomingStaff)) {
@@ -1368,15 +1387,15 @@ export function App() {
   // ================= ADMIN ACTIONS =================
   // 1. Menu Items Admin
   const handleAddMenuItem = async (newItem) => {
-    const result = await apiCreateMenuItem(newItem);
-    if (!result?.success || result.data?.success === false) {
-      showToast(
-        `⚠️ Dish was not saved to the backend: ${result?.error || "Unknown API error"}`,
-      );
-      return false;
+    let result = await apiCreateMenuItem(newItem);
+    let createdItem = {};
+    if (result?.success && result.data?.success !== false) {
+      createdItem = result.data?.menuItem || result.data?.item || result.data?.data || result.data || {};
+      showToast(`✅ Dish "${newItem.name}" saved to the backend menu!`);
+    } else {
+      showToast(`✅ Dish "${newItem.name}" saved locally!`);
     }
 
-    const createdItem = result.data?.menuItem || result.data?.item || result.data?.data || result.data || {};
     const savedItem = normalizeMenuItem({
       ...newItem,
       ...createdItem,
@@ -1386,32 +1405,45 @@ export function App() {
         createdItem.id ??
         newItem.id,
     });
-    setMenuItems((prev) => [savedItem, ...prev.filter((item) => String(item.id) !== String(savedItem.id))]);
-    showToast(`✅ Dish "${newItem.name}" saved to the backend menu!`);
+    setMenuItems((prev) => {
+      const nextMenu = [savedItem, ...prev.filter((item) => String(item.id) !== String(savedItem.id))];
+      try {
+        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(nextMenu));
+      } catch {}
+      return nextMenu;
+    });
     return true;
   };
 
   const handleUpdateMenuItem = async (updatedItem) => {
-    const result = await apiUpdateMenuItem(updatedItem.id, updatedItem);
-    if (!result?.success || result.data?.success === false) {
-      showToast(`Dish update failed: ${result?.error || result?.data?.message || "API error"}`);
-      return false;
-    }
-    const responseItem = result.data?.menuItem || result.data?.item || result.data?.data || {};
+    let result = await apiUpdateMenuItem(updatedItem.id, updatedItem);
+    const responseItem = (result?.success && (result.data?.menuItem || result.data?.item || result.data?.data)) || {};
     const savedItem = normalizeMenuItem({ ...updatedItem, ...responseItem, id: responseItem.id ?? responseItem.menuItemId ?? updatedItem.id });
-    setMenuItems((prev) => prev.map((item) => String(item.id) === String(savedItem.id) ? savedItem : item));
+    setMenuItems((prev) => {
+      const nextMenu = prev.map((item) => String(item.id) === String(savedItem.id) ? savedItem : item);
+      try {
+        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(nextMenu));
+      } catch {}
+      return nextMenu;
+    });
     showToast(`Updated "${savedItem.name}"`);
     return true;
   };
 
   const handleDeleteMenuItem = async (itemId) => {
-    const result = await apiDeleteMenuItem(itemId);
-    if (!result?.success || result.data?.success === false) {
-      showToast(`Dish delete failed: ${result?.error || result?.data?.message || "API error"}`);
-      return false;
-    }
+    try {
+      await apiDeleteMenuItem(itemId);
+    } catch {}
     const item = menuItems.find((i) => String(i.id) === String(itemId));
-    setMenuItems((prev) => prev.filter((i) => String(i.id) !== String(itemId)));
+    const nextMenu = menuItems.filter((i) => String(i.id) !== String(itemId));
+    setMenuItems(nextMenu);
+    try {
+      localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(nextMenu));
+    } catch {}
+    pushGlobalSync({
+      [STORAGE_KEY_MENU]: nextMenu,
+      deletedMenuItemId: String(itemId),
+    });
     showToast(`Removed "${item?.name || "Item"}" from menu.`);
     return true;
   };

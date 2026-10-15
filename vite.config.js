@@ -64,6 +64,7 @@ function globalSyncPlugin() {
 
         // Get initial server DB state
         if (req.url === "/api/state" && req.method === "GET") {
+          db = loadDb();
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(JSON.stringify(db));
         }
@@ -238,7 +239,166 @@ function globalSyncPlugin() {
           );
         }
 
-        // REST API: /api/v1/menu-items
+        // REST API: /api/v1/menu-items (DELETE)
+        const menuItemDeleteMatch = req.url.match(/^\/api\/v1\/menu-items\/([^/?]+)$/i);
+        if (menuItemDeleteMatch && req.method === "DELETE") {
+          const rawId = decodeURIComponent(menuItemDeleteMatch[1]);
+          db = loadDb();
+          db.gourmet_pos_menu_items_v2 = (db.gourmet_pos_menu_items_v2 || []).filter(
+            (item) => String(item.id) !== rawId && String(item.menuItemId) !== rawId && String(item.id) !== `m-${rawId}`
+          );
+          saveDb(db);
+          broadcast({
+            gourmet_pos_menu_items_v2: db.gourmet_pos_menu_items_v2,
+            deletedMenuItemId: rawId,
+          });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              message: "Menu item deleted successfully",
+              deletedId: rawId,
+              remaining: db.gourmet_pos_menu_items_v2.length,
+            })
+          );
+        }
+
+        // REST API: /api/v1/menu-items (CREATE)
+        if ((req.url === "/api/v1/menu-items" || req.url === "/api/v1/menu-items/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = db.gourmet_pos_menu_items_v2 || [];
+              const newItem = {
+                id: payload.id || `m-${Date.now()}`,
+                name: payload.dishName || payload.name || "New Dish",
+                category: payload.category || "mains",
+                price: Number(payload.price) || 0,
+                isVeg: payload.dietaryType ? payload.dietaryType === "VEG" : !!payload.isVeg,
+                spiceLevel: payload.spiceLevel ?? 1,
+                prepTime: payload.prepTime || `${payload.prepTimeMinutes || 15} min`,
+                prepTimeMinutes: Number(payload.prepTimeMinutes) || 15,
+                description: payload.shortDescription || payload.description || "",
+                image: payload.imageUrl || payload.image || "/assets/chicken-dum-biryani.jpg",
+                isChefSpecial: !!payload.isChefsSpecial || !!payload.isChefSpecial,
+                isAvailable: payload.isAvailable !== false,
+                recipe: payload.recipe || [],
+              };
+              db.gourmet_pos_menu_items_v2 = [newItem, ...existing];
+              saveDb(db);
+              broadcast({ gourmet_pos_menu_items_v2: db.gourmet_pos_menu_items_v2 });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, menuItem: newItem, data: newItem }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/menu-items/:id (UPDATE)
+        const menuItemUpdateMatch = req.url.match(/^\/api\/v1\/menu-items\/([^/?]+)$/i);
+        if (menuItemUpdateMatch && req.method === "PUT") {
+          const rawId = decodeURIComponent(menuItemUpdateMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const list = db.gourmet_pos_menu_items_v2 || [];
+              let updatedItem = null;
+              db.gourmet_pos_menu_items_v2 = list.map((item) => {
+                if (String(item.id) === rawId || String(item.menuItemId) === rawId || String(item.id) === `m-${rawId}`) {
+                  updatedItem = {
+                    ...item,
+                    ...payload,
+                    name: payload.dishName || payload.name || item.name,
+                    category: payload.category || item.category,
+                    price: payload.price !== undefined ? Number(payload.price) : item.price,
+                    isVeg: payload.dietaryType !== undefined ? payload.dietaryType === "VEG" : (payload.isVeg !== undefined ? !!payload.isVeg : item.isVeg),
+                    description: payload.shortDescription || payload.description || item.description,
+                    image: payload.imageUrl || payload.image || item.image,
+                    isChefSpecial: payload.isChefsSpecial !== undefined ? !!payload.isChefsSpecial : (payload.isChefSpecial !== undefined ? !!payload.isChefSpecial : item.isChefSpecial),
+                    isAvailable: payload.isAvailable !== undefined ? payload.isAvailable !== false : item.isAvailable,
+                  };
+                  return updatedItem;
+                }
+                return item;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_menu_items_v2: db.gourmet_pos_menu_items_v2 });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, menuItem: updatedItem, data: updatedItem }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/menu-items/:id/availability
+        const menuItemAvailMatch = req.url.match(/^\/api\/v1\/menu-items\/([^/?]+)\/availability$/i);
+        if (menuItemAvailMatch && req.method === "PATCH") {
+          const rawId = decodeURIComponent(menuItemAvailMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const { isAvailable } = JSON.parse(body || "{}");
+              db = loadDb();
+              db.gourmet_pos_menu_items_v2 = (db.gourmet_pos_menu_items_v2 || []).map((item) => {
+                if (String(item.id) === rawId || String(item.menuItemId) === rawId || String(item.id) === `m-${rawId}`) {
+                  return { ...item, isAvailable: !!isAvailable };
+                }
+                return item;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_menu_items_v2: db.gourmet_pos_menu_items_v2 });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/menu-items/:id/special-status
+        const menuItemSpecialMatch = req.url.match(/^\/api\/v1\/menu-items\/([^/?]+)\/special-status$/i);
+        if (menuItemSpecialMatch && req.method === "PATCH") {
+          const rawId = decodeURIComponent(menuItemSpecialMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const { isSpecial } = JSON.parse(body || "{}");
+              db = loadDb();
+              db.gourmet_pos_menu_items_v2 = (db.gourmet_pos_menu_items_v2 || []).map((item) => {
+                if (String(item.id) === rawId || String(item.menuItemId) === rawId || String(item.id) === `m-${rawId}`) {
+                  return { ...item, isChefSpecial: !!isSpecial };
+                }
+                return item;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_menu_items_v2: db.gourmet_pos_menu_items_v2 });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/menu-items (GET)
         if (req.url.startsWith("/api/v1/menu-items") && req.method === "GET") {
           db = loadDb();
           const menuItems = db.gourmet_pos_menu_items_v2 || [];

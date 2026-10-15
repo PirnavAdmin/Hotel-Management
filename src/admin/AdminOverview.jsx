@@ -16,6 +16,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 
 function parseOrderToYMD(order) {
   if (!order) return "";
@@ -682,7 +683,7 @@ export function AdminOverview({
                 }}
               >
                 <img
-                  src={dish.image}
+                  src={getMenuItemImage(dish)}
                   alt={dish.name}
                   style={{
                     width: "36px",
@@ -690,7 +691,7 @@ export function AdminOverview({
                     borderRadius: "7px",
                     objectFit: "cover",
                   }}
-                  onError={(e) => (e.target.style.display = "none")}
+                  onError={(e) => handleDishImageError(e, dish)}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div

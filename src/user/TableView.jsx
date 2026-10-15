@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
   Clock,
@@ -7,6 +7,10 @@ import {
   Search,
   Flame,
   Hourglass,
+  User,
+  X,
+  Filter,
+  RotateCcw,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import {
@@ -25,26 +29,121 @@ export function TableView({ tables, onSelectTable }) {
 
   const [sectionFilter, setSectionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [serverFilter, setServerFilter] = useState("all");
+  const [tableFilter, setTableFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const sections = [
-    { id: "all", name: `All Areas (${tables.length} Tables)` },
-    { id: "Main Hall", name: "Main Hall" },
-    { id: "Window Side", name: "Window Side" },
-    { id: "Garden Terrace", name: "Garden Terrace" },
-    { id: "VIP Lounge", name: "VIP Lounge" },
-  ];
+  // Extract distinct servers dynamically from tables
+  const uniqueServers = useMemo(() => {
+    const set = new Set();
+    tables.forEach((t) => {
+      const s = (t.server || t.waiter || t.assignedServer || "").trim();
+      if (s) set.add(s);
+    });
+    return Array.from(set).sort();
+  }, [tables]);
 
-  const filteredTables = tables.filter((t) => {
-    const matchesSection =
-      sectionFilter === "all" || t.section === sectionFilter;
-    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-    const matchesSearch =
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.server.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.section.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSection && matchesStatus && matchesSearch;
-  });
+  // Extract distinct table list sorted numerically
+  const uniqueTableNumbers = useMemo(() => {
+    return [...tables].sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }, [tables]);
+
+  // Dynamic sections list based on active tables
+  const sections = useMemo(() => {
+    const defaultSections = ["Main Hall", "Window Side", "Garden Terrace", "VIP Lounge"];
+    const foundSections = new Set(defaultSections);
+    tables.forEach((t) => {
+      if (t.section && typeof t.section === "string") foundSections.add(t.section);
+    });
+    return [
+      { id: "all", name: `All Areas (${tables.length} Tables)` },
+      ...Array.from(foundSections).map((s) => ({ id: s, name: s })),
+    ];
+  }, [tables]);
+
+  const filteredTables = useMemo(() => {
+    return tables.filter((t) => {
+      // 1. Section Filter
+      const matchesSection =
+        sectionFilter === "all" || t.section === sectionFilter;
+
+      // 2. Status Filter
+      const matchesStatus =
+        statusFilter === "all" || t.status === statusFilter;
+
+      // 3. Server Dropdown Filter
+      const tServer = (t.server || t.waiter || t.assignedServer || "Staff").trim();
+      const matchesServerDropdown =
+        serverFilter === "all" ||
+        tServer.toLowerCase() === serverFilter.toLowerCase();
+
+      // 4. Table Number Dropdown Filter
+      const matchesTableDropdown =
+        tableFilter === "all" ||
+        String(t.id) === String(tableFilter) ||
+        String(t.name).toLowerCase() === String(tableFilter).toLowerCase();
+
+      // 5. Search Query Filter (Searches Table Number OR Server Name OR Section)
+      let matchesSearch = true;
+      const q = searchQuery.trim().toLowerCase();
+      if (q) {
+        const tIdStr = String(t.id ?? "");
+        const tName = String(t.name ?? "").toLowerCase();
+        const tSec = String(t.section ?? "").toLowerCase();
+        const sName = tServer.toLowerCase();
+
+        // Check for table number patterns (e.g. "1", "t1", "t 1", "table 1", "#1")
+        const cleanNum = q.replace(/^(table\s*|t\s*|#\s*)/i, "").trim();
+        const isPureNumber = cleanNum !== "" && !isNaN(cleanNum);
+
+        let tableMatch = false;
+        if (isPureNumber) {
+          // Exact table ID match or word-bounded number in table name
+          const numRegex = new RegExp(`(^|\\b)${cleanNum}(\\b|$)`, "i");
+          tableMatch =
+            tIdStr === cleanNum ||
+            numRegex.test(tName) ||
+            tName === `table ${cleanNum}`;
+        } else {
+          tableMatch =
+            tName.includes(q) ||
+            `t${tIdStr}` === q ||
+            `t ${tIdStr}` === q;
+        }
+
+        // Check for server name match (safe substring)
+        const serverMatch = sName.includes(q);
+
+        // Check for section match
+        const sectionMatch = tSec.includes(q);
+
+        matchesSearch = tableMatch || serverMatch || sectionMatch;
+      }
+
+      return (
+        matchesSection &&
+        matchesStatus &&
+        matchesServerDropdown &&
+        matchesTableDropdown &&
+        matchesSearch
+      );
+    });
+  }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    serverFilter !== "all" ||
+    tableFilter !== "all" ||
+    statusFilter !== "all" ||
+    sectionFilter !== "all";
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setServerFilter("all");
+    setTableFilter("all");
+    setStatusFilter("all");
+    setSectionFilter("all");
+  };
 
   return (
     <div
@@ -109,7 +208,7 @@ export function TableView({ tables, onSelectTable }) {
             flexWrap: "wrap",
           }}
         >
-          {/* Quick Search */}
+          {/* Quick Search with Clear */}
           <div
             style={{
               position: "relative",
@@ -120,7 +219,7 @@ export function TableView({ tables, onSelectTable }) {
             <Search
               size={16}
               color="var(--text-dim)"
-              style={{ position: "absolute", left: "12px" }}
+              style={{ position: "absolute", left: "12px", pointerEvents: "none" }}
             />
             <input
               type="text"
@@ -129,15 +228,155 @@ export function TableView({ tables, onSelectTable }) {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 background: "var(--bg-secondary)",
-                border: "1px solid var(--border-subtle)",
+                border: searchQuery ? "1px solid var(--accent-amber)" : "1px solid var(--border-subtle)",
                 borderRadius: "var(--radius-md)",
                 color: "var(--text-main)",
-                padding: "0.55rem 1rem 0.55rem 2.25rem",
+                padding: "0.55rem 2rem 0.55rem 2.25rem",
                 fontSize: "0.85rem",
-                width: "220px",
+                width: "210px",
+                outline: "none",
+                transition: "border-color 0.2s ease",
               }}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-dim)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "2px",
+                  borderRadius: "50%",
+                }}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
+
+          {/* Filter by Table Number Dropdown */}
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                left: "10px",
+                fontSize: "0.78rem",
+                fontWeight: 900,
+                color: tableFilter !== "all" ? "var(--accent-amber-light)" : "var(--text-dim)",
+                pointerEvents: "none",
+              }}
+            >
+              #
+            </span>
+            <select
+              value={tableFilter}
+              onChange={(e) => setTableFilter(e.target.value)}
+              title="Filter by Table Number"
+              style={{
+                background: tableFilter !== "all" ? "rgba(245, 158, 11, 0.16)" : "var(--bg-secondary)",
+                border: tableFilter !== "all" ? "1px solid var(--accent-amber)" : "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-md)",
+                color: tableFilter !== "all" ? "var(--accent-amber-light)" : "var(--text-main)",
+                padding: "0.52rem 0.85rem 0.52rem 1.85rem",
+                fontSize: "0.82rem",
+                fontWeight: tableFilter !== "all" ? 700 : 500,
+                cursor: "pointer",
+                outline: "none",
+                height: "36px",
+              }}
+            >
+              <option value="all" style={{ background: "#18181b", color: "#f4f4f5" }}>
+                All Tables ({tables.length})
+              </option>
+              {uniqueTableNumbers.map((tbl) => (
+                <option key={tbl.id} value={tbl.id} style={{ background: "#18181b", color: "#f4f4f5" }}>
+                  Table {tbl.id} {tbl.section ? `• ${tbl.section}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter by Server Name Dropdown */}
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <User
+              size={14}
+              color={serverFilter !== "all" ? "var(--accent-amber-light)" : "var(--text-dim)"}
+              style={{ position: "absolute", left: "10px", pointerEvents: "none" }}
+            />
+            <select
+              value={serverFilter}
+              onChange={(e) => setServerFilter(e.target.value)}
+              title="Filter by Server Name"
+              style={{
+                background: serverFilter !== "all" ? "rgba(245, 158, 11, 0.16)" : "var(--bg-secondary)",
+                border: serverFilter !== "all" ? "1px solid var(--accent-amber)" : "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-md)",
+                color: serverFilter !== "all" ? "var(--accent-amber-light)" : "var(--text-main)",
+                padding: "0.52rem 0.85rem 0.52rem 1.95rem",
+                fontSize: "0.82rem",
+                fontWeight: serverFilter !== "all" ? 700 : 500,
+                cursor: "pointer",
+                outline: "none",
+                height: "36px",
+              }}
+            >
+              <option value="all" style={{ background: "#18181b", color: "#f4f4f5" }}>
+                All Servers ({uniqueServers.length})
+              </option>
+              {uniqueServers.map((srv) => (
+                <option key={srv} value={srv} style={{ background: "#18181b", color: "#f4f4f5" }}>
+                  👤 {srv}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Reset Filters Button (visible when any filter active) */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              title="Reset all search & filter conditions"
+              style={{
+                background: "rgba(239, 68, 68, 0.14)",
+                border: "1px solid rgba(239, 68, 68, 0.35)",
+                color: "#f87171",
+                borderRadius: "var(--radius-md)",
+                padding: "0.45rem 0.75rem",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                height: "36px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <RotateCcw size={13} />
+              <span>Reset</span>
+            </button>
+          )}
 
           {/* Status Filters */}
           <div
@@ -258,16 +497,96 @@ export function TableView({ tables, onSelectTable }) {
         })}
       </div>
 
-      {/* 6 Tables Per Row Grid (Auto Responsive on Mobile) */}
-      <div
-        className="responsive-table-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-          gap: "0.75rem",
-        }}
-      >
-        {filteredTables.map((table) => {
+      {/* Tables Grid or Empty Filter State */}
+      {filteredTables.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "3.5rem 1.5rem",
+            background: "var(--bg-secondary)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px dashed var(--border-subtle)",
+            margin: "1rem 0",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.5rem",
+          }}
+        >
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              background: "rgba(245, 158, 11, 0.12)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent-amber-light)",
+              marginBottom: "0.5rem",
+            }}
+          >
+            <Search size={24} />
+          </div>
+          <h3
+            style={{
+              fontSize: "1.15rem",
+              fontWeight: 800,
+              color: "var(--text-main)",
+              margin: 0,
+            }}
+          >
+            No Matching Tables Found
+          </h3>
+          <p
+            style={{
+              color: "var(--text-muted)",
+              fontSize: "0.85rem",
+              maxWidth: "420px",
+              margin: "0.25rem 0 1rem",
+              lineHeight: 1.4,
+            }}
+          >
+            No tables matched your filter criteria
+            {searchQuery ? ` for "${searchQuery}"` : ""}
+            {serverFilter !== "all" ? ` (Server: ${serverFilter})` : ""}
+            {tableFilter !== "all" ? ` (Table: #${tableFilter})` : ""}
+            {statusFilter !== "all" ? ` (Status: ${statusFilter})` : ""}
+            {sectionFilter !== "all" ? ` (Area: ${sectionFilter})` : ""}.
+          </p>
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            style={{
+              background: "linear-gradient(135deg, #f59e0b, #d97706)",
+              color: "#000000",
+              fontWeight: 800,
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              padding: "0.6rem 1.4rem",
+              fontSize: "0.85rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              boxShadow: "0 2px 10px rgba(245, 158, 11, 0.25)",
+            }}
+          >
+            <RotateCcw size={14} />
+            <span>Clear All Filters</span>
+          </button>
+        </div>
+      ) : (
+        <div
+          className="responsive-table-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+            gap: "0.75rem",
+          }}
+        >
+          {filteredTables.map((table) => {
           const items = Array.isArray(table?.items) ? table.items : [];
           const subtotal = items.reduce(
             (sum, item) =>
@@ -469,6 +788,73 @@ export function TableView({ tables, onSelectTable }) {
                       ? `${table.guests} Seated`
                       : "Vacant"}
                   </span>
+                </div>
+
+                {/* Assigned Server Badge */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.25rem 0.45rem",
+                    marginTop: "0.32rem",
+                    background:
+                      (serverFilter !== "all" &&
+                        (table.server || "Staff").toLowerCase() ===
+                          serverFilter.toLowerCase()) ||
+                      (searchQuery &&
+                        (table.server || "Staff")
+                          .toLowerCase()
+                          .includes(searchQuery.trim().toLowerCase()))
+                        ? "rgba(245, 158, 11, 0.22)"
+                        : "rgba(255, 255, 255, 0.04)",
+                    border:
+                      (serverFilter !== "all" &&
+                        (table.server || "Staff").toLowerCase() ===
+                          serverFilter.toLowerCase()) ||
+                      (searchQuery &&
+                        (table.server || "Staff")
+                          .toLowerCase()
+                          .includes(searchQuery.trim().toLowerCase()))
+                        ? "1px solid var(--accent-amber)"
+                        : "1px solid rgba(255, 255, 255, 0.06)",
+                    borderRadius: "5px",
+                    fontSize: "0.68rem",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "var(--text-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      fontSize: "0.66rem",
+                    }}
+                  >
+                    <User size={11} color="var(--text-dim)" /> Server:
+                  </span>
+                  <strong
+                    style={{
+                      color:
+                        (serverFilter !== "all" &&
+                          (table.server || "Staff").toLowerCase() ===
+                            serverFilter.toLowerCase()) ||
+                        (searchQuery &&
+                          (table.server || "Staff")
+                            .toLowerCase()
+                            .includes(searchQuery.trim().toLowerCase()))
+                          ? "var(--accent-amber-light)"
+                          : "var(--text-main)",
+                      fontWeight: 700,
+                      maxWidth: "105px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {table.server || "Staff"}
+                  </strong>
                 </div>
 
                 {/* Kitchen Cooking Status Live Badge */}
@@ -726,6 +1112,7 @@ export function TableView({ tables, onSelectTable }) {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

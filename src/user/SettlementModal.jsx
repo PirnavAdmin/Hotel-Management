@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Banknote, 
@@ -26,6 +26,81 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   const [cashTendered, setCashTendered] = useState(0);
   const [selectedWallet, setSelectedWallet] = useState('paytm');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const getQrConfig = () => {
+    try {
+      const saved = localStorage.getItem("gourmet_pos_settings_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.paymentQrs)) {
+          const valid = parsed.paymentQrs.filter((q) => q && q.image);
+          if (valid.length > 0) {
+            let activeIdx = -1;
+            if (parsed.selectedQrId) {
+              activeIdx = valid.findIndex((q) => q.id === parsed.selectedQrId);
+            }
+            if (activeIdx === -1) {
+              activeIdx = valid.findIndex((q) => q.active);
+            }
+            if (activeIdx === -1) {
+              activeIdx = 0;
+            }
+            return { configuredQrs: valid, initialIndex: activeIdx };
+          }
+        }
+      }
+    } catch {}
+    return {
+      configuredQrs: [{ id: "default", label: "Main Counter UPI", image: paymentQrImage, active: true }],
+      initialIndex: 0,
+    };
+  };
+
+  const [qrConfig, setQrConfig] = useState(() => getQrConfig());
+  const [selectedQrIndex, setSelectedQrIndex] = useState(qrConfig.initialIndex);
+
+  useEffect(() => {
+    const syncQrConfig = () => {
+      const latest = getQrConfig();
+      setQrConfig(latest);
+      setSelectedQrIndex(latest.initialIndex);
+    };
+    window.addEventListener("storage", syncQrConfig);
+    window.addEventListener("focus", syncQrConfig);
+    return () => {
+      window.removeEventListener("storage", syncQrConfig);
+      window.removeEventListener("focus", syncQrConfig);
+    };
+  }, []);
+
+  const configuredQrs = qrConfig.configuredQrs;
+  const activeQr = configuredQrs[selectedQrIndex] || configuredQrs[0];
+
+  const handleSelectQr = (idx) => {
+    setSelectedQrIndex(idx);
+    const chosenQr = configuredQrs[idx];
+    if (chosenQr) {
+      try {
+        const saved = localStorage.getItem("gourmet_pos_settings_v1");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed.paymentQrs)) {
+            parsed.paymentQrs = parsed.paymentQrs.map((q) => ({
+              ...q,
+              active:
+                q.id === chosenQr.id ||
+                (chosenQr.id !== "default" && q.image === chosenQr.image),
+            }));
+          }
+          parsed.selectedQrId = chosenQr.id;
+          localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(parsed));
+          window.dispatchEvent(new Event("storage"));
+        }
+      } catch (err) {
+        console.error("Failed to update active QR in settings", err);
+      }
+    }
+  };
 
   if (!table) return null;
 
@@ -409,8 +484,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
               }}>
                 <img
-                  src={paymentQrImage}
-                  alt="Scan to Pay"
+                  src={activeQr?.image || paymentQrImage}
+                  alt={activeQr?.label || "Scan to Pay"}
                   style={{
                     width: '115px',
                     height: '115px',
@@ -423,22 +498,51 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             </div>
 
             {/* Scan & Pay Instructions & Brand Badges */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <Zap size={16} color="#f59e0b" fill="#f59e0b" />
-                <span style={{ fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
-                  Scan & Pay
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.55rem' }}>
-                <span style={{ fontSize: '0.84rem', color: '#94a3b8', fontWeight: 600 }}>
-                  UPI / QR to Pay
-                </span>
-                <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.45rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Zap size={16} color="#f59e0b" fill="#f59e0b" />
+                  <span style={{ fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
+                    Scan & Pay
+                  </span>
+                </div>
+                <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f59e0b' }}>
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
+
+              {/* Configured QR Label */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>
+                  {activeQr?.label || "UPI / QR to Pay"}
+                </span>
+              </div>
+
+              {/* Counter / Channel Selector if multiple QRs configured */}
+              {configuredQrs.length > 1 && (
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', margin: '2px 0' }}>
+                  {configuredQrs.map((q, idx) => (
+                    <button
+                      key={q.id || idx}
+                      type="button"
+                      onClick={() => handleSelectQr(idx)}
+                      style={{
+                        background: selectedQrIndex === idx ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)' : 'rgba(255, 255, 255, 0.08)',
+                        color: selectedQrIndex === idx ? '#ffffff' : '#cbd5e1',
+                        border: selectedQrIndex === idx ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
+                        borderRadius: '6px',
+                        padding: '2px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {q.label || `QR #${idx + 1}`}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* UPI Brand Badges: GPay, PhonePe, Paytm, BHIM */}
               <div style={{
