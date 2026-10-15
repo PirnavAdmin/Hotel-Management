@@ -23,11 +23,20 @@ export function normalizeMenuItem(item = {}) {
     category: item.category ?? "",
     price: Number(item.price) || 0,
     isVeg: item.isVeg ?? String(dietaryType ?? "").toUpperCase() === "VEG",
-    isChefSpecial:
+    isChefSpecial: Boolean(
       item.isChefSpecial ??
       item.isChefsSpecial ??
       item.is_chef_special ??
-      false,
+      item.isSpecial ??
+      false
+    ),
+    isChefsSpecial: Boolean(
+      item.isChefsSpecial ??
+      item.isChefSpecial ??
+      item.is_chef_special ??
+      item.isSpecial ??
+      false
+    ),
     spiceLevel: Number(item.spiceLevel ?? item.spice_level) || 0,
     prepTime: prepTime ?? `${prepTimeMinutes ?? 15} min`,
     description:
@@ -100,6 +109,7 @@ export async function apiUploadMenuImage(file) {
 }
 
 export async function apiCreateMenuItem(itemData) {
+  const isSpecialFlag = Boolean(itemData.isChefSpecial ?? itemData.isChefsSpecial ?? itemData.isSpecial);
   return await apiClient("/api/v1/menu-items", {
     method: "POST",
     body: JSON.stringify({
@@ -111,7 +121,9 @@ export async function apiCreateMenuItem(itemData) {
       prepTimeMinutes: parseInt(itemData.prepTime || 15, 10),
       shortDescription: itemData.description || "",
       imageUrl: itemData.image || "",
-      isChefsSpecial: !!itemData.isChefSpecial,
+      isChefsSpecial: isSpecialFlag,
+      isChefSpecial: isSpecialFlag,
+      isSpecial: isSpecialFlag,
       isAvailable: itemData.isAvailable !== false,
     }),
   });
@@ -119,6 +131,7 @@ export async function apiCreateMenuItem(itemData) {
 
 export async function apiUpdateMenuItem(id, itemData) {
   const cleanId = String(id).replace(/^m-/, "");
+  const isSpecialFlag = Boolean(itemData.isChefSpecial ?? itemData.isChefsSpecial ?? itemData.isSpecial);
   return await apiClient(`/api/v1/menu-items/${encodeURIComponent(cleanId)}`, {
     method: "PUT",
     body: JSON.stringify({
@@ -130,7 +143,9 @@ export async function apiUpdateMenuItem(id, itemData) {
       prepTimeMinutes: parseInt(itemData.prepTime || 15, 10),
       shortDescription: itemData.description || "",
       imageUrl: itemData.image || "",
-      isChefsSpecial: !!itemData.isChefSpecial,
+      isChefsSpecial: isSpecialFlag,
+      isChefSpecial: isSpecialFlag,
+      isSpecial: isSpecialFlag,
       isAvailable: itemData.isAvailable !== false,
     }),
   });
