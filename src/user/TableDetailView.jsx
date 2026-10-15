@@ -1725,6 +1725,7 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -2995,18 +2996,11 @@ export function TableDetailView({
                     {/* Item Image with culinary tags */}
                     <div className="pos-menu-card-image">
                       <img
-                        src={
-                          item.image ||
-                          "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80"
-                        }
+                        src={getMenuItemImage(item)}
                         alt={item.name}
                         loading="lazy"
                         className="pos-menu-card-image-img"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src =
-                            "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80";
-                        }}
+                        onError={(e) => handleDishImageError(e, item)}
                       />
 
                       {/* Fallback Icon when image loading */}

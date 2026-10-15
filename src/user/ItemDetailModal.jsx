@@ -14,6 +14,7 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { sounds } from "../utils/audio";
 import { MENU_CATEGORIES } from "../data/menuData";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 
 const PRESET_NOTES = [
   "Extra Spicy 🌶️",
@@ -149,21 +150,14 @@ export function ItemDetailModal({
           }}
         >
           <img
-            src={
-              item.image ||
-              "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80"
-            }
+            src={getMenuItemImage(item)}
             alt={item.name}
             style={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
             }}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src =
-                "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80";
-            }}
+            onError={(e) => handleDishImageError(e, item)}
           />
 
           {/* Gradient Overlay for Readable Badges */}
