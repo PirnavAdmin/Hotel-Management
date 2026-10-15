@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChefHat, Calendar, Clock, Moon, Sun } from "lucide-react";
+import { Calendar, Clock, Moon, Sun } from "lucide-react";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 
 export function AdminHeader({
@@ -8,7 +8,6 @@ export function AdminHeader({
   onClose,
   currentTheme = "royal-saffron",
   onChangeTheme,
-  restaurantLogo = "",
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -42,6 +41,9 @@ export function AdminHeader({
     second: "2-digit",
     hour12: true,
   });
+  const hour = currentTime.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const userName = String(currentSession?.name || currentSession?.username || "Admin").trim();
 
   return (
     <header
@@ -58,34 +60,15 @@ export function AdminHeader({
         zIndex: 40,
       }}
     >
-      {/* Left Brand Title with Orange Chef Hat Squircle */}
+      {/* Restaurant title */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "0.85rem",
+          gap: 0,
           minWidth: 0,
         }}
       >
-        <div
-          style={{
-            width: "44px",
-            height: "44px",
-            borderRadius: "12px",
-            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
-            flexShrink: 0,
-          }}
-        >
-          {restaurantLogo ? (
-            <img src={restaurantLogo} alt="Restaurant logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "12px", padding: "3px" }} />
-          ) : (
-            <ChefHat size={24} color="#ffffff" strokeWidth={2.3} />
-          )}
-        </div>
         <div style={{ minWidth: 0 }}>
           <h1
             style={{
@@ -99,21 +82,8 @@ export function AdminHeader({
               textOverflow: "ellipsis",
             }}
           >
-            Welcome to Admin & Management Portal
+            {greeting}, {userName}
           </h1>
-          <p
-            style={{
-              fontSize: "0.78rem",
-              color: "var(--text-dim)",
-              margin: 0,
-              marginTop: "2px",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            Configure menu items, dining tables, staff and operations
-          </p>
         </div>
       </div>
 

@@ -13,7 +13,7 @@ import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '.
  * LoginPage — role-specific login/register screen.
  * Register (admin only) includes: Name, Username, Mobile, Email + OTP, Password.
  */
-export function LoginPage({ role = 'pos', onLoginSuccess }) {
+export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Restaurant' }) {
   const [currentRole, setCurrentRole] = useState(role);
   const [mode, setMode] = useState('login'); // 'login' | 'register'
 
@@ -291,7 +291,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess }) {
           </div>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-              AVSR FOOD COURT
+              {restaurantName}
             </div>
             <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Restaurant Management System

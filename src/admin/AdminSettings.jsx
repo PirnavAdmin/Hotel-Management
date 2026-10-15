@@ -39,16 +39,16 @@ const DEFAULT_PAYMENT_QRS = [
 
 const getInitialSettings = (initialSettings) => {
   const baseDefaults = {
-    restaurantName: "AVSR FOOD COURT",
-    tagline: "Restaurant Management & Fine Dining",
-    phone: "+91 98450 12345",
-    address: "Main Road, Near Tech Park, Hyderabad, India",
-    gstin: "36AABCA1234F1Z5",
+    restaurantName: "",
+    tagline: "",
+    phone: "",
+    address: "",
+    gstin: "",
     taxRate: 5,
     serviceChargeRate: 5,
-    currency: "₹",
-    receiptHeader: "Welcome to AVSR Food Court!",
-    receiptFooter: "Thank you for dining with us. Visit again!",
+    currency: "â‚¹",
+    receiptHeader: "",
+    receiptFooter: "",
     selectedQrId: "qr-1",
     paymentQrs: DEFAULT_PAYMENT_QRS,
     showLogoOnReceipt: true,
@@ -770,7 +770,7 @@ export function AdminSettings({
                   <span
                     style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}
                   >
-                    Image file, up to 350 KB. Save settings to keep the logo.
+                    Image file, up to 350 KB. Save settings to share it with your other devices.
                   </span>
                 </div>
                 {logoError && (
@@ -945,8 +945,8 @@ export function AdminSettings({
                     outline: "none",
                   }}
                 >
-                  <option value="rupee">Nearest ₹1</option>
-                  <option value="five">Nearest ₹5</option>
+                  <option value="rupee">Nearest â‚¹1</option>
+                  <option value="five">Nearest â‚¹5</option>
                   <option value="none">No rounding</option>
                 </select>
               </div>

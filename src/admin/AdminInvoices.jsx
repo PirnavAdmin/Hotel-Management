@@ -89,7 +89,7 @@ const formatInvoiceTime = (value) => {
     : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 
-export function AdminInvoices({ pastOrders = [] }) {
+export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }) {
   const allOrders = sortOrdersBySettlementTime(
       dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []),
   );
@@ -927,7 +927,7 @@ export function AdminInvoices({ pastOrders = [] }) {
                     color: "#f59e0b",
                   }}
                 >
-                  AVSR FOOD COURT
+                  {restaurantName}
                 </h3>
                 <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
                   Invoice: {selectedReceipt.invoiceNo || "INV-001"}

@@ -23,6 +23,7 @@ export function AdminSidebar({
   staffCount = 0,
   activeKOTCount = 0,
   restaurantLogo = "",
+  restaurantName = "Restaurant",
 }) {
   const navSections = [
     {
@@ -164,16 +165,7 @@ export function AdminSidebar({
             }}
           >
             <span style={{ color: "var(--text-main)", letterSpacing: "0.2px" }}>
-              AVSR{" "}
-            </span>
-            <span
-              style={{
-                color: "#f59e0b",
-                letterSpacing: "0.2px",
-                fontWeight: 900,
-              }}
-            >
-              FOOD COURT
+              {restaurantName}
             </span>
           </div>
           <div

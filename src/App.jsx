@@ -56,6 +56,15 @@ const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
+const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+
+const readRestaurantSettings = () => {
+  try {
+    return JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+};
 
 const dedupeStaff = (staff) => {
   const byIdentity = new Map();
@@ -153,6 +162,50 @@ const getDeletedTableIds = () => {
 };
 
 export function App() {
+  const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
+
+  useEffect(() => {
+    const refreshSettings = () => setRestaurantSettings(readRestaurantSettings());
+    window.addEventListener("storage", refreshSettings);
+    window.addEventListener("restaurant-settings-updated", refreshSettings);
+    return () => {
+      window.removeEventListener("storage", refreshSettings);
+      window.removeEventListener("restaurant-settings-updated", refreshSettings);
+    };
+  }, []);
+
+  // Load shared restaurant settings for every device, keeping local settings as
+  // a fallback when the shared server is unavailable.
+  useEffect(() => {
+    let active = true;
+    const applySharedSettings = (settings) => {
+      if (!settings || typeof settings !== "object") return;
+      let local = {};
+      try { local = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}"); } catch {}
+      const merged = { ...local, ...settings };
+      try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
+      if (active) {
+        setRestaurantSettings(merged);
+        window.dispatchEvent(new Event("restaurant-settings-updated"));
+      }
+    };
+    fetch(`${API_BASE_URL}/api/state`, { headers: { "ngrok-skip-browser-warning": "true" } })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
+      .catch(() => {});
+    let events;
+    try {
+      events = new EventSource(`${API_BASE_URL}/api/events`);
+      events.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+        } catch {}
+      };
+    } catch {}
+    return () => { active = false; events?.close(); };
+  }, []);
+
   // Theme state: 'royal-saffron' | 'emerald-spice' | 'light-bistro'
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem(STORAGE_KEY_THEME) || "royal-saffron";
@@ -1717,6 +1770,7 @@ export function App() {
         posSession &&
         (posSession.role === "pos" || posSession.role === "admin") && (
           <Header
+            restaurantName={restaurantSettings.restaurantName}
             tables={tables}
             activeView={activeView}
             setActiveView={setActiveView}
@@ -1767,7 +1821,7 @@ export function App() {
               />
             </ErrorBoundary>
           ) : (
-            <LoginPage role="kot" onLoginSuccess={handleGlobalLogin} />
+            <LoginPage role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
@@ -1800,7 +1854,7 @@ export function App() {
               pastOrders={pastOrders}
             />
           ) : (
-            <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} />
+            <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
@@ -1851,7 +1905,7 @@ export function App() {
               )}
             </>
           ) : (
-            <LoginPage role="pos" onLoginSuccess={handleGlobalLogin} />
+            <LoginPage role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
       </main>
 
@@ -2150,6 +2204,7 @@ export function App() {
       {isReceiptOpen && (
         <ReceiptModal
           table={reprintReceiptData || currentTable}
+          restaurantSettings={restaurantSettings}
           onClose={() => {
             setIsReceiptOpen(false);
             setReprintReceiptData(null);

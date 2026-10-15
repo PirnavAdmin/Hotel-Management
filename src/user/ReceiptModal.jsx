@@ -12,8 +12,14 @@ const formatReceiptTime = (value) => {
   return String(value);
 };
 
-export function ReceiptModal({ table, onClose, onPrint }) {
+export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} }) {
   if (!table) return null;
+
+  const restaurantName = restaurantSettings.restaurantName?.trim() || "Restaurant";
+  const restaurantTagline = restaurantSettings.tagline?.trim() || "";
+  const restaurantPhone = restaurantSettings.phone?.trim() || "";
+  const restaurantAddress = restaurantSettings.address?.trim() || "";
+  const restaurantGstin = restaurantSettings.gstin?.trim() || "";
 
   const items = (Array.isArray(table.items) ? table.items : []).map((item) => ({
     ...item,
@@ -144,11 +150,11 @@ export function ReceiptModal({ table, onClose, onPrint }) {
           {/* Restaurant Header */}
           <div style={{ textAlign: 'center', borderBottom: '1px dashed #cbd5e1', paddingBottom: '0.45rem', marginBottom: '0.45rem' }}>
             <h2 style={{ fontSize: '1.05rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#0f172a', margin: 0 }}>
-              AVSR FOOD COURT
+              {restaurantName}
             </h2>
-            <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f59e0b', margin: '1px 0' }}>Authentic Dum Biryani & Dining</p>
-            <p style={{ fontSize: '0.64rem', color: '#64748b', margin: 0 }}>Plot 12, Food Street, Jubilee Enclave • Ph: +91 98490 12345</p>
-            <p style={{ fontSize: '0.64rem', color: '#64748b', margin: 0 }}>GSTIN: 36AAJCS8214M1ZV</p>
+            {restaurantTagline && <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f59e0b', margin: '1px 0' }}>{restaurantTagline}</p>}
+            {(restaurantAddress || restaurantPhone) && <p style={{ fontSize: '0.64rem', color: '#64748b', margin: 0 }}>{[restaurantAddress, restaurantPhone].filter(Boolean).join(' • ')}</p>}
+            {restaurantGstin && <p style={{ fontSize: '0.64rem', color: '#64748b', margin: 0 }}>GSTIN: {restaurantGstin}</p>}
           </div>
 
           {/* Bill details use separate grid cells to prevent wrapping guest counts and times */}
@@ -261,10 +267,10 @@ export function ReceiptModal({ table, onClose, onPrint }) {
 
           <div style={{ textAlign: 'center', marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed #cbd5e1' }}>
             <p style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0f172a', margin: '2px 0 0' }}>
-              THANK YOU FOR DINING AT AVSR FOOD COURT!
+              THANK YOU FOR DINING AT {restaurantName.toUpperCase()}!
             </p>
             <p style={{ fontSize: '0.62rem', color: '#64748b', margin: '1px 0 0' }}>
-              Please visit again • For bulk orders: +91 98490 12345
+              Please visit again{restaurantPhone ? ` • For orders: ${restaurantPhone}` : ""}
             </p>
           </div>
         </div>
