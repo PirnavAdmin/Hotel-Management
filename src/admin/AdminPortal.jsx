@@ -1461,33 +1461,6 @@ export function AdminPortal({
                                       : "Available"}
                                   </button>
                                   <button
-                                    onClick={() =>
-                                      onSetMenuSpecial?.(
-                                        item.id,
-                                        !item.isChefSpecial,
-                                      )
-                                    }
-                                    title={
-                                      item.isChefSpecial
-                                        ? "Remove Chef's Special"
-                                        : "Mark Chef's Special"
-                                    }
-                                    style={{
-                                      border:
-                                        "1px solid rgba(245, 158, 11, 0.45)",
-                                      background: "rgba(245, 158, 11, 0.06)",
-                                      color: "#f59e0b",
-                                      borderRadius: "6px",
-                                      padding: "4px 8px",
-                                      fontSize: "0.72rem",
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    {item.isChefSpecial
-                                      ? "★ Special"
-                                      : "☆ Special"}
-                                  </button>
-                                  <button
                                     onClick={() => handleOpenItemModal(item)}
                                     style={{
                                       border:
