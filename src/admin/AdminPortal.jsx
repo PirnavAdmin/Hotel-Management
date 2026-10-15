@@ -88,7 +88,7 @@ export function AdminPortal({
 }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchFilter, setSearchFilter] = useState("");
-  const emptyMenuFilters = { category: "", dietary: "", availability: "", special: "", minPrice: "", maxPrice: "" };
+  const emptyMenuFilters = { category: "", dietary: "", availability: "", special: "" };
   const [menuFilters, setMenuFilters] = useState(emptyMenuFilters);
   const updateMenuFilter = (key, value) => {
     setMenuFilters((previous) => ({ ...previous, [key]: value }));
@@ -100,7 +100,7 @@ export function AdminPortal({
     setMenuPage(1);
   };
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
-  const emptyTableFilters = { search: "", area: "", status: "", minCapacity: "", maxCapacity: "", server: "" };
+  const emptyTableFilters = { search: "", area: "", status: "", server: "" };
   const [tableFilters, setTableFilters] = useState(emptyTableFilters);
   const updateTableFilter = (key, value) => setTableFilters((previous) => ({ ...previous, [key]: value }));
   const normalizeTableFilterText = (value) => String(value ?? "").trim().toLowerCase();
@@ -111,14 +111,11 @@ export function AdminPortal({
   ].map((name) => String(name ?? "").trim()).filter(Boolean).map((name) => [normalizeTableFilterText(name), name])).values()];
   const filteredTables = tables.filter((table) => {
     const query = normalizeTableFilterText(tableFilters.search);
-    const capacity = Number(table.capacity);
     const server = normalizeTableFilterText(table.server);
     return [table.name, table.tableNumber, table.number, table.id].some((value) => normalizeTableFilterText(value).includes(query)) &&
       (!tableFilters.area || normalizeTableFilterText(table.section) === normalizeTableFilterText(tableFilters.area)) &&
       (!tableFilters.status || (normalizeTableFilterText(table.status) === "vacant" ? "vacant" : "occupied") === tableFilters.status) &&
-      (!tableFilters.server || (tableFilters.server === "unassigned" ? !server : server === tableFilters.server.slice(5))) &&
-      (tableFilters.minCapacity === "" || (Number.isFinite(capacity) && capacity >= Number(tableFilters.minCapacity))) &&
-      (tableFilters.maxCapacity === "" || (Number.isFinite(capacity) && capacity <= Number(tableFilters.maxCapacity)));
+      (!tableFilters.server || (tableFilters.server === "unassigned" ? !server : server === tableFilters.server.slice(5)));
   });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [restaurantSettings, setRestaurantSettings] = useState(() => {
@@ -659,14 +656,11 @@ export function AdminPortal({
   // Filtered menu items
   const filteredItems = menuItems.filter((item) => {
     const query = searchFilter.trim().toLowerCase();
-    const price = Number(item.price);
     return [item.name, item.description, item.category].some((value) => String(value ?? "").toLowerCase().includes(query)) &&
       (!menuFilters.category || String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase()) &&
       (!menuFilters.dietary || Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
       (!menuFilters.availability || (item.isAvailable !== false) === (menuFilters.availability === "available")) &&
-      (!menuFilters.special || Boolean(item.isChefSpecial) === (menuFilters.special === "special")) &&
-      (menuFilters.minPrice === "" || (Number.isFinite(price) && price >= Number(menuFilters.minPrice))) &&
-      (menuFilters.maxPrice === "" || (Number.isFinite(price) && price <= Number(menuFilters.maxPrice)));
+      (!menuFilters.special || Boolean(item.isChefSpecial) === (menuFilters.special === "special"));
   });
 
   // Small Pagination for Menu Items
@@ -970,12 +964,6 @@ export function AdminPortal({
                       </select>
                     </label>
                   ))}
-                  {[{ key: "minPrice", label: "Minimum Price" }, { key: "maxPrice", label: "Maximum Price" }].map(({ key, label }) => (
-                    <label className="menu-filter-field menu-filter-price" key={key}>
-                      <span>{label}</span>
-                      <input type="number" min="0" step="any" placeholder="Price" value={menuFilters[key]} onChange={(event) => updateMenuFilter(key, event.target.value)} />
-                    </label>
-                  ))}
                   <button type="button" className="menu-filter-clear" onClick={clearMenuFilters}>Clear Filters</button>
                 </div>
 
@@ -1015,7 +1003,7 @@ export function AdminPortal({
                           Dietary
                         </th>
                         <th style={{ padding: "0.6rem 0.85rem", width: "12%" }}>
-                          Price (â‚¹)
+                          Price (₹)
                         </th>
                         <th
                           style={{
@@ -1130,7 +1118,7 @@ export function AdminPortal({
                                       overflow: "hidden",
                                     }}
                                   >
-                                    {item.prepTime || ""} â€¢ {item.description}
+                                    {item.prepTime || ""} • {item.description}
                                   </div>
                                 </div>
                               </div>
@@ -1193,7 +1181,7 @@ export function AdminPortal({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              â‚¹{Number(item.price).toFixed(2)}
+                              ₹{Number(item.price).toFixed(2)}
                             </td>
                             <td
                               style={{
@@ -1246,6 +1234,21 @@ export function AdminPortal({
                                   }}
                                 >
                                   {item.isAvailable === false ? "Unavailable" : "Available"}
+                                </button>
+                                <button
+                                  onClick={() => onSetMenuSpecial?.(item.id, !item.isChefSpecial)}
+                                  title={item.isChefSpecial ? "Remove Chef's Special" : "Mark Chef's Special"}
+                                  style={{
+                                    border: "1px solid rgba(245, 158, 11, 0.45)",
+                                    background: "rgba(245, 158, 11, 0.06)",
+                                    color: "#f59e0b",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.72rem",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {item.isChefSpecial ? "★ Special" : "☆ Special"}
                                 </button>
                                 <button
                                   onClick={() => handleOpenItemModal(item)}
@@ -1330,7 +1333,7 @@ export function AdminPortal({
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {startIdx + 1}
                           </strong>
-                          â€“
+                          –
                           <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                             {Math.min(startIdx + menuPageSize, filteredItems.length)}
                           </strong>{" "}
@@ -1595,12 +1598,6 @@ export function AdminPortal({
                       <option value="">All</option>
                       {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
-                  </label>
-                ))}
-                {[{ key: "minCapacity", label: "Minimum Chairs" }, { key: "maxCapacity", label: "Maximum Chairs" }].map(({ key, label }) => (
-                  <label className="menu-filter-field menu-filter-price" key={key}>
-                    <span>{label}</span>
-                    <input type="number" min="0" step="1" placeholder="Chairs" value={tableFilters[key]} onChange={(event) => updateTableFilter(key, event.target.value)} />
                   </label>
                 ))}
                 <button type="button" className="menu-filter-clear" onClick={() => setTableFilters(emptyTableFilters)}>Clear Filters</button>
@@ -2461,7 +2458,7 @@ export function AdminPortal({
                                     color: "var(--text-main)",
                                   }}
                                 >
-                                  {tbl.section} â€¢ Server: {tbl.server}
+                                  {tbl.section} • Server: {tbl.server}
                                 </div>
                                 <div
                                   style={{
@@ -2847,7 +2844,7 @@ export function AdminPortal({
                     marginBottom: "5px",
                   }}
                 >
-                  Price in Rupees (â‚¹){" "}
+                  Price in Rupees (₹){" "}{" "}
                   <span style={{ color: "#ea580c" }}>*</span>
                 </label>
                 <input
@@ -2917,8 +2914,8 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 >
-                  <option value="non-veg">Non-Veg ðŸ”´</option>
-                  <option value="veg">Pure Veg ðŸŸ¢</option>
+                  <option value="non-veg">Non-Veg 🔴</option>
+                  <option value="veg">Pure Veg 🟢</option>
                 </select>
               </div>
 
@@ -3554,7 +3551,7 @@ export function AdminPortal({
                       fontWeight: 600,
                     }}
                   >
-                    ðŸ’¡ This new server will be assigned to this table and
+                    💡 This new server will be assigned to this table and
                     automatically saved to your Staff personnel list!
                   </p>
                 </div>

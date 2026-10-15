@@ -46,7 +46,7 @@ const getInitialSettings = (initialSettings) => {
     gstin: "",
     taxRate: 5,
     serviceChargeRate: 5,
-    currency: "â‚¹",
+    currency: "₹",
     receiptHeader: "",
     receiptFooter: "",
     selectedQrId: "qr-1",
@@ -87,10 +87,14 @@ const getInitialSettings = (initialSettings) => {
       active: q.id === selectedId,
     }));
 
+    const rawCurrency = source.currency || parsedSaved.currency || "₹";
+    const cleanCurrency = rawCurrency.includes("â") || rawCurrency === "?" ? "₹" : rawCurrency;
+
     return {
       ...baseDefaults,
       ...source,
       ...parsedSaved,
+      currency: cleanCurrency,
       selectedQrId: selectedId,
       paymentQrs: qrs,
     };
@@ -945,8 +949,8 @@ export function AdminSettings({
                     outline: "none",
                   }}
                 >
-                  <option value="rupee">Nearest â‚¹1</option>
-                  <option value="five">Nearest â‚¹5</option>
+                  <option value="rupee">Nearest ₹1</option>
+                  <option value="five">Nearest ₹5</option>
                   <option value="none">No rounding</option>
                 </select>
               </div>
