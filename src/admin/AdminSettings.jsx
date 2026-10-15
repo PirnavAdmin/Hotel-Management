@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Settings,
   Save,
@@ -37,73 +37,84 @@ const DEFAULT_PAYMENT_QRS = [
   },
 ];
 
+const getInitialSettings = (initialSettings) => {
+  const baseDefaults = {
+    restaurantName: "AVSR FOOD COURT",
+    tagline: "Restaurant Management & Fine Dining",
+    phone: "+91 98450 12345",
+    address: "Main Road, Near Tech Park, Hyderabad, India",
+    gstin: "36AABCA1234F1Z5",
+    taxRate: 5,
+    serviceChargeRate: 5,
+    currency: "₹",
+    receiptHeader: "Welcome to AVSR Food Court!",
+    receiptFooter: "Thank you for dining with us. Visit again!",
+    selectedQrId: "qr-1",
+    paymentQrs: DEFAULT_PAYMENT_QRS,
+    showLogoOnReceipt: true,
+    showAddressOnReceipt: true,
+    showGstBreakdown: true,
+    lowStockAlertsEnabled: true,
+  };
+
+  try {
+    const saved = localStorage.getItem("gourmet_pos_settings_v1");
+    const parsedSaved = saved ? JSON.parse(saved) : {};
+    const source = {
+      ...parsedSaved,
+      ...(initialSettings || {}),
+    };
+
+    const sourceQrs =
+      (Array.isArray(parsedSaved.paymentQrs) && parsedSaved.paymentQrs.length > 0 && parsedSaved.paymentQrs) ||
+      (Array.isArray(source.paymentQrs) && source.paymentQrs.length > 0 && source.paymentQrs) ||
+      DEFAULT_PAYMENT_QRS;
+
+    let qrs = [0, 1, 2].map((i) => ({
+      ...DEFAULT_PAYMENT_QRS[i],
+      ...(sourceQrs[i] || {}),
+    }));
+
+    const selectedId =
+      parsedSaved.selectedQrId ||
+      source.selectedQrId ||
+      qrs.find((q) => q.active && q.image)?.id ||
+      qrs.find((q) => q.image)?.id ||
+      "qr-1";
+
+    qrs = qrs.map((q) => ({
+      ...q,
+      active: q.id === selectedId,
+    }));
+
+    return {
+      ...baseDefaults,
+      ...source,
+      ...parsedSaved,
+      selectedQrId: selectedId,
+      paymentQrs: qrs,
+    };
+  } catch {
+    return baseDefaults;
+  }
+};
+
 export function AdminSettings({
   currentTheme = "royal-saffron",
   onChangeTheme,
   initialSettings,
   onSaveSettings,
 }) {
-  const [settings, setSettings] = useState(() => {
-    const baseDefaults = {
-      restaurantName: "AVSR FOOD COURT",
-      tagline: "Restaurant Management & Fine Dining",
-      phone: "+91 98450 12345",
-      address: "Main Road, Near Tech Park, Hyderabad, India",
-      gstin: "36AABCA1234F1Z5",
-      taxRate: 5,
-      serviceChargeRate: 5,
-      currency: "₹",
-      receiptHeader: "Welcome to AVSR Food Court!",
-      receiptFooter: "Thank you for dining with us. Visit again!",
-      selectedQrId: "qr-1",
-      paymentQrs: DEFAULT_PAYMENT_QRS,
-    };
-
-    try {
-      const saved = localStorage.getItem("gourmet_pos_settings_v1");
-      const parsedSaved = saved ? JSON.parse(saved) : {};
-      const source = {
-        ...parsedSaved,
-        ...(initialSettings || {}),
-      };
-
-      const sourceQrs =
-        (Array.isArray(parsedSaved.paymentQrs) && parsedSaved.paymentQrs.length > 0 && parsedSaved.paymentQrs) ||
-        (Array.isArray(source.paymentQrs) && source.paymentQrs.length > 0 && source.paymentQrs) ||
-        DEFAULT_PAYMENT_QRS;
-
-      let qrs = [0, 1, 2].map((i) => ({
-        ...DEFAULT_PAYMENT_QRS[i],
-        ...(sourceQrs[i] || {}),
-      }));
-
-      const selectedId =
-        parsedSaved.selectedQrId ||
-        source.selectedQrId ||
-        qrs.find((q) => q.active && q.image)?.id ||
-        qrs.find((q) => q.image)?.id ||
-        "qr-1";
-
-      qrs = qrs.map((q) => ({
-        ...q,
-        active: q.id === selectedId,
-      }));
-
-      return {
-        ...baseDefaults,
-        ...source,
-        ...parsedSaved,
-        selectedQrId: selectedId,
-        paymentQrs: qrs,
-      };
-    } catch {
-      return baseDefaults;
-    }
-  });
-
+  const [settings, setSettings] = useState(() => getInitialSettings(initialSettings));
+  const [lastSavedSettings, setLastSavedSettings] = useState(() => getInitialSettings(initialSettings));
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [logoError, setLogoError] = useState("");
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(settings) !== JSON.stringify(lastSavedSettings);
+  }, [settings, lastSavedSettings]);
 
   const handleLogoUpload = (event) => {
     const file = event.target.files?.[0];
@@ -166,13 +177,22 @@ export function AdminSettings({
           active: q.id === selectedId,
         }));
 
-        return {
+        const nextSettings = {
           ...prev,
           ...initialSettings,
           ...localSaved,
           selectedQrId: selectedId,
           paymentQrs: qrs,
         };
+
+        setLastSavedSettings((prevSaved) => {
+          if (JSON.stringify(prev) === JSON.stringify(prevSaved)) {
+            return nextSettings;
+          }
+          return prevSaved;
+        });
+
+        return nextSettings;
       });
     }
   }, [initialSettings]);
@@ -351,6 +371,11 @@ export function AdminSettings({
 
   const handleSave = async (e) => {
     if (e?.preventDefault) e.preventDefault();
+    if (!isDirty || isSaving) return;
+
+    setIsSaving(true);
+    setSaveError("");
+
     try {
       localStorage.setItem(
         "gourmet_pos_settings_v1",
@@ -365,7 +390,8 @@ export function AdminSettings({
           console.warn("Server sync error (local settings saved successfully):", syncErr);
         }
       }
-      setSaveError("");
+
+      setLastSavedSettings(settings);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     } catch (error) {
@@ -376,11 +402,17 @@ export function AdminSettings({
           : error?.message ||
               "Could not save settings.",
       );
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      <style>{`
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
       {/* Outer Card Matching Design */}
       <div
         style={{
@@ -1544,26 +1576,88 @@ export function AdminSettings({
           </div>
 
           {/* Submit Action */}
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: "1rem",
+              paddingTop: "0.5rem",
+              flexWrap: "wrap",
+            }}
+          >
+
+
+
+            {saveError && (
+              <div
+                role="alert"
+                style={{
+                  color: "#f87171",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                }}
+              >
+                {saveError}
+              </div>
+            )}
+
             <button
               type="submit"
+              disabled={!isDirty || isSaving}
               style={{
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                color: "#ffffff",
-                border: "none",
+                background: savedSuccess
+                  ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                  : isDirty && !isSaving
+                  ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                  : "rgba(255, 255, 255, 0.05)",
+                color: savedSuccess || (isDirty && !isSaving) ? "#ffffff" : "#64748b",
+                border: savedSuccess
+                  ? "1px solid rgba(16, 185, 129, 0.6)"
+                  : isDirty && !isSaving
+                  ? "1px solid rgba(245, 158, 11, 0.5)"
+                  : "1px solid rgba(255, 255, 255, 0.08)",
                 borderRadius: "10px",
-                padding: "0.7rem 1.75rem",
+                padding: "0.72rem 1.85rem",
                 fontSize: "0.88rem",
                 fontWeight: 700,
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem",
-                cursor: "pointer",
-                boxShadow: "0 3px 14px rgba(245, 158, 11, 0.4)",
+                gap: "0.55rem",
+                cursor: !isDirty || isSaving ? "not-allowed" : "pointer",
+                boxShadow: savedSuccess
+                  ? "0 4px 16px rgba(16, 185, 129, 0.35)"
+                  : isDirty && !isSaving
+                  ? "0 4px 18px rgba(245, 158, 11, 0.45)"
+                  : "none",
+                opacity: !isDirty && !savedSuccess && !isSaving ? 0.6 : 1,
+                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
+              title={
+                !isDirty && !savedSuccess
+                  ? "No changes to save"
+                  : "Click to save all configuration changes"
+              }
             >
-              <Save size={16} />
-              <span>Save Configuration</span>
+              {isSaving ? (
+                <>
+                  <RotateCcw
+                    size={16}
+                    style={{ animation: "spin 1s linear infinite" }}
+                  />
+                  <span>Saving...</span>
+                </>
+              ) : savedSuccess ? (
+                <>
+                  <CheckCircle2 size={16} strokeWidth={2.5} />
+                  <span>Saved!</span>
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  <span>Save Configuration</span>
+                </>
+              )}
             </button>
           </div>
         </form>
