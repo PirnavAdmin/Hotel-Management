@@ -5,6 +5,8 @@ import {
   Calendar,
   CheckCircle2,
   Eye,
+  Pencil,
+  Save,
   X,
   Printer,
   CreditCard,
@@ -96,7 +98,11 @@ const formatInvoiceTime = (value) => {
     : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 
-export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }) {
+export function AdminInvoices({
+  pastOrders = [],
+  restaurantName = "Restaurant",
+  onUpdateInvoiceDiscount = null,
+}) {
   const allOrders = sortOrdersBySettlementTime(
       dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []),
   );
@@ -120,6 +126,39 @@ export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [editingInvoice, setEditingInvoice] = useState(null);
+  const [discountDraft, setDiscountDraft] = useState("0");
+  const [editError, setEditError] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const openDiscountEditor = (order) => {
+    setEditingInvoice(order);
+    setDiscountDraft(String(Number(order.discountPercent) || 0));
+    setEditError("");
+  };
+
+  const saveInvoiceDiscount = async (event) => {
+    event.preventDefault();
+    const discountPercent = Number(discountDraft);
+    if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+      setEditError("Enter a discount between 0% and 100%.");
+      return;
+    }
+    if (!editingInvoice?.id || !onUpdateInvoiceDiscount) {
+      setEditError("This invoice cannot be edited because it has no server order ID.");
+      return;
+    }
+    setIsSavingEdit(true);
+    setEditError("");
+    try {
+      await onUpdateInvoiceDiscount(editingInvoice.id, discountPercent);
+      setEditingInvoice(null);
+    } catch (error) {
+      setEditError(error?.message || "Could not update the invoice discount.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const invalidCustomDate = dateFilter === "custom" && (
     (customFromDateText && !customFromDate) ||
@@ -680,9 +719,10 @@ export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }
 
                     {/* Action */}
                     <td style={{ padding: "1rem", textAlign: "center" }}>
-                      <button
-                        onClick={() => setSelectedReceipt(order)}
-                        style={{
+                      <div style={{ display: "flex", justifyContent: "center", gap: "0.4rem" }}>
+                        <button
+                          onClick={() => setSelectedReceipt(order)}
+                          style={{
                           background: "rgba(245, 158, 11, 0.08)",
                           border: "1px solid rgba(245, 158, 11, 0.35)",
                           color: "#f59e0b",
@@ -694,11 +734,34 @@ export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
-                        }}
-                      >
-                        <Eye size={12} />
-                        <span>View</span>
-                      </button>
+                          }}
+                        >
+                          <Eye size={12} />
+                          <span>View</span>
+                        </button>
+                        <button
+                          onClick={() => openDiscountEditor(order)}
+                          disabled={!onUpdateInvoiceDiscount || !order.id}
+                          title="Edit bill discount"
+                          style={{
+                            background: "rgba(59, 130, 246, 0.08)",
+                            border: "1px solid rgba(59, 130, 246, 0.35)",
+                            color: "#60a5fa",
+                            borderRadius: "7px",
+                            padding: "5px 9px",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            cursor: onUpdateInvoiceDiscount && order.id ? "pointer" : "not-allowed",
+                            opacity: onUpdateInvoiceDiscount && order.id ? 1 : 0.5,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <Pencil size={12} />
+                          <span>Edit</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -1115,6 +1178,75 @@ export function AdminInvoices({ pastOrders = [], restaurantName = "Restaurant" }
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {editingInvoice && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 170,
+            display: "grid",
+            placeItems: "center",
+            padding: "1rem",
+            background: "rgba(0, 0, 0, 0.72)",
+            backdropFilter: "blur(5px)",
+          }}
+        >
+          <form
+            onSubmit={saveInvoiceDiscount}
+            style={{
+              width: "100%",
+              maxWidth: "400px",
+              padding: "1.4rem",
+              borderRadius: "14px",
+              border: "1px solid var(--border-card)",
+              background: "var(--bg-card)",
+              color: "var(--text-main)",
+              boxShadow: "0 20px 45px rgba(0,0,0,0.45)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Edit invoice discount</h3>
+                <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                  {editingInvoice.invoiceNo || `Order #${editingInvoice.id}`}
+                </div>
+              </div>
+              <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.4rem" }}>
+              Discount percentage
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={discountDraft}
+                onChange={(event) => setDiscountDraft(event.target.value)}
+                style={{ width: "100%", padding: "0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-secondary)", color: "var(--text-main)" }}
+              />
+              <span>%</span>
+            </div>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.74rem", lineHeight: 1.5 }}>
+              Saving updates the bill discount on the server and reloads the invoice history.
+            </p>
+            {editError && <div role="alert" style={{ color: "#f87171", fontSize: "0.78rem", marginBottom: "0.8rem" }}>{editError}</div>}
+            <div style={{ display: "flex", gap: "0.6rem", marginTop: "1rem" }}>
+              <button type="button" onClick={() => setEditingInvoice(null)} disabled={isSavingEdit} style={{ flex: 1, padding: "0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "transparent", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button type="submit" disabled={isSavingEdit} style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.65rem", borderRadius: "8px", border: 0, color: "#fff", background: "linear-gradient(135deg, #f59e0b, #ea580c)", fontWeight: 700, cursor: isSavingEdit ? "wait" : "pointer", opacity: isSavingEdit ? 0.7 : 1 }}>
+                <Save size={14} />
+                {isSavingEdit ? "Saving..." : "Save Discount"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

@@ -57,10 +57,10 @@ export async function apiUpdateOrderGuests(orderId, guests) {
   });
 }
 
-export async function apiUpdateOrderDiscount(orderId, discount) {
+export async function apiUpdateOrderDiscount(orderId, discountPercent) {
   return await apiClient(`/api/v1/orders/${orderId}/discount`, {
     method: 'PATCH',
-    body: JSON.stringify({ discount })
+    body: JSON.stringify({ discountPercent: Number(discountPercent) })
   });
 }
 

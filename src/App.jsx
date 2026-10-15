@@ -44,7 +44,11 @@ import {
   apiUpdateStaff,
   apiDeleteStaff,
 } from "./api/staffApi";
-import { apiGetOrderHistory, apiCreateOrder } from "./api/orderApi";
+import {
+  apiGetOrderHistory,
+  apiCreateOrder,
+  apiUpdateOrderDiscount,
+} from "./api/orderApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
@@ -1462,6 +1466,32 @@ export function App() {
     setIsReceiptOpen(true);
   };
 
+  const handleUpdateInvoiceDiscount = async (orderId, discountPercent) => {
+    const updateResult = await apiUpdateOrderDiscount(orderId, discountPercent);
+    if (!updateResult?.success || updateResult.data?.success === false) {
+      throw new Error(updateResult?.error || updateResult?.data?.message || "The server could not update this invoice discount.");
+    }
+
+    const historyResult = await apiGetOrderHistory();
+    const history = historyResult?.data ?? historyResult;
+    const orders = Array.isArray(history?.orders)
+      ? history.orders
+      : Array.isArray(history?.data)
+        ? history.data
+        : Array.isArray(history)
+          ? history
+          : null;
+    if (!historyResult?.success || !orders) {
+      throw new Error("The discount was sent to the server, but the updated invoice list could not be refreshed. Reload Admin Invoices to confirm it.");
+    }
+
+    const updatedOrders = dedupeOrders(orders);
+    setPastOrders(updatedOrders);
+    try {
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updatedOrders));
+    } catch {}
+  };
+
   // ================= ADMIN ACTIONS =================
   // 1. Menu Items Admin
   const handleAddMenuItem = async (newItem) => {
@@ -1865,6 +1895,7 @@ export function App() {
               currentTheme={theme}
               onChangeTheme={setTheme}
               pastOrders={pastOrders}
+              onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
             <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
@@ -2142,6 +2173,7 @@ export function App() {
           currentTheme={theme}
           onChangeTheme={setTheme}
           pastOrders={pastOrders}
+          onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
         />
       )}
 

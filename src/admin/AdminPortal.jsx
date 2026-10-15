@@ -89,6 +89,7 @@ export function AdminPortal({
   currentTheme = "royal-saffron",
   onChangeTheme = null,
   pastOrders = [],
+  onUpdateInvoiceDiscount = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchFilter, setSearchFilter] = useState("");
@@ -3046,6 +3047,7 @@ export function AdminPortal({
               <AdminInvoices
                 pastOrders={pastOrders}
                 restaurantName={restaurantName}
+                onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
               />
             )}
 
