@@ -129,6 +129,7 @@ export function AdminPortal({
   });
   const restaurantLogo = restaurantSettings?.logo || "";
   const restaurantName = restaurantSettings?.restaurantName?.trim() || "Restaurant";
+  const restaurantTagline = restaurantSettings?.tagline?.trim() || "";
 
   useEffect(() => {
     let active = true;
@@ -753,6 +754,7 @@ export function AdminPortal({
           activeKOTCount={activeKOTCount}
           restaurantLogo={restaurantLogo}
           restaurantName={restaurantName}
+          restaurantTagline={restaurantTagline}
         />
 
         {/* Right Main Content Pane */}

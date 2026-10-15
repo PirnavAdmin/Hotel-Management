@@ -24,6 +24,7 @@ export function AdminSidebar({
   activeKOTCount = 0,
   restaurantLogo = "",
   restaurantName = "Restaurant",
+  restaurantTagline = "",
 }) {
   const navSections = [
     {
@@ -177,7 +178,7 @@ export function AdminSidebar({
               whiteSpace: "nowrap",
             }}
           >
-            Restaurant Management
+            {restaurantTagline}
           </div>
         </div>
       </div>
