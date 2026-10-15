@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -127,12 +127,27 @@ export function AdminPortal({
 
   useEffect(() => {
     let active = true;
-    const applySettings = (settings) => {
-      if (!settings || typeof settings !== "object") return;
+    const applySettings = (incomingSettings) => {
+      if (!incomingSettings || typeof incomingSettings !== "object") return;
       try {
-        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
-      } catch {}
-      if (active) setRestaurantSettings(settings);
+        let localSaved = {};
+        try {
+          localSaved = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
+        } catch {}
+
+        const merged = {
+          ...localSaved,
+          ...incomingSettings,
+          selectedQrId: incomingSettings.selectedQrId || localSaved.selectedQrId || "qr-1",
+          paymentQrs: (Array.isArray(incomingSettings.paymentQrs) && incomingSettings.paymentQrs.length > 0)
+            ? incomingSettings.paymentQrs
+            : localSaved.paymentQrs,
+        };
+        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged));
+        if (active) setRestaurantSettings(merged);
+      } catch {
+        if (active) setRestaurantSettings(incomingSettings);
+      }
     };
 
     fetch(`${API_BASE_URL}/api/state`, {
@@ -181,16 +196,8 @@ export function AdminPortal({
     }
     const result = await response.json().catch(() => null);
     if (result?.success === false) {
-      throw new Error(
-        result.error ||
-          result.message ||
-          "The server rejected the settings update.",
-      );
+      throw new Error(result.error || result.message || "The server rejected the settings update.");
     }
-    try {
-      localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
-    } catch {}
-    setRestaurantSettings(settings);
   };
 
   const themes = [
@@ -1182,20 +1189,10 @@ export function AdminPortal({
                                     fontWeight: 700,
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px",
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  <span>VEG</span>
-                                  <span
-                                    style={{
-                                      width: "5px",
-                                      height: "5px",
-                                      borderRadius: "50%",
-                                      background: "#10b981",
-                                      display: "inline-block",
-                                    }}
-                                  />
+                                  VEG
                                 </span>
                               ) : (
                                 <span
@@ -1209,20 +1206,10 @@ export function AdminPortal({
                                     fontWeight: 700,
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "4px",
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  <span>NON-VEG</span>
-                                  <span
-                                    style={{
-                                      width: "5px",
-                                      height: "5px",
-                                      borderRadius: "50%",
-                                      background: "#ef4444",
-                                      display: "inline-block",
-                                    }}
-                                  />
+                                  NON-VEG
                                 </span>
                               )}
                             </td>
