@@ -470,3 +470,14 @@ input, select, textarea {
   }
 }
 
+
+.menu-filter-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
+.menu-filter-field { display: flex; flex: 1 1 120px; min-width: 0; flex-direction: column; gap: 5px; color: var(--text-muted); font-size: 0.74rem; font-weight: 600; }
+.menu-filter-search { flex: 2 1 220px; }
+.menu-filter-price { flex: 1 1 110px; }
+.menu-filter-field select, .menu-filter-field input, .menu-filter-clear { box-sizing: border-box; width: 100%; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-tertiary); color: var(--text-main); font-family: inherit; font-size: 0.82rem; }
+.menu-filter-field select { color-scheme: dark; }
+.menu-filter-field input:focus-visible, .menu-filter-field select:focus-visible, .menu-filter-clear:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
+.menu-filter-clear { width: auto; flex: 0 0 auto; color: var(--accent-amber); cursor: pointer; font-weight: 700; }
+.menu-filter-clear:hover { background: var(--bg-card-hover); }
+@media (max-width: 540px) { .menu-filter-search { flex-basis: 100%; } .menu-filter-field { flex-basis: calc(50% - 10px); } .menu-filter-clear { margin-left: auto; } }

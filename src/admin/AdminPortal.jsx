@@ -87,7 +87,38 @@ export function AdminPortal({
 }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchFilter, setSearchFilter] = useState("");
+  const emptyMenuFilters = { category: "", dietary: "", availability: "", special: "", minPrice: "", maxPrice: "" };
+  const [menuFilters, setMenuFilters] = useState(emptyMenuFilters);
+  const updateMenuFilter = (key, value) => {
+    setMenuFilters((previous) => ({ ...previous, [key]: value }));
+    setMenuPage(1);
+  };
+  const clearMenuFilters = () => {
+    setSearchFilter("");
+    setMenuFilters(emptyMenuFilters);
+    setMenuPage(1);
+  };
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
+  const emptyTableFilters = { search: "", area: "", status: "", minCapacity: "", maxCapacity: "", server: "" };
+  const [tableFilters, setTableFilters] = useState(emptyTableFilters);
+  const updateTableFilter = (key, value) => setTableFilters((previous) => ({ ...previous, [key]: value }));
+  const normalizeTableFilterText = (value) => String(value ?? "").trim().toLowerCase();
+  const tableAreaOptions = [...new Map(tables.map((table) => String(table.section ?? "").trim()).filter(Boolean).map((area) => [normalizeTableFilterText(area), area])).values()];
+  const tableServerOptions = [...new Map([
+    ...staffList.map((staff) => staff?.name || staff?.fullName || staff?.FullName || staff?.username),
+    ...tables.map((table) => table.server),
+  ].map((name) => String(name ?? "").trim()).filter(Boolean).map((name) => [normalizeTableFilterText(name), name])).values()];
+  const filteredTables = tables.filter((table) => {
+    const query = normalizeTableFilterText(tableFilters.search);
+    const capacity = Number(table.capacity);
+    const server = normalizeTableFilterText(table.server);
+    return [table.name, table.tableNumber, table.number, table.id].some((value) => normalizeTableFilterText(value).includes(query)) &&
+      (!tableFilters.area || normalizeTableFilterText(table.section) === normalizeTableFilterText(tableFilters.area)) &&
+      (!tableFilters.status || (normalizeTableFilterText(table.status) === "vacant" ? "vacant" : "occupied") === tableFilters.status) &&
+      (!tableFilters.server || (tableFilters.server === "unassigned" ? !server : server === tableFilters.server.slice(5))) &&
+      (tableFilters.minCapacity === "" || (Number.isFinite(capacity) && capacity >= Number(tableFilters.minCapacity))) &&
+      (tableFilters.maxCapacity === "" || (Number.isFinite(capacity) && capacity <= Number(tableFilters.maxCapacity)));
+  });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [restaurantSettings, setRestaurantSettings] = useState(() => {
     try {
@@ -621,19 +652,23 @@ export function AdminPortal({
   };
 
   // Filtered menu items
-  const filteredItems = menuItems.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchFilter.toLowerCase()),
-  );
+  const filteredItems = menuItems.filter((item) => {
+    const query = searchFilter.trim().toLowerCase();
+    const price = Number(item.price);
+    return [item.name, item.description, item.category].some((value) => String(value ?? "").toLowerCase().includes(query)) &&
+      (!menuFilters.category || String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase()) &&
+      (!menuFilters.dietary || Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
+      (!menuFilters.availability || (item.isAvailable !== false) === (menuFilters.availability === "available")) &&
+      (!menuFilters.special || Boolean(item.isChefSpecial) === (menuFilters.special === "special")) &&
+      (menuFilters.minPrice === "" || (Number.isFinite(price) && price >= Number(menuFilters.minPrice))) &&
+      (menuFilters.maxPrice === "" || (Number.isFinite(price) && price <= Number(menuFilters.maxPrice)));
+  });
 
   // Small Pagination for Menu Items
   const [menuPage, setMenuPage] = useState(1);
   const [menuPageSize, setMenuPageSize] = useState(6);
 
-  useEffect(() => {
-    setMenuPage(1);
-  }, [searchFilter]);
+
 
   const totalMenuPages = Math.ceil(filteredItems.length / menuPageSize) || 1;
   const safeMenuPage = Math.min(Math.max(menuPage, 1), totalMenuPages);
@@ -850,43 +885,6 @@ export function AdminPortal({
                       flexWrap: "wrap",
                     }}
                   >
-                    <div
-                      style={{
-                        position: "relative",
-                        width: "250px",
-                        height: "36px",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Search
-                        size={15}
-                        color="var(--text-dim)"
-                        style={{
-                          position: "absolute",
-                          left: "12px",
-                          pointerEvents: "none",
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Search dishes to edit, delete..."
-                        value={searchFilter}
-                        onChange={(e) => setSearchFilter(e.target.value)}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          background: "var(--bg-tertiary)",
-                          border: "1px solid var(--border-card)",
-                          borderRadius: "8px",
-                          padding: "0 10px 0 34px",
-                          color: "var(--text-main)",
-                          fontSize: "0.82rem",
-                          outline: "none",
-                        }}
-                      />
-                    </div>
-
                     <button
                       onClick={() => handleOpenItemModal()}
                       style={{
@@ -909,6 +907,71 @@ export function AdminPortal({
                       <span>Add New Dish / Biryani</span>
                     </button>
                   </div>
+                </div>
+
+                <div className="menu-filter-toolbar" role="search" aria-label="Menu item filters">
+                  <label className="menu-filter-field menu-filter-search"><span>Search</span>
+                    <div
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        height: "36px",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Search
+                        size={15}
+                        color="var(--text-dim)"
+                        style={{
+                          position: "absolute",
+                          left: "12px",
+                          pointerEvents: "none",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Search dishes to edit, delete..."
+                        value={searchFilter}
+                        onChange={(e) => { setSearchFilter(e.target.value); setMenuPage(1); }}
+                        aria-label="Search dishes"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          background: "var(--bg-tertiary)",
+                          border: "1px solid var(--border-card)",
+                          borderRadius: "8px",
+                          padding: "0 10px 0 34px",
+                          color: "var(--text-main)",
+                          fontSize: "0.82rem",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+
+
+                  </label>
+                  {[
+                    { key: "category", label: "Category", options: allCategoryOptions },
+                    { key: "dietary", label: "Dietary Type", options: [{ value: "veg", label: "Veg" }, { value: "non-veg", label: "Non-Veg" }] },
+                    { key: "availability", label: "Availability", options: [{ value: "available", label: "Available" }, { value: "unavailable", label: "Unavailable" }] },
+                    { key: "special", label: "Special Dish", options: [{ value: "special", label: "Special" }, { value: "regular", label: "Regular" }] },
+                  ].map(({ key, label, options }) => (
+                    <label className="menu-filter-field" key={key}>
+                      <span>{label}</span>
+                      <select value={menuFilters[key]} onChange={(event) => updateMenuFilter(key, event.target.value)}>
+                        <option value="">All</option>
+                        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                    </label>
+                  ))}
+                  {[{ key: "minPrice", label: "Minimum Price" }, { key: "maxPrice", label: "Maximum Price" }].map(({ key, label }) => (
+                    <label className="menu-filter-field menu-filter-price" key={key}>
+                      <span>{label}</span>
+                      <input type="number" min="0" step="any" placeholder="Price" value={menuFilters[key]} onChange={(event) => updateMenuFilter(key, event.target.value)} />
+                    </label>
+                  ))}
+                  <button type="button" className="menu-filter-clear" onClick={clearMenuFilters}>Clear Filters</button>
                 </div>
 
                 {/* Items Table List */}
@@ -972,7 +1035,7 @@ export function AdminPortal({
                               fontSize: "0.85rem",
                             }}
                           >
-                            No menu items found matching "{searchFilter}"
+                            No menu items match the selected filters.
                           </td>
                         </tr>
                       ) : (
@@ -1475,6 +1538,33 @@ export function AdminPortal({
                 </div>
               </div>
 
+              <div className="menu-filter-toolbar" role="search" aria-label="Table filters">
+                <label className="menu-filter-field menu-filter-search">
+                  <span>Search Table</span>
+                  <input type="search" placeholder="Table number or name..." value={tableFilters.search} onChange={(event) => updateTableFilter("search", event.target.value)} />
+                </label>
+                {[
+                  { key: "area", label: "Area / Location", options: tableAreaOptions.map((area) => ({ value: area, label: area })) },
+                  { key: "status", label: "Table Status", options: [{ value: "vacant", label: "Vacant" }, { value: "occupied", label: "Occupied" }] },
+                  { key: "server", label: "Assigned Server", options: [{ value: "unassigned", label: "Unassigned" }, ...tableServerOptions.map((name) => ({ value: 'name:' + normalizeTableFilterText(name), label: name }))] },
+                ].map(({ key, label, options }) => (
+                  <label className="menu-filter-field" key={key}>
+                    <span>{label}</span>
+                    <select value={tableFilters[key]} onChange={(event) => updateTableFilter(key, event.target.value)}>
+                      <option value="">All</option>
+                      {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                ))}
+                {[{ key: "minCapacity", label: "Minimum Chairs" }, { key: "maxCapacity", label: "Maximum Chairs" }].map(({ key, label }) => (
+                  <label className="menu-filter-field menu-filter-price" key={key}>
+                    <span>{label}</span>
+                    <input type="number" min="0" step="1" placeholder="Chairs" value={tableFilters[key]} onChange={(event) => updateTableFilter(key, event.target.value)} />
+                  </label>
+                ))}
+                <button type="button" className="menu-filter-clear" onClick={() => setTableFilters(emptyTableFilters)}>Clear Filters</button>
+              </div>
+
               {/* Action Bar */}
               <div
                 style={{
@@ -1526,7 +1616,10 @@ export function AdminPortal({
                   gap: "0.75rem",
                 }}
               >
-                {tables.map((tbl) => (
+                {filteredTables.length === 0 && (
+                  <p role="status" style={{ color: "var(--text-muted)", gridColumn: "1 / -1", margin: "0.75rem 0" }}>No tables match the selected filters.</p>
+                )}
+                {filteredTables.map((tbl) => (
                   <div
                     key={tbl.id}
                     style={{
