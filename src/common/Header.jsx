@@ -843,7 +843,7 @@ export function Header({
           )}
         </div>
 
-        {/* Reset Demo Data Button */}
+        {/* Clear Dynamic Data Button */}
         <button
           onClick={onResetData}
           style={{
@@ -858,10 +858,10 @@ export function Header({
             fontSize: "0.78rem",
             cursor: "pointer",
           }}
-          title="Reset tables to default initial state"
+          title="Clear dynamic tables, menu, staff, invoices and inventory"
         >
           <RotateCcw size={13} />
-          <span>Reset</span>
+          <span>Clear Data</span>
         </button>
 
         {/* Profile Dropdown with User Details & Logout (Top Right Corner) */}

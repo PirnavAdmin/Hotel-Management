@@ -17,10 +17,10 @@ import {
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { formatCurrency } from '../utils/formatCurrency';
-import { getNextInvoiceNumber } from '../utils/invoiceCounter';
+import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
 import paymentQrImage from '../assets/payment-qr.png';
 
-export function SettlementModal({ table, onClose, onConfirmPayment }) {
+export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment }) {
   // 'upi' | 'cash' | 'card' | 'wallet'
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [cashTendered, setCashTendered] = useState(0);
@@ -30,7 +30,19 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
   if (!table) return null;
 
   const safeItems = Array.isArray(table?.items) ? table.items : [];
-  const subtotal = safeItems.reduce((sum, item) => sum + ((Number(item?.price) || 0) * (Number(item?.quantity) || 1)), 0);
+  const normalizedItems = safeItems.map((item) => ({
+    ...item,
+    name: String(item?.name || item?.dishName || menuItems.find((menuItem) =>
+      String(menuItem.id) === String(item?.menuItemId ?? item?.id),
+    )?.name || "").trim(),
+    quantity: Number(item?.quantity ?? item?.qty) || 0,
+    price: Number(item?.price ?? item?.unitPrice),
+  }));
+  const validItems = normalizedItems.filter((item) =>
+    item.name && item.quantity > 0 && Number.isFinite(item.price) && item.price >= 0,
+  );
+  const hasInvalidItems = safeItems.length === 0 || validItems.length !== safeItems.length;
+  const subtotal = validItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = (subtotal * (table?.discountPercent || 0)) / 100;
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxRate = 0.05;
@@ -42,6 +54,7 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
   const changeDue = Math.max(0, (parseFloat(effectiveCash) || 0) - grandTotal);
 
   const handleSettle = () => {
+    if (hasInvalidItems) return;
     setIsProcessing(true);
     sounds.playSuccess();
 
@@ -58,7 +71,12 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
           2,
         capacity: Number(table.capacity) || 4,
         orderTime: table.orderTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        items: [...table.items],
+        items: validItems.map((item) => ({
+          ...item,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
         subtotal,
         discountAmount,
         taxAmount,
@@ -69,8 +87,9 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
         cashTendered: paymentMethod === 'cash' ? cashTendered : grandTotal,
         changeDue: paymentMethod === 'cash' ? changeDue : 0,
         settledAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        invoiceNo: table.invoiceNo || getNextInvoiceNumber()
+        date: getTodayDateString(),
+        settledDate: getBusinessDayStart().toISOString().slice(0, 10),
+        invoiceNo: getNextInvoiceNumber()
       });
     }, 450);
   };
@@ -704,7 +723,8 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
           <button
             type="button"
             onClick={handleSettle}
-            disabled={isProcessing}
+            disabled={hasInvalidItems || isProcessing}
+            title={hasInvalidItems ? "Remove or correct unnamed/invalid items before settling" : "Settle bill"}
             style={{
               flex: 2,
               height: '46px',
@@ -718,7 +738,8 @@ export function SettlementModal({ table, onClose, onConfirmPayment }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
+              cursor: isProcessing || hasInvalidItems ? 'not-allowed' : 'pointer',
+              opacity: hasInvalidItems ? 0.55 : 1,
               boxShadow: '0 6px 20px rgba(234, 88, 12, 0.4)',
               transition: 'all 0.18s ease'
             }}

@@ -1,7 +1,5 @@
 // ============================================================
-// AVSR FOOD COURT — Daily Sequential Invoice Counter Utility
-// Guarantees strictly serial invoice numbers per day (INV-001, INV-002...)
-// Automatically refreshes / resets back to INV-001 on each new day!
+// Daily invoice sequence follows the restaurant business day (04:00 to 03:59).
 // ============================================================
 
 const LAST_DATE_KEY = 'avsr_last_invoice_date_v2';
@@ -11,7 +9,9 @@ const LEGACY_STORAGE_ORDERS = 'gourmet_pos_past_orders_v2_inr';
 // Format helper to get date string in Indian locale: e.g. "12 Oct 2026"
 export function getTodayDateString(dateObj = new Date()) {
   try {
-    return dateObj.toLocaleDateString('en-IN', {
+    const businessDate = new Date(dateObj);
+    if (businessDate.getHours() < 4) businessDate.setDate(businessDate.getDate() - 1);
+    return businessDate.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
@@ -107,6 +107,14 @@ export function getNextInvoiceNumber(targetDateStr) {
   } catch {
     return 'INV-001';
   }
+}
+
+/** Return the start timestamp for the current restaurant business day. */
+export function getBusinessDayStart(dateObj = new Date()) {
+  const start = new Date(dateObj);
+  start.setHours(4, 0, 0, 0);
+  if (dateObj.getHours() < 4) start.setDate(start.getDate() - 1);
+  return start;
 }
 
 /**

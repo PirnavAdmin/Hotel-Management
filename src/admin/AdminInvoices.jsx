@@ -15,7 +15,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { INITIAL_ORDERS } from "../data/initialOrders";
 import { dedupeOrders, sortOrdersBySettlementTime } from "../utils/orderDedupe";
 
 const localDateInputValue = (date = new Date()) => {
@@ -92,9 +91,7 @@ const formatInvoiceTime = (value) => {
 
 export function AdminInvoices({ pastOrders = [] }) {
   const allOrders = sortOrdersBySettlementTime(
-    dedupeOrders(
-      pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS,
-    ),
+      dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []),
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");

@@ -28,6 +28,20 @@ const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
   return fallbackDate;
 };
 
+const formatOrderTime = (value) => {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (!match) return text;
+  let hour = Number(match[1]);
+  let suffix = match[3]?.toUpperCase();
+  if (!suffix) {
+    suffix = hour >= 12 ? "PM" : "AM";
+    hour %= 12;
+    if (hour === 0) hour = 12;
+  }
+  return `${String(hour).padStart(2, "0")}:${match[2]} ${suffix}`;
+};
+
 const parseDisplayDate = (value) => {
   if (!value) return null;
   const text = String(value).trim();
@@ -1269,7 +1283,7 @@ function OrderCard({ order, onReprintReceipt }) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
           <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.86rem' }}>
-            {order.tableName}
+            {order.tableName || (order.tableId != null ? `Table ${order.tableId}` : "Table unavailable")}
           </span>
           <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-amber-light)', fontWeight: 800 }}>
             {order.invoiceNo}
@@ -1295,12 +1309,12 @@ function OrderCard({ order, onReprintReceipt }) {
           <span>•</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-main)', fontWeight: 600 }}>
             <Clock size={11} color="var(--accent-amber)" />
-            {order.settledAt}
+            {formatOrderTime(order.settledAt || order.orderTime) || "Time unavailable"}
           </span>
           <span>•</span>
-          <span>Server: <strong>{order.server}</strong></span>
+          <span>Server: <strong>{order.server || "Staff unavailable"}</strong></span>
           <span>•</span>
-          <span>{(order.items || []).reduce((sum, item) => sum + Number(item.quantity || 1), 0)} items</span>
+          <span>{(Array.isArray(order.items) ? order.items : []).reduce((sum, item) => sum + Number(item.quantity || item.qty || 1), 0)} items</span>
         </div>
       </div>
 

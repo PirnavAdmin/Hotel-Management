@@ -32,7 +32,6 @@ import {
   BarChart3,
   Settings,
 } from "lucide-react";
-import { MENU_CATEGORIES } from "../data/menuData";
 import { formatCurrency } from "../utils/formatCurrency";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
@@ -53,32 +52,6 @@ const STORAGE_KEY_CUSTOM_CATEGORIES = "pos_custom_menu_categories";
 const STORAGE_KEY_CUSTOM_SECTIONS = "pos_custom_table_sections";
 const STORAGE_KEY_CUSTOM_ROLES = "pos_custom_staff_roles";
 const STORAGE_KEY_CUSTOM_SHIFTS = "pos_custom_staff_shifts";
-
-const DEFAULT_SECTIONS = [
-  "Main Hall",
-  "Window Side",
-  "Garden Terrace",
-  "AC Family Hall",
-  "VIP Lounge",
-];
-
-const DEFAULT_ROLES = [
-  "Senior Captain",
-  "VIP Lounge Captain",
-  "Captain",
-  "Head Waiter",
-  "Server / Waiter",
-  "Steward",
-  "Stewardess",
-  "Cashier",
-];
-
-const DEFAULT_SHIFTS = [
-  "Morning Shift (10 AM - 4 PM)",
-  "Evening Shift (5 PM - 11 PM)",
-  "Full Day (11 AM - 11 PM)",
-  "General Shift",
-];
 
 export function AdminPortal({
   onClose,
@@ -238,7 +211,7 @@ export function AdminPortal({
   const saveCustomCategory = async (newCat) => {
     if (!newCat || !newCat.trim()) return;
     const trimmed = newCat.trim();
-    const knownNames = [...MENU_CATEGORIES.map((category) => category.name), ...customCategories.map((category) => typeof category === "string" ? category : category.name || category.label || category.value)];
+    const knownNames = [...customCategories.map((category) => typeof category === "string" ? category : category.name || category.label || category.value)];
     if (!knownNames.some((name) => name?.toLowerCase() === trimmed.toLowerCase())) {
       const result = await apiCreateMenuCategory(trimmed, knownNames.length);
       if (!result?.success || result.data?.success === false) {
@@ -317,9 +290,6 @@ export function AdminPortal({
 
   const allCategoryOptions = React.useMemo(() => {
     const map = new Map();
-    MENU_CATEGORIES.filter((c) => c.id !== "all").forEach((c) => {
-      map.set(c.name.toLowerCase(), { value: c.name, label: c.name });
-    });
     customCategories.forEach((cat) => {
       const name = typeof cat === "string" ? cat : cat.name || cat.label || cat.value;
       if (name && !map.has(name.toLowerCase())) {
@@ -328,10 +298,7 @@ export function AdminPortal({
     });
     (menuItems || []).forEach((item) => {
       if (item.category) {
-        const matched = MENU_CATEGORIES.find(
-          (c) => c.id === item.category || c.name.toLowerCase() === item.category.toLowerCase()
-        );
-        const name = matched ? matched.name : item.category;
+        const name = item.category;
         if (!map.has(name.toLowerCase())) {
           map.set(name.toLowerCase(), { value: name, label: name });
         }
@@ -342,9 +309,6 @@ export function AdminPortal({
 
   const allSectionOptions = React.useMemo(() => {
     const map = new Map();
-    DEFAULT_SECTIONS.forEach((s) => {
-      map.set(s.toLowerCase(), { value: s, label: s });
-    });
     customSections.forEach((s) => {
       if (s && !map.has(s.toLowerCase())) {
         map.set(s.toLowerCase(), { value: s, label: s });
@@ -360,9 +324,6 @@ export function AdminPortal({
 
   const allRoleOptions = React.useMemo(() => {
     const map = new Map();
-    DEFAULT_ROLES.forEach((r) => {
-      map.set(r.toLowerCase(), { value: r, label: r });
-    });
     customRoles.forEach((r) => {
       if (r && !map.has(r.toLowerCase())) {
         map.set(r.toLowerCase(), { value: r, label: r });
@@ -378,9 +339,6 @@ export function AdminPortal({
 
   const allShiftOptions = React.useMemo(() => {
     const map = new Map();
-    DEFAULT_SHIFTS.forEach((sh) => {
-      map.set(sh.toLowerCase(), { value: sh, label: sh });
-    });
     customShifts.forEach((sh) => {
       if (sh && !map.has(sh.toLowerCase())) {
         map.set(sh.toLowerCase(), { value: sh, label: sh });
@@ -400,12 +358,12 @@ export function AdminPortal({
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [itemForm, setItemForm] = useState({
     name: "",
-    category: "Biryanis & Rice Special",
-    price: 250,
+    category: "",
+    price: "",
     isVeg: false,
     isChefSpecial: false,
-    spiceLevel: 2,
-    prepTime: "15 min",
+    spiceLevel: "",
+    prepTime: "",
     description: "",
     image: "",
   });
@@ -415,12 +373,12 @@ export function AdminPortal({
   const [editingTable, setEditingTable] = useState(null);
   const [isNewServerMode, setIsNewServerMode] = useState(false);
   const [newServerName, setNewServerName] = useState("");
-  const [newServerRole, setNewServerRole] = useState("Server / Waiter");
+  const [newServerRole, setNewServerRole] = useState("");
   const [tableForm, setTableForm] = useState({
-    name: `Table ${tables.length + 1}`,
-    section: "Main Hall",
-    capacity: 4, // Chairs / Persons capacity
-    server: staffList[0]?.name || "Rajesh K.",
+    name: "",
+    section: "",
+    capacity: "",
+    server: staffList[0]?.name || "",
   });
 
   // --- STAFF (PERSONS) MODAL STATE ---
@@ -428,22 +386,18 @@ export function AdminPortal({
   const [editingStaff, setEditingStaff] = useState(null);
   const [staffForm, setStaffForm] = useState({
     name: "",
-    role: "Server / Waiter",
+    role: "",
     phone: "",
-    shift: "General Shift",
+    shift: "",
   });
 
   // Open item modal for Add or Edit
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
-      const matchedCat = MENU_CATEGORIES.find(
-        (c) => c.id === item.category || c.name.toLowerCase() === item.category.toLowerCase()
-      );
-      const categoryName = matchedCat ? matchedCat.name : item.category;
       setItemForm({
         name: item.name,
-        category: categoryName || "Biryanis & Rice Special",
+        category: item.category || "",
         price: item.price,
         isVeg: item.isVeg,
         isChefSpecial: item.isChefSpecial,
@@ -456,12 +410,12 @@ export function AdminPortal({
       setEditingItem(null);
       setItemForm({
         name: "",
-        category: "Biryanis & Rice Special",
-        price: 250,
+        category: "",
+        price: "",
         isVeg: false,
         isChefSpecial: false,
-        spiceLevel: 2,
-        prepTime: "15 min",
+        spiceLevel: "",
+        prepTime: "",
         description: "",
         image: "",
       });
@@ -495,7 +449,7 @@ export function AdminPortal({
   const handleOpenTableModal = (tbl = null) => {
     setIsNewServerMode(false);
     setNewServerName("");
-    setNewServerRole("Server / Waiter");
+    setNewServerRole("");
 
     if (tbl) {
       setEditingTable(tbl);
@@ -510,10 +464,10 @@ export function AdminPortal({
       // Auto suggest next table number
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       setTableForm({
-        name: `Table ${maxId + 1}`,
-        section: "Main Hall",
-        capacity: 4,
-        server: staffList[0]?.name || "Rajesh K.",
+        name: "",
+        section: "",
+        capacity: "",
+        server: staffList[0]?.name || "",
       });
     }
     setIsTableModalOpen(true);
@@ -533,9 +487,9 @@ export function AdminPortal({
       onAddStaff({
         id: Date.now(),
         name: assignedServer,
-        role: newServerRole.trim() || "Server / Waiter",
+        role: newServerRole.trim(),
         phone: "+91 98450 00000",
-        shift: "General Shift",
+        shift: "",
       });
     }
 
@@ -579,22 +533,22 @@ export function AdminPortal({
           "",
       );
       const personRole = String(
-        person?.role || person?.roleTitle || "Server / Waiter",
+        person?.role || person?.roleTitle || "",
       );
       setEditingStaff(person);
       setStaffForm({
         name: personName,
         role: personRole,
         phone: person.phone || "",
-        shift: person.shift || "General Shift",
+        shift: person.shift || "",
       });
     } else {
       setEditingStaff(null);
       setStaffForm({
         name: "",
-        role: "Server / Waiter",
+        role: "",
         phone: "",
-        shift: "General Shift",
+        shift: "",
       });
     }
     setIsStaffModalOpen(true);
@@ -637,9 +591,9 @@ export function AdminPortal({
     setEditingStaff(null);
     setStaffForm({
       name: "",
-      role: "Server / Waiter",
+      role: "",
       phone: "",
-      shift: "General Shift",
+      shift: "",
     });
     setIsStaffModalOpen(false);
   };
@@ -1061,7 +1015,7 @@ export function AdminPortal({
                                       overflow: "hidden",
                                     }}
                                   >
-                                    {item.prepTime || "15 mins"} • {item.description}
+                                    {item.prepTime || ""} • {item.description}
                                   </div>
                                 </div>
                               </div>
@@ -3324,9 +3278,9 @@ export function AdminPortal({
                         onAddStaff({
                           id: Date.now(),
                           name: newServer,
-                          role: "Server / Waiter",
+                          role: "",
                           phone: "+91 98450 00000",
-                          shift: "General Shift",
+                          shift: "",
                         });
                       }
                     }

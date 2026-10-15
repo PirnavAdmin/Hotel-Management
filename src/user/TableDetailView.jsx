@@ -1716,7 +1716,6 @@ import {
   ChevronDown,
   Filter,
 } from "lucide-react";
-import { MENU_CATEGORIES, MENU_ITEMS } from "../data/menuData";
 import { sounds } from "../utils/audio";
 import { formatCurrency } from "../utils/formatCurrency";
 import {
@@ -1739,7 +1738,7 @@ const CATEGORY_ICONS = {
 export function TableDetailView({
   table,
   allTables,
-  menuItems = MENU_ITEMS,
+  menuItems = [],
   onSelectTable,
   onBackToTables,
   onAddItemToTable,
@@ -1780,7 +1779,7 @@ export function TableDetailView({
     const query = searchQuery.trim().toLowerCase();
     const normalizedQuery = query.replace(/biriyani/g, "biryani");
 
-    return (menuItems || MENU_ITEMS).filter((item) => {
+    return (Array.isArray(menuItems) ? menuItems : []).filter((item) => {
       const matchCat =
         selectedCategory === "all" || item.category === selectedCategory;
 
@@ -2722,7 +2721,7 @@ export function TableDetailView({
               padding: "0.5rem",
             }}
           >
-            {MENU_CATEGORIES.map((category) => {
+            {[{ id: "all", name: "All Items", icon: "Utensils" }, ...Array.from(new Map((menuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: "Utensils" }])).values())].map((category) => {
               const isSelected = selectedCategory === category.id;
               const IconComp = CATEGORY_ICONS[category.icon] || Utensils;
 
@@ -2995,18 +2994,11 @@ export function TableDetailView({
                     {/* Item Image with culinary tags */}
                     <div className="pos-menu-card-image">
                       <img
-                        src={
-                          item.image ||
-                          "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80"
-                        }
+                        src={item.image || undefined}
                         alt={item.name}
                         loading="lazy"
                         className="pos-menu-card-image-img"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src =
-                            "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80";
-                        }}
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
                       />
 
                       {/* Fallback Icon when image loading */}

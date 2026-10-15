@@ -1,7 +1,7 @@
 import React from 'react';
 import { Printer, X } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
-import { getNextInvoiceNumber } from '../utils/invoiceCounter';
+import { getTodayDateString, getNextInvoiceNumber } from '../utils/invoiceCounter';
 
 const formatReceiptTime = (value) => {
   if (!value) return '';
@@ -15,7 +15,12 @@ const formatReceiptTime = (value) => {
 export function ReceiptModal({ table, onClose, onPrint }) {
   if (!table) return null;
 
-  const items = table.items || [];
+  const items = (Array.isArray(table.items) ? table.items : []).map((item) => ({
+    ...item,
+    name: String(item?.name || item?.dishName || "Item name unavailable").trim(),
+    quantity: Number(item?.quantity ?? item?.qty) || 1,
+    price: Number(item?.price ?? item?.unitPrice) || 0,
+  }));
   const subtotal = table.subtotal !== undefined
     ? table.subtotal
     : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -43,11 +48,7 @@ export function ReceiptModal({ table, onClose, onPrint }) {
     : Math.round(taxableAmount + taxAmount + serviceChargeAmount);
 
   const invoiceNumber = table.invoiceNo || getNextInvoiceNumber();
-  const currentDate = table.date || new Date().toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
+  const currentDate = table.date || getTodayDateString();
   const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
   const paidTime = formatReceiptTime(table.settledAt || table.time);
   const tableCapacity = Number(table.capacity) || 0;
@@ -199,7 +200,7 @@ export function ReceiptModal({ table, onClose, onPrint }) {
                   }}
                 >
                   <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.name}
+                    {item.name || "Item name unavailable"}
                   </span>
                   <span style={{ textAlign: 'center' }}>{item.quantity}</span>
                   <span style={{ textAlign: 'right' }}>₹{item.price}</span>

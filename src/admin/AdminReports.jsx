@@ -13,7 +13,6 @@ import {
   Printer,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { INITIAL_ORDERS } from "../data/initialOrders";
 
 function parseOrderToYMD(order) {
   if (!order) return "";
@@ -69,14 +68,10 @@ export function AdminReports({ pastOrders = [], menuItems = [] }) {
   const [endDate, setEndDate] = useState(todayYMD);
   const [isFetching, setIsFetching] = useState(false);
   const startInputRef = useRef(null);
-  const [ordersData, setOrdersData] = useState(() => {
-    return pastOrders && pastOrders.length > 0 ? pastOrders : INITIAL_ORDERS;
-  });
+  const [ordersData, setOrdersData] = useState(() => Array.isArray(pastOrders) ? pastOrders : []);
 
   useEffect(() => {
-    if (pastOrders && pastOrders.length > 0) {
-      setOrdersData(pastOrders);
-    }
+    setOrdersData(Array.isArray(pastOrders) ? pastOrders : []);
   }, [pastOrders]);
 
   const allOrders = ordersData;

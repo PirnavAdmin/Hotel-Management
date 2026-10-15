@@ -21,120 +21,16 @@ import { API_BASE_URL } from "../api/apiConfig";
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "Litres", "ml", "Pcs", "Cans"];
 
-const INITIAL_INVENTORY = [
-  {
-    id: "inv-1",
-    name: "Hyderabadi Basmati Rice",
-    category: "Grains & Rice",
-    stock: 85,
-    minThreshold: 20,
-    unit: "KG",
-    supplier: "Deccan Grain Mills",
-    lastRestocked: "12 Oct 2026",
-  },
-  {
-    id: "inv-2",
-    name: "Fresh Tender Chicken Cuts",
-    category: "Meats & Poultry",
-    stock: 42,
-    minThreshold: 15,
-    unit: "KG",
-    supplier: "Royal Poultry Farms",
-    lastRestocked: "13 Oct 2026",
-  },
-  {
-    id: "inv-3",
-    name: "Baby Goat Mutton Cuts",
-    category: "Meats & Poultry",
-    stock: 12,
-    minThreshold: 15,
-    unit: "KG",
-    supplier: "City Prime Meat Hub",
-    lastRestocked: "11 Oct 2026",
-  },
-  {
-    id: "inv-4",
-    name: "Malai Paneer Fresh Blocks",
-    category: "Dairy",
-    stock: 18,
-    minThreshold: 8,
-    unit: "KG",
-    supplier: "Heritage Dairy",
-    lastRestocked: "13 Oct 2026",
-  },
-  {
-    id: "inv-5",
-    name: "Shahi Biryani Garam Masala",
-    category: "Spices & Oils",
-    stock: 9.5,
-    minThreshold: 4,
-    unit: "KG",
-    supplier: "Old City Spice Traders",
-    lastRestocked: "10 Oct 2026",
-  },
-  {
-    id: "inv-6",
-    name: "Pure Desi Ghee",
-    category: "Spices & Oils",
-    stock: 24,
-    minThreshold: 10,
-    unit: "Litres",
-    supplier: "Amul Fresh Supplies",
-    lastRestocked: "12 Oct 2026",
-  },
-  {
-    id: "inv-7",
-    name: "Kashmiri Mogra Saffron",
-    category: "Spices & Oils",
-    stock: 0.35,
-    minThreshold: 0.1,
-    unit: "KG",
-    supplier: "Kashmir Organic Hub",
-    lastRestocked: "05 Oct 2026",
-  },
-  {
-    id: "inv-8",
-    name: "Takeaway Handi Containers (1L)",
-    category: "Packaging",
-    stock: 350,
-    minThreshold: 100,
-    unit: "Pcs",
-    supplier: "Apex Eco Packs",
-    lastRestocked: "09 Oct 2026",
-  },
-  {
-    id: "inv-9",
-    name: "Cold Beverage Cans (300ml)",
-    category: "Beverages",
-    stock: 8,
-    minThreshold: 24,
-    unit: "Cans",
-    supplier: "Coca Cola Distributors",
-    lastRestocked: "08 Oct 2026",
-  },
-];
-
 const STORAGE_KEY_CUSTOM_INV_CATEGORIES = "pos_custom_inventory_categories";
 const STORAGE_KEY_CUSTOM_INV_UNITS = "pos_custom_inventory_units";
-
-const DEFAULT_INV_CATEGORIES = [
-  "Grains & Rice",
-  "Meats & Poultry",
-  "Dairy",
-  "Spices & Oils",
-  "Packaging",
-  "Beverages",
-];
-
-const DEFAULT_INV_UNITS = ["KG", "Litres", "Pcs", "Bags", "Cans"];
 
 export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [inventory, setInventory] = useState(() => {
     try {
       const saved = localStorage.getItem(INVENTORY_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_INVENTORY;
+      return [];
     }
   });
 
@@ -184,7 +80,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
   const allCategoryOptions = useMemo(() => {
     const map = new Map();
-    DEFAULT_INV_CATEGORIES.forEach((c) => map.set(c.toLowerCase(), { value: c, label: c }));
     customInvCategories.forEach((c) => {
       if (c && !map.has(c.toLowerCase())) map.set(c.toLowerCase(), { value: c, label: c });
     });
@@ -198,7 +93,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
   const allUnitOptions = useMemo(() => {
     const map = new Map();
-    DEFAULT_INV_UNITS.forEach((u) => map.set(u.toLowerCase(), { value: u, label: u }));
     customInvUnits.forEach((u) => {
       if (u && !map.has(u.toLowerCase())) map.set(u.toLowerCase(), { value: u, label: u });
     });
