@@ -187,7 +187,8 @@ export function AdminPortal({
           localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}",
         );
       } catch {}
-      // Shared server settings are authoritative across devices.`r`n      const mergedSettings = { ...localSettings, ...settings };
+      // Shared server settings are authoritative across devices.
+      const mergedSettings = { ...localSettings, ...settings };
       try {
         localStorage.setItem(
           RESTAURANT_SETTINGS_KEY,

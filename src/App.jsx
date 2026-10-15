@@ -44,7 +44,7 @@ import {
   apiUpdateStaff,
   apiDeleteStaff,
 } from "./api/staffApi";
-import { apiGetOrders, apiCreateOrder } from "./api/orderApi";
+import { apiGetOrderHistory, apiCreateOrder } from "./api/orderApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
@@ -334,7 +334,17 @@ export function App() {
         response?.menuItems,
       ].find((candidate) => Array.isArray(candidate));
       if (Array.isArray(backendMenu)) {
-        const normalizedMenu = backendMenu.map(normalizeMenuItem);
+        let localMenu = [];
+        try {
+          localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
+        } catch {}
+        const normalizedMenu = backendMenu.map((item) => {
+          const previous = localMenu.find((saved) =>
+            String(saved.id) === String(item.menuItemId ?? item.id) ||
+            saved.name?.trim().toLowerCase() === String(item.dishName || item.name || "").trim().toLowerCase()
+          );
+          return normalizeMenuItem({ ...item, recipe: item.recipe || previous?.recipe || [] });
+        });
         setMenuItems(normalizedMenu);
         try {
           localStorage.setItem(
@@ -362,12 +372,15 @@ export function App() {
     });
 
     // 4. Load live past settled orders from the backend
-    apiGetOrders().then((response) => {
-      const backendOrders = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.data)
-          ? response.data
-          : [];
+    apiGetOrderHistory().then((response) => {
+      const result = response?.data ?? response;
+      const backendOrders = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.orders)
+          ? result.orders
+          : Array.isArray(result?.data)
+            ? result.data
+            : [];
       setPastOrders(dedupeOrders(backendOrders));
     });
   }, []);

@@ -19,6 +19,7 @@ import {
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { formatCurrency } from "../utils/formatCurrency";
 import { API_BASE_URL } from "../api/apiConfig";
+import { apiGetInventory } from "../api/inventoryApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans"];
@@ -186,6 +187,47 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       );
     } catch {}
   };
+
+  useEffect(() => {
+    let active = true;
+    apiGetInventory().then((response) => {
+      const payload = response?.data ?? response;
+      const rows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.ingredients)
+            ? payload.ingredients
+            : [];
+      if (!active || !response?.success || !rows.length) return;
+      let saved = [];
+      try {
+        saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+      } catch {}
+      const savedById = new Map((Array.isArray(saved) ? saved : []).map((item) => [String(item.id), item]));
+      const remote = rows.map((row) => {
+        const id = row.id ?? row.ingredientId ?? row.ingredient_id;
+        const previous = savedById.get(String(id)) || {};
+        return {
+          ...previous,
+          id: String(id),
+          name: row.name?.trim() || previous.name || `Unnamed ingredient #${id}`,
+          unit: normalizeUnit(row.unit || previous.unit || "Pcs"),
+          stock: Number(row.currentStock ?? row.stock ?? previous.stock ?? 0),
+          minThreshold: Number(row.minimumThreshold ?? row.minThreshold ?? previous.minThreshold ?? 0),
+          mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
+        };
+      });
+      const remoteIds = new Set(remote.map((item) => String(item.id)));
+      const merged = normalizeInventoryUnits([
+        ...remote,
+        ...(Array.isArray(saved) ? saved.filter((item) => !remoteIds.has(String(item.id))) : []),
+      ]);
+      setInventory(merged);
+      try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
