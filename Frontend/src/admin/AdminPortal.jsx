@@ -28,6 +28,7 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Package,
   FileText,
   BarChart3,
@@ -42,6 +43,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { AdminOverview } from "./AdminOverview";
@@ -59,7 +61,6 @@ import {
   getMenuItemImage,
   handleDishImageError,
   getRelevantLocalFallback,
-  LOCAL_IMAGE_PRESETS,
 } from "../utils/menuImageHelper";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
@@ -223,6 +224,8 @@ export function AdminPortal({
     setMenuPage(1);
   };
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
+  const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
+  const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const emptyTableFilters = { search: "", area: "", status: "", server: "" };
   const [tableFilters, setTableFilters] = useState(emptyTableFilters);
   const updateTableFilter = (key, value) =>
@@ -445,9 +448,14 @@ export function AdminPortal({
     ) {
       const result = await apiCreateMenuCategory(trimmed, knownNames.length);
       if (!result?.success || result.data?.success === false) {
-        window.alert(
-          `Category was not saved: ${result?.error || result?.data?.message || "API error"}`,
-        );
+        requestDelete({
+          title: "Category Not Saved",
+          message: `Category was not saved: ${result?.error || result?.data?.message || "API error"}`,
+          confirmLabel: "Understood",
+          cancelLabel: "Close",
+          icon: <AlertCircle size={22} color="#f59e0b" />,
+          onConfirm: () => {},
+        });
         return;
       }
     }
@@ -667,6 +675,9 @@ export function AdminPortal({
 
   // Open item modal for Add or Edit
   const handleOpenItemModal = (item = null) => {
+    const fileInput = document.getElementById("dish-image-file-input");
+    if (fileInput) fileInput.value = "";
+
     if (item) {
       setEditingItem(item);
       setItemForm({
@@ -704,7 +715,7 @@ export function AdminPortal({
     if (isImageUploading || !itemForm.name.trim()) return;
 
     let itemImage = (itemForm.image || "").trim();
-    if (!itemImage || itemImage.includes("photo-1563379091339-03b21ab4a4f8")) {
+    if (itemImage.includes("photo-1563379091339-03b21ab4a4f8")) {
       itemImage = getRelevantLocalFallback(itemForm);
     }
 
@@ -1611,13 +1622,12 @@ export function AdminPortal({
 
                                   <button
                                     onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          `Delete "${item.name}" from restaurant menu?`,
-                                        )
-                                      ) {
-                                        onDeleteMenuItem(item.id);
-                                      }
+                                      requestDelete({
+                                        title: "Delete Menu Item?",
+                                        message: `Are you sure you want to delete "${item.name}" from the restaurant menu? This action cannot be undone.`,
+                                        confirmLabel: "Yes, Delete",
+                                        onConfirm: () => onDeleteMenuItem(item.id),
+                                      });
                                     }}
                                     style={{
                                       border:
@@ -2163,7 +2173,13 @@ export function AdminPortal({
                                 flexShrink: 0,
                               }}
                             >
-                              T{tbl.id}
+                              {(() => {
+                                const name = String(tbl.name || "").trim();
+                                const numMatch = name.match(/\d+/);
+                                if (numMatch) return `T${numMatch[0]}`;
+                                if (name) return name.slice(0, 3).toUpperCase();
+                                return `T${tbl.id}`;
+                              })()}
                             </div>
                             <div>
                               <h4
@@ -2174,7 +2190,7 @@ export function AdminPortal({
                                   margin: 0,
                                 }}
                               >
-                                Table {tbl.id}
+                                {tbl.name || `Table ${tbl.id}`}
                               </h4>
                               <span
                                 style={{
@@ -2313,16 +2329,22 @@ export function AdminPortal({
                         <button
                           onClick={() => {
                             if (tbl.status !== "vacant") {
-                              alert(
-                                `Cannot delete ${tbl.name} because it is currently occupied with diners. Clear or settle bill first.`,
-                              );
+                              requestDelete({
+                                title: "Cannot Delete Table",
+                                message: `Cannot delete ${tbl.name} because it is currently occupied with diners. Clear or settle bill first.`,
+                                confirmLabel: "Understood",
+                                cancelLabel: "Close",
+                                icon: <AlertCircle size={22} color="#f59e0b" />,
+                                onConfirm: () => {},
+                              });
                               return;
                             }
-                            if (
-                              window.confirm(`Delete ${tbl.name} permanently?`)
-                            ) {
-                              onDeleteTable(tbl.id);
-                            }
+                            requestDelete({
+                              title: "Delete Table?",
+                              message: `Are you sure you want to delete ${tbl.name} permanently? This action cannot be undone.`,
+                              confirmLabel: "Yes, Delete",
+                              onConfirm: () => onDeleteTable(tbl.id),
+                            });
                           }}
                           style={{
                             padding: "0.35rem 0.55rem",
@@ -2512,13 +2534,12 @@ export function AdminPortal({
 
                               <button
                                 onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      `Remove ${personName} from staff list?`,
-                                    )
-                                  ) {
-                                    onDeleteStaff(personId);
-                                  }
+                                  requestDelete({
+                                    title: "Remove Staff?",
+                                    message: `Are you sure you want to remove "${personName}" from the staff list? This action cannot be undone.`,
+                                    confirmLabel: "Yes, Remove",
+                                    onConfirm: () => onDeleteStaff(personId),
+                                  });
                                 }}
                                 style={{
                                   background: "transparent",
@@ -2652,7 +2673,7 @@ export function AdminPortal({
                   )}
                 </div>
 
-                {/* Table Number Selector Strip */}
+                {/* Table Filter Bar with Dropdown matching TableDetailView */}
                 <div
                   style={{
                     background: "var(--bg-primary)",
@@ -2662,130 +2683,513 @@ export function AdminPortal({
                     marginBottom: "1.25rem",
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.5rem",
-                    overflowX: "auto",
+                    justifyContent: "space-between",
+                    position: "relative",
                   }}
                 >
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.35rem",
-                      fontSize: "0.76rem",
-                      fontWeight: 800,
-                      color: "var(--accent-amber-light)",
-                      marginRight: "0.5rem",
-                      flexShrink: 0,
+                      gap: "0.5rem",
                     }}
                   >
-                    <Filter size={14} />
-                    <span>TABLE NO:</span>
-                  </div>
-
-                  <button
-                    onClick={() => setAdminKotTableFilter("all")}
-                    style={{
-                      padding: "0.4rem 0.8rem",
-                      borderRadius: "5px",
-                      fontSize: "0.78rem",
-                      fontWeight: adminKotTableFilter === "all" ? 800 : 500,
-                      background:
-                        adminKotTableFilter === "all"
-                          ? "var(--accent-amber)"
-                          : "var(--bg-secondary)",
-                      color:
-                        adminKotTableFilter === "all"
-                          ? "#000000"
-                          : "var(--text-muted)",
-                      border:
-                        adminKotTableFilter === "all"
-                          ? "1px solid var(--accent-amber)"
-                          : "1px solid var(--border-subtle)",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    All Active Tables ({tablesWithOrders.length})
-                  </button>
-
-                  {tables.map((tbl) => {
-                    const hasOrders = tbl.items && tbl.items.length > 0;
-                    const isCompleted =
-                      hasOrders &&
-                      tbl.items.every(
-                        (i) =>
-                          i.kotStatus === "served" || i.kotStatus === "ready",
-                      );
-                    const isSelected =
-                      adminKotTableFilter === tbl.id ||
-                      adminKotTableFilter === tbl.name;
-                    const dotColor = isCompleted
-                      ? "#10b981"
-                      : hasOrders
-                        ? "#f59e0b"
-                        : "#64748b";
-
-                    return (
-                      <button
-                        key={tbl.id}
-                        onClick={() => setAdminKotTableFilter(tbl.id)}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "0.76rem",
+                        fontWeight: 800,
+                        color: "var(--accent-amber-light)",
+                      }}
+                    >
+                      <Filter size={14} />
+                      <span>TABLE FILTER:</span>
+                    </div>
+                    {adminKotTableFilter !== "all" ? (
+                      <div
                         style={{
-                          padding: "0.4rem 0.75rem",
-                          borderRadius: "5px",
-                          fontSize: "0.78rem",
-                          fontWeight: isSelected ? 800 : 500,
-                          background: isSelected
-                            ? "linear-gradient(135deg, #f59e0b, #ea580c)"
-                            : hasOrders
-                              ? "rgba(245, 158, 11, 0.12)"
-                              : "var(--bg-secondary)",
-                          color: isSelected
-                            ? "#ffffff"
-                            : hasOrders
-                              ? "var(--text-main)"
-                              : "var(--text-muted)",
-                          border: isSelected
-                            ? "1px solid #ea580c"
-                            : "1px solid var(--border-subtle)",
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                          display: "flex",
+                          display: "inline-flex",
                           alignItems: "center",
-                          gap: "0.35rem",
+                          gap: "6px",
+                          background: "rgba(245, 158, 11, 0.15)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          padding: "3px 8px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          color: "var(--accent-amber-light)",
                         }}
                       >
-                        <span
+                        <span>
+                          {tables.find(
+                            (t) =>
+                              t.id === Number(adminKotTableFilter) ||
+                              t.name === adminKotTableFilter ||
+                              String(t.id) === String(adminKotTableFilter)
+                          )?.name || `Table ${adminKotTableFilter}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAdminKotTableFilter("all")}
+                          title="Show all tables"
                           style={{
-                            width: "6px",
-                            height: "6px",
-                            borderRadius: "50%",
-                            background: dotColor,
+                            background: "transparent",
+                            border: "none",
+                            color: "var(--accent-amber-light)",
+                            cursor: "pointer",
+                            fontSize: "0.8rem",
+                            lineHeight: 1,
+                            padding: 0,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        All Active Tables ({tablesWithOrders.length})
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dropdown Container */}
+                  <div style={{ position: "relative" }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsKotTableDropdownOpen((prev) => !prev)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "0.5rem",
+                        minWidth: "132px",
+                        padding: "0.5rem 0.8rem",
+                        borderRadius: "8px",
+                        background: isKotTableDropdownOpen
+                          ? "var(--accent-amber)"
+                          : "var(--bg-tertiary)",
+                        color: isKotTableDropdownOpen
+                          ? "#000000"
+                          : "var(--text-main)",
+                        border: isKotTableDropdownOpen
+                          ? "1px solid var(--accent-amber)"
+                          : "1px solid var(--border-subtle)",
+                        fontSize: "0.8rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        boxShadow: isKotTableDropdownOpen
+                          ? "0 4px 12px rgba(245,158,11,0.25)"
+                          : "none",
+                      }}
+                    >
+                      <Filter
+                        size={15}
+                        color={
+                          isKotTableDropdownOpen
+                            ? "#000000"
+                            : "var(--accent-amber)"
+                        }
+                      />
+                      <span>
+                        {adminKotTableFilter === "all"
+                          ? "All Tables"
+                          : tables.find(
+                              (t) =>
+                                t.id === Number(adminKotTableFilter) ||
+                                t.name === adminKotTableFilter ||
+                                String(t.id) === String(adminKotTableFilter)
+                            )?.name || "All Tables"}
+                      </span>
+                      <ChevronDown
+                        size={15}
+                        style={{
+                          transform: isKotTableDropdownOpen
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
+                          transition: "transform 160ms ease",
+                        }}
+                      />
+                    </button>
+
+                    {isKotTableDropdownOpen && (
+                      <>
+                        {/* Backdrop to close dropdown on click outside */}
+                        <div
+                          onClick={() => setIsKotTableDropdownOpen(false)}
+                          style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 99,
                           }}
                         />
-                        <span>{tbl.name}</span>
-                        {hasOrders && (
-                          <span
+
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "calc(100% + 8px)",
+                            right: 0,
+                            width: "280px",
+                            maxHeight: "380px",
+                            display: "flex",
+                            flexDirection: "column",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "10px",
+                            boxShadow: "0 14px 32px rgba(0,0,0,0.35)",
+                            zIndex: 100,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {/* Header */}
+                          <div
                             style={{
-                              background: isSelected
-                                ? "#000000"
-                                : "rgba(0,0,0,0.3)",
-                              color: isSelected
-                                ? "#ffffff"
-                                : isCompleted
-                                  ? "#10b981"
-                                  : "#f59e0b",
-                              padding: "1px 5px",
-                              borderRadius: "6px",
-                              fontSize: "0.65rem",
-                              fontWeight: 800,
+                              padding: "0.5rem 0.65rem 0.45rem",
+                              borderBottom: "1px solid var(--border-subtle)",
+                              flexShrink: 0,
                             }}
                           >
-                            {tbl.items.length}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                            <div
+                              style={{
+                                color: "var(--text-dim)",
+                                fontSize: "0.68rem",
+                                fontWeight: 800,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                                marginBottom: "0.45rem",
+                              }}
+                            >
+                              FILTER BY STATUS
+                            </div>
+
+                            {/* Status Filter Pills */}
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "0.3rem",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {[
+                                {
+                                  id: "all",
+                                  label: "All",
+                                  count: tables.length,
+                                  dot: null,
+                                },
+                                {
+                                  id: "vacant",
+                                  label: "Vacant",
+                                  count: tables.filter(
+                                    (t) =>
+                                      (t.status || "vacant").toLowerCase() ===
+                                      "vacant"
+                                  ).length,
+                                  dot: "var(--status-vacant, #10b981)",
+                                },
+                                {
+                                  id: "occupied",
+                                  label: "Occupied",
+                                  count: tables.filter(
+                                    (t) =>
+                                      (t.status || "").toLowerCase() ===
+                                      "occupied"
+                                  ).length,
+                                  dot: "var(--status-occupied, #f59e0b)",
+                                },
+                                {
+                                  id: "billed",
+                                  label: "Billed",
+                                  count: tables.filter(
+                                    (t) =>
+                                      (t.status || "").toLowerCase() ===
+                                      "billed"
+                                  ).length,
+                                  dot: "var(--status-billed, #a855f7)",
+                                },
+                              ].map((sf) => {
+                                const isActive = kotTableStatusFilter === sf.id;
+                                return (
+                                  <button
+                                    key={sf.id}
+                                    type="button"
+                                    onClick={() =>
+                                      setKotTableStatusFilter(sf.id)
+                                    }
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      padding: "0.25rem 0.55rem",
+                                      borderRadius: "6px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: isActive ? 800 : 600,
+                                      background: isActive
+                                        ? "rgba(245,158,11,0.2)"
+                                        : "var(--bg-tertiary)",
+                                      color: isActive
+                                        ? "var(--accent-amber-light)"
+                                        : "var(--text-muted)",
+                                      border: isActive
+                                        ? "1px solid var(--accent-amber)"
+                                        : "1px solid var(--border-subtle)",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    {sf.dot && (
+                                      <span
+                                        style={{
+                                          width: "6px",
+                                          height: "6px",
+                                          borderRadius: "50%",
+                                          backgroundColor: sf.dot,
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                    )}
+                                    <span>{sf.label}</span>
+                                    <span style={{ opacity: 0.7 }}>
+                                      ({sf.count})
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Table List */}
+                          <div
+                            style={{
+                              overflowY: "auto",
+                              flex: 1,
+                              padding: "0.35rem",
+                            }}
+                          >
+                            {/* All Active Tables Option */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAdminKotTableFilter("all");
+                                setIsKotTableDropdownOpen(false);
+                              }}
+                              style={{
+                                width: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "0.65rem",
+                                padding: "0.55rem 0.65rem",
+                                marginBottom: "2px",
+                                borderRadius: "7px",
+                                background:
+                                  adminKotTableFilter === "all"
+                                    ? "rgba(245,158,11,0.14)"
+                                    : "transparent",
+                                color: "var(--text-main)",
+                                border:
+                                  adminKotTableFilter === "all"
+                                    ? "1px solid rgba(245,158,11,0.5)"
+                                    : "1px solid transparent",
+                                cursor: "pointer",
+                                textAlign: "left",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (adminKotTableFilter !== "all")
+                                  e.currentTarget.style.background =
+                                    "var(--bg-tertiary)";
+                              }}
+                              onMouseLeave={(e) => {
+                                if (adminKotTableFilter !== "all")
+                                  e.currentTarget.style.background =
+                                    "transparent";
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.55rem",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    width: "7px",
+                                    height: "7px",
+                                    borderRadius: "50%",
+                                    background: "var(--accent-amber)",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    fontWeight:
+                                      adminKotTableFilter === "all" ? 800 : 650,
+                                  }}
+                                >
+                                  All Active Tables
+                                </span>
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.66rem",
+                                  fontWeight: 800,
+                                  textTransform: "uppercase",
+                                  color:
+                                    adminKotTableFilter === "all"
+                                      ? "var(--accent-amber-light)"
+                                      : "var(--text-dim)",
+                                }}
+                              >
+                                {adminKotTableFilter === "all"
+                                  ? "CURRENT"
+                                  : `${tablesWithOrders.length} ACTIVE`}
+                              </span>
+                            </button>
+
+                            {tables
+                              .filter((t) => {
+                                const status = (
+                                  t.status || "vacant"
+                                ).toLowerCase();
+                                return (
+                                  kotTableStatusFilter === "all" ||
+                                  status === kotTableStatusFilter
+                                );
+                              })
+                              .map((t) => {
+                                const isCurrent =
+                                  adminKotTableFilter === t.id ||
+                                  adminKotTableFilter === t.name ||
+                                  String(adminKotTableFilter) === String(t.id);
+                                const status = (
+                                  t.status || "vacant"
+                                ).toLowerCase();
+                                let statusDot = "var(--status-vacant, #10b981)";
+                                if (status === "occupied")
+                                  statusDot = "var(--status-occupied, #f59e0b)";
+                                if (status === "billed")
+                                  statusDot = "var(--status-billed, #a855f7)";
+
+                                return (
+                                  <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setAdminKotTableFilter(t.id);
+                                      setIsKotTableDropdownOpen(false);
+                                    }}
+                                    style={{
+                                      width: "100%",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      gap: "0.65rem",
+                                      padding: "0.55rem 0.65rem",
+                                      marginBottom: "2px",
+                                      borderRadius: "7px",
+                                      background: isCurrent
+                                        ? "rgba(245,158,11,0.14)"
+                                        : "transparent",
+                                      color: "var(--text-main)",
+                                      border: isCurrent
+                                        ? "1px solid rgba(245,158,11,0.5)"
+                                        : "1px solid transparent",
+                                      cursor: "pointer",
+                                      textAlign: "left",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (!isCurrent)
+                                        e.currentTarget.style.background =
+                                          "var(--bg-tertiary)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (!isCurrent)
+                                        e.currentTarget.style.background =
+                                          "transparent";
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "0.55rem",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          width: "7px",
+                                          height: "7px",
+                                          borderRadius: "50%",
+                                          background: statusDot,
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                      <span
+                                        style={{
+                                          fontWeight: isCurrent ? 800 : 650,
+                                        }}
+                                      >
+                                        {t.name}
+                                      </span>
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: "0.66rem",
+                                        fontWeight: 800,
+                                        textTransform: "uppercase",
+                                        color: isCurrent
+                                          ? "var(--accent-amber-light)"
+                                          : status === "occupied"
+                                            ? "var(--status-occupied, #f59e0b)"
+                                            : status === "billed"
+                                              ? "var(--status-billed, #a855f7)"
+                                              : "var(--text-dim)",
+                                      }}
+                                    >
+                                      {isCurrent
+                                        ? "CURRENT"
+                                        : t.status || "VACANT"}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+
+                            {/* Empty state when filter yields nothing */}
+                            {tables.filter((t) => {
+                              const status = (
+                                t.status || "vacant"
+                              ).toLowerCase();
+                              return (
+                                kotTableStatusFilter === "all" ||
+                                status === kotTableStatusFilter
+                              );
+                            }).length === 0 && (
+                              <div
+                                style={{
+                                  textAlign: "center",
+                                  padding: "1rem",
+                                  color: "var(--text-dim)",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                No {kotTableStatusFilter} tables found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Table KOT Cards */}
@@ -3487,64 +3891,12 @@ export function AdminPortal({
                   marginBottom: "5px",
                 }}
               >
-                Dish Image (Local Preset or Upload)
+                Dish Image (Upload)
               </label>
-
-              {/* Local Presets Pill Selector */}
-              <div style={{ marginBottom: "8px" }}>
-                <span
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text-muted)",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Select from local asset presets:
-                </span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {LOCAL_IMAGE_PRESETS.map((preset) => {
-                    const isSelected = itemForm.image === preset.path;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() =>
-                          setItemForm((curr) => ({
-                            ...curr,
-                            image: preset.path,
-                          }))
-                        }
-                        style={{
-                          fontSize: "0.74rem",
-                          fontWeight: 600,
-                          padding: "4px 8px",
-                          borderRadius: "6px",
-                          border: isSelected
-                            ? "1.5px solid var(--color-primary, #ea580c)"
-                            : "1px solid var(--border-subtle)",
-                          background: isSelected
-                            ? "rgba(234, 88, 12, 0.15)"
-                            : "var(--bg-tertiary)",
-                          color: isSelected
-                            ? "var(--color-primary, #ea580c)"
-                            : "var(--text-main)",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <span>{preset.icon}</span>
-                        <span>{preset.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
 
               {/* File Upload Input */}
               <input
+                id="dish-image-file-input"
                 type="file"
                 accept="image/*"
                 disabled={isImageUploading}
@@ -3592,42 +3944,65 @@ export function AdminPortal({
                 }}
               />
 
-              {/* Dish Image Live Preview */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  marginTop: "8px",
-                  padding: "6px 10px",
-                  borderRadius: "8px",
-                  background: "var(--bg-tertiary)",
-                  border: "1px dashed var(--border-subtle)",
-                }}
-              >
-                <img
-                  src={getMenuItemImage(itemForm)}
-                  alt="Dish preview"
-                  onError={(e) => handleDishImageError(e, itemForm)}
-                  style={{
-                    width: "56px",
-                    height: "44px",
-                    objectFit: "cover",
-                    borderRadius: "6px",
-                    border: "1px solid var(--border-card)",
-                    background: "#0f172a",
-                    flexShrink: 0,
-                  }}
-                />
+              {/* Dish Image Live Preview - only shown when an image is actually chosen or uploaded */}
+              {itemForm.image ? (
                 <div
-                  style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: "8px",
+                    padding: "6px 10px",
+                    borderRadius: "8px",
+                    background: "var(--bg-tertiary)",
+                    border: "1px dashed var(--border-subtle)",
+                  }}
                 >
-                  <div style={{ fontWeight: 600, color: "var(--text-main)" }}>
-                    Live Preview
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <img
+                      src={itemForm.image}
+                      alt="Dish preview"
+                      style={{
+                        width: "56px",
+                        height: "44px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border-card)",
+                        background: "#0f172a",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div
+                      style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}
+                    >
+                      <div style={{ fontWeight: 600, color: "var(--text-main)" }}>
+                        Live Preview
+                      </div>
+                      <div>Uploaded image ready</div>
+                    </div>
                   </div>
-                  <div>Relevant image saved locally for all devices</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setItemForm((curr) => ({ ...curr, image: "" }));
+                      const fileInput = document.getElementById("dish-image-file-input");
+                      if (fileInput) fileInput.value = "";
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#ef4444",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    ✕ Remove
+                  </button>
                 </div>
-              </div>
+              ) : null}
             </div>
 
             <div
@@ -4355,6 +4730,8 @@ export function AdminPortal({
           </form>
         </div>
       )}
+      {/* Global Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }

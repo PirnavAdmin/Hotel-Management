@@ -14,15 +14,32 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
+import { mergeSettledOrders } from "../utils/orderDedupe";
 
 function parseOrderToYMD(order) {
   if (!order) return "";
   const months = {
-    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
-    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+    jan: "01",
+    feb: "02",
+    mar: "03",
+    apr: "04",
+    may: "05",
+    jun: "06",
+    jul: "07",
+    aug: "08",
+    sep: "09",
+    oct: "10",
+    nov: "11",
+    dec: "12",
   };
 
-  const dateValue = order.settledDate || order.date || order.settledAt || order.createdAt || order.orderTimestamp || order.timestamp;
+  const dateValue =
+    order.settledDate ||
+    order.date ||
+    order.settledAt ||
+    order.createdAt ||
+    order.orderTimestamp ||
+    order.timestamp;
   if (dateValue) {
     const s = String(dateValue).trim();
     const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
@@ -46,7 +63,11 @@ function parseOrderToYMD(order) {
     }
   }
 
-  const ts = order.orderTimestamp || order.timestamp || order.settledAt || order.createdAt;
+  const ts =
+    order.orderTimestamp ||
+    order.timestamp ||
+    order.settledAt ||
+    order.createdAt;
   if (ts) {
     const d = new Date(ts);
     if (!isNaN(d.getTime())) {
@@ -56,7 +77,40 @@ function parseOrderToYMD(order) {
   return "";
 }
 
-export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {} }) {
+function normalizePaymentMethod(order) {
+  const rawMethod =
+    order?.paymentMethod ??
+    order?.PaymentMethod ??
+    order?.payment_mode ??
+    order?.paymentMode;
+  const method = String(rawMethod || "")
+    .trim()
+    .toLowerCase();
+  if (method === "cash" || method.includes("cash")) return "cash";
+  if (
+    method.includes("upi") ||
+    method.includes("qr") ||
+    method.includes("online") ||
+    method.includes("gpay") ||
+    method.includes("phonepe") ||
+    method.includes("paytm")
+  )
+    return "upi";
+  if (
+    method.includes("card") ||
+    method.includes("credit") ||
+    method.includes("debit") ||
+    method.includes("pos")
+  )
+    return "card";
+  return "other";
+}
+
+export function AdminReports({
+  pastOrders = [],
+  menuItems = [],
+  restaurantSettings = {},
+}) {
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -71,11 +125,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const [isFetching, setIsFetching] = useState(false);
   const [ordersLoaded, setOrdersLoaded] = useState(false);
   const startInputRef = useRef(null);
-  const [ordersData, setOrdersData] = useState(() => Array.isArray(pastOrders) ? pastOrders : []);
+  const [ordersData, setOrdersData] = useState(() =>
+    Array.isArray(pastOrders) ? pastOrders : [],
+  );
 
   useEffect(() => {
     if (Array.isArray(pastOrders) && pastOrders.length) {
-      setOrdersData(pastOrders);
+      setOrdersData((current) => mergeSettledOrders(pastOrders, current));
       setOrdersLoaded(true);
     }
   }, [pastOrders]);
@@ -93,14 +149,16 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               ? result.data
               : null;
         if (active && response?.success && serverOrders) {
-          setOrdersData(serverOrders);
+          setOrdersData((current) => mergeSettledOrders(serverOrders, current));
         }
       })
       .catch(() => {})
       .finally(() => {
         if (active) setOrdersLoaded(true);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredOrders = ordersData.filter((order) => {
@@ -137,17 +195,17 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   const totalRevenue = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.grandTotal) || 0),
-    0
+    0,
   );
 
   const totalTax = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.taxAmount) || 0),
-    0
+    0,
   );
 
   const totalService = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.serviceChargeAmount) || 0),
-    0
+    0,
   );
   const totalDiscount = filteredOrders.reduce(
     (sum, order) => sum + (Number(order.discountAmount) || 0),
@@ -160,19 +218,25 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   // Payment breakdown
   const paymentStats = {
     upi: filteredOrders
-      .filter((o) => (o.paymentMethod || "").toLowerCase() === "upi")
+      .filter((order) => normalizePaymentMethod(order) === "upi")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
     cash: filteredOrders
-      .filter((o) => String(o.paymentMethod || "cash").toLowerCase() === "cash")
+      .filter((order) => normalizePaymentMethod(order) === "cash")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
     card: filteredOrders
-      .filter((o) => (o.paymentMethod || "").toLowerCase() === "card")
+      .filter((order) => normalizePaymentMethod(order) === "card")
       .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
   };
 
-  const upiPercent = totalRevenue ? Math.round((paymentStats.upi / totalRevenue) * 100) : 0;
-  const cashPercent = totalRevenue ? Math.round((paymentStats.cash / totalRevenue) * 100) : 0;
-  const cardPercent = totalRevenue ? Math.max(0, 100 - upiPercent - cashPercent) : 0;
+  const upiPercent = totalRevenue
+    ? Math.round((paymentStats.upi / totalRevenue) * 100)
+    : 0;
+  const cashPercent = totalRevenue
+    ? Math.round((paymentStats.cash / totalRevenue) * 100)
+    : 0;
+  const cardPercent = totalRevenue
+    ? Math.round((paymentStats.card / totalRevenue) * 100)
+    : 0;
 
   // Top selling dishes across settled orders
   const dishCounts = {};
@@ -201,7 +265,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             ? result.data
             : null;
       if (response?.success && serverOrders) {
-        setOrdersData(serverOrders);
+        setOrdersData((current) => mergeSettledOrders(serverOrders, current));
         setOrdersLoaded(true);
         return;
       }
@@ -212,8 +276,8 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           setOrdersData(parsed);
         }
       }
-    } catch {}
-    finally {
+    } catch {
+    } finally {
       setOrdersLoaded(true);
       setIsFetching(false);
     }
@@ -221,7 +285,8 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   const getFilterPeriodLabel = () => {
     if (filterPeriod === "today") return `Today (${todayYMD})`;
-    if (filterPeriod === "week") return `Last 7 Days (${sevenDaysYMD} to ${todayYMD})`;
+    if (filterPeriod === "week")
+      return `Last 7 Days (${sevenDaysYMD} to ${todayYMD})`;
     if (filterPeriod === "month") return `This Month (${currentMonthPrefix})`;
     if (filterPeriod === "all") return "All Time";
     if (filterPeriod === "custom") {
@@ -257,7 +322,9 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           }}
         >
           {/* Left Title with Orange Squircle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
+          >
             <div
               style={{
                 width: "44px",
@@ -273,7 +340,9 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               <BarChart3 size={22} color="#ffffff" />
             </div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+              >
                 <h2
                   style={{
                     fontSize: "1.35rem",
@@ -332,215 +401,223 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             marginBottom: "1.5rem",
           }}
         >
-            {/* Quick Period Buttons */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "10px",
-                padding: "3px",
-                gap: "3px",
-              }}
-            >
-              {[
-                { id: "today", label: "Today" },
-                { id: "week", label: "7 Days" },
-                { id: "month", label: "This Month" },
-                { id: "all", label: "All Time" },
-              ].map((p) => {
-                const active = filterPeriod === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setFilterPeriod(p.id);
-                      if (p.id === "today") {
-                        setStartDate(todayYMD);
-                        setEndDate(todayYMD);
-                      } else if (p.id === "week") {
-                        setStartDate(sevenDaysYMD);
-                        setEndDate(todayYMD);
-                      } else if (p.id === "month") {
-                        setStartDate(monthStartYMD);
-                        setEndDate(todayYMD);
-                      } else if (p.id === "all") {
-                        setStartDate("");
-                        setEndDate("");
-                      }
-                    }}
-                    style={{
-                      background: active
-                        ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                        : "transparent",
-                      color: active ? "#ffffff" : "var(--text-muted)",
-                      border: "none",
-                      borderRadius: "7px",
-                      padding: "0.38rem 0.65rem",
-                      fontSize: "0.76rem",
-                      fontWeight: active ? 700 : 600,
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.color = "var(--text-main)";
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.color = "var(--text-muted)";
-                        e.currentTarget.style.background = "transparent";
-                      }
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Quick Period Buttons */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "10px",
+              padding: "3px",
+              gap: "3px",
+            }}
+          >
+            {[
+              { id: "today", label: "Today" },
+              { id: "week", label: "7 Days" },
+              { id: "month", label: "This Month" },
+              { id: "all", label: "All Time" },
+            ].map((p) => {
+              const active = filterPeriod === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setFilterPeriod(p.id);
+                    if (p.id === "today") {
+                      setStartDate(todayYMD);
+                      setEndDate(todayYMD);
+                    } else if (p.id === "week") {
+                      setStartDate(sevenDaysYMD);
+                      setEndDate(todayYMD);
+                    } else if (p.id === "month") {
+                      setStartDate(monthStartYMD);
+                      setEndDate(todayYMD);
+                    } else if (p.id === "all") {
+                      setStartDate("");
+                      setEndDate("");
+                    }
+                  }}
+                  style={{
+                    background: active
+                      ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                      : "transparent",
+                    color: active ? "#ffffff" : "var(--text-muted)",
+                    border: "none",
+                    borderRadius: "7px",
+                    padding: "0.38rem 0.65rem",
+                    fontSize: "0.76rem",
+                    fontWeight: active ? 700 : 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.color = "var(--text-main)";
+                      e.currentTarget.style.background =
+                        "rgba(245, 158, 11, 0.08)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.color = "var(--text-muted)";
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Calendar Date-to-Date Range Picker */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background:
-                  filterPeriod === "custom"
-                    ? "rgba(245, 158, 11, 0.14)"
-                    : "var(--bg-tertiary)",
-                border:
-                  filterPeriod === "custom"
-                    ? "1.5px solid var(--accent-amber)"
-                    : "1px solid var(--border-subtle)",
-                borderRadius: "10px",
-                padding: "0.35rem 0.65rem",
-                transition: "all 0.15s ease",
+          {/* Calendar Date-to-Date Range Picker */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              background:
+                filterPeriod === "custom"
+                  ? "rgba(245, 158, 11, 0.14)"
+                  : "var(--bg-tertiary)",
+              border:
+                filterPeriod === "custom"
+                  ? "1.5px solid var(--accent-amber)"
+                  : "1px solid var(--border-subtle)",
+              borderRadius: "10px",
+              padding: "0.35rem 0.65rem",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span
+              onClick={() => {
+                try {
+                  startInputRef.current?.showPicker();
+                } catch {}
               }}
-            >
-              <span
-                onClick={() => {
-                  try {
-                    startInputRef.current?.showPicker();
-                  } catch {}
-                }}
-                style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-                title="Click to select dates"
-              >
-                <Calendar size={15} color="var(--accent-amber)" style={{ flexShrink: 0 }} />
-              </span>
-              <input
-                ref={startInputRef}
-                type="date"
-                className="clean-date-input"
-                value={startDate}
-                max={endDate && endDate < todayYMD ? endDate : todayYMD}
-                onClick={(e) => {
-                  try {
-                    e.currentTarget.showPicker();
-                  } catch {}
-                }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const capped = val && val > todayYMD ? todayYMD : val;
-                  setStartDate(capped);
-                  setFilterPeriod("custom");
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text-main)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                }}
-                title="From Date (Future dates disabled)"
-              />
-              <span
-                style={{
-                  fontSize: "0.74rem",
-                  color: "var(--text-muted)",
-                  margin: "0 2px",
-                  fontWeight: 700,
-                  userSelect: "none",
-                }}
-              >
-                to
-              </span>
-              <input
-                type="date"
-                className="clean-date-input"
-                value={endDate}
-                min={startDate || undefined}
-                max={todayYMD}
-                onClick={(e) => {
-                  try {
-                    e.currentTarget.showPicker();
-                  } catch {}
-                }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const capped = val && val > todayYMD ? todayYMD : val;
-                  setEndDate(capped);
-                  setFilterPeriod("custom");
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text-main)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                }}
-                title="To Date (Future dates disabled)"
-              />
-            </div>
-
-            {/* Fetch Data Button */}
-            <button
-              onClick={handleFetchData}
               style={{
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                border: "none",
-                borderRadius: "10px",
-                padding: "0.45rem 0.85rem",
-                color: "#ffffff",
-                fontSize: "0.78rem",
-                fontWeight: 700,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.4rem",
-                boxShadow: "0 3px 10px rgba(245, 158, 11, 0.35)",
-                transition: "all 0.15s ease",
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = "0.92";
-                e.currentTarget.style.transform = "translateY(-1px)";
+              title="Click to select dates"
+            >
+              <Calendar
+                size={15}
+                color="var(--accent-amber)"
+                style={{ flexShrink: 0 }}
+              />
+            </span>
+            <input
+              ref={startInputRef}
+              type="date"
+              className="clean-date-input"
+              value={startDate}
+              max={endDate && endDate < todayYMD ? endDate : todayYMD}
+              onClick={(e) => {
+                try {
+                  e.currentTarget.showPicker();
+                } catch {}
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = "1";
-                e.currentTarget.style.transform = "translateY(0)";
+              onChange={(e) => {
+                const val = e.target.value;
+                const capped = val && val > todayYMD ? todayYMD : val;
+                setStartDate(capped);
+                setFilterPeriod("custom");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: "var(--text-main)",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+              }}
+              title="From Date (Future dates disabled)"
+            />
+            <span
+              style={{
+                fontSize: "0.74rem",
+                color: "var(--text-muted)",
+                margin: "0 2px",
+                fontWeight: 700,
+                userSelect: "none",
               }}
             >
-              <RefreshCw
-                size={13}
-                style={{
-                  transition: "transform 0.45s ease",
-                  transform: isFetching ? "rotate(360deg)" : "none",
-                }}
-              />
-              <span>Fetch Data</span>
-            </button>
-
+              to
+            </span>
+            <input
+              type="date"
+              className="clean-date-input"
+              value={endDate}
+              min={startDate || undefined}
+              max={todayYMD}
+              onClick={(e) => {
+                try {
+                  e.currentTarget.showPicker();
+                } catch {}
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                const capped = val && val > todayYMD ? todayYMD : val;
+                setEndDate(capped);
+                setFilterPeriod("custom");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: "var(--text-main)",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+              }}
+              title="To Date (Future dates disabled)"
+            />
           </div>
+
+          {/* Fetch Data Button */}
+          <button
+            onClick={handleFetchData}
+            style={{
+              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              border: "none",
+              borderRadius: "10px",
+              padding: "0.45rem 0.85rem",
+              color: "#ffffff",
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              boxShadow: "0 3px 10px rgba(245, 158, 11, 0.35)",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = "0.92";
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = "1";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+          >
+            <RefreshCw
+              size={13}
+              style={{
+                transition: "transform 0.45s ease",
+                transform: isFetching ? "rotate(360deg)" : "none",
+              }}
+            />
+            <span>Fetch Data</span>
+          </button>
+        </div>
 
         {/* 4 Financial Metric Cards */}
         <div
@@ -572,7 +649,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               {formatCurrency(totalRevenue)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-dim)",
+                marginTop: "3px",
+              }}
+            >
               Across {filteredOrders.length} settled tickets
             </div>
           </div>
@@ -598,7 +681,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               {filteredOrders.length}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-dim)",
+                marginTop: "3px",
+              }}
+            >
               Settled dining orders
             </div>
           </div>
@@ -624,7 +713,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               {formatCurrency(totalTax)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-dim)",
+                marginTop: "3px",
+              }}
+            >
               Tax collected across settled invoices
             </div>
           </div>
@@ -650,7 +745,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               {formatCurrency(totalService)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-dim)",
+                marginTop: "3px",
+              }}
+            >
               Service charges on settled invoices
             </div>
           </div>
@@ -666,10 +767,23 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
               Average Bill
             </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--text-main)", marginTop: "4px" }}>
+            <div
+              style={{
+                fontSize: "1.4rem",
+                fontWeight: 800,
+                color: "var(--text-main)",
+                marginTop: "4px",
+              }}
+            >
               {formatCurrency(averageBill)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-dim)",
+                marginTop: "3px",
+              }}
+            >
               Average collected per settled order
             </div>
           </div>
@@ -685,10 +799,23 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
               Discounts Given
             </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#c084fc", marginTop: "4px" }}>
+            <div
+              style={{
+                fontSize: "1.4rem",
+                fontWeight: 800,
+                color: "#c084fc",
+                marginTop: "4px",
+              }}
+            >
               {formatCurrency(totalDiscount)}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-dim)",
+                marginTop: "3px",
+              }}
+            >
               Total discounts on settled bills
             </div>
           </div>
@@ -930,65 +1057,74 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     fontSize: "0.82rem",
                   }}
                 >
-              {ordersLoaded ? "No settled invoices recorded for this period" : "Loading settled invoice data..."}
+                  {ordersLoaded
+                    ? "No settled invoices recorded for this period"
+                    : "Loading settled invoice data..."}
                 </div>
               ) : (
                 displayedDishes.map(([name, qty], index) => (
-                <div
-                  key={name}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.5rem 0.65rem",
-                    borderRadius: "8px",
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        background:
-                          index === 0
-                            ? "#f59e0b"
-                            : index === 1
-                            ? "#64748b"
-                            : "var(--border-card)",
-                        color: index <= 1 ? "#000000" : "var(--text-main)",
-                        fontWeight: 800,
-                        fontSize: "0.72rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {index + 1}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.85rem",
-                        fontWeight: 700,
-                        color: "var(--text-main)",
-                      }}
-                    >
-                      {name}
-                    </span>
-                  </div>
-                  <span
+                  <div
+                    key={name}
                     style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "#fbbf24",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0.5rem 0.65rem",
+                      borderRadius: "8px",
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--border-subtle)",
                     }}
                   >
-                    {qty} orders
-                  </span>
-                </div>
-              )))}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "22px",
+                          height: "22px",
+                          borderRadius: "50%",
+                          background:
+                            index === 0
+                              ? "#f59e0b"
+                              : index === 1
+                                ? "#64748b"
+                                : "var(--border-card)",
+                          color: index <= 1 ? "#000000" : "var(--text-main)",
+                          fontWeight: 800,
+                          fontSize: "0.72rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {index + 1}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          color: "var(--text-main)",
+                        }}
+                      >
+                        {name}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        color: "#fbbf24",
+                      }}
+                    >
+                      {qty} orders
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1028,8 +1164,17 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               {restaurantSettings?.restaurantName?.trim() || "Restaurant"}
             </h1>
-            <div style={{ fontSize: "11px", color: "#475569", fontWeight: 500 }}>
-              {[restaurantSettings?.address, restaurantSettings?.phone, restaurantSettings?.gstin && `GSTIN: ${restaurantSettings.gstin}`].filter(Boolean).join(" • ")}
+            <div
+              style={{ fontSize: "11px", color: "#475569", fontWeight: 500 }}
+            >
+              {[
+                restaurantSettings?.address,
+                restaurantSettings?.phone,
+                restaurantSettings?.gstin &&
+                  `GSTIN: ${restaurantSettings.gstin}`,
+              ]
+                .filter(Boolean)
+                .join(" • ")}
             </div>
             <div
               style={{
@@ -1043,7 +1188,9 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               SALES & REVENUE ANALYTICS REPORT
             </div>
           </div>
-          <div style={{ textAlign: "right", fontSize: "11px", color: "#334155" }}>
+          <div
+            style={{ textAlign: "right", fontSize: "11px", color: "#334155" }}
+          >
             <div>
               <strong>Generated:</strong>{" "}
               {new Date().toLocaleDateString("en-IN", {
@@ -1088,21 +1235,85 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           >
             <thead>
               <tr style={{ background: "#f1f5f9" }}>
-                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Gross Revenue</th>
-                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Net Food Sales</th>
-                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total GST (5%)</th>
-                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Service Charges</th>
-                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total Orders</th>
-                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Avg Ticket</th>
+                <th
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    textAlign: "left",
+                  }}
+                >
+                  Gross Revenue
+                </th>
+                <th
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    textAlign: "left",
+                  }}
+                >
+                  Net Food Sales
+                </th>
+                <th
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    textAlign: "left",
+                  }}
+                >
+                  Total GST (5%)
+                </th>
+                <th
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    textAlign: "left",
+                  }}
+                >
+                  Service Charges
+                </th>
+                <th
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    textAlign: "left",
+                  }}
+                >
+                  Total Orders
+                </th>
+                <th
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    textAlign: "left",
+                  }}
+                >
+                  Avg Ticket
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 800, fontSize: "13px", color: "#047857" }}>
+                <td
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    color: "#047857",
+                  }}
+                >
                   {formatCurrency(totalRevenue)}
                 </td>
-                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
-                  {formatCurrency(Math.max(0, totalRevenue - totalTax - totalService))}
+                <td
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    fontWeight: 700,
+                  }}
+                >
+                  {formatCurrency(
+                    Math.max(0, totalRevenue - totalTax - totalService),
+                  )}
                 </td>
                 <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>
                   {formatCurrency(totalTax)}
@@ -1110,10 +1321,22 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>
                   {formatCurrency(totalService)}
                 </td>
-                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                <td
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    fontWeight: 700,
+                  }}
+                >
                   {filteredOrders.length}
                 </td>
-                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                <td
+                  style={{
+                    border: "1px solid #cbd5e1",
+                    padding: "6px 8px",
+                    fontWeight: 700,
+                  }}
+                >
                   {formatCurrency(averageBill)}
                 </td>
               </tr>
@@ -1144,42 +1367,159 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               2. Payment Channel Breakdown
             </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "11px",
+              }}
+            >
               <thead>
                 <tr style={{ background: "#f1f5f9" }}>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Channel</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Amount</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Share %</th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "left",
+                    }}
+                  >
+                    Channel
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
+                    Amount
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
+                    Share %
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>UPI / QR Pay</td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    UPI / QR Pay
+                  </td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                      fontWeight: 700,
+                    }}
+                  >
                     {formatCurrency(paymentStats.upi)}
                   </td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{upiPercent}%</td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
+                    {upiPercent}%
+                  </td>
                 </tr>
                 <tr>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Cash</td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Cash
+                  </td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                      fontWeight: 700,
+                    }}
+                  >
                     {formatCurrency(paymentStats.cash)}
                   </td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cashPercent}%</td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
+                    {cashPercent}%
+                  </td>
                 </tr>
                 <tr>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Card / POS Swipe</td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Card / POS Swipe
+                  </td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                      fontWeight: 700,
+                    }}
+                  >
                     {formatCurrency(paymentStats.card)}
                   </td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cardPercent}%</td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
+                    {cardPercent}%
+                  </td>
                 </tr>
                 <tr style={{ background: "#f8fafc", fontWeight: 800 }}>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>Total Settlement</td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>
+                  <td
+                    style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}
+                  >
+                    Total Settlement
+                  </td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
                     {formatCurrency(totalRevenue)}
                   </td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>100%</td>
+                  <td
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
+                    100%
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1199,29 +1539,90 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               3. Top Selling Items
             </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "11px",
+              }}
+            >
               <thead>
                 <tr style={{ background: "#f1f5f9" }}>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", width: "35px", textAlign: "center" }}>#</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Dish / Item Name</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Qty Sold</th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      width: "35px",
+                      textAlign: "center",
+                    }}
+                  >
+                    #
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "left",
+                    }}
+                  >
+                    Dish / Item Name
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "6px 8px",
+                      textAlign: "right",
+                    }}
+                  >
+                    Qty Sold
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {sortedDishes.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "center", color: "#64748b" }}>
+                    <td
+                      colSpan={3}
+                      style={{
+                        border: "1px solid #cbd5e1",
+                        padding: "8px",
+                        textAlign: "center",
+                        color: "#64748b",
+                      }}
+                    >
                       No items sold during this period.
                     </td>
                   </tr>
                 ) : (
                   sortedDishes.slice(0, 7).map(([name, qty], idx) => (
                     <tr key={name}>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "center", fontWeight: 700 }}>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "6px 8px",
+                          textAlign: "center",
+                          fontWeight: 700,
+                        }}
+                      >
                         {idx + 1}
                       </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>{name}</td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "6px 8px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {name}
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "6px 8px",
+                          textAlign: "right",
+                          fontWeight: 700,
+                        }}
+                      >
                         {qty} orders
                       </td>
                     </tr>
@@ -1247,34 +1648,119 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               4. Filtered Orders Summary ({filteredOrders.length} records)
             </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "10.5px",
+              }}
+            >
               <thead>
                 <tr style={{ background: "#f1f5f9" }}>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Order #</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Date / Time</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Table</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Mode</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Items Summary</th>
-                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "right" }}>Total</th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "5px 7px",
+                      textAlign: "left",
+                    }}
+                  >
+                    Order #
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "5px 7px",
+                      textAlign: "left",
+                    }}
+                  >
+                    Date / Time
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "5px 7px",
+                      textAlign: "left",
+                    }}
+                  >
+                    Table
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "5px 7px",
+                      textAlign: "left",
+                    }}
+                  >
+                    Mode
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "5px 7px",
+                      textAlign: "left",
+                    }}
+                  >
+                    Items Summary
+                  </th>
+                  <th
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      padding: "5px 7px",
+                      textAlign: "right",
+                    }}
+                  >
+                    Total
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.map((ord, idx) => {
                   const itemSummary = (ord.items || [])
-                    .map((i) => `${i.name || "Item"}${i.quantity > 1 ? ` (x${i.quantity})` : ""}`)
+                    .map(
+                      (i) =>
+                        `${i.name || "Item"}${i.quantity > 1 ? ` (x${i.quantity})` : ""}`,
+                    )
                     .join(", ");
                   return (
-                    <tr key={ord.id || idx} style={{ pageBreakInside: "avoid" }}>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", fontFamily: "monospace", fontWeight: 600 }}>
+                    <tr
+                      key={ord.id || idx}
+                      style={{ pageBreakInside: "avoid" }}
+                    >
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "5px 7px",
+                          fontFamily: "monospace",
+                          fontWeight: 600,
+                        }}
+                      >
                         #{ord.id || ord.orderNumber || idx + 1}
                       </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", whiteSpace: "nowrap" }}>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "5px 7px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {ord.date || ord.time || "N/A"}
                       </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px" }}>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "5px 7px",
+                        }}
+                      >
                         {ord.table ? `T-${ord.table}` : "Takeaway / Direct"}
                       </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", fontWeight: 600, textTransform: "uppercase" }}>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "5px 7px",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                        }}
+                      >
                         {ord.paymentMethod || "CASH"}
                       </td>
                       <td
@@ -1289,7 +1775,14 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                       >
                         {itemSummary || "N/A"}
                       </td>
-                      <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "right", fontWeight: 700 }}>
+                      <td
+                        style={{
+                          border: "1px solid #cbd5e1",
+                          padding: "5px 7px",
+                          textAlign: "right",
+                          fontWeight: 700,
+                        }}
+                      >
                         {formatCurrency(ord.grandTotal || ord.total || 0)}
                       </td>
                     </tr>
@@ -1320,7 +1813,14 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ marginBottom: "28px" }}>Authorized Signatory:</div>
-            <div style={{ borderTop: "1px dashed #64748b", width: "180px", textAlign: "center", paddingTop: "4px" }}>
+            <div
+              style={{
+                borderTop: "1px dashed #64748b",
+                width: "180px",
+                textAlign: "center",
+                paddingTop: "4px",
+              }}
+            >
               Manager / Auditor
             </div>
           </div>

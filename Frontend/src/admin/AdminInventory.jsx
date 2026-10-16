@@ -17,6 +17,7 @@ import {
   PackagePlus,
 } from "lucide-react";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
 import { API_BASE_URL } from "../api/apiConfig";
 import { apiGetInventory } from "../api/inventoryApi";
@@ -31,6 +32,7 @@ const normalizeInventoryUnits = (items) =>
 const STORAGE_KEY_CUSTOM_INV_CATEGORIES = "pos_custom_inventory_categories";
 const STORAGE_KEY_CUSTOM_INV_UNITS = "pos_custom_inventory_units";
 export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [inventory, setInventory] = useState(() => {
     try {
       const saved = localStorage.getItem(INVENTORY_STORAGE_KEY);
@@ -537,9 +539,14 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   };
 
   const handleDeleteItem = (id) => {
-    if (window.confirm("Remove this item from restaurant inventory?")) {
-      saveInventory(inventory.filter((item) => item.id !== id));
-    }
+    const item = inventory.find((i) => i.id === id);
+    const itemName = item?.name || "this item";
+    requestDelete({
+      title: "Remove Inventory Item?",
+      message: `Are you sure you want to remove "${itemName}" from restaurant inventory? This action cannot be undone.`,
+      confirmLabel: "Yes, Remove",
+      onConfirm: () => saveInventory(inventory.filter((i) => i.id !== id)),
+    });
   };
 
   const categories = [
@@ -2438,6 +2445,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           </div>
         </div>
       )}
+      {/* Global Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }

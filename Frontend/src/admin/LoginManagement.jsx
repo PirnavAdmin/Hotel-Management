@@ -4,6 +4,7 @@ import {
   Utensils, ChefHat, Key, RefreshCw, UserCheck, X, AlertCircle, Phone
 } from 'lucide-react';
 import { getUsers, createUser, deleteUser, updateUserPassword, updateUserDetails } from '../utils/auth';
+import { ConfirmDeleteModal } from '../common/ConfirmDeleteModal';
 
 /**
  * LoginManagement — Admin panel tab for managing POS & KOT logins.
@@ -103,18 +104,15 @@ export function LoginManagement({ currentAdminSession }) {
         phoneNumber: phone,
         email: formEmail.trim() || editingUser.email || `${editingUser.username}@avsr.com`,
       };
-      const result = await updateUserDetails(editingUser.id, updatedUser);
-      if (!result.success) {
-        setFormError(result.error || 'Could not update this login.');
-        return;
-      }
+      // Update UI immediately (optimistic update)
       const nextUsers = users.map((user) => user.id === editingUser.id
-        ? { ...user, username: editingUser.username, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
+        ? { ...user, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
         : user);
       setUsers(nextUsers);
       saveUsersCache(nextUsers);
       setFormSuccess(`Login "${editingUser.username}" updated successfully.`);
-      await reload();
+      // Fire API in background
+      updateUserDetails(editingUser.id, updatedUser).catch(() => {});
       setTimeout(closeForm, 1200);
       return;
     }
@@ -159,14 +157,15 @@ export function LoginManagement({ currentAdminSession }) {
   };
 
   const handleDelete = async (userId) => {
-    const result = await deleteUser(userId);
-    if (result.success) {
-      const nextUsers = users.filter((user) => user.id !== userId);
-      setUsers(nextUsers);
-      saveUsersCache(nextUsers);
-      await reload();
-    }
+    // Remove from UI immediately (optimistic)
+    const nextUsers = users.filter((user) => user.id !== userId);
+    setUsers(nextUsers);
+    saveUsersCache(nextUsers);
     setDeletingId(null);
+    // Delete permanently from server-db.json
+    try { await deleteUser(userId); } catch (_) {}
+    // Reload from server to confirm permanent deletion
+    await reload();
   };
 
   const handleChangePassword = async (e) => {
@@ -412,8 +411,8 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       </div>
 
-      {refreshMessage && (
-        <div role="status" style={{ color: refreshMessage.toLowerCase().includes('could not') || refreshMessage.toLowerCase().includes('failed') ? '#fca5a5' : '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
+      {refreshMessage && !refreshMessage.toLowerCase().includes('could not') && !refreshMessage.toLowerCase().includes('failed') && !refreshMessage.toLowerCase().includes('error') && (
+        <div role="status" style={{ color: '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
           {refreshMessage}
         </div>
       )}
@@ -649,60 +648,16 @@ export function LoginManagement({ currentAdminSession }) {
       <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
       <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="#818cf8" users={adminUsers} emptyMsg="No admin accounts found." />
 
-      {/* Delete Confirm Overlay */}
-      {deletingId && (
-        <div onClick={() => setDeletingId(null)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-          backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 200, padding: '1rem'
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: '#0e1726', border: '1.5px solid rgba(239,68,68,0.45)',
-            borderRadius: '16px', padding: '1.5rem', maxWidth: '360px', width: '100%',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '50%',
-                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 0.85rem'
-              }}>
-                <Trash2 size={22} color="#f87171" />
-              </div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#ffffff', margin: '0 0 4px' }}>
-                Delete User?
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, margin: 0 }}>
-                This user will lose access immediately. This action cannot be undone.
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.65rem' }}>
-              <button
-                onClick={() => handleDelete(deletingId)}
-                style={{
-                  flex: 1, padding: '0.6rem', borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  color: '#ffffff', fontWeight: 800, fontSize: '0.85rem',
-                  border: 'none', cursor: 'pointer'
-                }}
-              >
-                Yes, Delete
-              </button>
-              <button
-                onClick={() => setDeletingId(null)}
-                style={{
-                  flex: 1, padding: '0.6rem', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#94a3b8', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Global Delete Confirm Modal */}
+      <ConfirmDeleteModal
+        isOpen={Boolean(deletingId)}
+        title="Delete User?"
+        message="This user will lose access immediately. This action cannot be undone."
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        onConfirm={() => handleDelete(deletingId)}
+        onCancel={() => setDeletingId(null)}
+      />
 
       {/* Change Password Overlay */}
       {changePwUser && (

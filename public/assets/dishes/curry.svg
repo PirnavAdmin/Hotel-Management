@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg_cur" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f130b"/>
+      <stop offset="100%" stop-color="#0c0704"/>
+    </linearGradient>
+    <linearGradient id="handi" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="50%" stop-color="#78350f"/>
+      <stop offset="100%" stop-color="#451a03"/>
+    </linearGradient>
+    <linearGradient id="curry_sauce" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="50%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg_cur)"/>
+  <ellipse cx="200" cy="240" rx="130" ry="22" fill="#000000" opacity="0.6"/>
+  <!-- Copper Handi Bowl -->
+  <path d="M 100 170 Q 95 240 200 240 Q 305 240 300 170 Z" fill="url(#handi)"/>
+  <!-- Copper Rim -->
+  <ellipse cx="200" cy="170" rx="100" ry="24" fill="#d97706"/>
+  <ellipse cx="200" cy="168" rx="94" ry="20" fill="url(#curry_sauce)"/>
+  <!-- Butter Chicken / Paneer Cubes floating -->
+  <rect x="145" y="160" width="26" height="20" rx="6" fill="#fde047" transform="rotate(15 145 160)"/>
+  <rect x="185" y="155" width="28" height="22" rx="6" fill="#fef08a" transform="rotate(-10 185 155)"/>
+  <rect x="225" y="162" width="26" height="20" rx="6" fill="#fed7aa" transform="rotate(20 225 162)"/>
+  <!-- Swirl of Fresh White Cream (Malai) -->
+  <path d="M 150 168 Q 180 185 210 165 Q 235 155 245 172" stroke="#ffffff" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 175 162 Q 200 175 220 162" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.9"/>
+  <!-- Kasuri Methi / Coriander flakes -->
+  <circle cx="165" cy="160" r="3" fill="#15803d"/>
+  <circle cx="195" cy="158" r="3.5" fill="#166534"/>
+  <circle cx="215" cy="172" r="3" fill="#15803d"/>
+  <circle cx="235" cy="165" r="2.5" fill="#166534"/>
+  <!-- Hot aroma steam -->
+  <path d="M 180 130 Q 170 100 185 75" stroke="#ffffff" stroke-width="5" fill="none" opacity="0.3" stroke-linecap="round"/>
+  <path d="M 215 125 Q 225 95 210 70" stroke="#ffffff" stroke-width="6" fill="none" opacity="0.3" stroke-linecap="round"/>
+</svg>
