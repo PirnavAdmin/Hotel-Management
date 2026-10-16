@@ -2048,7 +2048,13 @@ export function AdminPortal({
                                 flexShrink: 0,
                               }}
                             >
-                              T{tbl.id}
+                              {(() => {
+                                const name = String(tbl.name || "").trim();
+                                const numMatch = name.match(/\d+/);
+                                if (numMatch) return `T${numMatch[0]}`;
+                                if (name) return name.slice(0, 3).toUpperCase();
+                                return `T${tbl.id}`;
+                              })()}
                             </div>
                             <div>
                               <h4
@@ -2059,7 +2065,7 @@ export function AdminPortal({
                                   margin: 0,
                                 }}
                               >
-                                Table {tbl.id}
+                                {tbl.name || `Table ${tbl.id}`}
                               </h4>
                               <span
                                 style={{
