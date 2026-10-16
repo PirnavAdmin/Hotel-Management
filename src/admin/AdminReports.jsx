@@ -74,10 +74,8 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const [ordersData, setOrdersData] = useState(() => Array.isArray(pastOrders) ? pastOrders : []);
 
   useEffect(() => {
-    if (Array.isArray(pastOrders) && pastOrders.length) {
-      setOrdersData(pastOrders);
-      setOrdersLoaded(true);
-    }
+    setOrdersData(Array.isArray(pastOrders) ? pastOrders : []);
+    setOrdersLoaded(true);
   }, [pastOrders]);
 
   useEffect(() => {

@@ -80,9 +80,7 @@ export function AdminOverview({
   });
 
   useEffect(() => {
-    if (pastOrders && pastOrders.length > 0) {
-      setOrdersList(pastOrders);
-    }
+    setOrdersList(Array.isArray(pastOrders) ? pastOrders : []);
   }, [pastOrders]);
 
   useEffect(() => {

@@ -176,9 +176,10 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         status: String(table.status || existing.status || "vacant").toLowerCase(),
         server:
           table.assignedServerName || table.server || existing.server || "Staff",
-        guests: Number(
-          table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
-        ),
+        guests:
+          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+            ? 0
+            : Number(table.occupiedChairs ?? table.guests ?? existing.guests ?? 0),
         items: Array.isArray(table.items)
           ? table.items
           : Array.isArray(existing.items)
@@ -192,7 +193,9 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
           table.serviceCharge ?? existing.serviceCharge ?? 5,
         ),
         occupiedSince:
-          table.occupiedSince || existing.occupiedSince || "08:55 AM",
+          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+            ? null
+            : (table.occupiedSince || existing.occupiedSince || null),
       };
 
       tablesById.set(targetId, normalized);

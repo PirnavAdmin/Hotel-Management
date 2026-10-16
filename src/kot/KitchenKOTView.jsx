@@ -2323,9 +2323,7 @@ export function KitchenKOTView({
   });
 
   useEffect(() => {
-    if (pastOrders && pastOrders.length > 0) {
-      setSyncedPastOrders(pastOrders);
-    }
+    setSyncedPastOrders(Array.isArray(pastOrders) ? pastOrders : []);
   }, [pastOrders]);
 
   useEffect(() => {

@@ -130,8 +130,8 @@ export function AdminReports({
   );
 
   useEffect(() => {
-    if (Array.isArray(pastOrders) && pastOrders.length) {
-      setOrdersData((current) => mergeSettledOrders(pastOrders, current));
+    if (Array.isArray(pastOrders)) {
+      setOrdersData(pastOrders.length > 0 ? ((current) => mergeSettledOrders(pastOrders, current)) : []);
       setOrdersLoaded(true);
     }
   }, [pastOrders]);

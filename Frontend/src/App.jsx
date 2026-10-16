@@ -121,7 +121,10 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       status: String(table.status || existing.status || "vacant").toLowerCase(),
       server:
         table.assignedServerName || table.server || existing.server || "Staff",
-      guests: table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
+      guests:
+        String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+          ? 0
+          : Number(table.occupiedChairs ?? table.guests ?? existing.guests ?? 0),
       items: Array.isArray(table.items)
         ? table.items
         : Array.isArray(existing.items)
@@ -131,7 +134,9 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       discountPercent: table.discountPercent ?? existing.discountPercent ?? 0,
       serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
       occupiedSince:
-        table.occupiedSince || existing.occupiedSince || "10:00 AM",
+        String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+          ? null
+          : (table.occupiedSince || existing.occupiedSince || null),
     };
     tablesById.set(id, normalized);
     normalizedIncoming.push(normalized);
@@ -1934,25 +1939,25 @@ export function App() {
       confirmLabel: "Yes, Reset All",
       onConfirm: () => {
         setDeletedTableIds([]);
-        setTables([]);
+        setTables(INITIAL_TABLES);
         setMenuItems([]);
         setStaffList([]);
         setPastOrders([]);
         setInventory([]);
-        localStorage.setItem(STORAGE_KEY_TABLES, "[]");
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
         localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
         localStorage.setItem(STORAGE_KEY_MENU, "[]");
         localStorage.setItem(STORAGE_KEY_STAFF, "[]");
         localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
         localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
         pushGlobalSync({
-          [STORAGE_KEY_TABLES]: [],
+          [STORAGE_KEY_TABLES]: INITIAL_TABLES,
           [STORAGE_KEY_MENU]: [],
           [STORAGE_KEY_STAFF]: [],
           [STORAGE_KEY_ORDERS]: [],
           [STORAGE_KEY_INVENTORY]: [],
         });
-        showToast("Dynamic data cleared.");
+        showToast("Data reset to default 15 tables.");
       },
     });
   };
