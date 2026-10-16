@@ -179,15 +179,6 @@ export function AdminOverview({
             >
               Restaurant Dashboard
             </h2>
-            <p
-              style={{
-                fontSize: "0.76rem",
-                color: "var(--text-muted)",
-                margin: "2px 0 0 0",
-              }}
-            >
-              Real-time snapshot of AVSR Food Court dining floor, kitchen, and menu
-            </p>
           </div>
         </div>
 

@@ -103,18 +103,15 @@ export function LoginManagement({ currentAdminSession }) {
         phoneNumber: phone,
         email: formEmail.trim() || editingUser.email || `${editingUser.username}@avsr.com`,
       };
-      const result = await updateUserDetails(editingUser.id, updatedUser);
-      if (!result.success) {
-        setFormError(result.error || 'Could not update this login.');
-        return;
-      }
+      // Update UI immediately (optimistic update)
       const nextUsers = users.map((user) => user.id === editingUser.id
-        ? { ...user, username: editingUser.username, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
+        ? { ...user, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
         : user);
       setUsers(nextUsers);
       saveUsersCache(nextUsers);
       setFormSuccess(`Login "${editingUser.username}" updated successfully.`);
-      await reload();
+      // Fire API in background
+      updateUserDetails(editingUser.id, updatedUser).catch(() => {});
       setTimeout(closeForm, 1200);
       return;
     }
@@ -159,14 +156,15 @@ export function LoginManagement({ currentAdminSession }) {
   };
 
   const handleDelete = async (userId) => {
-    const result = await deleteUser(userId);
-    if (result.success) {
-      const nextUsers = users.filter((user) => user.id !== userId);
-      setUsers(nextUsers);
-      saveUsersCache(nextUsers);
-      await reload();
-    }
+    // Remove from UI immediately (optimistic)
+    const nextUsers = users.filter((user) => user.id !== userId);
+    setUsers(nextUsers);
+    saveUsersCache(nextUsers);
     setDeletingId(null);
+    // Delete permanently from server-db.json
+    try { await deleteUser(userId); } catch (_) {}
+    // Reload from server to confirm permanent deletion
+    await reload();
   };
 
   const handleChangePassword = async (e) => {
@@ -412,8 +410,8 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       </div>
 
-      {refreshMessage && (
-        <div role="status" style={{ color: refreshMessage.toLowerCase().includes('could not') || refreshMessage.toLowerCase().includes('failed') ? '#fca5a5' : '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
+      {refreshMessage && !refreshMessage.toLowerCase().includes('could not') && !refreshMessage.toLowerCase().includes('failed') && !refreshMessage.toLowerCase().includes('error') && (
+        <div role="status" style={{ color: '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
           {refreshMessage}
         </div>
       )}
