@@ -39,6 +39,7 @@ export function Header({
   onClearNotifications = null,
   onSelectTable = null,
   restaurantName = "Restaurant",
+  restaurantLogo = "",
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -182,6 +183,13 @@ export function Header({
             cursor: "pointer",
           }}
         >
+          {restaurantLogo ? (
+            <img
+              src={restaurantLogo}
+              alt={`${restaurantName || "Restaurant"} logo`}
+              style={{ width: 52, height: 52, objectFit: "contain", borderRadius: 8 }}
+            />
+          ) : (
           <div
             style={{
               background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
@@ -196,6 +204,7 @@ export function Header({
           >
             <UtensilsCrossed size={20} color="#ffffff" />
           </div>
+          )}
           <div>
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}

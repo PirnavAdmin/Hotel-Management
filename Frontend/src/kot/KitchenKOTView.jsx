@@ -2259,6 +2259,8 @@ export function KitchenKOTView({
   initialTableId = "all",
   currentSession = null,
   onLogout = null,
+  restaurantName = "Restaurant",
+  restaurantLogo = "",
 }) {
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
@@ -2978,6 +2980,13 @@ export function KitchenKOTView({
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
             >
+              {restaurantLogo ? (
+                <img
+                  src={restaurantLogo}
+                  alt={`${restaurantName || "Restaurant"} logo`}
+                  style={{ width: 54, height: 54, objectFit: "contain", borderRadius: 10 }}
+                />
+              ) : (
               <div
                 style={{
                   background: "linear-gradient(135deg, #f59e0b, #ea580c)",
@@ -2992,6 +3001,7 @@ export function KitchenKOTView({
               >
                 <ChefHat size={26} />
               </div>
+              )}
               <div>
                 <div
                   style={{
@@ -3009,7 +3019,7 @@ export function KitchenKOTView({
                       letterSpacing: "-0.02em",
                     }}
                   >
-                    AVSR FOOD COURT
+                    {restaurantName?.trim() || "Restaurant"}
                   </h1>
                   <span
                     style={{
@@ -4885,6 +4895,8 @@ export function KitchenKOTView({
         {activePrintTable && (
           <KOTModal
             table={activePrintTable}
+            restaurantName={restaurantName}
+            restaurantLogo={restaurantLogo}
             onClose={() => setActivePrintTable(null)}
           />
         )}
