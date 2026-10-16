@@ -92,66 +92,115 @@ const dedupeStaff = (staff) => {
   return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
+const isRogueName = (name) => {
+  if (!name) return false;
+  const lower = String(name).trim().toLowerCase();
+  return (
+    lower.includes("live verification") ||
+    lower.includes("table final") ||
+    lower.includes("table 20") ||
+    lower === "verification" ||
+    lower === "test"
+  );
+};
+
+const parseTableNumber = (table) => {
+  const rawName = String(table.tableName || table.name || "").trim();
+  const nameMatch = rawName.match(/^(?:table|t)\s*(\d+)$/i);
+  if (nameMatch) {
+    return parseInt(nameMatch[1], 10);
+  }
+  const rawId = Number(table.id ?? table.tableId);
+  if (Number.isFinite(rawId) && rawId > 0) {
+    return rawId;
+  }
+  return null;
+};
+
 const mergeIncomingTables = (incomingTables, deletedTableIds) => {
-  // A server response is the authoritative table collection. Start with it so
-  // deleted defaults and extra defaults cannot be reintroduced on every load.
-  const tablesById = new Map();
-
-  const normalizedIncoming = [];
-  incomingTables.forEach((table) => {
-    const id = Number(table.tableId ?? table.id);
-    if (!Number.isFinite(id)) return;
-
-    const existing = tablesById.get(id) || {};
-    const normalized = {
-      ...existing,
-      ...table,
-      id,
-      name: table.tableName || table.name || existing.name || `Table ${id}`,
-      section:
-        table.sectionArea || table.section || existing.section || "",
-      capacity:
-        table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
-      status: String(table.status || existing.status || "vacant").toLowerCase(),
-      server:
-        table.assignedServerName || table.server || existing.server || "Staff",
-      guests: table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
-      items: Array.isArray(table.items)
-        ? table.items
-        : Array.isArray(existing.items)
-          ? existing.items
-          : [],
-      orderTime: table.orderTime ?? existing.orderTime ?? null,
-      discountPercent:
-        table.discountPercent ?? existing.discountPercent ?? 0,
-      serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
-      occupiedSince:
-        table.occupiedSince || existing.occupiedSince || "10:00 AM",
-    };
-    tablesById.set(id, normalized);
-    normalizedIncoming.push(normalized);
-  });
-
-  // Older clients sometimes saved generic table names against different IDs.
-  const nameCounts = new Map();
-  normalizedIncoming.forEach((table) => {
-    const key = String(table.name || "").trim().toLowerCase();
-    nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
-  });
-  normalizedIncoming.forEach((table) => {
-    const key = String(table.name || "").trim().toLowerCase();
-    if (key && nameCounts.get(key) > 1 && /^table\s+\d+$/i.test(table.name)) {
-      table.name = `Table ${table.id}`;
-      tablesById.set(Number(table.id), table);
-    }
-  });
-
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
     : [];
+  const tablesById = new Map();
+
+  // 1. Seed with default 15 tables from INITIAL_TABLES so the standard floor plan is always intact
+  INITIAL_TABLES.forEach((defTable) => {
+    if (!deletedIds.includes(String(defTable.id))) {
+      tablesById.set(Number(defTable.id), { ...defTable });
+    }
+  });
+
+  // 2. Overlay incoming live tables from server or localStorage
+  if (Array.isArray(incomingTables)) {
+    incomingTables.forEach((table) => {
+      if (!table || typeof table !== "object") return;
+      const rawName = String(table.tableName || table.name || "").trim();
+      const num = parseTableNumber(table);
+
+      let targetId = null;
+      if (num && num >= 1 && num <= 15) {
+        targetId = num;
+      } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
+        targetId = Number(table.id);
+      } else if (num) {
+        targetId = num;
+      }
+
+      if (!targetId || deletedIds.includes(String(targetId))) return;
+
+      const isStandard = targetId >= 1 && targetId <= 15;
+      if (!isStandard && isRogueName(rawName)) return;
+
+      const existing = tablesById.get(targetId) || {};
+      const cleanName = isStandard
+        ? isRogueName(rawName) || !rawName
+          ? `Table ${targetId}`
+          : rawName.match(/^(?:table|t)\s*(\d+)$/i)
+            ? `Table ${targetId}`
+            : rawName
+        : rawName || `Table ${targetId}`;
+
+      const normalized = {
+        ...existing,
+        ...table,
+        id: targetId,
+        name: cleanName,
+        backendTableId:
+          table.tableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
+        section:
+          table.sectionArea || table.section || existing.section || "Main Hall",
+        capacity: Number(
+          table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
+        ),
+        status: String(table.status || existing.status || "vacant").toLowerCase(),
+        server:
+          table.assignedServerName || table.server || existing.server || "Staff",
+        guests: Number(
+          table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
+        ),
+        items: Array.isArray(table.items)
+          ? table.items
+          : Array.isArray(existing.items)
+            ? existing.items
+            : [],
+        orderTime: table.orderTime ?? existing.orderTime ?? null,
+        discountPercent: Number(
+          table.discountPercent ?? existing.discountPercent ?? 0,
+        ),
+        serviceCharge: Number(
+          table.serviceCharge ?? existing.serviceCharge ?? 5,
+        ),
+        occupiedSince:
+          table.occupiedSince || existing.occupiedSince || "08:55 AM",
+      };
+
+      tablesById.set(targetId, normalized);
+    });
+  }
+
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
-    .sort((a, b) => a.id - b.id);
+    .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
 const getDeletedTableIds = () => {
@@ -1663,7 +1712,8 @@ export function App() {
       } catch {}
       return updated;
     });
-    apiUpdateTable(updatedTable.id, updatedTable).catch(() => {});
+    const targetApiId = updatedTable.backendTableId || updatedTable.id;
+    apiUpdateTable(targetApiId, updatedTable).catch(() => {});
     showToast(
       `✅ Updated ${updatedTable.name} (${updatedTable.capacity} chairs)`,
     );
@@ -1700,8 +1750,9 @@ export function App() {
       setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
     }
 
-    apiDeleteTable(tableId).catch(() => {});
-    showToast(`🗑️ Permanently Deleted ${tbl?.name || "Table"}`);
+    const targetApiId = tbl?.backendTableId || tableId;
+    apiDeleteTable(targetApiId).catch(() => {});
+    showToast(`🗑️  Permanently Deleted ${tbl?.name || "Table"}`);
   };
 
   // 3. Staff & Persons Admin

@@ -164,7 +164,7 @@ export function AdminPortal({
           ? !server
           : server === tableFilters.server.slice(5)))
     );
-  });
+  }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
   const [currentTime, setCurrentTime] = useState(new Date());
   const [restaurantSettings, setRestaurantSettings] = useState(() => {
     try {

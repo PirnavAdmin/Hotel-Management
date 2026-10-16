@@ -364,6 +364,7 @@ textarea {
     padding: 0.5rem 0.75rem !important;
     gap: 0.4rem !important;
     align-items: stretch !important;
+    flex-wrap: wrap !important;
   }
 
   .mobile-header-nav > div:first-of-type {
