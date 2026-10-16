@@ -14,6 +14,7 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import { ConfirmDeleteModal, useConfirmDelete } from "./common/ConfirmDeleteModal";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
@@ -167,6 +168,7 @@ const getDeletedTableIds = () => {
 };
 
 export function App() {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
 
   useEffect(() => {
@@ -1261,25 +1263,28 @@ export function App() {
 
   // Clear / Void Table Order
   const handleClearOrder = (tableId) => {
-    if (
-      window.confirm(
-        `Are you sure you want to clear the entire order for Table ${tableId}?`,
-      )
-    ) {
-      setTables((prevTables) =>
-        prevTables.map((t) => {
-          if (t.id !== tableId) return t;
-          return {
-            ...t,
-            items: [],
-            status: "vacant",
-            orderTime: null,
-            discountPercent: 0,
-          };
-        }),
-      );
-      showToast(`Table ${tableId} order cleared.`);
-    }
+    const tbl = tables.find((t) => t.id === tableId);
+    const tableName = tbl?.name || `Table ${tableId}`;
+    requestDelete({
+      title: `Void Order for ${tableName}?`,
+      message: `Are you sure you want to clear the entire active order for ${tableName}? All current items will be voided.`,
+      confirmLabel: "Yes, Void Order",
+      onConfirm: () => {
+        setTables((prevTables) =>
+          prevTables.map((t) => {
+            if (t.id !== tableId) return t;
+            return {
+              ...t,
+              items: [],
+              status: "vacant",
+              orderTime: null,
+              discountPercent: 0,
+            };
+          }),
+        );
+        showToast(`${tableName} order cleared.`);
+      },
+    });
   };
 
   // Transfer Table Order
@@ -1772,32 +1777,33 @@ export function App() {
 
   // Reset to default initial state
   const handleResetData = () => {
-    if (
-      window.confirm(
-        "Clear all dynamic tables, menu items, staff, invoices and inventory? This cannot be undone.",
-      )
-    ) {
-      setDeletedTableIds([]);
-      setTables([]);
-      setMenuItems([]);
-      setStaffList([]);
-      setPastOrders([]);
-      setInventory([]);
-      localStorage.setItem(STORAGE_KEY_TABLES, "[]");
-      localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
-      localStorage.setItem(STORAGE_KEY_MENU, "[]");
-      localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-      localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
-      localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
-      pushGlobalSync({
-        [STORAGE_KEY_TABLES]: [],
-        [STORAGE_KEY_MENU]: [],
-        [STORAGE_KEY_STAFF]: [],
-        [STORAGE_KEY_ORDERS]: [],
-        [STORAGE_KEY_INVENTORY]: [],
-      });
-      showToast("Dynamic data cleared.");
-    }
+    requestDelete({
+      title: "Reset All Restaurant Data?",
+      message: "Clear all dynamic tables, menu items, staff, invoices and inventory? This cannot be undone.",
+      confirmLabel: "Yes, Reset All",
+      onConfirm: () => {
+        setDeletedTableIds([]);
+        setTables([]);
+        setMenuItems([]);
+        setStaffList([]);
+        setPastOrders([]);
+        setInventory([]);
+        localStorage.setItem(STORAGE_KEY_TABLES, "[]");
+        localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
+        localStorage.setItem(STORAGE_KEY_MENU, "[]");
+        localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+        localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
+        localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
+        pushGlobalSync({
+          [STORAGE_KEY_TABLES]: [],
+          [STORAGE_KEY_MENU]: [],
+          [STORAGE_KEY_STAFF]: [],
+          [STORAGE_KEY_ORDERS]: [],
+          [STORAGE_KEY_INVENTORY]: [],
+        });
+        showToast("Dynamic data cleared.");
+      },
+    });
   };
 
   return (
@@ -2260,6 +2266,9 @@ export function App() {
           }}
         />
       )}
+
+      {/* Global Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }
