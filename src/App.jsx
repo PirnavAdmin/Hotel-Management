@@ -52,6 +52,7 @@ import {
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
+import { INITIAL_TABLES } from "./data/initialTables";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -1824,29 +1825,29 @@ export function App() {
   const handleResetData = () => {
     if (
       window.confirm(
-        "Clear all dynamic tables, menu items, staff, invoices and inventory? This cannot be undone.",
+        "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
       )
     ) {
       setDeletedTableIds([]);
-      setTables([]);
+      setTables(INITIAL_TABLES);
       setMenuItems([]);
       setStaffList([]);
       setPastOrders([]);
       setInventory([]);
-      localStorage.setItem(STORAGE_KEY_TABLES, "[]");
+      localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
       localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
       localStorage.setItem(STORAGE_KEY_MENU, "[]");
       localStorage.setItem(STORAGE_KEY_STAFF, "[]");
       localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
       localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
       pushGlobalSync({
-        [STORAGE_KEY_TABLES]: [],
+        [STORAGE_KEY_TABLES]: INITIAL_TABLES,
         [STORAGE_KEY_MENU]: [],
         [STORAGE_KEY_STAFF]: [],
         [STORAGE_KEY_ORDERS]: [],
         [STORAGE_KEY_INVENTORY]: [],
       });
-      showToast("Dynamic data cleared.");
+      showToast("Data reset to default 15 tables.");
     }
   };
 

@@ -362,29 +362,32 @@ textarea {
   /* Navigation Header compact on mobile */
   .mobile-header-nav {
     padding: 0.5rem 0.75rem !important;
-    gap: 0.4rem !important;
-    align-items: stretch !important;
-    flex-wrap: wrap !important;
   }
 
-  .mobile-header-nav > div:first-of-type {
+  .mobile-header-primary {
+    padding: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-header-primary > div:first-of-type {
     width: 100%;
     flex-wrap: wrap !important;
     justify-content: space-between;
     gap: 0.5rem !important;
   }
 
-  .mobile-header-nav > div:first-of-type > nav {
+  .mobile-header-primary > div:first-of-type > nav {
     width: 100%;
     display: grid !important;
     grid-template-columns: 1fr 1fr;
   }
 
-  .mobile-header-nav > div:first-of-type > nav > button {
+  .mobile-header-primary > div:first-of-type > nav > button {
     justify-content: center;
   }
 
-  .mobile-header-nav > div:last-child {
+  .mobile-header-primary > div:last-child {
     width: 100%;
     justify-content: space-between;
   }
