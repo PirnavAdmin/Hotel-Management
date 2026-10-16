@@ -98,6 +98,7 @@ export function AdminPortal({
   onUpdateInvoiceDiscount = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
 
   // Toggle between Dine (Restaurant) and Bar mode
   const [portalMode, setPortalMode] = useState(() => {
