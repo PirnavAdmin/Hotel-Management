@@ -38,6 +38,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { AdminOverview } from "./AdminOverview";
@@ -92,6 +93,7 @@ export function AdminPortal({
   onUpdateInvoiceDiscount = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [searchFilter, setSearchFilter] = useState("");
   const emptyMenuFilters = {
     category: "",
@@ -334,9 +336,14 @@ export function AdminPortal({
     ) {
       const result = await apiCreateMenuCategory(trimmed, knownNames.length);
       if (!result?.success || result.data?.success === false) {
-        window.alert(
-          `Category was not saved: ${result?.error || result?.data?.message || "API error"}`,
-        );
+        requestDelete({
+          title: "Category Not Saved",
+          message: `Category was not saved: ${result?.error || result?.data?.message || "API error"}`,
+          confirmLabel: "Understood",
+          cancelLabel: "Close",
+          icon: <AlertCircle size={22} color="#f59e0b" />,
+          onConfirm: () => {},
+        });
         return;
       }
     }
@@ -1490,13 +1497,12 @@ export function AdminPortal({
 
                                   <button
                                     onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          `Delete "${item.name}" from restaurant menu?`,
-                                        )
-                                      ) {
-                                        onDeleteMenuItem(item.id);
-                                      }
+                                      requestDelete({
+                                        title: "Delete Menu Item?",
+                                        message: `Are you sure you want to delete "${item.name}" from the restaurant menu? This action cannot be undone.`,
+                                        confirmLabel: "Yes, Delete",
+                                        onConfirm: () => onDeleteMenuItem(item.id),
+                                      });
                                     }}
                                     style={{
                                       border:
@@ -2192,16 +2198,22 @@ export function AdminPortal({
                         <button
                           onClick={() => {
                             if (tbl.status !== "vacant") {
-                              alert(
-                                `Cannot delete ${tbl.name} because it is currently occupied with diners. Clear or settle bill first.`,
-                              );
+                              requestDelete({
+                                title: "Cannot Delete Table",
+                                message: `Cannot delete ${tbl.name} because it is currently occupied with diners. Clear or settle bill first.`,
+                                confirmLabel: "Understood",
+                                cancelLabel: "Close",
+                                icon: <AlertCircle size={22} color="#f59e0b" />,
+                                onConfirm: () => {},
+                              });
                               return;
                             }
-                            if (
-                              window.confirm(`Delete ${tbl.name} permanently?`)
-                            ) {
-                              onDeleteTable(tbl.id);
-                            }
+                            requestDelete({
+                              title: "Delete Table?",
+                              message: `Are you sure you want to delete ${tbl.name} permanently? This action cannot be undone.`,
+                              confirmLabel: "Yes, Delete",
+                              onConfirm: () => onDeleteTable(tbl.id),
+                            });
                           }}
                           style={{
                             padding: "0.35rem 0.55rem",
@@ -2391,13 +2403,12 @@ export function AdminPortal({
 
                               <button
                                 onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      `Remove ${personName} from staff list?`,
-                                    )
-                                  ) {
-                                    onDeleteStaff(personId);
-                                  }
+                                  requestDelete({
+                                    title: "Remove Staff?",
+                                    message: `Are you sure you want to remove "${personName}" from the staff list? This action cannot be undone.`,
+                                    confirmLabel: "Yes, Remove",
+                                    onConfirm: () => onDeleteStaff(personId),
+                                  });
                                 }}
                                 style={{
                                   background: "transparent",
@@ -4584,6 +4595,8 @@ export function AdminPortal({
           </form>
         </div>
       )}
+      {/* Global Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }
