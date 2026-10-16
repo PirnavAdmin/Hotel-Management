@@ -32,6 +32,11 @@ import {
   FileText,
   BarChart3,
   Settings,
+  Wine,
+  Beer,
+  Martini,
+  GlassWater,
+  Sparkles,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { LoginManagement } from "./LoginManagement";
@@ -92,6 +97,114 @@ export function AdminPortal({
   onUpdateInvoiceDiscount = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Toggle between Dine (Restaurant) and Bar mode
+  const [portalMode, setPortalMode] = useState(() => {
+    try {
+      return localStorage.getItem("avsr_portal_mode") || "dine";
+    } catch {
+      return "dine";
+    }
+  });
+
+  const [activeBarTab, setActiveBarTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem("avsr_active_bar_tab");
+      return saved || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const handlePortalModeChange = (mode) => {
+    setPortalMode(mode);
+    try {
+      localStorage.setItem("avsr_portal_mode", mode);
+    } catch {}
+  };
+
+  const [showBarHeaderToggle, setShowBarHeaderToggle] = useState(() => {
+    try {
+      const saved = localStorage.getItem("avsr_show_bar_header_toggle");
+      if (saved !== null) return JSON.parse(saved);
+      const posSettings = JSON.parse(
+        localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}",
+      );
+      if (posSettings?.showBarHeaderToggle !== undefined) {
+        return Boolean(posSettings.showBarHeaderToggle);
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleShowBarHeader = (enabled) => {
+    setShowBarHeaderToggle(enabled);
+    try {
+      localStorage.setItem("avsr_show_bar_header_toggle", JSON.stringify(enabled));
+    } catch {}
+    if (!enabled && portalMode === "bar") {
+      handlePortalModeChange("dine");
+    }
+  };
+
+  const renderBarWorkspace = () => {
+    return (
+      <div
+        style={{
+          minHeight: "420px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "3.5rem 1.5rem",
+          background: "var(--bg-card)",
+          border: "1.5px dashed var(--border-card)",
+          borderRadius: "16px",
+        }}
+      >
+        <div
+          style={{
+            width: "72px",
+            height: "72px",
+            borderRadius: "50%",
+            background: "rgba(234, 88, 12, 0.12)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "1.2rem",
+            color: "#ea580c",
+          }}
+        >
+          <Wine size={36} />
+        </div>
+        <h2
+          style={{
+            fontSize: "1.45rem",
+            fontWeight: 800,
+            color: "var(--text-main)",
+            marginBottom: "0.5rem",
+          }}
+        >
+          {activeBarTab ? `Bar - ${activeBarTab}` : "Bar Workspace"}
+        </h2>
+        <p
+          style={{
+            maxWidth: "460px",
+            fontSize: "0.92rem",
+            color: "var(--text-muted)",
+            lineHeight: 1.55,
+            margin: 0,
+          }}
+        >
+          You are currently in Bar mode.
+        </p>
+      </div>
+    );
+  };
+
   const [searchFilter, setSearchFilter] = useState("");
   const emptyMenuFilters = {
     category: "",
@@ -882,6 +995,9 @@ export function AdminPortal({
           restaurantLogo={restaurantLogo}
           restaurantName={restaurantName}
           restaurantTagline={restaurantTagline}
+          portalMode={portalMode}
+          activeBarTab={activeBarTab}
+          setActiveBarTab={setActiveBarTab}
         />
 
         {/* Right Main Content Pane */}
@@ -903,6 +1019,9 @@ export function AdminPortal({
             onClose={onClose}
             currentTheme={currentTheme}
             onChangeTheme={handleThemeChange}
+            activeMode={portalMode}
+            onModeChange={handlePortalModeChange}
+            showModeToggle={showBarHeaderToggle}
           />
 
           {/* Scrollable Work Area */}
@@ -913,12 +1032,19 @@ export function AdminPortal({
               overflowY: "auto",
               scrollbarWidth: "none",
               msOverflowStyle: "none",
-              padding: activeTab === "logins" ? "1rem" : "1.5rem 2rem",
+              padding:
+                portalMode === "bar" || activeTab === "logins"
+                  ? "1rem"
+                  : "1.5rem 2rem",
               minHeight: 0,
             }}
           >
-            {/* OVERVIEW TAB */}
-            {activeTab === "overview" && (
+            {portalMode === "bar" ? (
+              renderBarWorkspace()
+            ) : (
+              <>
+                {/* OVERVIEW TAB */}
+                {activeTab === "overview" && (
               <AdminOverview
                 menuItems={menuItems}
                 tables={tables}
@@ -3045,7 +3171,11 @@ export function AdminPortal({
                 onChangeTheme={handleThemeChange}
                 initialSettings={restaurantSettings}
                 onSaveSettings={handleSaveRestaurantSettings}
+                showBarHeaderToggle={showBarHeaderToggle}
+                onToggleShowBarHeader={handleToggleShowBarHeader}
               />
+            )}
+              </>
             )}
           </div>
         </div>
