@@ -153,10 +153,9 @@ export function Header({
     <header
       className="mobile-header-nav"
       style={{
-
         background: "var(--bg-secondary)",
         borderBottom: "1px solid var(--border-subtle)",
-        padding: "0.75rem 1.5rem",
+        padding: "0.6rem 1.25rem",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -164,12 +163,12 @@ export function Header({
         top: 0,
         zIndex: 40,
         boxShadow: "var(--shadow-md)",
-        flexWrap: "wrap",
-        gap: "0.75rem",
+        flexWrap: "nowrap",
+        gap: "0.65rem",
       }}
     >
       {/* 1. BRAND & LOGO */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
         <div
           onClick={() => {
             setActiveView("tables");
@@ -306,16 +305,18 @@ export function Header({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "0.55rem",
+          gap: "0.45rem",
           background: "var(--bg-tertiary)",
           border: "1px solid var(--border-subtle)",
-          padding: "0.42rem 0.95rem",
+          padding: "0.38rem 0.8rem",
           borderRadius: "var(--radius-md)",
           color: "var(--accent-amber-light)",
-          fontSize: "0.82rem",
+          fontSize: "0.78rem",
           fontWeight: 800,
           fontFamily: "monospace",
           boxShadow: "inset 0 1px 3px rgba(0,0,0,0.25)",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
         }}
       >
         <div
@@ -366,11 +367,13 @@ export function Header({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "0.85rem",
+          gap: "0.7rem",
           background: "var(--bg-tertiary)",
-          padding: "0.45rem 1rem",
+          padding: "0.38rem 0.85rem",
           borderRadius: "var(--radius-md)",
           border: "1px solid var(--border-subtle)",
+          whiteSpace: "nowrap",
+          flexShrink: 1,
         }}
       >
         <div
@@ -474,7 +477,16 @@ export function Header({
           </strong>
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.6rem",
+          marginLeft: "auto",
+          flexShrink: 0,
+          justifyContent: "flex-end",
+        }}
+      >
         {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
         <button
           onClick={() => {
