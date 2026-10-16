@@ -304,7 +304,7 @@ export function TableView({ tables, onSelectTable }) {
               </option>
               {uniqueTableNumbers.map((tbl) => (
                 <option key={tbl.id} value={tbl.id} style={{ background: "#18181b", color: "#f4f4f5" }}>
-                  Table {tbl.id} {tbl.section ? `• ${tbl.section}` : ""}
+                  {tbl.name || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
                 </option>
               ))}
             </select>
