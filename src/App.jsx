@@ -52,6 +52,7 @@ import {
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
+import { INITIAL_TABLES } from "./data/initialTables";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -226,7 +227,7 @@ export function App() {
     return Array.isArray(initial) ? initial : [];
   });
 
-  // Load saved tables only; do not seed demo records into the live list.
+  // Use the standard 15-table floor plan on first launch, while honoring deletions.
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
     const delList = Array.isArray(deleted) ? deleted : [];
@@ -244,7 +245,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return [];
+    return mergeIncomingTables(INITIAL_TABLES, delList);
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -316,7 +317,7 @@ export function App() {
           : response?.success && Array.isArray(response.tables)
             ? response.tables
           : null;
-      if (Array.isArray(backendTables)) {
+      if (Array.isArray(backendTables) && backendTables.length > 0) {
         const merged = mergeIncomingTables(
           backendTables,
           getDeletedTableIds(),
@@ -1814,6 +1815,7 @@ export function App() {
         (posSession.role === "pos" || posSession.role === "admin") && (
           <Header
             restaurantName={restaurantSettings.restaurantName}
+            restaurantLogo={restaurantSettings.logo}
             tables={tables}
             activeView={activeView}
             setActiveView={setActiveView}
@@ -1846,6 +1848,8 @@ export function App() {
               <KitchenKOTView
                 tables={tables}
                 pastOrders={pastOrders}
+                restaurantName={restaurantSettings.restaurantName}
+                restaurantLogo={restaurantSettings.logo}
                 currentTheme={theme}
                 onChangeTheme={setTheme}
                 onBackToFloor={() => {
