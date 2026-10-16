@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
+import { apiGetInvoices } from "../api/invoiceApi";
 import { mergeSettledOrders } from "../utils/orderDedupe";
 
 function parseOrderToYMD(order) {
@@ -106,6 +107,85 @@ function normalizePaymentMethod(order) {
   return "other";
 }
 
+function normalizeInvoicesToOrders(invoices, orders) {
+  const ordersById = new Map(orders.map((order) => [String(order.id), order]));
+
+  return invoices
+    .map((invoice) => {
+      const orderId = invoice.orderId ?? invoice.OrderId;
+      const existingOrder = ordersById.get(String(orderId));
+      const payments = invoice.payments ?? invoice.Payments ?? [];
+      const paymentTotal = payments.reduce(
+        (sum, payment) => sum + (Number(payment.amount ?? payment.Amount) || 0),
+        0,
+      );
+      const paidAmount =
+        Number(
+          invoice.paidAmount ??
+            invoice.amountPaid ??
+            invoice.PaidAmount ??
+            invoice.AmountPaid,
+        ) || 0;
+      const totalAmount =
+        Number(invoice.totalAmount ?? invoice.TotalAmount) || 0;
+      const status = String(
+        invoice.status ?? invoice.Status ?? "",
+      ).toLowerCase();
+
+      if (["void", "cancelled", "canceled"].includes(status)) return null;
+      if (paidAmount <= 0 && paymentTotal <= 0 && status !== "paid")
+        return null;
+
+      const createdAt =
+        invoice.createdAt ?? invoice.CreatedAt ?? existingOrder?.date;
+      const invoiceItems = invoice.items ?? invoice.Items;
+
+      return {
+        ...existingOrder,
+        id:
+          orderId ??
+          existingOrder?.id ??
+          invoice.invoiceId ??
+          invoice.InvoiceId,
+        invoiceNo:
+          invoice.invoiceNumber ??
+          invoice.InvoiceNumber ??
+          existingOrder?.invoiceNo,
+        date: createdAt,
+        settledDate: createdAt,
+        grandTotal: paidAmount || paymentTotal || totalAmount,
+        taxAmount:
+          Number(
+            invoice.taxAmount ?? invoice.TaxAmount ?? existingOrder?.taxAmount,
+          ) || 0,
+        discountAmount:
+          Number(
+            invoice.discountAmount ??
+              invoice.DiscountAmount ??
+              existingOrder?.discountAmount,
+          ) || 0,
+        serviceChargeAmount: Number(existingOrder?.serviceChargeAmount) || 0,
+        paymentMethod:
+          invoice.paymentMethod ??
+          invoice.PaymentMethod ??
+          payments.at(-1)?.paymentMode ??
+          payments.at(-1)?.PaymentMode ??
+          existingOrder?.paymentMethod,
+        payments,
+        items: Array.isArray(invoiceItems)
+          ? invoiceItems.map((item) => ({
+              ...item,
+              name: item.name ?? item.itemName ?? item.Name ?? item.ItemName,
+              quantity: item.quantity ?? item.Quantity,
+              price:
+                item.price ?? item.unitPrice ?? item.Price ?? item.UnitPrice,
+            }))
+          : (existingOrder?.items ?? []),
+      };
+    })
+    .filter(Boolean);
+}
+
 export function AdminReports({
   pastOrders = [],
   menuItems = [],
@@ -124,6 +204,7 @@ export function AdminReports({
   const [endDate, setEndDate] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [invoicesData, setInvoicesData] = useState(null);
   const startInputRef = useRef(null);
   const [ordersData, setOrdersData] = useState(() =>
     Array.isArray(pastOrders) ? pastOrders : [],
@@ -131,7 +212,11 @@ export function AdminReports({
 
   useEffect(() => {
     if (Array.isArray(pastOrders)) {
-      setOrdersData(pastOrders.length > 0 ? ((current) => mergeSettledOrders(pastOrders, current)) : []);
+      setOrdersData(
+        pastOrders.length > 0
+          ? (current) => mergeSettledOrders(pastOrders, current)
+          : [],
+      );
       setOrdersLoaded(true);
     }
   }, [pastOrders]);
@@ -161,7 +246,26 @@ export function AdminReports({
     };
   }, []);
 
-  const filteredOrders = ordersData.filter((order) => {
+  useEffect(() => {
+    let active = true;
+    apiGetInvoices()
+      .then((response) => {
+        const invoiceList =
+          response?.data?.data ?? response?.data?.invoices ?? response?.data;
+        if (active && response?.success && Array.isArray(invoiceList)) {
+          setInvoicesData(invoiceList);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const reportOrders = invoicesData?.length
+    ? normalizeInvoicesToOrders(invoicesData, ordersData)
+    : ordersData;
+  const filteredOrders = reportOrders.filter((order) => {
     if (filterPeriod === "all") return true;
 
     const orderYMD = parseOrderToYMD(order);
@@ -216,16 +320,33 @@ export function AdminReports({
     : 0;
 
   // Payment breakdown
+  const getPaymentTotal = (order, channel) => {
+    if (Array.isArray(order.payments) && order.payments.length > 0) {
+      return order.payments.reduce(
+        (sum, payment) =>
+          normalizePaymentMethod(payment) === channel
+            ? sum + (Number(payment.amount ?? payment.Amount) || 0)
+            : sum,
+        0,
+      );
+    }
+    return normalizePaymentMethod(order) === channel
+      ? Number(order.grandTotal) || 0
+      : 0;
+  };
   const paymentStats = {
-    upi: filteredOrders
-      .filter((order) => normalizePaymentMethod(order) === "upi")
-      .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
-    cash: filteredOrders
-      .filter((order) => normalizePaymentMethod(order) === "cash")
-      .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
-    card: filteredOrders
-      .filter((order) => normalizePaymentMethod(order) === "card")
-      .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
+    upi: filteredOrders.reduce(
+      (sum, order) => sum + getPaymentTotal(order, "upi"),
+      0,
+    ),
+    cash: filteredOrders.reduce(
+      (sum, order) => sum + getPaymentTotal(order, "cash"),
+      0,
+    ),
+    card: filteredOrders.reduce(
+      (sum, order) => sum + getPaymentTotal(order, "card"),
+      0,
+    ),
   };
 
   const upiPercent = totalRevenue
@@ -255,7 +376,17 @@ export function AdminReports({
   const handleFetchData = async () => {
     setIsFetching(true);
     try {
-      const response = await apiGetOrderHistory();
+      const [response, invoiceResponse] = await Promise.all([
+        apiGetOrderHistory(),
+        apiGetInvoices(),
+      ]);
+      const invoiceList =
+        invoiceResponse?.data?.data ??
+        invoiceResponse?.data?.invoices ??
+        invoiceResponse?.data;
+      if (invoiceResponse?.success && Array.isArray(invoiceList)) {
+        setInvoicesData(invoiceList);
+      }
       const result = response?.data ?? response;
       const serverOrders = Array.isArray(result)
         ? result
