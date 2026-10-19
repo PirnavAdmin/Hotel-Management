@@ -706,7 +706,7 @@ export function AdminPortal({
 
   // Open staff modal for Add or Edit
   const generateEmployeeId = () => {
-    // Find the highest existing EMP-XXX number from staffList
+    // Step 1: Find highest EMP-XXX number already saved in staffList (from server)
     let maxNum = 0;
     (staffList || []).forEach((staff) => {
       const id = staff?.employeeId || "";
@@ -716,7 +716,25 @@ export function AdminPortal({
         if (num > maxNum) maxNum = num;
       }
     });
+
+    // Step 2: Also check localStorage — what was the last ID THIS device assigned?
+    // This prevents collision if two devices open the form before either has saved & synced.
+    try {
+      const localMax = parseInt(
+        localStorage.getItem("pos_last_emp_id") || "0",
+        10,
+      );
+      if (localMax > maxNum) maxNum = localMax;
+    } catch {}
+
+    // Step 3: Next number = max + 1
     const nextNum = maxNum + 1;
+
+    // Step 4: Save to localStorage so this device won't reuse this number
+    try {
+      localStorage.setItem("pos_last_emp_id", String(nextNum));
+    } catch {}
+
     return `EMP-${String(nextNum).padStart(3, "0")}`;
   };
 
