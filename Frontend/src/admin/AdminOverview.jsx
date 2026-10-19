@@ -18,45 +18,7 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 
-function parseOrderToYMD(order) {
-  if (!order) return "";
-  const months = {
-    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
-    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
-  };
-
-  if (order.date) {
-    const s = String(order.date).trim();
-    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
-    }
-    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (dmyMatch) {
-      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
-    }
-    const textMatch = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3,})[\s\-]+(\d{4})/);
-    if (textMatch) {
-      const mon = textMatch[2].slice(0, 3).toLowerCase();
-      if (months[mon]) {
-        return `${textMatch[3]}-${months[mon]}-${textMatch[1].padStart(2, "0")}`;
-      }
-    }
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-  }
-
-  const ts = order.orderTimestamp || order.timestamp || order.createdAt;
-  if (ts) {
-    const d = new Date(ts);
-    if (!isNaN(d.getTime())) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-  }
-  return "";
-}
+import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
 
 export function AdminOverview({
   menuItems = [],
@@ -67,20 +29,20 @@ export function AdminOverview({
   onOpenKOTView,
   onOpenItemModal,
 }) {
-  // Dynamically load orders from localStorage or props
+  // Dynamically load orders from localStorage or props with deduplication
   const [ordersList, setOrdersList] = useState(() => {
     try {
       const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeOrders(parsed);
       }
     } catch {}
-    return pastOrders && pastOrders.length > 0 ? pastOrders : [];
+    return Array.isArray(pastOrders) && pastOrders.length > 0 ? dedupeOrders(pastOrders) : [];
   });
 
   useEffect(() => {
-    setOrdersList(Array.isArray(pastOrders) ? pastOrders : []);
+    setOrdersList(dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []));
   }, [pastOrders]);
 
   useEffect(() => {
@@ -90,7 +52,7 @@ export function AdminOverview({
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
-            setOrdersList(parsed);
+            setOrdersList(dedupeOrders(parsed));
           }
         }
       } catch {}
@@ -104,12 +66,15 @@ export function AdminOverview({
     };
   }, []);
 
+  const cleanOrders = dedupeOrders(
+    ordersList && ordersList.length > 0 ? ordersList : pastOrders,
+  );
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-  const todayOrders = ordersList.filter((o) => parseOrderToYMD(o) === todayYMD);
+  const todayOrders = cleanOrders.filter((o) => parseOrderToYMD(o) === todayYMD);
   const todayRevenue = todayOrders.reduce(
-    (sum, order) => sum + (Number(order.grandTotal || order.total) || 0),
+    (sum, order) => sum + (Number(order.grandTotal ?? order.total) || 0),
     0
   );
 

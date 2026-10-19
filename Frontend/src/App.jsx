@@ -620,6 +620,17 @@ export function App() {
     } catch {}
   };
 
+  // BroadcastChannel helper for cross-tab instantaneous sync
+  const broadcastSync = (type, payload) => {
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        const bc = new BroadcastChannel("avsr_pos_cross_sync");
+        bc.postMessage({ type, payload });
+        bc.close();
+      }
+    } catch {}
+  };
+
   // Sync to LocalStorage & Global Network DB
   useEffect(() => {
     try {
@@ -633,29 +644,45 @@ export function App() {
       )
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
-      localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
-      pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+      const cleanJson = JSON.stringify(cleanTables);
+      if (localStorage.getItem(STORAGE_KEY_TABLES) !== cleanJson) {
+        localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+        broadcastSync("SYNC_TABLES", cleanTables);
+      }
     } catch {}
   }, [tables, deletedTableIds]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(menuItems));
-      pushGlobalSync({ [STORAGE_KEY_MENU]: menuItems });
+      const menuJson = JSON.stringify(menuItems);
+      if (localStorage.getItem(STORAGE_KEY_MENU) !== menuJson) {
+        localStorage.setItem(STORAGE_KEY_MENU, menuJson);
+        pushGlobalSync({ [STORAGE_KEY_MENU]: menuItems });
+        broadcastSync("SYNC_MENU", menuItems);
+      }
     } catch {}
   }, [menuItems]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(staffList));
-      pushGlobalSync({ [STORAGE_KEY_STAFF]: staffList });
+      const staffJson = JSON.stringify(staffList);
+      if (localStorage.getItem(STORAGE_KEY_STAFF) !== staffJson) {
+        localStorage.setItem(STORAGE_KEY_STAFF, staffJson);
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: staffList });
+        broadcastSync("SYNC_STAFF", staffList);
+      }
     } catch {}
   }, [staffList]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(pastOrders));
-      pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
+      const ordersJson = JSON.stringify(pastOrders);
+      if (localStorage.getItem(STORAGE_KEY_ORDERS) !== ordersJson) {
+        localStorage.setItem(STORAGE_KEY_ORDERS, ordersJson);
+        pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
+        broadcastSync("SYNC_ORDERS", pastOrders);
+      }
     } catch {}
   }, [pastOrders]);
 
@@ -920,7 +947,66 @@ export function App() {
     } catch {}
 
     const handleStorageChange = (e) => {
-      if (e.key === STORAGE_KEY_LATEST_ALERT && e.newValue) {
+      if (!e.key || !e.newValue) return;
+
+      if (e.key === STORAGE_KEY_TABLES) {
+        try {
+          const incomingTables = JSON.parse(e.newValue);
+          if (Array.isArray(incomingTables)) {
+            const freshDel = getDeletedTableIds();
+            const clean = mergeIncomingTables(incomingTables, freshDel);
+            setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_ORDERS) {
+        try {
+          const incomingOrders = JSON.parse(e.newValue);
+          if (Array.isArray(incomingOrders)) {
+            setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_MENU) {
+        try {
+          const incomingMenu = JSON.parse(e.newValue);
+          if (Array.isArray(incomingMenu)) {
+            const normalized = incomingMenu.map(normalizeMenuItem);
+            setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_STAFF) {
+        try {
+          const incomingStaff = JSON.parse(e.newValue);
+          if (Array.isArray(incomingStaff)) {
+            const deduped = dedupeStaff(incomingStaff);
+            setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_DELETED_TABLES) {
+        try {
+          const incomingDeleted = JSON.parse(e.newValue);
+          if (Array.isArray(incomingDeleted)) {
+            setDeletedTableIds(incomingDeleted);
+            setTables((prev) => prev.filter((t) => !incomingDeleted.map(String).includes(String(t.id))));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_INVENTORY) {
+        try {
+          const incomingInventory = JSON.parse(e.newValue);
+          if (Array.isArray(incomingInventory)) {
+            window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
+          }
+        } catch {}
+      } else if (e.key === RESTAURANT_SETTINGS_KEY) {
+        try {
+          const incomingSettings = JSON.parse(e.newValue);
+          if (incomingSettings && typeof incomingSettings === "object") {
+            setRestaurantSettings(incomingSettings);
+            window.dispatchEvent(new Event("restaurant-settings-updated"));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_THEME) {
+        setTheme(e.newValue);
+      } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
           const alert = JSON.parse(e.newValue);
           if (alert && alert.id) {
@@ -939,24 +1025,102 @@ export function App() {
       }
     };
 
-    const handleOrdersStorageUpdate = (event) => {
-      if (event.key !== STORAGE_KEY_ORDERS || !event.newValue) return;
+    let syncChannel = null;
+    if (typeof BroadcastChannel !== "undefined") {
       try {
-        const incomingOrders = JSON.parse(event.newValue);
-        if (Array.isArray(incomingOrders)) {
-          setPastOrders((current) =>
-            mergeSettledOrders(current, incomingOrders),
-          );
+        syncChannel = new BroadcastChannel("avsr_pos_cross_sync");
+        syncChannel.onmessage = (event) => {
+          const { type, payload } = event.data || {};
+          if (!type || !payload) return;
+
+          if (type === "SYNC_TABLES" && Array.isArray(payload)) {
+            const freshDel = getDeletedTableIds();
+            const clean = mergeIncomingTables(payload, freshDel);
+            setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
+          } else if (type === "SYNC_ORDERS" && Array.isArray(payload)) {
+            setPastOrders((current) => mergeSettledOrders(current, payload));
+          } else if (type === "SYNC_MENU" && Array.isArray(payload)) {
+            const normalized = payload.map(normalizeMenuItem);
+            setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
+          } else if (type === "SYNC_STAFF" && Array.isArray(payload)) {
+            const deduped = dedupeStaff(payload);
+            setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
+            setDeletedTableIds(payload);
+            setTables((prev) => prev.filter((t) => !payload.map(String).includes(String(t.id))));
+          }
+        };
+      } catch {}
+    }
+
+    const syncAllFromStorage = () => {
+      try {
+        const rawTables = localStorage.getItem(STORAGE_KEY_TABLES);
+        if (rawTables) {
+          const parsed = JSON.parse(rawTables);
+          if (Array.isArray(parsed)) {
+            const freshDel = getDeletedTableIds();
+            const clean = mergeIncomingTables(parsed, freshDel);
+            setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
+        if (rawOrders) {
+          const parsed = JSON.parse(rawOrders);
+          if (Array.isArray(parsed)) {
+            setPastOrders((current) => mergeSettledOrders(current, parsed));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawMenu = localStorage.getItem(STORAGE_KEY_MENU);
+        if (rawMenu) {
+          const parsed = JSON.parse(rawMenu);
+          if (Array.isArray(parsed)) {
+            const normalized = parsed.map(normalizeMenuItem);
+            setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawStaff = localStorage.getItem(STORAGE_KEY_STAFF);
+        if (rawStaff) {
+          const parsed = JSON.parse(rawStaff);
+          if (Array.isArray(parsed)) {
+            const deduped = dedupeStaff(parsed);
+            setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawDel = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
+        if (rawDel) {
+          const parsed = JSON.parse(rawDel);
+          if (Array.isArray(parsed)) {
+            setDeletedTableIds(parsed);
+          }
         }
       } catch {}
     };
 
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("storage", handleOrdersStorageUpdate);
+    window.addEventListener("focus", syncAllFromStorage);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") syncAllFromStorage();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("storage", handleOrdersStorageUpdate);
+      window.removeEventListener("focus", syncAllFromStorage);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (syncChannel) syncChannel.close();
       if (es) es.close();
     };
   }, []);
@@ -1374,6 +1538,7 @@ export function App() {
               ...t,
               items: [],
               status: "vacant",
+              guests: 0,
               orderTime: null,
               discountPercent: 0,
             };
@@ -1407,6 +1572,7 @@ export function App() {
             ...t,
             items: [],
             status: "vacant",
+            guests: 0,
             orderTime: null,
             discountPercent: 0,
           };
@@ -1554,7 +1720,7 @@ export function App() {
         status: "vacant",
         orderTime: null,
         discountPercent: 0,
-        guests: t.capacity,
+        guests: 0,
       };
     });
     setTables(updatedTables);
