@@ -177,41 +177,17 @@ export async function fetchCurrentAuthUser() {
 export async function loginUser(usernameOrEmail, password, expectedRole) {
   const res = await apiLogin(usernameOrEmail.trim(), password.trim());
   if (!res.success) {
-    const isNetworkError =
-      res.error?.includes('Failed to fetch') ||
-      res.error?.includes('Network error') ||
-      res.error?.includes('502') ||
-      res.error?.includes('NetworkError');
+    const isConnectionError =
+      !res.status ||
+      [502, 503, 504].includes(res.status) ||
+      /failed to fetch|network error|networkerror|load failed/i.test(res.error || '');
 
-    if (isNetworkError) {
-      const uLower = usernameOrEmail.trim().toLowerCase();
-      let fallbackRole = expectedRole ? mapRole(expectedRole) : 'admin';
-      if (uLower.includes('admin')) fallbackRole = 'admin';
-      else if (uLower.includes('kot') || uLower.includes('kitchen') || uLower.includes('chef')) fallbackRole = 'kot';
-      else if (uLower.includes('pos') || uLower.includes('cashier') || uLower.includes('user')) fallbackRole = 'pos';
-
-      const mockSession = {
-        userId: `offline-${Date.now()}`,
-        username: usernameOrEmail.trim(),
-        name: usernameOrEmail.trim().charAt(0).toUpperCase() + usernameOrEmail.trim().slice(1),
-        role: fallbackRole,
-        email: `${uLower}@avsr.com`,
-        mobile: '',
-        loginAt: new Date().toISOString(),
-        isOfflineMode: true,
-      };
-      const mockToken = btoa(
-        JSON.stringify({
-          sub: mockSession.userId,
-          role: mockSession.role,
-          name: mockSession.name,
-        }),
-      );
-      setSession(mockSession, mockToken);
-      return { success: true, session: mockSession, isOfflineFallback: true };
-    }
-
-    return { success: false, error: res.error || 'Invalid credentials' };
+    return {
+      success: false,
+      error: isConnectionError
+        ? 'Cannot connect to the server. Please make sure it is running and try again.'
+        : res.error || 'Invalid credentials',
+    };
   }
   
   // Handle both nested { token, user } and flat { token, role, username } responses
