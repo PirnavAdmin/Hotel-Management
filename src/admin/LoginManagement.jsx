@@ -11,6 +11,7 @@ import { getUsers, createUser, deleteUser, updateUserPassword, updateUserDetails
  */
 export function LoginManagement({ currentAdminSession }) {
   const [users, setUsers]           = useState([]);
+  const [activeAccountTab, setActiveAccountTab] = useState('pos');
   const [showForm, setShowForm]     = useState(false);
   const [formRole, setFormRole]     = useState('pos');
   const [formName, setFormName]     = useState('');
@@ -189,6 +190,13 @@ export function LoginManagement({ currentAdminSession }) {
   const posUsers   = users.filter(u => (u.role || '').toLowerCase() === 'pos');
   const kotUsers   = users.filter(u => (u.role || '').toLowerCase() === 'kot');
   const adminUsers = users.filter(u => (u.role || '').toLowerCase() === 'admin');
+
+  const accountTabs = [
+    { id: 'pos', label: 'POS Users', title: 'User POS Accounts', users: posUsers, icon: <Utensils size={16} />, color: '#f59e0b', emptyMsg: 'No POS users yet. Create one above.' },
+    { id: 'kot', label: 'Kitchen KOT Users', title: 'Kitchen KOT Accounts', users: kotUsers, icon: <ChefHat size={16} />, color: '#fb923c', emptyMsg: 'No KOT users yet. Create one above.' },
+    { id: 'admin', label: 'Admin Users', title: 'Admin Accounts', users: adminUsers, icon: <ShieldCheck size={16} />, color: '#818cf8', emptyMsg: 'No admin accounts found.' },
+  ];
+  const selectedAccountTab = accountTabs.find((tab) => tab.id === activeAccountTab);
 
   const roleConfig = {
     pos: {
@@ -410,44 +418,39 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       </div>
 
+      <div className="login-account-tabs" role="tablist" aria-label="Account categories">
+        {accountTabs.map((tab, index) => (
+          <button
+            key={tab.id}
+            id={'login-account-tab-' + tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeAccountTab === tab.id}
+            aria-controls="login-account-panel"
+            tabIndex={activeAccountTab === tab.id ? 0 : -1}
+            onClick={() => setActiveAccountTab(tab.id)}
+            onKeyDown={(event) => {
+              let nextIndex;
+              if (event.key === 'ArrowRight') nextIndex = (index + 1) % accountTabs.length;
+              else if (event.key === 'ArrowLeft') nextIndex = (index + accountTabs.length - 1) % accountTabs.length;
+              else if (event.key === 'Home') nextIndex = 0;
+              else if (event.key === 'End') nextIndex = accountTabs.length - 1;
+              else return;
+              event.preventDefault();
+              setActiveAccountTab(accountTabs[nextIndex].id);
+              event.currentTarget.parentElement.children[nextIndex].focus();
+            }}
+          >
+            {tab.icon}<span>{tab.label} ({tab.users.length})</span>
+          </button>
+        ))}
+      </div>
+
       {refreshMessage && (
         <div role="status" style={{ color: refreshMessage.toLowerCase().includes('could not') || refreshMessage.toLowerCase().includes('failed') ? '#fca5a5' : '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
           {refreshMessage}
         </div>
       )}
-
-      {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
-        {[
-          { label: 'POS Users', count: posUsers.length, color: '#f59e0b', icon: <Utensils size={18} /> },
-          { label: 'KOT Users', count: kotUsers.length, color: '#fb923c', icon: <ChefHat size={18} /> },
-          { label: 'Admins', count: adminUsers.length, color: '#818cf8', icon: <ShieldCheck size={18} /> }
-        ].map(stat => (
-          <div key={stat.label} style={{
-            background: 'var(--bg-tertiary)',
-            border: `1px solid var(--border-subtle)`,
-            borderRadius: '10px', padding: '0.85rem 1rem',
-            display: 'flex', alignItems: 'center', gap: '0.75rem'
-          }}>
-            <div style={{
-              width: '38px', height: '38px', borderRadius: '10px',
-              background: `${stat.color}20`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: stat.color
-            }}>
-              {stat.icon}
-            </div>
-            <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-main)', lineHeight: 1 }}>
-                {stat.count}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700 }}>
-                {stat.label}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* Create Login Form */}
       {showForm && (
@@ -643,9 +646,9 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />
-      <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
-      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="#818cf8" users={adminUsers} emptyMsg="No admin accounts found." />
+      <div id="login-account-panel" role="tabpanel" aria-labelledby={'login-account-tab-' + activeAccountTab} tabIndex={0}>
+        <Section title={selectedAccountTab.title} icon={selectedAccountTab.icon} color={selectedAccountTab.color} users={selectedAccountTab.users} emptyMsg={selectedAccountTab.emptyMsg} />
+      </div>
 
       {/* Delete Confirm Overlay */}
       {deletingId && (

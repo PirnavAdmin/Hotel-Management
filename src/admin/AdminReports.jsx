@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   BarChart3,
   TrendingUp,
@@ -14,47 +14,13 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
-
-function parseOrderToYMD(order) {
-  if (!order) return "";
-  const months = {
-    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
-    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
-  };
-
-  const dateValue = order.settledDate || order.date || order.settledAt || order.createdAt || order.orderTimestamp || order.timestamp;
-  if (dateValue) {
-    const s = String(dateValue).trim();
-    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
-    }
-    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (dmyMatch) {
-      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
-    }
-    const textMatch = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3,})[\s\-]+(\d{4})/);
-    if (textMatch) {
-      const mon = textMatch[2].slice(0, 3).toLowerCase();
-      if (months[mon]) {
-        return `${textMatch[3]}-${months[mon]}-${textMatch[1].padStart(2, "0")}`;
-      }
-    }
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-  }
-
-  const ts = order.orderTimestamp || order.timestamp || order.settledAt || order.createdAt;
-  if (ts) {
-    const d = new Date(ts);
-    if (!isNaN(d.getTime())) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-  }
-  return "";
-}
+import {
+  dedupeOrders,
+  sortOrdersBySettlementTime,
+  normalizePaymentMethod,
+  parseOrderToYMD,
+  mergeSettledOrders,
+} from "../utils/orderDedupe";
 
 export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {} }) {
   const now = new Date();
@@ -69,37 +35,16 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isFetching, setIsFetching] = useState(false);
-  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [fetchedOrders, setFetchedOrders] = useState(null);
+  const ordersLoaded = true;
   const startInputRef = useRef(null);
-  const [ordersData, setOrdersData] = useState(() => Array.isArray(pastOrders) ? pastOrders : []);
 
-  useEffect(() => {
-    setOrdersData(Array.isArray(pastOrders) ? pastOrders : []);
-    setOrdersLoaded(true);
-  }, [pastOrders]);
-
-  useEffect(() => {
-    let active = true;
-    apiGetOrderHistory()
-      .then((response) => {
-        const result = response?.data ?? response;
-        const serverOrders = Array.isArray(result)
-          ? result
-          : Array.isArray(result?.orders)
-            ? result.orders
-            : Array.isArray(result?.data)
-              ? result.data
-              : null;
-        if (active && response?.success && serverOrders) {
-          setOrdersData(serverOrders);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (active) setOrdersLoaded(true);
-      });
-    return () => { active = false; };
-  }, []);
+  const ordersData = useMemo(() => {
+    const rawList = fetchedOrders || pastOrders;
+    return sortOrdersBySettlementTime(
+      dedupeOrders(Array.isArray(rawList) ? rawList : []),
+    );
+  }, [pastOrders, fetchedOrders]);
 
   const filteredOrders = ordersData.filter((order) => {
     if (filterPeriod === "all") return true;
@@ -134,7 +79,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   });
 
   const totalRevenue = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal) || 0),
+    (sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0),
     0
   );
 
@@ -155,17 +100,35 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     ? totalRevenue / filteredOrders.length
     : 0;
 
+  const getPaymentTotal = (order, channel) => {
+    if (Array.isArray(order.payments) && order.payments.length > 0) {
+      return order.payments.reduce(
+        (sum, payment) =>
+          normalizePaymentMethod(payment) === channel
+            ? sum + (Number(payment.amount ?? payment.Amount) || 0)
+            : sum,
+        0,
+      );
+    }
+    return normalizePaymentMethod(order) === channel
+      ? Number(order.grandTotal ?? order.total ?? 0) || 0
+      : 0;
+  };
+
   // Payment breakdown
   const paymentStats = {
-    upi: filteredOrders
-      .filter((o) => (o.paymentMethod || "").toLowerCase() === "upi")
-      .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
-    cash: filteredOrders
-      .filter((o) => String(o.paymentMethod || "cash").toLowerCase() === "cash")
-      .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
-    card: filteredOrders
-      .filter((o) => (o.paymentMethod || "").toLowerCase() === "card")
-      .reduce((s, o) => s + (Number(o.grandTotal) || 0), 0),
+    upi: filteredOrders.reduce(
+      (sum, order) => sum + getPaymentTotal(order, "upi"),
+      0,
+    ),
+    cash: filteredOrders.reduce(
+      (sum, order) => sum + getPaymentTotal(order, "cash"),
+      0,
+    ),
+    card: filteredOrders.reduce(
+      (sum, order) => sum + getPaymentTotal(order, "card"),
+      0,
+    ),
   };
 
   const upiPercent = totalRevenue ? Math.round((paymentStats.upi / totalRevenue) * 100) : 0;
@@ -198,21 +161,23 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           : Array.isArray(result?.data)
             ? result.data
             : null;
-      if (response?.success && serverOrders) {
-        setOrdersData(serverOrders);
-        setOrdersLoaded(true);
+      if (Array.isArray(serverOrders) && serverOrders.length > 0) {
+        setFetchedOrders((current) =>
+          mergeSettledOrders(current || pastOrders, serverOrders),
+        );
         return;
       }
       const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setOrdersData(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFetchedOrders((current) =>
+            mergeSettledOrders(current || pastOrders, parsed),
+          );
         }
       }
     } catch {}
     finally {
-      setOrdersLoaded(true);
       setIsFetching(false);
     }
   };
@@ -1273,7 +1238,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                         {ord.table ? `T-${ord.table}` : "Takeaway / Direct"}
                       </td>
                       <td style={{ border: "1px solid #cbd5e1", padding: "5px 7px", fontWeight: 600, textTransform: "uppercase" }}>
-                        {ord.paymentMethod || "CASH"}
+                        {normalizePaymentMethod(ord).toUpperCase()}
                       </td>
                       <td
                         style={{

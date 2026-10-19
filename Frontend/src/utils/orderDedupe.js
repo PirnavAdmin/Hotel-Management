@@ -1,17 +1,57 @@
 const normalize = (value) => String(value ?? "").trim().toLocaleLowerCase();
 
-const dateKey = (order) => {
-  const rawDate = order?.settledDate || order?.date || order?.createdAt;
-  const parsedDate = rawDate ? new Date(rawDate) : null;
-  const timestampDate = Number(order?.orderTimestamp);
-  const date = parsedDate && !Number.isNaN(parsedDate.getTime())
-    ? parsedDate
-    : Number.isFinite(timestampDate) && timestampDate > 0
-      ? new Date(timestampDate)
-      : null;
-  if (!date || Number.isNaN(date.getTime())) return "";
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-};
+export function parseOrderToYMD(order) {
+  if (!order) return "";
+  const months = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  };
+
+  const dateValue =
+    order.settledDate ||
+    order.date ||
+    order.settledAt ||
+    order.createdAt ||
+    order.orderTimestamp ||
+    order.timestamp;
+  if (dateValue) {
+    const s = String(dateValue).trim();
+    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
+    }
+    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (dmyMatch) {
+      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
+    }
+    const textMatch = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3,})[\s\-]+(\d{4})/);
+    if (textMatch) {
+      const mon = textMatch[2].slice(0, 3).toLowerCase();
+      if (months[mon]) {
+        return `${textMatch[3]}-${months[mon]}-${textMatch[1].padStart(2, "0")}`;
+      }
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+
+  const ts =
+    order.orderTimestamp ||
+    order.timestamp ||
+    order.settledAt ||
+    order.createdAt;
+  if (ts) {
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  return "";
+}
+
+const dateKey = (order) => parseOrderToYMD(order);
 
 const timeKey = (order) => {
   const value = order?.settledAt || order?.paidAt || order?.completedAt;
@@ -126,6 +166,63 @@ export const mergeSettledOrders = (...sources) => {
   return merged;
 };
 
+export function normalizePaymentMethod(orderOrMethod) {
+  if (!orderOrMethod) return "cash";
+
+  let method = "";
+  if (typeof orderOrMethod === "string") {
+    method = orderOrMethod;
+  } else if (typeof orderOrMethod === "object") {
+    method =
+      orderOrMethod.paymentMethod ??
+      orderOrMethod.PaymentMethod ??
+      orderOrMethod.paymentMode ??
+      orderOrMethod.payment_mode ??
+      orderOrMethod.paymentType ??
+      orderOrMethod.payment ??
+      "";
+  }
+
+  const s = String(method || "").trim().toLowerCase();
+  if (!s) return "cash";
+
+  if (
+    s === "upi" ||
+    s.includes("upi") ||
+    s.includes("qr") ||
+    s.includes("online") ||
+    s.includes("gpay") ||
+    s.includes("googlepay") ||
+    s.includes("phonepe") ||
+    s.includes("paytm") ||
+    s.includes("bhim") ||
+    s.includes("wallet") ||
+    s.includes("netbanking") ||
+    s.includes("bank")
+  ) {
+    return "upi";
+  }
+
+  if (
+    s === "card" ||
+    s.includes("card") ||
+    s.includes("credit") ||
+    s.includes("debit") ||
+    s.includes("pos") ||
+    s.includes("swipe") ||
+    s.includes("visa") ||
+    s.includes("mastercard")
+  ) {
+    return "card";
+  }
+
+  if (s === "cash" || s.includes("cash")) {
+    return "cash";
+  }
+
+  return "cash";
+}
+
 /** Collapse copies of one settled sale even when a sync assigned each copy a different id/invoice number. */
 export function dedupeOrders(orders = []) {
   const result = [];
@@ -156,9 +253,29 @@ export function dedupeOrders(orders = []) {
     // Keep the more complete/newer copy, while retaining metadata from both sources.
     const existing = result[existingIndex];
     const incomingIsNewer = getOrderTimestamp(order) > getOrderTimestamp(existing);
-    result[existingIndex] = incomingIsNewer
+    const base = incomingIsNewer
       ? { ...existing, ...order }
       : { ...order, ...existing };
+
+    // Crucial: preserve valid non-null properties so empty backend fields never wipe out live POS values
+    const fieldsToPreserve = [
+      "paymentMethod", "paymentMode", "PaymentMethod", "payment_mode",
+      "invoiceNo", "InvoiceNo",
+      "settledAt", "SettledAt",
+      "date", "settledDate",
+      "tableName", "TableName",
+      "server", "serverName", "ServerName",
+    ];
+    fieldsToPreserve.forEach((f) => {
+      const val = order[f] || existing[f];
+      if (val !== undefined && val !== null && val !== "") {
+        if (base[f] === undefined || base[f] === null || base[f] === "") {
+          base[f] = val;
+        }
+      }
+    });
+
+    result[existingIndex] = base;
     identities.forEach((identity) => indexByIdentity.set(identity, existingIndex));
   }
 

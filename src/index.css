@@ -584,3 +584,10 @@ textarea {
     justify-self: end;
   }
 }
+
+.login-account-tabs { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.login-account-tabs button { display: flex; flex: 1 1 160px; min-width: 0; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-tertiary); color: var(--text-muted); font-family: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+.login-account-tabs button svg { flex-shrink: 0; }
+.login-account-tabs button span { overflow-wrap: anywhere; }
+.login-account-tabs button[aria-selected="true"] { background: rgba(245,158,11,0.14); border-color: var(--accent-amber); color: var(--accent-amber); }
+.login-account-tabs button:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
