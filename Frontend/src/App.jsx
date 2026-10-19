@@ -122,9 +122,12 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       server:
         table.assignedServerName || table.server || existing.server || "Staff",
       guests:
-        String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+        String(table.status || existing.status || "vacant").toLowerCase() ===
+        "vacant"
           ? 0
-          : Number(table.occupiedChairs ?? table.guests ?? existing.guests ?? 0),
+          : Number(
+              table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
+            ),
       items: Array.isArray(table.items)
         ? table.items
         : Array.isArray(existing.items)
@@ -134,9 +137,10 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       discountPercent: table.discountPercent ?? existing.discountPercent ?? 0,
       serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
       occupiedSince:
-        String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+        String(table.status || existing.status || "vacant").toLowerCase() ===
+        "vacant"
           ? null
-          : (table.occupiedSince || existing.occupiedSince || null),
+          : table.occupiedSince || existing.occupiedSince || null,
     };
     tablesById.set(id, normalized);
     normalizedIncoming.push(normalized);
@@ -1868,15 +1872,25 @@ export function App() {
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
     const result = await apiCreateStaff(newPerson);
-    if (!result?.success) {
+    const createdStaff = result?.data?.data ?? result?.data;
+    const staffId = createdStaff?.staffId ?? createdStaff?.id;
+    if (!result?.success || !staffId) {
       showToast(
         `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
 
-    setStaffList((prev) => [...prev, newPerson]);
-    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
+    const savedStaff = {
+      ...createdStaff,
+      id: staffId,
+      name: createdStaff.fullName || createdStaff.name || newPerson.name,
+      role: createdStaff.roleTitle || createdStaff.role || newPerson.role,
+    };
+    setStaffList((prev) => [...prev, savedStaff]);
+    showToast(
+      `✅ ${savedStaff.name} saved with Employee ID EMP-${String(staffId).padStart(5, "0")}`,
+    );
     return true;
   };
 
@@ -1944,7 +1958,10 @@ export function App() {
         setStaffList([]);
         setPastOrders([]);
         setInventory([]);
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
+        localStorage.setItem(
+          STORAGE_KEY_TABLES,
+          JSON.stringify(INITIAL_TABLES),
+        );
         localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
         localStorage.setItem(STORAGE_KEY_MENU, "[]");
         localStorage.setItem(STORAGE_KEY_STAFF, "[]");

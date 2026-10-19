@@ -548,6 +548,7 @@ export function AdminPortal({
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [staffForm, setStaffForm] = useState({
+    employeeId: "",
     name: "",
     role: "",
     phone: "",
@@ -704,6 +705,13 @@ export function AdminPortal({
   };
 
   // Open staff modal for Add or Edit
+  const generateEmployeeId = () => {
+    const prefix = "EMP";
+    const timestamp = Date.now().toString().slice(-5);
+    const rand = Math.floor(Math.random() * 900 + 100);
+    return `${prefix}-${timestamp}${rand}`;
+  };
+
   const handleOpenStaffModal = (person = null) => {
     if (person) {
       const personName = String(
@@ -716,6 +724,7 @@ export function AdminPortal({
       const personRole = String(person?.role || person?.roleTitle || "");
       setEditingStaff(person);
       setStaffForm({
+        employeeId: person.employeeId || generateEmployeeId(),
         name: personName,
         role: personRole,
         phone: person.phone || "",
@@ -724,6 +733,7 @@ export function AdminPortal({
     } else {
       setEditingStaff(null);
       setStaffForm({
+        employeeId: generateEmployeeId(),
         name: "",
         role: "",
         phone: "",
@@ -750,6 +760,7 @@ export function AdminPortal({
       if (onUpdateStaff) {
         saved = await onUpdateStaff({
           ...editingStaff,
+          employeeId: staffForm.employeeId,
           name: staffForm.name.trim(),
           role: staffForm.role,
           phone: staffForm.phone || "+91 98450 00000",
@@ -759,6 +770,7 @@ export function AdminPortal({
     } else {
       saved = await onAddStaff({
         id: Date.now(),
+        employeeId: staffForm.employeeId,
         name: staffForm.name.trim(),
         role: staffForm.role,
         phone: staffForm.phone || "+91 98450 00000",
@@ -769,6 +781,7 @@ export function AdminPortal({
 
     setEditingStaff(null);
     setStaffForm({
+      employeeId: "",
       name: "",
       role: "",
       phone: "",
@@ -4421,6 +4434,67 @@ export function AdminPortal({
               >
                 <X size={18} />
               </button>
+            </div>
+
+            {/* Employee ID — auto-generated, read-only */}
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Employee ID{" "}
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 500,
+                    color: "var(--text-muted, #888)",
+                    marginLeft: "4px",
+                  }}
+                >
+                  (Auto-generated)
+                </span>
+              </label>
+              <div style={{ position: "relative" }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={staffForm.employeeId}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.65rem 2.6rem 0.65rem 0.85rem",
+                    color: "var(--accent, #f97316)",
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    letterSpacing: "0.05em",
+                    outline: "none",
+                    cursor: "default",
+                    userSelect: "all",
+                  }}
+                />
+                <span
+                  title="Auto-generated — cannot be edited"
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: "0.78rem",
+                    color: "var(--text-muted, #888)",
+                    pointerEvents: "none",
+                  }}
+                >
+                  🔒
+                </span>
+              </div>
             </div>
 
             <div>
