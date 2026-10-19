@@ -17,7 +17,12 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { dedupeOrders, sortOrdersBySettlementTime } from "../utils/orderDedupe";
+import {
+  dedupeOrders,
+  sortOrdersBySettlementTime,
+  normalizePaymentMethod,
+  parseOrderToYMD,
+} from "../utils/orderDedupe";
 
 const localDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
@@ -40,25 +45,7 @@ const localWeekEndValue = (date = new Date()) => {
   return localDateInputValue(weekEnd);
 };
 
-const invoiceDateKey = (order) => {
-  const value = order.settledDate || order.date || order.settledAt || order.createdAt;
-  if (!value) return "";
-  const text = String(value).trim();
-  const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoDate) return `${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`;
-  const dayMonthYear = text.match(/^(\d{1,2})[\s/-]+([A-Za-z]{3,}|\d{1,2})[\s,-]+(\d{4})/);
-  if (dayMonthYear) {
-    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-    const month = /^\d+$/.test(dayMonthYear[2])
-      ? Number(dayMonthYear[2])
-      : monthNames.indexOf(dayMonthYear[2].slice(0, 3).toLowerCase()) + 1;
-    if (month >= 1 && month <= 12) return `${dayMonthYear[3]}-${String(month).padStart(2, "0")}-${String(Number(dayMonthYear[1])).padStart(2, "0")}`;
-  }
-  const yearMonthDay = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (yearMonthDay) return `${yearMonthDay[3]}-${String(Number(yearMonthDay[2])).padStart(2, "0")}-${String(Number(yearMonthDay[1])).padStart(2, "0")}`;
-  const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime()) ? "" : localDateInputValue(parsed);
-};
+const invoiceDateKey = (order) => parseOrderToYMD(order);
 
 const invoiceDisplayDate = (order) => {
   const dateKey = invoiceDateKey(order);
@@ -166,14 +153,6 @@ export function AdminInvoices({
     (customFromDate && customToDate && customFromDate > customToDate)
   );
 
-  const normalizePaymentMethod = (method) => {
-    const value = String(method || "cash").trim().toLowerCase();
-    if (value === "cash" || value === "upi" || value === "card") return value;
-    if (value.includes("upi") || value.includes("online") || value.includes("gpay") || value.includes("phonepe") || value.includes("paytm")) return "upi";
-    if (value.includes("card") || value.includes("credit") || value.includes("debit")) return "card";
-    return value;
-  };
-
   const filteredOrders = allOrders.filter((order) => {
     const orderDate = invoiceDateKey(order);
     const matchesDate = dateFilter === "all" ||
@@ -188,7 +167,7 @@ export function AdminInvoices({
         (!customFromDate || orderDate >= customFromDate) &&
         (!customToDate || orderDate <= customToDate));
     const matchesPayment = paymentFilter === "all" ||
-      normalizePaymentMethod(order.paymentMethod) === paymentFilter;
+      normalizePaymentMethod(order) === paymentFilter;
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
@@ -211,17 +190,21 @@ export function AdminInvoices({
   );
 
   const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal) || 0),
+    (sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0),
     0,
   );
 
   const upiTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o.paymentMethod) === "upi")
-    .reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0);
+    .filter((o) => normalizePaymentMethod(o) === "upi")
+    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
 
   const cashTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o.paymentMethod) === "cash")
-    .reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0);
+    .filter((o) => normalizePaymentMethod(o) === "cash")
+    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
+
+  const cardTotal = filteredOrders
+    .filter((o) => normalizePaymentMethod(o) === "card")
+    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -519,6 +502,14 @@ export function AdminInvoices({
                 {formatCurrency(cashTotal)}
               </strong>
             </span>
+            {cardTotal > 0 && (
+              <span>
+                Card:{" "}
+                <strong style={{ color: "#c084fc" }}>
+                  {formatCurrency(cardTotal)}
+                </strong>
+              </span>
+            )}
           </div>
         </div>
 
@@ -562,7 +553,7 @@ export function AdminInvoices({
             <tbody>
               {paginatedOrders.map((order, idx) => {
                 const orderIndex = pageStart + idx;
-                const pMode = normalizePaymentMethod(order.paymentMethod);
+                const pMode = normalizePaymentMethod(order);
                 const itemCount = (order.items || []).reduce(
                   (sum, i) => sum + Number(i.quantity || 1),
                   0,
@@ -1128,7 +1119,7 @@ export function AdminInvoices({
                   fontWeight: 700,
                 }}
               >
-                Paid via {selectedReceipt.paymentMethod || "Cash"}
+                Paid via {normalizePaymentMethod(selectedReceipt).toUpperCase()}
               </div>
             </div>
 

@@ -1461,6 +1461,11 @@ export function App() {
         settlementData.id ||
         `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       date: settlementData.date || getTodayDateString(),
+      status: "Settled",
+      Status: "Settled",
+      paymentMethod: settlementData.paymentMethod || "upi",
+      paymentMode: settlementData.paymentMode || settlementData.paymentMethod || "upi",
+      PaymentMethod: settlementData.PaymentMethod || settlementData.paymentMethod || "upi",
       cookingStartedAt:
         tableObj?.cookingStartedAt ||
         tableObj?.orderTime ||
@@ -1532,13 +1537,14 @@ export function App() {
 
     const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);
-    apiCreateOrder(enrichedSettlement).catch(() => {});
     try {
       localStorage.setItem(
         STORAGE_KEY_ORDERS,
         JSON.stringify(updatedPastOrders),
       );
+      pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
+    apiCreateOrder(enrichedSettlement).catch(() => {});
 
     const updatedTables = tables.map((t) => {
       if (t.id !== settlementData.tableId) return t;

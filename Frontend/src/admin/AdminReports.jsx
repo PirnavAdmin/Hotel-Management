@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   BarChart3,
   TrendingUp,
@@ -15,97 +15,13 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
 import { apiGetInvoices } from "../api/invoiceApi";
-import { mergeSettledOrders } from "../utils/orderDedupe";
-
-function parseOrderToYMD(order) {
-  if (!order) return "";
-  const months = {
-    jan: "01",
-    feb: "02",
-    mar: "03",
-    apr: "04",
-    may: "05",
-    jun: "06",
-    jul: "07",
-    aug: "08",
-    sep: "09",
-    oct: "10",
-    nov: "11",
-    dec: "12",
-  };
-
-  const dateValue =
-    order.settledDate ||
-    order.date ||
-    order.settledAt ||
-    order.createdAt ||
-    order.orderTimestamp ||
-    order.timestamp;
-  if (dateValue) {
-    const s = String(dateValue).trim();
-    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
-    }
-    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (dmyMatch) {
-      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
-    }
-    const textMatch = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3,})[\s\-]+(\d{4})/);
-    if (textMatch) {
-      const mon = textMatch[2].slice(0, 3).toLowerCase();
-      if (months[mon]) {
-        return `${textMatch[3]}-${months[mon]}-${textMatch[1].padStart(2, "0")}`;
-      }
-    }
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-  }
-
-  const ts =
-    order.orderTimestamp ||
-    order.timestamp ||
-    order.settledAt ||
-    order.createdAt;
-  if (ts) {
-    const d = new Date(ts);
-    if (!isNaN(d.getTime())) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-  }
-  return "";
-}
-
-function normalizePaymentMethod(order) {
-  const rawMethod =
-    order?.paymentMethod ??
-    order?.PaymentMethod ??
-    order?.payment_mode ??
-    order?.paymentMode;
-  const method = String(rawMethod || "")
-    .trim()
-    .toLowerCase();
-  if (method === "cash" || method.includes("cash")) return "cash";
-  if (
-    method.includes("upi") ||
-    method.includes("qr") ||
-    method.includes("online") ||
-    method.includes("gpay") ||
-    method.includes("phonepe") ||
-    method.includes("paytm")
-  )
-    return "upi";
-  if (
-    method.includes("card") ||
-    method.includes("credit") ||
-    method.includes("debit") ||
-    method.includes("pos")
-  )
-    return "card";
-  return "other";
-}
+import {
+  dedupeOrders,
+  sortOrdersBySettlementTime,
+  normalizePaymentMethod,
+  parseOrderToYMD,
+  mergeSettledOrders,
+} from "../utils/orderDedupe";
 
 function normalizeInvoicesToOrders(invoices, orders) {
   const ordersById = new Map(orders.map((order) => [String(order.id), order]));
@@ -203,48 +119,17 @@ export function AdminReports({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isFetching, setIsFetching] = useState(false);
-  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [fetchedOrders, setFetchedOrders] = useState(null);
   const [invoicesData, setInvoicesData] = useState(null);
+  const ordersLoaded = true;
   const startInputRef = useRef(null);
-  const [ordersData, setOrdersData] = useState(() =>
-    Array.isArray(pastOrders) ? pastOrders : [],
-  );
 
-  useEffect(() => {
-    if (Array.isArray(pastOrders)) {
-      setOrdersData(
-        pastOrders.length > 0
-          ? (current) => mergeSettledOrders(pastOrders, current)
-          : [],
-      );
-      setOrdersLoaded(true);
-    }
-  }, [pastOrders]);
-
-  useEffect(() => {
-    let active = true;
-    apiGetOrderHistory()
-      .then((response) => {
-        const result = response?.data ?? response;
-        const serverOrders = Array.isArray(result)
-          ? result
-          : Array.isArray(result?.orders)
-            ? result.orders
-            : Array.isArray(result?.data)
-              ? result.data
-              : null;
-        if (active && response?.success && serverOrders) {
-          setOrdersData((current) => mergeSettledOrders(serverOrders, current));
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (active) setOrdersLoaded(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const ordersData = useMemo(() => {
+    const rawList = fetchedOrders || pastOrders;
+    return sortOrdersBySettlementTime(
+      dedupeOrders(Array.isArray(rawList) ? rawList : []),
+    );
+  }, [pastOrders, fetchedOrders]);
 
   useEffect(() => {
     let active = true;
@@ -262,9 +147,14 @@ export function AdminReports({
     };
   }, []);
 
-  const reportOrders = invoicesData?.length
-    ? normalizeInvoicesToOrders(invoicesData, ordersData)
-    : ordersData;
+  const reportOrders = useMemo(() => {
+    if (Array.isArray(invoicesData) && invoicesData.length > 0) {
+      const normalized = normalizeInvoicesToOrders(invoicesData, ordersData);
+      return mergeSettledOrders(ordersData, normalized);
+    }
+    return ordersData;
+  }, [ordersData, invoicesData]);
+
   const filteredOrders = reportOrders.filter((order) => {
     if (filterPeriod === "all") return true;
 
@@ -298,7 +188,7 @@ export function AdminReports({
   });
 
   const totalRevenue = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal) || 0),
+    (sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0),
     0,
   );
 
@@ -331,7 +221,7 @@ export function AdminReports({
       );
     }
     return normalizePaymentMethod(order) === channel
-      ? Number(order.grandTotal) || 0
+      ? Number(order.grandTotal ?? order.total ?? 0) || 0
       : 0;
   };
   const paymentStats = {
@@ -356,7 +246,7 @@ export function AdminReports({
     ? Math.round((paymentStats.cash / totalRevenue) * 100)
     : 0;
   const cardPercent = totalRevenue
-    ? Math.round((paymentStats.card / totalRevenue) * 100)
+    ? Math.max(0, 100 - upiPercent - cashPercent)
     : 0;
 
   // Top selling dishes across settled orders
@@ -395,21 +285,23 @@ export function AdminReports({
           : Array.isArray(result?.data)
             ? result.data
             : null;
-      if (response?.success && serverOrders) {
-        setOrdersData((current) => mergeSettledOrders(serverOrders, current));
-        setOrdersLoaded(true);
+      if (Array.isArray(serverOrders) && serverOrders.length > 0) {
+        setFetchedOrders((current) =>
+          mergeSettledOrders(current || pastOrders, serverOrders),
+        );
         return;
       }
       const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setOrdersData(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFetchedOrders((current) =>
+            mergeSettledOrders(current || pastOrders, parsed),
+          );
         }
       }
     } catch {
     } finally {
-      setOrdersLoaded(true);
       setIsFetching(false);
     }
   };
@@ -1892,7 +1784,7 @@ export function AdminReports({
                           textTransform: "uppercase",
                         }}
                       >
-                        {ord.paymentMethod || "CASH"}
+                        {normalizePaymentMethod(ord).toUpperCase()}
                       </td>
                       <td
                         style={{
