@@ -15,6 +15,8 @@ import {
   Receipt,
   ChevronLeft,
   ChevronRight,
+  IndianRupee,
+  TrendingUp,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import {
@@ -206,6 +208,18 @@ export function AdminInvoices({
     .filter((o) => normalizePaymentMethod(o) === "card")
     .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
 
+  const cashOrdersCount = filteredOrders.filter(
+    (o) => normalizePaymentMethod(o) === "cash",
+  ).length;
+
+  const upiOrdersCount = filteredOrders.filter(
+    (o) => normalizePaymentMethod(o) === "upi",
+  ).length;
+
+  const cardOrdersCount = filteredOrders.filter(
+    (o) => normalizePaymentMethod(o) === "card",
+  ).length;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {/* Outer Card Matching Design */}
@@ -327,6 +341,479 @@ export function AdminInvoices({
               }}
             />
           </div>
+        </div>
+
+        {/* Invoices Overview Summary Bar (Total Revenue & Total Invoices List) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              cardTotal > 0
+                ? "repeat(auto-fit, minmax(200px, 1fr))"
+                : "repeat(auto-fit, minmax(215px, 1fr))",
+            gap: "0.75rem",
+            marginBottom: "1.1rem",
+          }}
+        >
+          {/* Card 1: Total Invoices List */}
+          <div
+            onClick={() => {
+              setPaymentFilter("all");
+              setCurrentPage(1);
+            }}
+            style={{
+              background:
+                paymentFilter === "all"
+                  ? "rgba(99, 102, 241, 0.08)"
+                  : "var(--bg-tertiary)",
+              border:
+                paymentFilter === "all"
+                  ? "1px solid rgba(99, 102, 241, 0.45)"
+                  : "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "0.85rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              boxShadow:
+                paymentFilter === "all"
+                  ? "0 2px 10px rgba(99, 102, 241, 0.18)"
+                  : "none",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.borderColor = "#818cf8";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor =
+                paymentFilter === "all"
+                  ? "rgba(99, 102, 241, 0.45)"
+                  : "var(--border-subtle)";
+            }}
+            title="Click to view all invoices in this list"
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Total Invoices List
+              </div>
+              <div
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  marginTop: "2px",
+                  lineHeight: 1.2,
+                }}
+              >
+                {filteredOrders.length}{" "}
+                <span
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  {filteredOrders.length === 1 ? "Invoice" : "Invoices"}
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-dim)",
+                  marginTop: "3px",
+                }}
+              >
+                {dateFilter === "all"
+                  ? "All settled records"
+                  : `Filtered (${filteredOrders.length})`}
+              </div>
+            </div>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "rgba(99, 102, 241, 0.15)",
+                border: "1px solid rgba(99, 102, 241, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <FileText size={18} color="#818cf8" />
+            </div>
+          </div>
+
+          {/* Card 2: Total Revenue */}
+          <div
+            onClick={() => {
+              setPaymentFilter("all");
+              setCurrentPage(1);
+            }}
+            style={{
+              background:
+                paymentFilter === "all"
+                  ? "rgba(245, 158, 11, 0.08)"
+                  : "var(--bg-tertiary)",
+              border:
+                paymentFilter === "all"
+                  ? "1px solid rgba(245, 158, 11, 0.45)"
+                  : "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "0.85rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              boxShadow:
+                paymentFilter === "all"
+                  ? "0 2px 10px rgba(245, 158, 11, 0.18)"
+                  : "none",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.borderColor = "#f59e0b";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor =
+                paymentFilter === "all"
+                  ? "rgba(245, 158, 11, 0.45)"
+                  : "var(--border-subtle)";
+            }}
+            title="Total settled billing revenue"
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Total Revenue
+              </div>
+              <div
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  color: "#f59e0b",
+                  marginTop: "2px",
+                  lineHeight: 1.2,
+                }}
+              >
+                {formatCurrency(totalCollected)}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-dim)",
+                  marginTop: "3px",
+                }}
+              >
+                Gross customer settlements
+              </div>
+            </div>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "rgba(245, 158, 11, 0.15)",
+                border: "1px solid rgba(245, 158, 11, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <IndianRupee size={18} color="#f59e0b" />
+            </div>
+          </div>
+
+          {/* Card 3: Cash Revenue */}
+          <div
+            onClick={() => {
+              setPaymentFilter(paymentFilter === "cash" ? "all" : "cash");
+              setCurrentPage(1);
+            }}
+            style={{
+              background:
+                paymentFilter === "cash"
+                  ? "rgba(16, 185, 129, 0.12)"
+                  : "var(--bg-tertiary)",
+              border:
+                paymentFilter === "cash"
+                  ? "1px solid #10b981"
+                  : "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "0.85rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              boxShadow:
+                paymentFilter === "cash"
+                  ? "0 2px 10px rgba(16, 185, 129, 0.22)"
+                  : "none",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.borderColor = "#10b981";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor =
+                paymentFilter === "cash" ? "#10b981" : "var(--border-subtle)";
+            }}
+            title="Click to filter by Cash payments"
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Cash Collected
+              </div>
+              <div
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  color: "#10b981",
+                  marginTop: "2px",
+                  lineHeight: 1.2,
+                }}
+              >
+                {formatCurrency(cashTotal)}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-dim)",
+                  marginTop: "3px",
+                }}
+              >
+                {cashOrdersCount}{" "}
+                {cashOrdersCount === 1 ? "cash invoice" : "cash invoices"}
+              </div>
+            </div>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "rgba(16, 185, 129, 0.15)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Banknote size={18} color="#10b981" />
+            </div>
+          </div>
+
+          {/* Card 4: UPI Revenue */}
+          <div
+            onClick={() => {
+              setPaymentFilter(paymentFilter === "upi" ? "all" : "upi");
+              setCurrentPage(1);
+            }}
+            style={{
+              background:
+                paymentFilter === "upi"
+                  ? "rgba(56, 189, 248, 0.12)"
+                  : "var(--bg-tertiary)",
+              border:
+                paymentFilter === "upi"
+                  ? "1px solid #38bdf8"
+                  : "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "0.85rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              boxShadow:
+                paymentFilter === "upi"
+                  ? "0 2px 10px rgba(56, 189, 248, 0.22)"
+                  : "none",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.borderColor = "#38bdf8";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor =
+                paymentFilter === "upi" ? "#38bdf8" : "var(--border-subtle)";
+            }}
+            title="Click to filter by UPI payments"
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                UPI Collected
+              </div>
+              <div
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  color: "#38bdf8",
+                  marginTop: "2px",
+                  lineHeight: 1.2,
+                }}
+              >
+                {formatCurrency(upiTotal)}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-dim)",
+                  marginTop: "3px",
+                }}
+              >
+                {upiOrdersCount}{" "}
+                {upiOrdersCount === 1 ? "UPI invoice" : "UPI invoices"}
+              </div>
+            </div>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "rgba(56, 189, 248, 0.15)",
+                border: "1px solid rgba(56, 189, 248, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Smartphone size={18} color="#38bdf8" />
+            </div>
+          </div>
+
+          {/* Card 5: Card Revenue (if any) */}
+          {cardTotal > 0 && (
+            <div
+              onClick={() => {
+                setPaymentFilter(paymentFilter === "card" ? "all" : "card");
+                setCurrentPage(1);
+              }}
+              style={{
+                background:
+                  paymentFilter === "card"
+                    ? "rgba(192, 132, 252, 0.12)"
+                    : "var(--bg-tertiary)",
+                border:
+                  paymentFilter === "card"
+                    ? "1px solid #c084fc"
+                    : "1px solid var(--border-subtle)",
+                borderRadius: "12px",
+                padding: "0.85rem 1rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                boxShadow:
+                  paymentFilter === "card"
+                    ? "0 2px 10px rgba(192, 132, 252, 0.22)"
+                    : "none",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.borderColor = "#c084fc";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.borderColor =
+                  paymentFilter === "card" ? "#c084fc" : "var(--border-subtle)";
+              }}
+              title="Click to filter by Card payments"
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.68rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Card Collected
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.35rem",
+                    fontWeight: 800,
+                    color: "#c084fc",
+                    marginTop: "2px",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {formatCurrency(cardTotal)}
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.68rem",
+                    color: "var(--text-dim)",
+                    marginTop: "3px",
+                  }}
+                >
+                  {cardOrdersCount}{" "}
+                  {cardOrdersCount === 1 ? "card invoice" : "card invoices"}
+                </div>
+              </div>
+              <div
+                style={{
+                  width: "38px",
+                  height: "38px",
+                  borderRadius: "10px",
+                  background: "rgba(192, 132, 252, 0.15)",
+                  border: "1px solid rgba(192, 132, 252, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <CreditCard size={18} color="#c084fc" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Invoice date filters */}
