@@ -706,10 +706,18 @@ export function AdminPortal({
 
   // Open staff modal for Add or Edit
   const generateEmployeeId = () => {
-    const prefix = "EMP";
-    const timestamp = Date.now().toString().slice(-5);
-    const rand = Math.floor(Math.random() * 900 + 100);
-    return `${prefix}-${timestamp}${rand}`;
+    // Find the highest existing EMP-XXX number from staffList
+    let maxNum = 0;
+    (staffList || []).forEach((staff) => {
+      const id = staff?.employeeId || "";
+      const match = id.match(/^EMP-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    const nextNum = maxNum + 1;
+    return `EMP-${String(nextNum).padStart(3, "0")}`;
   };
 
   const handleOpenStaffModal = (person = null) => {
