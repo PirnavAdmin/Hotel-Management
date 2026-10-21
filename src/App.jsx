@@ -14,6 +14,10 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import {
+  ConfirmDeleteModal,
+  useConfirmDelete,
+} from "./common/ConfirmDeleteModal";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
@@ -219,6 +223,7 @@ const getDeletedTableIds = () => {
 };
 
 export function App() {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
 
   useEffect(() => {
@@ -1938,15 +1943,28 @@ export function App() {
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
     const result = await apiCreateStaff(newPerson);
-    if (!result?.success) {
+    const createdStaff = result?.data?.data ?? result?.data;
+    const staffId = createdStaff?.staffId ?? createdStaff?.id;
+    if (!result?.success || !staffId) {
       showToast(
-        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️  Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
 
-    setStaffList((prev) => [...prev, newPerson]);
-    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
+    const savedStaff = {
+      ...createdStaff,
+      id: staffId,
+      name: createdStaff.fullName || createdStaff.name || newPerson.name,
+      role: createdStaff.roleTitle || createdStaff.role || newPerson.role,
+      employeeId:
+        newPerson.employeeId ||
+        `EMP-${String(staffId).padStart(3, "0")}`,
+    };
+    setStaffList((prev) => [...prev, savedStaff]);
+    showToast(
+      `✅ ${savedStaff.name} saved with Employee ID ${savedStaff.employeeId || `EMP-${String(staffId).padStart(5, "0")}`}`,
+    );
     return true;
   };
 
@@ -1997,37 +2015,42 @@ export function App() {
       prev.filter((p) => (p.id ?? p.staffId) !== personId),
     );
     apiDeleteStaff(personId).catch(() => {});
-    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
+    showToast(`🗑️  Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
   const handleResetData = () => {
-    if (
-      window.confirm(
-        "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
-      )
-    ) {
-      setDeletedTableIds([]);
-      setTables(INITIAL_TABLES);
-      setMenuItems([]);
-      setStaffList([]);
-      setPastOrders([]);
-      setInventory([]);
-      localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
-      localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
-      localStorage.setItem(STORAGE_KEY_MENU, "[]");
-      localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-      localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
-      localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
-      pushGlobalSync({
-        [STORAGE_KEY_TABLES]: INITIAL_TABLES,
-        [STORAGE_KEY_MENU]: [],
-        [STORAGE_KEY_STAFF]: [],
-        [STORAGE_KEY_ORDERS]: [],
-        [STORAGE_KEY_INVENTORY]: [],
-      });
-      showToast("Data reset to default 15 tables.");
-    }
+    requestDelete({
+      title: "Reset All Restaurant Data?",
+      message:
+        "Clear all dynamic tables, menu items, staff, invoices and inventory? This cannot be undone.",
+      confirmLabel: "Yes, Reset All",
+      onConfirm: () => {
+        setDeletedTableIds([]);
+        setTables(INITIAL_TABLES);
+        setMenuItems([]);
+        setStaffList([]);
+        setPastOrders([]);
+        setInventory([]);
+        localStorage.setItem(
+          STORAGE_KEY_TABLES,
+          JSON.stringify(INITIAL_TABLES),
+        );
+        localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
+        localStorage.setItem(STORAGE_KEY_MENU, "[]");
+        localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+        localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
+        localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
+        pushGlobalSync({
+          [STORAGE_KEY_TABLES]: INITIAL_TABLES,
+          [STORAGE_KEY_MENU]: [],
+          [STORAGE_KEY_STAFF]: [],
+          [STORAGE_KEY_ORDERS]: [],
+          [STORAGE_KEY_INVENTORY]: [],
+        });
+        showToast("Data reset to default 15 tables.");
+      },
+    });
   };
 
   return (
@@ -2045,6 +2068,7 @@ export function App() {
         (posSession.role === "pos" || posSession.role === "admin") && (
           <Header
             restaurantName={restaurantSettings.restaurantName}
+            restaurantLogo={restaurantSettings.logo}
             tables={tables}
             activeView={activeView}
             setActiveView={setActiveView}
@@ -2077,6 +2101,8 @@ export function App() {
               <KitchenKOTView
                 tables={tables}
                 pastOrders={pastOrders}
+                restaurantName={restaurantSettings.restaurantName}
+                restaurantLogo={restaurantSettings.logo}
                 currentTheme={theme}
                 onChangeTheme={setTheme}
                 onBackToFloor={() => {
@@ -2487,6 +2513,9 @@ export function App() {
           }}
         />
       )}
+
+      {/* Global Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }

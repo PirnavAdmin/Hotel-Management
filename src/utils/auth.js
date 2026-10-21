@@ -54,27 +54,29 @@ export async function getUsers() {
     };
   };
 
-  const remoteUsers = res.success ? extractList(res.data).filter((user) => user && typeof user === 'object').map(normalizeUser) : [];
+  // If server responded successfully, it is the source of truth.
+  // Do NOT merge with localStorage — that would resurrect deleted users.
+  if (res.success) {
+    const remoteUsers = extractList(res.data)
+      .filter((user) => user && typeof user === 'object')
+      .map(normalizeUser);
+    try {
+      localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(remoteUsers));
+    } catch {}
+    return { users: remoteUsers, error: '' };
+  }
+
+  // Server unreachable — fall back to localStorage cache only
   let cachedUsers = [];
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
-    cachedUsers = extractList(saved).filter((user) => user && typeof user === 'object').map(normalizeUser);
-  } catch {}
-
-  const byUser = new Map();
-  [...remoteUsers, ...cachedUsers].forEach((user) => {
-    const key = user.id
-      ? `id:${user.id}`
-      : `username:${user.username.trim().toLowerCase()}`;
-    byUser.set(key, { ...(byUser.get(key) || {}), ...user });
-  });
-  const users = Array.from(byUser.values());
-  try {
-    localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(users));
+    cachedUsers = extractList(saved)
+      .filter((user) => user && typeof user === 'object')
+      .map(normalizeUser);
   } catch {}
   return {
-    users,
-    error: res.success ? '' : (res.error || 'Could not reach the user service; showing saved accounts.'),
+    users: cachedUsers,
+    error: res.error || 'Could not reach the user service; showing saved accounts.',
   };
 }
 
@@ -96,14 +98,7 @@ export async function registerUser(userData) {
 }
 
 export async function deleteUser(userId) {
-  let res = { success: false };
-  try {
-    res = await apiDeleteUser(userId);
-  } catch (err) {
-    res = { success: false, error: err?.message };
-  }
-
-  // Always remove from localStorage cache so account deletion is guaranteed
+  // 1. Remove from localStorage immediately so it doesn't resurrect on next fetch
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
     const nextSaved = saved.filter(u =>
@@ -113,7 +108,15 @@ export async function deleteUser(userId) {
     localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(nextSaved));
   } catch {}
 
-  return { success: true, error: res.error };
+  // 2. Delete from server-db.json (permanent backend delete)
+  let res = { success: false };
+  try {
+    res = await apiDeleteUser(userId);
+  } catch (err) {
+    res = { success: false, error: err?.message };
+  }
+
+  return { success: true, error: res.success ? null : res.error };
 }
 
 export async function updateUserDetails(userId, userData) {

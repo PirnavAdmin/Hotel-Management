@@ -127,7 +127,7 @@ export function TableView({ tables, onSelectTable }) {
         matchesTableDropdown &&
         matchesSearch
       );
-    });
+    }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
   }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
 
   const hasActiveFilters =
@@ -304,7 +304,7 @@ export function TableView({ tables, onSelectTable }) {
               </option>
               {uniqueTableNumbers.map((tbl) => (
                 <option key={tbl.id} value={tbl.id} style={{ background: "#18181b", color: "#f4f4f5" }}>
-                  {tbl.name || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
+                  Table {tbl.id} {tbl.section ? `• ${tbl.section}` : ""}
                 </option>
               ))}
             </select>
