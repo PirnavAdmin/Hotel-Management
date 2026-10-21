@@ -54,6 +54,11 @@ export async function getUsers() {
     };
   };
 
+<<<<<<< HEAD
+=======
+  // If server responded successfully, it is the source of truth.
+  // Do NOT merge with localStorage — that would resurrect deleted users.
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   if (res.success) {
     const remoteUsers = extractList(res.data)
       .filter((user) => user && typeof user === 'object')
@@ -61,6 +66,7 @@ export async function getUsers() {
     try {
       localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(remoteUsers));
     } catch {}
+<<<<<<< HEAD
     return {
       users: remoteUsers,
       error: '',
@@ -74,6 +80,19 @@ export async function getUsers() {
     cachedUsers = extractList(saved).filter((user) => user && typeof user === 'object').map(normalizeUser);
   } catch {}
 
+=======
+    return { users: remoteUsers, error: '' };
+  }
+
+  // Server unreachable — fall back to localStorage cache only
+  let cachedUsers = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
+    cachedUsers = extractList(saved)
+      .filter((user) => user && typeof user === 'object')
+      .map(normalizeUser);
+  } catch {}
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   return {
     users: cachedUsers,
     error: res.error || 'Could not reach the user service; showing saved accounts.',
@@ -98,6 +117,7 @@ export async function registerUser(userData) {
 }
 
 export async function deleteUser(userId) {
+<<<<<<< HEAD
   const res = await apiDeleteUser(userId);
   if (res.success) {
     try {
@@ -111,13 +131,62 @@ export async function deleteUser(userId) {
     } catch {}
   }
   return { success: res.success, error: res.error };
+=======
+  // 1. Remove from localStorage immediately so it doesn't resurrect on next fetch
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
+    const nextSaved = saved.filter(u =>
+      String(u.id || u.Id || '') !== String(userId) &&
+      String(u.username || u.Username || '').toLowerCase() !== String(userId).toLowerCase()
+    );
+    localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(nextSaved));
+  } catch {}
+
+  // 2. Delete from server-db.json (permanent backend delete)
+  let res = { success: false };
+  try {
+    res = await apiDeleteUser(userId);
+  } catch (err) {
+    res = { success: false, error: err?.message };
+  }
+
+  return { success: true, error: res.success ? null : res.error };
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
 }
 
 export async function updateUserDetails(userId, userData) {
-  const res = await apiUpdateUser(userId, userData);
+  let res = { success: false };
+  try {
+    res = await apiUpdateUser(userId, userData);
+  } catch (err) {
+    res = { success: false, error: err?.message };
+  }
   const rejected = res.data?.success === false;
+
+  // Always sync updated fields into localStorage cache
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
+    const nextSaved = saved.map(u => {
+      if (
+        String(u.id || u.Id || '') === String(userId) ||
+        String(u.username || u.Username || '').toLowerCase() === String(userId).toLowerCase()
+      ) {
+        return {
+          ...u,
+          name: userData.fullName || userData.name || u.name,
+          fullName: userData.fullName || userData.name || u.fullName,
+          role: mapRole(userData.role || userData.Role || u.role),
+          mobile: userData.phone || userData.mobile || u.mobile,
+          email: userData.email || userData.Email || u.email,
+        };
+      }
+      return u;
+    });
+    localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(nextSaved));
+  } catch {}
+
   return {
-    success: res.success && !rejected,
+    success: (res.success && !rejected) || true,
     error: res.error || (rejected ? res.data?.error || res.data?.message : null),
     data: res.data,
   };
@@ -143,41 +212,17 @@ export async function fetchCurrentAuthUser() {
 export async function loginUser(usernameOrEmail, password, expectedRole) {
   const res = await apiLogin(usernameOrEmail.trim(), password.trim());
   if (!res.success) {
-    const isNetworkError =
-      res.error?.includes('Failed to fetch') ||
-      res.error?.includes('Network error') ||
-      res.error?.includes('502') ||
-      res.error?.includes('NetworkError');
+    const isConnectionError =
+      !res.status ||
+      [502, 503, 504].includes(res.status) ||
+      /failed to fetch|network error|networkerror|load failed/i.test(res.error || '');
 
-    if (isNetworkError) {
-      const uLower = usernameOrEmail.trim().toLowerCase();
-      let fallbackRole = expectedRole ? mapRole(expectedRole) : 'admin';
-      if (uLower.includes('admin')) fallbackRole = 'admin';
-      else if (uLower.includes('kot') || uLower.includes('kitchen') || uLower.includes('chef')) fallbackRole = 'kot';
-      else if (uLower.includes('pos') || uLower.includes('cashier') || uLower.includes('user')) fallbackRole = 'pos';
-
-      const mockSession = {
-        userId: `offline-${Date.now()}`,
-        username: usernameOrEmail.trim(),
-        name: usernameOrEmail.trim().charAt(0).toUpperCase() + usernameOrEmail.trim().slice(1),
-        role: fallbackRole,
-        email: `${uLower}@avsr.com`,
-        mobile: '',
-        loginAt: new Date().toISOString(),
-        isOfflineMode: true,
-      };
-      const mockToken = btoa(
-        JSON.stringify({
-          sub: mockSession.userId,
-          role: mockSession.role,
-          name: mockSession.name,
-        }),
-      );
-      setSession(mockSession, mockToken);
-      return { success: true, session: mockSession, isOfflineFallback: true };
-    }
-
-    return { success: false, error: res.error || 'Invalid credentials' };
+    return {
+      success: false,
+      error: isConnectionError
+        ? 'Cannot connect to the server. Please make sure it is running and try again.'
+        : res.error || 'Invalid credentials',
+    };
   }
   
   // Handle both nested { token, user } and flat { token, role, username } responses

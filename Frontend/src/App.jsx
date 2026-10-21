@@ -14,6 +14,10 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import {
+  ConfirmDeleteModal,
+  useConfirmDelete,
+} from "./common/ConfirmDeleteModal";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
@@ -97,6 +101,7 @@ const dedupeStaff = (staff) => {
   return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
+<<<<<<< HEAD
 const isAllowedTableFormat = (str) => {
   if (!str) return false;
   const trimmed = String(str).trim();
@@ -175,12 +180,120 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
     tablesById.set(id, normalized);
   });
 
+=======
+const isRogueName = (name) => {
+  if (!name) return false;
+  const lower = String(name).trim().toLowerCase();
+  return (
+    lower.includes("live verification") ||
+    lower.includes("table final") ||
+    lower.includes("table 20") ||
+    lower === "verification" ||
+    lower === "test"
+  );
+};
+
+const parseTableNumber = (table) => {
+  const rawName = String(table.tableName || table.name || "").trim();
+  const nameMatch = rawName.match(/^(?:table|t)\s*(\d+)$/i);
+  if (nameMatch) {
+    return parseInt(nameMatch[1], 10);
+  }
+  const rawId = Number(table.id ?? table.tableId);
+  if (Number.isFinite(rawId) && rawId > 0) {
+    return rawId;
+  }
+  return null;
+};
+
+const mergeIncomingTables = (incomingTables, deletedTableIds) => {
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
     : [];
+  const tablesById = new Map();
+
+  // 1. Seed with default 15 tables from INITIAL_TABLES so the standard floor plan is always intact
+  INITIAL_TABLES.forEach((defTable) => {
+    if (!deletedIds.includes(String(defTable.id))) {
+      tablesById.set(Number(defTable.id), { ...defTable });
+    }
+  });
+
+  // 2. Overlay incoming live tables from server or localStorage
+  if (Array.isArray(incomingTables)) {
+    incomingTables.forEach((table) => {
+      if (!table || typeof table !== "object") return;
+      const rawName = String(table.tableName || table.name || "").trim();
+      const num = parseTableNumber(table);
+
+      let targetId = null;
+      if (num && num >= 1 && num <= 15) {
+        targetId = num;
+      } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
+        targetId = Number(table.id);
+      } else if (num) {
+        targetId = num;
+      }
+
+      if (!targetId || deletedIds.includes(String(targetId))) return;
+
+      const isStandard = targetId >= 1 && targetId <= 15;
+      if (!isStandard && isRogueName(rawName)) return;
+
+      const existing = tablesById.get(targetId) || {};
+      const cleanName = isStandard
+        ? isRogueName(rawName) || !rawName
+          ? `Table ${targetId}`
+          : rawName.match(/^(?:table|t)\s*(\d+)$/i)
+            ? `Table ${targetId}`
+            : rawName
+        : rawName || `Table ${targetId}`;
+
+      const normalized = {
+        ...existing,
+        ...table,
+        id: targetId,
+        name: cleanName,
+        backendTableId:
+          table.tableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
+        section:
+          table.sectionArea || table.section || existing.section || "Main Hall",
+        capacity: Number(
+          table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
+        ),
+        status: String(table.status || existing.status || "vacant").toLowerCase(),
+        server:
+          table.assignedServerName || table.server || existing.server || "Staff",
+        guests:
+          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+            ? 0
+            : Number(table.occupiedChairs ?? table.guests ?? existing.guests ?? 0),
+        items: Array.isArray(table.items)
+          ? table.items
+          : Array.isArray(existing.items)
+            ? existing.items
+            : [],
+        orderTime: table.orderTime ?? existing.orderTime ?? null,
+        discountPercent: Number(
+          table.discountPercent ?? existing.discountPercent ?? 0,
+        ),
+        serviceCharge: Number(
+          table.serviceCharge ?? existing.serviceCharge ?? 5,
+        ),
+        occupiedSince:
+          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+            ? null
+            : (table.occupiedSince || existing.occupiedSince || null),
+      };
+
+      tablesById.set(targetId, normalized);
+    });
+  }
+
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
-    .sort((a, b) => a.id - b.id);
+    .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
 const getDeletedTableIds = () => {
@@ -195,6 +308,7 @@ const getDeletedTableIds = () => {
 };
 
 export function App() {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
 
   useEffect(() => {
@@ -255,7 +369,7 @@ export function App() {
     return Array.isArray(initial) ? initial : [];
   });
 
-  // Use the standard 15-table floor plan on first launch, while honoring deletions.
+  // Load saved tables only; do not seed demo records into the live list.
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
     const delList = Array.isArray(deleted) ? deleted : [];
@@ -274,7 +388,11 @@ export function App() {
     } catch {
       // Fallback
     }
+<<<<<<< HEAD
     return INITIAL_TABLES;
+=======
+    return [];
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -341,6 +459,7 @@ export function App() {
     apiGetTables().then((response) => {
       const backendTables = Array.isArray(response)
         ? response
+<<<<<<< HEAD
         : response?.success && Array.isArray(response.data?.data)
           ? response.data.data
           : response?.success && Array.isArray(response.data?.tables)
@@ -350,6 +469,13 @@ export function App() {
               : response?.success && Array.isArray(response.tables)
                 ? response.tables
                 : null;
+=======
+        : response?.success && Array.isArray(response.data)
+          ? response.data
+          : response?.success && Array.isArray(response.tables)
+            ? response.tables
+          : null;
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
       if (Array.isArray(backendTables)) {
         const merged = mergeIncomingTables(
           backendTables,
@@ -428,7 +554,9 @@ export function App() {
           : Array.isArray(result?.data)
             ? result.data
             : [];
-      setPastOrders(dedupeOrders(backendOrders));
+      if (Array.isArray(backendOrders) && backendOrders.length > 0) {
+        setPastOrders((current) => mergeSettledOrders(current, backendOrders));
+      }
     });
   }, []);
 
@@ -612,6 +740,17 @@ export function App() {
     } catch {}
   };
 
+  // BroadcastChannel helper for cross-tab instantaneous sync
+  const broadcastSync = (type, payload) => {
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        const bc = new BroadcastChannel("avsr_pos_cross_sync");
+        bc.postMessage({ type, payload });
+        bc.close();
+      }
+    } catch {}
+  };
+
   // Sync to LocalStorage & Global Network DB
   useEffect(() => {
     try {
@@ -625,29 +764,45 @@ export function App() {
       )
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
-      localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
-      pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+      const cleanJson = JSON.stringify(cleanTables);
+      if (localStorage.getItem(STORAGE_KEY_TABLES) !== cleanJson) {
+        localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+        broadcastSync("SYNC_TABLES", cleanTables);
+      }
     } catch {}
   }, [tables, deletedTableIds]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(menuItems));
-      pushGlobalSync({ [STORAGE_KEY_MENU]: menuItems });
+      const menuJson = JSON.stringify(menuItems);
+      if (localStorage.getItem(STORAGE_KEY_MENU) !== menuJson) {
+        localStorage.setItem(STORAGE_KEY_MENU, menuJson);
+        pushGlobalSync({ [STORAGE_KEY_MENU]: menuItems });
+        broadcastSync("SYNC_MENU", menuItems);
+      }
     } catch {}
   }, [menuItems]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(staffList));
-      pushGlobalSync({ [STORAGE_KEY_STAFF]: staffList });
+      const staffJson = JSON.stringify(staffList);
+      if (localStorage.getItem(STORAGE_KEY_STAFF) !== staffJson) {
+        localStorage.setItem(STORAGE_KEY_STAFF, staffJson);
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: staffList });
+        broadcastSync("SYNC_STAFF", staffList);
+      }
     } catch {}
   }, [staffList]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(pastOrders));
-      pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
+      const ordersJson = JSON.stringify(pastOrders);
+      if (localStorage.getItem(STORAGE_KEY_ORDERS) !== ordersJson) {
+        localStorage.setItem(STORAGE_KEY_ORDERS, ordersJson);
+        pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
+        broadcastSync("SYNC_ORDERS", pastOrders);
+      }
     } catch {}
   }, [pastOrders]);
 
@@ -864,7 +1019,66 @@ export function App() {
     } catch {}
 
     const handleStorageChange = (e) => {
-      if (e.key === STORAGE_KEY_LATEST_ALERT && e.newValue) {
+      if (!e.key || !e.newValue) return;
+
+      if (e.key === STORAGE_KEY_TABLES) {
+        try {
+          const incomingTables = JSON.parse(e.newValue);
+          if (Array.isArray(incomingTables)) {
+            const freshDel = getDeletedTableIds();
+            const clean = mergeIncomingTables(incomingTables, freshDel);
+            setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_ORDERS) {
+        try {
+          const incomingOrders = JSON.parse(e.newValue);
+          if (Array.isArray(incomingOrders)) {
+            setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_MENU) {
+        try {
+          const incomingMenu = JSON.parse(e.newValue);
+          if (Array.isArray(incomingMenu)) {
+            const normalized = incomingMenu.map(normalizeMenuItem);
+            setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_STAFF) {
+        try {
+          const incomingStaff = JSON.parse(e.newValue);
+          if (Array.isArray(incomingStaff)) {
+            const deduped = dedupeStaff(incomingStaff);
+            setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_DELETED_TABLES) {
+        try {
+          const incomingDeleted = JSON.parse(e.newValue);
+          if (Array.isArray(incomingDeleted)) {
+            setDeletedTableIds(incomingDeleted);
+            setTables((prev) => prev.filter((t) => !incomingDeleted.map(String).includes(String(t.id))));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_INVENTORY) {
+        try {
+          const incomingInventory = JSON.parse(e.newValue);
+          if (Array.isArray(incomingInventory)) {
+            window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
+          }
+        } catch {}
+      } else if (e.key === RESTAURANT_SETTINGS_KEY) {
+        try {
+          const incomingSettings = JSON.parse(e.newValue);
+          if (incomingSettings && typeof incomingSettings === "object") {
+            setRestaurantSettings(incomingSettings);
+            window.dispatchEvent(new Event("restaurant-settings-updated"));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_THEME) {
+        setTheme(e.newValue);
+      } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
           const alert = JSON.parse(e.newValue);
           if (alert && alert.id) {
@@ -883,22 +1097,102 @@ export function App() {
       }
     };
 
-    const handleOrdersStorageUpdate = (event) => {
-      if (event.key !== STORAGE_KEY_ORDERS || !event.newValue) return;
+    let syncChannel = null;
+    if (typeof BroadcastChannel !== "undefined") {
       try {
-        const incomingOrders = JSON.parse(event.newValue);
-        if (Array.isArray(incomingOrders)) {
-          setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
+        syncChannel = new BroadcastChannel("avsr_pos_cross_sync");
+        syncChannel.onmessage = (event) => {
+          const { type, payload } = event.data || {};
+          if (!type || !payload) return;
+
+          if (type === "SYNC_TABLES" && Array.isArray(payload)) {
+            const freshDel = getDeletedTableIds();
+            const clean = mergeIncomingTables(payload, freshDel);
+            setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
+          } else if (type === "SYNC_ORDERS" && Array.isArray(payload)) {
+            setPastOrders((current) => mergeSettledOrders(current, payload));
+          } else if (type === "SYNC_MENU" && Array.isArray(payload)) {
+            const normalized = payload.map(normalizeMenuItem);
+            setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
+          } else if (type === "SYNC_STAFF" && Array.isArray(payload)) {
+            const deduped = dedupeStaff(payload);
+            setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
+            setDeletedTableIds(payload);
+            setTables((prev) => prev.filter((t) => !payload.map(String).includes(String(t.id))));
+          }
+        };
+      } catch {}
+    }
+
+    const syncAllFromStorage = () => {
+      try {
+        const rawTables = localStorage.getItem(STORAGE_KEY_TABLES);
+        if (rawTables) {
+          const parsed = JSON.parse(rawTables);
+          if (Array.isArray(parsed)) {
+            const freshDel = getDeletedTableIds();
+            const clean = mergeIncomingTables(parsed, freshDel);
+            setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
+        if (rawOrders) {
+          const parsed = JSON.parse(rawOrders);
+          if (Array.isArray(parsed)) {
+            setPastOrders((current) => mergeSettledOrders(current, parsed));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawMenu = localStorage.getItem(STORAGE_KEY_MENU);
+        if (rawMenu) {
+          const parsed = JSON.parse(rawMenu);
+          if (Array.isArray(parsed)) {
+            const normalized = parsed.map(normalizeMenuItem);
+            setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawStaff = localStorage.getItem(STORAGE_KEY_STAFF);
+        if (rawStaff) {
+          const parsed = JSON.parse(rawStaff);
+          if (Array.isArray(parsed)) {
+            const deduped = dedupeStaff(parsed);
+            setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          }
+        }
+      } catch {}
+
+      try {
+        const rawDel = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
+        if (rawDel) {
+          const parsed = JSON.parse(rawDel);
+          if (Array.isArray(parsed)) {
+            setDeletedTableIds(parsed);
+          }
         }
       } catch {}
     };
 
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("storage", handleOrdersStorageUpdate);
+    window.addEventListener("focus", syncAllFromStorage);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") syncAllFromStorage();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("storage", handleOrdersStorageUpdate);
+      window.removeEventListener("focus", syncAllFromStorage);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (syncChannel) syncChannel.close();
       if (es) es.close();
     };
   }, []);
@@ -1419,6 +1713,7 @@ export function App() {
             ...t,
             items: [],
             status: "vacant",
+            guests: 0,
             orderTime: null,
             discountPercent: 0,
           };
@@ -1453,6 +1748,7 @@ export function App() {
             ...t,
             items: [],
             status: "vacant",
+            guests: 0,
             orderTime: null,
             discountPercent: 0,
           };
@@ -1506,6 +1802,11 @@ export function App() {
         settlementData.id ||
         `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       date: settlementData.date || getTodayDateString(),
+      status: "Settled",
+      Status: "Settled",
+      paymentMethod: settlementData.paymentMethod || "upi",
+      paymentMode: settlementData.paymentMode || settlementData.paymentMethod || "upi",
+      PaymentMethod: settlementData.PaymentMethod || settlementData.paymentMethod || "upi",
       cookingStartedAt:
         tableObj?.cookingStartedAt ||
         tableObj?.orderTime ||
@@ -1561,6 +1862,7 @@ export function App() {
 
     const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);
+<<<<<<< HEAD
 
     const orderPayload = {
       tableId: Number.isInteger(Number(settlementData.tableId)) ? Number(settlementData.tableId) : null,
@@ -1604,12 +1906,16 @@ export function App() {
       })
       .catch(() => {});
 
+=======
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
     try {
       localStorage.setItem(
         STORAGE_KEY_ORDERS,
         JSON.stringify(updatedPastOrders),
       );
+      pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
+    apiCreateOrder(enrichedSettlement).catch(() => {});
 
     const updatedTables = tables.map((t) => {
       if (t.id !== settlementData.tableId) return t;
@@ -1619,7 +1925,7 @@ export function App() {
         status: "vacant",
         orderTime: null,
         discountPercent: 0,
-        guests: t.capacity,
+        guests: 0,
       };
     });
     setTables(updatedTables);
@@ -1892,6 +2198,7 @@ export function App() {
           JSON.stringify(nextDeleted),
         );
       } catch {}
+<<<<<<< HEAD
 
       setTables((prev) => {
         const filtered = prev.filter((t) => Number(t.id) !== assignedId);
@@ -1909,6 +2216,15 @@ export function App() {
       showToast(`❌ Failed to connect to server: ${err.message || "Network Error"}`);
       return false;
     }
+=======
+      return updated;
+    });
+    const targetApiId = updatedTable.backendTableId || updatedTable.id;
+    apiUpdateTable(targetApiId, updatedTable).catch(() => {});
+    showToast(
+      `✅ Updated ${updatedTable.name} (${updatedTable.capacity} chairs)`,
+    );
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
   const handleUpdateTable = async (updatedTable) => {
@@ -2013,22 +2329,41 @@ export function App() {
       setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
     }
 
+<<<<<<< HEAD
     showToast(`🗑️  Permanently Deleted ${tbl?.name || "Table"}`);
     return true;
+=======
+    const targetApiId = tbl?.backendTableId || tableId;
+    apiDeleteTable(targetApiId).catch(() => {});
+    showToast(`🗑️  Permanently Deleted ${tbl?.name || "Table"}`);
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
     const result = await apiCreateStaff(newPerson);
-    if (!result?.success) {
+    const createdStaff = result?.data?.data ?? result?.data;
+    const staffId = createdStaff?.staffId ?? createdStaff?.id;
+    if (!result?.success || !staffId) {
       showToast(
         `⚠️  Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
 
-    setStaffList((prev) => [...prev, newPerson]);
-    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
+    const savedStaff = {
+      ...createdStaff,
+      id: staffId,
+      name: createdStaff.fullName || createdStaff.name || newPerson.name,
+      role: createdStaff.roleTitle || createdStaff.role || newPerson.role,
+      employeeId:
+        newPerson.employeeId ||
+        `EMP-${String(staffId).padStart(3, "0")}`,
+    };
+    setStaffList((prev) => [...prev, savedStaff]);
+    showToast(
+      `✅ ${savedStaff.name} saved with Employee ID ${savedStaff.employeeId || `EMP-${String(staffId).padStart(5, "0")}`}`,
+    );
     return true;
   };
 
@@ -2075,6 +2410,7 @@ export function App() {
 
   const handleDeleteStaff = async (personId) => {
     const person = staffList.find((p) => (p.id ?? p.staffId) === personId);
+<<<<<<< HEAD
     try {
       await apiDeleteStaff(personId);
     } catch (err) {
@@ -2085,37 +2421,48 @@ export function App() {
     try {
       localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
     } catch {}
+=======
+    setStaffList((prev) =>
+      prev.filter((p) => (p.id ?? p.staffId) !== personId),
+    );
+    apiDeleteStaff(personId).catch(() => {});
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
     showToast(`🗑️  Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
   const handleResetData = () => {
-    if (
-      window.confirm(
+    requestDelete({
+      title: "Reset All Restaurant Data?",
+      message:
         "Clear all dynamic tables, menu items, staff, invoices and inventory? This cannot be undone.",
-      )
-    ) {
-      setDeletedTableIds([]);
-      setTables([]);
-      setMenuItems([]);
-      setStaffList([]);
-      setPastOrders([]);
-      setInventory([]);
-      localStorage.setItem(STORAGE_KEY_TABLES, "[]");
-      localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
-      localStorage.setItem(STORAGE_KEY_MENU, "[]");
-      localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-      localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
-      localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
-      pushGlobalSync({
-        [STORAGE_KEY_TABLES]: [],
-        [STORAGE_KEY_MENU]: [],
-        [STORAGE_KEY_STAFF]: [],
-        [STORAGE_KEY_ORDERS]: [],
-        [STORAGE_KEY_INVENTORY]: [],
-      });
-      showToast("Dynamic data cleared.");
-    }
+      confirmLabel: "Yes, Reset All",
+      onConfirm: () => {
+        setDeletedTableIds([]);
+        setTables(INITIAL_TABLES);
+        setMenuItems([]);
+        setStaffList([]);
+        setPastOrders([]);
+        setInventory([]);
+        localStorage.setItem(
+          STORAGE_KEY_TABLES,
+          JSON.stringify(INITIAL_TABLES),
+        );
+        localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
+        localStorage.setItem(STORAGE_KEY_MENU, "[]");
+        localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+        localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
+        localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
+        pushGlobalSync({
+          [STORAGE_KEY_TABLES]: INITIAL_TABLES,
+          [STORAGE_KEY_MENU]: [],
+          [STORAGE_KEY_STAFF]: [],
+          [STORAGE_KEY_ORDERS]: [],
+          [STORAGE_KEY_INVENTORY]: [],
+        });
+        showToast("Data reset to default 15 tables.");
+      },
+    });
   };
 
   return (
@@ -2578,6 +2925,9 @@ export function App() {
           }}
         />
       )}
+
+      {/* Global Custom Delete Confirmation Modal */}
+      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }

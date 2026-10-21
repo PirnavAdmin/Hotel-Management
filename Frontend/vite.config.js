@@ -37,8 +37,19 @@ function globalSyncPlugin() {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
+<<<<<<< HEAD
         // Forward all API and upload requests directly to the ASP.NET Core Web API proxy
         return next();
+=======
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning");
+
+        if (req.method === "OPTIONS") {
+          res.statusCode = 204;
+          return res.end();
+        }
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
 
         // Realtime SSE Event Stream
         if (req.url === "/api/events") {
@@ -99,6 +110,23 @@ function globalSyncPlugin() {
         // Update account details in the shared local database.
         const userPasswordRoute = req.url.match(/^\/api\/Users\/([^/]+)\/password$/i);
         const userDetailsRoute = req.url.match(/^\/api\/Users\/([^/]+)$/i);
+
+        // DELETE User
+        if (userDetailsRoute && req.method === "DELETE") {
+          const userId = decodeURIComponent(userDetailsRoute[1]);
+          db = loadDb();
+          const users = db.avsr_auth_users_v1 || [];
+          const nextUsers = users.filter((user) =>
+            String(user.id || user.Id || user.userId || user.UserId || "") !== userId &&
+            String(user.username || user.Username || "").toLowerCase() !== userId.toLowerCase(),
+          );
+          db.avsr_auth_users_v1 = nextUsers;
+          saveDb(db);
+          broadcast({ avsr_auth_users_v1: nextUsers });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, message: "User deleted successfully" }));
+        }
+
         if ((userPasswordRoute && req.method === "PUT") || (userDetailsRoute && req.method === "PUT")) {
           const route = userPasswordRoute || userDetailsRoute;
           const userId = decodeURIComponent(route[1]);
@@ -108,17 +136,17 @@ function globalSyncPlugin() {
             try {
               const payload = JSON.parse(body || "{}");
               db = loadDb();
-              const users = db.avsr_auth_users_v1 || [];
-              const userIndex = users.findIndex((user) =>
+              let users = db.avsr_auth_users_v1 || [];
+              let userIndex = users.findIndex((user) =>
                 String(user.id || user.Id || user.userId || user.UserId || "") === userId ||
                 String(user.username || user.Username || "").toLowerCase() === userId.toLowerCase(),
               );
-              if (userIndex < 0) {
-                res.writeHead(404, { "Content-Type": "application/json" });
-                return res.end(JSON.stringify({ success: false, error: "Account not found." }));
-              }
 
               if (userPasswordRoute) {
+                if (userIndex < 0) {
+                  res.writeHead(404, { "Content-Type": "application/json" });
+                  return res.end(JSON.stringify({ success: false, error: "Account not found." }));
+                }
                 const password = String(payload.password || payload.Password || payload.newPassword || payload.NewPassword || "");
                 if (password.length < 4) {
                   res.writeHead(400, { "Content-Type": "application/json" });
@@ -126,24 +154,29 @@ function globalSyncPlugin() {
                 }
                 users[userIndex].password = password;
               } else {
-                const current = users[userIndex];
-                const username = String(payload.Username || payload.username || current.username || "").trim();
-                const duplicate = users.some((user, index) => index !== userIndex &&
-                  String(user.username || user.Username || "").toLowerCase() === username.toLowerCase(),
-                );
-                if (!username) {
-                  res.writeHead(400, { "Content-Type": "application/json" });
-                  return res.end(JSON.stringify({ success: false, error: "Username is required." }));
+                // If user not in server-db yet, insert as new entry
+                if (userIndex < 0) {
+                  const username = String(payload.Username || payload.username || userId).trim();
+                  const newUser = {
+                    id: userId,
+                    username,
+                    fullName: String(payload.FullName || payload.fullName || payload.name || username).trim(),
+                    role: String(payload.Role || payload.role || "pos").trim().toLowerCase(),
+                    phone: String(payload.Phone || payload.phone || payload.mobile || "").trim(),
+                    email: String(payload.Email || payload.email || "").trim(),
+                    createdAt: new Date().toISOString(),
+                  };
+                  users = [newUser, ...users];
+                  userIndex = 0;
+                } else {
+                  const current = users[userIndex];
+                  const username = String(payload.Username || payload.username || current.username || "").trim();
+                  current.username = username || current.username;
+                  current.fullName = String(payload.FullName || payload.fullName || payload.name || current.fullName || current.username).trim();
+                  current.role = String(payload.Role || payload.role || current.role || "pos").trim().toLowerCase();
+                  current.phone = String(payload.Phone || payload.phone || payload.mobile || current.phone || "").trim();
+                  current.email = String(payload.Email || payload.email || current.email || "").trim();
                 }
-                if (duplicate) {
-                  res.writeHead(409, { "Content-Type": "application/json" });
-                  return res.end(JSON.stringify({ success: false, error: "That username is already in use." }));
-                }
-                current.username = username;
-                current.fullName = String(payload.FullName || payload.fullName || payload.name || current.fullName || username).trim();
-                current.role = String(payload.Role || payload.role || current.role || "pos").trim().toLowerCase();
-                current.phone = String(payload.Phone || payload.phone || payload.mobile || current.phone || "").trim();
-                current.email = String(payload.Email || payload.email || current.email || "").trim();
               }
 
               db.avsr_auth_users_v1 = users;
