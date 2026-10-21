@@ -23,7 +23,7 @@ import {
   mergeSettledOrders,
 } from '../utils/orderDedupe';
 
-export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {} }) {
+export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
