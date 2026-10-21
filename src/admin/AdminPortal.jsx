@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -3457,6 +3457,12 @@ export function AdminPortal({
                 pastOrders={pastOrders}
                 menuItems={menuItems}
                 restaurantSettings={restaurantSettings}
+                inventory={(() => {
+                  try {
+                    const saved = localStorage.getItem('gourmet_pos_inventory_v1');
+                    return saved ? JSON.parse(saved) : [];
+                  } catch(e) { return []; }
+                })()}
               />
             )}
 

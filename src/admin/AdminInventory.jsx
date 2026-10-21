@@ -30,13 +30,326 @@ const normalizeInventoryUnits = (items) =>
 
 const STORAGE_KEY_CUSTOM_INV_CATEGORIES = "pos_custom_inventory_categories";
 const STORAGE_KEY_CUSTOM_INV_UNITS = "pos_custom_inventory_units";
+const STORAGE_KEY_CUSTOM_INV_SUPPLIERS = "pos_custom_inventory_suppliers";
+const STORAGE_KEY_CUSTOM_INV_SUBCATEGORIES = "pos_custom_inventory_subcategories";
+
+export const PRIMARY_CATEGORY_KEYS = [
+  "Grains & Rice",
+  "Meats & Poultry",
+  "Seafood",
+  "Dairy & Cheeses",
+  "Vegetables & Fresh Produce",
+  "Spices & Seasonings",
+  "Cooking Oils & Fats",
+  "Sauces, Pastes & Condiments",
+  "Bakery & Breads",
+  "Beverages & Soft Drinks",
+  "Desserts & Dry Fruits",
+  "Packaging & Disposables",
+  "Hygiene & Cleaning",
+];
+
+export const normalizeCategory = (cat) => {
+  if (!cat || typeof cat !== "string") return "Grains & Rice";
+  const trimmed = cat.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Legacy mappings from old POS versions
+  if (lower === "dairy") return "Dairy & Cheeses";
+  if (
+    lower === "spices & oils" ||
+    lower === "spices & oil" ||
+    lower === "spices" ||
+    lower === "masalas" ||
+    lower === "seasoning"
+  )
+    return "Spices & Seasonings";
+  if (lower === "cooking oil" || lower === "oils" || lower === "fats")
+    return "Cooking Oils & Fats";
+  if (
+    lower === "vegetables & fruits" ||
+    lower === "vegetables" ||
+    lower === "fruits"
+  )
+    return "Vegetables & Fresh Produce";
+  if (lower === "packaging" || lower === "disposables")
+    return "Packaging & Disposables";
+  if (lower === "beverages" || lower === "drinks")
+    return "Beverages & Soft Drinks";
+  if (lower === "desserts" || lower === "dry fruits" || lower === "sweets")
+    return "Desserts & Dry Fruits";
+  if (lower === "sauces" || lower === "condiments" || lower === "pastes")
+    return "Sauces, Pastes & Condiments";
+  if (lower === "bakery" || lower === "breads") return "Bakery & Breads";
+  if (lower === "cleaning" || lower === "hygiene") return "Hygiene & Cleaning";
+  if (lower === "poultry" || lower === "meat" || lower === "meats")
+    return "Meats & Poultry";
+
+  // Check against canonical keys case-insensitively
+  for (const key of PRIMARY_CATEGORY_KEYS) {
+    if (key.toLowerCase() === lower) {
+      return key;
+    }
+  }
+  return trimmed;
+};
+
+export const DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS = {
+  "Grains & Rice": [
+    "Basmati Biryani Rice",
+    "Jeera Samba Rice",
+    "Sona Masoori Rice",
+    "Wheat Flour (Atta)",
+    "Maida",
+    "Corn Flour",
+    "Dals & Pulses",
+    "Poha & Flakes",
+  ],
+  "Meats & Poultry": [
+    "Fresh Chicken (Curry Cut)",
+    "Boneless Chicken Breast",
+    "Chicken Wings & Legs",
+    "Chicken 65 Pieces",
+    "Fresh Mutton (Curry Cut)",
+    "Mutton Keema (Minced)",
+    "Mutton Chops",
+    "Fresh Eggs",
+  ],
+  "Seafood": [
+    "Tiger Prawns (Cleaned)",
+    "Medium Prawns",
+    "Fish Fillets (Basa / Rohu / Apollo)",
+    "Whole Fresh Fish",
+    "Crab",
+  ],
+  "Dairy & Cheeses": [
+    "Fresh Malai Paneer",
+    "Pure Desi Cooking Ghee",
+    "Fresh Curd (Dahi)",
+    "Cooking Butter",
+    "Fresh Milk",
+    "Cooking Cream",
+    "Mozzarella & Cheddar Cheese",
+  ],
+  "Vegetables & Fresh Produce": [
+    "Onions",
+    "Tomatoes",
+    "Ginger",
+    "Garlic",
+    "Fresh Coriander",
+    "Mint Leaves (Pudina)",
+    "Green Chillies",
+    "Lemons",
+    "Potatoes",
+    "Capsicum & Carrots",
+    "Cauliflower & Green Peas",
+    "Curry Leaves",
+  ],
+  "Spices & Seasonings": [
+    "Biryani Masala",
+    "Garam Masala",
+    "Kashmiri Chilli Powder",
+    "Turmeric Powder (Haldi)",
+    "Cumin Seeds (Jeera)",
+    "Coriander Powder (Dhania)",
+    "Whole Khada Spices (Cardamom, Cloves, Star Anise, Cinnamon, Bay Leaves)",
+    "Saffron (Kesar)",
+    "Kasuri Methi",
+    "Ginger-Garlic Paste",
+    "Table Salt & Rock Salt",
+    "Black Pepper",
+    "Chaat Masala",
+  ],
+  "Cooking Oils & Fats": [
+    "Refined Sunflower Oil",
+    "Mustard Oil",
+    "Deep Frying Oil",
+    "Dalda / Vanaspati Ghee",
+    "Sesame Oil",
+  ],
+  "Sauces, Pastes & Condiments": [
+    "Dark Soy Sauce",
+    "Chilli Sauce (Red/Green)",
+    "Tomato Puree & Ketchup",
+    "White Vinegar",
+    "Schezwan Sauce",
+    "Mayonnaise",
+    "Biryani Essence & Rose Water",
+    "Food Coloring (Orange/Red/Yellow)",
+  ],
+  "Bakery & Breads": [
+    "Rumali Roti",
+    "Naan & Kulcha Dough / Flour Mix",
+    "Burger Buns",
+    "Bread Crumbs",
+    "Shawarma Pita Breads",
+  ],
+  "Beverages & Soft Drinks": [
+    "Packaged Mineral Water (Bottles)",
+    "Club Soda",
+    "Soft Drinks (Cola, Lemon, Orange cans/bottles)",
+    "Fruit Pulps & Syrups",
+    "Tea Leaves & Chai Spices",
+    "Coffee Powder",
+  ],
+  "Desserts & Dry Fruits": [
+    "Cashews (Kaju)",
+    "Almonds (Badam)",
+    "Raisins (Kismis)",
+    "Gulab Jamun Mix",
+    "Khoya / Mawa",
+    "Refined White Sugar",
+    "Condensed Milk",
+  ],
+  "Packaging & Disposables": [
+    "Biryani Buckets & Handis",
+    "Foil Meal Trays & Containers",
+    "Aluminium Foil Rolls & Cling Film",
+    "Gravy & Raita Plastic Cups",
+    "Takeaway Carry Bags",
+    "Paper Napkins & Tissues",
+    "Wooden / Plastic Cutlery Sets",
+  ],
+  "Hygiene & Cleaning": [
+    "Commercial Dishwash Liquid",
+    "Floor Cleaner & Degreaser",
+    "Hand Wash & Sanitizer",
+    "Kitchen Gloves & Hairnets",
+    "Garbage Bags & Bins",
+  ],
+};
+
+// Aliases so subcategories are always available even if old category names are referenced
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Dairy"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Dairy & Cheeses"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Spices & Oils"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Spices & Seasonings"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Vegetables & Fruits"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Vegetables & Fresh Produce"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Packaging"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Packaging & Disposables"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Beverages"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Beverages & Soft Drinks"];
+
+export const DEFAULT_SUPPLIERS = [
+  "Metro Cash & Carry Wholesale",
+  "Fresh Farm Poultry & Chicken Supplies",
+  "Royal Halal Mutton Center",
+  "Ocean Fresh Seafoods & Fisheries",
+  "Local Mandi Vegetable & Fruit Market",
+  "Sri Lakshmi Rice & Grain Merchants",
+  "Heritage & Amul Dairy Distributors",
+  "National Spices & Oil Traders",
+  "City Packaging & Disposable Supplies",
+  "Beverage & Soft Drinks Depot",
+  "General Wholesale Supplier",
+];
+
+export const deduplicateAndNormalizeInventory = (items) => {
+  if (!Array.isArray(items)) return [];
+
+  const map = new Map();
+
+  items.forEach((rawItem) => {
+    if (!rawItem || !rawItem.name) return;
+    const name = String(rawItem.name).trim();
+    if (!name) return;
+
+    const rawSupplier = String(rawItem.supplier || "").trim();
+    const supplier =
+      rawSupplier && rawSupplier !== "Supplier not set"
+        ? rawSupplier
+        : "Metro Cash & Carry Wholesale";
+
+    // Deduplication Key: SAME item name + SAME supplier
+    // Items with same name from DIFFERENT suppliers have distinct keys and are NOT duplicates.
+    const key = `${name.toLowerCase()}___${supplier.toLowerCase()}`;
+
+    const category = normalizeCategory(rawItem.category);
+    const unit = normalizeUnit(rawItem.unit || "KG");
+    const stock = Number(rawItem.stock ?? 0);
+    const minThreshold = Number(rawItem.minThreshold ?? 5);
+    const mrp =
+      rawItem.mrp != null && rawItem.mrp !== "" ? Number(rawItem.mrp) : null;
+    const totalUsed = Number(rawItem.totalUsed ?? 0);
+    const totalRestocked = Number(rawItem.totalRestocked ?? 0);
+
+    const defaultSubs =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[category] || ["General Supplies"];
+    const subcategory =
+      rawItem.subcategory && rawItem.subcategory.trim()
+        ? rawItem.subcategory.trim()
+        : defaultSubs[0];
+
+    if (map.has(key)) {
+      // DUPLICATE DETECTED: Merge duplicate records into one
+      const existing = map.get(key);
+      existing.stock = Number(
+        (
+          Number(existing.stock || 0) + (isNaN(stock) ? 0 : stock)
+        ).toFixed(3),
+      );
+      existing.totalUsed = Number(
+        (
+          Number(existing.totalUsed || 0) + (isNaN(totalUsed) ? 0 : totalUsed)
+        ).toFixed(3),
+      );
+      existing.totalRestocked = Number(
+        (
+          Number(existing.totalRestocked || 0) +
+          (isNaN(totalRestocked) ? 0 : totalRestocked)
+        ).toFixed(3),
+      );
+      if (!existing.subcategory || existing.subcategory === "General Supplies") {
+        existing.subcategory = subcategory;
+      }
+      if (
+        (existing.mrp == null || isNaN(existing.mrp)) &&
+        mrp != null &&
+        !isNaN(mrp)
+      ) {
+        existing.mrp = mrp;
+      }
+      if (rawItem.lastRestocked && rawItem.lastRestocked !== "Not restocked") {
+        existing.lastRestocked = rawItem.lastRestocked;
+      }
+    } else {
+      map.set(key, {
+        ...rawItem,
+        id: String(
+          rawItem.id ||
+            `inv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        ),
+        name,
+        category,
+        subcategory,
+        supplier,
+        unit,
+        stock: isNaN(stock) ? 0 : Number(stock.toFixed(3)),
+        minThreshold: isNaN(minThreshold) ? 5 : minThreshold,
+        mrp: mrp != null && !isNaN(mrp) ? mrp : null,
+        totalUsed: isNaN(totalUsed) ? 0 : Number(totalUsed.toFixed(3)),
+        totalRestocked:
+          isNaN(totalRestocked) ? 0 : Number(totalRestocked.toFixed(3)),
+        lastRestocked: rawItem.lastRestocked || "Not restocked",
+      });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [inventory, setInventory] = useState(() => {
     try {
       const saved = localStorage.getItem(INVENTORY_STORAGE_KEY);
-      return saved
-        ? normalizeInventoryUnits(JSON.parse(saved))
-        : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const cleaned = deduplicateAndNormalizeInventory(parsed);
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(cleaned));
+        return cleaned;
+      }
+      return [];
     } catch {
       return [];
     }
@@ -45,7 +358,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [customInvCategories, setCustomInvCategories] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_CATEGORIES);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      const standardKeys = new Set(
+        PRIMARY_CATEGORY_KEYS.map((k) => k.toLowerCase()),
+      );
+      const filtered = parsed
+        .map(normalizeCategory)
+        .filter((c) => c && !standardKeys.has(c.toLowerCase()));
+      const unique = Array.from(new Set(filtered));
+      localStorage.setItem(
+        STORAGE_KEY_CUSTOM_INV_CATEGORIES,
+        JSON.stringify(unique),
+      );
+      return unique;
     } catch {
       return [];
     }
@@ -60,9 +387,32 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     }
   });
 
+  const [customInvSuppliers, setCustomInvSuppliers] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_SUPPLIERS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customInvSubcategories, setCustomInvSubcategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_SUBCATEGORIES);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const saveCustomCategory = (newCat) => {
     if (!newCat || !newCat.trim()) return;
-    const trimmed = newCat.trim();
+    const trimmed = normalizeCategory(newCat.trim());
+    const standardKeys = new Set(
+      PRIMARY_CATEGORY_KEYS.map((k) => k.toLowerCase()),
+    );
+    if (standardKeys.has(trimmed.toLowerCase())) return;
+
     setCustomInvCategories((prev) => {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase()))
         return prev;
@@ -94,22 +444,95 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     });
   };
 
+  const saveCustomSupplier = (newSup) => {
+    if (!newSup || !newSup.trim()) return;
+    const trimmed = newSup.trim();
+    setCustomInvSuppliers((prev) => {
+      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_INV_SUPPLIERS,
+          JSON.stringify(updated),
+        );
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomSubcategory = (newSub) => {
+    if (!newSub || !newSub.trim()) return;
+    const trimmed = newSub.trim();
+    const currentCat = normalizeCategory(newItem.category || "General Supplies");
+    setCustomInvSubcategories((prev) => {
+      const existing = prev[currentCat] || [];
+      if (existing.some((s) => s.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = {
+        ...prev,
+        [currentCat]: [...existing, trimmed],
+      };
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_INV_SUBCATEGORIES,
+          JSON.stringify(updated),
+        );
+      } catch {}
+      return updated;
+    });
+  };
+
   const allCategoryOptions = useMemo(() => {
     const map = new Map();
-    customInvCategories.forEach((c) => {
+    // 1. Only canonical standard categories
+    PRIMARY_CATEGORY_KEYS.forEach((c) => {
       if (c && !map.has(c.toLowerCase()))
         map.set(c.toLowerCase(), { value: c, label: c });
     });
+    // 2. Custom categories (normalized to skip duplicates of standard ones)
+    customInvCategories.forEach((c) => {
+      const norm = normalizeCategory(c);
+      if (norm && !map.has(norm.toLowerCase()))
+        map.set(norm.toLowerCase(), { value: norm, label: norm });
+    });
+    // 3. Normalized inventory item categories
     (inventory || []).forEach((item) => {
-      if (item.category && !map.has(item.category.toLowerCase())) {
-        map.set(item.category.toLowerCase(), {
-          value: item.category,
-          label: item.category,
+      const norm = normalizeCategory(item.category);
+      if (norm && !map.has(norm.toLowerCase())) {
+        map.set(norm.toLowerCase(), {
+          value: norm,
+          label: norm,
         });
       }
     });
     return Array.from(map.values());
   }, [customInvCategories, inventory]);
+
+  const allSupplierOptions = useMemo(() => {
+    const map = new Map();
+    DEFAULT_SUPPLIERS.forEach((s) => {
+      if (s && !map.has(s.toLowerCase()))
+        map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    customInvSuppliers.forEach((s) => {
+      if (s && !map.has(s.toLowerCase()))
+        map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    (inventory || []).forEach((item) => {
+      if (
+        item.supplier &&
+        item.supplier !== "Supplier not set" &&
+        !map.has(item.supplier.toLowerCase())
+      ) {
+        map.set(item.supplier.toLowerCase(), {
+          value: item.supplier,
+          label: item.supplier,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [customInvSuppliers, inventory]);
 
   const allUnitOptions = useMemo(() => {
     const map = new Map();
@@ -146,31 +569,67 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [newItem, setNewItem] = useState({
     name: "",
     category: "Grains & Rice",
-    subcategory: "Rice",
+    subcategory: "Basmati Biryani Rice",
     mrp: "",
     stock: 10,
     minThreshold: 5,
     unit: "KG",
-    supplier: "Local Supplier",
+    supplier: "Metro Cash & Carry Wholesale",
   });
 
   const subcategoryOptions = useMemo(() => {
-    const subcategories = new Map();
+    const map = new Map();
+    const currentCatNorm = normalizeCategory(newItem.category);
+
+    const defaults =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[newItem.category] ||
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[currentCatNorm] ||
+      [];
+    defaults.forEach((sub) => {
+      if (sub && !map.has(sub.toLowerCase())) {
+        map.set(sub.toLowerCase(), { value: sub, label: sub });
+      }
+    });
+
+    const customs = [
+      ...(customInvSubcategories[newItem.category] || []),
+      ...(customInvSubcategories[currentCatNorm] || []),
+    ];
+    customs.forEach((sub) => {
+      if (sub && !map.has(sub.toLowerCase())) {
+        map.set(sub.toLowerCase(), { value: sub, label: sub });
+      }
+    });
+
     (inventory || [])
-      .filter((item) => item.category === newItem.category && item.subcategory)
+      .filter(
+        (item) =>
+          (item.category === newItem.category ||
+            normalizeCategory(item.category) === currentCatNorm) &&
+          item.subcategory,
+      )
       .forEach((item) => {
-        if (!subcategories.has(item.subcategory.toLowerCase())) {
-          subcategories.set(item.subcategory.toLowerCase(), {
+        if (!map.has(item.subcategory.toLowerCase())) {
+          map.set(item.subcategory.toLowerCase(), {
             value: item.subcategory,
             label: item.subcategory,
           });
         }
       });
-    return Array.from(subcategories.values());
-  }, [inventory, newItem.category]);
+
+    // Fallback: If custom category has no subcategories yet, provide a general default
+    if (map.size === 0 && newItem.category) {
+      map.set("general", {
+        value: "General Supplies",
+        label: "General Supplies",
+      });
+    }
+
+    return Array.from(map.values());
+  }, [inventory, newItem.category, customInvSubcategories]);
 
   const saveInventory = (updated) => {
-    const normalized = normalizeInventoryUnits(updated);
+    const normalized = deduplicateAndNormalizeInventory(updated);
     setInventory(normalized);
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
@@ -219,7 +678,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         };
       });
       const remoteIds = new Set(remote.map((item) => String(item.id)));
-      const merged = normalizeInventoryUnits([
+      const merged = deduplicateAndNormalizeInventory([
         ...remote,
         ...(Array.isArray(saved) ? saved.filter((item) => !remoteIds.has(String(item.id))) : []),
       ]);
@@ -232,7 +691,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
       if (Array.isArray(event.detail)) {
-        setInventory(normalizeInventoryUnits(event.detail));
+        setInventory(deduplicateAndNormalizeInventory(event.detail));
       }
     };
     const handleStorageUpdate = (event) => {
@@ -240,7 +699,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       try {
         const updated = JSON.parse(event.newValue);
         if (Array.isArray(updated)) {
-          setInventory(normalizeInventoryUnits(updated));
+          setInventory(deduplicateAndNormalizeInventory(updated));
         }
       } catch {}
     };
@@ -460,18 +919,50 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     e.preventDefault();
     if (!newItem.name.trim()) return;
 
-    if (newItem.category) saveCustomCategory(newItem.category);
+    const trimmedName = newItem.name.trim();
+    const finalCategory = normalizeCategory(newItem.category);
+    const finalSupplier =
+      newItem.supplier.trim() || "Metro Cash & Carry Wholesale";
+
+    // Validate duplicate item: Same Item Name + Same Supplier
+    const duplicate = inventory.find(
+      (item) =>
+        item.id !== editingItemId &&
+        item.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
+        (item.supplier || "").trim().toLowerCase() ===
+          finalSupplier.toLowerCase(),
+    );
+
+    if (duplicate) {
+      alert(
+        `Duplicate Item Detected:\n\n"${trimmedName}" from "${finalSupplier}" is already in your inventory.\n\n• If restocking this supplier, please use the Restock button or edit the existing item.\n• If this item is supplied by a different vendor, select or enter the different supplier.`,
+      );
+      return;
+    }
+
+    if (finalCategory) saveCustomCategory(finalCategory);
     if (newItem.unit) saveCustomUnit(newItem.unit);
+    if (finalSupplier) saveCustomSupplier(finalSupplier);
+    if (newItem.subcategory) saveCustomSubcategory(newItem.subcategory);
+
+    const defaultSubs =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[finalCategory] || [
+        "General Supplies",
+      ];
+    const finalSubcategory =
+      newItem.subcategory && newItem.subcategory.trim()
+        ? newItem.subcategory.trim()
+        : defaultSubs[0];
 
     const itemDetails = {
-      name: newItem.name.trim(),
-      category: newItem.category,
-      subcategory: newItem.subcategory,
+      name: trimmedName,
+      category: finalCategory,
+      subcategory: finalSubcategory,
       mrp: newItem.mrp === "" ? null : Number(newItem.mrp),
       stock: Number(newItem.stock) || 0,
       minThreshold: Number(newItem.minThreshold) || 5,
-      unit: newItem.unit,
-      supplier: newItem.supplier.trim() || "Local Vendor",
+      unit: normalizeUnit(newItem.unit || "KG"),
+      supplier: finalSupplier,
     };
 
     if (editingItemId !== null) {
@@ -502,12 +993,12 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     setNewItem({
       name: "",
       category: "Grains & Rice",
-      subcategory: "Rice",
+      subcategory: "Basmati Biryani Rice",
       mrp: "",
       stock: 10,
       minThreshold: 5,
       unit: "KG",
-      supplier: "Local Supplier",
+      supplier: "Metro Cash & Carry Wholesale",
     });
   };
 
@@ -518,15 +1009,18 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
   const openEditItemModal = (item) => {
     setEditingItemId(item.id);
+    const cat = normalizeCategory(item.category || "Grains & Rice");
+    const defaultSubs =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[cat] || ["General Supplies"];
     setNewItem({
       name: item.name || "",
-      category: item.category || "Grains & Rice",
-      subcategory: item.subcategory || "",
+      category: cat,
+      subcategory: item.subcategory || defaultSubs[0],
       mrp: item.mrp == null ? "" : String(item.mrp),
       stock: String(item.stock ?? 0),
       minThreshold: String(item.minThreshold ?? 5),
-      unit: item.unit || "KG",
-      supplier: item.supplier || "",
+      unit: normalizeUnit(item.unit || "KG"),
+      supplier: item.supplier || "Metro Cash & Carry Wholesale",
     });
     setIsAddModalOpen(true);
   };
@@ -542,18 +1036,12 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     }
   };
 
-  const categories = [
-    "all",
-    "Grains & Rice",
-    "Meats & Poultry",
-    "Seafood",
-    "Dairy",
-    "Spices & Oils",
-    "Vegetables & Fruits",
-    "Packaging",
-    "Beverages",
-  ];
-  const suppliers = [...new Set(inventory.map((item) => item.supplier))].sort();
+  const categories = useMemo(() => {
+    return ["all", ...allCategoryOptions.map((opt) => opt.value)];
+  }, [allCategoryOptions]);
+  const suppliers = useMemo(() => {
+    return allSupplierOptions.map((opt) => opt.value);
+  }, [allSupplierOptions]);
   const inStockCount = inventory.filter(
     (item) => item.stock > item.minThreshold,
   ).length;
@@ -561,7 +1049,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
   const filtered = inventory.filter((item) => {
     const matchesCategory =
-      selectedCategory === "all" || item.category === selectedCategory;
+      selectedCategory === "all" ||
+      item.category === selectedCategory ||
+      normalizeCategory(item.category) === normalizeCategory(selectedCategory);
     const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
@@ -1999,23 +2489,17 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             >
               SUPPLIER
             </label>
-            <input
-              value={restockSupplier}
-              onChange={(event) => setRestockSupplier(event.target.value)}
-              placeholder="Supplier name"
-              style={{
-                width: "100%",
-                height: "38px",
-                boxSizing: "border-box",
-                padding: "0 0.65rem",
-                borderRadius: "8px",
-                border: "1px solid var(--border-card)",
-                background: "var(--bg-tertiary)",
-                color: "var(--text-main)",
-                fontSize: "0.82rem",
-                marginBottom: "0.9rem",
-              }}
-            />
+            <div style={{ marginBottom: "0.9rem" }}>
+              <CustomCreatableDropdown
+                value={restockSupplier}
+                onChange={(val) => setRestockSupplier(val)}
+                options={allSupplierOptions}
+                placeholder="Select or enter supplier..."
+                customPlaceholder="Type new supplier name..."
+                allowCustom
+                onSaveCustomOption={saveCustomSupplier}
+              />
+            </div>
             <div
               style={{
                 display: "flex",
@@ -2211,29 +2695,23 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "var(--text-dim)",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
                     marginBottom: "4px",
                   }}
                 >
                   Supplier
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Local Supplier"
+                <CustomCreatableDropdown
                   value={newItem.supplier}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, supplier: e.target.value })
+                  onChange={(val) =>
+                    setNewItem({ ...newItem, supplier: val })
                   }
-                  style={{
-                    width: "100%",
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-card)",
-                    borderRadius: "8px",
-                    padding: "0.6rem 0.8rem",
-                    color: "var(--text-main)",
-                    fontSize: "0.85rem",
-                    outline: "none",
-                  }}
+                  options={allSupplierOptions}
+                  placeholder="Select Supplier"
+                  customPlaceholder="Type new supplier name..."
+                  allowCustom
+                  onSaveCustomOption={saveCustomSupplier}
                 />
               </div>
 
@@ -2259,13 +2737,23 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   </label>
                   <CustomCreatableDropdown
                     value={newItem.category}
-                    onChange={(val) =>
+                    onChange={(val) => {
+                      const normalized = normalizeCategory(val);
+                      const defaultSubs =
+                        DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[normalized] ||
+                        DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[val] ||
+                        customInvSubcategories[val] ||
+                        customInvSubcategories[normalized] ||
+                        ["General Supplies"];
                       setNewItem({
                         ...newItem,
-                        category: val,
-                        subcategory: "",
-                      })
-                    }
+                        category: normalized,
+                        subcategory:
+                          defaultSubs.length > 0
+                            ? defaultSubs[0]
+                            : "General Supplies",
+                      });
+                    }}
                     options={allCategoryOptions}
                     placeholder="Select Category"
                     customPlaceholder="Type new category..."
@@ -2319,6 +2807,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   placeholder="Select Subcategory"
                   customPlaceholder="Type new subcategory..."
                   allowCustom
+                  onSaveCustomOption={saveCustomSubcategory}
                 />
               </div>
 
