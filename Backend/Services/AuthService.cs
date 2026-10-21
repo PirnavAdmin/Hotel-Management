@@ -358,7 +358,6 @@ public class AuthService
 
         var token = tokens[0];
         if (DateTime.UtcNow > token.ExpiresAt) return new { success = false, message = "OTP has expired." };
-        if (token.VerifiedAt == null) return new { success = false, message = "Please verify the OTP first." };
 
         var validOtp = BCrypt.Net.BCrypt.Verify(request.Otp, token.OtpHash);
         if (!validOtp) return new { success = false, message = "Invalid OTP." };

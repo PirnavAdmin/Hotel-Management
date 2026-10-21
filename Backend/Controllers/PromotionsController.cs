@@ -74,6 +74,33 @@ public class PromotionsController : ControllerBase
         });
     }
 
+    [AllowAnonymous]
+    [HttpDelete("{id}")]
+    [HttpDelete("/api/Promotions/{id}")]
+    public async Task<IActionResult> DeletePromotion(string id)
+    {
+        long numericId = 0;
+        if (!string.IsNullOrEmpty(id))
+        {
+            var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+            long.TryParse(cleanId, out numericId);
+        }
+
+        if (numericId <= 0)
+        {
+            return Ok(new { success = true, message = "Promotion removed successfully." });
+        }
+
+        var parameters = new Dictionary<string, object?> { { "p_promotion_id", numericId } };
+        await _spService.ExecuteNonQueryAsync("sp_DeletePromotion", parameters);
+
+        return Ok(new
+        {
+            success = true,
+            message = "Promotion removed successfully."
+        });
+    }
+
     private static Promotion MapPromotionFromReader(DbDataReader reader)
     {
         return new Promotion

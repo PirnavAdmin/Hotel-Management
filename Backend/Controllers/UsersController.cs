@@ -62,8 +62,9 @@ public class UsersController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Fetching user by identifier {UserId} via SP.", id);
-            var users = await _spService.ExecuteQueryAsync("sp_GetUserByIdentifier", MapUserDtoFromReader, new Dictionary<string, object?> { { "p_identifier", id } });
+            var resolvedId = ResolveIdentifier(id);
+            _logger.LogInformation("Fetching user by identifier {UserId} (resolved: {ResolvedId}) via SP.", id, resolvedId);
+            var users = await _spService.ExecuteQueryAsync("sp_GetUserByIdentifier", MapUserDtoFromReader, new Dictionary<string, object?> { { "p_identifier", resolvedId } });
 
             if (users.Count == 0)
             {
@@ -95,8 +96,9 @@ public class UsersController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Changing password for user {UserId} via SP.", id);
-            var users = await _spService.ExecuteQueryAsync("sp_GetUserByIdentifier", MapUserFromReader, new Dictionary<string, object?> { { "p_identifier", id } });
+            var resolvedId = ResolveIdentifier(id);
+            _logger.LogInformation("Changing password for user {UserId} (resolved: {ResolvedId}) via SP.", id, resolvedId);
+            var users = await _spService.ExecuteQueryAsync("sp_GetUserByIdentifier", MapUserFromReader, new Dictionary<string, object?> { { "p_identifier", resolvedId } });
 
             if (users.Count == 0)
             {
@@ -131,8 +133,9 @@ public class UsersController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Deleting user {UserId} via SP.", id);
-            var users = await _spService.ExecuteQueryAsync("sp_GetUserByIdentifier", MapUserFromReader, new Dictionary<string, object?> { { "p_identifier", id } });
+            var resolvedId = ResolveIdentifier(id);
+            _logger.LogInformation("Deleting user {UserId} (resolved: {ResolvedId}) via SP.", id, resolvedId);
+            var users = await _spService.ExecuteQueryAsync("sp_GetUserByIdentifier", MapUserFromReader, new Dictionary<string, object?> { { "p_identifier", resolvedId } });
 
             if (users.Count == 0)
             {
@@ -242,6 +245,7 @@ public class UsersController : ControllerBase
         return new UserDto
         {
             Id = LongToGuid(userId),
+            UserId = userId,
             Name = !string.IsNullOrWhiteSpace(fullName) ? fullName : username,
             Username = username,
             Email = reader.GetString(reader.GetOrdinal("email")),
@@ -262,6 +266,21 @@ public class UsersController : ControllerBase
             Email = reader.GetString(reader.GetOrdinal("email")),
             IsActive = reader.GetBoolean(reader.GetOrdinal("is_active"))
         };
+    }
+
+    private static string ResolveIdentifier(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return id;
+        if (Guid.TryParse(id, out Guid guid))
+        {
+            byte[] bytes = guid.ToByteArray();
+            long numericId = BitConverter.ToInt64(bytes, 0);
+            if (numericId > 0)
+            {
+                return numericId.ToString();
+            }
+        }
+        return id.Trim();
     }
 
     private static Guid LongToGuid(long value)

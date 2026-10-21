@@ -13,6 +13,8 @@ import {
   Trash2,
   X,
   Package,
+  Wine,
+  Utensils,
 } from "lucide-react";
 import defaultPaymentQr from "../assets/payment-qr.png";
 
@@ -55,6 +57,7 @@ const getInitialSettings = (initialSettings) => {
     showAddressOnReceipt: true,
     showGstBreakdown: true,
     lowStockAlertsEnabled: true,
+    showBarHeaderToggle: true,
   };
 
   try {
@@ -108,6 +111,8 @@ export function AdminSettings({
   onChangeTheme,
   initialSettings,
   onSaveSettings,
+  showBarHeaderToggle,
+  onToggleShowBarHeader,
 }) {
   const [settings, setSettings] = useState(() => getInitialSettings(initialSettings));
   const [lastSavedSettings, setLastSavedSettings] = useState(() => getInitialSettings(initialSettings));
@@ -115,6 +120,19 @@ export function AdminSettings({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [logoError, setLogoError] = useState("");
+
+  const isBarToggleOn =
+    showBarHeaderToggle !== undefined
+      ? Boolean(showBarHeaderToggle)
+      : settings.showBarHeaderToggle ?? true;
+
+  const handleToggleBarHeader = (nextVal) => {
+    setSettings((prev) => ({
+      ...prev,
+      showBarHeaderToggle: nextVal,
+    }));
+    onToggleShowBarHeader?.(nextVal);
+  };
 
   const isDirty = useMemo(() => {
     return JSON.stringify(settings) !== JSON.stringify(lastSavedSettings);
@@ -1577,6 +1595,150 @@ export function AdminSettings({
               Show low-stock alert in Inventory when items reach their
               individual thresholds
             </label>
+          </div>
+
+          {/* ================= BAR & DINE HEADER TOGGLE SWITCH ================= */}
+          <div
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "12px",
+              padding: "1.15rem 1.35rem",
+              boxShadow: "var(--shadow-sm)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1.25rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.85rem",
+                flex: 1,
+                minWidth: "260px",
+              }}
+            >
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "10px",
+                  background: isBarToggleOn
+                    ? "rgba(245, 158, 11, 0.15)"
+                    : "var(--bg-tertiary)",
+                  color: isBarToggleOn ? "#ea580c" : "var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s ease",
+                  flexShrink: 0,
+                }}
+              >
+                <Wine size={22} />
+              </div>
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: "0.95rem",
+                      fontWeight: 800,
+                      color: "var(--text-main)",
+                      margin: 0,
+                    }}
+                  >
+                    Dine & Bar Mode Header Switcher
+                  </h3>
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 800,
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      background: isBarToggleOn
+                        ? "rgba(16, 185, 129, 0.15)"
+                        : "rgba(100, 116, 139, 0.15)",
+                      color: isBarToggleOn ? "#10b981" : "#64748b",
+                      border: isBarToggleOn
+                        ? "1px solid rgba(16, 185, 129, 0.3)"
+                        : "1px solid rgba(100, 116, 139, 0.2)",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {isBarToggleOn ? "ENABLED (SHOWN)" : "DISABLED (HIDDEN)"}
+                  </span>
+                </div>
+                <p
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--text-muted)",
+                    margin: "4px 0 0 0",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Turn ON to show the [Dine | Bar] toggle button in the top header. Turn OFF to hide it from the header.
+                </p>
+              </div>
+            </div>
+
+            {/* Interactive Toggle Switch Button */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: isBarToggleOn ? "#ea580c" : "var(--text-muted)",
+                }}
+              >
+                {isBarToggleOn ? "On" : "Off"}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isBarToggleOn}
+                onClick={() => handleToggleBarHeader(!isBarToggleOn)}
+                style={{
+                  width: "56px",
+                  height: "30px",
+                  borderRadius: "30px",
+                  background: isBarToggleOn
+                    ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                    : "var(--border-subtle)",
+                  border: "none",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "background 0.25s ease, box-shadow 0.25s ease",
+                  boxShadow: isBarToggleOn
+                    ? "0 2px 10px rgba(234, 88, 12, 0.4)"
+                    : "inset 0 1px 3px rgba(0,0,0,0.2)",
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "3px",
+                    left: isBarToggleOn ? "29px" : "3px",
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    background: "#ffffff",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.25)",
+                    transition: "left 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
+                  }}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Submit Action */}

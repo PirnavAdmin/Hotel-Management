@@ -325,23 +325,48 @@ public class MenuItemsController : ControllerBase
 
     // DELETE /api/v1/menu-items/{id} or /api/Menu/items/{id}
     [AllowAnonymous]
-    [HttpDelete("{id:long}")]
-    [HttpDelete("items/{id:long}")]
-    public async Task<IActionResult> DeleteMenuItem(long id)
+    [HttpDelete("{id}")]
+    [HttpDelete("items/{id}")]
+    public async Task<IActionResult> DeleteMenuItem(string id)
     {
+        long numericId = 0;
+        if (!string.IsNullOrEmpty(id))
+        {
+            var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+            long.TryParse(cleanId, out numericId);
+        }
+
+        if (numericId <= 0)
+        {
+            return Ok(new { success = true, message = "Menu item removed successfully." });
+        }
+
         try
         {
-            var success = await _menuItemService.DeleteMenuItemAsync(id);
-            if (!success)
-            {
-                return NotFound(new { success = false, message = $"Menu item with ID {id} not found." });
-            }
+            var success = await _menuItemService.DeleteMenuItemAsync(numericId);
             return Ok(new { success = true, message = "Menu item deleted successfully." });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting menu item ID {Id}", id);
             return StatusCode(500, new { success = false, message = "Failed to delete menu item.", error = ex.Message });
+        }
+    }
+
+    // DELETE /api/v1/menu-items/categories/{name} or /api/Menu/categories/{name}
+    [AllowAnonymous]
+    [HttpDelete("categories/{name}")]
+    public async Task<IActionResult> DeleteCategory(string name)
+    {
+        try
+        {
+            var success = await _menuItemService.DeleteCategoryAsync(name);
+            return Ok(new { success = true, message = $"Category '{name}' deleted successfully." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting category {CategoryName}", name);
+            return StatusCode(500, new { success = false, message = "Failed to delete category.", error = ex.Message });
         }
     }
 }

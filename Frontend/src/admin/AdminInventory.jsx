@@ -20,7 +20,13 @@ import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
 import { API_BASE_URL } from "../api/apiConfig";
-import { apiGetInventory } from "../api/inventoryApi";
+import {
+  apiGetInventory,
+  apiCreateIngredient,
+  apiUpdateIngredient,
+  apiDeleteIngredient,
+  apiAdjustStock,
+} from "../api/inventoryApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans"];
@@ -220,13 +226,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
         };
       });
-      const remoteIds = new Set(remote.map((item) => String(item.id)));
-      const merged = normalizeInventoryUnits([
-        ...remote,
-        ...(Array.isArray(saved) ? saved.filter((item) => !remoteIds.has(String(item.id))) : []),
-      ]);
-      setInventory(merged);
-      try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
+      const normalizedRemote = normalizeInventoryUnits(remote);
+      if (Array.isArray(normalizedRemote) && normalizedRemote.length > 0) {
+        setInventory(normalizedRemote);
+        try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalizedRemote)); } catch {}
+      } else if (Array.isArray(saved) && saved.length > 0) {
+        setInventory(saved);
+      }
     }).catch(() => {});
     return () => { active = false; };
   }, []);
@@ -371,6 +377,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           }
         : item,
     );
+    if (restockItem?.id && !isNaN(Number(restockItem.id))) {
+      apiAdjustStock({
+        ingredientId: Number(restockItem.id),
+        quantityChange: amount,
+        reason: "Restocked from " + (restockSupplier.trim() || restockItem.supplier || "Supplier"),
+      }).catch(() => {});
+    }
     saveInventory(updated);
     setRestockItem(null);
     setRestockAmount("");
@@ -378,6 +391,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   };
 
   const handleAdjustStock = (id, delta) => {
+    if (id && !isNaN(Number(id))) {
+      apiAdjustStock({
+        ingredientId: Number(id),
+        quantityChange: delta,
+        reason: delta > 0 ? "Manual Increase" : "Manual Decrease",
+      }).catch(() => {});
+    }
     const updated = inventory.map((item) => {
       if (item.id === id) {
         const nextStock = Math.max(0, Number((item.stock + delta).toFixed(2)));
@@ -458,7 +478,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     window.setTimeout(() => setExportMessage(""), 5000);
   };
 
-  const handleAddItem = (e) => {
+  const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItem.name.trim()) return;
 
@@ -477,15 +497,48 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     };
 
     if (editingItemId !== null) {
+      if (!isNaN(Number(editingItemId))) {
+        apiUpdateIngredient(Number(editingItemId), {
+          name: itemDetails.name,
+          category: itemDetails.category,
+          subcategory: itemDetails.subcategory,
+          mrp: itemDetails.mrp,
+          stock: itemDetails.stock,
+          minThreshold: itemDetails.minThreshold,
+          unit: itemDetails.unit,
+          supplier: itemDetails.supplier,
+          unitCost: itemDetails.mrp || 0,
+        }).catch(() => {});
+      }
       saveInventory(
         inventory.map((item) =>
           item.id === editingItemId ? { ...item, ...itemDetails } : item,
         ),
       );
     } else {
+      let createdId = `inv-${Date.now()}`;
+      try {
+        const createRes = await apiCreateIngredient({
+          name: itemDetails.name,
+          category: itemDetails.category,
+          subcategory: itemDetails.subcategory,
+          mrp: itemDetails.mrp,
+          stock: itemDetails.stock,
+          minThreshold: itemDetails.minThreshold,
+          unit: itemDetails.unit,
+          supplier: itemDetails.supplier,
+          unitCost: itemDetails.mrp || 0,
+        });
+        if (createRes?.data?.ingredientId || createRes?.data?.id) {
+          createdId = String(createRes.data.ingredientId || createRes.data.id);
+        }
+      } catch (err) {
+        console.warn("Could not create ingredient via API:", err);
+      }
+
       saveInventory([
         {
-          id: `inv-${Date.now()}`,
+          id: createdId,
           ...itemDetails,
           totalUsed: 0,
           totalRestocked: Number(newItem.stock) || 0,
@@ -538,6 +591,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     resetItemForm();
   };
 
+<<<<<<< HEAD
+  const handleDeleteItem = async (id) => {
+    if (window.confirm("Remove this item from restaurant inventory?")) {
+      const numericId = Number(id);
+      if (!isNaN(numericId) && numericId > 0) {
+        try {
+          await apiDeleteIngredient(numericId);
+        } catch (err) {
+          console.warn("Could not delete ingredient via API:", err);
+        }
+      }
+      const updated = inventory.filter((item) => String(item.id) !== String(id));
+      saveInventory(updated);
+    }
+=======
   const handleDeleteItem = (id) => {
     const item = inventory.find((i) => i.id === id);
     const itemName = item?.name || "this item";
@@ -547,6 +615,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       confirmLabel: "Yes, Remove",
       onConfirm: () => saveInventory(inventory.filter((i) => i.id !== id)),
     });
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
   const categories = [

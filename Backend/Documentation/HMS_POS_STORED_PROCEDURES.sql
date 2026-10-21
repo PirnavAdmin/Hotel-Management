@@ -484,8 +484,16 @@ CREATE PROCEDURE `sp_CreateTable`(
     IN p_assigned_server_id BIGINT
 )
 BEGIN
-    INSERT INTO `restaurant_tables` (table_name, section_area, capacity_chairs, occupied_chairs, status, assigned_server_id, created_at, updated_at)
-    VALUES (p_table_name, p_section_area, p_capacity_chairs, 0, 'VACANT', p_assigned_server_id, NOW(), NOW());
+    INSERT INTO `restaurant_tables` (
+        branch_id, table_number, table_name, capacity, capacity_chairs,
+        location, section_area, occupied_chairs, status, assigned_server_id,
+        created_at, updated_at
+    )
+    VALUES (
+        1, TRIM(p_table_name), TRIM(p_table_name), COALESCE(p_capacity_chairs, 4), COALESCE(p_capacity_chairs, 4),
+        COALESCE(p_section_area, 'Main Hall'), COALESCE(p_section_area, 'Main Hall'), 0, 'available', p_assigned_server_id,
+        NOW(), NOW()
+    );
     SELECT LAST_INSERT_ID() AS table_id;
 END;
 
@@ -1251,3 +1259,151 @@ BEGIN
     SET status = 'Settled', payment_method = p_payment_method, settled_at = NOW(), updated_at = NOW()
     WHERE id = p_order_id;
 END;
+
+DROP PROCEDURE IF EXISTS `sp_manage_restaurant_tables`;
+CREATE PROCEDURE `sp_manage_restaurant_tables`(
+    IN p_action             VARCHAR(30),
+    IN p_table_id           BIGINT UNSIGNED,
+    IN p_branch_id          BIGINT UNSIGNED,
+    IN p_table_number       VARCHAR(50),
+    IN p_capacity           INT,
+    IN p_location           VARCHAR(50),
+    IN p_qr_code_url        VARCHAR(255),
+    IN p_status             VARCHAR(20),
+    IN p_assigned_server_id BIGINT UNSIGNED
+)
+proc_label: BEGIN
+    DECLARE v_existing_active_id BIGINT UNSIGNED DEFAULT NULL;
+    DECLARE v_existing_deleted_id BIGINT UNSIGNED DEFAULT NULL;
+    DECLARE v_error_msg VARCHAR(255);
+
+    DECLARE EXIT HANDLER FOR 1062
+    BEGIN
+        ROLLBACK;
+        SELECT 'CONFLICT' AS status, 409 AS status_code, 'Table number already exists for this branch.' AS message, NULL AS data_id;
+    END;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        GET DIAGNOSTICS CONDITION 1 v_error_msg = MESSAGE_TEXT;
+        ROLLBACK;
+        SELECT 'ERROR' AS status, 500 AS status_code, CONCAT('Database Error: ', v_error_msg) AS message, NULL AS data_id;
+    END;
+
+    IF p_action = 'CREATE' THEN
+        SELECT table_id INTO v_existing_active_id
+        FROM restaurant_tables
+        WHERE branch_id = COALESCE(p_branch_id, 1)
+          AND table_number = TRIM(p_table_number)
+          AND deleted_at IS NULL
+        LIMIT 1;
+
+        IF v_existing_active_id IS NOT NULL THEN
+            SELECT 'CONFLICT' AS status, 409 AS status_code, CONCAT('Table number ', TRIM(p_table_number), ' already exists for this branch.') AS message, v_existing_active_id AS data_id;
+        ELSE
+            SELECT table_id INTO v_existing_deleted_id
+            FROM restaurant_tables
+            WHERE branch_id = COALESCE(p_branch_id, 1)
+              AND table_number = TRIM(p_table_number)
+              AND deleted_at IS NOT NULL
+            LIMIT 1;
+
+            IF v_existing_deleted_id IS NOT NULL THEN
+                START TRANSACTION;
+                    UPDATE restaurant_tables
+                    SET deleted_at = NULL,
+                        table_name = TRIM(p_table_number),
+                        capacity = COALESCE(p_capacity, 4),
+                        capacity_chairs = COALESCE(p_capacity, 4),
+                        location = COALESCE(p_location, 'Main Hall'),
+                        section_area = COALESCE(p_location, 'Main Hall'),
+                        qr_code_url = p_qr_code_url,
+                        status = 'available',
+                        assigned_server_id = p_assigned_server_id,
+                        updated_at = NOW()
+                    WHERE table_id = v_existing_deleted_id;
+                COMMIT;
+                SELECT 'SUCCESS' AS status, 201 AS status_code, 'Table added to floor layout' AS message, v_existing_deleted_id AS data_id;
+            ELSE
+                START TRANSACTION;
+                    INSERT INTO restaurant_tables (
+                        branch_id, table_number, table_name, capacity, capacity_chairs,
+                        location, section_area, qr_code_url, status, assigned_server_id,
+                        created_at, updated_at
+                    )
+                    VALUES (
+                        COALESCE(p_branch_id, 1), TRIM(p_table_number), TRIM(p_table_number),
+                        COALESCE(p_capacity, 4), COALESCE(p_capacity, 4),
+                        COALESCE(p_location, 'Main Hall'), COALESCE(p_location, 'Main Hall'),
+                        p_qr_code_url, 'available', p_assigned_server_id,
+                        NOW(), NOW()
+                    );
+                    SET @new_tbl_id = LAST_INSERT_ID();
+                COMMIT;
+                SELECT 'SUCCESS' AS status, 201 AS status_code, 'Table added to floor layout' AS message, @new_tbl_id AS data_id;
+            END IF;
+        END IF;
+
+    ELSEIF p_action = 'GET_BY_BRANCH' THEN
+        SELECT t.*,
+               sp.full_name AS server_name,
+               sp.role_title AS server_role,
+               (SELECT o.order_number FROM orders o WHERE o.table_id = t.table_id AND o.status IN ('pending', 'confirmed', 'preparing', 'ready', 'served') ORDER BY o.order_id DESC LIMIT 1) AS active_order_number
+        FROM restaurant_tables t
+        LEFT JOIN staff_persons sp ON t.assigned_server_id = sp.staff_id
+        WHERE t.branch_id = COALESCE(p_branch_id, 1)
+          AND t.deleted_at IS NULL
+        ORDER BY t.location, t.table_number ASC;
+
+    ELSEIF p_action = 'UPDATE_STATUS' THEN
+        START TRANSACTION;
+            UPDATE restaurant_tables SET status = p_status, updated_at = NOW() WHERE table_id = p_table_id;
+        COMMIT;
+        SELECT 'SUCCESS' AS status, 200 AS status_code, 'Table status updated' AS message, p_table_id AS data_id;
+
+    ELSEIF p_action = 'UPDATE_DETAILS' THEN
+        IF p_table_number IS NOT NULL AND TRIM(p_table_number) != '' THEN
+            SELECT table_id INTO v_existing_active_id
+            FROM restaurant_tables
+            WHERE branch_id = COALESCE(p_branch_id, 1)
+              AND table_number = TRIM(p_table_number)
+              AND table_id != p_table_id
+              AND deleted_at IS NULL
+            LIMIT 1;
+
+            IF v_existing_active_id IS NOT NULL THEN
+                SELECT 'CONFLICT' AS status, 409 AS status_code, CONCAT('Table number ', TRIM(p_table_number), ' already exists for another table in this branch.') AS message, NULL AS data_id;
+                LEAVE proc_label;
+            END IF;
+        END IF;
+
+        START TRANSACTION;
+            UPDATE restaurant_tables
+            SET table_number = COALESCE(TRIM(p_table_number), table_number),
+                table_name   = COALESCE(TRIM(p_table_number), table_name),
+                capacity     = COALESCE(p_capacity, capacity),
+                capacity_chairs = COALESCE(p_capacity, capacity_chairs),
+                location     = COALESCE(p_location, location),
+                section_area = COALESCE(p_location, section_area),
+                qr_code_url  = COALESCE(p_qr_code_url, qr_code_url),
+                assigned_server_id = COALESCE(p_assigned_server_id, assigned_server_id),
+                updated_at   = NOW()
+            WHERE table_id = p_table_id;
+        COMMIT;
+        SELECT 'SUCCESS' AS status, 200 AS status_code, 'Table layout updated' AS message, p_table_id AS data_id;
+
+    ELSEIF p_action = 'DELETE' THEN
+        START TRANSACTION;
+            IF EXISTS (SELECT 1 FROM orders WHERE table_id = p_table_id) OR EXISTS (SELECT 1 FROM reservations WHERE table_id = p_table_id) THEN
+                UPDATE restaurant_tables SET deleted_at = NOW(), status = 'inactive' WHERE table_id = p_table_id;
+            ELSE
+                DELETE FROM restaurant_tables WHERE table_id = p_table_id;
+            END IF;
+        COMMIT;
+        SELECT 'SUCCESS' AS status, 200 AS status_code, 'Table removed' AS message, p_table_id AS data_id;
+
+    ELSE
+        SELECT 'FAILED' AS status, 400 AS status_code, 'Invalid Action' AS message, NULL AS data_id;
+    END IF;
+END;
+

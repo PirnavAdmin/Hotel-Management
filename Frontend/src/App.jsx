@@ -26,6 +26,8 @@ import {
   apiCreateTable,
   apiUpdateTable,
   apiDeleteTable,
+  apiUpdateTableStatus,
+  apiVacateTable,
 } from "./api/tableApi";
 import {
   apiGetMenuItems,
@@ -41,6 +43,8 @@ import {
   apiGetKotOrders,
   apiCreateKotOrder,
   apiUpdateKotStatus,
+  apiUpdateKotItemStatus,
+  apiMarkAllPrepared,
 } from "./api/kotApi";
 import {
   apiGetStaff,
@@ -94,9 +98,27 @@ const dedupeStaff = (staff) => {
       name: person.name || person.fullName || previous.name || "Staff",
     });
   });
-  return Array.from(byIdentity.values()).sort(
-    (a, b) => Number(a.id || 0) - Number(b.id || 0),
-  );
+  return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+};
+
+<<<<<<< HEAD
+const isAllowedTableFormat = (str) => {
+  if (!str) return false;
+  const trimmed = String(str).trim();
+  return /^(Table|table)[-\s]?\d+$/i.test(trimmed);
+};
+
+const standardizeTableName = (str, fallbackId) => {
+  const trimmed = String(str || "").trim();
+  const match = trimmed.match(/^(Table|table)[-\s]?(\d+)$/i);
+  if (match) {
+    return `Table-${match[2]}`;
+  }
+  const digitsOnly = trimmed.match(/^(\d+)$/);
+  if (digitsOnly) {
+    return `Table-${digitsOnly[1]}`;
+  }
+  return fallbackId ? `Table-${fallbackId}` : trimmed;
 };
 
 const mergeIncomingTables = (incomingTables, deletedTableIds) => {
@@ -104,72 +126,174 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
   // deleted defaults and extra defaults cannot be reintroduced on every load.
   const tablesById = new Map();
 
-  const normalizedIncoming = [];
   incomingTables.forEach((table) => {
     const id = Number(table.tableId ?? table.id);
     if (!Number.isFinite(id)) return;
 
+    const rawIdentifier = String(table.tableNumber || table.tableName || table.name || "").trim();
+    // Exclude mock / non-Table-X format tables (like T-01, PAT-01, VIP-01, HYD-01, ROOF-01, BOM-01)
+    const isMock = /^(T-\d+|PAT|VIP|HYD|ROOF|BOM)/i.test(rawIdentifier);
+    if (isMock) {
+      return;
+    }
+
     const existing = tablesById.get(id) || {};
+    let tableNum = standardizeTableName(rawIdentifier || existing.tableNumber || existing.name, id);
+    if (!isAllowedTableFormat(tableNum)) {
+      return;
+    }
+
     const normalized = {
       ...existing,
       ...table,
       id,
-      name: table.tableName || table.name || existing.name || `Table ${id}`,
-      section: table.sectionArea || table.section || existing.section || "",
+      tableId: id,
+      name: tableNum,
+      tableName: tableNum,
+      tableNumber: tableNum,
+      branchId: Number(table.branchId || existing.branchId || 1),
+      section:
+        table.location || table.sectionArea || table.section || existing.section || "Main Hall",
+      location:
+        table.location || table.sectionArea || table.section || existing.location || "Main Hall",
       capacity:
-        table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
-      status: String(table.status || existing.status || "vacant").toLowerCase(),
+        table.capacity ?? table.capacityChairs ?? existing.capacity ?? 4,
+      status:
+        String(table.status || existing.status || "vacant").toLowerCase() === "occupied"
+          ? "occupied"
+          : "vacant",
       server:
         table.assignedServerName || table.server || existing.server || "Staff",
-      guests:
-        String(table.status || existing.status || "vacant").toLowerCase() ===
-        "vacant"
-          ? 0
-          : Number(
-              table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
-            ),
+      guests: table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
       items: Array.isArray(table.items)
         ? table.items
         : Array.isArray(existing.items)
           ? existing.items
           : [],
       orderTime: table.orderTime ?? existing.orderTime ?? null,
-      discountPercent: table.discountPercent ?? existing.discountPercent ?? 0,
+      discountPercent:
+        table.discountPercent ?? existing.discountPercent ?? 0,
       serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
       occupiedSince:
-        String(table.status || existing.status || "vacant").toLowerCase() ===
-        "vacant"
-          ? null
-          : table.occupiedSince || existing.occupiedSince || null,
+        table.occupiedSince || existing.occupiedSince || "10:00 AM",
     };
     tablesById.set(id, normalized);
-    normalizedIncoming.push(normalized);
   });
 
-  // Older clients sometimes saved generic table names against different IDs.
-  const nameCounts = new Map();
-  normalizedIncoming.forEach((table) => {
-    const key = String(table.name || "")
-      .trim()
-      .toLowerCase();
-    nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
-  });
-  normalizedIncoming.forEach((table) => {
-    const key = String(table.name || "")
-      .trim()
-      .toLowerCase();
-    if (key && nameCounts.get(key) > 1 && /^table\s+\d+$/i.test(table.name)) {
-      table.name = `Table ${table.id}`;
-      tablesById.set(Number(table.id), table);
-    }
-  });
+=======
+const isRogueName = (name) => {
+  if (!name) return false;
+  const lower = String(name).trim().toLowerCase();
+  return (
+    lower.includes("live verification") ||
+    lower.includes("table final") ||
+    lower.includes("table 20") ||
+    lower === "verification" ||
+    lower === "test"
+  );
+};
 
+const parseTableNumber = (table) => {
+  const rawName = String(table.tableName || table.name || "").trim();
+  const nameMatch = rawName.match(/^(?:table|t)\s*(\d+)$/i);
+  if (nameMatch) {
+    return parseInt(nameMatch[1], 10);
+  }
+  const rawId = Number(table.id ?? table.tableId);
+  if (Number.isFinite(rawId) && rawId > 0) {
+    return rawId;
+  }
+  return null;
+};
+
+const mergeIncomingTables = (incomingTables, deletedTableIds) => {
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
     : [];
+  const tablesById = new Map();
+
+  // 1. Seed with default 15 tables from INITIAL_TABLES so the standard floor plan is always intact
+  INITIAL_TABLES.forEach((defTable) => {
+    if (!deletedIds.includes(String(defTable.id))) {
+      tablesById.set(Number(defTable.id), { ...defTable });
+    }
+  });
+
+  // 2. Overlay incoming live tables from server or localStorage
+  if (Array.isArray(incomingTables)) {
+    incomingTables.forEach((table) => {
+      if (!table || typeof table !== "object") return;
+      const rawName = String(table.tableName || table.name || "").trim();
+      const num = parseTableNumber(table);
+
+      let targetId = null;
+      if (num && num >= 1 && num <= 15) {
+        targetId = num;
+      } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
+        targetId = Number(table.id);
+      } else if (num) {
+        targetId = num;
+      }
+
+      if (!targetId || deletedIds.includes(String(targetId))) return;
+
+      const isStandard = targetId >= 1 && targetId <= 15;
+      if (!isStandard && isRogueName(rawName)) return;
+
+      const existing = tablesById.get(targetId) || {};
+      const cleanName = isStandard
+        ? isRogueName(rawName) || !rawName
+          ? `Table ${targetId}`
+          : rawName.match(/^(?:table|t)\s*(\d+)$/i)
+            ? `Table ${targetId}`
+            : rawName
+        : rawName || `Table ${targetId}`;
+
+      const normalized = {
+        ...existing,
+        ...table,
+        id: targetId,
+        name: cleanName,
+        backendTableId:
+          table.tableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
+        section:
+          table.sectionArea || table.section || existing.section || "Main Hall",
+        capacity: Number(
+          table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
+        ),
+        status: String(table.status || existing.status || "vacant").toLowerCase(),
+        server:
+          table.assignedServerName || table.server || existing.server || "Staff",
+        guests:
+          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+            ? 0
+            : Number(table.occupiedChairs ?? table.guests ?? existing.guests ?? 0),
+        items: Array.isArray(table.items)
+          ? table.items
+          : Array.isArray(existing.items)
+            ? existing.items
+            : [],
+        orderTime: table.orderTime ?? existing.orderTime ?? null,
+        discountPercent: Number(
+          table.discountPercent ?? existing.discountPercent ?? 0,
+        ),
+        serviceCharge: Number(
+          table.serviceCharge ?? existing.serviceCharge ?? 5,
+        ),
+        occupiedSince:
+          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
+            ? null
+            : (table.occupiedSince || existing.occupiedSince || null),
+      };
+
+      tablesById.set(targetId, normalized);
+    });
+  }
+
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
-    .sort((a, b) => a.id - b.id);
+    .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
 const getDeletedTableIds = () => {
@@ -185,21 +309,15 @@ const getDeletedTableIds = () => {
 
 export function App() {
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
-  const [restaurantSettings, setRestaurantSettings] = useState(
-    readRestaurantSettings,
-  );
+  const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
 
   useEffect(() => {
-    const refreshSettings = () =>
-      setRestaurantSettings(readRestaurantSettings());
+    const refreshSettings = () => setRestaurantSettings(readRestaurantSettings());
     window.addEventListener("storage", refreshSettings);
     window.addEventListener("restaurant-settings-updated", refreshSettings);
     return () => {
       window.removeEventListener("storage", refreshSettings);
-      window.removeEventListener(
-        "restaurant-settings-updated",
-        refreshSettings,
-      );
+      window.removeEventListener("restaurant-settings-updated", refreshSettings);
     };
   }, []);
 
@@ -210,30 +328,17 @@ export function App() {
     const applySharedSettings = (settings) => {
       if (!settings || typeof settings !== "object") return;
       let local = {};
-      try {
-        local = JSON.parse(
-          localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}",
-        );
-      } catch {}
+      try { local = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}"); } catch {}
       const merged = { ...local, ...settings };
-      try {
-        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged));
-      } catch {}
+      try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
       if (active) {
         setRestaurantSettings(merged);
         window.dispatchEvent(new Event("restaurant-settings-updated"));
       }
     };
-    fetch(`${API_BASE_URL}/api/state`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) =>
-        applySharedSettings(
-          data?.[RESTAURANT_SETTINGS_KEY] ||
-            data?.data?.[RESTAURANT_SETTINGS_KEY],
-        ),
-      )
+    fetch(`${API_BASE_URL}/api/state`, { headers: { "ngrok-skip-browser-warning": "true" } })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
       .catch(() => {});
     let events;
     try {
@@ -241,17 +346,11 @@ export function App() {
       events.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          applySharedSettings(
-            message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
-              message?.payload?.data?.[RESTAURANT_SETTINGS_KEY],
-          );
+          applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
         } catch {}
       };
     } catch {}
-    return () => {
-      active = false;
-      events?.close();
-    };
+    return () => { active = false; events?.close(); };
   }, []);
 
   // Theme state: 'royal-saffron' | 'emerald-spice' | 'light-bistro'
@@ -270,7 +369,7 @@ export function App() {
     return Array.isArray(initial) ? initial : [];
   });
 
-  // Use the standard 15-table floor plan on first launch, while honoring deletions.
+  // Load saved tables only; do not seed demo records into the live list.
   const [tables, setTables] = useState(() => {
     const deleted = getDeletedTableIds();
     const delList = Array.isArray(deleted) ? deleted : [];
@@ -279,19 +378,21 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_TABLES);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return mergeIncomingTables(parsed, delList)
-            .map((t) => ({
-              ...t,
-              items: Array.isArray(t.items) ? t.items : [],
-            }))
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const merged = mergeIncomingTables(parsed, delList)
+            .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
             .filter((t) => !isDeleted(t.id));
+          if (merged.length > 0) return merged;
         }
       }
     } catch {
       // Fallback
     }
-    return mergeIncomingTables(INITIAL_TABLES, delList);
+<<<<<<< HEAD
+    return INITIAL_TABLES;
+=======
+    return [];
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -358,13 +459,28 @@ export function App() {
     apiGetTables().then((response) => {
       const backendTables = Array.isArray(response)
         ? response
+<<<<<<< HEAD
+        : response?.success && Array.isArray(response.data?.data)
+          ? response.data.data
+          : response?.success && Array.isArray(response.data?.tables)
+            ? response.data.tables
+            : response?.success && Array.isArray(response.data)
+              ? response.data
+              : response?.success && Array.isArray(response.tables)
+                ? response.tables
+                : null;
+=======
         : response?.success && Array.isArray(response.data)
           ? response.data
           : response?.success && Array.isArray(response.tables)
             ? response.tables
-            : null;
-      if (Array.isArray(backendTables) && backendTables.length > 0) {
-        const merged = mergeIncomingTables(backendTables, getDeletedTableIds());
+          : null;
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
+      if (Array.isArray(backendTables)) {
+        const merged = mergeIncomingTables(
+          backendTables,
+          getDeletedTableIds(),
+        );
         setTables(merged);
         try {
           localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(merged));
@@ -384,23 +500,14 @@ export function App() {
       if (Array.isArray(backendMenu)) {
         let localMenu = [];
         try {
-          localMenu = JSON.parse(
-            localStorage.getItem(STORAGE_KEY_MENU) || "[]",
-          );
+          localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
         } catch {}
         const normalizedMenu = backendMenu.map((item) => {
-          const previous = localMenu.find(
-            (saved) =>
-              String(saved.id) === String(item.menuItemId ?? item.id) ||
-              saved.name?.trim().toLowerCase() ===
-                String(item.dishName || item.name || "")
-                  .trim()
-                  .toLowerCase(),
+          const previous = localMenu.find((saved) =>
+            String(saved.id) === String(item.menuItemId ?? item.id) ||
+            saved.name?.trim().toLowerCase() === String(item.dishName || item.name || "").trim().toLowerCase()
           );
-          return normalizeMenuItem({
-            ...item,
-            recipe: item.recipe || previous?.recipe || [],
-          });
+          return normalizeMenuItem({ ...item, recipe: item.recipe || previous?.recipe || [] });
         });
         setMenuItems(normalizedMenu);
         try {
@@ -414,9 +521,16 @@ export function App() {
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((backendStaff) => {
-      if (Array.isArray(backendStaff)) {
+      const staffList = Array.isArray(backendStaff)
+        ? backendStaff
+        : Array.isArray(backendStaff?.data)
+          ? backendStaff.data
+          : Array.isArray(backendStaff?.staff)
+            ? backendStaff.staff
+            : [];
+      if (staffList.length > 0) {
         const uniqueStaff = dedupeStaff(
-          backendStaff.map((s) => ({
+          staffList.map((s) => ({
             ...s,
             id: s.staffId ?? s.id,
             name: s.fullName || s.name,
@@ -440,7 +554,9 @@ export function App() {
           : Array.isArray(result?.data)
             ? result.data
             : [];
-      setPastOrders((current) => mergeSettledOrders(backendOrders, current));
+      if (Array.isArray(backendOrders) && backendOrders.length > 0) {
+        setPastOrders((current) => mergeSettledOrders(current, backendOrders));
+      }
     });
   }, []);
 
@@ -701,8 +817,7 @@ export function App() {
       .then((res) => res.json())
       .then((data) => {
         if (!data) return;
-        const incomingTables =
-          data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
+        const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
         if (Array.isArray(incomingTables)) {
           const freshDel = getDeletedTableIds();
           const clean = mergeIncomingTables(incomingTables, freshDel);
@@ -712,46 +827,33 @@ export function App() {
           } catch {}
         }
 
-        const incomingOrders =
-          data.pastOrders ?? data.data?.pastOrders ?? data[STORAGE_KEY_ORDERS];
+        const incomingOrders = data.pastOrders ?? data.data?.pastOrders ?? data[STORAGE_KEY_ORDERS];
         if (Array.isArray(incomingOrders)) {
-          setPastOrders((current) =>
-            mergeSettledOrders(current, incomingOrders),
-          );
+          setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
         }
 
         // Menu items are officially loaded from /api/v1/menu-items (which includes isChefsSpecial).
-        // Only fallback to /api/state if menuItems has not been loaded at all.
-        const incomingMenu =
-          data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
-        if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
-          setMenuItems((prev) => {
-            if (prev && prev.length > 0) return prev;
-            const normalizedMenu = incomingMenu.map(normalizeMenuItem);
-            try {
-              localStorage.setItem(
-                STORAGE_KEY_MENU,
-                JSON.stringify(normalizedMenu),
-              );
-            } catch {}
-            return normalizedMenu;
-          });
+        const incomingMenu = data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
+        if (Array.isArray(incomingMenu)) {
+          const normalizedMenu = incomingMenu.map(normalizeMenuItem);
+          setMenuItems(normalizedMenu);
+          try {
+            localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
+          } catch {}
         }
 
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
         if (Array.isArray(incomingStaff)) {
-          const normalizedStaff = dedupeStaff(
-            incomingStaff.map((s) => ({
-              id: s.staffId ?? s.id,
-              name: s.fullName || s.name,
-              role: s.roleTitle || s.role || "Waiter",
-              phone: s.phone || "",
-              email: s.email || "",
-              shift: s.shift || "Full Day",
-              status: s.isActive === false ? "inactive" : "active",
-            })),
-          );
+          const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
+            id: s.staffId ?? s.id,
+            name: s.fullName || s.name,
+            role: s.roleTitle || s.role || "Waiter",
+            phone: s.phone || "",
+            email: s.email || "",
+            shift: s.shift || "Full Day",
+            status: s.isActive === false ? "inactive" : "active",
+          })));
           setStaffList(normalizedStaff);
           try {
             localStorage.setItem(
@@ -773,15 +875,8 @@ export function App() {
         const incomingInventory = data[STORAGE_KEY_INVENTORY];
         if (Array.isArray(incomingInventory)) {
           try {
-            localStorage.setItem(
-              STORAGE_KEY_INVENTORY,
-              JSON.stringify(incomingInventory),
-            );
-            window.dispatchEvent(
-              new CustomEvent("avsr-inventory-updated", {
-                detail: incomingInventory,
-              }),
-            );
+            localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
+            window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
           } catch {}
         }
       })
@@ -790,18 +885,17 @@ export function App() {
     // 2. Connect to realtime SSE stream push for instant multi-device updates
     let es;
     try {
-      es = new EventSource(`${API_BASE_URL}/api/events`);
+      es = new EventSource(
+        `${API_BASE_URL}/api/events`,
+      );
       es.onmessage = (e) => {
         try {
           const parsedMsg = JSON.parse(e.data);
           const payload = parsedMsg.payload;
           if (!payload) return;
 
-          const incomingTables =
-            payload.tables ??
-            payload.data?.tables ??
-            payload[STORAGE_KEY_TABLES];
-          if (Array.isArray(incomingTables)) {
+          const incomingTables = payload.tables ?? payload.data?.tables ?? payload[STORAGE_KEY_TABLES];
+        if (Array.isArray(incomingTables)) {
             const freshDel = getDeletedTableIds();
             const clean = mergeIncomingTables(incomingTables, freshDel);
             setTables(clean);
@@ -809,43 +903,28 @@ export function App() {
               localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
             } catch {}
           }
-          const incomingOrders =
-            payload.pastOrders ?? payload[STORAGE_KEY_ORDERS];
+          const incomingOrders = payload.pastOrders ?? payload[STORAGE_KEY_ORDERS];
           if (Array.isArray(incomingOrders)) {
-            setPastOrders((current) =>
-              mergeSettledOrders(current, incomingOrders),
-            );
+            setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
           }
           const incomingMenu = payload.menuItems ?? payload[STORAGE_KEY_MENU];
           if (Array.isArray(incomingMenu)) {
             let savedMenuForRecipes = [];
             try {
-              savedMenuForRecipes = JSON.parse(
-                localStorage.getItem(STORAGE_KEY_MENU) || "[]",
-              );
+              savedMenuForRecipes = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
             } catch {}
             setMenuItems((prev) => {
-              const currentList =
-                prev && prev.length > 0 ? prev : savedMenuForRecipes;
+              const currentList = prev && prev.length > 0 ? prev : savedMenuForRecipes;
               const normalizedMenu = incomingMenu.map((m) => {
                 const existing = currentList.find(
                   (item) =>
                     String(item.id) === String(m.menuItemId || m.id) ||
-                    item.name?.trim().toLowerCase() ===
-                      String(m.dishName || m.name || "")
-                        .trim()
-                        .toLowerCase(),
+                    item.name?.trim().toLowerCase() === String(m.dishName || m.name || "").trim().toLowerCase()
                 );
-                const hasExplicitSpecial =
-                  m.isChefSpecial !== undefined ||
-                  m.isChefsSpecial !== undefined;
+                const hasExplicitSpecial = m.isChefSpecial !== undefined || m.isChefsSpecial !== undefined;
                 const isSpecial = hasExplicitSpecial
                   ? Boolean(m.isChefSpecial ?? m.isChefsSpecial)
-                  : Boolean(
-                      existing?.isChefSpecial ??
-                      existing?.isChefsSpecial ??
-                      false,
-                    );
+                  : Boolean(existing?.isChefSpecial ?? existing?.isChefsSpecial ?? false);
 
                 return {
                   id: m.menuItemId ? String(m.menuItemId) : String(m.id),
@@ -860,22 +939,20 @@ export function App() {
                         ? "Medium"
                         : "Spicy",
                   description: m.shortDescription || m.description || "",
-                  prepTime: m.prepTimeMinutes
-                    ? `${m.prepTimeMinutes} mins`
-                    : "",
+                  prepTime: m.prepTimeMinutes ? `${m.prepTimeMinutes} mins` : "",
                   prepTimeMinutes: m.prepTimeMinutes || 0,
                   isChefSpecial: isSpecial,
                   isChefsSpecial: isSpecial,
                   isAvailable: m.isAvailable !== false,
                   recipe: m.recipe || existing?.recipe || [],
-                  image: m.imageUrl || m.image || getRelevantLocalFallback(m),
+                  image:
+                    m.imageUrl ||
+                    m.image ||
+                    getRelevantLocalFallback(m),
                 };
               });
               try {
-                localStorage.setItem(
-                  STORAGE_KEY_MENU,
-                  JSON.stringify(normalizedMenu),
-                );
+                localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
               } catch {}
               return normalizedMenu;
             });
@@ -895,17 +972,15 @@ export function App() {
           }
           const incomingStaff = payload.staff ?? payload[STORAGE_KEY_STAFF];
           if (Array.isArray(incomingStaff)) {
-            const normalizedStaff = dedupeStaff(
-              incomingStaff.map((s) => ({
-                id: s.staffId || s.id,
-                name: s.fullName || s.name,
-                role: s.roleTitle || s.role || "Waiter",
-                phone: s.phone || "",
-                email: s.email || "",
-                shift: s.shift || "Full Day",
-                status: s.isActive === false ? "inactive" : "active",
-              })),
-            );
+            const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
+              id: s.staffId || s.id,
+              name: s.fullName || s.name,
+              role: s.roleTitle || s.role || "Waiter",
+              phone: s.phone || "",
+              email: s.email || "",
+              shift: s.shift || "Full Day",
+              status: s.isActive === false ? "inactive" : "active",
+            })));
             setStaffList(normalizedStaff);
             try {
               localStorage.setItem(
@@ -917,15 +992,8 @@ export function App() {
           const incomingInventory = payload[STORAGE_KEY_INVENTORY];
           if (Array.isArray(incomingInventory)) {
             try {
-              localStorage.setItem(
-                STORAGE_KEY_INVENTORY,
-                JSON.stringify(incomingInventory),
-              );
-              window.dispatchEvent(
-                new CustomEvent("avsr-inventory-updated", {
-                  detail: incomingInventory,
-                }),
-              );
+              localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
+              window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
             } catch {}
           }
           if (payload["avsr_auth_users_v1"]) {
@@ -1129,10 +1197,7 @@ export function App() {
     };
   }, []);
 
-  const currentTable =
-    tables.find((t) => String(t.id) === String(selectedTableId)) ||
-    tables[0] ||
-    null;
+  const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
 
   // Table selection handler
   const handleSelectTable = (id) => {
@@ -1203,6 +1268,8 @@ export function App() {
         };
       }),
     );
+
+    apiUpdateTableStatus(tableId, "occupied").catch(() => {});
 
     showToast(
       `Added ${menuItem.name} to ${tables.find((t) => t.id === tableId)?.name}`,
@@ -1286,13 +1353,38 @@ export function App() {
   };
 
   // 1. Send KOT (Kitchen Order Ticket): Transitions items to 'received' status in Kitchen
-  const handleSendKOT = (tableId) => {
+  const handleSendKOT = async (tableId, explicitItems = null) => {
     sounds.playBell();
-    const tbl = tables.find((t) => t.id === tableId);
+    const tbl =
+      tables.find(
+        (t) =>
+          String(t.id) === String(tableId) ||
+          String(t.tableNumber) === String(tableId) ||
+          String(t.name) === String(tableId),
+      ) ||
+      (selectedTableId &&
+        tables.find((t) => String(t.id) === String(selectedTableId))) ||
+      {};
+
+    const rawItems =
+      explicitItems && Array.isArray(explicitItems) && explicitItems.length > 0
+        ? explicitItems
+        : tbl?.items || [];
+
+    if (!rawItems || rawItems.length === 0) {
+      showToast("⚠️ Cannot send KOT: Table order has no items.", "error");
+      return;
+    }
+
     setTables((prevTables) =>
       prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        const updatedItems = t.items.map((i) => ({
+        if (
+          String(t.id) !== String(tableId) &&
+          String(t.tableNumber) !== String(tableId) &&
+          String(t.name) !== String(tableId)
+        )
+          return t;
+        const updatedItems = (t.items || []).map((i) => ({
           ...i,
           kotStatus:
             i.kotStatus === "ready" ||
@@ -1314,6 +1406,7 @@ export function App() {
 
         return {
           ...t,
+          status: "occupied",
           orderTime:
             t.orderTime ||
             new Date().toLocaleTimeString([], {
@@ -1327,13 +1420,79 @@ export function App() {
         };
       }),
     );
-    apiCreateKotOrder({ tableId, items: tbl?.items, status: "received" }).catch(
-      () => {},
-    );
-    setIsKOTOpen(true);
-    showToast(
-      `📥 KOT Sent: Order Received from ${tbl?.name || `Table ${tableId}`}!`,
-    );
+
+    const resolvedTableId =
+      Number.isInteger(Number(tbl?.id)) && Number(tbl?.id) > 0
+        ? Number(tbl?.id)
+        : Number.isInteger(Number(tableId)) && Number(tableId) > 0
+          ? Number(tableId)
+          : null;
+
+    const resolvedTableName =
+      tbl?.name ||
+      tbl?.tableNumber ||
+      (typeof tableId === "string" ? tableId : `Table ${tableId}`);
+
+    const kotPayload = {
+      tableId: resolvedTableId,
+      tableName: resolvedTableName,
+      name: resolvedTableName,
+      sectionArea: tbl?.section || tbl?.location || "Main Hall",
+      section: tbl?.section || tbl?.location || "Main Hall",
+      serverName: tbl?.server || tbl?.assignedServer || "Staff",
+      server: tbl?.server || tbl?.assignedServer || "Staff",
+      items: rawItems.map((item) => ({
+        menuItemId:
+          Number.isInteger(Number(item.id)) && Number(item.id) > 0
+            ? Number(item.id)
+            : Number.isInteger(Number(item.backendId)) &&
+                Number(item.backendId) > 0
+              ? Number(item.backendId)
+              : null,
+        id:
+          Number.isInteger(Number(item.id)) && Number(item.id) > 0
+            ? Number(item.id)
+            : Number.isInteger(Number(item.backendId)) &&
+                Number(item.backendId) > 0
+              ? Number(item.backendId)
+              : null,
+        backendId:
+          Number.isInteger(Number(item.backendId)) &&
+          Number(item.backendId) > 0
+            ? Number(item.backendId)
+            : Number.isInteger(Number(item.id)) && Number(item.id) > 0
+              ? Number(item.id)
+              : null,
+        dishName: item.name || item.dishName || "Dish Item",
+        name: item.name || item.dishName || "Dish Item",
+        quantity: Math.max(1, Number(item.quantity || 1)),
+      })),
+    };
+
+    try {
+      const res = await apiCreateKotOrder(kotPayload);
+      if (res && res.success === false) {
+        console.error("Failed to create KOT order:", res.error);
+        showToast(
+          `❌ KOT Failed: ${res.error || "Could not save KOT to backend"}`,
+          "error",
+        );
+        return;
+      }
+      if (resolvedTableId) {
+        apiUpdateTableStatus(resolvedTableId, "occupied").catch(() => {});
+      }
+      setIsKOTOpen(true);
+      showToast(
+        `📥 KOT Sent: Order Received from ${resolvedTableName}!`,
+      );
+    } catch (err) {
+      console.error("Error creating KOT order:", err);
+      showToast(
+        `❌ KOT Error: ${err.message || "Failed to dispatch KOT order"}`,
+        "error",
+      );
+    }
   };
 
   // 2. Kitchen KDS Action: Start cooking or update status
@@ -1447,6 +1606,14 @@ export function App() {
         `✅ ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
       );
     }
+
+    if (itemId) {
+      const kotItemStatus = status === "ready" ? "READY" : (status === "cooking" ? "IN PREP" : "PENDING");
+      apiUpdateKotItemStatus(tableId, itemId, kotItemStatus).catch(() => {});
+    } else {
+      const kotOrderStatus = status === "ready" ? "PREPARATION COMPLETED" : (status === "cooking" ? "IN PREPARATION" : "PENDING");
+      apiUpdateKotStatus(tableId, kotOrderStatus).catch(() => {});
+    }
   };
 
   // 3. Kitchen KDS Action: Mark preparation completed
@@ -1507,6 +1674,12 @@ export function App() {
       }),
     );
 
+    if (itemId) {
+      apiUpdateKotItemStatus(tableId, itemId, "READY").catch(() => {});
+    } else {
+      apiMarkAllPrepared(tableId).catch(() => {});
+    }
+
     const isSingleItem = Boolean(itemObj);
     triggerKitchenNotification({
       tableId,
@@ -1528,29 +1701,28 @@ export function App() {
 
   // Clear / Void Table Order
   const handleClearOrder = (tableId) => {
-    const tbl = tables.find((t) => t.id === tableId);
-    const tableName = tbl?.name || `Table ${tableId}`;
-    requestDelete({
-      title: `Void Order for ${tableName}?`,
-      message: `Are you sure you want to clear the entire active order for ${tableName}? All current items will be voided.`,
-      confirmLabel: "Yes, Void Order",
-      onConfirm: () => {
-        setTables((prevTables) =>
-          prevTables.map((t) => {
-            if (t.id !== tableId) return t;
-            return {
-              ...t,
-              items: [],
-              status: "vacant",
-              guests: 0,
-              orderTime: null,
-              discountPercent: 0,
-            };
-          }),
-        );
-        showToast(`${tableName} order cleared.`);
-      },
-    });
+    if (
+      window.confirm(
+        `Are you sure you want to clear the entire order for Table ${tableId}?`,
+      )
+    ) {
+      setTables((prevTables) =>
+        prevTables.map((t) => {
+          if (t.id !== tableId) return t;
+          return {
+            ...t,
+            items: [],
+            status: "vacant",
+            guests: 0,
+            orderTime: null,
+            discountPercent: 0,
+          };
+        }),
+      );
+      apiVacateTable(tableId).catch(() => {});
+      apiUpdateTableStatus(tableId, "available").catch(() => {});
+      showToast(`Table ${tableId} order cleared.`);
+    }
   };
 
   // Transfer Table Order
@@ -1585,6 +1757,10 @@ export function App() {
       }),
     );
 
+    apiUpdateTableStatus(targetId, "occupied").catch(() => {});
+    apiVacateTable(sourceId).catch(() => {});
+    apiUpdateTableStatus(sourceId, "available").catch(() => {});
+
     setIsTransferOpen(false);
     setSelectedTableId(targetId);
     showToast(`Transferred Table ${sourceId} to Table ${targetId}!`);
@@ -1592,9 +1768,7 @@ export function App() {
 
   // Confirm Payment & Settle Bill
   const handleConfirmPayment = (settlementData) => {
-    const rawItems = Array.isArray(settlementData.items)
-      ? settlementData.items
-      : [];
+    const rawItems = Array.isArray(settlementData.items) ? settlementData.items : [];
     const billableItems = rawItems
       .map((item) => ({
         ...item,
@@ -1603,17 +1777,14 @@ export function App() {
         price: Number(item?.price ?? item?.unitPrice) || 0,
       }))
       .filter((item) => item.name && item.quantity > 0);
-    const hasInvalidItems = rawItems.some(
-      (item) =>
-        !String(item?.name || item?.dishName || "").trim() ||
-        !(Number(item?.quantity ?? item?.qty) > 0) ||
-        !Number.isFinite(Number(item?.price ?? item?.unitPrice)) ||
-        Number(item?.price ?? item?.unitPrice) < 0,
+    const hasInvalidItems = rawItems.some((item) =>
+      !String(item?.name || item?.dishName || "").trim() ||
+      !(Number(item?.quantity ?? item?.qty) > 0) ||
+      !Number.isFinite(Number(item?.price ?? item?.unitPrice)) ||
+      Number(item?.price ?? item?.unitPrice) < 0,
     );
     if (billableItems.length === 0 || hasInvalidItems) {
-      showToast(
-        "Cannot settle this bill: remove or correct every unnamed/invalid item first.",
-      );
+      showToast("Cannot settle this bill: remove or correct every unnamed/invalid item first.");
       setIsSettlementOpen(false);
       return;
     }
@@ -1644,9 +1815,7 @@ export function App() {
       completedDuration: finalDuration || "",
       guests:
         (Number(tableObj?.guests) > 0 ? Number(tableObj.guests) : null) ??
-        (Number(settlementData.guests) > 0
-          ? Number(settlementData.guests)
-          : null) ??
+        (Number(settlementData.guests) > 0 ? Number(settlementData.guests) : null) ??
         (Number(tableObj?.capacity) > 0 ? Number(tableObj.capacity) : null) ??
         2,
       capacity: tableObj?.capacity || settlementData.capacity || 0,
@@ -1656,27 +1825,20 @@ export function App() {
 
     // Deduct recipe ingredients once the bill is paid.
     try {
-      const inventory = JSON.parse(
-        localStorage.getItem(STORAGE_KEY_INVENTORY) || "[]",
-      );
+      const inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INVENTORY) || "[]");
       if (Array.isArray(inventory) && inventory.length) {
         const usageByIngredient = new Map();
         (settlementData.items || []).forEach((orderedItem) => {
-          const dish = menuItems.find(
-            (item) =>
-              String(item.id) === String(orderedItem.id) ||
-              item.name?.trim().toLowerCase() ===
-                orderedItem.name?.trim().toLowerCase(),
+          const dish = menuItems.find((item) =>
+            String(item.id) === String(orderedItem.id) ||
+            item.name?.trim().toLowerCase() === orderedItem.name?.trim().toLowerCase(),
           );
           const dishCount = Number(orderedItem.quantity) || 1;
           (dish?.recipe || []).forEach((ingredient) => {
             const ingredientId = String(ingredient.inventoryId);
             const amount = Number(ingredient.quantity) * dishCount;
             if (ingredientId && Number.isFinite(amount) && amount > 0) {
-              usageByIngredient.set(
-                ingredientId,
-                (usageByIngredient.get(ingredientId) || 0) + amount,
-              );
+              usageByIngredient.set(ingredientId, (usageByIngredient.get(ingredientId) || 0) + amount);
             }
           });
         });
@@ -1691,22 +1853,61 @@ export function App() {
               totalUsed: Number(ingredient.totalUsed || 0) + used,
             };
           });
-          localStorage.setItem(
-            STORAGE_KEY_INVENTORY,
-            JSON.stringify(updatedInventory),
-          );
+          localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(updatedInventory));
           pushGlobalSync({ [STORAGE_KEY_INVENTORY]: updatedInventory });
-          window.dispatchEvent(
-            new CustomEvent("avsr-inventory-updated", {
-              detail: updatedInventory,
-            }),
-          );
+          window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: updatedInventory }));
         }
       }
     } catch {}
 
     const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);
+<<<<<<< HEAD
+
+    const orderPayload = {
+      tableId: Number.isInteger(Number(settlementData.tableId)) ? Number(settlementData.tableId) : null,
+      tableName: tableObj?.name || tableObj?.tableNumber || `Table ${settlementData.tableId}`,
+      tableNumber: tableObj?.tableNumber || tableObj?.name || `Table ${settlementData.tableId}`,
+      serverName: tableObj?.server || "Staff",
+      guests: Number(enrichedSettlement.guests) || 1,
+      paymentMethod: settlementData.paymentMethod || "Cash",
+      discountPercent: Number(settlementData.discountPercent) || 0,
+      serviceChargeEnabled: true,
+      tipAmount: Number(settlementData.tipAmount) || 0,
+      status: "Settled",
+      items: billableItems.map((item) => ({
+        id: Number.isInteger(Number(item.id)) ? Number(item.id) : null,
+        backendId: Number.isInteger(Number(item.backendId)) ? Number(item.backendId) : null,
+        menuItemId: Number.isInteger(Number(item.id || item.backendId)) ? Number(item.id || item.backendId) : null,
+        dishName: item.name,
+        name: item.name,
+        price: Number(item.price) || 0,
+        quantity: Math.max(1, Number(item.quantity) || 1),
+      })),
+    };
+
+    apiCreateOrder(orderPayload)
+      .then((res) => {
+        if (res && res.success !== false) {
+          apiGetOrderHistory()
+            .then((hRes) => {
+              const resData = hRes?.data ?? hRes;
+              const freshHistory = Array.isArray(resData)
+                ? resData
+                : Array.isArray(resData?.data)
+                  ? resData.data
+                  : [];
+              if (freshHistory.length > 0) {
+                setPastOrders(dedupeOrders(freshHistory));
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+=======
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
     try {
       localStorage.setItem(
         STORAGE_KEY_ORDERS,
@@ -1728,6 +1929,8 @@ export function App() {
       };
     });
     setTables(updatedTables);
+    apiVacateTable(settlementData.tableId).catch(() => {});
+    apiUpdateTableStatus(settlementData.tableId, "available").catch(() => {});
     try {
       const isDeleted = (id) =>
         (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
@@ -1769,11 +1972,7 @@ export function App() {
   const handleUpdateInvoiceDiscount = async (orderId, discountPercent) => {
     const updateResult = await apiUpdateOrderDiscount(orderId, discountPercent);
     if (!updateResult?.success || updateResult.data?.success === false) {
-      throw new Error(
-        updateResult?.error ||
-          updateResult?.data?.message ||
-          "The server could not update this invoice discount.",
-      );
+      throw new Error(updateResult?.error || updateResult?.data?.message || "The server could not update this invoice discount.");
     }
 
     const historyResult = await apiGetOrderHistory();
@@ -1786,9 +1985,7 @@ export function App() {
           ? history
           : null;
     if (!historyResult?.success || !orders) {
-      throw new Error(
-        "The discount was sent to the server, but the updated invoice list could not be refreshed. Reload Admin Invoices to confirm it.",
-      );
+      throw new Error("The discount was sent to the server, but the updated invoice list could not be refreshed. Reload Admin Invoices to confirm it.");
     }
 
     const updatedOrders = dedupeOrders(orders);
@@ -1802,7 +1999,7 @@ export function App() {
   // 1. Menu Items Admin
   const handleAddMenuItem = async (newItem) => {
     const isSpecialValue = Boolean(
-      newItem.isChefSpecial ?? newItem.isChefsSpecial ?? newItem.isSpecial,
+      newItem.isChefSpecial ?? newItem.isChefsSpecial ?? newItem.isSpecial
     );
     let result = await apiCreateMenuItem({
       ...newItem,
@@ -1812,12 +2009,7 @@ export function App() {
     });
     let createdItem = {};
     if (result?.success && result.data?.success !== false) {
-      createdItem =
-        result.data?.menuItem ||
-        result.data?.item ||
-        result.data?.data ||
-        result.data ||
-        {};
+      createdItem = result.data?.menuItem || result.data?.item || result.data?.data || result.data || {};
       showToast(`✅ Dish "${newItem.name}" saved to the backend menu!`);
     } else {
       showToast(`✅ Dish "${newItem.name}" saved locally!`);
@@ -1844,10 +2036,7 @@ export function App() {
       id: createdId,
     });
     setMenuItems((prev) => {
-      const nextMenu = [
-        savedItem,
-        ...prev.filter((item) => String(item.id) !== String(savedItem.id)),
-      ];
+      const nextMenu = [savedItem, ...prev.filter((item) => String(item.id) !== String(savedItem.id))];
       try {
         localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(nextMenu));
       } catch {}
@@ -1860,7 +2049,7 @@ export function App() {
     const isSpecialValue = Boolean(
       updatedItem.isChefSpecial ??
       updatedItem.isChefsSpecial ??
-      updatedItem.isSpecial,
+      updatedItem.isSpecial
     );
 
     // Call update API (PUT)
@@ -1876,10 +2065,7 @@ export function App() {
       await apiSetMenuSpecialStatus(updatedItem.id, isSpecialValue);
     } catch {}
 
-    const responseItem =
-      (result?.success &&
-        (result.data?.menuItem || result.data?.item || result.data?.data)) ||
-      {};
+    const responseItem = (result?.success && (result.data?.menuItem || result.data?.item || result.data?.data)) || {};
     const savedItem = normalizeMenuItem({
       ...updatedItem,
       ...responseItem,
@@ -1890,9 +2076,7 @@ export function App() {
     });
 
     setMenuItems((prev) => {
-      const nextMenu = prev.map((item) =>
-        String(item.id) === String(savedItem.id) ? savedItem : item,
-      );
+      const nextMenu = prev.map((item) => String(item.id) === String(savedItem.id) ? savedItem : item);
       try {
         localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(nextMenu));
       } catch {}
@@ -1904,8 +2088,14 @@ export function App() {
 
   const handleDeleteMenuItem = async (itemId) => {
     try {
-      await apiDeleteMenuItem(itemId);
-    } catch {}
+      const res = await apiDeleteMenuItem(itemId);
+      if (res && res.success === false) {
+        showToast(`Failed to delete menu item: ${res.error || res.message || 'API error'}`);
+        return false;
+      }
+    } catch (err) {
+      console.warn("Delete menu item API error:", err);
+    }
     const item = menuItems.find((i) => String(i.id) === String(itemId));
     const nextMenu = menuItems.filter((i) => String(i.id) !== String(itemId));
     setMenuItems(nextMenu);
@@ -1923,91 +2113,193 @@ export function App() {
   const handleSetMenuAvailability = async (itemId, isAvailable) => {
     const result = await apiSetMenuAvailability(itemId, isAvailable);
     if (!result?.success || result.data?.success === false) {
-      showToast(
-        `Availability update failed: ${result?.error || result?.data?.message || "API error"}`,
-      );
+      showToast(`Availability update failed: ${result?.error || result?.data?.message || "API error"}`);
       return false;
     }
-    setMenuItems((prev) =>
-      prev.map((item) =>
-        String(item.id) === String(itemId) ? { ...item, isAvailable } : item,
-      ),
-    );
+    setMenuItems((prev) => prev.map((item) => String(item.id) === String(itemId) ? { ...item, isAvailable } : item));
     return true;
   };
 
   const handleSetMenuSpecial = async (itemId, isSpecial) => {
     const result = await apiSetMenuSpecialStatus(itemId, isSpecial);
     if (!result?.success || result.data?.success === false) {
-      showToast(
-        `Chef's Special update failed: ${result?.error || result?.data?.message || "API error"}`,
-      );
+      showToast(`Chef's Special update failed: ${result?.error || result?.data?.message || "API error"}`);
       return false;
     }
-    setMenuItems((prev) =>
-      prev.map((item) =>
-        String(item.id) === String(itemId)
-          ? { ...item, isChefSpecial: isSpecial }
-          : item,
-      ),
-    );
+    setMenuItems((prev) => prev.map((item) => String(item.id) === String(itemId) ? { ...item, isChefSpecial: isSpecial } : item));
     return true;
   };
   // 2. Tables & Chairs Admin
-  const handleAddTable = (newTable) => {
-    const normalizedTable = {
-      ...newTable,
-      id: Number(newTable.id),
-      name: String(newTable.name || "").trim(),
-    };
-    const nextDeleted = deletedTableIds.filter(
-      (id) => String(id) !== String(normalizedTable.id),
-    );
-    setDeletedTableIds(nextDeleted);
+  const handleAddTable = async (newTable) => {
+    const tableNum = String(newTable.tableNumber || newTable.name || newTable.tableName || "").trim();
+    if (!tableNum) {
+      showToast("❌ Table Number is required.");
+      return false;
+    }
+    if (tableNum.length > 10) {
+      showToast("❌ Table Number must not exceed 10 characters.");
+      return false;
+    }
+
+    const branch = Number(newTable.branchId) || 1;
+    const capacity = Number(newTable.capacity || newTable.capacityChairs) || 4;
+    const section = String(newTable.section || newTable.sectionArea || newTable.location || "Main Hall").trim();
+    const assignedServerId = newTable.assignedServerId ? Number(newTable.assignedServerId) : null;
+    const serverName = newTable.server || newTable.assignedServerName || "";
+
     try {
-      localStorage.setItem(
-        STORAGE_KEY_DELETED_TABLES,
-        JSON.stringify(nextDeleted),
-      );
-    } catch {}
+      const response = await apiCreateTable({
+        tableNumber: tableNum,
+        name: tableNum,
+        tableName: tableNum,
+        branchId: branch,
+        section: section,
+        sectionArea: section,
+        location: section,
+        capacity: capacity,
+        capacityChairs: capacity,
+        status: "available",
+        assignedServerId: assignedServerId,
+        server: serverName
+      });
 
-    setTables((prev) => {
-      if (prev.some((table) => Number(table.id) === normalizedTable.id)) {
-        showToast(
-          `Table ID ${normalizedTable.id} already exists. Please choose another table number.`,
-        );
-        return prev;
+      if (!response?.success) {
+        const errorMsg = response?.error || response?.data?.message || "Failed to create table on server.";
+        showToast(`❌ ${errorMsg}`);
+        return false;
       }
-      const updated = [...prev, normalizedTable];
-      try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-    apiCreateTable(normalizedTable).catch(() => {});
-    showToast(
-      `✅ Created ${normalizedTable.name} with ${normalizedTable.capacity} chairs!`,
-    );
-  };
 
-  const handleUpdateTable = (updatedTable) => {
-    setTables((prev) => {
-      const updated = prev.map((t) =>
-        String(t.id) === String(updatedTable.id) ? updatedTable : t,
+      const serverTable = response?.data?.data || response?.data || response;
+      const assignedId = Number(serverTable?.tableId || serverTable?.id || newTable.id);
+
+      const normalizedTable = {
+        ...newTable,
+        id: assignedId,
+        tableId: assignedId,
+        name: serverTable?.tableNumber || serverTable?.tableName || tableNum,
+        tableName: serverTable?.tableName || serverTable?.tableNumber || tableNum,
+        tableNumber: serverTable?.tableNumber || tableNum,
+        branchId: Number(serverTable?.branchId || branch),
+        section: serverTable?.sectionArea || serverTable?.location || section,
+        location: serverTable?.location || serverTable?.sectionArea || section,
+        capacity: Number(serverTable?.capacity || serverTable?.capacityChairs || capacity),
+        status: String(serverTable?.status || "available").toLowerCase(),
+        server: serverTable?.assignedServerName || serverTable?.server || serverName || "Staff",
+        assignedServerId: serverTable?.assignedServerId || assignedServerId
+      };
+
+      const nextDeleted = deletedTableIds.filter(
+        (id) => String(id) !== String(assignedId),
       );
+      setDeletedTableIds(nextDeleted);
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+        localStorage.setItem(
+          STORAGE_KEY_DELETED_TABLES,
+          JSON.stringify(nextDeleted),
+        );
       } catch {}
+<<<<<<< HEAD
+
+      setTables((prev) => {
+        const filtered = prev.filter((t) => Number(t.id) !== assignedId);
+        const updated = [...filtered, normalizedTable];
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      showToast(`✅ Created Table ${normalizedTable.tableNumber} with ${normalizedTable.capacity} chairs!`);
+      return true;
+    } catch (err) {
+      console.error("Failed to create table via API:", err);
+      showToast(`❌ Failed to connect to server: ${err.message || "Network Error"}`);
+      return false;
+    }
+=======
       return updated;
     });
-    apiUpdateTable(updatedTable.id, updatedTable).catch(() => {});
+    const targetApiId = updatedTable.backendTableId || updatedTable.id;
+    apiUpdateTable(targetApiId, updatedTable).catch(() => {});
     showToast(
       `✅ Updated ${updatedTable.name} (${updatedTable.capacity} chairs)`,
     );
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
-  const handleDeleteTable = (tableId) => {
+  const handleUpdateTable = async (updatedTable) => {
+    const tableNum = String(updatedTable.tableNumber || updatedTable.name || updatedTable.tableName || "").trim();
+    if (!tableNum) {
+      showToast("❌ Table Number is required.");
+      return false;
+    }
+    if (tableNum.length > 10) {
+      showToast("❌ Table Number must not exceed 10 characters.");
+      return false;
+    }
+    const branch = Number(updatedTable.branchId) || 1;
+    const capacity = Number(updatedTable.capacity || updatedTable.capacityChairs) || 4;
+    const section = String(updatedTable.section || updatedTable.sectionArea || updatedTable.location || "Main Hall").trim();
+    const assignedServerId = updatedTable.assignedServerId ? Number(updatedTable.assignedServerId) : null;
+    const serverName = updatedTable.server || updatedTable.assignedServerName || "";
+
+    try {
+      const response = await apiUpdateTable(updatedTable.id, {
+        tableNumber: tableNum,
+        name: tableNum,
+        tableName: tableNum,
+        branchId: branch,
+        section: section,
+        sectionArea: section,
+        location: section,
+        capacity: capacity,
+        capacityChairs: capacity,
+        status: updatedTable.status || "available",
+        assignedServerId: assignedServerId,
+        server: serverName
+      });
+
+      if (!response?.success) {
+        const errorMsg = response?.error || response?.data?.message || "Failed to update table on server.";
+        showToast(`❌ ${errorMsg}`);
+        return false;
+      }
+
+      setTables((prev) => {
+        const updated = prev.map((t) =>
+          String(t.id) === String(updatedTable.id)
+            ? { ...updatedTable, name: tableNum, tableNumber: tableNum, tableName: tableNum, branchId: branch, location: section, section: section, capacity: capacity, server: serverName, assignedServerId: assignedServerId }
+            : t,
+        );
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      showToast(`✅ Updated ${tableNum} (${capacity} chairs)`);
+      return true;
+    } catch (err) {
+      console.warn("Update table API error:", err);
+      showToast(`❌ Failed to connect to server: ${err.message || "Network Error"}`);
+      return false;
+    }
+  };
+
+  const handleDeleteTable = async (tableId) => {
     const tbl = tables.find((t) => String(t.id) === String(tableId));
+    try {
+      const response = await apiDeleteTable(tableId);
+      if (!response?.success) {
+        const errorMsg = response?.error || response?.data?.message || "Failed to delete table on server.";
+        showToast(`❌ ${errorMsg}`);
+        return false;
+      }
+    } catch (err) {
+      console.warn("Delete table API error:", err);
+      showToast(`❌ Failed to connect to server: ${err.message || "Network Error"}`);
+      return false;
+    }
 
     // 1. Permanently register this table ID as deleted
     const nextDeleted = [
@@ -2037,8 +2329,14 @@ export function App() {
       setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
     }
 
-    apiDeleteTable(tableId).catch(() => {});
-    showToast(`🗑️ Permanently Deleted ${tbl?.name || "Table"}`);
+<<<<<<< HEAD
+    showToast(`🗑️  Permanently Deleted ${tbl?.name || "Table"}`);
+    return true;
+=======
+    const targetApiId = tbl?.backendTableId || tableId;
+    apiDeleteTable(targetApiId).catch(() => {});
+    showToast(`🗑️  Permanently Deleted ${tbl?.name || "Table"}`);
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
   // 3. Staff & Persons Admin
@@ -2048,7 +2346,7 @@ export function App() {
     const staffId = createdStaff?.staffId ?? createdStaff?.id;
     if (!result?.success || !staffId) {
       showToast(
-        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️  Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
@@ -2058,10 +2356,13 @@ export function App() {
       id: staffId,
       name: createdStaff.fullName || createdStaff.name || newPerson.name,
       role: createdStaff.roleTitle || createdStaff.role || newPerson.role,
+      employeeId:
+        newPerson.employeeId ||
+        `EMP-${String(staffId).padStart(3, "0")}`,
     };
     setStaffList((prev) => [...prev, savedStaff]);
     showToast(
-      `✅ ${savedStaff.name} saved with Employee ID EMP-${String(staffId).padStart(5, "0")}`,
+      `✅ ${savedStaff.name} saved with Employee ID ${savedStaff.employeeId || `EMP-${String(staffId).padStart(5, "0")}`}`,
     );
     return true;
   };
@@ -2107,13 +2408,26 @@ export function App() {
     return true;
   };
 
-  const handleDeleteStaff = (personId) => {
+  const handleDeleteStaff = async (personId) => {
     const person = staffList.find((p) => (p.id ?? p.staffId) === personId);
+<<<<<<< HEAD
+    try {
+      await apiDeleteStaff(personId);
+    } catch (err) {
+      console.warn("Delete staff API error:", err);
+    }
+    const nextStaff = staffList.filter((p) => (p.id ?? p.staffId) !== personId);
+    setStaffList(nextStaff);
+    try {
+      localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+    } catch {}
+=======
     setStaffList((prev) =>
       prev.filter((p) => (p.id ?? p.staffId) !== personId),
     );
     apiDeleteStaff(personId).catch(() => {});
-    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
+    showToast(`🗑️  Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
@@ -2219,11 +2533,7 @@ export function App() {
               />
             </ErrorBoundary>
           ) : (
-            <LoginPage
-              role="kot"
-              onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
-            />
+            <LoginPage role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
@@ -2257,11 +2567,7 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage
-              role="admin"
-              onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
-            />
+            <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
@@ -2292,33 +2598,15 @@ export function App() {
                     setIsReceiptOpen(true);
                   }}
                   onOpenSettlement={() => {
-                    const items = Array.isArray(currentTable?.items)
-                      ? currentTable.items
-                      : [];
-                    const hasValidItems =
-                      items.length > 0 &&
-                      items.every(
-                        (item) =>
-                          String(
-                            item?.name ||
-                              item?.dishName ||
-                              menuItems.find(
-                                (menuItem) =>
-                                  String(menuItem.id) ===
-                                  String(item?.menuItemId ?? item?.id),
-                              )?.name ||
-                              "",
-                          ).trim() &&
-                          Number(item?.quantity ?? item?.qty) > 0 &&
-                          Number.isFinite(
-                            Number(item?.price ?? item?.unitPrice),
-                          ) &&
-                          Number(item?.price ?? item?.unitPrice) >= 0,
-                      );
+                    const items = Array.isArray(currentTable?.items) ? currentTable.items : [];
+                    const hasValidItems = items.length > 0 && items.every((item) =>
+                      String(item?.name || item?.dishName || menuItems.find((menuItem) => String(menuItem.id) === String(item?.menuItemId ?? item?.id))?.name || "").trim() &&
+                      Number(item?.quantity ?? item?.qty) > 0 &&
+                      Number.isFinite(Number(item?.price ?? item?.unitPrice)) &&
+                      Number(item?.price ?? item?.unitPrice) >= 0,
+                    );
                     if (!hasValidItems) {
-                      showToast(
-                        "Cannot settle: remove or correct every unnamed/invalid item first.",
-                      );
+                      showToast("Cannot settle: remove or correct every unnamed/invalid item first.");
                       return;
                     }
                     setIsSettlementOpen(true);
@@ -2330,11 +2618,7 @@ export function App() {
               )}
             </>
           ) : (
-            <LoginPage
-              role="pos"
-              onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
-            />
+            <LoginPage role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
       </main>
 
@@ -2539,8 +2823,8 @@ export function App() {
           onAddMenuItem={handleAddMenuItem}
           onUpdateMenuItem={handleUpdateMenuItem}
           onDeleteMenuItem={handleDeleteMenuItem}
-          onSetMenuAvailability={handleSetMenuAvailability}
-          onSetMenuSpecial={handleSetMenuSpecial}
+              onSetMenuAvailability={handleSetMenuAvailability}
+              onSetMenuSpecial={handleSetMenuSpecial}
           tables={tables}
           onAddTable={handleAddTable}
           onUpdateTable={handleUpdateTable}
@@ -2594,25 +2878,16 @@ export function App() {
           pastOrders={pastOrders}
           onClose={() => setIsPastOrdersOpen(false)}
           onReprintReceipt={(order) => {
-            const matchedTable = tables.find(
-              (t) => t.id === order.tableId || t.name === order.tableName,
-            );
-            const resolvedCapacity =
-              order.capacity || matchedTable?.capacity || 0;
+            const matchedTable = tables.find(t => t.id === order.tableId || t.name === order.tableName);
+            const resolvedCapacity = order.capacity || matchedTable?.capacity || 0;
             const resolvedGuests =
               (Number(order.guests) > 0 ? Number(order.guests) : null) ??
-              (Number(order.occupiedChairs) > 0
-                ? Number(order.occupiedChairs)
-                : null) ??
+              (Number(order.occupiedChairs) > 0 ? Number(order.occupiedChairs) : null) ??
               (resolvedCapacity > 0 ? resolvedCapacity : null);
 
             setReprintReceiptData({
               id: order.tableId,
-              name:
-                order.tableName ||
-                (order.tableId != null
-                  ? `Table ${order.tableId}`
-                  : "Table unavailable"),
+              name: order.tableName || (order.tableId != null ? `Table ${order.tableId}` : "Table unavailable"),
               section: order.section,
               server: order.server,
               capacity: order.capacity || matchedTable?.capacity || 0,

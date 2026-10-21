@@ -507,7 +507,11 @@ export function AdminOverview({
               msOverflowStyle: "none",
             }}
           >
-            {tables.slice(0, 15).map((tbl) => {
+            {tables
+              .slice()
+              .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+              .slice(0, 15)
+              .map((tbl) => {
               const isOccupied = tbl.status !== "vacant";
               return (
                 <div

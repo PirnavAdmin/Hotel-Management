@@ -39,7 +39,6 @@ export function Header({
   onClearNotifications = null,
   onSelectTable = null,
   restaurantName = "Restaurant",
-  restaurantLogo = "",
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -154,23 +153,28 @@ export function Header({
     <header
       className="mobile-header-nav"
       style={{
-
         background: "var(--bg-secondary)",
         borderBottom: "1px solid var(--border-subtle)",
-        padding: "0.75rem 1.5rem",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
         position: "sticky",
         top: 0,
         zIndex: 40,
         boxShadow: "var(--shadow-md)",
-        flexWrap: "wrap",
-        gap: "0.75rem",
       }}
     >
-      {/* 1. BRAND & LOGO */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+      {/* ── TOP PRIMARY ROW: BRAND, DATE/TIME, USER CONTROLS ── */}
+      <div
+        className="mobile-header-primary"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0.6rem 1.25rem",
+          gap: "1rem",
+          width: "100%",
+        }}
+      >
+        {/* 1. BRAND & LOGO */}
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
         <div
           onClick={() => {
             setActiveView("tables");
@@ -183,13 +187,6 @@ export function Header({
             cursor: "pointer",
           }}
         >
-          {restaurantLogo ? (
-            <img
-              src={restaurantLogo}
-              alt={`${restaurantName || "Restaurant"} logo`}
-              style={{ width: 52, height: 52, objectFit: "contain", borderRadius: 8 }}
-            />
-          ) : (
           <div
             style={{
               background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
@@ -204,7 +201,6 @@ export function Header({
           >
             <UtensilsCrossed size={20} color="#ffffff" />
           </div>
-          )}
           <div>
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
@@ -315,16 +311,18 @@ export function Header({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "0.55rem",
+          gap: "0.45rem",
           background: "var(--bg-tertiary)",
           border: "1px solid var(--border-subtle)",
-          padding: "0.42rem 0.95rem",
+          padding: "0.38rem 0.8rem",
           borderRadius: "var(--radius-md)",
           color: "var(--accent-amber-light)",
-          fontSize: "0.82rem",
+          fontSize: "0.78rem",
           fontWeight: 800,
           fontFamily: "monospace",
           boxShadow: "inset 0 1px 3px rgba(0,0,0,0.25)",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
         }}
       >
         <div
@@ -369,121 +367,16 @@ export function Header({
         </div>
       </div>
 
-      {/* 3. CENTER LIVE FLOOR METRICS & RUPEE REVENUE */}
       <div
-        className="desktop-only"
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "0.85rem",
-          background: "var(--bg-tertiary)",
-          padding: "0.45rem 1rem",
-          borderRadius: "var(--radius-md)",
-          border: "1px solid var(--border-subtle)",
+          gap: "0.6rem",
+          marginLeft: "auto",
+          flexShrink: 0,
+          justifyContent: "flex-end",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            fontSize: "0.78rem",
-          }}
-        >
-          <span
-            style={{
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background: "var(--status-vacant)",
-              display: "inline-block",
-            }}
-          />
-          <span style={{ color: "var(--text-muted)" }}>Vacant:</span>
-          <strong style={{ color: "var(--status-vacant)" }}>
-            {vacantCount}
-          </strong>
-        </div>
-
-        <div
-          style={{
-            width: "1px",
-            height: "14px",
-            background: "var(--border-subtle)",
-          }}
-        />
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            fontSize: "0.78rem",
-          }}
-        >
-          <span
-            style={{
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background: "var(--status-occupied)",
-              display: "inline-block",
-            }}
-          />
-          <span style={{ color: "var(--text-muted)" }}>Dining:</span>
-          <strong style={{ color: "var(--status-occupied)" }}>
-            {occupiedCount}
-          </strong>
-        </div>
-
-        <div
-          style={{
-            width: "1px",
-            height: "14px",
-            background: "var(--border-subtle)",
-          }}
-        />
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            fontSize: "0.78rem",
-          }}
-        >
-          <Users size={13} color="var(--text-muted)" />
-          <span style={{ color: "var(--text-muted)" }}>Guests:</span>
-          <strong style={{ color: "var(--text-main)" }}>{totalGuests}</strong>
-        </div>
-
-        <div
-          style={{
-            width: "1px",
-            height: "14px",
-            background: "var(--border-subtle)",
-          }}
-        />
-
-        {/* Live Running Total in Rupees */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            fontSize: "0.78rem",
-          }}
-        >
-          <span style={{ color: "var(--text-muted)" }}>Running Total:</span>
-          <strong
-            className="font-mono"
-            style={{ color: "var(--accent-amber-light)", fontSize: "0.9rem" }}
-          >
-            {formatCurrency(totalRunningRevenue)}
-          </strong>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
         {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
         <button
           onClick={() => {
@@ -880,6 +773,130 @@ export function Header({
           onLogout={onLogout}
           role="pos"
         /> 
+      </div>
+      </div>
+
+      {/* ── SECONDARY SUB-BAR (DOWN): VACANT / DINING / GUESTS / RUNNING TOTAL ── */}
+      <div
+        className="desktop-only"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0.32rem 1.25rem",
+          background: "rgba(0, 0, 0, 0.14)",
+          borderTop: "1px solid var(--border-subtle)",
+          width: "100%",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "1.25rem",
+            fontSize: "0.78rem",
+          }}
+        >
+          {/* Vacant */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+            }}
+          >
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "var(--status-vacant)",
+                display: "inline-block",
+              }}
+            />
+            <span style={{ color: "var(--text-muted)" }}>Vacant:</span>
+            <strong style={{ color: "var(--status-vacant)" }}>
+              {vacantCount}
+            </strong>
+          </div>
+
+          <div
+            style={{
+              width: "1px",
+              height: "14px",
+              background: "var(--border-subtle)",
+            }}
+          />
+
+          {/* Dining */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+            }}
+          >
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "var(--status-occupied)",
+                display: "inline-block",
+              }}
+            />
+            <span style={{ color: "var(--text-muted)" }}>Dining:</span>
+            <strong style={{ color: "var(--status-occupied)" }}>
+              {occupiedCount}
+            </strong>
+          </div>
+
+          <div
+            style={{
+              width: "1px",
+              height: "14px",
+              background: "var(--border-subtle)",
+            }}
+          />
+
+          {/* Guests */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+            }}
+          >
+            <Users size={13} color="var(--text-muted)" />
+            <span style={{ color: "var(--text-muted)" }}>Guests:</span>
+            <strong style={{ color: "var(--text-main)" }}>{totalGuests}</strong>
+          </div>
+
+          <div
+            style={{
+              width: "1px",
+              height: "14px",
+              background: "var(--border-subtle)",
+            }}
+          />
+
+          {/* Live Running Total in Rupees */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+            }}
+          >
+            <span style={{ color: "var(--text-muted)" }}>Running Total:</span>
+            <strong
+              className="font-mono"
+              style={{ color: "var(--accent-amber-light)", fontSize: "0.9rem" }}
+            >
+              {formatCurrency(totalRunningRevenue)}
+            </strong>
+          </div>
+        </div>
       </div>
     </header>
   );

@@ -78,17 +78,19 @@ export function TableView({ tables, onSelectTable }) {
         tServer.toLowerCase() === serverFilter.toLowerCase();
 
       // 4. Table Number Dropdown Filter
+      const tNum = String(t.tableNumber || t.name || "").toLowerCase();
       const matchesTableDropdown =
         tableFilter === "all" ||
         String(t.id) === String(tableFilter) ||
+        tNum === String(tableFilter).toLowerCase() ||
         String(t.name).toLowerCase() === String(tableFilter).toLowerCase();
 
       // 5. Search Query Filter (Searches Table Number OR Server Name OR Section)
       let matchesSearch = true;
       const q = searchQuery.trim().toLowerCase();
       if (q) {
-        const tIdStr = String(t.id ?? "");
-        const tName = String(t.name ?? "").toLowerCase();
+        const tIdStr = String(t.id || "");
+        const tName = String(t.tableNumber || t.name || "").toLowerCase();
         const tSec = String(t.section ?? "").toLowerCase();
         const sName = tServer.toLowerCase();
 
@@ -103,7 +105,9 @@ export function TableView({ tables, onSelectTable }) {
           tableMatch =
             tIdStr === cleanNum ||
             numRegex.test(tName) ||
-            tName === `table ${cleanNum}`;
+            tName === `table ${cleanNum}` ||
+            tName === `t-${cleanNum}` ||
+            tName === `t${cleanNum}`;
         } else {
           tableMatch =
             tName.includes(q) ||
@@ -127,7 +131,7 @@ export function TableView({ tables, onSelectTable }) {
         matchesTableDropdown &&
         matchesSearch
       );
-    });
+    }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
   }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
 
   const hasActiveFilters =
@@ -304,7 +308,7 @@ export function TableView({ tables, onSelectTable }) {
               </option>
               {uniqueTableNumbers.map((tbl) => (
                 <option key={tbl.id} value={tbl.id} style={{ background: "#18181b", color: "#f4f4f5" }}>
-                  {tbl.name || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
+                  {tbl.name || tbl.tableNumber || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
                 </option>
               ))}
             </select>
@@ -774,12 +778,53 @@ export function TableView({ tables, onSelectTable }) {
                   >
                     <span
                       style={{
+<<<<<<< HEAD
+                        background:
+                          table.status !== "vacant"
+                            ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                            : "var(--bg-tertiary)",
+                        color:
+                          table.status !== "vacant"
+                            ? "#ffffff"
+                            : "var(--text-main)",
+                        border:
+                          table.status !== "vacant"
+                            ? "none"
+                            : "1px solid var(--border-subtle)",
+                        fontWeight: 900,
+                        fontSize: "0.74rem",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        letterSpacing: "0.03em",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {table.tableNumber || table.name || `Table-${table.id}`}
+                    </span>
+                    <h3
+                      style={{
+                        fontSize: "1rem",
+                        fontWeight: 900,
+                        color:
+                          table.status !== "vacant"
+                            ? "var(--accent-amber-light)"
+                            : "var(--text-main)",
+                        margin: 0,
+                        lineHeight: 1.1,
+                        letterSpacing: "-0.02em",
+                        whiteSpace: "nowrap",
+=======
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                         minWidth: 0,
                       }}
                     >
+<<<<<<< HEAD
+                      {table.tableNumber || table.name || `Table ${table.id}`}
+                    </h3>
+=======
                       {table.section}
                     </span>
                     <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
@@ -788,6 +833,7 @@ export function TableView({ tables, onSelectTable }) {
                         ? `${table.guests} Seated`
                         : "Vacant"}
                     </span>
+>>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
                   </div>
 
                   {/* Assigned Server Badge */}
