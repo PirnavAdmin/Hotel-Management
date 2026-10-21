@@ -10,7 +10,7 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
   };
 
   return (
-    <div style={{
+    <div className="receipt-modal-overlay" style={{
       position: 'fixed',
       inset: 0,
       background: 'rgba(0, 0, 0, 0.75)',
@@ -21,7 +21,7 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
       zIndex: 110,
       padding: '1rem'
     }}>
-      <div style={{
+      <div className="receipt-modal-container" style={{
         background: '#ffffff',
         color: '#1a1a1a',
         width: '100%',
@@ -51,9 +51,9 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
         </div>
 
         {/* Printable KOT Thermal Slip */}
-        <div id="printable-receipt" style={{
+        <div id="printable-receipt" className="format-thermal" style={{
           padding: '1.25rem',
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           fontSize: '0.82rem',
           lineHeight: '1.4'
         }}>

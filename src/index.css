@@ -271,58 +271,128 @@ textarea {
 }
 
 /* Print Styles for Receipts and Reports */
+@page {
+  size: auto;
+  margin: 0mm;
+}
+
 @media print {
-  html, body {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
-  #printable-receipt,
-  #printable-receipt *,
-  #printable-report,
-  #printable-report * {
-    visibility: visible;
-  }
-  #printable-receipt {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    max-width: 80mm;
-    margin: 0;
-    padding: 4mm 3mm !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-  #printable-report {
-    display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 12mm 15mm;
-    background: #ffffff !important;
-    color: #000000 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
+
   .no-print,
   .no-print * {
     display: none !important;
     visibility: hidden !important;
   }
+
+  /* Reset fixed modal overlay for natural top-of-page printing */
+  .receipt-modal-overlay,
+  .receipt-modal-container {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+    max-width: none !important;
+  }
+
+  #printable-receipt,
+  #printable-receipt *,
+  #printable-report,
+  #printable-report * {
+    visibility: visible !important;
+  }
+
+  /* 80mm Thermal Receipt Print Styling */
+  #printable-receipt.format-thermal,
+  #printable-receipt:not(.format-a4) {
+    display: block !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    padding: 4mm 3mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* A4 Full Page Invoice Print Styling */
+  #printable-receipt.format-a4 {
+    display: block !important;
+    position: relative !important;
+    margin: 8mm auto !important;
+    width: 100% !important;
+    max-width: 190mm !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  #printable-report {
+    display: block !important;
+    position: relative !important;
+    margin: 10mm auto !important;
+    width: 100% !important;
+    max-width: 190mm !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
   .receipt-items-scroll {
     max-height: none !important;
     overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Force print text and borders to black for thermal roll clarity */
+  #printable-receipt * {
+    color: #000000 !important;
   }
 }
 
