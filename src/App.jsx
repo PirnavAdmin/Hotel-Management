@@ -53,6 +53,7 @@ import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
+import { useAppDialog } from "./common/DialogContext";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -219,6 +220,7 @@ const getDeletedTableIds = () => {
 };
 
 export function App() {
+  const { confirmDialog } = useAppDialog();
   const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
 
   useEffect(() => {
@@ -1480,27 +1482,30 @@ export function App() {
   };
 
   // Clear / Void Table Order
-  const handleClearOrder = (tableId) => {
-    if (
-      window.confirm(
-        `Are you sure you want to clear the entire order for Table ${tableId}?`,
-      )
-    ) {
-      setTables((prevTables) =>
-        prevTables.map((t) => {
-          if (t.id !== tableId) return t;
-          return {
-            ...t,
-            items: [],
-            status: "vacant",
-            guests: 0,
-            orderTime: null,
-            discountPercent: 0,
-          };
-        }),
-      );
-      showToast(`Table ${tableId} order cleared.`);
-    }
+  const handleClearOrder = async (tableId) => {
+    const confirmed = await confirmDialog(
+      `Are you sure you want to clear the entire order for Table ${tableId}?`,
+      {
+        title: "Clear table order?",
+        confirmText: "Yes, Clear Order",
+      },
+    );
+    if (!confirmed) return;
+
+    setTables((prevTables) =>
+      prevTables.map((t) => {
+        if (t.id !== tableId) return t;
+        return {
+          ...t,
+          items: [],
+          status: "vacant",
+          guests: 0,
+          orderTime: null,
+          discountPercent: 0,
+        };
+      }),
+    );
+    showToast(`Table ${tableId} order cleared.`);
   };
 
   // Transfer Table Order
@@ -2001,33 +2006,36 @@ export function App() {
   };
 
   // Reset to default initial state
-  const handleResetData = () => {
-    if (
-      window.confirm(
-        "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
-      )
-    ) {
-      setDeletedTableIds([]);
-      setTables(INITIAL_TABLES);
-      setMenuItems([]);
-      setStaffList([]);
-      setPastOrders([]);
-      setInventory([]);
-      localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
-      localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
-      localStorage.setItem(STORAGE_KEY_MENU, "[]");
-      localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-      localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
-      localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
-      pushGlobalSync({
-        [STORAGE_KEY_TABLES]: INITIAL_TABLES,
-        [STORAGE_KEY_MENU]: [],
-        [STORAGE_KEY_STAFF]: [],
-        [STORAGE_KEY_ORDERS]: [],
-        [STORAGE_KEY_INVENTORY]: [],
-      });
-      showToast("Data reset to default 15 tables.");
-    }
+  const handleResetData = async () => {
+    const confirmed = await confirmDialog(
+      "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
+      {
+        title: "Reset all data?",
+        confirmText: "Yes, Reset Data",
+      },
+    );
+    if (!confirmed) return;
+
+    setDeletedTableIds([]);
+    setTables(INITIAL_TABLES);
+    setMenuItems([]);
+    setStaffList([]);
+    setPastOrders([]);
+    setInventory([]);
+    localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
+    localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
+    localStorage.setItem(STORAGE_KEY_MENU, "[]");
+    localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+    localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
+    localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
+    pushGlobalSync({
+      [STORAGE_KEY_TABLES]: INITIAL_TABLES,
+      [STORAGE_KEY_MENU]: [],
+      [STORAGE_KEY_STAFF]: [],
+      [STORAGE_KEY_ORDERS]: [],
+      [STORAGE_KEY_INVENTORY]: [],
+    });
+    showToast("Data reset to default 15 tables.");
   };
 
   return (
@@ -2138,7 +2146,11 @@ export function App() {
           (posSession.role === "pos" || posSession.role === "admin") ? (
             <>
               {activeView === "tables" && (
-                <TableView tables={tables} onSelectTable={handleSelectTable} />
+                <TableView
+                  tables={tables}
+                  onSelectTable={handleSelectTable}
+                  onUpdateTable={handleUpdateTable}
+                />
               )}
               {activeView === "order" && (
                 <TableDetailView

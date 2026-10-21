@@ -4,14 +4,16 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import { ErrorBoundary } from './common/ErrorBoundary.jsx'
+import { DialogProvider } from './common/DialogProvider.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <App />
+        <DialogProvider>
+          <App />
+        </DialogProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </StrictMode>,
 )
-

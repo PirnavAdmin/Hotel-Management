@@ -2270,7 +2270,11 @@ export function App() {
           (posSession.role === "pos" || posSession.role === "admin") ? (
             <>
               {activeView === "tables" && (
-                <TableView tables={tables} onSelectTable={handleSelectTable} />
+                <TableView
+                  tables={tables}
+                  onSelectTable={handleSelectTable}
+                  onUpdateTable={handleUpdateTable}
+                />
               )}
               {activeView === "order" && (
                 <TableDetailView
