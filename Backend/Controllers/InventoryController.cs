@@ -381,7 +381,7 @@ public class InventoryController : ControllerBase
         }
     }
 
-    private static Ingredient MapIngredientFromReader(DbDataReader reader)
+    public static Ingredient MapIngredientFromReader(DbDataReader reader)
     {
         int catOrd = reader.GetOrdinal("category");
         int subOrd = reader.GetOrdinal("subcategory");

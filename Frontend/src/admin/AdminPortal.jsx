@@ -537,6 +537,8 @@ export function AdminPortal({
   const [newServerRole, setNewServerRole] = useState("");
   const [tableForm, setTableForm] = useState({
     name: "",
+    tableNumber: "",
+    branchId: 1,
     section: "",
     capacity: "",
     server: staffList[0]?.name || "",
@@ -629,73 +631,122 @@ export function AdminPortal({
 
     if (tbl) {
       setEditingTable(tbl);
+      const tNum = String(tbl.tableNumber || tbl.name || tbl.tableName || "").trim();
       setTableForm({
-        name: tbl.name,
-        section: tbl.section,
-        capacity: tbl.capacity,
-        server: tbl.server,
+        name: tNum,
+        tableNumber: tNum,
+        branchId: tbl.branchId || 1,
+        section: tbl.section || tbl.location || "",
+        capacity: tbl.capacity || 4,
+        server: tbl.server || tbl.assignedServerName || staffList[0]?.name || "",
+        assignedServerId: tbl.assignedServerId || null,
       });
     } else {
       setEditingTable(null);
-      // Auto suggest next table number
-      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      // Auto suggest next table number based on active table count
+      const nextNum = `T-${String(tables.length + 1).padStart(2, "0")}`;
       setTableForm({
-        name: "",
+        name: nextNum,
+        tableNumber: nextNum,
+        branchId: 1,
         section: "",
-        capacity: "",
+        capacity: 4,
         server: staffList[0]?.name || "",
+        assignedServerId: staffList[0]?.staffId || staffList[0]?.id || null,
       });
     }
     setIsTableModalOpen(true);
   };
 
-  const handleSaveTable = (e) => {
+  const handleSaveTable = async (e) => {
     e.preventDefault();
-    if (!tableForm.name.trim()) return;
+    const rawInput = String(tableForm.tableNumber || tableForm.name || "").trim();
+    if (!rawInput) {
+      showToast("❌ Table Number / Identifier is required.");
+      return;
+    }
+    const match = rawInput.match(/^(Table|table)[-\s]?(\d+)$/i);
+    const tableNum = match
+      ? `Table-${match[2]}`
+      : (/^\d+$/.test(rawInput) ? `Table-${rawInput}` : rawInput);
+
+    if (tableNum.length > 10) {
+      showToast("❌ Table Number / Identifier must not exceed 10 characters.");
+      return;
+    }
 
     if (tableForm.section) {
       saveCustomSection(tableForm.section);
     }
 
     let assignedServer = tableForm.server;
+    let assignedServerId = tableForm.assignedServerId || null;
+
     if (isNewServerMode && newServerName.trim()) {
       assignedServer = newServerName.trim();
-      onAddStaff({
+      const staffRes = await onAddStaff({
         id: Date.now(),
         name: assignedServer,
-        role: newServerRole.trim(),
+        fullName: assignedServer,
+        role: newServerRole.trim() || "Server",
+        roleTitle: newServerRole.trim() || "Server",
         phone: "+91 98450 00000",
-        shift: "",
+        shift: "Morning",
+        isActive: true,
       });
+      if (staffRes && typeof staffRes === "object") {
+        assignedServerId = staffRes.staffId || staffRes.id || null;
+      }
+    } else if (tableForm.server) {
+      const foundStaff = staffList.find(s =>
+        String(s.name || s.fullName || "").toLowerCase() === String(tableForm.server).toLowerCase()
+      );
+      if (foundStaff) {
+        assignedServerId = foundStaff.staffId || foundStaff.id || null;
+      }
     }
 
+    let savedResult;
     if (editingTable) {
-      onUpdateTable({
+      savedResult = await onUpdateTable({
         ...editingTable,
-        name: tableForm.name,
-        section: tableForm.section,
-        capacity: Number(tableForm.capacity) || 2,
+        name: tableNum,
+        tableName: tableNum,
+        tableNumber: tableNum,
+        branchId: Number(tableForm.branchId) || editingTable.branchId || 1,
+        section: tableForm.section || "Main Hall",
+        location: tableForm.section || "Main Hall",
+        capacity: Number(tableForm.capacity) || 4,
         server: assignedServer,
+        assignedServerId: assignedServerId,
       });
     } else {
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
-      onAddTable({
+      savedResult = await onAddTable({
         id: maxId + 1,
-        name: tableForm.name,
-        section: tableForm.section,
+        name: tableNum,
+        tableName: tableNum,
+        tableNumber: tableNum,
+        branchId: Number(tableForm.branchId) || 1,
+        section: tableForm.section || "Main Hall",
+        location: tableForm.section || "Main Hall",
         capacity: Number(tableForm.capacity) || 4,
-        status: "vacant",
-        guests: Number(tableForm.capacity) || 4,
+        status: "available",
+        guests: 0,
         items: [],
         discountPercent: 0,
         serviceCharge: 5,
         orderTime: null,
         server: assignedServer,
+        assignedServerId: assignedServerId,
       });
     }
-    setIsTableModalOpen(false);
-    setIsNewServerMode(false);
-    setNewServerName("");
+
+    if (savedResult !== false) {
+      setIsTableModalOpen(false);
+      setIsNewServerMode(false);
+      setNewServerName("");
+    }
   };
 
   // Open staff modal for Add or Edit
@@ -2037,7 +2088,7 @@ export function AdminPortal({
                                 flexShrink: 0,
                               }}
                             >
-                              T{tbl.id}
+                              {tbl.tableNumber || tbl.name || `T${tbl.id}`}
                             </div>
                             <div>
                               <h4
@@ -2048,7 +2099,7 @@ export function AdminPortal({
                                   margin: 0,
                                 }}
                               >
-                                Table {tbl.id}
+                                {tbl.name || tbl.tableNumber || `Table ${tbl.id}`}
                               </h4>
                               <span
                                 style={{
@@ -2069,11 +2120,11 @@ export function AdminPortal({
                               fontWeight: 700,
                               textTransform: "uppercase",
                               background:
-                                tbl.status === "vacant"
+                                (tbl.status === "vacant" || tbl.status === "available")
                                   ? "var(--status-vacant-bg)"
                                   : "var(--status-occupied-bg)",
                               color:
-                                tbl.status === "vacant"
+                                (tbl.status === "vacant" || tbl.status === "available")
                                   ? "var(--status-vacant)"
                                   : "var(--status-occupied)",
                             }}
@@ -2186,14 +2237,14 @@ export function AdminPortal({
 
                         <button
                           onClick={() => {
-                            if (tbl.status !== "vacant") {
+                            if (tbl.status !== "vacant" && tbl.status !== "available") {
                               alert(
-                                `Cannot delete ${tbl.name} because it is currently occupied with diners. Clear or settle bill first.`,
+                                `Cannot delete ${tbl.tableNumber || tbl.name || `Table ${tbl.id}`} because it is currently occupied with diners. Clear or settle bill first.`,
                               );
                               return;
                             }
                             if (
-                              window.confirm(`Delete ${tbl.name} permanently?`)
+                              window.confirm(`Delete ${tbl.tableNumber || tbl.name || `Table ${tbl.id}`} permanently?`)
                             ) {
                               onDeleteTable(tbl.id);
                             }
@@ -3662,15 +3713,21 @@ export function AdminPortal({
                   marginBottom: "5px",
                 }}
               >
-                Table Name / Identifier{" "}
+                Table Number / Identifier{" "}
                 <span style={{ color: "#ea580c" }}>*</span>
               </label>
               <input
                 type="text"
                 required
-                value={tableForm.name}
+                maxLength={10}
+                placeholder="e.g. Table-1, Table-2"
+                value={tableForm.tableNumber || tableForm.name}
                 onChange={(e) =>
-                  setTableForm({ ...tableForm, name: e.target.value })
+                  setTableForm({
+                    ...tableForm,
+                    name: e.target.value,
+                    tableNumber: e.target.value,
+                  })
                 }
                 style={{
                   width: "100%",

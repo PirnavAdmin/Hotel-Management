@@ -18,6 +18,10 @@ public class PosStateResponseDto
     public object? RestaurantSettings { get; set; }
     [System.Text.Json.Serialization.JsonPropertyName("gourmet_pos_settings_v1")]
     public object? GourmetPosSettingsV1 { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("ingredients")]
+    public object Ingredients { get; set; } = new List<object>();
+    [System.Text.Json.Serialization.JsonPropertyName("gourmet_pos_inventory_v2")]
+    public object GourmetPosInventoryV2 { get; set; } = new List<object>();
     public object Data { get; set; } = null!;
 }
 

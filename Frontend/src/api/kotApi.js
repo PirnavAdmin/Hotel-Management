@@ -12,8 +12,14 @@ export async function apiGetKotDetails(id) {
   return await apiClient(`/api/v1/kot/${id}`);
 }
 
-export async function apiCreateKotOrder(orderId, kotData) {
-  return await apiClient(`/api/v1/orders/${orderId}/kot`, {
+export async function apiCreateKotOrder(orderIdOrData, kotData) {
+  if (typeof orderIdOrData === 'object' && orderIdOrData !== null) {
+    return await apiClient('/api/v1/kot/orders', {
+      method: 'POST',
+      body: JSON.stringify(orderIdOrData)
+    });
+  }
+  return await apiClient(`/api/v1/orders/${orderIdOrData}/kot`, {
     method: 'POST',
     body: JSON.stringify(kotData)
   });

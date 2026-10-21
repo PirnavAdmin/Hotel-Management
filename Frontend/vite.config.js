@@ -37,14 +37,8 @@ function globalSyncPlugin() {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-        if (req.method === "OPTIONS") {
-          res.statusCode = 204;
-          return res.end();
-        }
+        // Forward all API and upload requests directly to the ASP.NET Core Web API proxy
+        return next();
 
         // Realtime SSE Event Stream
         if (req.url === "/api/events") {
@@ -647,10 +641,17 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
+        "/api": {
+          target:
+            env.VITE_API_BASE_URL ||
+            "http://localhost:5018",
+          changeOrigin: true,
+          secure: false,
+        },
         "/uploads": {
           target:
             env.VITE_API_BASE_URL ||
-            "https://cultivate-suitable-manmade.ngrok-free.dev",
+            "http://localhost:5018",
           changeOrigin: true,
           headers: { "ngrok-skip-browser-warning": "true" },
         },

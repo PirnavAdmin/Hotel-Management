@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -10,18 +11,19 @@ public class Reservation
     [Column("reservation_id")]
     public long ReservationId { get; set; }
 
+    [Column("branch_id")]
+    public long BranchId { get; set; } = 1;
+
     [Column("customer_id")]
     public long? CustomerId { get; set; }
 
-    [Required]
     [MaxLength(100)]
     [Column("customer_name")]
-    public string CustomerName { get; set; } = string.Empty;
+    public string? CustomerName { get; set; }
 
-    [Required]
     [MaxLength(20)]
     [Column("phone")]
-    public string Phone { get; set; } = string.Empty;
+    public string? Phone { get; set; }
 
     [Column("table_id")]
     public long? TableId { get; set; }
@@ -29,14 +31,24 @@ public class Reservation
     [Column("guests_count")]
     public int GuestsCount { get; set; } = 2;
 
+    [Column("reservation_date")]
+    public DateTime ReservationDate { get; set; } = DateTime.UtcNow.Date;
+
     [Column("reservation_time")]
-    public DateTime ReservationTime { get; set; } = DateTime.UtcNow;
+    public TimeSpan ReservationTime { get; set; }
 
     [Required]
     [MaxLength(20)]
     [Column("status")]
-    public string Status { get; set; } = "PENDING"; // "PENDING", "CONFIRMED", "SEATED", "CANCELLED"
+    public string Status { get; set; } = "booked"; // "booked", "confirmed", "seated", "cancelled", "no_show"
+
+    [MaxLength(255)]
+    [Column("notes")]
+    public string? Notes { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

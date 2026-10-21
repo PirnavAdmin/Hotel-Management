@@ -54,27 +54,29 @@ export async function getUsers() {
     };
   };
 
-  const remoteUsers = res.success ? extractList(res.data).filter((user) => user && typeof user === 'object').map(normalizeUser) : [];
+  if (res.success) {
+    const remoteUsers = extractList(res.data)
+      .filter((user) => user && typeof user === 'object')
+      .map(normalizeUser);
+    try {
+      localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(remoteUsers));
+    } catch {}
+    return {
+      users: remoteUsers,
+      error: '',
+    };
+  }
+
+  // Fallback to cached users only when API request fails (e.g. offline)
   let cachedUsers = [];
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
     cachedUsers = extractList(saved).filter((user) => user && typeof user === 'object').map(normalizeUser);
   } catch {}
 
-  const byUser = new Map();
-  [...remoteUsers, ...cachedUsers].forEach((user) => {
-    const key = user.id
-      ? `id:${user.id}`
-      : `username:${user.username.trim().toLowerCase()}`;
-    byUser.set(key, { ...(byUser.get(key) || {}), ...user });
-  });
-  const users = Array.from(byUser.values());
-  try {
-    localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(users));
-  } catch {}
   return {
-    users,
-    error: res.success ? '' : (res.error || 'Could not reach the user service; showing saved accounts.'),
+    users: cachedUsers,
+    error: res.error || 'Could not reach the user service; showing saved accounts.',
   };
 }
 
@@ -97,6 +99,17 @@ export async function registerUser(userData) {
 
 export async function deleteUser(userId) {
   const res = await apiDeleteUser(userId);
+  if (res.success) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
+      const filtered = saved.filter(
+        (u) =>
+          String(u.id || u.userId) !== String(userId) &&
+          String(u.username || '').toLowerCase() !== String(userId).toLowerCase()
+      );
+      localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(filtered));
+    } catch {}
+  }
   return { success: res.success, error: res.error };
 }
 

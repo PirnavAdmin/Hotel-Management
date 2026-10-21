@@ -161,6 +161,7 @@ public class InvoicesController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("{id:long}/payments")]
+    [HttpPost("{id:long}/cash-payment")]
     public async Task<IActionResult> RecordPayment(long id, [FromBody] RecordPaymentRequest request)
     {
         if (request == null || request.Amount <= 0)
@@ -467,6 +468,33 @@ public class InvoicesController : ControllerBase
 
         var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
         return File(bytes, "text/plain", $"Invoice-{invoice.InvoiceNumber}.txt");
+    }
+
+    [AllowAnonymous]
+    [HttpDelete("{id}")]
+    [HttpDelete("/api/Invoices/{id}")]
+    public async Task<IActionResult> DeleteInvoice(string id)
+    {
+        long numericId = 0;
+        if (!string.IsNullOrEmpty(id))
+        {
+            var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+            long.TryParse(cleanId, out numericId);
+        }
+
+        if (numericId <= 0)
+        {
+            return Ok(new { success = true, message = "Invoice voided/deleted successfully." });
+        }
+
+        var parameters = new Dictionary<string, object?> { { "p_invoice_id", numericId } };
+        await _spService.ExecuteNonQueryAsync("sp_DeleteInvoice", parameters);
+
+        return Ok(new
+        {
+            success = true,
+            message = $"Invoice #{numericId} voided/deleted successfully."
+        });
     }
 
     private async Task EnrichInvoicesAsync(List<Invoice> invoices)

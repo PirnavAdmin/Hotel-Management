@@ -74,6 +74,33 @@ public class SuppliersController : ControllerBase
     }
 
     [AllowAnonymous]
+    [HttpDelete("{id}")]
+    [HttpDelete("/api/Suppliers/{id}")]
+    public async Task<IActionResult> DeleteSupplier(string id)
+    {
+        long numericId = 0;
+        if (!string.IsNullOrEmpty(id))
+        {
+            var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+            long.TryParse(cleanId, out numericId);
+        }
+
+        if (numericId <= 0)
+        {
+            return Ok(new { success = true, message = "Supplier removed successfully." });
+        }
+
+        var parameters = new Dictionary<string, object?> { { "p_supplier_id", numericId } };
+        await _spService.ExecuteNonQueryAsync("sp_DeleteSupplier", parameters);
+
+        return Ok(new
+        {
+            success = true,
+            message = "Supplier removed successfully."
+        });
+    }
+
+    [AllowAnonymous]
     [HttpGet("purchase-orders")]
     public async Task<IActionResult> GetPurchaseOrders([FromQuery] string? status)
     {

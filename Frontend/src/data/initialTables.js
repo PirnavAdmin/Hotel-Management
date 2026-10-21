@@ -1,7 +1,8 @@
 export const INITIAL_TABLES = [
   {
     "id": 1,
-    "name": "Table 1",
+    "name": "Table-1",
+    "tableNumber": "Table-1",
     "section": "Main Hall",
     "capacity": 2,
     "status": "vacant",
@@ -16,7 +17,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 2,
-    "name": "Table 2",
+    "name": "Table-2",
+    "tableNumber": "Table-2",
     "section": "Main Hall",
     "capacity": 4,
     "status": "vacant",
@@ -31,7 +33,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 3,
-    "name": "Table 3",
+    "name": "Table-3",
+    "tableNumber": "Table-3",
     "section": "Main Hall",
     "capacity": 4,
     "status": "vacant",
@@ -46,7 +49,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 4,
-    "name": "Table 4",
+    "name": "Table-4",
+    "tableNumber": "Table-4",
     "section": "Main Hall",
     "capacity": 6,
     "status": "vacant",
@@ -61,7 +65,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 5,
-    "name": "Table 5",
+    "name": "Table-5",
+    "tableNumber": "Table-5",
     "section": "Main Hall",
     "capacity": 4,
     "status": "vacant",
@@ -76,7 +81,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 6,
-    "name": "Table 6",
+    "name": "Table-6",
+    "tableNumber": "Table-6",
     "section": "Main Hall",
     "capacity": 4,
     "status": "vacant",
@@ -91,7 +97,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 7,
-    "name": "Table 7",
+    "name": "Table-7",
+    "tableNumber": "Table-7",
     "section": "VIP Lounge",
     "capacity": 8,
     "status": "vacant",
@@ -106,7 +113,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 8,
-    "name": "Table 8",
+    "name": "Table-8",
+    "tableNumber": "Table-8",
     "section": "VIP Lounge",
     "capacity": 8,
     "status": "vacant",
@@ -121,7 +129,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 9,
-    "name": "Table 9",
+    "name": "Table-9",
+    "tableNumber": "Table-9",
     "section": "Terrace",
     "capacity": 4,
     "status": "vacant",
@@ -136,7 +145,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 10,
-    "name": "Table 10",
+    "name": "Table-10",
+    "tableNumber": "Table-10",
     "section": "Terrace",
     "capacity": 4,
     "status": "vacant",
@@ -151,7 +161,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 11,
-    "name": "Table 11",
+    "name": "Table-11",
+    "tableNumber": "Table-11",
     "section": "Main Hall",
     "capacity": 4,
     "status": "vacant",
@@ -166,7 +177,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 12,
-    "name": "Table 12",
+    "name": "Table-12",
+    "tableNumber": "Table-12",
     "section": "Main Hall",
     "capacity": 4,
     "status": "vacant",
@@ -181,7 +193,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 13,
-    "name": "Table 13",
+    "name": "Table-13",
+    "tableNumber": "Table-13",
     "section": "VIP Lounge",
     "capacity": 6,
     "status": "vacant",
@@ -196,7 +209,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 14,
-    "name": "Table 14",
+    "name": "Table-14",
+    "tableNumber": "Table-14",
     "section": "VIP Lounge",
     "capacity": 4,
     "status": "vacant",
@@ -211,7 +225,8 @@ export const INITIAL_TABLES = [
   },
   {
     "id": 15,
-    "name": "Table 15",
+    "name": "Table-15",
+    "tableNumber": "Table-15",
     "section": "Terrace",
     "capacity": 4,
     "status": "vacant",
