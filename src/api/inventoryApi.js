@@ -31,6 +31,12 @@ export async function apiUpdateIngredient(id, ingredientData) {
 }
 
 export async function apiDeleteIngredient(id) {
+  try {
+    const res = await apiClient(`/api/v1/inventory/${id}`, {
+      method: "DELETE",
+    });
+    if (res && res.success) return res;
+  } catch {}
   return apiClient(`/api/v1/inventory/ingredients/${id}`, {
     method: "DELETE",
   });
