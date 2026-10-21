@@ -3,8 +3,12 @@ import { apiClient } from "./apiConfig";
 /**
  * Retrieves all inventory ingredients from backend MySQL database.
  */
-export async function apiGetInventory() {
-  return apiClient("/api/v1/inventory");
+export async function apiGetInventory(category, search) {
+  const query = new URLSearchParams();
+  if (category) query.set("category", category);
+  if (search) query.set("search", search);
+  const queryString = query.toString();
+  return apiClient(`/api/v1/inventory${queryString ? `?${queryString}` : ""}`);
 }
 
 export async function apiGetInventoryIngredients() {
@@ -42,6 +46,13 @@ export async function apiCreateInventoryItem(itemData) {
   });
 }
 
+export async function apiCreateIngredient(ingredientData) {
+  return apiClient("/api/v1/inventory/ingredients", {
+    method: "POST",
+    body: JSON.stringify(ingredientData),
+  });
+}
+
 /**
  * Updates an existing ingredient in MySQL database.
  */
@@ -70,13 +81,35 @@ export async function apiUpdateInventoryItem(id, itemData) {
   });
 }
 
+export async function apiUpdateIngredient(id, ingredientData) {
+  return apiClient(`/api/v1/inventory/ingredients/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(ingredientData),
+  });
+}
+
 /**
  * Deletes / deactivates an ingredient in MySQL database.
  */
 export async function apiDeleteInventoryItem(id) {
-  return apiClient(`/api/v1/inventory/${id}`, {
+  const primaryResult = await apiClient(`/api/v1/inventory/${id}`, {
     method: "DELETE",
   });
+  if (primaryResult?.success) return primaryResult;
+
+  const fallbackResult = await apiClient(`/api/v1/inventory/ingredients/${id}`, {
+    method: "DELETE",
+  });
+  if (fallbackResult?.success) return fallbackResult;
+
+  return {
+    ...fallbackResult,
+    error: `Delete failed on both inventory routes. Primary: ${primaryResult?.error || "unknown error"}. Fallback: ${fallbackResult?.error || "unknown error"}.`,
+  };
+}
+
+export async function apiDeleteIngredient(id) {
+  return apiDeleteInventoryItem(id);
 }
 
 /**
@@ -101,6 +134,10 @@ export async function apiAdjustStock({ ingredientId, quantityChange, reason }) {
  */
 export async function apiGetLowStockInventory() {
   return apiClient("/api/v1/inventory/low-stock");
+}
+
+export async function apiGetLowStockAlerts() {
+  return apiGetLowStockInventory();
 }
 
 /**

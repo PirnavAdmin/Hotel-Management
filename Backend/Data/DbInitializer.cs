@@ -530,8 +530,28 @@ public static class DbInitializer
             EnsureColumnExists(conn, "invoice_payments", "paid_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "customers", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "customers", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "reservations", "branch_id", "BIGINT NOT NULL DEFAULT 1");
+            EnsureColumnExists(conn, "reservations", "customer_name", "VARCHAR(100) NULL");
+            EnsureColumnExists(conn, "reservations", "phone", "VARCHAR(20) NULL");
+            EnsureColumnExists(conn, "reservations", "reservation_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "reservations", "notes", "VARCHAR(255) NULL");
             EnsureColumnExists(conn, "reservations", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "reservations", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
+
+            EnsureColumnExists(conn, "ingredients", "name", "VARCHAR(100) NOT NULL DEFAULT ''");
+            EnsureColumnExists(conn, "ingredients", "unit", "VARCHAR(20) NOT NULL DEFAULT 'KG'");
+            EnsureColumnExists(conn, "ingredients", "current_stock", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "ingredients", "minimum_threshold", "DECIMAL(18,2) NOT NULL DEFAULT 5.00");
+            EnsureColumnExists(conn, "ingredients", "unit_cost", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "ingredients", "category", "VARCHAR(100) NULL DEFAULT 'General'");
+            EnsureColumnExists(conn, "ingredients", "subcategory", "VARCHAR(100) NULL DEFAULT ''");
+            EnsureColumnExists(conn, "ingredients", "supplier", "VARCHAR(150) NULL DEFAULT 'Local Supplier'");
+            EnsureColumnExists(conn, "ingredients", "mrp", "DECIMAL(10,2) NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "ingredients", "ingredient_code", "VARCHAR(30) NULL");
+            EnsureColumnExists(conn, "ingredients", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
             EnsureColumnExists(conn, "ingredients", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+
             EnsureColumnExists(conn, "suppliers", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "purchase_orders", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "purchase_orders", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
@@ -657,7 +677,7 @@ public static class DbInitializer
             CreateAllTables(conn);
 
             // Verify menu_items schema
-            try { _ = context.MenuItems.FirstOrDefault(); }
+            try { _ = context.MenuItems.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `menu_items`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -665,7 +685,7 @@ public static class DbInitializer
             }
 
             // Verify staff_persons schema
-            try { _ = context.StaffPersons.FirstOrDefault(); }
+            try { _ = context.StaffPersons.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `staff_persons`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -673,7 +693,7 @@ public static class DbInitializer
             }
 
             // Verify restaurant_tables schema
-            try { _ = context.RestaurantTables.FirstOrDefault(); }
+            try { _ = context.RestaurantTables.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `restaurant_tables`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -681,7 +701,7 @@ public static class DbInitializer
             }
 
             // Verify kot_orders schema
-            try { _ = context.KotOrders.FirstOrDefault(); }
+            try { _ = context.KotOrders.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `kot_orders`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -689,7 +709,7 @@ public static class DbInitializer
             }
 
             // Verify restaurant_orders schema
-            try { _ = context.Orders.FirstOrDefault(); }
+            try { _ = context.Orders.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `order_items`; DROP TABLE IF EXISTS `restaurant_orders`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -700,7 +720,7 @@ public static class DbInitializer
             SafeExecuteSql(conn, "ALTER TABLE `order_items` MODIFY COLUMN `item_id` BIGINT NULL DEFAULT NULL;");
 
             // Verify invoices schema
-            try { _ = context.Invoices.FirstOrDefault(); }
+            try { _ = context.Invoices.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `invoice_payments`; DROP TABLE IF EXISTS `invoices`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -708,7 +728,7 @@ public static class DbInitializer
             }
 
             // Verify customers schema
-            try { _ = context.Customers.FirstOrDefault(); }
+            try { _ = context.Customers.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `customers`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -716,7 +736,7 @@ public static class DbInitializer
             }
 
             // Verify reservations schema
-            try { _ = context.Reservations.FirstOrDefault(); }
+            try { _ = context.Reservations.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `reservations`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -724,7 +744,7 @@ public static class DbInitializer
             }
 
             // Verify ingredients schema
-            try { _ = context.Ingredients.FirstOrDefault(); }
+            try { _ = context.Ingredients.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `ingredients`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -732,7 +752,7 @@ public static class DbInitializer
             }
 
             // Verify suppliers schema
-            try { _ = context.Suppliers.FirstOrDefault(); }
+            try { _ = context.Suppliers.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `suppliers`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -740,7 +760,7 @@ public static class DbInitializer
             }
 
             // Verify purchase_orders schema
-            try { _ = context.PurchaseOrders.FirstOrDefault(); }
+            try { _ = context.PurchaseOrders.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `purchase_orders`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -748,7 +768,7 @@ public static class DbInitializer
             }
 
             // Verify attendances schema
-            try { _ = context.Attendances.FirstOrDefault(); }
+            try { _ = context.Attendances.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `attendances`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -756,7 +776,7 @@ public static class DbInitializer
             }
 
             // Verify promotions schema
-            try { _ = context.Promotions.FirstOrDefault(); }
+            try { _ = context.Promotions.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `promotions`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -764,7 +784,7 @@ public static class DbInitializer
             }
 
             // Verify delivery_orders schema
-            try { _ = context.DeliveryOrders.FirstOrDefault(); }
+            try { _ = context.DeliveryOrders.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `delivery_orders`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -772,7 +792,7 @@ public static class DbInitializer
             }
 
             // Verify menu_categories schema
-            try { _ = context.MenuCategories.FirstOrDefault(); }
+            try { _ = context.MenuCategories.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `menu_categories`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -780,7 +800,7 @@ public static class DbInitializer
             }
 
             // Verify staff schema
-            try { _ = context.Staff.FirstOrDefault(); }
+            try { _ = context.Staff.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `staff`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -788,7 +808,7 @@ public static class DbInitializer
             }
 
             // Verify dining_sections schema
-            try { _ = context.DiningSections.FirstOrDefault(); }
+            try { _ = context.DiningSections.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `dining_sections`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -796,7 +816,7 @@ public static class DbInitializer
             }
 
             // Verify dining_tables schema
-            try { _ = context.DiningTables.FirstOrDefault(); }
+            try { _ = context.DiningTables.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `dining_tables`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -804,7 +824,7 @@ public static class DbInitializer
             }
 
             // Verify kitchen_stations schema
-            try { _ = context.KitchenStations.FirstOrDefault(); }
+            try { _ = context.KitchenStations.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `kitchen_stations`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -812,7 +832,7 @@ public static class DbInitializer
             }
 
             // Verify kitchen_order_tickets schema
-            try { _ = context.KitchenOrderTickets.FirstOrDefault(); }
+            try { _ = context.KitchenOrderTickets.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `kitchen_order_tickets`; SET FOREIGN_KEY_CHECKS = 1;");
@@ -985,14 +1005,18 @@ public static class DbInitializer
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `reservations` (
                 `reservation_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `branch_id` BIGINT NOT NULL DEFAULT 1,
                 `customer_id` BIGINT NULL,
-                `customer_name` VARCHAR(100) NOT NULL,
-                `phone` VARCHAR(20) NOT NULL,
+                `customer_name` VARCHAR(100) NULL,
+                `phone` VARCHAR(20) NULL,
                 `table_id` BIGINT NULL,
                 `guests_count` INT NOT NULL DEFAULT 2,
-                `reservation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+                `reservation_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `reservation_time` TIME NOT NULL DEFAULT '12:00:00',
+                `status` VARCHAR(20) NOT NULL DEFAULT 'booked',
+                `notes` VARCHAR(255) NULL,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`reservation_id`)
             ) ENGINE=InnoDB;");
 
@@ -1004,6 +1028,12 @@ public static class DbInitializer
                 `current_stock` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
                 `minimum_threshold` DECIMAL(18,2) NOT NULL DEFAULT 5.00,
                 `unit_cost` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `category` VARCHAR(100) NOT NULL DEFAULT 'General',
+                `subcategory` VARCHAR(100) NULL DEFAULT '',
+                `supplier` VARCHAR(150) NOT NULL DEFAULT 'Local Supplier',
+                `mrp` DECIMAL(18,2) NULL DEFAULT 0.00,
+                `ingredient_code` VARCHAR(30) NULL,
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`ingredient_id`)
             ) ENGINE=InnoDB;");

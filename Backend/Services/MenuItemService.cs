@@ -158,6 +158,14 @@ public class MenuItemService
         return category;
     }
 
+    public async Task<bool> DeleteCategoryAsync(string name)
+    {
+        var parameters = new Dictionary<string, object?> { { "p_name", name.Trim() } };
+        await _spService.ExecuteNonQueryAsync("sp_DeleteMenuCategory", parameters);
+        _logger.LogInformation("Menu category deleted: {CategoryName}", name);
+        return true;
+    }
+
     public async Task<MenuItemResponseDto?> ToggleAvailabilityAsync(long id, bool isAvailable)
     {
         var existing = await GetMenuItemByIdAsync(id);

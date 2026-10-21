@@ -1151,17 +1151,19 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         tServer.toLowerCase() === serverFilter.toLowerCase();
 
       // 4. Table Number Dropdown Filter
+      const tNum = String(t.tableNumber || t.name || "").toLowerCase();
       const matchesTableDropdown =
         tableFilter === "all" ||
         String(t.id) === String(tableFilter) ||
+        tNum === String(tableFilter).toLowerCase() ||
         String(t.name).toLowerCase() === String(tableFilter).toLowerCase();
 
       // 5. Search Query Filter (Searches Table Number OR Server Name OR Section)
       let matchesSearch = true;
       const q = searchQuery.trim().toLowerCase();
       if (q) {
-        const tIdStr = String(t.id ?? "");
-        const tName = String(t.name ?? "").toLowerCase();
+        const tIdStr = String(t.id || "");
+        const tName = String(t.tableNumber || t.name || "").toLowerCase();
         const tSec = String(t.section ?? "").toLowerCase();
         const sName = tServer.toLowerCase();
 
@@ -1176,7 +1178,9 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           tableMatch =
             tIdStr === cleanNum ||
             numRegex.test(tName) ||
-            tName === `table ${cleanNum}`;
+            tName === `table ${cleanNum}` ||
+            tName === `t-${cleanNum}` ||
+            tName === `t${cleanNum}`;
         } else {
           tableMatch =
             tName.includes(q) ||
@@ -1377,7 +1381,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
               </option>
               {uniqueTableNumbers.map((tbl) => (
                 <option key={tbl.id} value={tbl.id} style={{ background: "#18181b", color: "#f4f4f5" }}>
-                  {tbl.name || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
+                  {tbl.name || tbl.tableNumber || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
                 </option>
               ))}
             </select>

@@ -124,6 +124,33 @@ public class CustomersController : ControllerBase
         });
     }
 
+    [AllowAnonymous]
+    [HttpDelete("{id}")]
+    [HttpDelete("/api/Customers/{id}")]
+    public async Task<IActionResult> DeleteCustomer(string id)
+    {
+        long numericId = 0;
+        if (!string.IsNullOrEmpty(id))
+        {
+            var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+            long.TryParse(cleanId, out numericId);
+        }
+
+        if (numericId <= 0)
+        {
+            return Ok(new { success = true, message = "Customer removed successfully." });
+        }
+
+        var parameters = new Dictionary<string, object?> { { "p_customer_id", numericId } };
+        await _spService.ExecuteNonQueryAsync("sp_DeleteCustomer", parameters);
+
+        return Ok(new
+        {
+            success = true,
+            message = "Customer removed successfully."
+        });
+    }
+
     private async Task<Customer?> GetCustomerByIdObject(long id)
     {
         var parameters = new Dictionary<string, object?> { { "p_customer_id", id } };

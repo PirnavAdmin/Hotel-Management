@@ -20,13 +20,7 @@ import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
 import { API_BASE_URL } from "../api/apiConfig";
-import {
-  apiGetInventory,
-  apiCreateInventoryItem,
-  apiUpdateInventoryItem,
-  apiDeleteInventoryItem,
-  apiAdjustStock,
-} from "../api/inventoryApi";
+import { apiGetInventory } from "../api/inventoryApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const INVENTORY_FORM_DRAFT_KEY = "gourmet_pos_inventory_form_draft_v1";
@@ -282,10 +276,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       ]);
       setInventory(merged);
       try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
-      console.log(`[Database API] Synced ${remote.length} ingredients from MySQL Database:`, remote);
-    }).catch((err) => {
-      console.error("[Database API] Error fetching inventory from DB:", err);
-    });
+    }).catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -444,6 +435,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           }
         : item,
     );
+    if (restockItem?.id && !isNaN(Number(restockItem.id))) {
+      apiAdjustStock({
+        ingredientId: Number(restockItem.id),
+        quantityChange: amount,
+        reason: "Restocked from " + (restockSupplier.trim() || restockItem.supplier || "Supplier"),
+      }).catch(() => {});
+    }
     saveInventory(updated);
     setRestockItem(null);
     setRestockAmount("");
@@ -451,21 +449,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   };
 
   const handleAdjustStock = (id, delta) => {
-    const numId = Number(id);
-    if (Number.isFinite(numId) && numId > 0 && delta !== 0) {
-      apiAdjustStock({
-        ingredientId: numId,
-        quantityChange: delta,
-        reason: delta > 0 ? "Manual stock increment" : "Manual stock decrement",
-      }).then((res) => {
-        if (res?.success) {
-          console.log(`[Database API] Stock delta ${delta} saved to MySQL DB for ingredient #${numId}`);
-        }
-      }).catch((err) => {
-        console.error("[Database API] Error saving stock adjustment to DB:", err);
-      });
-    }
-
     const updated = inventory.map((item) => {
       if (item.id === id) {
         const nextStock = Math.max(0, Number((item.stock + delta).toFixed(2)));
@@ -567,65 +550,23 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     console.log("[Inventory Form Submit] Processing item for MySQL Database:", itemDetails);
 
     if (editingItemId !== null) {
-      // Optimistically update UI & localStorage
-      const updated = inventory.map((item) =>
-        item.id === editingItemId ? { ...item, ...itemDetails } : item,
+      saveInventory(
+        inventory.map((item) =>
+          item.id === editingItemId ? { ...item, ...itemDetails } : item,
+        ),
       );
-      saveInventory(updated);
-
-      // Call Backend PUT API to update in MySQL Database
-      const numId = Number(editingItemId);
-      if (Number.isFinite(numId) && numId > 0) {
-        apiUpdateInventoryItem(numId, itemDetails).then((res) => {
-          if (res?.success) {
-            console.log(`[Database API] Ingredient #${numId} updated in MySQL DB:`, res.data);
-          } else {
-            console.warn(`[Database API] Backend update warning for #${numId}:`, res?.error);
-          }
-        }).catch((err) => {
-          console.error(`[Database API] Error updating ingredient #${numId} in DB:`, err);
-        });
-      }
     } else {
-      let assignedId = `inv-${Date.now()}`;
-      const newEntry = {
-        id: assignedId,
-        ...itemDetails,
-        totalUsed: 0,
-        totalRestocked: Number(newItem.stock) || 0,
-        lastRestocked: "Today",
-      };
-
-      // Call Backend POST API to persist into MySQL Database
-      try {
-        const apiRes = await apiCreateInventoryItem(itemDetails);
-        console.log("[Database API] Response from /api/v1/inventory:", apiRes);
-        if (apiRes?.success && apiRes?.data) {
-          const dbItem = apiRes.data?.data || apiRes.data;
-          const remoteId = String(dbItem.ingredientId || dbItem.id || dbItem.ingredient_id || "");
-          if (remoteId) {
-            assignedId = remoteId;
-            newEntry.id = remoteId;
-          }
-          if (dbItem.currentStock !== undefined) newEntry.stock = Number(dbItem.currentStock);
-          if (dbItem.minimumThreshold !== undefined) newEntry.minThreshold = Number(dbItem.minimumThreshold);
-          console.log(`[Database API] Successfully saved new ingredient #${assignedId} to MySQL Database:`, dbItem);
-        } else {
-          console.warn("[Database API] Backend create warning (saved locally):", apiRes?.error);
-        }
-      } catch (err) {
-        console.error("[Database API] Network error calling create inventory API:", err);
-      }
-
-      const updated = [newEntry, ...inventory.filter((item) => item.id !== newEntry.id)];
-      saveInventory(updated);
-      console.log(`[Inventory Current Count in LocalStorage (${INVENTORY_STORAGE_KEY})]:`, updated.length);
+      saveInventory([
+        {
+          id: `inv-${Date.now()}`,
+          ...itemDetails,
+          totalUsed: 0,
+          totalRestocked: Number(newItem.stock) || 0,
+          lastRestocked: "Today",
+        },
+        ...inventory,
+      ]);
     }
-
-    try {
-      localStorage.removeItem(INVENTORY_FORM_DRAFT_KEY);
-      console.log(`[LocalStorage Draft Cleared] Key: "${INVENTORY_FORM_DRAFT_KEY}" after successful save`);
-    } catch {}
 
     resetItemForm();
     setIsAddModalOpen(false);
@@ -692,27 +633,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   };
 
   const handleDeleteItem = (id) => {
-    const item = inventory.find((i) => i.id === id);
+    const item = inventory.find((i) => String(i.id) === String(id));
     const itemName = item?.name || "this item";
     requestDelete({
       title: "Remove Inventory Item?",
       message: `Are you sure you want to remove "${itemName}" from restaurant inventory? This action cannot be undone.`,
       confirmLabel: "Yes, Remove",
-      onConfirm: () => {
-        const numId = Number(id);
-        if (Number.isFinite(numId) && numId > 0) {
-          apiDeleteInventoryItem(numId).then((res) => {
-            if (res?.success) {
-              console.log(`[Database API] Ingredient #${numId} deleted from MySQL DB`);
-            } else {
-              console.warn(`[Database API] Backend delete warning for #${numId}:`, res?.error);
-            }
-          }).catch((err) => {
-            console.error(`[Database API] Error deleting ingredient #${numId} from DB:`, err);
-          });
-        }
-        saveInventory(inventory.filter((i) => i.id !== id));
-      },
+      onConfirm: () => saveInventory(inventory.filter((i) => i.id !== id)),
     });
   };
 

@@ -4,6 +4,7 @@ import {
   Utensils, ChefHat, Key, RefreshCw, UserCheck, X, AlertCircle, Phone
 } from 'lucide-react';
 import { getUsers, createUser, deleteUser, updateUserPassword, updateUserDetails } from '../utils/auth';
+import { ConfirmDeleteModal } from '../common/ConfirmDeleteModal';
 
 /**
  * LoginManagement — Admin panel tab for managing POS & KOT logins.
@@ -11,7 +12,6 @@ import { getUsers, createUser, deleteUser, updateUserPassword, updateUserDetails
  */
 export function LoginManagement({ currentAdminSession }) {
   const [users, setUsers]           = useState([]);
-  const [activeAccountTab, setActiveAccountTab] = useState('pos');
   const [showForm, setShowForm]     = useState(false);
   const [formRole, setFormRole]     = useState('pos');
   const [formName, setFormName]     = useState('');
@@ -104,16 +104,15 @@ export function LoginManagement({ currentAdminSession }) {
         phoneNumber: phone,
         email: formEmail.trim() || editingUser.email || `${editingUser.username}@avsr.com`,
       };
-      // Always update locally first so UI reflects the change even if API is unavailable
+      // Update UI immediately (optimistic update)
       const nextUsers = users.map((user) => user.id === editingUser.id
-        ? { ...user, username: editingUser.username, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
+        ? { ...user, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
         : user);
       setUsers(nextUsers);
       saveUsersCache(nextUsers);
-      // Try API update in background (non-blocking)
-      updateUserDetails(editingUser.id, updatedUser).catch(() => {});
       setFormSuccess(`Login "${editingUser.username}" updated successfully.`);
-      await reload();
+      // Fire API in background
+      updateUserDetails(editingUser.id, updatedUser).catch(() => {});
       setTimeout(closeForm, 1200);
       return;
     }
@@ -158,13 +157,14 @@ export function LoginManagement({ currentAdminSession }) {
   };
 
   const handleDelete = async (userId) => {
-    // Always remove from local UI state immediately
+    // Remove from UI immediately (optimistic)
     const nextUsers = users.filter((user) => user.id !== userId);
     setUsers(nextUsers);
     saveUsersCache(nextUsers);
     setDeletingId(null);
-    // Try API delete in background (non-blocking)
-    deleteUser(userId).catch(() => {});
+    // Delete permanently from server-db.json
+    try { await deleteUser(userId); } catch (_) {}
+    // Reload from server to confirm permanent deletion
     await reload();
   };
 
@@ -190,13 +190,6 @@ export function LoginManagement({ currentAdminSession }) {
   const posUsers   = users.filter(u => (u.role || '').toLowerCase() === 'pos');
   const kotUsers   = users.filter(u => (u.role || '').toLowerCase() === 'kot');
   const adminUsers = users.filter(u => (u.role || '').toLowerCase() === 'admin');
-
-  const accountTabs = [
-    { id: 'pos', label: 'POS Users', title: 'User POS Accounts', users: posUsers, icon: <Utensils size={16} />, color: '#f59e0b', emptyMsg: 'No POS users yet. Create one above.' },
-    { id: 'kot', label: 'Kitchen KOT Users', title: 'Kitchen KOT Accounts', users: kotUsers, icon: <ChefHat size={16} />, color: '#fb923c', emptyMsg: 'No KOT users yet. Create one above.' },
-    { id: 'admin', label: 'Admin Users', title: 'Admin Accounts', users: adminUsers, icon: <ShieldCheck size={16} />, color: '#818cf8', emptyMsg: 'No admin accounts found.' },
-  ];
-  const selectedAccountTab = accountTabs.find((tab) => tab.id === activeAccountTab);
 
   const roleConfig = {
     pos: {
@@ -418,39 +411,44 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       </div>
 
-      <div className="login-account-tabs" role="tablist" aria-label="Account categories">
-        {accountTabs.map((tab, index) => (
-          <button
-            key={tab.id}
-            id={'login-account-tab-' + tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeAccountTab === tab.id}
-            aria-controls="login-account-panel"
-            tabIndex={activeAccountTab === tab.id ? 0 : -1}
-            onClick={() => setActiveAccountTab(tab.id)}
-            onKeyDown={(event) => {
-              let nextIndex;
-              if (event.key === 'ArrowRight') nextIndex = (index + 1) % accountTabs.length;
-              else if (event.key === 'ArrowLeft') nextIndex = (index + accountTabs.length - 1) % accountTabs.length;
-              else if (event.key === 'Home') nextIndex = 0;
-              else if (event.key === 'End') nextIndex = accountTabs.length - 1;
-              else return;
-              event.preventDefault();
-              setActiveAccountTab(accountTabs[nextIndex].id);
-              event.currentTarget.parentElement.children[nextIndex].focus();
-            }}
-          >
-            {tab.icon}<span>{tab.label} ({tab.users.length})</span>
-          </button>
-        ))}
-      </div>
-
-      {refreshMessage && (
-        <div role="status" style={{ color: refreshMessage.toLowerCase().includes('could not') || refreshMessage.toLowerCase().includes('failed') ? '#fca5a5' : '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
+      {refreshMessage && !refreshMessage.toLowerCase().includes('could not') && !refreshMessage.toLowerCase().includes('failed') && !refreshMessage.toLowerCase().includes('error') && (
+        <div role="status" style={{ color: '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
           {refreshMessage}
         </div>
       )}
+
+      {/* Quick Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
+        {[
+          { label: 'POS Users', count: posUsers.length, color: '#f59e0b', icon: <Utensils size={18} /> },
+          { label: 'KOT Users', count: kotUsers.length, color: '#fb923c', icon: <ChefHat size={18} /> },
+          { label: 'Admins', count: adminUsers.length, color: '#818cf8', icon: <ShieldCheck size={18} /> }
+        ].map(stat => (
+          <div key={stat.label} style={{
+            background: 'var(--bg-tertiary)',
+            border: `1px solid var(--border-subtle)`,
+            borderRadius: '10px', padding: '0.85rem 1rem',
+            display: 'flex', alignItems: 'center', gap: '0.75rem'
+          }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '10px',
+              background: `${stat.color}20`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: stat.color
+            }}>
+              {stat.icon}
+            </div>
+            <div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-main)', lineHeight: 1 }}>
+                {stat.count}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+                {stat.label}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Create Login Form */}
       {showForm && (
@@ -646,64 +644,20 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      <div id="login-account-panel" role="tabpanel" aria-labelledby={'login-account-tab-' + activeAccountTab} tabIndex={0}>
-        <Section title={selectedAccountTab.title} icon={selectedAccountTab.icon} color={selectedAccountTab.color} users={selectedAccountTab.users} emptyMsg={selectedAccountTab.emptyMsg} />
-      </div>
+      <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />
+      <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
+      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="#818cf8" users={adminUsers} emptyMsg="No admin accounts found." />
 
-      {/* Delete Confirm Overlay */}
-      {deletingId && (
-        <div onClick={() => setDeletingId(null)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-          backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 200, padding: '1rem'
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: '#0e1726', border: '1.5px solid rgba(239,68,68,0.45)',
-            borderRadius: '16px', padding: '1.5rem', maxWidth: '360px', width: '100%',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '50%',
-                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 0.85rem'
-              }}>
-                <Trash2 size={22} color="#f87171" />
-              </div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#ffffff', margin: '0 0 4px' }}>
-                Delete User?
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, margin: 0 }}>
-                This user will lose access immediately. This action cannot be undone.
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.65rem' }}>
-              <button
-                onClick={() => handleDelete(deletingId)}
-                style={{
-                  flex: 1, padding: '0.6rem', borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  color: '#ffffff', fontWeight: 800, fontSize: '0.85rem',
-                  border: 'none', cursor: 'pointer'
-                }}
-              >
-                Yes, Delete
-              </button>
-              <button
-                onClick={() => setDeletingId(null)}
-                style={{
-                  flex: 1, padding: '0.6rem', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#94a3b8', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Global Delete Confirm Modal */}
+      <ConfirmDeleteModal
+        isOpen={Boolean(deletingId)}
+        title="Delete User?"
+        message="This user will lose access immediately. This action cannot be undone."
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        onConfirm={() => handleDelete(deletingId)}
+        onCancel={() => setDeletingId(null)}
+      />
 
       {/* Change Password Overlay */}
       {changePwUser && (

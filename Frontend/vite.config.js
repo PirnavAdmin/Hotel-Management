@@ -450,6 +450,105 @@ function globalSyncPlugin() {
           );
         }
 
+        // REST API: /api/v1/orders/history
+        if (req.url.startsWith("/api/v1/orders/history") && req.method === "GET") {
+          db = loadDb();
+          const orders = db.gourmet_pos_past_orders_v2_inr || [];
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              data: { orders, totalPages: 1, totalCount: orders.length },
+            }),
+          );
+        }
+
+        // REST API: PATCH /api/v1/orders/:id/discount
+        const discountRoute = req.url.match(/^\/api\/v1\/orders\/([^/]+)\/discount$/i);
+        if (discountRoute && req.method === "PATCH") {
+          const targetOrderId = decodeURIComponent(discountRoute[1]);
+          let body = "";
+          req.on("data", (chunk) => {
+            body += chunk;
+          });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const discountPercent = Math.max(
+                0,
+                Math.min(100, Number(payload.discountPercent) || 0),
+              );
+              db = loadDb();
+              const orders = db.gourmet_pos_past_orders_v2_inr || [];
+              let updatedOrder = null;
+              const nextOrders = orders.map((ord) => {
+                const match =
+                  String(ord.id ?? ord.orderId ?? "") === String(targetOrderId) ||
+                  String(ord.invoiceNo ?? "") === String(targetOrderId);
+                if (!match) return ord;
+
+                const items = Array.isArray(ord.items) ? ord.items : [];
+                const subtotal =
+                  items.length > 0
+                    ? items.reduce(
+                        (sum, item) =>
+                          sum +
+                          (Number(item.price) || 0) * (Number(item.quantity) || 1),
+                        0,
+                      )
+                    : Number(ord.subtotal) || Number(ord.total) || 0;
+
+                const discountAmount = Math.round((subtotal * discountPercent) / 100);
+                const taxableAmount = Math.max(0, subtotal - discountAmount);
+
+                const taxRate = Number(ord.taxRate ?? 5);
+                const taxAmount = Math.round((taxableAmount * taxRate) / 100);
+
+                const serviceChargePercent = Number(
+                  ord.serviceChargePercent ?? ord.serviceCharge ?? 0,
+                );
+                const serviceChargeAmount = Math.round(
+                  (taxableAmount * serviceChargePercent) / 100,
+                );
+
+                const grandTotal = Math.max(
+                  0,
+                  taxableAmount + taxAmount + serviceChargeAmount,
+                );
+
+                updatedOrder = {
+                  ...ord,
+                  discount: discountPercent,
+                  discountPercent,
+                  discountAmount,
+                  subtotal,
+                  taxableAmount,
+                  taxAmount,
+                  serviceChargePercent,
+                  serviceChargeAmount,
+                  grandTotal,
+                  total: grandTotal,
+                };
+                return updatedOrder;
+              });
+
+              db.gourmet_pos_past_orders_v2_inr = nextOrders;
+              saveDb(db);
+              broadcast({ gourmet_pos_past_orders_v2_inr: nextOrders });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(
+                JSON.stringify({ success: true, data: updatedOrder }),
+              );
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(
+                JSON.stringify({ success: false, error: err.message }),
+              );
+            }
+          });
+          return;
+        }
+
         // REST API: /api/v1/orders
         if (req.url.startsWith("/api/v1/orders") && req.method === "GET") {
           db = loadDb();

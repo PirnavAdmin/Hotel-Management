@@ -2,7 +2,7 @@ import React from 'react';
 import { ChefHat, X, Printer, Check } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
-export function KOTModal({ table, onClose }) {
+export function KOTModal({ table, onClose, restaurantName = "Restaurant", restaurantLogo = "" }) {
   if (!table) return null;
 
   const handlePrint = () => {
@@ -10,7 +10,7 @@ export function KOTModal({ table, onClose }) {
   };
 
   return (
-    <div style={{
+    <div className="receipt-modal-overlay" style={{
       position: 'fixed',
       inset: 0,
       background: 'rgba(0, 0, 0, 0.75)',
@@ -21,7 +21,7 @@ export function KOTModal({ table, onClose }) {
       zIndex: 110,
       padding: '1rem'
     }}>
-      <div style={{
+      <div className="receipt-modal-container" style={{
         background: '#ffffff',
         color: '#1a1a1a',
         width: '100%',
@@ -51,13 +51,15 @@ export function KOTModal({ table, onClose }) {
         </div>
 
         {/* Printable KOT Thermal Slip */}
-        <div id="printable-receipt" style={{
+        <div id="printable-receipt" className="format-thermal" style={{
           padding: '1.25rem',
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           fontSize: '0.82rem',
           lineHeight: '1.4'
         }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
+            {restaurantLogo && <img src={restaurantLogo} alt={`${restaurantName || "Restaurant"} logo`} style={{ maxWidth: '72px', maxHeight: '48px', objectFit: 'contain', margin: '0 auto 6px' }} />}
+            <div style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '4px' }}>{restaurantName?.trim() || "Restaurant"}</div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 900 }}>*** KITCHEN COPY ***</h2>
             <div style={{ fontSize: '1.1rem', fontWeight: 800, marginTop: '2px' }}>
               TABLE: {table.name}
@@ -90,7 +92,7 @@ export function KOTModal({ table, onClose }) {
           </div>
 
           <div style={{ textAlign: 'center', fontSize: '0.72rem', marginTop: '0.5rem' }}>
-            Ticket Dispatch: Active | AVSR Food Court Kitchen
+            Ticket Dispatch: Active | {restaurantName?.trim() || "Restaurant"} Kitchen
           </div>
         </div>
 

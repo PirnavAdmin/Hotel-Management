@@ -133,5 +133,26 @@ public class SpService
         }
         return list;
     }
+
+    public async Task<T?> ExecuteSqlScalarAsync<T>(string sql, Dictionary<string, object?>? parameters = null)
+    {
+        var conn = await GetOpenConnectionAsync();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        if (parameters != null)
+        {
+            foreach (var kvp in parameters)
+            {
+                var p = cmd.CreateParameter();
+                p.ParameterName = kvp.Key.StartsWith("@") ? kvp.Key : "@" + kvp.Key;
+                p.Value = kvp.Value ?? DBNull.Value;
+                cmd.Parameters.Add(p);
+            }
+        }
+        var result = await cmd.ExecuteScalarAsync();
+        if (result == null || result == DBNull.Value) return default;
+        return (T)Convert.ChangeType(result, typeof(T));
+    }
 }
 

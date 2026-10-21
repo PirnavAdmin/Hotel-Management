@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, Moon, Sun } from "lucide-react";
+import { Calendar, Clock, Moon, Sun, Utensils, Wine } from "lucide-react";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 
 export function AdminHeader({
@@ -8,6 +8,9 @@ export function AdminHeader({
   onClose,
   currentTheme = "royal-saffron",
   onChangeTheme,
+  activeMode = "dine",
+  onModeChange,
+  showModeToggle = true,
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -86,6 +89,80 @@ export function AdminHeader({
           </h1>
         </div>
       </div>
+
+      {/* Dine vs Bar Mode Toggle */}
+      {showModeToggle && (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            background: "var(--bg-tertiary)",
+            border: "1.5px solid var(--border-subtle)",
+            borderRadius: "30px",
+            padding: "3px",
+            gap: "4px",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.12)",
+          }}
+        >
+          <button
+            onClick={() => onModeChange?.("dine")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "5px 16px",
+              borderRadius: "24px",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "none",
+              outline: "none",
+              transition: "all 0.18s ease",
+              background:
+                activeMode === "dine"
+                  ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                  : "transparent",
+              color: activeMode === "dine" ? "#ffffff" : "var(--text-muted)",
+              boxShadow:
+                activeMode === "dine"
+                  ? "0 2px 10px rgba(245, 158, 11, 0.4)"
+                  : "none",
+            }}
+          >
+            <Utensils size={14} />
+            <span>Dine</span>
+          </button>
+
+          <button
+            onClick={() => onModeChange?.("bar")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "5px 16px",
+              borderRadius: "24px",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "none",
+              outline: "none",
+              transition: "all 0.18s ease",
+              background:
+                activeMode === "bar"
+                  ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                  : "transparent",
+              color: activeMode === "bar" ? "#ffffff" : "var(--text-muted)",
+              boxShadow:
+                activeMode === "bar"
+                  ? "0 2px 10px rgba(245, 158, 11, 0.4)"
+                  : "none",
+            }}
+          >
+            <Wine size={14} />
+            <span>Bar</span>
+          </button>
+        </div>
+      )}
 
       {/* Right Controls Row (Date/Time, Theme Toggle, Profile Avatar) */}
       <div

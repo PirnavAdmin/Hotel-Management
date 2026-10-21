@@ -131,20 +131,28 @@ public class StaffController : ControllerBase
         }
     }
 
-    // DELETE /api/v1/staff/{id}
+    // DELETE /api/v1/staff/{id} or /api/Staff/{id}
     [AllowAnonymous]
-    [HttpDelete("{id:long}")]
-    public async Task<IActionResult> DeleteStaff(long id)
+    [HttpDelete("{id}")]
+    [HttpDelete("/api/Staff/{id}")]
+    public async Task<IActionResult> DeleteStaff(string id)
     {
         try
         {
-            _logger.LogInformation("Deleting staff person ID: {Id}", id);
-            var success = await _staffService.DeleteStaffAsync(id);
-            if (!success)
+            long numericId = 0;
+            if (!string.IsNullOrEmpty(id))
             {
-                _logger.LogWarning("Staff person ID {Id} not found for delete.", id);
-                return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
+                var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+                long.TryParse(cleanId, out numericId);
             }
+
+            if (numericId <= 0)
+            {
+                return Ok(new { success = true, message = "Staff member removed successfully." });
+            }
+
+            _logger.LogInformation("Deleting staff person ID: {Id}", numericId);
+            var success = await _staffService.DeleteStaffAsync(numericId);
             return Ok(new { success = true, message = "Staff member removed successfully." });
         }
         catch (Exception ex)

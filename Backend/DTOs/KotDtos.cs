@@ -1,9 +1,40 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace HMS.DTOs;
 
+public class FlexibleNullableLongConverter : JsonConverter<long?>
+{
+    public override long? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null) return null;
+        if (reader.TokenType == JsonTokenType.Number) return reader.GetInt64();
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            var str = reader.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(str)) return null;
+            if (long.TryParse(str, out var directLong)) return directLong;
+            var digits = Regex.Replace(str, @"\D+", "");
+            if (long.TryParse(digits, out var parsedDigits)) return parsedDigits;
+            return null;
+        }
+        return null;
+    }
+
+    public override void Write(Utf8JsonWriter writer, long? value, JsonSerializerOptions options)
+    {
+        if (value.HasValue) writer.WriteNumberValue(value.Value);
+        else writer.WriteNullValue();
+    }
+}
+
 public class CreateKotOrderDto : IValidatableObject
 {
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
     public long? TableId { get; set; }
 
     private string _tableName = string.Empty;
@@ -60,6 +91,7 @@ public class CreateKotOrderDto : IValidatableObject
 
 public class CreateKotOrderItemDto : IValidatableObject
 {
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
     private long? _menuItemId;
     public long? MenuItemId
     {
@@ -67,7 +99,10 @@ public class CreateKotOrderItemDto : IValidatableObject
         set => _menuItemId = value;
     }
 
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
     public long? Id { get; set; }
+
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
     public long? BackendId { get; set; }
 
     private string _dishName = string.Empty;
