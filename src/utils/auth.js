@@ -66,7 +66,7 @@ export async function getUsers() {
     return { users: remoteUsers, error: '' };
   }
 
-  // Server unreachable — fall back to localStorage cache only
+  // Fallback to cached users only when API request fails (e.g. offline)
   let cachedUsers = [];
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
@@ -101,9 +101,10 @@ export async function deleteUser(userId) {
   // 1. Remove from localStorage immediately so it doesn't resurrect on next fetch
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
-    const nextSaved = saved.filter(u =>
-      String(u.id || u.Id || '') !== String(userId) &&
-      String(u.username || u.Username || '').toLowerCase() !== String(userId).toLowerCase()
+    const nextSaved = saved.filter(
+      (u) =>
+        String(u.id || u.Id || u.userId || '') !== String(userId) &&
+        String(u.username || u.Username || '').toLowerCase() !== String(userId).toLowerCase()
     );
     localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(nextSaved));
   } catch {}

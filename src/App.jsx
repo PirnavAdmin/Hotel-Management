@@ -1700,30 +1700,85 @@ export function App() {
     setIsReceiptOpen(true);
   };
 
-  const handleUpdateInvoiceDiscount = async (orderId, discountPercent) => {
-    const updateResult = await apiUpdateOrderDiscount(orderId, discountPercent);
-    if (!updateResult?.success || updateResult.data?.success === false) {
-      throw new Error(updateResult?.error || updateResult?.data?.message || "The server could not update this invoice discount.");
-    }
+  const handleUpdateInvoiceDiscount = async (orderId, discountPercent, editingOrder = null) => {
+    const discount = Math.max(0, Math.min(100, Number(discountPercent) || 0));
+    const targetIdStr = orderId != null ? String(orderId) : "";
+    const targetInvoiceNo = editingOrder?.invoiceNo || "";
 
-    const historyResult = await apiGetOrderHistory();
-    const history = historyResult?.data ?? historyResult;
-    const orders = Array.isArray(history?.orders)
-      ? history.orders
-      : Array.isArray(history?.data)
-        ? history.data
-        : Array.isArray(history)
-          ? history
-          : null;
-    if (!historyResult?.success || !orders) {
-      throw new Error("The discount was sent to the server, but the updated invoice list could not be refreshed. Reload Admin Invoices to confirm it.");
-    }
+    const updatedPastOrders = pastOrders.map((order) => {
+      const isMatch =
+        (targetIdStr && (String(order.id) === targetIdStr || String(order.orderId) === targetIdStr)) ||
+        (targetInvoiceNo && order.invoiceNo === targetInvoiceNo) ||
+        (editingOrder?.id != null && String(order.id) === String(editingOrder.id));
 
-    const updatedOrders = dedupeOrders(orders);
-    setPastOrders(updatedOrders);
+      if (isMatch) {
+        const items = Array.isArray(order.items) ? order.items : [];
+        let subtotal = 0;
+        if (items.length > 0) {
+          subtotal = items.reduce((sum, item) => {
+            const price = Number(item.price ?? item.unitPrice ?? item.Price ?? item.UnitPrice) || 0;
+            const qty = Number(item.quantity ?? item.qty ?? item.Quantity ?? item.Qty) || 1;
+            return sum + price * qty;
+          }, 0);
+        }
+        if (!subtotal || subtotal <= 0) {
+          subtotal = Number(order.subtotal ?? order.Subtotal) || 0;
+        }
+        if (!subtotal || subtotal <= 0) {
+          const prevTotal = Number(order.grandTotal ?? order.total ?? order.totalAmount) || 0;
+          subtotal = Math.round(prevTotal / 1.10);
+        }
+
+        const discountAmount = Number(((subtotal * discount) / 100).toFixed(2));
+        const taxableAmount = Math.max(0, subtotal - discountAmount);
+        const taxRate = 0.05;
+        const taxAmount = Number((taxableAmount * taxRate).toFixed(2));
+        const serviceChargePercent = Number(order.serviceCharge ?? order.ServiceCharge) || 5;
+        const serviceChargeAmount = Number((taxableAmount * (serviceChargePercent / 100)).toFixed(2));
+        const grandTotal = Math.round(taxableAmount + taxAmount + serviceChargeAmount);
+
+        return {
+          ...order,
+          discountPercent: discount,
+          discountAmount,
+          taxAmount,
+          serviceChargeAmount,
+          serviceCharge: serviceChargePercent,
+          subtotal,
+          grandTotal,
+          total: grandTotal,
+          totalAmount: grandTotal,
+          amountPaid: grandTotal,
+          paidAmount: grandTotal,
+        };
+      }
+      return order;
+    });
+
+    setPastOrders(updatedPastOrders);
     try {
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updatedOrders));
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updatedPastOrders));
+      pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
+
+    // Send discount update to server if available
+    try {
+      if (orderId) {
+        await apiUpdateOrderDiscount(orderId, discount);
+      }
+    } catch (err) {
+      console.warn("Could not reach backend to sync discount:", err);
+    }
+
+    const matched = updatedPastOrders.find(
+      (o) =>
+        (targetIdStr && (String(o.id) === targetIdStr || String(o.orderId) === targetIdStr)) ||
+        (targetInvoiceNo && o.invoiceNo === targetInvoiceNo),
+    );
+    showToast(
+      `✅ Updated discount (${discount}%) for ${matched?.invoiceNo || `Order #${orderId}`}. New Total: ₹${matched?.grandTotal ?? ""}`,
+    );
+    return true;
   };
 
   // ================= ADMIN ACTIONS =================

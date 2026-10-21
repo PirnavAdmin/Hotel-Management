@@ -591,31 +591,26 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     resetItemForm();
   };
 
-<<<<<<< HEAD
-  const handleDeleteItem = async (id) => {
-    if (window.confirm("Remove this item from restaurant inventory?")) {
-      const numericId = Number(id);
-      if (!isNaN(numericId) && numericId > 0) {
-        try {
-          await apiDeleteIngredient(numericId);
-        } catch (err) {
-          console.warn("Could not delete ingredient via API:", err);
-        }
-      }
-      const updated = inventory.filter((item) => String(item.id) !== String(id));
-      saveInventory(updated);
-    }
-=======
   const handleDeleteItem = (id) => {
-    const item = inventory.find((i) => i.id === id);
+    const item = inventory.find((i) => String(i.id) === String(id));
     const itemName = item?.name || "this item";
     requestDelete({
       title: "Remove Inventory Item?",
       message: `Are you sure you want to remove "${itemName}" from restaurant inventory? This action cannot be undone.`,
       confirmLabel: "Yes, Remove",
-      onConfirm: () => saveInventory(inventory.filter((i) => i.id !== id)),
+      onConfirm: async () => {
+        const numericId = Number(id);
+        if (!isNaN(numericId) && numericId > 0) {
+          try {
+            await apiDeleteIngredient(numericId);
+          } catch (err) {
+            console.warn("Could not delete ingredient via API:", err);
+          }
+        }
+        const updated = inventory.filter((i) => String(i.id) !== String(id));
+        saveInventory(updated);
+      },
     });
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
   const categories = [

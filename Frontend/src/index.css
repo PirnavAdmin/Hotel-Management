@@ -272,6 +272,14 @@ textarea {
 
 /* Print Styles for Receipts and Reports */
 @media print {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   body * {
     visibility: hidden;
   }
@@ -286,8 +294,9 @@ textarea {
     left: 0;
     top: 0;
     width: 80mm;
+    max-width: 80mm;
     margin: 0;
-    padding: 10mm;
+    padding: 4mm 3mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
@@ -306,8 +315,10 @@ textarea {
     box-shadow: none !important;
     border: none !important;
   }
-  .no-print {
+  .no-print,
+  .no-print * {
     display: none !important;
+    visibility: hidden !important;
   }
   .receipt-items-scroll {
     max-height: none !important;

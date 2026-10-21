@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -665,8 +665,6 @@ export function AdminPortal({
   const [newServerRole, setNewServerRole] = useState("");
   const [tableForm, setTableForm] = useState({
     name: "",
-    tableNumber: "",
-    branchId: 1,
     section: "",
     capacity: "",
     server: staffList[0]?.name || "",
@@ -762,126 +760,72 @@ export function AdminPortal({
 
     if (tbl) {
       setEditingTable(tbl);
-      const tNum = String(tbl.tableNumber || tbl.name || tbl.tableName || "").trim();
       setTableForm({
-        name: tNum,
-        tableNumber: tNum,
-        branchId: tbl.branchId || 1,
-        section: tbl.section || tbl.location || "",
-        capacity: tbl.capacity || 4,
-        server: tbl.server || tbl.assignedServerName || staffList[0]?.name || "",
-        assignedServerId: tbl.assignedServerId || null,
+        name: tbl.name,
+        section: tbl.section,
+        capacity: tbl.capacity,
+        server: tbl.server,
       });
     } else {
       setEditingTable(null);
-      // Auto suggest next table number based on active table count
-      const nextNum = `T-${String(tables.length + 1).padStart(2, "0")}`;
+      // Auto suggest next table number
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       setTableForm({
-        name: nextNum,
-        tableNumber: nextNum,
-        branchId: 1,
+        name: "",
         section: "",
-        capacity: 4,
+        capacity: "",
         server: staffList[0]?.name || "",
-        assignedServerId: staffList[0]?.staffId || staffList[0]?.id || null,
       });
     }
     setIsTableModalOpen(true);
   };
 
-  const handleSaveTable = async (e) => {
+  const handleSaveTable = (e) => {
     e.preventDefault();
-    const rawInput = String(tableForm.tableNumber || tableForm.name || "").trim();
-    if (!rawInput) {
-      showToast("❌ Table Number / Identifier is required.");
-      return;
-    }
-    const match = rawInput.match(/^(Table|table)[-\s]?(\d+)$/i);
-    const tableNum = match
-      ? `Table-${match[2]}`
-      : (/^\d+$/.test(rawInput) ? `Table-${rawInput}` : rawInput);
-
-    if (tableNum.length > 10) {
-      showToast("❌ Table Number / Identifier must not exceed 10 characters.");
-      return;
-    }
+    if (!tableForm.name.trim()) return;
 
     if (tableForm.section) {
       saveCustomSection(tableForm.section);
     }
 
     let assignedServer = tableForm.server;
-    let assignedServerId = tableForm.assignedServerId || null;
-
     if (isNewServerMode && newServerName.trim()) {
       assignedServer = newServerName.trim();
-<<<<<<< HEAD
-      const staffRes = await onAddStaff({
-        id: Date.now(),
-=======
       onAddStaff({
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
         name: assignedServer,
-        fullName: assignedServer,
-        role: newServerRole.trim() || "Server",
-        roleTitle: newServerRole.trim() || "Server",
+        role: newServerRole.trim(),
         phone: "+91 98450 00000",
-        shift: "Morning",
-        isActive: true,
+        shift: "",
       });
-      if (staffRes && typeof staffRes === "object") {
-        assignedServerId = staffRes.staffId || staffRes.id || null;
-      }
-    } else if (tableForm.server) {
-      const foundStaff = staffList.find(s =>
-        String(s.name || s.fullName || "").toLowerCase() === String(tableForm.server).toLowerCase()
-      );
-      if (foundStaff) {
-        assignedServerId = foundStaff.staffId || foundStaff.id || null;
-      }
     }
 
-    let savedResult;
     if (editingTable) {
-      savedResult = await onUpdateTable({
+      onUpdateTable({
         ...editingTable,
-        name: tableNum,
-        tableName: tableNum,
-        tableNumber: tableNum,
-        branchId: Number(tableForm.branchId) || editingTable.branchId || 1,
-        section: tableForm.section || "Main Hall",
-        location: tableForm.section || "Main Hall",
-        capacity: Number(tableForm.capacity) || 4,
+        name: tableForm.name,
+        section: tableForm.section,
+        capacity: Number(tableForm.capacity) || 2,
         server: assignedServer,
-        assignedServerId: assignedServerId,
       });
     } else {
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
-      savedResult = await onAddTable({
+      onAddTable({
         id: maxId + 1,
-        name: tableNum,
-        tableName: tableNum,
-        tableNumber: tableNum,
-        branchId: Number(tableForm.branchId) || 1,
-        section: tableForm.section || "Main Hall",
-        location: tableForm.section || "Main Hall",
+        name: tableForm.name,
+        section: tableForm.section,
         capacity: Number(tableForm.capacity) || 4,
-        status: "available",
-        guests: 0,
+        status: "vacant",
+        guests: Number(tableForm.capacity) || 4,
         items: [],
         discountPercent: 0,
         serviceCharge: 5,
         orderTime: null,
         server: assignedServer,
-        assignedServerId: assignedServerId,
       });
     }
-
-    if (savedResult !== false) {
-      setIsTableModalOpen(false);
-      setIsNewServerMode(false);
-      setNewServerName("");
-    }
+    setIsTableModalOpen(false);
+    setIsNewServerMode(false);
+    setNewServerName("");
   };
 
   // Open staff modal for Add or Edit
@@ -2726,314 +2670,11 @@ export function AdminPortal({
                         <div
                           style={{
                             display: "flex",
-<<<<<<< HEAD
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            marginBottom: "0.4rem",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.45rem",
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: "30px",
-                                height: "30px",
-                                borderRadius: "7px",
-                                background: "rgba(245, 158, 11, 0.18)",
-                                color: "var(--accent-amber-light)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontWeight: 800,
-                                fontSize: "0.82rem",
-                                flexShrink: 0,
-                              }}
-                            >
-                              {tbl.tableNumber || tbl.name || `T${tbl.id}`}
-                            </div>
-                            <div>
-                              <h4
-                                style={{
-                                  fontWeight: 800,
-                                  color: "var(--text-main)",
-                                  fontSize: "0.9rem",
-                                  margin: 0,
-                                }}
-                              >
-                                {tbl.name || tbl.tableNumber || `Table ${tbl.id}`}
-                              </h4>
-                              <span
-                                style={{
-                                  fontSize: "0.68rem",
-                                  color: "var(--text-dim)",
-                                }}
-                              >
-                                {tbl.section}
-                              </span>
-                            </div>
-                          </div>
-
-                          <span
-                            style={{
-                              padding: "2px 7px",
-                              borderRadius: "10px",
-                              fontSize: "0.64rem",
-                              fontWeight: 700,
-                              textTransform: "uppercase",
-                              background:
-                                (tbl.status === "vacant" || tbl.status === "available")
-                                  ? "var(--status-vacant-bg)"
-                                  : "var(--status-occupied-bg)",
-                              color:
-                                (tbl.status === "vacant" || tbl.status === "available")
-                                  ? "var(--status-vacant)"
-                                  : "var(--status-occupied)",
-                            }}
-                          >
-                            {tbl.status}
-                          </span>
-                        </div>
-
-                        {/* Chairs and Persons Capacity */}
-                        <div
-                          style={{
-                            background: "var(--bg-secondary)",
-                            borderRadius: "var(--radius-sm)",
-                            padding: "0.45rem 0.65rem",
-                            marginTop: "0.45rem",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.25rem",
-                            fontSize: "0.74rem",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <span
-                              style={{
-                                color: "var(--text-muted)",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.25rem",
-                                fontSize: "0.72rem",
-                              }}
-                            >
-                              <Armchair size={13} color="var(--accent-amber)" />
-                              <span>Chairs (Capacity):</span>
-                            </span>
-                            <strong
-                              style={{
-                                color: "var(--text-main)",
-                                fontSize: "0.82rem",
-                              }}
-                            >
-                              {tbl.capacity} Chairs ({tbl.capacity} Persons)
-                            </strong>
-                          </div>
-
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <span
-                              style={{
-                                color: "var(--text-muted)",
-                                fontSize: "0.72rem",
-                              }}
-                            >
-                              Assigned Server:
-                            </span>
-                            <span
-                              style={{
-                                color: "var(--text-main)",
-                                fontWeight: 600,
-                                fontSize: "0.74rem",
-                              }}
-                            >
-                              {tbl.server}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Table Actions: Edit Chairs / Delete Table */}
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "0.4rem",
-                          marginTop: "0.65rem",
-                          paddingTop: "0.55rem",
-                          borderTop: "1px solid var(--border-subtle)",
-                        }}
-                      >
-                        <button
-                          onClick={() => handleOpenTableModal(tbl)}
-                          style={{
-                            flex: 1,
-                            padding: "0.35rem 0.5rem",
-                            background: "var(--bg-secondary)",
-                            color: "var(--accent-amber-light)",
-                            border: "1px solid var(--border-subtle)",
-                            borderRadius: "var(--radius-sm)",
-                            fontSize: "0.74rem",
-                            fontWeight: 700,
-                            display: "flex",
-=======
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
                             alignItems: "center",
                             gap: "0.5rem",
                           }}
                         >
-<<<<<<< HEAD
-                          <Edit3 size={12} />
-                          <span>Edit Chairs / Area</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            if (tbl.status !== "vacant" && tbl.status !== "available") {
-                              alert(
-                                `Cannot delete ${tbl.tableNumber || tbl.name || `Table ${tbl.id}`} because it is currently occupied with diners. Clear or settle bill first.`,
-                              );
-                              return;
-                            }
-                            if (
-                              window.confirm(`Delete ${tbl.tableNumber || tbl.name || `Table ${tbl.id}`} permanently?`)
-                            ) {
-                              onDeleteTable(tbl.id);
-                            }
-                          }}
-                          style={{
-                            padding: "0.35rem 0.55rem",
-                            background: "var(--danger-bg)",
-                            color: "var(--danger)",
-                            border: "1px solid rgba(239,68,68,0.3)",
-                            borderRadius: "var(--radius-sm)",
-                            fontSize: "0.74rem",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                          }}
-                          title="Delete table"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ================= TAB 3: STAFF & PERSONS ================= */}
-            {activeTab === "staff" && (
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "1.25rem",
-                  }}
-                >
-                  <div>
-                    <h3
-                      style={{
-                        fontSize: "1.1rem",
-                        fontWeight: 800,
-                        color: "var(--text-main)",
-                      }}
-                    >
-                      Restaurant Staff & Serving Personnel
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: "0.76rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      Manage waiters, table captains and servers handling dining
-                      guests
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => handleOpenStaffModal()}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.45rem",
-                      padding: "0.6rem 1.25rem",
-                      background: "linear-gradient(135deg, #f59e0b, #ea580c)",
-                      color: "#ffffff",
-                      borderRadius: "var(--radius-sm)",
-                      fontWeight: 700,
-                      fontSize: "0.85rem",
-                      boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
-                    }}
-                  >
-                    <Plus size={16} />
-                    <span>Add New Person (Staff)</span>
-                  </button>
-                </div>
-
-                {/* Staff Cards Grid */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(280px, 1fr))",
-                    gap: "1rem",
-                  }}
-                >
-                  {staffList.map((person) => {
-                    const personName = String(
-                      person?.name ||
-                        person?.fullName ||
-                        person?.FullName ||
-                        person?.username ||
-                        "Unnamed staff",
-                    );
-                    const personRole = String(
-                      person?.role || person?.roleTitle || "Staff",
-                    );
-                    const personId = person?.id ?? person?.staffId;
-                    const assignedCount = tables.filter(
-                      (t) => t.server === personName,
-                    ).length;
-
-                    return (
-                      <div
-                        key={personId ?? personName}
-                        style={{
-                          background: "var(--bg-tertiary)",
-                          borderRadius: "var(--radius-md)",
-                          border: "1px solid var(--border-subtle)",
-                          padding: "1.1rem",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <div>
-                          <div
-=======
                           <h3
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
                             style={{
                               fontSize: "1.15rem",
                               fontWeight: 800,
@@ -3990,18 +3631,19 @@ export function AdminPortal({
                   <AdminInvoices
                     pastOrders={pastOrders}
                     restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
                     onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                   />
                 )}
 
-                {/* ================= TAB 7: REPORTS ================= */}
-                {activeTab === "reports" && (
-                  <AdminReports
-                    pastOrders={pastOrders}
-                    menuItems={menuItems}
-                    restaurantSettings={restaurantSettings}
-                  />
-                )}
+            {/* ================= TAB 7: REPORTS ================= */}
+            {activeTab === "reports" && (
+              <AdminReports
+                pastOrders={pastOrders}
+                menuItems={menuItems}
+                restaurantSettings={restaurantSettings}
+              />
+            )}
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
                 {activeTab === "logins" && (
@@ -4654,21 +4296,15 @@ export function AdminPortal({
                   marginBottom: "5px",
                 }}
               >
-                Table Number / Identifier{" "}
+                Table Name / Identifier{" "}
                 <span style={{ color: "#ea580c" }}>*</span>
               </label>
               <input
                 type="text"
                 required
-                maxLength={10}
-                placeholder="e.g. Table-1, Table-2"
-                value={tableForm.tableNumber || tableForm.name}
+                value={tableForm.name}
                 onChange={(e) =>
-                  setTableForm({
-                    ...tableForm,
-                    name: e.target.value,
-                    tableNumber: e.target.value,
-                  })
+                  setTableForm({ ...tableForm, name: e.target.value })
                 }
                 style={{
                   width: "100%",

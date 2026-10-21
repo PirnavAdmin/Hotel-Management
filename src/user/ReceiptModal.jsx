@@ -27,30 +27,31 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     quantity: Number(item?.quantity ?? item?.qty) || 1,
     price: Number(item?.price ?? item?.unitPrice) || 0,
   }));
-  const subtotal = table.subtotal !== undefined
-    ? table.subtotal
+  const subtotal = table.subtotal !== undefined && Number(table.subtotal) > 0
+    ? Number(table.subtotal)
     : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
-  const discountAmount = table.discountAmount !== undefined
-    ? table.discountAmount
-    : (subtotal * (table.discountPercent || 0)) / 100;
+  const discountPercent = Number(table.discountPercent) || 0;
+  const discountAmount = table.discountAmount !== undefined && Number(table.discountAmount) > 0
+    ? Number(table.discountAmount)
+    : (subtotal * discountPercent) / 100;
 
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxRate = 0.05; // 5% GST
   
-  const taxAmount = table.taxAmount !== undefined
-    ? table.taxAmount
+  const taxAmount = table.taxAmount !== undefined && Number(table.taxAmount) > 0
+    ? Number(table.taxAmount)
     : taxableAmount * taxRate;
   
   const cgst = taxAmount / 2;
   const sgst = taxAmount / 2;
   
-  const serviceChargeAmount = table.serviceChargeAmount !== undefined
-    ? table.serviceChargeAmount
-    : (table.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0);
+  const serviceChargeAmount = table.serviceChargeAmount !== undefined && Number(table.serviceChargeAmount) > 0
+    ? Number(table.serviceChargeAmount)
+    : (table.serviceCharge ? (taxableAmount * (Number(table.serviceCharge) / 100)) : 0);
   
-  const grandTotal = table.grandTotal !== undefined
-    ? table.grandTotal
+  const grandTotal = table.grandTotal !== undefined && Number(table.grandTotal) > 0
+    ? Number(table.grandTotal)
     : Math.round(taxableAmount + taxAmount + serviceChargeAmount);
 
   const invoiceNumber = table.invoiceNo || getNextInvoiceNumber();
@@ -149,6 +150,13 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
         }}>
           {/* Restaurant Header */}
           <div style={{ textAlign: 'center', borderBottom: '1px dashed #cbd5e1', paddingBottom: '0.45rem', marginBottom: '0.45rem' }}>
+            {restaurantSettings.logo && (
+              <img
+                src={restaurantSettings.logo}
+                alt={`${restaurantName} logo`}
+                style={{ maxWidth: '64px', maxHeight: '40px', objectFit: 'contain', margin: '0 auto 4px', display: 'block' }}
+              />
+            )}
             <h2 style={{ fontSize: '1.05rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#0f172a', margin: 0 }}>
               {restaurantName}
             </h2>
@@ -225,9 +233,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               <span>₹{subtotal.toFixed(2)}</span>
             </div>
 
-            {table.discountPercent > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#16a34a' }}>
-                <span>Discount ({table.discountPercent}%):</span>
+            {(discountAmount > 0 || discountPercent > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#16a34a', fontWeight: 700 }}>
+                <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}:</span>
                 <span>-₹{discountAmount.toFixed(2)}</span>
               </div>
             )}
@@ -327,3 +335,5 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     </div>
   );
 }
+
+export default ReceiptModal;

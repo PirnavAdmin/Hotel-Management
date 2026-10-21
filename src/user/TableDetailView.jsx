@@ -2362,6 +2362,28 @@ export function TableDetailView({
 
         {/* Right Table Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {safeItems.length > 0 && (
+            <button
+              onClick={() => onClearOrder(table.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.4rem 0.75rem",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--danger-bg)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239, 68, 68, 0.25)",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+              }}
+              title="Void / Clear current items"
+            >
+              <Trash2 size={13} />
+              <span>Void</span>
+            </button>
+          )}
+
           {/* Cart Icon in vacant place */}
           {safeItems.length > 0 && (
             <div
@@ -4008,7 +4030,7 @@ export function TableDetailView({
                   }}
                 >
                   <button
-                    onClick={() => onSendKOT(table.id)}
+                    onClick={() => onSendKOT(table.id, safeItems)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4389,7 +4411,7 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onSendKOT(table.id);
+                    onSendKOT(table.id, safeItems);
                   }}
                   style={{
                     padding: "0.55rem",

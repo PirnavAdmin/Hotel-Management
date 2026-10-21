@@ -3631,6 +3631,7 @@ export function AdminPortal({
                   <AdminInvoices
                     pastOrders={pastOrders}
                     restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
                     onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                   />
                 )}
