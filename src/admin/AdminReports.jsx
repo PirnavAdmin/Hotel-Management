@@ -12,6 +12,10 @@ import {
   ArrowRight,
   RefreshCw,
   Printer,
+  FileSpreadsheet,
+  Boxes,
+  Receipt,
+  Search,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
