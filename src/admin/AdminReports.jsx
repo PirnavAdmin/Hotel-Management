@@ -26,6 +26,7 @@ import {
   parseOrderToYMD,
   mergeSettledOrders,
 } from '../utils/orderDedupe';
+import { deduplicateAndNormalizeInventory } from './AdminInventory';
 
 export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const now = new Date();
@@ -53,10 +54,11 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   // Real-time Inventory State
   const [liveInventory, setLiveInventory] = useState(() => {
-    if (Array.isArray(inventory) && inventory.length > 0) return inventory;
+    if (Array.isArray(inventory) && inventory.length > 0)
+      return deduplicateAndNormalizeInventory(inventory);
     try {
       const saved = localStorage.getItem('gourmet_pos_inventory_v1');
-      return saved ? JSON.parse(saved) : [];
+      return saved ? deduplicateAndNormalizeInventory(JSON.parse(saved)) : [];
     } catch {
       return [];
     }
@@ -64,18 +66,21 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   useEffect(() => {
     if (Array.isArray(inventory) && inventory.length > 0) {
-      setLiveInventory(inventory);
+      setLiveInventory(deduplicateAndNormalizeInventory(inventory));
     }
   }, [inventory]);
 
   useEffect(() => {
     const handleUpdate = (e) => {
-      if (Array.isArray(e.detail)) setLiveInventory(e.detail);
+      if (Array.isArray(e.detail))
+        setLiveInventory(deduplicateAndNormalizeInventory(e.detail));
     };
     const handleStorage = (e) => {
       if (e.key === 'gourmet_pos_inventory_v1' && e.newValue) {
         try {
-          setLiveInventory(JSON.parse(e.newValue));
+          setLiveInventory(
+            deduplicateAndNormalizeInventory(JSON.parse(e.newValue)),
+          );
         } catch {}
       }
     };

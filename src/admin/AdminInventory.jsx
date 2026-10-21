@@ -246,15 +246,92 @@ export const DEFAULT_SUPPLIERS = [
   "General Wholesale Supplier",
 ];
 
+export const getCanonicalIngredientInfo = (rawName) => {
+  if (!rawName || typeof rawName !== "string") {
+    return { dedupeKey: "", canonicalName: "" };
+  }
+  const trimmed = rawName.trim().replace(/\s+/g, " ");
+  const lower = trimmed.toLowerCase();
+  const alphanumeric = lower.replace(/[^a-z0-9]/g, "");
+
+  // 1. Jeera / Cumin detection (unless it is explicitly Jeera Rice / Samba Rice)
+  if (alphanumeric.includes("jeera") || alphanumeric.includes("cumin")) {
+    if (!alphanumeric.includes("rice") && !alphanumeric.includes("samba")) {
+      return {
+        dedupeKey: "ingredient_spice_jeera",
+        canonicalName: "Cumin Seeds (Jeera)",
+        suggestedCategory: "Spices & Seasonings",
+        suggestedSubcategory: "Cumin Seeds (Jeera)",
+        suggestedUnit: "KG",
+      };
+    }
+  }
+
+  // 2. Containers / Trays / Food Packaging detection
+  if (
+    alphanumeric.includes("container") ||
+    alphanumeric === "foiltrays" ||
+    alphanumeric === "foiltray" ||
+    alphanumeric.includes("mealtray")
+  ) {
+    return {
+      dedupeKey: "ingredient_pack_containers",
+      canonicalName: "Foil Meal Trays & Containers",
+      suggestedCategory: "Packaging & Disposables",
+      suggestedSubcategory: "Foil Meal Trays & Containers",
+      suggestedUnit: "Pcs",
+    };
+  }
+
+  // 3. Basmati Biryani Rice detection
+  if (alphanumeric.includes("basmati")) {
+    return {
+      dedupeKey: "ingredient_grain_basmati",
+      canonicalName: "Basmati Biryani Rice",
+      suggestedCategory: "Grains & Rice",
+      suggestedSubcategory: "Basmati Biryani Rice",
+      suggestedUnit: "KG",
+    };
+  }
+
+  // 4. General normalized key (singularize common plural endings)
+  let baseKey = alphanumeric;
+  if (baseKey.endsWith("ies") && baseKey.length > 5) {
+    baseKey = baseKey.slice(0, -3) + "y";
+  } else if (baseKey.endsWith("es") && baseKey.length > 4) {
+    baseKey = baseKey.slice(0, -2);
+  } else if (baseKey.endsWith("s") && !baseKey.endsWith("ss") && baseKey.length > 3) {
+    baseKey = baseKey.slice(0, -1);
+  }
+
+  return {
+    dedupeKey: `ingredient_${baseKey}`,
+    canonicalName: trimmed,
+  };
+};
+
 export const deduplicateAndNormalizeInventory = (items) => {
   if (!Array.isArray(items)) return [];
 
   const map = new Map();
 
+  const isMeaningfulSupplier = (s) =>
+    Boolean(
+      s &&
+        s !== "Supplier not set" &&
+        s !== "Local Vendor" &&
+        s !== "Local Supplier" &&
+        s.trim().length > 0,
+    );
+
   items.forEach((rawItem) => {
     if (!rawItem || !rawItem.name) return;
-    const name = String(rawItem.name).trim();
-    if (!name) return;
+    const rawName = String(rawItem.name).trim();
+    if (!rawName) return;
+
+    const info = getCanonicalIngredientInfo(rawName);
+    const key = info.dedupeKey || rawName.toLowerCase();
+    const finalName = info.canonicalName || rawName;
 
     const rawSupplier = String(rawItem.supplier || "").trim();
     const supplier =
@@ -262,12 +339,9 @@ export const deduplicateAndNormalizeInventory = (items) => {
         ? rawSupplier
         : "Metro Cash & Carry Wholesale";
 
-    // Deduplication Key: SAME item name + SAME supplier
-    // Items with same name from DIFFERENT suppliers have distinct keys and are NOT duplicates.
-    const key = `${name.toLowerCase()}___${supplier.toLowerCase()}`;
-
-    const category = normalizeCategory(rawItem.category);
-    const unit = normalizeUnit(rawItem.unit || "KG");
+    const category =
+      info.suggestedCategory || normalizeCategory(rawItem.category);
+    const unit = info.suggestedUnit || normalizeUnit(rawItem.unit || "KG");
     const stock = Number(rawItem.stock ?? 0);
     const minThreshold = Number(rawItem.minThreshold ?? 5);
     const mrp =
@@ -278,12 +352,13 @@ export const deduplicateAndNormalizeInventory = (items) => {
     const defaultSubs =
       DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[category] || ["General Supplies"];
     const subcategory =
-      rawItem.subcategory && rawItem.subcategory.trim()
+      info.suggestedSubcategory ||
+      (rawItem.subcategory && rawItem.subcategory.trim()
         ? rawItem.subcategory.trim()
-        : defaultSubs[0];
+        : defaultSubs[0]);
 
     if (map.has(key)) {
-      // DUPLICATE DETECTED: Merge duplicate records into one
+      // DUPLICATE DETECTED: Merge duplicate records into one unique item
       const existing = map.get(key);
       existing.stock = Number(
         (
@@ -301,7 +376,17 @@ export const deduplicateAndNormalizeInventory = (items) => {
           (isNaN(totalRestocked) ? 0 : totalRestocked)
         ).toFixed(3),
       );
-      if (!existing.subcategory || existing.subcategory === "General Supplies") {
+      // Prefer meaningful supplier over generic placeholder
+      if (
+        !isMeaningfulSupplier(existing.supplier) &&
+        isMeaningfulSupplier(supplier)
+      ) {
+        existing.supplier = supplier;
+      }
+      if (
+        !existing.subcategory ||
+        existing.subcategory === "General Supplies"
+      ) {
         existing.subcategory = subcategory;
       }
       if (
@@ -321,7 +406,7 @@ export const deduplicateAndNormalizeInventory = (items) => {
           rawItem.id ||
             `inv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         ),
-        name,
+        name: finalName,
         category,
         subcategory,
         supplier,
@@ -922,22 +1007,26 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     if (!newItem.name.trim()) return;
 
     const trimmedName = newItem.name.trim();
-    const finalCategory = normalizeCategory(newItem.category);
+    const info = getCanonicalIngredientInfo(trimmedName);
+    const finalName = info.canonicalName || trimmedName;
+    const finalCategory =
+      info.suggestedCategory || normalizeCategory(newItem.category);
     const finalSupplier =
       newItem.supplier.trim() || "Metro Cash & Carry Wholesale";
 
-    // Validate duplicate item: Same Item Name + Same Supplier
-    const duplicate = inventory.find(
-      (item) =>
-        item.id !== editingItemId &&
-        item.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
-        (item.supplier || "").trim().toLowerCase() ===
-          finalSupplier.toLowerCase(),
-    );
+    // Validate duplicate item by canonical ingredient identity
+    const duplicate = inventory.find((item) => {
+      if (item.id === editingItemId) return false;
+      const existingInfo = getCanonicalIngredientInfo(item.name);
+      return (
+        info.dedupeKey === existingInfo.dedupeKey ||
+        item.name.trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+    });
 
     if (duplicate) {
       alert(
-        `Duplicate Item Detected:\n\n"${trimmedName}" from "${finalSupplier}" is already in your inventory.\n\n• If restocking this supplier, please use the Restock button or edit the existing item.\n• If this item is supplied by a different vendor, select or enter the different supplier.`,
+        `Duplicate Item Detected:\n\n"${trimmedName}" is already in your inventory as "${duplicate.name}".\n\n• If restocking, please use the Restock button or edit the existing item to add more quantity.\n• To avoid duplicate records, same ingredients cannot be added multiple times.`,
       );
       return;
     }
@@ -952,18 +1041,19 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         "General Supplies",
       ];
     const finalSubcategory =
-      newItem.subcategory && newItem.subcategory.trim()
+      info.suggestedSubcategory ||
+      (newItem.subcategory && newItem.subcategory.trim()
         ? newItem.subcategory.trim()
-        : defaultSubs[0];
+        : defaultSubs[0]);
 
     const itemDetails = {
-      name: trimmedName,
+      name: finalName,
       category: finalCategory,
       subcategory: finalSubcategory,
       mrp: newItem.mrp === "" ? null : Number(newItem.mrp),
       stock: Number(newItem.stock) || 0,
       minThreshold: Number(newItem.minThreshold) || 5,
-      unit: normalizeUnit(newItem.unit || "KG"),
+      unit: info.suggestedUnit || normalizeUnit(newItem.unit || "KG"),
       supplier: finalSupplier,
     };
 
