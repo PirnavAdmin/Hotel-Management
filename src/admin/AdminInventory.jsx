@@ -1071,9 +1071,14 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     });
 
     if (duplicate) {
-      alert(
-        `Duplicate Item Detected:\n\n"${trimmedName}" is already in your inventory as "${duplicate.name}".\n\n• If restocking, please use the Restock button or edit the existing item to add more quantity.\n• To avoid duplicate records, same ingredients cannot be added multiple times.`,
-      );
+      requestDelete({
+        title: "Duplicate inventory item",
+        message: `"${trimmedName}" is already in your inventory as "${duplicate.name}". If restocking, use the Restock button or edit the existing item to add more quantity. Duplicate ingredients cannot be added multiple times.`,
+        confirmLabel: "OK",
+        cancelLabel: "Close",
+        icon: <AlertTriangle size={22} color="#f59e0b" />,
+        onConfirm: () => {},
+      });
       return;
     }
 

@@ -1486,26 +1486,27 @@ export function App() {
 
   // Clear / Void Table Order
   const handleClearOrder = (tableId) => {
-    if (
-      window.confirm(
-        `Are you sure you want to clear the entire order for Table ${tableId}?`,
-      )
-    ) {
-      setTables((prevTables) =>
-        prevTables.map((t) => {
-          if (t.id !== tableId) return t;
-          return {
-            ...t,
-            items: [],
-            status: "vacant",
-            guests: 0,
-            orderTime: null,
-            discountPercent: 0,
-          };
-        }),
-      );
-      showToast(`Table ${tableId} order cleared.`);
-    }
+    requestDelete({
+      title: "Clear table order?",
+      message: `Are you sure you want to clear the entire order for Table ${tableId}?`,
+      confirmLabel: "Yes, Clear Order",
+      onConfirm: () => {
+        setTables((prevTables) =>
+          prevTables.map((t) => {
+            if (t.id !== tableId) return t;
+            return {
+              ...t,
+              items: [],
+              status: "vacant",
+              guests: 0,
+              orderTime: null,
+              discountPercent: 0,
+            };
+          }),
+        );
+        showToast(`Table ${tableId} order cleared.`);
+      },
+    });
   };
 
   // Transfer Table Order
