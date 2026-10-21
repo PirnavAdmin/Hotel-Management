@@ -90,8 +90,9 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     );
   }, [pastOrders, fetchedOrders]);
 
-  const filteredOrders = ordersData.filter((order) => {
-    if (filterPeriod === "all") return true;
+  const filteredOrders = useMemo(() => {
+    return ordersData.filter((order) => {
+      if (filterPeriod === "all") return true;
 
       const orderYMD = parseOrderToYMD(order);
       if (!orderYMD) return false;
