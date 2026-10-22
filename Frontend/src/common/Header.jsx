@@ -491,11 +491,10 @@ export function Header({
                 left: dropdownCoords ? `${dropdownCoords.left}px` : "12px",
                 width: dropdownCoords ? `${dropdownCoords.width}px` : "360px",
                 maxWidth: "calc(100vw - 24px)",
-                background: "#0d1527",
-                border: "1.5px solid rgba(245, 158, 11, 0.45)",
+                background: "var(--bg-card)",
+                border: "1.5px solid var(--border-subtle)",
                 borderRadius: "14px",
-                boxShadow:
-                  "0 20px 50px rgba(0,0,0,0.85), 0 0 25px rgba(245, 158, 11, 0.2)",
+                boxShadow: "var(--shadow-lg)",
                 zIndex: 9999,
                 overflow: "hidden",
                 display: "flex",
@@ -507,9 +506,8 @@ export function Header({
               <div
                 style={{
                   padding: "0.85rem 1rem",
-                  background:
-                    "linear-gradient(135deg, #172339 0%, #0d1527 100%)",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                  background: "var(--bg-tertiary)",
+                  borderBottom: "1px solid var(--border-subtle)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -522,12 +520,12 @@ export function Header({
                     gap: "0.5rem",
                   }}
                 >
-                  <Bell size={16} color="#f59e0b" />
+                  <Bell size={16} color="var(--accent-amber)" />
                   <span
                     style={{
                       fontSize: "0.88rem",
                       fontWeight: 900,
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       letterSpacing: "-0.01em",
                     }}
                   >
@@ -587,7 +585,7 @@ export function Header({
                     style={{
                       padding: "2rem 1rem",
                       textAlign: "center",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       fontSize: "0.82rem",
                     }}
                   >
@@ -681,7 +679,7 @@ export function Header({
                             <span
                               style={{
                                 fontSize: "0.68rem",
-                                color: "#94a3b8",
+                                color: "var(--text-dim)",
                                 fontWeight: 700,
                                 fontFamily: "monospace",
                               }}
@@ -692,7 +690,7 @@ export function Header({
                           <div
                             style={{
                               fontSize: "0.8rem",
-                              color: "#f1f5f9",
+                              color: "var(--text-main)",
                               lineHeight: 1.35,
                               fontWeight: 500,
                             }}
@@ -784,7 +782,7 @@ export function Header({
           alignItems: "center",
           justifyContent: "center",
           padding: "0.32rem 1.25rem",
-          background: "rgba(0, 0, 0, 0.14)",
+          background: "var(--bg-tertiary)",
           borderTop: "1px solid var(--border-subtle)",
           width: "100%",
         }}

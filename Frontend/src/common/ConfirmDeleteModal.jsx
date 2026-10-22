@@ -53,13 +53,13 @@ export function ConfirmDeleteModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#0e1726',
+          background: 'var(--bg-card, #111827)',
           border: '1.5px solid rgba(239,68,68,0.45)',
           borderRadius: '16px',
           padding: '1.6rem 1.5rem 1.4rem',
           maxWidth: '360px',
           width: '100%',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(239,68,68,0.15)',
+          boxShadow: 'var(--shadow-lg)',
           textAlign: 'center',
           animation: 'cdm-slideUp 0.18s ease',
         }}
@@ -83,7 +83,7 @@ export function ConfirmDeleteModal({
         {/* Title */}
         <h3 style={{
           fontSize: '1.1rem', fontWeight: 900,
-          color: '#ffffff', margin: '0 0 0.5rem',
+          color: 'var(--text-main)', margin: '0 0 0.5rem',
           letterSpacing: '-0.01em',
         }}>
           {title}
@@ -91,7 +91,7 @@ export function ConfirmDeleteModal({
 
         {/* Message */}
         <p style={{
-          fontSize: '0.82rem', color: '#94a3b8',
+          fontSize: '0.82rem', color: 'var(--text-muted)',
           fontWeight: 500, margin: '0 0 1.5rem',
           lineHeight: 1.55,
         }}>
@@ -120,9 +120,9 @@ export function ConfirmDeleteModal({
             style={{
               flex: 1, padding: '0.65rem 1rem',
               borderRadius: '12px',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.13)',
-              color: '#94a3b8', fontWeight: 700,
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-main)', fontWeight: 700,
               fontSize: '0.85rem', cursor: 'pointer',
             }}
           >

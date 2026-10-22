@@ -503,7 +503,7 @@ export function LoginManagement({ currentAdminSession }) {
                 id="new-login-role"
                 value={formRole}
                 onChange={(event) => setFormRole(event.target.value)}
-                style={{ width: '100%', padding: '0.7rem 0.8rem', background: '#111827', border: '1.5px solid rgba(245,158,11,0.55)', borderRadius: '9px', color: '#fff', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
+                style={{ width: '100%', padding: '0.7rem 0.8rem', background: 'var(--bg-tertiary)', border: '1.5px solid var(--border-subtle)', borderRadius: '9px', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
               >
                 <option value="pos">User POS - Billing &amp; floor orders</option>
                 <option value="kot">Kitchen KOT - Kitchen display system</option>
@@ -667,21 +667,21 @@ export function LoginManagement({ currentAdminSession }) {
           justifyContent: 'center', zIndex: 200, padding: '1rem'
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: '#0e1726', border: '1.5px solid rgba(245,158,11,0.4)',
+            background: 'var(--bg-secondary)', border: '1.5px solid var(--border-subtle)',
             borderRadius: '16px', padding: '1.5rem', maxWidth: '360px', width: '100%',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+            boxShadow: 'var(--shadow-lg)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
                 🔑 Reset Password
               </h3>
               <button onClick={() => setChangePwUser(null)}
-                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, marginBottom: '1rem' }}>
-              Changing password for <strong style={{ color: '#ffffff' }}>@{changePwUser.username}</strong> ({changePwUser.role.toUpperCase()})
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '1rem' }}>
+              Changing password for <strong style={{ color: 'var(--text-main)' }}>@{changePwUser.username}</strong> ({changePwUser.role.toUpperCase()})
             </div>
 
             {pwError && (
