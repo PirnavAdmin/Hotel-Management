@@ -823,12 +823,15 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         ? selectedSeatTable.guests
         : selectedSeatTable.capacity;
 
+    const finalStatus = count > 0 ? "occupied" : selectedSeatTable.status;
+
     const finalTable = {
       ...selectedSeatTable,
       capacity: selectedSeatTable.capacity,
       seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
       guests: count,
       selectedSeats: selectedSeatIds,
+      status: finalStatus,
     };
 
     try {
@@ -844,6 +847,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                   seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
                   guests: count,
                   selectedSeats: selectedSeatIds,
+                  status: finalStatus,
                 }
               : t
           );

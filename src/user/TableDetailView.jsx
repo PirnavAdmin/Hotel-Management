@@ -2265,9 +2265,10 @@ export function TableDetailView({
             <Users size={13} color="var(--text-muted)" />
             <span style={{ color: "var(--text-muted)" }}>Guests:</span>
             <button
-              onClick={() =>
-                onUpdateGuests(table.id, Math.max(1, table.guests - 1))
-              }
+              onClick={() => {
+                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
+                onUpdateGuests(table.id, Math.max(1, currentG - 1));
+              }}
               style={{
                 background: "var(--surface-tint)",
                 color: "var(--text-main)",
@@ -2284,10 +2285,13 @@ export function TableDetailView({
             <span
               style={{ fontWeight: 700, minWidth: "16px", textAlign: "center" }}
             >
-              {table.guests}
+              {Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0)}
             </span>
             <button
-              onClick={() => onUpdateGuests(table.id, table.guests + 1)}
+              onClick={() => {
+                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
+                onUpdateGuests(table.id, currentG + 1);
+              }}
               style={{
                 background: "var(--surface-tint)",
                 color: "var(--text-main)",

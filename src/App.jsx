@@ -173,13 +173,16 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         capacity: Number(
           table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
         ),
-        status: String(table.status || existing.status || "vacant").toLowerCase(),
+        status:
+          (table.status && String(table.status).toLowerCase() !== "vacant")
+            ? String(table.status).toLowerCase()
+            : (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0) || (Array.isArray(table.items) && table.items.length > 0))
+              ? "occupied"
+              : "vacant",
         server:
           table.assignedServerName || table.server || existing.server || "Staff",
         guests:
-          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
-            ? 0
-            : Number(table.occupiedChairs ?? table.guests ?? existing.guests ?? 0),
+          Number(table.occupiedChairs ?? table.guests ?? (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ?? existing.guests ?? 0),
         items: Array.isArray(table.items)
           ? table.items
           : Array.isArray(existing.items)
@@ -1215,9 +1218,22 @@ export function App() {
 
   // Update Guests Count
   const handleUpdateGuests = (tableId, count) => {
-    setTables((prevTables) =>
-      prevTables.map((t) => (t.id === tableId ? { ...t, guests: count } : t)),
-    );
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (t.id !== tableId) return t;
+        const newCount = Math.max(0, Number(count) || 0);
+        return {
+          ...t,
+          guests: newCount,
+          status: newCount > 0 && t.status === "vacant" ? "occupied" : t.status,
+        };
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+      } catch {}
+      return nextTables;
+    });
   };
 
   // Update Discount
