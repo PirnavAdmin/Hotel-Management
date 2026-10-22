@@ -9,7 +9,7 @@
   --modal-overlay:rgba(4,10,22,.72);
   --input-bg:#17243a;
   --table-header-bg:#152239;
-  --auth-overlay:linear-gradient(90deg,rgba(4,10,22,.48),rgba(4,10,22,.38) 50%,rgba(4,10,22,.52));
+  --auth-overlay:linear-gradient(105deg,rgba(6,12,24,.84) 0%,rgba(6,12,24,.75) 45%,rgba(6,12,24,.72) 75%,rgba(6,12,24,.80) 100%);
   --auth-card:rgba(11,22,40,.94);
   --auth-card-border:rgba(255,157,0,.25);
   --bg-primary: #080d18;
@@ -68,7 +68,7 @@
   --modal-overlay:rgba(23,32,51,.35);
   --input-bg:#fff;
   --table-header-bg:#f1f5f9;
-  --auth-overlay:linear-gradient(90deg,rgba(4,10,22,.30),rgba(4,10,22,.18) 50%,rgba(4,10,22,.26));
+  --auth-overlay:linear-gradient(105deg,rgba(6,12,24,.84) 0%,rgba(6,12,24,.75) 45%,rgba(6,12,24,.72) 75%,rgba(6,12,24,.80) 100%);
   --auth-card:rgba(255,255,255,.95);
   --auth-card-border:rgba(180,100,0,.30);
   --bg-primary: #f8fafc;

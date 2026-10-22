@@ -2296,7 +2296,7 @@ export function App() {
               />
             </ErrorBoundary>
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
           ))}
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
@@ -2330,7 +2330,7 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
@@ -2385,7 +2385,7 @@ export function App() {
               )}
             </>
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
           ))}
       </main>
 

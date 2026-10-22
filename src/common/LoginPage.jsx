@@ -15,14 +15,110 @@ import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '.
  * LoginPage — role-specific login/register screen.
  * Register (admin only) includes: Name, Username, Mobile, Email + OTP, Password.
  */
-export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Restaurant', currentTheme = 'royal-saffron', onChangeTheme }) {
+const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+
+const getStoredRestaurantSettings = () => {
+  try {
+    const raw = localStorage.getItem(RESTAURANT_SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch {}
+  return {};
+};
+
+const resolveRestaurantName = (propVal) => {
+  if (propVal && typeof propVal === "string" && propVal.trim() && propVal.trim().toLowerCase() !== "restaurant") {
+    return propVal.trim();
+  }
+  const settings = getStoredRestaurantSettings();
+  if (settings && typeof settings.restaurantName === "string" && settings.restaurantName.trim()) {
+    return settings.restaurantName.trim();
+  }
+  if (propVal && typeof propVal === "string" && propVal.trim()) {
+    return propVal.trim();
+  }
+  return "AVSR FOOD COURT";
+};
+
+const resolveTagline = () => {
+  const settings = getStoredRestaurantSettings();
+  if (settings && typeof settings.tagline === "string" && settings.tagline.trim()) {
+    return settings.tagline.trim();
+  }
+  return "";
+};
+
+const resolveRestaurantLogo = (propVal, altPropVal) => {
+  const candidate = propVal || altPropVal;
+  if (candidate && typeof candidate === "string" && candidate.trim()) {
+    return candidate.trim();
+  }
+  const settings = getStoredRestaurantSettings();
+  if (settings && typeof settings.logo === "string" && settings.logo.trim()) {
+    return settings.logo.trim();
+  }
+  return "";
+};
+
+const HEADLINE_ITEMS = [
+  { icon: <Sparkles size={15} />, text: 'Better Food \u2014 Better Business.' },
+  { icon: <TrendingUp size={15} />, text: 'Smart Management \u2014 Higher Profits.' },
+  { icon: <Heart size={15} />, text: 'Happy Customers \u2014 Everyday.' }
+];
+
+export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Restaurant', restaurantLogo = '', logo = '', currentTheme = 'royal-saffron', onChangeTheme }) {
   const [currentRole, setCurrentRole] = useState(role);
   const [mode, setMode] = useState('login'); // 'login' | 'register'
+
+  // Dynamic restaurant name and tagline from Settings / localStorage / prop
+  const [currentRestaurantName, setCurrentRestaurantName] = useState(() =>
+    resolveRestaurantName(restaurantName)
+  );
+  const [currentTagline, setCurrentTagline] = useState(() => resolveTagline());
+  const [currentRestaurantLogo, setCurrentRestaurantLogo] = useState(() =>
+    resolveRestaurantLogo(restaurantLogo, logo)
+  );
 
   // Sync prop role if parent route changes
   useEffect(() => {
     setCurrentRole(role);
   }, [role]);
+
+  // Lock window scrollbar on login screen
+  useEffect(() => {
+    const origHtmlOverflow = document.documentElement.style.overflow;
+    const origBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = origHtmlOverflow;
+      document.body.style.overflow = origBodyOverflow;
+    };
+  }, []);
+
+  // Sync restaurant name on prop change
+  useEffect(() => {
+    setCurrentRestaurantName(resolveRestaurantName(restaurantName));
+    setCurrentTagline(resolveTagline());
+    setCurrentRestaurantLogo(resolveRestaurantLogo(restaurantLogo, logo));
+  }, [restaurantName, restaurantLogo, logo]);
+
+  // Listen to live settings updates across windows/tabs and AdminSettings save events
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setCurrentRestaurantName(resolveRestaurantName(restaurantName));
+      setCurrentTagline(resolveTagline());
+    setCurrentRestaurantLogo(resolveRestaurantLogo(restaurantLogo, logo));
+    };
+    window.addEventListener("storage", handleSettingsUpdate);
+    window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("storage", handleSettingsUpdate);
+      window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    };
+  }, [restaurantName, restaurantLogo, logo]);
 
   // Login
   const [username, setUsername] = useState('');
@@ -89,8 +185,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   const cfg = cfgMap[currentRole] || cfgMap.pos;
   const loginTitle = currentRole === 'admin' ? 'Admin Panel Login'
     : currentRole === 'kot' ? 'Kitchen KOT Login' : 'User POS Login';
-  const loginSub   = currentRole === 'admin' ? 'Restaurant Management Portal'
-    : currentRole === 'kot' ? 'Kitchen Display System (KDS)' : 'Dining Floor & Billing Station';
+
+
 
   const triggerShake = () => { setShake(true); setTimeout(() => setShake(false), 600); };
 
@@ -252,12 +348,25 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   return (
     <main className="bhanu-login" data-mode={mode}>
       <div className="auth-theme-toggle"><ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/></div>
-      <section className="bhanu-story" aria-label="Welcome to Bhanu"><header><div className="bhanu-brand"><span className="bhanu-logo"><Utensils size={30}/></span><div><strong>Bhanu</strong><small>RESTAURANT MANAGEMENT SYSTEM</small></div></div><div className="bhanu-restaurant">AVSR FOOD COURT</div></header>
-      <div className="bhanu-welcome"><h1>Welcome back to<br/><em>Bhanu</em></h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
+      <section className="bhanu-story" aria-label={`Welcome to ${currentRestaurantName}`}><header><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
+      <div className="bhanu-welcome"><h1 style={{ color: '#ff9d00' }}>Welcome</h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
       <div className="bhanu-features">{[{title:'POS Billing',description:'Fast & Easy Billing',icon:<Printer/>},{title:'Kitchen KOT',description:'Real-time Order Management',icon:<ChefHat/>},{title:'Admin Portal',description:'Complete Restaurant Control',icon:<Settings/>}].map(feature => <div key={feature.title}><span className="bhanu-feature-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.description}</p></div>)}</div></div>
       <img className="bhanu-dish" src="/assets/chicken-dum-biryani.jpg" alt="Restaurant biryani"/>
-      <div className="bhanu-benefits"><span><Sparkles size={16}/>Better Food &mdash; Better Business.</span><span><TrendingUp size={16}/>Smart Management &mdash; Higher Profits.</span><span><Heart size={16}/>Happy Customers &mdash; Everyday.</span></div></section>
-      <section className="bhanu-login-side" aria-label="Restaurant sign in"><div className="bhanu-login-card" style={{animation:shake?'shakeCard .5s ease':undefined}}><header className="bhanu-card-brand"><div className="bhanu-brand"><span className="bhanu-logo"><Utensils size={30}/></span><div><strong>Bhanu</strong><small>RESTAURANT MANAGEMENT SYSTEM</small></div></div><div className="bhanu-restaurant">AVSR FOOD COURT</div></header>
+      <div className="bhanu-benefits" aria-label="Restaurant headlines">
+        <div className="bhanu-benefits-track">
+          {[1, 2].map((groupNum) => (
+            <div key={groupNum} className="bhanu-benefits-group" aria-hidden={groupNum === 2 ? 'true' : undefined}>
+              {[...HEADLINE_ITEMS, ...HEADLINE_ITEMS].map((item, idx) => (
+                <React.Fragment key={idx}>
+                  <span>{item.icon}{item.text}</span>
+                  <span className="ticker-sep">&bull;</span>
+                </React.Fragment>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div></section>
+      <section className="bhanu-login-side" aria-label={`${currentRestaurantName} sign in`}><div className="bhanu-login-card" style={{animation:shake?'shakeCard .5s ease':undefined}}><header className="bhanu-card-brand"><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
       {/* Global 3-Terminal Role Selector Bar */}
       <div style={{
         display: 'grid',
@@ -317,9 +426,11 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
           <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
             {mode === 'register' ? 'Create Admin Account' : mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
           </h1>
-          <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600 }}>
-            {mode === 'register' ? 'Set up your administrator account' : mode === 'forgot' ? (forgotOtpStep ? 'Enter verification OTP & set new password' : 'Enter email to receive OTP verification code') : loginSub}
+          {mode === 'forgot' && (
+            <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600 }}>
+            {forgotOtpStep ? 'Enter verification OTP & set new password' : 'Enter email to receive OTP verification code'}
           </p>
+        )}
         </div>
 
         {/* Tab toggle — Admin only */}
@@ -404,7 +515,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
               <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
             </div>
 
-            <div className="bhanu-security"><Lock size={17}/><strong>Secure Access to AVSR Food Court</strong><span>POS, Kitchen &amp; Admin - All in One System</span></div>
+
           </form>
         )}
 
