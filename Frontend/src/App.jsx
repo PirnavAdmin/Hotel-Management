@@ -2636,7 +2636,12 @@ export function App() {
 
       {/* Kitchen Order Ticket (KOT) Thermal Pop-up Modal */}
       {isKOTOpen && (
-        <KOTModal table={currentTable} onClose={() => setIsKOTOpen(false)} />
+        <KOTModal
+          table={currentTable}
+          restaurantName={restaurantSettings?.restaurantName || "Restaurant"}
+          restaurantLogo={restaurantSettings?.logo || ""}
+          onClose={() => setIsKOTOpen(false)}
+        />
       )}
 
       {/* Past Orders & Invoices Modal */}
