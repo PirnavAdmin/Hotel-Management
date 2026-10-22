@@ -50,6 +50,7 @@ import {
   apiCreateOrder,
   apiUpdateOrderDiscount,
 } from "./api/orderApi";
+import { apiAdjustStock } from "./api/inventoryApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
@@ -1614,42 +1615,105 @@ export function App() {
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
 
-    // Deduct recipe ingredients once the bill is paid.
+    // Deduct recipe ingredients once the bill is paid (Live Inventory Deduction)
     try {
-      const inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INVENTORY) || "[]");
+      const rawInv = localStorage.getItem(STORAGE_KEY_INVENTORY);
+      const inventory = rawInv ? JSON.parse(rawInv) : [];
       if (Array.isArray(inventory) && inventory.length) {
-        const usageByIngredient = new Map();
+        // Map to aggregate required deduction per inventory item id
+        const usageByIngredientId = new Map();
+
+        // Helper for unit conversion between recipe and inventory stock
+        const convertQuantity = (rawAmount, fromUnit, toUnit) => {
+          const from = String(fromUnit || "KG").toUpperCase();
+          const to = String(toUnit || "KG").toUpperCase();
+          if (from === to) return rawAmount;
+          // Weight
+          if (from === "G" && to === "KG") return rawAmount / 1000;
+          if (from === "KG" && to === "G") return rawAmount * 1000;
+          // Volume
+          if (from === "ML" && (to === "L" || to === "LITRES")) return rawAmount / 1000;
+          if ((from === "L" || from === "LITRES") && to === "ML") return rawAmount * 1000;
+          return rawAmount;
+        };
+
         (settlementData.items || []).forEach((orderedItem) => {
+          const cleanOrderedName = String(orderedItem?.name || orderedItem?.dishName || "").trim().toLowerCase();
           const dish = menuItems.find((item) =>
             String(item.id) === String(orderedItem.id) ||
-            item.name?.trim().toLowerCase() === orderedItem.name?.trim().toLowerCase(),
+            item.name?.trim().toLowerCase() === cleanOrderedName
           );
-          const dishCount = Number(orderedItem.quantity) || 1;
-          (dish?.recipe || []).forEach((ingredient) => {
-            const ingredientId = String(ingredient.inventoryId);
-            const amount = Number(ingredient.quantity) * dishCount;
-            if (ingredientId && Number.isFinite(amount) && amount > 0) {
-              usageByIngredient.set(ingredientId, (usageByIngredient.get(ingredientId) || 0) + amount);
-            }
-          });
+          const dishCount = Number(orderedItem.quantity ?? orderedItem.qty) || 1;
+
+          if (Array.isArray(dish?.recipe) && dish.recipe.length > 0) {
+            dish.recipe.forEach((ingredient) => {
+              // Find matching inventory item by ID first, then by canonical name
+              let matchedStock = null;
+              if (ingredient.inventoryId) {
+                matchedStock = inventory.find((inv) => String(inv.id) === String(ingredient.inventoryId));
+              }
+              if (!matchedStock && ingredient.name) {
+                const ingCleanName = String(ingredient.name).trim().toLowerCase();
+                matchedStock = inventory.find((inv) => String(inv.name || "").trim().toLowerCase() === ingCleanName);
+              }
+
+              if (matchedStock) {
+                const rawAmount = Number(ingredient.quantity) * dishCount;
+                if (Number.isFinite(rawAmount) && rawAmount > 0) {
+                  const convertedAmount = convertQuantity(rawAmount, ingredient.unit, matchedStock.unit);
+                  const existingTotal = usageByIngredientId.get(String(matchedStock.id)) || 0;
+                  usageByIngredientId.set(String(matchedStock.id), existingTotal + convertedAmount);
+                }
+              }
+            });
+          }
         });
 
-        if (usageByIngredient.size) {
-          const updatedInventory = inventory.map((ingredient) => {
-            const used = usageByIngredient.get(String(ingredient.id));
-            if (!used) return ingredient;
+        if (usageByIngredientId.size > 0) {
+          const lowStockAlerts = [];
+          const updatedInventory = inventory.map((stockItem) => {
+            const used = usageByIngredientId.get(String(stockItem.id));
+            if (!used) return stockItem;
+
+            const prevStock = Number(stockItem.stock ?? stockItem.currentStock ?? 0);
+            const prevUsed = Number(stockItem.totalUsed ?? 0);
+            const newStock = Math.max(0, Number((prevStock - used).toFixed(3)));
+            const newTotalUsed = Number((prevUsed + used).toFixed(3));
+
+            const threshold = Number(stockItem.minThreshold ?? stockItem.minimumThreshold ?? 5);
+            if (newStock <= threshold) {
+              lowStockAlerts.push(`${stockItem.name} (${newStock} ${stockItem.unit} remaining)`);
+            }
+
+            // Sync audit adjustment to backend MySQL
+            try {
+              apiAdjustStock({
+                ingredientId: stockItem.id,
+                quantityChange: -used,
+                reason: `Live POS billing deduction (Invoice ${settlementData.invoiceNo || settlementData.id})`,
+              }).catch(() => {});
+            } catch {}
+
             return {
-              ...ingredient,
-              stock: Math.max(0, Number(ingredient.stock || 0) - used),
-              totalUsed: Number(ingredient.totalUsed || 0) + used,
+              ...stockItem,
+              stock: newStock,
+              currentStock: newStock,
+              totalUsed: newTotalUsed,
             };
           });
+
           localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(updatedInventory));
           pushGlobalSync({ [STORAGE_KEY_INVENTORY]: updatedInventory });
           window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: updatedInventory }));
+
+          if (lowStockAlerts.length > 0) {
+            showToast(`⚠️ Low stock alert: ${lowStockAlerts.join(", ")}`);
+          }
         }
       }
-    } catch {}
+    } catch (invErr) {
+      console.warn("Live inventory deduction error:", invErr);
+    }
 
     const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);
