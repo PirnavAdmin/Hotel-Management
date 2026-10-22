@@ -523,7 +523,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
           }} />
         </div>
 
-        {/* Bottom: Editorial Headline and Subtitle */}
+        {/* Bottom: Editorial Headline */}
         <div style={{ position: 'relative', zIndex: 2, flexShrink: 0, marginTop: '4px' }}>
           <h1 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
@@ -531,22 +531,11 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
             fontWeight: 800,
             color: '#ffffff',
             lineHeight: 1.15,
-            margin: '0 0 6px 0',
+            margin: 0,
             letterSpacing: '-0.02em'
           }}>
             Every great service<br />starts here.
           </h1>
-          <p style={{
-            fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-            fontSize: 'clamp(0.82rem, 0.95vw, 0.92rem)',
-            color: '#f5e8e2',
-            lineHeight: 1.4,
-            margin: 0,
-            maxWidth: '360px',
-            fontWeight: 400
-          }}>
-            Billing, table orders and settlements, all in one calm place.
-          </p>
         </div>
       </div>
 
