@@ -5,12 +5,27 @@ import path from "path";
 
 function globalSyncPlugin() {
   let sseClients = [];
-  const dataFile = path.resolve(process.cwd(), "server-db.json");
+  const getDataFile = () => {
+    const candidates = [
+      path.resolve(process.cwd(), "server-db.json"),
+      path.resolve(process.cwd(), "POS", "server-db.json"),
+      path.resolve(process.cwd(), "Frontend", "server-db.json"),
+      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\server-db.json",
+      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\Frontend\\server-db.json",
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+    return path.resolve(process.cwd(), "server-db.json");
+  };
 
   const loadDb = () => {
     try {
-      if (fs.existsSync(dataFile)) {
-        return JSON.parse(fs.readFileSync(dataFile, "utf-8"));
+      const file = getDataFile();
+      if (fs.existsSync(file)) {
+        let text = fs.readFileSync(file, "utf-8");
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        return JSON.parse(text);
       }
     } catch {}
     return {};
@@ -18,7 +33,8 @@ function globalSyncPlugin() {
 
   const saveDb = (data) => {
     try {
-      fs.writeFileSync(dataFile, JSON.stringify(data, null, 2), "utf-8");
+      const file = getDataFile();
+      fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
     } catch {}
   };
 
@@ -448,6 +464,72 @@ function globalSyncPlugin() {
               data: staff,
             }),
           );
+        }
+
+        // REST API: /api/v1/inventory (GET)
+        if (req.url.startsWith("/api/v1/inventory") && req.method === "GET") {
+          db = loadDb();
+          const items = db.gourmet_pos_inventory_v1 || [];
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              count: items.length,
+              data: items,
+              ingredients: items,
+            }),
+          );
+        }
+
+        // REST API: /api/v1/inventory (POST)
+        if ((req.url === "/api/v1/inventory" || req.url === "/api/v1/inventory/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = db.gourmet_pos_inventory_v1 || [];
+              const newItem = {
+                id: payload.id || inv- + Date.now(),
+                name: payload.name || "Unnamed Ingredient",
+                category: payload.category || "General",
+                subcategory: payload.subcategory || "",
+                supplier: payload.supplier || "Local Supplier",
+                unit: payload.unit || "KG",
+                stock: Number(payload.stock ?? payload.currentStock ?? 0),
+                minThreshold: Number(payload.minThreshold ?? payload.minimumThreshold ?? 5),
+                unitCost: Number(payload.unitCost ?? payload.mrp ?? 0),
+                mrp: Number(payload.mrp ?? payload.unitCost ?? 0),
+                totalUsed: 0,
+                totalRestocked: Number(payload.stock ?? 0),
+                lastRestocked: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+              };
+              db.gourmet_pos_inventory_v1 = [newItem, ...existing];
+              saveDb(db);
+              broadcast({ gourmet_pos_inventory_v1: db.gourmet_pos_inventory_v1 });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: newItem, item: newItem }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/inventory/:id (DELETE)
+        const invDeleteMatch = req.url.match(/^\/api\/v1\/inventory\/([^/?]+)$/i);
+        if (invDeleteMatch && req.method === "DELETE") {
+          const rawId = decodeURIComponent(invDeleteMatch[1]);
+          db = loadDb();
+          db.gourmet_pos_inventory_v1 = (db.gourmet_pos_inventory_v1 || []).filter(
+            (i) => String(i.id) !== rawId
+          );
+          saveDb(db);
+          broadcast({ gourmet_pos_inventory_v1: db.gourmet_pos_inventory_v1 });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, message: "Inventory item deleted successfully" }));
         }
 
         // REST API: /api/v1/orders/history

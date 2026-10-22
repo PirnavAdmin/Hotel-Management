@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
+import { apiGetInvoices } from "../api/invoiceApi";
+import { apiGetInventory } from "../api/inventoryApi";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
@@ -27,6 +29,51 @@ import {
   mergeSettledOrders,
 } from '../utils/orderDedupe';
 import { deduplicateAndNormalizeInventory } from './AdminInventory';
+
+export const normalizeInventoryList = (items) => {
+  if (!Array.isArray(items)) return [];
+  try {
+    if (typeof deduplicateAndNormalizeInventory === "function") {
+      const res = deduplicateAndNormalizeInventory(items);
+      if (Array.isArray(res) && res.length > 0) return res;
+    }
+  } catch {}
+  const map = new Map();
+  items.forEach((item, index) => {
+    if (!item) return;
+    const name = String(item.name || item.ingredientName || "").trim();
+    if (!name) return;
+    const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const stockVal = Number(item.stock ?? item.currentStock ?? 0);
+    const minVal = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    const mrpVal = Number(item.mrp ?? item.unitCost ?? 0);
+    const unitVal = item.unit === "Litres" ? "L" : (item.unit || "KG");
+    if (map.has(key)) {
+      const prev = map.get(key);
+      map.set(key, {
+        ...prev,
+        stock: Math.max(prev.stock, stockVal),
+        mrp: mrpVal || prev.mrp,
+        unitCost: mrpVal || prev.unitCost,
+      });
+    } else {
+      map.set(key, {
+        id: String(item.id || `inv-${index + 1}`),
+        name: name,
+        category: item.category || "General Supplies",
+        subcategory: item.subcategory || "",
+        supplier: item.supplier || "Local Supplier",
+        unit: unitVal,
+        stock: stockVal,
+        minThreshold: minVal,
+        mrp: mrpVal,
+        unitCost: mrpVal,
+        lastRestocked: item.lastRestocked || "Recent",
+      });
+    }
+  });
+  return Array.from(map.values());
+};
 
 export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const now = new Date();
@@ -41,7 +88,16 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isFetching, setIsFetching] = useState(false);
-  const [fetchedOrders, setFetchedOrders] = useState(null);
+  const [fetchedOrders, setFetchedOrders] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return null;
+  });
   const [invoicesData, setInvoicesData] = useState(null);
   const ordersLoaded = true;
   const startInputRef = useRef(null);
@@ -55,32 +111,66 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   // Real-time Inventory State
   const [liveInventory, setLiveInventory] = useState(() => {
     if (Array.isArray(inventory) && inventory.length > 0)
-      return deduplicateAndNormalizeInventory(inventory);
+      return normalizeInventoryList(inventory);
     try {
       const saved = localStorage.getItem('gourmet_pos_inventory_v1');
-      return saved ? deduplicateAndNormalizeInventory(JSON.parse(saved)) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return normalizeInventoryList(parsed);
+      }
     } catch {
       return [];
     }
+    return [];
   });
 
   useEffect(() => {
     if (Array.isArray(inventory) && inventory.length > 0) {
-      setLiveInventory(deduplicateAndNormalizeInventory(inventory));
+      setLiveInventory(normalizeInventoryList(inventory));
     }
   }, [inventory]);
 
   useEffect(() => {
+    let active = true;
+    if (!liveInventory || liveInventory.length === 0) {
+      apiGetInventory()
+        .then((response) => {
+          if (!active) return;
+          const payload = response?.data ?? response;
+          const rows = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.data)
+              ? payload.data
+              : Array.isArray(payload?.ingredients)
+                ? payload.ingredients
+                : [];
+          if (rows.length > 0) {
+            const normalized = normalizeInventoryList(rows);
+            setLiveInventory(normalized);
+            try {
+              localStorage.setItem('gourmet_pos_inventory_v1', JSON.stringify(normalized));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [liveInventory]);
+
+  useEffect(() => {
     const handleUpdate = (e) => {
-      if (Array.isArray(e.detail))
-        setLiveInventory(deduplicateAndNormalizeInventory(e.detail));
+      if (Array.isArray(e.detail) && e.detail.length > 0)
+        setLiveInventory(normalizeInventoryList(e.detail));
     };
     const handleStorage = (e) => {
       if (e.key === 'gourmet_pos_inventory_v1' && e.newValue) {
         try {
-          setLiveInventory(
-            deduplicateAndNormalizeInventory(JSON.parse(e.newValue)),
-          );
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLiveInventory(normalizeInventoryList(parsed));
+          }
         } catch {}
       }
     };
@@ -295,9 +385,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const handleFetchData = async () => {
     setIsFetching(true);
     try {
-      const [response, invoiceResponse] = await Promise.all([
-        apiGetOrderHistory(),
-        apiGetInvoices(),
+      const [response, invoiceResponse, inventoryResponse] = await Promise.all([
+        apiGetOrderHistory().catch(() => null),
+        apiGetInvoices().catch(() => null),
+        apiGetInventory().catch(() => null),
       ]);
       const invoiceList =
         invoiceResponse?.data?.data ??
@@ -327,6 +418,24 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           setFetchedOrders((current) =>
             mergeSettledOrders(current || pastOrders, parsed),
           );
+        }
+      }
+
+      if (inventoryResponse) {
+        const payload = inventoryResponse?.data ?? inventoryResponse;
+        const rows = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.ingredients)
+              ? payload.ingredients
+              : [];
+        if (rows.length > 0) {
+          const normalized = normalizeInventoryList(rows);
+          setLiveInventory(normalized);
+          try {
+            localStorage.setItem('gourmet_pos_inventory_v1', JSON.stringify(normalized));
+          } catch {}
         }
       }
     } catch {
@@ -662,6 +771,79 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               <span>Fetch Data</span>
             </button>
 
+          </div>
+
+          {/* Quick Section Navigation Bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              marginBottom: '1.25rem',
+              padding: '0.6rem 0.85rem',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+              Quick Navigation:
+            </span>
+            <button
+              type='button'
+              onClick={() => {
+                const el = document.getElementById('admin-work-area');
+                if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+                else window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                color: '#f59e0b',
+                borderRadius: '8px',
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <span>📊 Overview &amp; Metrics</span>
+            </button>
+            <button
+              type='button'
+              onClick={() => {
+                const target = document.getElementById('profit-loss-section');
+                if (target) {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
+                border: '1.5px solid #10b981',
+                color: '#10b981',
+                borderRadius: '8px',
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <span>💰 Income, Expenditure &amp; Profit / Loss Report ↓</span>
+            </button>
           </div>
 
         {/* 6 Metric Overview Cards */}
@@ -1126,6 +1308,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
       {/* CARD 2: INCOME, EXPENDITURE & PROFIT / LOSS REPORT (DETAILED & USER FRIENDLY) */}
       {/* ========================================================================= */}
       <div
+        id="profit-loss-section"
         style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-card)',

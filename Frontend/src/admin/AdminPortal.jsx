@@ -54,6 +54,7 @@ import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
+import { apiGetInventory } from "../api/inventoryApi";
 import { API_BASE_URL } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
@@ -99,8 +100,72 @@ export function AdminPortal({
   onChangeTheme = null,
   pastOrders = [],
   onUpdateInvoiceDiscount = null,
+  inventory: propInventory = [],
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+
+  const [inventory, setInventory] = useState(() => {
+    if (Array.isArray(propInventory) && propInventory.length > 0) return propInventory;
+    try {
+      const saved = localStorage.getItem("gourmet_pos_inventory_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    if (Array.isArray(propInventory) && propInventory.length > 0) {
+      setInventory(propInventory);
+    }
+  }, [propInventory]);
+
+  useEffect(() => {
+    if (!inventory || inventory.length === 0) {
+      apiGetInventory()
+        .then((res) => {
+          const payload = res?.data ?? res;
+          const rows = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.data)
+              ? payload.data
+              : Array.isArray(payload?.ingredients)
+                ? payload.ingredients
+                : [];
+          if (rows.length > 0) {
+            setInventory(rows);
+            try {
+              localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(rows));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+
+    const handleInvUpdated = (e) => {
+      if (Array.isArray(e.detail) && e.detail.length > 0) {
+        setInventory(e.detail);
+      }
+    };
+    const handleStorage = (e) => {
+      if (e.key === "gourmet_pos_inventory_v1" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setInventory(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener("avsr-inventory-updated", handleInvUpdated);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("avsr-inventory-updated", handleInvUpdated);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [inventory]);
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
 
   // Toggle between Dine (Restaurant) and Bar mode
@@ -1208,12 +1273,10 @@ export function AdminPortal({
 
           {/* Scrollable Work Area */}
           <div
-            className="no-scrollbar"
+            id="admin-work-area"
             style={{
               flex: 1,
               overflowY: "auto",
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
               padding:
                 portalMode === "bar" || activeTab === "logins"
                   ? "1rem"
@@ -4215,19 +4278,19 @@ export function AdminPortal({
                   <AdminInvoices
                     pastOrders={pastOrders}
                     restaurantName={restaurantName}
-                    restaurantSettings={restaurantSettings}
                     onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                   />
                 )}
 
-            {/* ================= TAB 7: REPORTS ================= */}
-            {activeTab === "reports" && (
-              <AdminReports
-                pastOrders={pastOrders}
-                menuItems={menuItems}
-                restaurantSettings={restaurantSettings}
-              />
-            )}
+                {/* ================= TAB 7: REPORTS ================= */}
+                {activeTab === "reports" && (
+                  <AdminReports
+                    pastOrders={pastOrders}
+                    menuItems={menuItems}
+                    restaurantSettings={restaurantSettings}
+                    inventory={inventory}
+                  />
+                )}
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
                 {activeTab === "logins" && (
