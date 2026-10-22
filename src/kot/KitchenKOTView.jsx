@@ -2247,6 +2247,17 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 
+const formatCleanTableNum = (name, id) => {
+  if (!name) return String(id ?? "");
+  const num = String(name).replace(/^Table\s*[-–—]?\s*/i, "").replace(/^Table\s*/i, "").trim();
+  return num || String(id ?? "");
+};
+
+const formatCleanTableName = (name, id) => {
+  const num = formatCleanTableNum(name, id);
+  return `Table ${num}`;
+};
+
 export function KitchenKOTView({
   tables = [],
   pastOrders = [],
@@ -2539,9 +2550,20 @@ export function KitchenKOTView({
     };
   };
 
-  // 1. Active Floor Tables with Orders in Preparation
+  // 1. Active Floor Tables with Orders in Preparation (Only from POS)
   const activeTickets = tables
-    .filter((t) => t.items && t.items.length > 0)
+    .filter((t) => Array.isArray(t.items) && t.items.length > 0)
+    .filter((t) => {
+      // If table has incomplete items (received or cooking), ALWAYS show it!
+      const allCompleted = t.items.length > 0 && t.items.every(isItemCompleted);
+      if (!allCompleted) return true;
+      // If all completed, hide if explicitly dismissed by chef
+      return (
+        !dismissedPaidTicketIds.includes(String(t.id)) &&
+        !dismissedPaidTicketIds.includes(Number(t.id)) &&
+        !dismissedPaidTicketIds.includes(`active-${t.id}`)
+      );
+    })
     .map((t) => ({
       ...t,
       priority: t.priority ?? t.orderPriority ?? "normal",
@@ -2550,107 +2572,8 @@ export function KitchenKOTView({
       ticketType: "active",
     }));
 
-  // 2. Paid / Settled Completed Orders (Deduplicated so each invoice appears only once!)
-  const seenPaidKeys = new Set();
-  const paidTickets = [];
-  (effectivePastOrders || []).forEach((order, idx) => {
-    if (!order.items || order.items.length === 0) return;
-    const key = order.invoiceNo || `table-${order.tableId}-${order.settledAt || order.orderTime}`;
-    if (seenPaidKeys.has(key)) return;
-    seenPaidKeys.add(key);
-
-    const ticketId = `paid-${key}`;
-    if (dismissedPaidTicketIds.includes(ticketId)) return;
-
-    const rawName = order.tableName || (String(order.tableId).startsWith("Table") ? String(order.tableId) : `Table ${order.tableId}`);
-    const cleanName = rawName.startsWith("Table ") ? rawName : `Table ${rawName}`;
-
-    paidTickets.push({
-      id: order.tableId,
-      uniqueKey: ticketId,
-      name: cleanName,
-      section: order.section || "Main Hall",
-      server: order.server || "Floor Staff",
-      capacity: 4,
-      status: "billed",
-      priority: order.priority ?? order.orderPriority ?? "normal",
-      orderTime: order.orderTime || order.settledAt,
-      cookingStartedAt:
-        order.cookingStartedAt || order.orderTime || order.settledAt,
-      completedAt: order.settledAt,
-      completedDuration: order.completedDuration || "12m 30s",
-      items: (order.items || []).map((i) => ({ ...i, kotStatus: "ready" })),
-      isPaid: true,
-      paymentMethod: order.paymentMethod || "cash",
-      grandTotal: order.grandTotal,
-      settledAt: order.settledAt,
-      invoiceNo: order.invoiceNo,
-      ticketType: "paid",
-    });
-  });
-
-
-  // Precise time value extractor (epoch ms) for chronological time sorting
-  const getTicketTimeValue = (ticket) => {
-    if (!ticket) return 0;
-
-    // 1. Direct epoch ms if orderTimestamp is recorded
-    if (
-      typeof ticket.orderTimestamp === "number" &&
-      ticket.orderTimestamp > 0
-    ) {
-      return ticket.orderTimestamp;
-    }
-
-    // 2. Extract item timeAdded values (e.g. '06:24 PM', '05:58 PM', '04:46 PM')
-    const itemTimes = (ticket.items || [])
-      .map((i) => i.timeAdded || i.time)
-      .filter(Boolean);
-
-    // 3. Fallback candidate time strings: orderTime, item time, settledAt, completedAt, cookingStartedAt
-    const timeStr =
-      ticket.orderTime ||
-      (itemTimes.length > 0 ? itemTimes[0] : null) ||
-      ticket.settledAt ||
-      ticket.completedAt ||
-      ticket.cookingStartedAt;
-
-    if (!timeStr) return 0;
-
-    // If timeStr is already a full ISO date or parseable date string
-    const parsedDate = Date.parse(timeStr);
-    if (!isNaN(parsedDate) && String(timeStr).includes("-")) {
-      return parsedDate;
-    }
-
-    // Match 12-hour or 24-hour time strings like "06:24:33 PM", "06:24 PM", "18:24"
-    const match = String(timeStr).match(/(\d+):(\d+)(?::(\d+))?\s*(AM|PM)?/i);
-    if (!match) return 0;
-
-    let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const seconds = match[3] ? parseInt(match[3], 10) : 0;
-    const meridian = match[4];
-
-    if (meridian) {
-      const m = meridian.toUpperCase();
-      if (m === "PM" && hours < 12) hours += 12;
-      if (m === "AM" && hours === 12) hours = 0;
-    }
-
-    const d = new Date();
-    d.setHours(hours, minutes, seconds, 0);
-
-    // If parsed time is > 30 minutes in the future, it was placed yesterday before midnight
-    if (d.getTime() > Date.now() + 30 * 60 * 1000) {
-      d.setDate(d.getDate() - 1);
-    }
-
-    return d.getTime();
-  };
-
-  // Combined List: Active Preparation Orders + Paid Completed Orders (Sorted Time-Wise: Recent First)
-  const allKitchenTickets = [...activeTickets, ...paidTickets].sort((a, b) => {
+  // Combined List: Only Active Orders from POS
+  const allKitchenTickets = activeTickets.sort((a, b) => {
     const priorityDelta = getPriorityWeight(b) - getPriorityWeight(a);
     if (priorityDelta !== 0) return priorityDelta;
 
@@ -2730,26 +2653,24 @@ export function KitchenKOTView({
       const hasCooking = items.some(isItemCooking);
       const hasReceived = items.some(isItemReceived);
 
-      if (statusFilter === "pending" && (!hasReceived || t.isPaid))
-        return false;
-      if (statusFilter === "cooking" && (!hasCooking || t.isPaid)) return false;
-      if (statusFilter === "completed" && !(allCompleted || t.isPaid))
-        return false;
+      if (statusFilter === "pending" && !hasReceived) return false;
+      if (statusFilter === "cooking" && !hasCooking) return false;
+      if (statusFilter === "completed" && !allCompleted) return false;
     }
 
     return true;
   });
 
-  // Kitchen stats: accurately reflect Received -> Cooking -> Completed (including paid completed!)
+  // Kitchen stats: accurately reflect Received -> Cooking -> Completed
   const totalOrdersCount = allKitchenTickets.length;
   const pendingOrdersCount = allKitchenTickets.filter(
-    (t) => !t.isPaid && Array.isArray(t?.items) && t.items.some(isItemReceived),
+    (t) => Array.isArray(t?.items) && t.items.some(isItemReceived),
   ).length;
   const cookingOrdersCount = allKitchenTickets.filter(
-    (t) => !t.isPaid && Array.isArray(t?.items) && t.items.some(isItemCooking),
+    (t) => Array.isArray(t?.items) && t.items.some(isItemCooking),
   ).length;
   const completedOrdersCount = allKitchenTickets.filter(
-    (t) => t.isPaid || (Array.isArray(t?.items) && t.items.length > 0 && t.items.every(isItemCompleted)),
+    (t) => Array.isArray(t?.items) && t.items.length > 0 && t.items.every(isItemCompleted),
   ).length;
 
   // Auto-switch to "Received" tab when a new KOT arrives
@@ -3904,7 +3825,7 @@ export function KitchenKOTView({
                           >
                             TABLE
                           </span>
-                          <span>{tbl.name.replace(/Table\s*/i, "")}</span>
+                          <span>{formatCleanTableNum(tbl.name, tbl.id)}</span>
                         </div>
 
                         <div style={{ minWidth: 0 }}>
@@ -3921,7 +3842,7 @@ export function KitchenKOTView({
                               letterSpacing: "-0.01em",
                             }}
                           >
-                            {tbl.name}
+                            {formatCleanTableName(tbl.name, tbl.id)}
                           </h3>
                           <div
                             style={{
@@ -4727,11 +4648,7 @@ export function KitchenKOTView({
                               }}
                             >
                               <CheckCircle2 size={14} />
-                              <span>
-                                {tbl.isPaid
-                                  ? "PREPARATION COMPLETED & BILL PAID"
-                                  : "PREPARATION COMPLETED"}
-                              </span>
+                              <span>PREPARATION COMPLETED</span>
                             </div>
                             <p
                               style={{
@@ -4742,30 +4659,16 @@ export function KitchenKOTView({
                                 margin: 0,
                               }}
                             >
-                              {tbl.isPaid ? (
-                                <>
-                                  <strong style={{ color: cardPrimaryText }}>
-                                    {tbl.name.startsWith("Table") ? tbl.name : `Table ${tbl.name}`}
-                                  </strong>{" "}
-                                  bill settled via{" "}
-                                  {(tbl.paymentMethod || "UPI").toUpperCase()}{" "}
-                                  at {tbl.settledAt}. Order remained in KDS!
-                                </>
-                              ) : (
-                                <>
-                                  Order for{" "}
-                                  <strong style={{ color: cardPrimaryText }}>
-                                    {tbl.name.startsWith("Table") ? tbl.name : `Table ${tbl.name}`}
-                                  </strong>{" "}
-                                  is cooked & ready to be served to guests!
-                                </>
-                              )}
-
+                              Order for{" "}
+                              <strong style={{ color: cardPrimaryText }}>
+                                {formatCleanTableName(tbl.name, tbl.id)}
+                              </strong>{" "}
+                              is cooked & ready to be served to guests!
                             </p>
                           </div>
 
-                          {/* Actions for Paid ticket vs Active ticket */}
-                          {tbl.isPaid ? (
+                          {/* Actions: Completed ticket vs In-Preparation ticket */}
+                          {allServed ? (
                             <div style={{ display: "flex", gap: "0.45rem" }}>
                               <button
                                 onClick={(e) => {
@@ -4799,9 +4702,7 @@ export function KitchenKOTView({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDismissTicket(
-                                    tbl.uniqueKey || `paid-${tbl.id}`,
-                                  );
+                                  handleDismissTicket(tbl.id);
                                 }}
                                 style={{
                                   flex: 1,
@@ -4818,14 +4719,14 @@ export function KitchenKOTView({
                                   gap: "0.3rem",
                                   cursor: "pointer",
                                 }}
-                                title="Clear this completed paid ticket from kitchen display"
+                                title="Clear this completed ticket from kitchen display"
                               >
                                 <Check size={12} />
                                 <span>Clear from KOT</span>
                               </button>
                             </div>
                           ) : (
-                            /* Active Table Re-cook / Reset */
+                            /* In Preparation: Re-cook / Reset */
                             <div style={{ display: "flex", gap: "0.45rem" }}>
                               <button
                                 onClick={(e) => {

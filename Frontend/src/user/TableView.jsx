@@ -1467,7 +1467,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           >
             {[
               { id: "all", label: `All (${tables.length})` },
-              { id: "vacant", label: "Available", dot: "var(--status-vacant)" },
+              { id: "vacant", label: "Vacant", dot: "var(--status-vacant)" },
               {
                 id: "occupied",
                 label: "Occupied",
@@ -1676,7 +1676,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
             );
 
             let statusColor = "var(--status-vacant)";
-            let statusText = "Available";
+            let statusText = "Vacant";
             let statusBg = "var(--status-vacant-bg)";
 
             if (table.status === "occupied") {
@@ -1798,7 +1798,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           flexShrink: 0,
                         }}
                       >
-                        T{table.id}
+                        T{table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id}
                       </span>
                       <h3
                         style={{
@@ -1816,7 +1816,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           textOverflow: "ellipsis",
                         }}
                       >
-                        Table {table.id}
+                        {table.name ? (table.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i) ? `Table ${table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "")}` : table.name) : `Table ${table.id}`}
                       </h3>
                     </div>
                     <span
@@ -2356,7 +2356,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         lineHeight: 1.25,
                       }}
                     >
-                      Table {selectedSeatTable.id} — Select Seats
+                      {selectedSeatTable.name || `Table ${selectedSeatTable.id}`} — Select Seats
                     </h2>
                     <div
                       style={{
@@ -2856,7 +2856,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ color: "var(--text-dim)" }}>Table No:</span>
                         <span style={{ color: "var(--text-main)", fontWeight: 700, fontSize: "0.88rem" }}>
-                          T{selectedSeatTable.id}
+                          T{selectedSeatTable.name ? selectedSeatTable.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : selectedSeatTable.id}
                         </span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

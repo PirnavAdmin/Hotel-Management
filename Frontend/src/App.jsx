@@ -140,26 +140,24 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       const num = parseTableNumber(table);
 
       let targetId = null;
-      if (num && num >= 1 && num <= 15) {
+      if (num && num >= 1) {
         targetId = num;
       } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
         targetId = Number(table.id);
-      } else if (num) {
-        targetId = num;
       }
 
       if (!targetId || deletedIds.includes(String(targetId))) return;
 
-      const isStandard = targetId >= 1 && targetId <= 15;
-      if (!isStandard && isRogueName(rawName)) return;
+      if (isRogueName(rawName)) return;
+
+      // If this table previously had an arbitrary backend auto-increment ID (e.g. 55) in tablesById, remove it
+      if (table.id && Number(table.id) !== targetId && tablesById.has(Number(table.id))) {
+        tablesById.delete(Number(table.id));
+      }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = isStandard
-        ? isRogueName(rawName) || !rawName
-          ? `Table ${targetId}`
-          : rawName.match(/^(?:table|t)\s*(\d+)$/i)
-            ? `Table ${targetId}`
-            : rawName
+      const cleanName = rawName.match(/^(?:table|t)\s*(\d+)$/i)
+        ? `Table ${num || targetId}`
         : rawName || `Table ${targetId}`;
 
       const normalized = {
@@ -1244,6 +1242,22 @@ export function App() {
   const handleSendKOT = (tableId) => {
     sounds.playBell();
     const tbl = tables.find((t) => t.id === tableId);
+    try {
+      const saved = localStorage.getItem("gourmet_kot_dismissed_tickets_v1");
+      if (saved) {
+        const list = JSON.parse(saved);
+        const updated = list.filter(
+          (id) =>
+            id !== String(tableId) &&
+            id !== Number(tableId) &&
+            id !== `active-${tableId}`,
+        );
+        localStorage.setItem(
+          "gourmet_kot_dismissed_tickets_v1",
+          JSON.stringify(updated),
+        );
+      }
+    } catch {}
     setTables((prevTables) =>
       prevTables.map((t) => {
         if (t.id !== tableId) return t;

@@ -9,7 +9,7 @@ export async function apiCreateTable(tableData) {
   const branch = Number(tableData.branchId) || 1;
   const section = String(tableData.section || tableData.sectionArea || tableData.location || "Main Hall").trim();
   const cap = parseInt(tableData.capacity || tableData.capacityChairs || 4, 10);
-  const status = tableData.status ? String(tableData.status).toLowerCase() : "available";
+  const status = tableData.status ? String(tableData.status).toLowerCase() : "vacant";
   const serverId = tableData.assignedServerId ? Number(tableData.assignedServerId) : null;
   const serverName = tableData.server || tableData.assignedServerName || null;
 
@@ -39,7 +39,7 @@ export async function apiUpdateTable(id, tableData) {
   const branch = Number(tableData.branchId) || 1;
   const section = String(tableData.section || tableData.sectionArea || tableData.location || "Main Hall").trim();
   const cap = parseInt(tableData.capacity || tableData.capacityChairs || 4, 10);
-  const status = tableData.status ? String(tableData.status).toLowerCase() : "available";
+  const status = tableData.status ? String(tableData.status).toLowerCase() : "vacant";
   const serverId = tableData.assignedServerId ? Number(tableData.assignedServerId) : null;
   const serverName = tableData.server || tableData.assignedServerName || null;
 
