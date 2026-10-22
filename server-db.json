@@ -1285,5 +1285,690 @@
   "avsr_daily_inv_cnt_15_Oct_2026": "1",
   "avsr_daily_inv_cnt_16_Oct_2026": "2",
   "avsr_daily_inv_cnt_19_Oct_2026": "1",
-  "avsr_daily_inv_cnt_21_Oct_2026": "46"
+  "avsr_daily_inv_cnt_21_Oct_2026": "46",
+  "gourmet_pos_inventory_v1": [
+    {
+      "id": "inv-1792668107097-od98",
+      "name": "Tomato & Onion Gravy",
+      "category": "Produce & Veggies",
+      "subcategory": "",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 40,
+      "mrp": 40,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026"
+    },
+    {
+      "id": "inv-1792668102329-aec2",
+      "name": "Onions & Mint",
+      "category": "Produce & Veggies",
+      "subcategory": "",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 40,
+      "mrp": 40,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026"
+    },
+    {
+      "id": "inv-1792666034839-wfon",
+      "name": "Table Salt & Rock Salt",
+      "category": "Spices & Seasonings",
+      "subcategory": "Table Salt & Rock Salt",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "unit": "KG",
+      "stock": 100,
+      "minThreshold": 10,
+      "unitCost": 25,
+      "mrp": 25,
+      "totalUsed": 0,
+      "totalRestocked": 100,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792666034839-wfon",
+        "inv-1792662238675-7wna"
+      ]
+    },
+    {
+      "id": "inv-1792666034578-pqb4",
+      "name": "Onions",
+      "category": "Vegetables & Fresh Produce",
+      "subcategory": "Onions",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "unit": "KG",
+      "stock": 300,
+      "minThreshold": 10,
+      "unitCost": 40,
+      "mrp": 40,
+      "totalUsed": 0,
+      "totalRestocked": 300,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792666034578-pqb4",
+        "inv-1792666034051-4s0s",
+        "inv-1792666033049-sugr",
+        "inv-1792662238617-cehx"
+      ]
+    },
+    {
+      "id": "inv-1792666033516-x2tt",
+      "name": "Basmati Biryani Rice",
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "unit": "KG",
+      "stock": 200,
+      "minThreshold": 10,
+      "unitCost": 120,
+      "mrp": 120,
+      "totalUsed": 0,
+      "totalRestocked": 200,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792666033516-x2tt",
+        "inv-1792663569897-4wok"
+      ]
+    },
+    {
+      "id": "inv-1792662239185-5ga1",
+      "name": "Mango Lassi Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239185-5ga1"
+      ]
+    },
+    {
+      "id": "inv-1792662239181-gxug",
+      "name": "Sugar",
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 50,
+      "mrp": 50,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239181-gxug"
+      ]
+    },
+    {
+      "id": "inv-1792662239179-4lwy",
+      "name": "Flavor Syrup / Fruit",
+      "category": "Produce & Veggies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 300,
+      "mrp": 300,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239179-4lwy"
+      ]
+    },
+    {
+      "id": "inv-1792662239178-8jjd",
+      "name": "Fresh Milk / Juice Base",
+      "category": "Beverages & Bar",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "L",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 65,
+      "mrp": 65,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239178-8jjd"
+      ]
+    },
+    {
+      "id": "inv-1792662239168-u9gi",
+      "name": "Gulab Jamun Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239168-u9gi"
+      ]
+    },
+    {
+      "id": "inv-1792662239160-28uc",
+      "name": "Gulab Jamun with Rabdi Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239160-28uc"
+      ]
+    },
+    {
+      "id": "inv-1792662239149-fzl4",
+      "name": "Brownie with ice cream Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 280,
+      "mrp": 280,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239149-fzl4"
+      ]
+    },
+    {
+      "id": "inv-1792662239135-s9n7",
+      "name": "Matka Kulfi Falooda Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239135-s9n7"
+      ]
+    },
+    {
+      "id": "inv-1792662239100-lpfo",
+      "name": "Royal Shahi Tukda Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239100-lpfo"
+      ]
+    },
+    {
+      "id": "inv-1792662239095-d4o6",
+      "name": "Gulab Jamun with Rabdi (2 Pcs) Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239095-d4o6"
+      ]
+    },
+    {
+      "id": "inv-1792662239079-f4h0",
+      "name": "Ice cream Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 280,
+      "mrp": 280,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239079-f4h0"
+      ]
+    },
+    {
+      "id": "inv-1792662239074-ln9z",
+      "name": "Spiced Buttermilk (Chaas) Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 65,
+      "mrp": 65,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239074-ln9z"
+      ]
+    },
+    {
+      "id": "inv-1792662239033-6wvy",
+      "name": "Sweet Punjabi Lassi Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662239033-6wvy"
+      ]
+    },
+    {
+      "id": "inv-1792662238968-u24s",
+      "name": "Royal Mango Lassi Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238968-u24s"
+      ]
+    },
+    {
+      "id": "inv-1792662238951-87km",
+      "name": "Tandoori Roti (Butter) Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238951-87km"
+      ]
+    },
+    {
+      "id": "inv-1792662238899-fq1t",
+      "name": "Cheese Garlic Naan Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 420,
+      "mrp": 420,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238899-fq1t"
+      ]
+    },
+    {
+      "id": "inv-1792662238896-f588",
+      "name": "Butter Garlic Naan Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238896-f588"
+      ]
+    },
+    {
+      "id": "inv-1792662238835-45s3",
+      "name": "Mutton Rogan Josh Main Ingredient",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 700,
+      "mrp": 700,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238835-45s3"
+      ]
+    },
+    {
+      "id": "inv-1792662238828-sku4",
+      "name": "Dal Makhani Bukhara Main Ingredient",
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238828-sku4"
+      ]
+    },
+    {
+      "id": "inv-1792662238763-dvql",
+      "name": "Mutton Seekh Kebab Main Ingredient",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 700,
+      "mrp": 700,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238763-dvql"
+      ]
+    },
+    {
+      "id": "inv-1792662238748-mou1",
+      "name": "Murgh Malai Kebab Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238748-mou1"
+      ]
+    },
+    {
+      "id": "inv-1792662238699-t380",
+      "name": "Apollo Fish Fry Main Ingredient",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 420,
+      "mrp": 420,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238699-t380"
+      ]
+    },
+    {
+      "id": "inv-1792662238650-wr29",
+      "name": "Curry Spices",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238650-wr29"
+      ]
+    },
+    {
+      "id": "inv-1792662238565-7owc",
+      "name": "Shawarma Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238565-7owc"
+      ]
+    },
+    {
+      "id": "inv-1792662238446-3250",
+      "name": "Garam Masala Spices",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238446-3250"
+      ]
+    },
+    {
+      "id": "inv-1792662238433-hk4j",
+      "name": "Cooking Butter & Cream",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238433-hk4j"
+      ]
+    },
+    {
+      "id": "inv-1792662238430-9fer",
+      "name": "Fresh Paneer",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 360,
+      "mrp": 360,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238430-9fer"
+      ]
+    },
+    {
+      "id": "inv-1792662238415-l8we",
+      "name": "Biryani Spices & Masala",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238415-l8we"
+      ]
+    },
+    {
+      "id": "inv-1792662238413-n5tc",
+      "name": "Cooking Oil",
+      "category": "Oils & Condiments",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "L",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 180,
+      "mrp": 180,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238413-n5tc"
+      ]
+    },
+    {
+      "id": "inv-1792662238401-qe1k",
+      "name": "Raw Chicken",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 280,
+      "mrp": 280,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238401-qe1k"
+      ]
+    },
+    {
+      "id": "inv-1792662238318-npjn",
+      "name": "Seasoning & Spices",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238318-npjn"
+      ]
+    },
+    {
+      "id": "inv-1792662238315-yfy5",
+      "name": "Cooking Oil / Butter",
+      "category": "Oils & Condiments",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "L",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238315-yfy5"
+      ]
+    },
+    {
+      "id": "inv-1792662238302-lw20",
+      "name": "Veg Thali Main Ingredient",
+      "category": "Produce & Veggies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "22 Oct 2026",
+      "associatedIds": [
+        "inv-1792662238302-lw20"
+      ]
+    }
+  ]
 }

@@ -22,6 +22,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { printSurface } from "../utils/printSurface";
 import { apiGetOrderHistory } from "../api/orderApi";
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetInventory } from "../api/inventoryApi";
@@ -696,6 +697,9 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       
+      {/* SCREEN VIEW ONLY (hidden completely during print) */}
+      <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%', maxWidth: '100%' }}>
+      
       {/* ========================================================= */}
       {/* CARD 1: SALES ANALYTICS & REVENUE REPORTS                 */}
       {/* ========================================================= */}
@@ -755,7 +759,11 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
           {/* Right Corner: Print Report Button */}
           <button
-            onClick={() => window.print()}
+            onClick={() => printSurface("printable-report", {
+              title: "Sales and Revenue Report",
+              format: "a4",
+              emptyMessage: "There is no report data to print.",
+            })}
             style={{
               background: "var(--bg-tertiary)",
               border: "1px solid var(--border-subtle)",
@@ -797,10 +805,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             marginBottom: '1.5rem',
           }}
         >
-            {/* Quick Period Buttons with Daily, Weekly, Monthly, Quarterly, Yearly */}
+            {/* Quick period buttons are hidden; the period dropdown is the primary control. */}
             <div
               style={{
-                display: "flex",
+                display: "none",
                 alignItems: "center",
                 background: "var(--bg-tertiary)",
                 border: "1px solid var(--border-subtle)",
@@ -871,31 +879,28 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 }}
                 title="Select detailed reporting period"
               >
-                <option value="all">🌐 All Time (Complete)</option>
-                <optgroup label="Daily Filters">
-                  <option value="today">📅 Today ({todayYMD})</option>
-                  <option value="yesterday">⏮️ Yesterday ({yesterdayYMD})</option>
+                <option value="all">All Time</option>
+                <optgroup label="Daily">
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
                 </optgroup>
-                <optgroup label="Weekly Filters">
-                  <option value="this_week">📆 This Week (Mon → Today)</option>
-                  <option value="week">🗓️ Rolling Last 7 Days</option>
-                  <option value="last_week">⏮️ Last Week Full</option>
+                <optgroup label="Weekly">
+                  <option value="this_week">This Week</option>
+                  <option value="last_week">Last Week</option>
                 </optgroup>
-                <optgroup label="Monthly Filters">
-                  <option value="this_month">📊 This Month ({now.toLocaleString("default", { month: "short" })})</option>
-                  <option value="last_month">⏮️ Last Month ({lastMonthDate.toLocaleString("default", { month: "short" })})</option>
+                <optgroup label="Monthly">
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
                 </optgroup>
-                <optgroup label="Quarterly Filters">
-                  <option value="this_quarter">📈 This Quarter (Q{currentQNum} {currentYear})</option>
-                  <option value="last_quarter">⏮️ Last Quarter (Q{lastQNum})</option>
+                <optgroup label="Quarterly">
+                  <option value="this_quarter">This Quarter</option>
+                  <option value="last_quarter">Last Quarter</option>
                 </optgroup>
-                <optgroup label="Yearly Filters">
-                  <option value="this_year">🏛️ This Year ({currentYear})</option>
-                  <option value="last_year">⏮️ Last Year ({currentYear - 1})</option>
+                <optgroup label="Yearly">
+                  <option value="this_year">This Year</option>
+                  <option value="last_year">Last Year</option>
                 </optgroup>
-                <optgroup label="Custom Range">
-                  <option value="custom">⚙️ Custom Date Range...</option>
-                </optgroup>
+                <option value="custom">Custom Date Range</option>
               </select>
             </div>
 
@@ -1137,9 +1142,9 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
         {/* 6 Metric Overview Cards */}
         <div
+          className="reports-metric-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
             gap: '1rem',
             marginBottom: '1.5rem',
           }}
@@ -2023,11 +2028,9 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 <optgroup label="Daily &amp; Particular Day">
                   <option value="today">📅 Today ({todayYMD})</option>
                   <option value="yesterday">⏮️ Yesterday ({yesterdayYMD})</option>
-                  <option value="single_date">🎯 Particular Date (Pick Any Day)...</option>
                 </optgroup>
                 <optgroup label="Weekly Basis">
                   <option value="this_week">📆 This Week (Mon → Today)</option>
-                  <option value="week">🗓️ Rolling Last 7 Days</option>
                   <option value="last_week">⏮️ Last Week (Full)</option>
                 </optgroup>
                 <optgroup label="Monthly Basis">
@@ -2047,51 +2050,6 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 </optgroup>
               </select>
             </div>
-
-            {/* Direct Inline Particular Single Date Picker */}
-            {filterPeriod === "single_date" && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  background: "rgba(245, 158, 11, 0.12)",
-                  border: "1.5px solid var(--accent-amber)",
-                  borderRadius: "8px",
-                  padding: "0.28rem 0.6rem",
-                }}
-              >
-                <Calendar size={13} color="#f59e0b" />
-                <span style={{ fontSize: "0.72rem", color: "#f59e0b", fontWeight: 700 }}>Select Day:</span>
-                <input
-                  type="date"
-                  className="clean-date-input"
-                  value={startDate || todayYMD}
-                  max={todayYMD}
-                  onClick={(e) => {
-                    try { e.currentTarget.showPicker(); } catch {}
-                  }}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const capped = val && val > todayYMD ? todayYMD : val;
-                    setStartDate(capped);
-                    setEndDate(capped);
-                    setFilterPeriod("single_date");
-                  }}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    color: "var(--text-main)",
-                    fontSize: "0.78rem",
-                    fontWeight: 700,
-                    fontFamily: "inherit",
-                    cursor: "pointer",
-                  }}
-                  title="Click to select a particular date"
-                />
-              </div>
-            )}
 
             {/* Direct Inline Custom Date Range Picker (From → To) */}
             {filterPeriod === "custom" && (
@@ -2166,7 +2124,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             )}
 
             {/* Date range chip for other periods */}
-            {filterPeriod !== "custom" && filterPeriod !== "single_date" && (
+            {filterPeriod !== "custom" && (
               <span
                 style={{
                   fontSize: "0.72rem",
@@ -2926,6 +2884,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           </div>
         )}
       </div>
+      </div>
 
       {/* ========================================================================= */}
       {/* PRINTABLE REPORT SHEET (Hidden on screen, rendered on window.print())     */}
@@ -2963,7 +2922,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               {restaurantSettings?.restaurantName?.trim() || 'Restaurant'}
             </h1>
-            <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>
+            <div style={{ fontSize: "11px", color: "#475569", fontWeight: 500 }}>
               {[restaurantSettings?.address, restaurantSettings?.phone, restaurantSettings?.gstin && `GSTIN: ${restaurantSettings.gstin}`].filter(Boolean).join(" • ")}
             </div>
             <div
@@ -2978,7 +2937,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               SALES, REVENUE &amp; PROFIT/LOSS AUDIT REPORT
             </div>
           </div>
-          <div style={{ textAlign: "right", fontSize: "11px", color: "var(--text-muted)" }}>
+          <div style={{ textAlign: "right", fontSize: "11px", color: "#475569" }}>
             <div>
               <strong>Generated:</strong>{' '}
               {new Date().toLocaleDateString('en-IN', {
@@ -3025,7 +2984,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             }}
           >
             <thead>
-              <tr style={{ background: "var(--bg-card)" }}>
+              <tr style={{ background: "#f1f5f9" }}>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Gross Revenue</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Net Food Sales</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total GST (5%)</th>
@@ -3084,7 +3043,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
               <thead>
-                <tr style={{ background: "var(--bg-card)" }}>
+                <tr style={{ background: "#f1f5f9" }}>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Channel</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Amount</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Share %</th>
@@ -3112,7 +3071,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   </td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cardPercent}%</td>
                 </tr>
-                <tr style={{ background: "var(--bg-card)", fontWeight: 800 }}>
+                <tr style={{ background: "#f1f5f9", fontWeight: 800 }}>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>Total Settlement</td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>
                     {formatCurrency(totalRevenue)}
@@ -3139,7 +3098,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
               <thead>
-                <tr style={{ background: "var(--bg-card)" }}>
+                <tr style={{ background: "#f1f5f9" }}>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", width: "35px", textAlign: "center" }}>#</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Dish / Item Name</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Qty Sold</th>
@@ -3148,7 +3107,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               <tbody>
                 {sortedDishes.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "center", color: "var(--text-dim)" }}>
+                    <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "center", color: "#64748b" }}>
                       No items sold during this period.
                     </td>
                   </tr>
@@ -3187,7 +3146,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px" }}>
               <thead>
-                <tr style={{ background: "var(--bg-card)" }}>
+                <tr style={{ background: "#f1f5f9" }}>
                   <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Order #</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Date / Time</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Table</th>
@@ -3248,7 +3207,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             paddingTop: '12px',
             borderTop: '1px solid #cbd5e1',
             fontSize: '11px',
-            color: 'var(--text-dim)',
+            color: '#64748b',
             pageBreakInside: 'avoid',
           }}
         >

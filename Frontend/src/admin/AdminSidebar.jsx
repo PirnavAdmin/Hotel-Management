@@ -137,6 +137,7 @@ export function AdminSidebar({
 
   return (
     <aside
+      className="admin-sidebar no-print"
       style={{
         width: "250px",
         minWidth: "250px",

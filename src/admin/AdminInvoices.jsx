@@ -226,6 +226,7 @@ export function AdminInvoices({
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {/* Outer Card Matching Design */}
       <div
+        className="no-print"
         style={{
           background: "var(--bg-card)",
           border: "1px solid var(--border-card)",

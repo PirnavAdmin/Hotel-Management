@@ -39,6 +39,7 @@ export function AdminHeader({
 
   return (
     <header
+      className="admin-header no-print"
       style={{
         padding: "0.85rem 1.75rem",
         borderBottom: "1px solid var(--border-subtle)",
