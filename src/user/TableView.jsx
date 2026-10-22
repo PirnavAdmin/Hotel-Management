@@ -1065,12 +1065,12 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                 fontSize: "0.76rem",
                 fontWeight: 800,
                 textAlign: "center",
-                background: "#081322",
-                border: "1.5px solid #f59e0b",
+                background: "var(--bg-secondary)",
+                border: "1.5px solid var(--accent-amber)",
                 borderRadius: "20px",
                 color: "var(--text-main)",
                 outline: "none",
-                boxShadow: "0 0 10px rgba(245, 158, 11, 0.5)",
+                boxShadow: "0 0 10px rgba(245, 158, 11, 0.35)",
               }}
             />
           ) : (
@@ -1376,11 +1376,11 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                 height: "36px",
               }}
             >
-              <option value="all" style={{ background: "#18181b", color: "#f4f4f5" }}>
+              <option value="all" style={{ background: "var(--bg-secondary)", color: "var(--text-main)" }}>
                 All Tables ({tables.length})
               </option>
               {uniqueTableNumbers.map((tbl) => (
-                <option key={tbl.id} value={tbl.id} style={{ background: "#18181b", color: "#f4f4f5" }}>
+                <option key={tbl.id} value={tbl.id} style={{ background: "var(--bg-secondary)", color: "var(--text-main)" }}>
                   {tbl.name || tbl.tableNumber || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
                 </option>
               ))}
@@ -1417,11 +1417,11 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                 height: "36px",
               }}
             >
-              <option value="all" style={{ background: "#18181b", color: "#f4f4f5" }}>
+              <option value="all" style={{ background: "var(--bg-secondary)", color: "var(--text-main)" }}>
                 All Servers ({uniqueServers.length})
               </option>
               {uniqueServers.map((srv) => (
-                <option key={srv} value={srv} style={{ background: "#18181b", color: "#f4f4f5" }}>
+                <option key={srv} value={srv} style={{ background: "var(--bg-secondary)", color: "var(--text-main)" }}>
                   👤 {srv}
                 </option>
               ))}
