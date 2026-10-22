@@ -1,11 +1,20 @@
 import React from 'react';
 import { ChefHat, X, Printer } from 'lucide-react';
+import { printSurface } from '../utils/printSurface';
 
 export function KOTModal({ table, onClose, restaurantName = "Restaurant", restaurantLogo = "" }) {
   if (!table) return null;
 
   const handlePrint = () => {
-    window.print();
+    if (!Array.isArray(table.items) || table.items.length === 0) {
+      window.alert("Cannot print an empty KOT ticket.");
+      return;
+    }
+    printSurface("printable-receipt", {
+      title: `KOT ${table.name || "Ticket"}`,
+      format: "thermal",
+      emptyMessage: "Cannot print an empty KOT ticket.",
+    });
   };
 
   return (
