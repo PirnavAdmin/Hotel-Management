@@ -49,6 +49,7 @@ import {
   apiGetOrderHistory,
   apiCreateOrder,
   apiUpdateOrderDiscount,
+  apiSettleOrder,
 } from "./api/orderApi";
 import { apiAdjustStock } from "./api/inventoryApi";
 import { API_BASE_URL } from "./api/apiConfig";
@@ -1789,7 +1790,42 @@ export function App() {
       );
       pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
-    apiCreateOrder(enrichedSettlement).catch(() => {});
+    void (async () => {
+      try {
+        const createResult = await apiCreateOrder({
+          tableId: settlementData.tableId,
+          tableName: settlementData.tableName,
+          tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+          serverName: settlementData.server || "Server",
+          guests: enrichedSettlement.guests,
+          discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+          serviceChargeEnabled: false,
+          tipAmount: 0,
+          status: "Active",
+          items: enrichedSettlement.items.map((item) => ({
+            menuItemId: Number(item.id ?? item.menuItemId ?? item.backendId) || undefined,
+            id: Number(item.id ?? item.menuItemId ?? item.backendId) || undefined,
+            name: item.name || item.dishName,
+            dishName: item.name || item.dishName,
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })),
+        });
+        const orderData = createResult?.data?.data || createResult?.data;
+        const backendOrderId = Number(orderData?.id ?? orderData?.Id);
+        if (createResult?.success && backendOrderId > 0) {
+          await apiSettleOrder(backendOrderId, {
+            discountPercent: settlementData.discountPercent,
+            serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
+            tipAmount: settlementData.tipAmount,
+            paymentMethod: enrichedSettlement.paymentMethod,
+          });
+        }
+      } catch (error) {
+        console.warn("Backend order settlement failed; local settlement retained:", error);
+      }
+    })();
 
     const updatedTables = tables.map((t) => {
       if (t.id !== settlementData.tableId) return t;

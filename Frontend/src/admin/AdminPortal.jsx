@@ -333,8 +333,18 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
       inventoryChanged = true;
 
       try {
-        apiCreateInventoryItem(newStockItem).catch(() => {});
-      } catch {}
+        const createResult = await apiCreateInventoryItem(newStockItem);
+        const createdItem = createResult?.data?.data || createResult?.data?.item || createResult?.data;
+        const backendId = Number(createdItem?.ingredientId ?? createdItem?.IngredientId ?? createdItem?.id);
+        if (createResult?.success && Number.isFinite(backendId) && backendId > 0) {
+          newStockItem.id = String(backendId);
+          newStockItem.ingredientId = backendId;
+        } else {
+          throw new Error(createResult?.error || "Inventory API create failed");
+        }
+      } catch (error) {
+        console.warn("Inventory database create failed; keeping local cache:", error);
+      }
 
       mappedRecipe.push({
         inventoryId: newStockItem.id,

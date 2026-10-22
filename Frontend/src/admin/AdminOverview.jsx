@@ -286,12 +286,13 @@ export function AdminOverview({
         </div>
       </div>
 
-      {/* 2. Five Operational Metric Cards */}
+      {/* 2. Five Operational Metric Cards - 1 Clean Row */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-          gap: "0.65rem",
+          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+          gap: "0.55rem",
+          width: "100%",
         }}
       >
         {/* Card 1: Today's Revenue & Orders */}
@@ -301,9 +302,11 @@ export function AdminOverview({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "var(--accent-amber)";
@@ -320,44 +323,45 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.4rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Today's Sales & Orders
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Today's Sales
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
                 background: "rgba(245, 158, 11, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <IndianRupee size={13} color="#f59e0b" />
+              <IndianRupee size={12} color="#f59e0b" />
             </div>
           </div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent-amber)" }}>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             ₹{todayRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.66rem",
               color: "var(--text-muted)",
-              marginTop: "3px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.35rem",
+              marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            <span>{todayOrders.length} {todayOrders.length === 1 ? "Bill" : "Bills"}</span>
-            <span>•</span>
-            <span style={{ color: "#10b981" }}>₹{todayCashRevenue.toFixed(0)} Cash</span>
-            <span>•</span>
-            <span style={{ color: "#3b82f6" }}>₹{todayUpiRevenue.toFixed(0)} UPI</span>
+            <span>{todayOrders.length} Bills</span>
+            <span style={{ margin: "0 3px" }}>•</span>
+            <span style={{ color: "#10b981" }}>₹{todayCashRevenue.toFixed(0)}</span>
+            <span style={{ margin: "0 2px" }}>/</span>
+            <span style={{ color: "#3b82f6" }}>₹{todayUpiRevenue.toFixed(0)}</span>
           </div>
         </div>
 
@@ -371,9 +375,11 @@ export function AdminOverview({
             background: "var(--bg-card)",
             border: pendingKOTCount > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "#ef4444";
@@ -390,38 +396,42 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.4rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               Kitchen KOT Live
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
                 background: pendingKOTCount > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(100, 116, 139, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <ChefHat size={13} color={pendingKOTCount > 0 ? "#ef4444" : "#94a3b8"} />
+              <ChefHat size={12} color={pendingKOTCount > 0 ? "#ef4444" : "#94a3b8"} />
             </div>
           </div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 800, color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-main)" }}>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {pendingKOTCount} {pendingKOTCount === 1 ? "Active KOT" : "Active KOTs"}
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.66rem",
               color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-muted)",
               fontWeight: 600,
-              marginTop: "3px",
+              marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            {pendingKOTCount > 0 ? `${tablesWithOrders.length} tables cooking now` : "Kitchen all caught up"}
+            {pendingKOTCount > 0 ? `${tablesWithOrders.length} tables cooking` : "Kitchen all caught up"}
           </div>
         </div>
 
@@ -432,9 +442,11 @@ export function AdminOverview({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "var(--accent-amber)";
@@ -451,38 +463,42 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.4rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Dining Floor Occupancy
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Floor Occupancy
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
                 background: "rgba(16, 185, 129, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Armchair size={13} color="#10b981" />
+              <Armchair size={12} color="#10b981" />
             </div>
           </div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--text-main)" }}>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {occupiedTables.length} / {tables.length} Tables
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.66rem",
               color: occupiedTables.length > 0 ? "#f59e0b" : "var(--status-vacant)",
               fontWeight: 600,
-              marginTop: "3px",
+              marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            {occupiedChairs} guests seated ({totalChairs} capacity)
+            {occupiedChairs} seated ({totalChairs} seats)
           </div>
         </div>
 
@@ -493,9 +509,11 @@ export function AdminOverview({
             background: "var(--bg-card)",
             border: lowStockItems.length > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = lowStockItems.length > 0 ? "#ef4444" : "var(--accent-amber)";
@@ -512,40 +530,44 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.4rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Inventory Stock Health
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Inventory Health
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
                 background: lowStockItems.length > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(16, 185, 129, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Package size={13} color={lowStockItems.length > 0 ? "#ef4444" : "#10b981"} />
+              <Package size={12} color={lowStockItems.length > 0 ? "#ef4444" : "#10b981"} />
             </div>
           </div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 800, color: lowStockItems.length > 0 ? "#ef4444" : "var(--text-main)" }}>
-            {inventoryList.length} Ingredients
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockItems.length > 0 ? "#ef4444" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {inventoryList.length} Items
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.66rem",
               color: lowStockItems.length > 0 ? "#ef4444" : "var(--text-muted)",
               fontWeight: 600,
-              marginTop: "3px",
+              marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             {lowStockItems.length > 0
-              ? `⚠️ ${lowStockItems.length} Low Stock Alert`
-              : "All ingredients in healthy stock"}
+              ? `⚠️ ${lowStockItems.length} Low Stock`
+              : "All stock healthy"}
           </div>
         </div>
 
@@ -556,9 +578,11 @@ export function AdminOverview({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "var(--accent-amber)";
@@ -575,37 +599,41 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.4rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Menu & Staff on Duty
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Menu & Staff
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
                 background: "rgba(234, 88, 12, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Utensils size={13} color="#ea580c" />
+              <Utensils size={12} color="#ea580c" />
             </div>
           </div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--text-main)" }}>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {menuItems.length} Dishes
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.66rem",
               color: "var(--text-muted)",
-              marginTop: "3px",
+              marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            {vegCount} Veg • {nonVegCount} Non-Veg • {staffList.length} Staff
+            {vegCount}V • {nonVegCount}NV • {staffList.length} Staff
           </div>
         </div>
       </div>

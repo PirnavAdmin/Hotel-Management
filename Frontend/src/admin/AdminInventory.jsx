@@ -825,7 +825,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       const savedById = new Map((Array.isArray(saved) ? saved : []).map((item) => [String(item.id), item]));
       const remote = rows
         .filter((row) => {
-          const id = String(row.id ?? row.ingredientId ?? row.ingredient_id);
+          const id = String(row.id ?? row.ingredientId ?? row.IngredientId ?? row.ingredient_id);
           const info = getCanonicalIngredientInfo(row.name);
           return (
             !deletedIds.has(id) &&
