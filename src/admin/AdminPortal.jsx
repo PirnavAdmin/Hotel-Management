@@ -38,6 +38,7 @@ import {
   Martini,
   GlassWater,
   Sparkles,
+  Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { LoginManagement } from "./LoginManagement";
@@ -54,7 +55,7 @@ import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
-import { apiGetInventory } from "../api/inventoryApi";
+import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { API_BASE_URL } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
@@ -68,6 +69,314 @@ import {
 } from "../utils/menuImageHelper";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+
+const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans", "Packets"];
+
+export function inferIngredientCategory(rawName = "") {
+  const name = String(rawName || "").toLowerCase().trim();
+  if (/chicken|mutton|fish|prawn|lamb|meat|egg|beef|pork|bacon|sausage/i.test(name)) return "Meat & Seafood";
+  if (/rice|basmati|wheat|flour|maida|atta|rava|suji|noodle|pasta|corn|grain|dal|lentil/i.test(name)) return "Grains & Rice";
+  if (/paneer|milk|cheese|butter|curd|yogurt|cream|ghee|dahi/i.test(name)) return "Dairy & Eggs";
+  if (/onion|tomato|potato|garlic|ginger|coriander|chilli|capsicum|carrot|lemon|mint|veg|cabbage|spinach|mushroom/i.test(name)) return "Produce & Veggies";
+  if (/oil|vinegar|sauce|ketchup|mayo|mustard|condiment/i.test(name)) return "Oils & Condiments";
+  if (/salt|pepper|turmeric|cumin|jeera|masala|cardamom|clove|cinnamon|spice|powder|herb/i.test(name)) return "Spices & Seasoning";
+  if (/coffee|tea|sugar|syrup|soda|juice|beverage|drink|beer|wine|whiskey|vodka|rum/i.test(name)) return "Beverages & Bar";
+  if (/bun|bread|toast|pav|tortilla|pita|roti|naan|bakery/i.test(name)) return "Bakery & Bread";
+  if (/box|foil|cup|straw|bag|napkin|container|wrap/i.test(name)) return "Packaging & Disposables";
+  return "General Supplies";
+}
+
+export function getStandardDishSuggestions(dishName = "", category = "") {
+  const name = String(dishName || "").toLowerCase().trim();
+  const cat = String(category || "").toLowerCase().trim();
+
+  if (name.includes("biryani") || name.includes("pulao")) {
+    const isVeg = name.includes("veg") || name.includes("paneer") || cat.includes("veg");
+    return [
+      { name: "Basmati Rice", quantity: "0.20", unit: "KG", category: "Grains & Rice" },
+      { name: isVeg ? "Fresh Paneer" : "Raw Chicken", quantity: "0.25", unit: "KG", category: isVeg ? "Dairy & Eggs" : "Meat & Seafood" },
+      { name: "Cooking Oil", quantity: "0.04", unit: "L", category: "Oils & Condiments" },
+      { name: "Onions & Mint", quantity: "0.08", unit: "KG", category: "Produce & Veggies" },
+      { name: "Biryani Spices & Masala", quantity: "0.02", unit: "KG", category: "Spices & Seasoning" },
+    ];
+  }
+
+  if (name.includes("fried rice") || name.includes("schezwan rice")) {
+    const isVeg = name.includes("veg") || cat.includes("veg");
+    return [
+      { name: "Cooked Rice", quantity: "0.25", unit: "KG", category: "Grains & Rice" },
+      { name: isVeg ? "Chopped Veggies" : "Chicken & Egg", quantity: "0.15", unit: "KG", category: isVeg ? "Produce & Veggies" : "Meat & Seafood" },
+      { name: "Refined Oil", quantity: "0.03", unit: "L", category: "Oils & Condiments" },
+      { name: "Soy & Chilli Sauce", quantity: "0.03", unit: "L", category: "Oils & Condiments" },
+    ];
+  }
+
+  if (name.includes("noodle") || name.includes("chowmein") || name.includes("hakka")) {
+    const isVeg = name.includes("veg") || cat.includes("veg");
+    return [
+      { name: "Raw Noodles", quantity: "0.20", unit: "KG", category: "Grains & Rice" },
+      { name: isVeg ? "Bell Peppers & Cabbage" : "Chicken Shreds", quantity: "0.10", unit: "KG", category: isVeg ? "Produce & Veggies" : "Meat & Seafood" },
+      { name: "Stir Fry Oil", quantity: "0.03", unit: "L", category: "Oils & Condiments" },
+      { name: "Soy & Garlic Sauce", quantity: "0.03", unit: "L", category: "Oils & Condiments" },
+    ];
+  }
+
+  if (name.includes("paneer") || name.includes("butter masala") || name.includes("tikka masala")) {
+    return [
+      { name: "Fresh Paneer", quantity: "0.20", unit: "KG", category: "Dairy & Eggs" },
+      { name: "Cooking Butter & Cream", quantity: "0.05", unit: "KG", category: "Dairy & Eggs" },
+      { name: "Tomato & Onion Gravy", quantity: "0.15", unit: "KG", category: "Produce & Veggies" },
+      { name: "Garam Masala Spices", quantity: "0.02", unit: "KG", category: "Spices & Seasoning" },
+    ];
+  }
+
+  if (name.includes("chicken") || name.includes("curry") || name.includes("masala")) {
+    return [
+      { name: "Raw Chicken", quantity: "0.30", unit: "KG", category: "Meat & Seafood" },
+      { name: "Curry Gravies & Onions", quantity: "0.15", unit: "KG", category: "Produce & Veggies" },
+      { name: "Cooking Oil", quantity: "0.04", unit: "L", category: "Oils & Condiments" },
+      { name: "Curry Spices", quantity: "0.02", unit: "KG", category: "Spices & Seasoning" },
+    ];
+  }
+
+  if (name.includes("burger")) {
+    return [
+      { name: "Burger Buns", quantity: "1", unit: "Pcs", category: "Bakery & Bread" },
+      { name: "Burger Patty", quantity: "1", unit: "Pcs", category: "Meat & Seafood" },
+      { name: "Cheese Slice", quantity: "1", unit: "Pcs", category: "Dairy & Eggs" },
+      { name: "Lettuce & Burger Sauce", quantity: "0.04", unit: "KG", category: "Oils & Condiments" },
+    ];
+  }
+
+  if (name.includes("pizza")) {
+    return [
+      { name: "Pizza Base", quantity: "1", unit: "Pcs", category: "Bakery & Bread" },
+      { name: "Mozzarella Cheese", quantity: "0.10", unit: "KG", category: "Dairy & Eggs" },
+      { name: "Pizza Marinara Sauce", quantity: "0.05", unit: "KG", category: "Oils & Condiments" },
+      { name: "Toppings (Veggies/Meat)", quantity: "0.08", unit: "KG", category: "Produce & Veggies" },
+    ];
+  }
+
+  if (name.includes("coffee")) {
+    return [
+      { name: "Coffee Powder / Beans", quantity: "0.02", unit: "KG", category: "Beverages & Bar" },
+      { name: "Fresh Milk", quantity: "0.18", unit: "L", category: "Dairy & Eggs" },
+      { name: "Sugar", quantity: "0.015", unit: "KG", category: "Grains & Rice" },
+    ];
+  }
+
+  if (name.includes("tea") || name.includes("chai")) {
+    return [
+      { name: "Tea Leaves", quantity: "0.015", unit: "KG", category: "Beverages & Bar" },
+      { name: "Fresh Milk", quantity: "0.12", unit: "L", category: "Dairy & Eggs" },
+      { name: "Sugar", quantity: "0.015", unit: "KG", category: "Grains & Rice" },
+    ];
+  }
+
+  if (name.includes("shake") || name.includes("smoothie") || name.includes("juice")) {
+    return [
+      { name: "Fresh Milk / Juice Base", quantity: "0.25", unit: "L", category: "Beverages & Bar" },
+      { name: "Flavor Syrup / Fruit", quantity: "0.05", unit: "KG", category: "Produce & Veggies" },
+      { name: "Sugar", quantity: "0.02", unit: "KG", category: "Grains & Rice" },
+    ];
+  }
+
+  // Default generic recipe
+  return [
+    { name: `${dishName.trim()} Main Ingredient`, quantity: "0.20", unit: "KG", category: inferIngredientCategory(dishName) },
+    { name: "Cooking Oil / Butter", quantity: "0.03", unit: "L", category: "Oils & Condiments" },
+    { name: "Seasoning & Spices", quantity: "0.01", unit: "KG", category: "Spices & Seasoning" },
+  ];
+}
+
+export function getApproximateIngredientMrp(rawName = "", unit = "KG") {
+  const name = String(rawName || "").toLowerCase();
+  const normalizedUnit = String(unit || "KG");
+
+  const approximateRates = {
+    chicken: 280,
+    mutton: 700,
+    paneer: 360,
+    egg: 8,
+    prawn: 650,
+    fish: 420,
+    rice: 120,
+    flour: 55,
+    noodles: 140,
+    pasta: 180,
+    milk: 65,
+    cheese: 420,
+    butter: 550,
+    cream: 280,
+    ghee: 650,
+    curd: 90,
+    onion: 40,
+    tomato: 50,
+    potato: 35,
+    garlic: 180,
+    ginger: 160,
+    coriander: 25,
+    mint: 30,
+    chilli: 120,
+    capsicum: 90,
+    carrot: 60,
+    lemon: 120,
+    vegetable: 70,
+    oil: 180,
+    sauce: 220,
+    sugar: 50,
+    spice: 250,
+    masala: 280,
+    salt: 25,
+    coffee: 900,
+    tea: 700,
+    syrup: 300,
+    juice: 120,
+    bread: 180,
+    bun: 120,
+    pizza: 180,
+  };
+
+  const matchingRate = Object.entries(approximateRates).find(([keyword]) =>
+    name.includes(keyword),
+  );
+  let rate = matchingRate?.[1] ?? 100;
+
+  if (normalizedUnit === "Pcs") {
+    rate = name.includes("egg") ? 8 : name.includes("bread") || name.includes("bun") ? 10 : 50;
+  } else if (normalizedUnit === "ml") {
+    rate = rate / 1000;
+  } else if (normalizedUnit === "g") {
+    rate = rate / 1000;
+  } else if (normalizedUnit === "L") {
+    rate = rate;
+  }
+
+  return Number(rate.toFixed(2));
+}
+
+export async function autoGenerateInventoryFromRecipe(recipe = []) {
+  if (!Array.isArray(recipe) || recipe.length === 0) return [];
+
+  const STORAGE_KEY = "gourmet_pos_inventory_v1";
+  let currentInventory = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) currentInventory = JSON.parse(raw);
+  } catch {}
+  if (!Array.isArray(currentInventory)) currentInventory = [];
+
+  const updatedInventory = [...currentInventory];
+  const mappedRecipe = [];
+  let inventoryChanged = false;
+
+  for (const ing of recipe) {
+    const rawName = String(ing?.name || "").trim();
+    if (!rawName) continue;
+
+    const unit = (ing.unit === "Litres" ? "L" : (ing.unit || "KG")).toUpperCase();
+    const quantity = Number(ing.quantity) || 0;
+    const category = ing.category || inferIngredientCategory(rawName);
+
+    // 1. Match existing by canonical name
+    let existingItem = updatedInventory.find(
+      (item) => (item.name || "").trim().toLowerCase() === rawName.toLowerCase()
+    );
+
+    // 2. Or match by ID if inventoryId was provided
+    if (!existingItem && ing.inventoryId) {
+      existingItem = updatedInventory.find(
+        (item) => String(item.id) === String(ing.inventoryId)
+      );
+    }
+
+    if (existingItem) {
+      const currentMrp = Number(existingItem.mrp ?? existingItem.unitCost ?? 0);
+      if (!Number.isFinite(currentMrp) || currentMrp <= 0) {
+        const sampleMrp = getApproximateIngredientMrp(rawName, existingItem.unit || unit);
+        existingItem.mrp = sampleMrp;
+        existingItem.unitCost = sampleMrp;
+        inventoryChanged = true;
+      }
+      mappedRecipe.push({
+        inventoryId: existingItem.id,
+        name: existingItem.name,
+        quantity,
+        unit: existingItem.unit || unit,
+        category: existingItem.category || category,
+      });
+    } else {
+      // Auto-generate new item in Inventory!
+      const newId = `inv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const sampleMrp = getApproximateIngredientMrp(rawName, unit);
+      const newStockItem = {
+        id: newId,
+        name: rawName,
+        category: category,
+        subcategory: "",
+        supplier: "Local Supplier",
+        unit: unit,
+        stock: 50,
+        minThreshold: 10,
+        unitCost: sampleMrp,
+        mrp: sampleMrp,
+        totalUsed: 0,
+        totalRestocked: 50,
+        lastRestocked: new Date().toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+      };
+
+      updatedInventory.unshift(newStockItem);
+      inventoryChanged = true;
+
+      try {
+        const createResult = await apiCreateInventoryItem(newStockItem);
+        const createdItem = createResult?.data?.data || createResult?.data?.item || createResult?.data;
+        const backendId = Number(createdItem?.ingredientId ?? createdItem?.IngredientId ?? createdItem?.id);
+        if (createResult?.success && Number.isFinite(backendId) && backendId > 0) {
+          newStockItem.id = String(backendId);
+          newStockItem.ingredientId = backendId;
+        } else {
+          throw new Error(createResult?.error || "Inventory API create failed");
+        }
+      } catch (error) {
+        console.warn("Inventory database create failed; keeping local cache:", error);
+      }
+
+      mappedRecipe.push({
+        inventoryId: newStockItem.id,
+        name: newStockItem.name,
+        quantity,
+        unit: newStockItem.unit,
+        category: newStockItem.category,
+      });
+    }
+  }
+
+  if (inventoryChanged) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedInventory));
+      window.dispatchEvent(
+        new CustomEvent("avsr-inventory-updated", { detail: updatedInventory })
+      );
+      try {
+        fetch(`${API_BASE_URL}/api/sync`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ [STORAGE_KEY]: updatedInventory }),
+        }).catch(() => {});
+      } catch {}
+    } catch {}
+  }
+
+  return mappedRecipe;
+}
 
 const STORAGE_KEY_CUSTOM_CATEGORIES = "pos_custom_menu_categories";
 const STORAGE_KEY_CUSTOM_SECTIONS = "pos_custom_table_sections";
@@ -832,6 +1141,25 @@ export function AdminPortal({
     return Array.from(map.values());
   }, [customShifts, staffList]);
 
+  // Available ingredients for recipe autocomplete
+  const [availableIngredients, setAvailableIngredients] = useState(() => {
+    try {
+      const raw = localStorage.getItem("gourmet_pos_inventory_v1");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    const handleInvSync = (e) => {
+      if (Array.isArray(e.detail)) {
+        setAvailableIngredients(e.detail);
+      }
+    };
+    window.addEventListener("avsr-inventory-updated", handleInvSync);
+    return () => window.removeEventListener("avsr-inventory-updated", handleInvSync);
+  }, []);
+
   // --- ITEM MODAL STATE ---
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -890,6 +1218,7 @@ export function AdminPortal({
         prepTime: item.prepTime || "12 min",
         description: item.description || "",
         image: item.image || "",
+        recipe: Array.isArray(item.recipe) ? item.recipe.map((r) => ({ ...r })) : [],
       });
     } else {
       setEditingItem(null);
@@ -903,9 +1232,60 @@ export function AdminPortal({
         prepTime: "",
         description: "",
         image: "",
+        recipe: [],
       });
     }
     setIsItemModalOpen(true);
+  };
+
+  // Recipe / Ingredients Builder Handlers
+  const handleAddRecipeRow = () => {
+    setItemForm((curr) => ({
+      ...curr,
+      recipe: [
+        ...(curr.recipe || []),
+        { name: "", quantity: "0.25", unit: "KG", category: "General Supplies" },
+      ],
+    }));
+  };
+
+  const handleUpdateRecipeRow = (idx, patch) => {
+    setItemForm((curr) => ({
+      ...curr,
+      recipe: (curr.recipe || []).map((row, i) => {
+        if (i !== idx) return row;
+        const updated = { ...row, ...patch };
+        if (patch.name && !patch.category) {
+          const match = availableIngredients.find(
+            (ai) => String(ai.name || "").trim().toLowerCase() === String(patch.name).trim().toLowerCase()
+          );
+          if (match) {
+            updated.category = match.category;
+            updated.unit = match.unit;
+            updated.inventoryId = match.id;
+          } else {
+            updated.category = inferIngredientCategory(patch.name);
+          }
+        }
+        return updated;
+      }),
+    }));
+  };
+
+  const handleRemoveRecipeRow = (idx) => {
+    setItemForm((curr) => ({
+      ...curr,
+      recipe: (curr.recipe || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const handleAutoSuggestIngredients = () => {
+    if (!itemForm.name.trim()) return;
+    const suggestions = getStandardDishSuggestions(itemForm.name, itemForm.category);
+    setItemForm((curr) => ({
+      ...curr,
+      recipe: suggestions,
+    }));
   };
 
   const handleSaveItem = async (e) => {
@@ -917,9 +1297,16 @@ export function AdminPortal({
       itemImage = getRelevantLocalFallback(itemForm);
     }
 
+    // Auto-generate recipe ingredients directly into Inventory database
+    let mappedRecipe = itemForm.recipe || [];
+    if (Array.isArray(itemForm.recipe) && itemForm.recipe.length > 0) {
+      mappedRecipe = await autoGenerateInventoryFromRecipe(itemForm.recipe);
+    }
+
     const isSpecialValue = Boolean(itemForm.isChefSpecial);
     const payload = {
       ...itemForm,
+      recipe: mappedRecipe,
       image: itemImage,
       price: Number(itemForm.price) || 0,
       isChefSpecial: isSpecialValue,
@@ -2197,7 +2584,7 @@ export function AdminPortal({
                       }}
                     >
                       <div style={{ overflowX: "auto" }}>
-                        <div style={{ minWidth: "960px", padding: "0.6rem" }}>
+                        <div style={{ width: "100%", minWidth: "720px", padding: "0.6rem", boxSizing: "border-box" }}>
                           {/* Filter Toolbar: Vacant / Occupied Only + Search */}
                           <div
                             style={{
@@ -2667,7 +3054,7 @@ export function AdminPortal({
                                       display: "inline-flex",
                                       alignItems: "center",
                                       gap: "0.35rem",
-                                      padding: "0.35rem 0.75rem",
+                                      padding: "0.32rem 0.6rem",
                                       background: "rgba(245, 158, 11, 0.08)",
                                       color: "#f59e0b",
                                       border: "1px solid rgba(245, 158, 11, 0.45)",
@@ -2677,6 +3064,7 @@ export function AdminPortal({
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
                                       whiteSpace: "nowrap",
+                                      flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
@@ -2719,7 +3107,7 @@ export function AdminPortal({
                                       display: "inline-flex",
                                       alignItems: "center",
                                       justifyContent: "center",
-                                      padding: "0.35rem 0.55rem",
+                                      padding: "0.32rem 0.5rem",
                                       background: "rgba(239, 68, 68, 0.08)",
                                       color: "#ef4444",
                                       border: "1px solid rgba(239, 68, 68, 0.35)",
@@ -2727,6 +3115,7 @@ export function AdminPortal({
                                       fontSize: "0.74rem",
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
+                                      flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(239, 68, 68, 0.22)";
@@ -2850,21 +3239,21 @@ export function AdminPortal({
                       }}
                     >
                       <div style={{ overflowX: "auto" }}>
-                        <div style={{ minWidth: "1100px", padding: "0.6rem" }}>
+                        <div style={{ width: "100%", minWidth: "720px", padding: "0.6rem", boxSizing: "border-box" }}>
                           {/* Column Filters Bar (Matching Image 2 header) */}
                           <div
                             style={{
                               display: "grid",
                               gridTemplateColumns:
-                                "minmax(160px, 1.4fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr) minmax(240px, 2.4fr) minmax(110px, 1fr) minmax(140px, 1.2fr)",
+                                "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
                               alignItems: "center",
-                              padding: "0.55rem 1.1rem",
+                              padding: "0.55rem 0.85rem",
                               background: "#081628",
                               borderRadius: "8px",
                               marginBottom: "0.5rem",
                               color: "#7e9bb7",
                               fontSize: "0.78rem",
-                              gap: "0.6rem",
+                              gap: "0.5rem",
                             }}
                           >
                             {/* Col 1: Search Filter */}
@@ -2883,7 +3272,7 @@ export function AdminPortal({
                                 />
                                 <input
                                   type="text"
-                                  placeholder="Search Staff Name..."
+                                  placeholder="Search Staff..."
                                   value={staffFilters.search}
                                   onChange={(e) => updateStaffFilter("search", e.target.value)}
                                   style={{
@@ -2993,19 +3382,19 @@ export function AdminPortal({
                                 }}
                               >
                                 <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
-                                  All Assigned Status
+                                  All Tables
                                 </option>
                                 <option value="assigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
-                                  Has Tables Assigned
+                                  Has Tables
                                 </option>
                                 <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
-                                  No Tables Assigned
+                                  No Tables
                                 </option>
                               </select>
                             </div>
 
                             {/* Col 6: Reset / Count */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
                               {hasActiveStaffFilters ? (
                                 <button
                                   type="button"
@@ -3013,16 +3402,17 @@ export function AdminPortal({
                                   style={{
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "0.35rem",
+                                    gap: "0.3rem",
                                     background: "rgba(239, 68, 68, 0.15)",
                                     border: "1px solid rgba(239, 68, 68, 0.4)",
                                     color: "#ef4444",
-                                    padding: "0.42rem 0.75rem",
+                                    padding: "0.35rem 0.65rem",
                                     borderRadius: "6px",
-                                    fontSize: "0.78rem",
+                                    fontSize: "0.74rem",
                                     fontWeight: 700,
                                     cursor: "pointer",
                                     transition: "all 0.15s ease",
+                                    whiteSpace: "nowrap",
                                   }}
                                   onMouseEnter={(e) => {
                                     e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
@@ -3032,12 +3422,12 @@ export function AdminPortal({
                                   }}
                                   title="Clear all active staff filters"
                                 >
-                                  <RotateCcw size={12} />
-                                  <span>Reset Filters</span>
+                                  <RotateCcw size={11} />
+                                  <span>Reset</span>
                                 </button>
                               ) : (
-                                <span style={{ fontSize: "0.76rem", color: "var(--text-dim)", fontWeight: 500 }}>
-                                  Showing all {staffList.length} staff
+                                <span style={{ fontSize: "0.74rem", color: "var(--text-dim)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                                  {staffList.length} Staff
                                 </span>
                               )}
                             </div>
@@ -3102,14 +3492,14 @@ export function AdminPortal({
                                 style={{
                                   display: "grid",
                                   gridTemplateColumns:
-                                    "minmax(160px, 1.4fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr) minmax(240px, 2.4fr) minmax(110px, 1fr) minmax(140px, 1.2fr)",
+                                    "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
                                   alignItems: "center",
-                                  padding: "0.58rem 1.1rem",
+                                  padding: "0.55rem 0.85rem",
                                   background: "#081627",
                                   border: "1px solid var(--neutral-border)",
                                   borderRadius: "8px",
                                   marginBottom: "0.45rem",
-                                  gap: "0.6rem",
+                                  gap: "0.5rem",
                                   transition: "background 0.15s ease, border-color 0.15s ease",
                                 }}
                                 onMouseEnter={(e) => {
@@ -3238,7 +3628,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions (Edit Staff + Delete button matching Image 2) */}
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
                                   {/* Edit Staff button */}
                                   <button
                                     type="button"
@@ -4346,7 +4736,7 @@ export function AdminPortal({
               borderRadius: "var(--radius-lg)",
               boxShadow: "var(--shadow-lg)",
               width: "100%",
-              maxWidth: "520px",
+              maxWidth: "580px",
               maxHeight: "calc(100dvh - 2rem)",
               padding: "1.6rem",
               display: "flex",
@@ -4823,6 +5213,250 @@ export function AdminPortal({
                 />
                 <span>Mark as Chef's Special â­</span>
               </label>
+            </div>
+
+            {/* INGREDIENTS & INVENTORY BREAKDOWN (RECIPE) */}
+            <div
+              style={{
+                background: "rgba(245, 158, 11, 0.03)",
+                border: "1.5px solid var(--border-subtle)",
+                borderRadius: "10px",
+                padding: "0.9rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.7rem",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                    <Boxes size={16} color="var(--accent-amber)" />
+                    <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-main)" }}>
+                      Ingredients Breakdown (Inventory)
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "#f59e0b",
+                        padding: "2px 7px",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      {itemForm.recipe?.length || 0} Ingredients
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                    Ingredients auto-generate in Inventory and auto-deduct when this dish is billed.
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  {itemForm.name.trim() && (
+                    <button
+                      type="button"
+                      onClick={handleAutoSuggestIngredients}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.3rem",
+                        padding: "0.3rem 0.6rem",
+                        background: "rgba(16, 185, 129, 0.12)",
+                        border: "1px solid rgba(16, 185, 129, 0.35)",
+                        color: "#10b981",
+                        borderRadius: "6px",
+                        fontSize: "0.73rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                      title="Auto-suggest standard ingredients based on dish name"
+                    >
+                      <Sparkles size={12} />
+                      <span>Auto-Suggest</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleAddRecipeRow}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                      padding: "0.3rem 0.65rem",
+                      background: "rgba(245, 158, 11, 0.15)",
+                      border: "1px solid rgba(245, 158, 11, 0.4)",
+                      color: "#f59e0b",
+                      borderRadius: "6px",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Plus size={13} />
+                    <span>+ Add Ingredient</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* List of Ingredients */}
+              {(!itemForm.recipe || itemForm.recipe.length === 0) ? (
+                <div
+                  style={{
+                    padding: "0.85rem",
+                    background: "var(--bg-tertiary)",
+                    borderRadius: "8px",
+                    textAlign: "center",
+                    border: "1px dashed var(--border-subtle)",
+                    color: "var(--text-dim)",
+                    fontSize: "0.76rem",
+                  }}
+                >
+                  <span>No ingredients added yet. Click </span>
+                  <strong style={{ color: "#f59e0b" }}>"+ Add Ingredient"</strong>
+                  <span> or </span>
+                  <strong style={{ color: "#10b981" }}>"Auto-Suggest"</strong>
+                  <span> to divide this dish into inventory stock items.</span>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.45rem",
+                    maxHeight: "180px",
+                    overflowY: "auto",
+                    paddingRight: "2px",
+                  }}
+                >
+                  {itemForm.recipe.map((ing, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1.7fr 0.8fr 0.8fr auto",
+                        gap: "0.4rem",
+                        alignItems: "center",
+                        background: "var(--bg-tertiary)",
+                        padding: "0.4rem 0.55rem",
+                        borderRadius: "7px",
+                        border: "1px solid var(--border-subtle)",
+                      }}
+                    >
+                      {/* Ingredient Name (with datalist autocomplete) */}
+                      <div style={{ minWidth: 0 }}>
+                        <input
+                          type="text"
+                          list={`inv-item-suggestions-${idx}`}
+                          placeholder="Ingredient (e.g. Basmati Rice)"
+                          value={ing.name || ""}
+                          onChange={(e) => handleUpdateRecipeRow(idx, { name: e.target.value })}
+                          style={{
+                            width: "100%",
+                            padding: "0.35rem 0.5rem",
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "5px",
+                            color: "var(--text-main)",
+                            fontSize: "0.77rem",
+                            fontWeight: 600,
+                            outline: "none",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                        <datalist id={`inv-item-suggestions-${idx}`}>
+                          {availableIngredients.map((ai) => (
+                            <option key={ai.id} value={ai.name} />
+                          ))}
+                        </datalist>
+                      </div>
+
+                      {/* Quantity */}
+                      <div style={{ minWidth: 0 }}>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.001"
+                          placeholder="Qty (e.g. 0.25)"
+                          value={ing.quantity || ""}
+                          onChange={(e) => handleUpdateRecipeRow(idx, { quantity: e.target.value })}
+                          style={{
+                            width: "100%",
+                            padding: "0.35rem 0.45rem",
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "5px",
+                            color: "var(--text-main)",
+                            fontSize: "0.77rem",
+                            fontWeight: 600,
+                            outline: "none",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      </div>
+
+                      {/* Unit */}
+                      <div style={{ minWidth: 0 }}>
+                        <select
+                          value={ing.unit || "KG"}
+                          onChange={(e) => handleUpdateRecipeRow(idx, { unit: e.target.value })}
+                          style={{
+                            width: "100%",
+                            padding: "0.35rem 0.4rem",
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "5px",
+                            color: "var(--text-main)",
+                            fontSize: "0.77rem",
+                            fontWeight: 600,
+                            outline: "none",
+                            cursor: "pointer",
+                            boxSizing: "border-box",
+                          }}
+                        >
+                          {MENU_RECIPE_UNITS.map((u) => (
+                            <option key={u} value={u}>
+                              {u}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRecipeRow(idx)}
+                        style={{
+                          width: "26px",
+                          height: "26px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "rgba(239, 68, 68, 0.12)",
+                          color: "#ef4444",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          borderRadius: "5px",
+                          cursor: "pointer",
+                          flexShrink: 0,
+                          padding: 0,
+                        }}
+                        title="Remove ingredient"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div

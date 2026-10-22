@@ -16,6 +16,10 @@ import {
   Boxes,
   Receipt,
   Search,
+  Download,
+  RotateCcw,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
@@ -30,7 +34,7 @@ import {
 } from '../utils/orderDedupe';
 import { deduplicateAndNormalizeInventory } from './AdminInventory';
 
-export const normalizeInventoryList = (items) => {
+const normalizeInventoryList = (items) => {
   if (!Array.isArray(items)) return [];
   try {
     if (typeof deduplicateAndNormalizeInventory === "function") {
@@ -77,16 +81,67 @@ export const normalizeInventoryList = (items) => {
 
 export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const now = new Date();
-  const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const sevenDaysYMD = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
-  const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const monthStartYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDate = now.getDate();
+  const currentDayOfWeek = now.getDay();
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const formatYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+  // Daily
+  const todayYMD = formatYMD(now);
+  const yesterdayDate = new Date(currentYear, currentMonth, currentDate - 1);
+  const yesterdayYMD = formatYMD(yesterdayDate);
+
+  // Weekly
+  const sevenDaysAgoDate = new Date(currentYear, currentMonth, currentDate - 6);
+  const sevenDaysYMD = formatYMD(sevenDaysAgoDate);
+  const mondayOffset = (currentDayOfWeek + 6) % 7;
+  const thisWeekStartDate = new Date(currentYear, currentMonth, currentDate - mondayOffset);
+  const thisWeekStartYMD = formatYMD(thisWeekStartDate);
+  const lastWeekStartDate = new Date(currentYear, currentMonth, currentDate - mondayOffset - 7);
+  const lastWeekEndDate = new Date(currentYear, currentMonth, currentDate - mondayOffset - 1);
+  const lastWeekStartYMD = formatYMD(lastWeekStartDate);
+  const lastWeekEndYMD = formatYMD(lastWeekEndDate);
+
+  // Monthly
+  const currentMonthPrefix = `${currentYear}-${pad2(currentMonth + 1)}`;
+  const thisMonthStartYMD = `${currentMonthPrefix}-01`;
+  const thisMonthEndDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const thisMonthEndYMD = `${currentMonthPrefix}-${pad2(thisMonthEndDay)}`;
+  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const lastMonthYear = lastMonthDate.getFullYear();
+  const lastMonthNum = lastMonthDate.getMonth() + 1;
+  const lastMonthPrefix = `${lastMonthYear}-${pad2(lastMonthNum)}`;
+  const lastMonthStartYMD = `${lastMonthPrefix}-01`;
+  const lastMonthEndDay = new Date(lastMonthYear, lastMonthNum, 0).getDate();
+  const lastMonthEndYMD = `${lastMonthPrefix}-${pad2(lastMonthEndDay)}`;
+
+  // Quarterly
+  const currentQNum = Math.floor(currentMonth / 3) + 1;
+  const qStartMonth = (currentQNum - 1) * 3;
+  const currentQStartDate = new Date(currentYear, qStartMonth, 1);
+  const currentQEndDate = new Date(currentYear, qStartMonth + 3, 0);
+  const currentQStartYMD = formatYMD(currentQStartDate);
+  const currentQEndYMD = formatYMD(currentQEndDate);
+  const lastQNum = currentQNum === 1 ? 4 : currentQNum - 1;
+  const lastQYear = currentQNum === 1 ? currentYear - 1 : currentYear;
+  const lastQStartMonth = (lastQNum - 1) * 3;
+  const lastQStartDate = new Date(lastQYear, lastQStartMonth, 1);
+  const lastQEndDate = new Date(lastQYear, lastQStartMonth + 3, 0);
+  const lastQStartYMD = formatYMD(lastQStartDate);
+  const lastQEndYMD = formatYMD(lastQEndDate);
+
+  // Yearly
+  const thisYearStartYMD = `${currentYear}-01-01`;
+  const thisYearEndYMD = `${currentYear}-12-31`;
+  const lastYearStartYMD = `${currentYear - 1}-01-01`;
+  const lastYearEndYMD = `${currentYear - 1}-12-31`;
 
   const [showAllDishes, setShowAllDishes] = useState(false);
-  const [filterPeriod, setFilterPeriod] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [filterPeriod, setFilterPeriod] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [fetchedOrders, setFetchedOrders] = useState(() => {
     try {
@@ -189,44 +244,117 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     );
   }, [pastOrders, fetchedOrders]);
 
+  const handleSelectPeriod = (periodId) => {
+    setFilterPeriod(periodId);
+    if (periodId === "today") {
+      setStartDate(todayYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "yesterday") {
+      setStartDate(yesterdayYMD);
+      setEndDate(yesterdayYMD);
+    } else if (periodId === "single_date") {
+      const target = startDate && startDate <= todayYMD ? startDate : todayYMD;
+      setStartDate(target);
+      setEndDate(target);
+    } else if (periodId === "this_week") {
+      setStartDate(thisWeekStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "week") {
+      setStartDate(sevenDaysYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_week") {
+      setStartDate(lastWeekStartYMD);
+      setEndDate(lastWeekEndYMD);
+    } else if (periodId === "this_month" || periodId === "month") {
+      setStartDate(thisMonthStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_month") {
+      setStartDate(lastMonthStartYMD);
+      setEndDate(lastMonthEndYMD);
+    } else if (periodId === "this_quarter") {
+      setStartDate(currentQStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_quarter") {
+      setStartDate(lastQStartYMD);
+      setEndDate(lastQEndYMD);
+    } else if (periodId === "this_year") {
+      setStartDate(thisYearStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_year") {
+      setStartDate(lastYearStartYMD);
+      setEndDate(lastYearEndYMD);
+    } else if (periodId === "custom") {
+      if (!startDate) setStartDate(thisMonthStartYMD);
+      if (!endDate) setEndDate(todayYMD);
+    } else if (periodId === "all") {
+      setStartDate("");
+      setEndDate("");
+    }
+  };
+
   const filteredOrders = useMemo(() => {
     return ordersData.filter((order) => {
       if (filterPeriod === "all") return true;
-
       const orderYMD = parseOrderToYMD(order);
       if (!orderYMD) return false;
-
-      if (filterPeriod === 'today') {
-        return orderYMD === todayYMD;
+      if (filterPeriod === "today") return orderYMD === todayYMD;
+      if (filterPeriod === "yesterday") return orderYMD === yesterdayYMD;
+      if (filterPeriod === "single_date") {
+        const target = startDate || todayYMD;
+        return orderYMD === target;
       }
-      if (filterPeriod === 'week') {
-        return orderYMD >= sevenDaysYMD && orderYMD <= todayYMD;
-      }
-      if (filterPeriod === 'month') {
-        return orderYMD.startsWith(currentMonthPrefix);
-      }
-      if (filterPeriod === 'custom') {
+      if (filterPeriod === "this_week") return orderYMD >= thisWeekStartYMD && orderYMD <= todayYMD;
+      if (filterPeriod === "week") return orderYMD >= sevenDaysYMD && orderYMD <= todayYMD;
+      if (filterPeriod === "last_week") return orderYMD >= lastWeekStartYMD && orderYMD <= lastWeekEndYMD;
+      if (filterPeriod === "this_month" || filterPeriod === "month") return orderYMD >= thisMonthStartYMD && orderYMD <= thisMonthEndYMD;
+      if (filterPeriod === "last_month") return orderYMD >= lastMonthStartYMD && orderYMD <= lastMonthEndYMD;
+      if (filterPeriod === "this_quarter") return orderYMD >= currentQStartYMD && orderYMD <= currentQEndYMD;
+      if (filterPeriod === "last_quarter") return orderYMD >= lastQStartYMD && orderYMD <= lastQEndYMD;
+      if (filterPeriod === "this_year") return orderYMD >= thisYearStartYMD && orderYMD <= thisYearEndYMD;
+      if (filterPeriod === "last_year") return orderYMD >= lastYearStartYMD && orderYMD <= lastYearEndYMD;
+      if (filterPeriod === "custom") {
         if (startDate && endDate) {
           const from = startDate <= endDate ? startDate : endDate;
           const to = startDate <= endDate ? endDate : startDate;
           return orderYMD >= from && orderYMD <= to;
         }
-        if (startDate) {
-          return orderYMD >= startDate;
-        }
-        if (endDate) {
-          return orderYMD <= endDate;
-        }
+        if (startDate) return orderYMD >= startDate;
+        if (endDate) return orderYMD <= endDate;
         return true;
       }
       return true;
     });
-  }, [ordersData, filterPeriod, todayYMD, sevenDaysYMD, currentMonthPrefix, startDate, endDate]);
+  }, [
+    ordersData,
+    filterPeriod,
+    todayYMD,
+    yesterdayYMD,
+    sevenDaysYMD,
+    thisWeekStartYMD,
+    lastWeekStartYMD,
+    lastWeekEndYMD,
+    thisMonthStartYMD,
+    thisMonthEndYMD,
+    lastMonthStartYMD,
+    lastMonthEndYMD,
+    currentQStartYMD,
+    currentQEndYMD,
+    lastQStartYMD,
+    lastQEndYMD,
+    thisYearStartYMD,
+    thisYearEndYMD,
+    lastYearStartYMD,
+    lastYearEndYMD,
+    startDate,
+    endDate,
+  ]);
 
-  const totalRevenue = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0),
-    0
-  );
+  const totalRevenue = filteredOrders.reduce((sum, order) => {
+    const grandTotal = Number(
+      order.grandTotal ?? order.totalAmount ?? order.finalTotal ?? order.amount ?? order.total ?? 0,
+    ) || 0;
+    return sum + Math.max(0, grandTotal);
+  }, 0);
 
   const totalTax = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.taxAmount) || 0),
@@ -320,6 +448,22 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     return Array.from(set).sort();
   }, [inventoryItems]);
 
+  const totalInventoryPurchaseCost = useMemo(() => {
+    return inventoryItems.reduce((sum, item) => {
+      const restocked = Number(item.totalRestocked ?? 0);
+      const cost = Number(item.mrp ?? item.unitCost ?? 0);
+      return sum + (restocked > 0 && cost > 0 ? restocked * cost : 0);
+    }, 0);
+  }, [inventoryItems]);
+
+  const totalIngredientUsageCost = useMemo(() => {
+    return inventoryItems.reduce((sum, item) => {
+      const used = Number(item.totalUsed ?? 0);
+      const cost = Number(item.mrp ?? item.unitCost ?? 0);
+      return sum + (used > 0 && cost > 0 ? used * cost : 0);
+    }, 0);
+  }, [inventoryItems]);
+
   const inventoryCategoryBreakdown = useMemo(() => {
     const map = {};
     inventoryItems.forEach((item) => {
@@ -346,7 +490,8 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   // ================= PROFIT & LOSS FORMULAS =================
   const plIncome = totalRevenue;
-  const plExpenditure = totalInventoryCost + totalDiscount;
+  const plExpenditure = totalInventoryPurchaseCost + totalDiscount;
+  const costOfGoodsSold = totalIngredientUsageCost;
   const plNet = plIncome - plExpenditure;
   const isProfit = plNet >= 0;
   const grossFoodSales = Math.max(0, totalRevenue - totalTax - totalService);
@@ -446,17 +591,106 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   const getFilterPeriodLabel = () => {
     if (filterPeriod === "today") return `Today (${todayYMD})`;
+    if (filterPeriod === "yesterday") return `Yesterday (${yesterdayYMD})`;
+    if (filterPeriod === "single_date") return `Particular Date (${startDate || todayYMD})`;
+    if (filterPeriod === "this_week") return `This Week (${thisWeekStartYMD} to ${todayYMD})`;
     if (filterPeriod === "week") return `Last 7 Days (${sevenDaysYMD} to ${todayYMD})`;
-    if (filterPeriod === "month") return `This Month (${currentMonthPrefix})`;
-    if (filterPeriod === "all") return "All Time";
+    if (filterPeriod === "last_week") return `Last Week (${lastWeekStartYMD} to ${lastWeekEndYMD})`;
+    if (filterPeriod === "this_month" || filterPeriod === "month") return `This Month (${now.toLocaleString("default", { month: "short" })} ${currentYear})`;
+    if (filterPeriod === "last_month") return `Last Month (${lastMonthDate.toLocaleString("default", { month: "short" })} ${lastMonthYear})`;
+    if (filterPeriod === "this_quarter") return `This Quarter (Q${currentQNum} ${currentYear})`;
+    if (filterPeriod === "last_quarter") return `Last Quarter (Q${lastQNum} ${lastQYear})`;
+    if (filterPeriod === "this_year") return `This Year (${currentYear})`;
+    if (filterPeriod === "last_year") return `Last Year (${currentYear - 1})`;
+    if (filterPeriod === "all") return "All Time (Complete History)";
     if (filterPeriod === "custom") {
       if (startDate && endDate) {
         return startDate === endDate ? startDate : `${startDate} to ${endDate}`;
       }
       if (startDate) return `From ${startDate}`;
-      if (endDate) return `Up to ${endDate}`;
+      if (endDate) return `Until ${endDate}`;
+      return "Custom Date Range";
     }
-    return 'Custom Period';
+    return "All Time";
+  };
+
+  const getActiveDateRangeText = () => {
+    if (filterPeriod === "today") return todayYMD;
+    if (filterPeriod === "yesterday") return yesterdayYMD;
+    if (filterPeriod === "single_date") return `Date: ${startDate || todayYMD}`;
+    if (filterPeriod === "this_week") return `${thisWeekStartYMD} → ${todayYMD}`;
+    if (filterPeriod === "week") return `${sevenDaysYMD} → ${todayYMD}`;
+    if (filterPeriod === "last_week") return `${lastWeekStartYMD} → ${lastWeekEndYMD}`;
+    if (filterPeriod === "this_month" || filterPeriod === "month") return `${thisMonthStartYMD} → ${thisMonthEndYMD}`;
+    if (filterPeriod === "last_month") return `${lastMonthStartYMD} → ${lastMonthEndYMD}`;
+    if (filterPeriod === "this_quarter") return `${currentQStartYMD} → ${currentQEndYMD}`;
+    if (filterPeriod === "last_quarter") return `${lastQStartYMD} → ${lastQEndYMD}`;
+    if (filterPeriod === "this_year") return `${thisYearStartYMD} → ${thisYearEndYMD}`;
+    if (filterPeriod === "last_year") return `${lastYearStartYMD} → ${lastYearEndYMD}`;
+    if (filterPeriod === "custom") {
+      if (startDate && endDate) return `${startDate} → ${endDate}`;
+      if (startDate) return `From ${startDate}`;
+      if (endDate) return `Until ${endDate}`;
+    }
+    return "All Time History";
+  };
+
+  const handleExportCSV = () => {
+    try {
+      const lines = [];
+      lines.push(`"FINANCIAL PERFORMANCE REPORT"`);
+      lines.push(`"Period:","${getFilterPeriodLabel()}"`);
+      lines.push(`"Date Range:","${getActiveDateRangeText()}"`);
+      lines.push(`"Generated At:","${new Date().toLocaleString("en-IN")}"`);
+      lines.push(``);
+      lines.push(`"EXECUTIVE FINANCIAL SUMMARY"`);
+      lines.push(`"Metric","Amount (INR)","Notes"`);
+      lines.push(`"Total Income (Sales)","${plIncome.toFixed(2)}","From ${filteredOrders.length} settled orders"`);
+      lines.push(`"Food & Beverage Net Sales","${grossFoodSales.toFixed(2)}","Excluding taxes & service charge"`);
+      lines.push(`"GST / Tax Collected","${totalTax.toFixed(2)}","Tax liability"`);
+      lines.push(`"Service Charges","${totalService.toFixed(2)}","Service charge revenue"`);
+      lines.push(`"Bill Discounts Given","${totalDiscount.toFixed(2)}","Promotions & reductions"`);
+      lines.push(`"Net Operating Revenue","${netRevenueAfterDiscount.toFixed(2)}","Sales adjusted for discounts"`);
+      lines.push(`"Total Inventory Stock Valuation","${totalInventoryCost.toFixed(2)}","${inventoryItems.length} items evaluated at unit cost"`);
+      lines.push(`"Total Operating Expenditure","${plExpenditure.toFixed(2)}","Inventory restock/purchase cost + Discounts"`);
+      lines.push(`"Ingredient Usage Cost / COGS","${costOfGoodsSold.toFixed(2)}","Tracked quantity used multiplied by ingredient unit cost"`);
+      lines.push(`"Net Operating ${isProfit ? "Profit" : "Loss"}","${(isProfit ? "+" : "-") + Math.abs(plNet).toFixed(2)}","Operating Margin: ${profitMarginPercent}%"`);
+      lines.push(``);
+      lines.push(`"SETTLED ORDERS IN PERIOD (${filteredOrders.length} Orders)"`);
+      lines.push(`"#","Order ID / No.","Date & Time","Table","Payment Method","Subtotal","Tax","Discount","Grand Total"`);
+      filteredOrders.forEach((ord, idx) => {
+        const id = ord.orderNumber || ord.id || `ord-${idx + 1}`;
+        const dt = ord.settledAt || ord.timestamp || ord.date || "";
+        const tbl = ord.table || ord.tableName || "Takeaway";
+        const pay = normalizePaymentMethod(ord);
+        const sub = Number(ord.subtotal || (ord.grandTotal - (ord.taxAmount || 0))) || 0;
+        const tax = Number(ord.taxAmount) || 0;
+        const disc = Number(ord.discountAmount) || 0;
+        const grand = Number(ord.grandTotal ?? ord.total) || 0;
+        lines.push(`"${idx + 1}","${id}","${dt}","${tbl}","${pay.toUpperCase()}","${sub.toFixed(2)}","${tax.toFixed(2)}","${disc.toFixed(2)}","${grand.toFixed(2)}"`);
+      });
+      lines.push(``);
+      lines.push(`"INVENTORY INGREDIENT VALUATION (${inventoryItems.length} Items)"`);
+      lines.push(`"#","Ingredient / Item","Category","Supplier","Stock","Unit","Min Threshold","Unit Cost","Total Valuation","Status"`);
+      inventoryItems.forEach((it, idx) => {
+        const stock = Number(it.stock ?? 0);
+        const mrp = Number(it.mrp ?? it.unitCost ?? 0);
+        const val = stock * mrp;
+        const min = Number(it.minThreshold ?? 0);
+        const status = stock <= 0 ? "Out of Stock" : (stock <= min ? "Low Stock" : "In Stock");
+        lines.push(`"${idx + 1}","${it.name || ""}","${it.category || ""}","${it.supplier || ""}","${stock}","${it.unit || ""}","${min}","${mrp.toFixed(2)}","${val.toFixed(2)}","${status}"`);
+      });
+      const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(lines.join("\n"));
+      const link = document.createElement("a");
+      const safePeriodName = filterPeriod.replace(/[^a-zA-Z0-9]/g, "_");
+      link.setAttribute("href", csvContent);
+      link.setAttribute("download", `Financial_Report_${safePeriodName}_${todayYMD}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export error:", err);
+    }
   };
 
   return (
@@ -563,7 +797,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             marginBottom: '1.5rem',
           }}
         >
-            {/* Quick Period Buttons */}
+            {/* Quick Period Buttons with Daily, Weekly, Monthly, Quarterly, Yearly */}
             <div
               style={{
                 display: "flex",
@@ -573,34 +807,22 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 borderRadius: "10px",
                 padding: "3px",
                 gap: "3px",
+                flexWrap: "wrap",
               }}
             >
               {[
-                { id: "today", label: "Today" },
-                { id: "week", label: "7 Days" },
-                { id: "month", label: "This Month" },
                 { id: "all", label: "All Time" },
+                { id: "today", label: "Daily (Today)" },
+                { id: "week", label: "Weekly (7D)" },
+                { id: "this_month", label: "Monthly" },
+                { id: "this_quarter", label: "Quarterly" },
+                { id: "this_year", label: "Yearly" },
               ].map((p) => {
-                const active = filterPeriod === p.id;
+                const active = filterPeriod === p.id || (p.id === "this_month" && filterPeriod === "month");
                 return (
                   <button
                     key={p.id}
-                    onClick={() => {
-                      setFilterPeriod(p.id);
-                      if (p.id === "today") {
-                        setStartDate(todayYMD);
-                        setEndDate(todayYMD);
-                      } else if (p.id === "week") {
-                        setStartDate(sevenDaysYMD);
-                        setEndDate(todayYMD);
-                      } else if (p.id === "month") {
-                        setStartDate(monthStartYMD);
-                        setEndDate(todayYMD);
-                      } else if (p.id === "all") {
-                        setStartDate("");
-                        setEndDate("");
-                      }
-                    }}
+                    onClick={() => handleSelectPeriod(p.id)}
                     style={{
                       background: active
                         ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
@@ -613,24 +835,68 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                       fontWeight: active ? 700 : 600,
                       cursor: "pointer",
                       transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.color = "var(--text-main)";
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.color = "var(--text-muted)";
-                        e.currentTarget.style.background = "transparent";
-                      }
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {p.label}
                   </button>
                 );
               })}
+            </div>
+
+            {/* More Periods Dropdown */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "10px",
+                padding: "0.38rem 0.65rem",
+                gap: "0.4rem",
+              }}
+            >
+              <Calendar size={14} color="#f59e0b" />
+              <select
+                value={filterPeriod}
+                onChange={(e) => handleSelectPeriod(e.target.value)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "var(--text-main)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                title="Select detailed reporting period"
+              >
+                <option value="all">🌐 All Time (Complete)</option>
+                <optgroup label="Daily Filters">
+                  <option value="today">📅 Today ({todayYMD})</option>
+                  <option value="yesterday">⏮️ Yesterday ({yesterdayYMD})</option>
+                </optgroup>
+                <optgroup label="Weekly Filters">
+                  <option value="this_week">📆 This Week (Mon → Today)</option>
+                  <option value="week">🗓️ Rolling Last 7 Days</option>
+                  <option value="last_week">⏮️ Last Week Full</option>
+                </optgroup>
+                <optgroup label="Monthly Filters">
+                  <option value="this_month">📊 This Month ({now.toLocaleString("default", { month: "short" })})</option>
+                  <option value="last_month">⏮️ Last Month ({lastMonthDate.toLocaleString("default", { month: "short" })})</option>
+                </optgroup>
+                <optgroup label="Quarterly Filters">
+                  <option value="this_quarter">📈 This Quarter (Q{currentQNum} {currentYear})</option>
+                  <option value="last_quarter">⏮️ Last Quarter (Q{lastQNum})</option>
+                </optgroup>
+                <optgroup label="Yearly Filters">
+                  <option value="this_year">🏛️ This Year ({currentYear})</option>
+                  <option value="last_year">⏮️ Last Year ({currentYear - 1})</option>
+                </optgroup>
+                <optgroup label="Custom Range">
+                  <option value="custom">⚙️ Custom Date Range...</option>
+                </optgroup>
+              </select>
             </div>
 
             {/* Calendar Date-to-Date Range Picker */}
@@ -733,6 +999,29 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 title="To Date (Future dates disabled)"
               />
             </div>
+
+            {/* Export CSV Button */}
+            <button
+              onClick={handleExportCSV}
+              style={{
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.35)",
+                borderRadius: "10px",
+                padding: "0.45rem 0.85rem",
+                color: "#10b981",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                transition: "all 0.15s ease",
+              }}
+              title="Export report for this period to CSV spreadsheet"
+            >
+              <Download size={14} />
+              <span>Export CSV</span>
+            </button>
 
             {/* Fetch Data Button */}
             <button
@@ -1404,6 +1693,41 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           </div>
         </div>
 
+        {/* Period Performance Insights Bar */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "0.75rem",
+            marginBottom: "1.25rem",
+          }}
+        >
+          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Period Orders Settled</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "var(--text-main)", marginTop: "2px" }}>
+              {filteredOrders.length} <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-dim)" }}>orders</span>
+            </div>
+          </div>
+          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Average Bill (AOV)</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#38bdf8", marginTop: "2px" }}>
+              {formatCurrency(averageBill)}
+            </div>
+          </div>
+          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Taxes &amp; Service Collected</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#f59e0b", marginTop: "2px" }}>
+              {formatCurrency(totalTax + totalService)}
+            </div>
+          </div>
+          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Promotions &amp; Discounts</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: totalDiscount > 0 ? "#ef4444" : "#10b981", marginTop: "2px" }}>
+              {formatCurrency(totalDiscount)} <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-dim)" }}>({totalRevenue > 0 ? ((totalDiscount / totalRevenue) * 100).toFixed(1) : "0.0"}%)</span>
+            </div>
+          </div>
+        </div>
+
         {/* 3 Prominent Executive Balance Metric Cards */}
         <div
           style={{
@@ -1501,7 +1825,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               {formatCurrency(plExpenditure)}
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-              Stock: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalInventoryCost)}</strong> ({inventoryItems.length} items) + Discounts: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalDiscount)}</strong>
+              Restock Purchases: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalInventoryPurchaseCost)}</strong> + Discounts: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalDiscount)}</strong> · COGS: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(costOfGoodsSold)}</strong>
             </div>
           </div>
 
@@ -1657,8 +1981,231 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </button>
           </div>
 
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', paddingRight: '0.5rem' }}>
-            Period: <strong style={{ color: 'var(--text-main)' }}>{getFilterPeriodLabel()}</strong>
+          {/* Interactive Period Quick Filter in Sub-Nav (Screenshot Location) */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              flexWrap: "wrap",
+              paddingRight: "0.4rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "8px",
+                padding: "0.32rem 0.6rem",
+              }}
+            >
+              <Calendar size={13} color="#f59e0b" />
+              <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>Period:</span>
+              <select
+                value={filterPeriod}
+                onChange={(e) => handleSelectPeriod(e.target.value)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "#f59e0b",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  paddingRight: "4px",
+                }}
+                title="Select reporting period"
+              >
+                <option value="all">🌐 All Time (Complete History)</option>
+                <optgroup label="Daily &amp; Particular Day">
+                  <option value="today">📅 Today ({todayYMD})</option>
+                  <option value="yesterday">⏮️ Yesterday ({yesterdayYMD})</option>
+                  <option value="single_date">🎯 Particular Date (Pick Any Day)...</option>
+                </optgroup>
+                <optgroup label="Weekly Basis">
+                  <option value="this_week">📆 This Week (Mon → Today)</option>
+                  <option value="week">🗓️ Rolling Last 7 Days</option>
+                  <option value="last_week">⏮️ Last Week (Full)</option>
+                </optgroup>
+                <optgroup label="Monthly Basis">
+                  <option value="this_month">📊 This Month ({now.toLocaleString("default", { month: "short" })})</option>
+                  <option value="last_month">⏮️ Last Month ({lastMonthDate.toLocaleString("default", { month: "short" })})</option>
+                </optgroup>
+                <optgroup label="Quarterly Basis">
+                  <option value="this_quarter">📈 This Quarter (Q{currentQNum} {currentYear})</option>
+                  <option value="last_quarter">⏮️ Last Quarter (Q{lastQNum})</option>
+                </optgroup>
+                <optgroup label="Yearly Basis">
+                  <option value="this_year">🏛️ This Year ({currentYear})</option>
+                  <option value="last_year">⏮️ Last Year ({currentYear - 1})</option>
+                </optgroup>
+                <optgroup label="Custom Range">
+                  <option value="custom">⚙️ Custom Date Range (From → To)...</option>
+                </optgroup>
+              </select>
+            </div>
+
+            {/* Direct Inline Particular Single Date Picker */}
+            {filterPeriod === "single_date" && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1.5px solid var(--accent-amber)",
+                  borderRadius: "8px",
+                  padding: "0.28rem 0.6rem",
+                }}
+              >
+                <Calendar size={13} color="#f59e0b" />
+                <span style={{ fontSize: "0.72rem", color: "#f59e0b", fontWeight: 700 }}>Select Day:</span>
+                <input
+                  type="date"
+                  className="clean-date-input"
+                  value={startDate || todayYMD}
+                  max={todayYMD}
+                  onClick={(e) => {
+                    try { e.currentTarget.showPicker(); } catch {}
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const capped = val && val > todayYMD ? todayYMD : val;
+                    setStartDate(capped);
+                    setEndDate(capped);
+                    setFilterPeriod("single_date");
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "var(--text-main)",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                  }}
+                  title="Click to select a particular date"
+                />
+              </div>
+            )}
+
+            {/* Direct Inline Custom Date Range Picker (From → To) */}
+            {filterPeriod === "custom" && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1.5px solid var(--accent-amber)",
+                  borderRadius: "8px",
+                  padding: "0.28rem 0.6rem",
+                }}
+              >
+                <Calendar size={13} color="#f59e0b" />
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>From:</span>
+                <input
+                  type="date"
+                  className="clean-date-input"
+                  value={startDate || thisMonthStartYMD}
+                  max={endDate && endDate < todayYMD ? endDate : todayYMD}
+                  onClick={(e) => {
+                    try { e.currentTarget.showPicker(); } catch {}
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const capped = val && val > todayYMD ? todayYMD : val;
+                    setStartDate(capped);
+                    setFilterPeriod("custom");
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "var(--text-main)",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                  }}
+                  title="From Date"
+                />
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>to</span>
+                <input
+                  type="date"
+                  className="clean-date-input"
+                  value={endDate || todayYMD}
+                  min={startDate || undefined}
+                  max={todayYMD}
+                  onClick={(e) => {
+                    try { e.currentTarget.showPicker(); } catch {}
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const capped = val && val > todayYMD ? todayYMD : val;
+                    setEndDate(capped);
+                    setFilterPeriod("custom");
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "var(--text-main)",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                  }}
+                  title="To Date"
+                />
+              </div>
+            )}
+
+            {/* Date range chip for other periods */}
+            {filterPeriod !== "custom" && filterPeriod !== "single_date" && (
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-dim)",
+                  background: "rgba(255, 255, 255, 0.03)",
+                  padding: "0.28rem 0.55rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {getActiveDateRangeText()}
+              </span>
+            )}
+
+            {/* 1-click Reset button if filter is active */}
+            {filterPeriod !== "all" && (
+              <button
+                type="button"
+                onClick={() => handleSelectPeriod("all")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  color: "#ef4444",
+                  borderRadius: "6px",
+                  padding: "0.28rem 0.55rem",
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+                title="Reset filter to All Time"
+              >
+                <RotateCcw size={11} />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1820,10 +2367,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   </tr>
                   <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                     <td style={{ padding: '8px 14px', paddingLeft: '28px', color: 'var(--text-main)', fontWeight: 600 }}>
-                      Ingredient &amp; Raw Material Stock Valuation
+                      Current Ingredient &amp; Raw Material Stock Valuation
                     </td>
                     <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
-                      {inventoryItems.length} inventory items evaluated at unit cost
+                      {inventoryItems.length} inventory items evaluated at current stock and unit cost
                     </td>
                     <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: '#ef4444' }}>
                       -{formatCurrency(totalInventoryCost)}
@@ -1861,7 +2408,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                       Total Operating Expenditure
                     </td>
                     <td style={{ padding: '9px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
-                      Total materials, ingredient costs &amp; discounts
+                      Lifetime tracked restock purchases + customer discounts
                     </td>
                     <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: '#ef4444', fontSize: '0.92rem' }}>
                       -{formatCurrency(plExpenditure)}

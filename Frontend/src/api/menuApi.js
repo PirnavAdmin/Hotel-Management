@@ -43,6 +43,11 @@ export function normalizeMenuItem(item = {}) {
       item.description ?? item.shortDescription ?? item.short_description ?? "",
     image: resolvedImagePath,
     isAvailable: item.isAvailable ?? item.is_available ?? true,
+    recipe: Array.isArray(item.recipe)
+      ? item.recipe
+      : Array.isArray(item.Recipe)
+      ? item.Recipe
+      : [],
   };
 
   return {
@@ -125,6 +130,7 @@ export async function apiCreateMenuItem(itemData) {
       isChefSpecial: isSpecialFlag,
       isSpecial: isSpecialFlag,
       isAvailable: itemData.isAvailable !== false,
+      recipe: Array.isArray(itemData.recipe) ? itemData.recipe : [],
     }),
   });
 }
@@ -147,6 +153,7 @@ export async function apiUpdateMenuItem(id, itemData) {
       isChefSpecial: isSpecialFlag,
       isSpecial: isSpecialFlag,
       isAvailable: itemData.isAvailable !== false,
+      recipe: Array.isArray(itemData.recipe) ? itemData.recipe : [],
     }),
   });
 }

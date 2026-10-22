@@ -14,10 +14,18 @@ import {
   AlertCircle,
   IndianRupee,
   ShoppingBag,
+  Boxes,
+  Receipt,
+  Plus,
+  Sparkles,
+  Smartphone,
+  Banknote,
+  CreditCard,
+  Flame,
+  Eye,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
-
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
 
 export function AdminOverview({
@@ -41,6 +49,15 @@ export function AdminOverview({
     return Array.isArray(pastOrders) && pastOrders.length > 0 ? dedupeOrders(pastOrders) : [];
   });
 
+  // Track inventory items and low stock
+  const [inventoryList, setInventoryList] = useState(() => {
+    try {
+      const raw = localStorage.getItem("gourmet_pos_inventory_v1");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+  });
+
   useEffect(() => {
     setOrdersList(dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []));
   }, [pastOrders]);
@@ -58,11 +75,25 @@ export function AdminOverview({
       } catch {}
     };
 
+    const syncInventory = (e) => {
+      if (Array.isArray(e.detail)) {
+        setInventoryList(e.detail);
+      } else {
+        try {
+          const raw = localStorage.getItem("gourmet_pos_inventory_v1");
+          if (raw) setInventoryList(JSON.parse(raw));
+        } catch {}
+      }
+    };
+
     window.addEventListener("storage", syncFromStorage);
     window.addEventListener("focus", syncFromStorage);
+    window.addEventListener("avsr-inventory-updated", syncInventory);
+
     return () => {
       window.removeEventListener("storage", syncFromStorage);
       window.removeEventListener("focus", syncFromStorage);
+      window.removeEventListener("avsr-inventory-updated", syncInventory);
     };
   }, []);
 
@@ -77,6 +108,15 @@ export function AdminOverview({
     (sum, order) => sum + (Number(order.grandTotal ?? order.total) || 0),
     0
   );
+
+  // Cash / UPI breakdown for today
+  const todayCashRevenue = todayOrders
+    .filter((o) => String(o.paymentMethod || o.paymentMode || "").toLowerCase() === "cash")
+    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total) || 0), 0);
+
+  const todayUpiRevenue = todayOrders
+    .filter((o) => String(o.paymentMethod || o.paymentMode || "").toLowerCase() === "upi")
+    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total) || 0), 0);
 
   const occupiedTables = tables.filter((t) => t.status !== "vacant");
   const totalChairs = tables.reduce(
@@ -99,9 +139,15 @@ export function AdminOverview({
   const vegCount = menuItems.filter((i) => i.isVeg).length;
   const nonVegCount = menuItems.filter((i) => !i.isVeg).length;
 
+  const lowStockItems = inventoryList.filter(
+    (item) => Number(item.stock ?? item.currentStock ?? 0) <= Number(item.minThreshold ?? item.minimumThreshold ?? 5)
+  );
+
+  const averageOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-      {/* Overview Header Banner */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* 1. Overview Header Banner */}
       <div
         style={{
           background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)",
@@ -142,10 +188,14 @@ export function AdminOverview({
             >
               Restaurant Dashboard
             </h2>
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
+              Live overview of sales, kitchen, dining floor, and inventory health
+            </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        {/* Quick Action Navigation Buttons */}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button
             onClick={() => onNavigateTab("menu")}
             style={{
@@ -167,6 +217,7 @@ export function AdminOverview({
             <Utensils size={14} />
             <span>Manage Menu</span>
           </button>
+
           <button
             onClick={() => onNavigateTab("tables")}
             style={{
@@ -188,27 +239,74 @@ export function AdminOverview({
             <Armchair size={14} color="var(--accent-amber)" />
             <span>Floor Plan</span>
           </button>
+
+          {typeof onOpenKOTView === "function" && (
+            <button
+              onClick={onOpenKOTView}
+              style={{
+                background: pendingKOTCount > 0 ? "rgba(239, 68, 68, 0.15)" : "var(--bg-card)",
+                border: pendingKOTCount > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
+                color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+              }}
+            >
+              <ChefHat size={14} color={pendingKOTCount > 0 ? "#ef4444" : "var(--text-main)"} />
+              <span>Live KOT ({pendingKOTCount})</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => onNavigateTab("invoices")}
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              color: "var(--text-main)",
+              borderRadius: "8px",
+              padding: "0.42rem 0.85rem",
+              fontSize: "0.76rem",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              cursor: "pointer",
+              height: "32px",
+            }}
+          >
+            <Receipt size={14} color="#3b82f6" />
+            <span>Invoices</span>
+          </button>
         </div>
       </div>
 
-      {/* 4 Core Metric Cards (Aligned) */}
+      {/* 2. Five Operational Metric Cards - 1 Clean Row */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "0.65rem",
+          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+          gap: "0.55rem",
+          width: "100%",
         }}
       >
-        {/* Today Orders */}
+        {/* Card 1: Today's Revenue & Orders */}
         <div
           onClick={() => onNavigateTab("reports")}
           style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "var(--accent-amber)";
@@ -218,116 +316,137 @@ export function AdminOverview({
             e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
-          title="Click to view today's sales and order analytics"
+          title="Click to view today's revenue & sales reports"
         >
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.45rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Today Orders
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Today's Sales
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
                 background: "rgba(245, 158, 11, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <ShoppingBag size={13} color="#f59e0b" />
+              <IndianRupee size={12} color="#f59e0b" />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--accent-amber)" }}>
-            {todayOrders.length} {todayOrders.length === 1 ? "Order" : "Orders"}
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            ₹{todayRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.66rem",
               color: "var(--text-muted)",
               marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            Settled customer bills
+            <span>{todayOrders.length} Bills</span>
+            <span style={{ margin: "0 3px" }}>•</span>
+            <span style={{ color: "#10b981" }}>₹{todayCashRevenue.toFixed(0)}</span>
+            <span style={{ margin: "0 2px" }}>/</span>
+            <span style={{ color: "#3b82f6" }}>₹{todayUpiRevenue.toFixed(0)}</span>
           </div>
         </div>
 
-        {/* Menu Items */}
+        {/* Card 2: Kitchen KOT Orders Live */}
         <div
-          onClick={() => onNavigateTab("menu")}
+          onClick={() => {
+            if (typeof onOpenKOTView === "function") onOpenKOTView();
+            else onNavigateTab("kot");
+          }}
           style={{
             background: "var(--bg-card)",
-            border: "1px solid var(--border-card)",
+            border: pendingKOTCount > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "var(--accent-amber)";
+            e.currentTarget.style.borderColor = "#ef4444";
             e.currentTarget.style.transform = "translateY(-2px)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "var(--border-card)";
+            e.currentTarget.style.borderColor = pendingKOTCount > 0 ? "rgba(239, 68, 68, 0.4)" : "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
+          title="Click to view Kitchen KOT display"
         >
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.45rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Active Menu Catalog
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Kitchen KOT Live
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
-                background: "rgba(234, 88, 12, 0.15)",
+                background: pendingKOTCount > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(100, 116, 139, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Utensils size={13} color="#ea580c" />
+              <ChefHat size={12} color={pendingKOTCount > 0 ? "#ef4444" : "#94a3b8"} />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-main)" }}>
-            {menuItems.length} Dishes
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {pendingKOTCount} {pendingKOTCount === 1 ? "Active KOT" : "Active KOTs"}
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
-              color: "var(--text-muted)",
+              fontSize: "0.66rem",
+              color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-muted)",
+              fontWeight: 600,
               marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            {nonVegCount} Non-Veg • {vegCount} Veg
+            {pendingKOTCount > 0 ? `${tablesWithOrders.length} tables cooking` : "Kitchen all caught up"}
           </div>
         </div>
 
-        {/* Dining Tables */}
+        {/* Card 3: Dining Tables & Seating */}
         <div
           onClick={() => onNavigateTab("tables")}
           style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "var(--accent-amber)";
@@ -337,57 +456,133 @@ export function AdminOverview({
             e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
+          title="Click to view Dining Floor Plan"
         >
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.45rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Dining Tables & Chairs
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Floor Occupancy
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
                 background: "rgba(16, 185, 129, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Armchair size={13} color="#10b981" />
+              <Armchair size={12} color="#10b981" />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-main)" }}>
-            {tables.length} Tables
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {occupiedTables.length} / {tables.length} Tables
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
-              color: "var(--status-vacant)",
+              fontSize: "0.66rem",
+              color: occupiedTables.length > 0 ? "#f59e0b" : "var(--status-vacant)",
               fontWeight: 600,
               marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            {occupiedTables.length} occupied ({occupiedChairs}/{totalChairs} seats)
+            {occupiedChairs} seated ({totalChairs} seats)
           </div>
         </div>
 
-        {/* Staff on Duty */}
+        {/* Card 4: Inventory & Stock Status */}
         <div
-          onClick={() => onNavigateTab("staff")}
+          onClick={() => onNavigateTab("inventory")}
+          style={{
+            background: "var(--bg-card)",
+            border: lowStockItems.length > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.75rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = lowStockItems.length > 0 ? "#ef4444" : "var(--accent-amber)";
+            e.currentTarget.style.transform = "translateY(-2px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = lowStockItems.length > 0 ? "rgba(239, 68, 68, 0.4)" : "var(--border-card)";
+            e.currentTarget.style.transform = "translateY(0)";
+          }}
+          title="Click to view Inventory & Stock Management"
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.35rem",
+            }}
+          >
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Inventory Health
+            </span>
+            <div
+              style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "6px",
+                background: lowStockItems.length > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Package size={12} color={lowStockItems.length > 0 ? "#ef4444" : "#10b981"} />
+            </div>
+          </div>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockItems.length > 0 ? "#ef4444" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {inventoryList.length} Items
+          </div>
+          <div
+            style={{
+              fontSize: "0.66rem",
+              color: lowStockItems.length > 0 ? "#ef4444" : "var(--text-muted)",
+              fontWeight: 600,
+              marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {lowStockItems.length > 0
+              ? `⚠️ ${lowStockItems.length} Low Stock`
+              : "All stock healthy"}
+          </div>
+        </div>
+
+        {/* Card 5: Menu Catalog & Staff */}
+        <div
+          onClick={() => onNavigateTab("menu")}
           style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "10px",
-            padding: "0.75rem 0.85rem",
+            padding: "0.65rem 0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
+            minWidth: 0,
+            overflow: "hidden",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "var(--accent-amber)";
@@ -397,52 +592,57 @@ export function AdminOverview({
             e.currentTarget.style.borderColor = "var(--border-card)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
+          title="Click to view Active Menu Catalog"
         >
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.45rem",
+              marginBottom: "0.35rem",
             }}
           >
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-              Staff & Waiters
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Menu & Staff
             </span>
             <div
               style={{
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 borderRadius: "6px",
-                background: "rgba(99, 102, 241, 0.15)",
+                background: "rgba(234, 88, 12, 0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Users size={13} color="#818cf8" />
+              <Utensils size={12} color="#ea580c" />
             </div>
           </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-main)" }}>
-            {staffList.length} Persons
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {menuItems.length} Dishes
           </div>
           <div
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.66rem",
               color: "var(--text-muted)",
               marginTop: "2px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            Assigned to dining halls & service
+            {vegCount}V • {nonVegCount}NV • {staffList.length} Staff
           </div>
         </div>
       </div>
 
-      {/* Two Column Grid: Floor Tables Monitor & Top Dishes */}
+      {/* 3. Two Column Grid: Floor Tables Monitor & Signature Dishes */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
           gap: "0.75rem",
         }}
       >
@@ -452,7 +652,9 @@ export function AdminOverview({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "12px",
-            padding: "0.85rem 1rem",
+            padding: "0.9rem 1rem",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div
@@ -460,7 +662,7 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.65rem",
+              marginBottom: "0.75rem",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
@@ -475,6 +677,18 @@ export function AdminOverview({
               >
                 Live Dining Tables Grid
               </h3>
+              <span
+                style={{
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  background: occupiedTables.length > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                  color: occupiedTables.length > 0 ? "#f59e0b" : "#10b981",
+                  padding: "1px 6px",
+                  borderRadius: "10px",
+                }}
+              >
+                {occupiedTables.length} Occupied
+              </span>
             </div>
             <button
               onClick={() => onNavigateTab("tables")}
@@ -490,89 +704,111 @@ export function AdminOverview({
                 gap: "2px",
               }}
             >
-              <span>View All</span>
+              <span>View All Floor</span>
               <ArrowRight size={12} />
             </button>
           </div>
 
+          {/* Clean Tables Grid - Shows Tables starting from Table 1 without cutoffs */}
           <div
-            className="no-scrollbar"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(95px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
               gap: "0.5rem",
-              maxHeight: "220px",
+              maxHeight: "260px",
               overflowY: "auto",
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
+              paddingRight: "2px",
             }}
           >
             {tables
               .slice()
               .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
-              .slice(0, 15)
               .map((tbl) => {
-              const isOccupied = tbl.status !== "vacant";
-              return (
-                <div
-                  key={tbl.id}
-                  style={{
-                    background: isOccupied
-                      ? "rgba(245, 158, 11, 0.12)"
-                      : "var(--bg-tertiary)",
-                    border: isOccupied
-                      ? "1px solid rgba(245, 158, 11, 0.35)"
-                      : "1px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0.45rem 0.4rem",
-                    textAlign: "center",
-                  }}
-                >
+                const isOccupied = tbl.status !== "vacant";
+                return (
                   <div
+                    key={tbl.id}
+                    onClick={() => onNavigateTab("tables")}
                     style={{
-                      fontSize: "0.8rem",
-                      fontWeight: 800,
-                      color: isOccupied ? "var(--accent-amber)" : "var(--text-main)",
+                      background: isOccupied
+                        ? "rgba(245, 158, 11, 0.12)"
+                        : "var(--bg-tertiary)",
+                      border: isOccupied
+                        ? "1px solid rgba(245, 158, 11, 0.4)"
+                        : "1px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      padding: "0.5rem 0.4rem",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--accent-amber)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = isOccupied
+                        ? "rgba(245, 158, 11, 0.4)"
+                        : "var(--border-subtle)";
                     }}
                   >
-                    {tbl.name}
+                    <div
+                      style={{
+                        fontSize: "0.82rem",
+                        fontWeight: 800,
+                        color: isOccupied ? "var(--accent-amber)" : "var(--text-main)",
+                      }}
+                    >
+                      {tbl.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.64rem",
+                        color: isOccupied ? "#f59e0b" : "var(--status-vacant)",
+                        marginTop: "2px",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "3px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "5px",
+                          height: "5px",
+                          borderRadius: "50%",
+                          background: isOccupied ? "#f59e0b" : "#10b981",
+                        }}
+                      />
+                      <span>{isOccupied ? `${tbl.guests || 2} Guests` : "Vacant"}</span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.62rem",
+                        color: "var(--text-muted)",
+                        marginTop: "2px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {tbl.server || "Unassigned"}
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.64rem",
-                      color: isOccupied ? "var(--status-occupied)" : "var(--text-muted)",
-                      marginTop: "1px",
-                      textTransform: "capitalize",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {isOccupied ? `${tbl.guests || 2} Guests` : "Vacant"}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-muted)",
-                      marginTop: "2px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {tbl.server || "Waiter"}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
 
-        {/* Top Biryanis & Popular Items */}
+        {/* Top Signature Dishes */}
         <div
           style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "12px",
-            padding: "0.85rem 1rem",
+            padding: "0.9rem 1rem",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div
@@ -580,7 +816,7 @@ export function AdminOverview({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.65rem",
+              marginBottom: "0.75rem",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
@@ -596,48 +832,78 @@ export function AdminOverview({
                 Signature Dishes Preview
               </h3>
             </div>
-            <button
-              onClick={() => onNavigateTab("menu")}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#ea580c",
-                fontSize: "0.74rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "2px",
-              }}
-            >
-              <span>Manage Menu</span>
-              <ArrowRight size={12} />
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              {typeof onOpenItemModal === "function" && (
+                <button
+                  onClick={() => onOpenItemModal(null)}
+                  style={{
+                    background: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    color: "#f59e0b",
+                    borderRadius: "6px",
+                    padding: "0.25rem 0.55rem",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                  }}
+                >
+                  <Plus size={11} />
+                  <span>Add Dish</span>
+                </button>
+              )}
+              <button
+                onClick={() => onNavigateTab("menu")}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#ea580c",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                <span>Manage Menu</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
           </div>
 
           <div
-            className="no-scrollbar"
             style={{
               display: "flex",
               flexDirection: "column",
               gap: "0.5rem",
-              maxHeight: "220px",
+              maxHeight: "260px",
               overflowY: "auto",
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
+              paddingRight: "2px",
             }}
           >
             {menuItems.slice(0, 5).map((dish) => (
               <div
                 key={dish.id}
+                onClick={() => onNavigateTab("menu")}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "0.65rem",
-                  padding: "0.42rem 0.55rem",
+                  padding: "0.45rem 0.65rem",
                   borderRadius: "8px",
                   background: "var(--bg-tertiary)",
                   border: "1px solid var(--border-subtle)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--accent-amber)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border-subtle)";
                 }}
               >
                 <img
@@ -654,7 +920,7 @@ export function AdminOverview({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: "0.8rem",
+                      fontSize: "0.82rem",
                       fontWeight: 700,
                       color: "var(--text-main)",
                       whiteSpace: "nowrap",
@@ -666,17 +932,22 @@ export function AdminOverview({
                   </div>
                   <div
                     style={{
-                      fontSize: "0.66rem",
+                      fontSize: "0.68rem",
                       color: "var(--text-dim)",
                       marginTop: "1px",
                     }}
                   >
                     {dish.prepTime || "15 mins"} • {dish.category}
+                    {Array.isArray(dish.recipe) && dish.recipe.length > 0 && (
+                      <span style={{ color: "#f59e0b", marginLeft: "4px" }}>
+                        ({dish.recipe.length} ingr.)
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div
                   style={{
-                    fontSize: "0.82rem",
+                    fontSize: "0.84rem",
                     fontWeight: 800,
                     color: "var(--accent-amber)",
                     whiteSpace: "nowrap",
@@ -688,6 +959,194 @@ export function AdminOverview({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* 4. Recent Settlement Invoices & Live Billing Feed */}
+      <div
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
+          borderRadius: "12px",
+          padding: "0.9rem 1.1rem",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "0.75rem",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Receipt size={17} color="#3b82f6" />
+            <h3
+              style={{
+                fontSize: "0.94rem",
+                fontWeight: 700,
+                color: "var(--text-main)",
+                margin: 0,
+              }}
+            >
+              Recent Customer Billing Invoices
+            </h3>
+            <span
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                background: "rgba(59, 130, 246, 0.15)",
+                color: "#3b82f6",
+                padding: "2px 7px",
+                borderRadius: "10px",
+              }}
+            >
+              {cleanOrders.length} Total Settled
+            </span>
+          </div>
+
+          <button
+            onClick={() => onNavigateTab("invoices")}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#3b82f6",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "3px",
+            }}
+          >
+            <span>View All Invoices in Detail</span>
+            <ArrowRight size={13} />
+          </button>
+        </div>
+
+        {cleanOrders.length === 0 ? (
+          <div
+            style={{
+              padding: "1.5rem",
+              textAlign: "center",
+              background: "var(--bg-tertiary)",
+              borderRadius: "8px",
+              border: "1px dashed var(--border-subtle)",
+              color: "var(--text-muted)",
+              fontSize: "0.8rem",
+            }}
+          >
+            No settled customer bills yet. Real-time payments from tables and takeaway orders will display here automatically.
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <div style={{ minWidth: "640px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.3fr 1.1fr 1fr 1fr 1.2fr 1fr",
+                  padding: "0.45rem 0.75rem",
+                  background: "var(--bg-tertiary)",
+                  borderRadius: "6px",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  marginBottom: "0.4rem",
+                }}
+              >
+                <div>Invoice #</div>
+                <div>Table / Source</div>
+                <div>Items</div>
+                <div>Payment Mode</div>
+                <div style={{ textAlign: "right" }}>Total Amount</div>
+                <div style={{ textAlign: "right" }}>Status</div>
+              </div>
+
+              {cleanOrders.slice(0, 5).map((order) => {
+                const mode = String(order.paymentMethod || order.paymentMode || "UPI").toUpperCase();
+                const total = Number(order.grandTotal ?? order.total ?? 0);
+                const invNumber = order.invoiceNumber || order.invoiceNo || order.id || "INV-001";
+                const tableName = order.tableName || (order.tableId ? `Table ${order.tableId}` : "Takeaway / Direct");
+
+                return (
+                  <div
+                    key={order.id || invNumber}
+                    onClick={() => onNavigateTab("invoices")}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1.3fr 1.1fr 1fr 1fr 1.2fr 1fr",
+                      alignItems: "center",
+                      padding: "0.45rem 0.75rem",
+                      background: "var(--bg-tertiary)",
+                      borderRadius: "6px",
+                      marginBottom: "0.35rem",
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      border: "1px solid var(--border-subtle)",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--accent-amber)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border-subtle)";
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
+                      {invNumber}
+                    </div>
+                    <div style={{ color: "var(--text-muted)", fontWeight: 500 }}>
+                      {tableName}
+                    </div>
+                    <div style={{ color: "var(--text-muted)" }}>
+                      {Array.isArray(order.items) ? `${order.items.length} items` : "1 item"}
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          padding: "2px 7px",
+                          borderRadius: "4px",
+                          fontSize: "0.68rem",
+                          fontWeight: 700,
+                          background: mode === "CASH" ? "rgba(16, 185, 129, 0.12)" : "rgba(59, 130, 246, 0.12)",
+                          color: mode === "CASH" ? "#10b981" : "#3b82f6",
+                          border: mode === "CASH" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(59, 130, 246, 0.3)",
+                        }}
+                      >
+                        {mode === "CASH" ? <Banknote size={10} /> : <Smartphone size={10} />}
+                        <span>{mode}</span>
+                      </span>
+                    </div>
+                    <div style={{ textAlign: "right", fontWeight: 800, color: "var(--accent-amber)" }}>
+                      ₹{total.toFixed(2)}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          color: "#10b981",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        <CheckCircle2 size={12} />
+                        <span>Settled</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

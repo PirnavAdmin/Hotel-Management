@@ -49,12 +49,18 @@ import {
   apiGetOrderHistory,
   apiCreateOrder,
   apiUpdateOrderDiscount,
+  apiSettleOrder,
 } from "./api/orderApi";
+import { apiAdjustStock } from "./api/inventoryApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
 import { useAppDialog } from "./common/DialogContext";
+import {
+  autoGenerateInventoryFromRecipe,
+  getStandardDishSuggestions,
+} from "./admin/AdminPortal";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -63,6 +69,7 @@ const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
+const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
 const readRestaurantSettings = () => {
@@ -319,6 +326,46 @@ export function App() {
     }
     return [];
   });
+
+  useEffect(() => {
+    if (!Array.isArray(menuItems) || menuItems.length === 0) return;
+
+    let cancelled = false;
+
+    const syncMenuIngredientsToInventory = async () => {
+      let menuChanged = false;
+      const syncedMenu = await Promise.all(
+        menuItems.map(async (item) => {
+          const hasRecipe = Array.isArray(item.recipe) && item.recipe.length > 0;
+          const recipe = hasRecipe
+            ? item.recipe
+            : getStandardDishSuggestions(
+                item.name || item.dishName || "",
+                item.category || "",
+              );
+          const mappedRecipe = await autoGenerateInventoryFromRecipe(recipe);
+          if (mappedRecipe.length === 0) return item;
+
+          if (JSON.stringify(mappedRecipe) !== JSON.stringify(item.recipe)) {
+            menuChanged = true;
+            return { ...item, recipe: mappedRecipe };
+          }
+          return item;
+        }),
+      );
+
+      if (cancelled || !menuChanged) return;
+      setMenuItems(syncedMenu);
+      try {
+        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(syncedMenu));
+      } catch {}
+    };
+
+    syncMenuIngredientsToInventory();
+    return () => {
+      cancelled = true;
+    };
+  }, [menuItems]);
 
   // Load staff personnel (supports Admin staff additions/deletions)
   const [staffList, setStaffList] = useState(() => {
@@ -1630,42 +1677,125 @@ export function App() {
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
 
-    // Deduct recipe ingredients once the bill is paid.
+    // Deduct recipe ingredients once the bill is paid. A ledger prevents
+    // repeated settlement/re-render events from deducting the same invoice twice.
     try {
-      const inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INVENTORY) || "[]");
+      const invoiceKey = String(
+        settlementData.invoiceNo || enrichedSettlement.id || enrichedSettlement.orderId || settlementData.id,
+      ).trim();
+      let deductionLedger = [];
+      try {
+        deductionLedger = JSON.parse(localStorage.getItem(STOCK_DEDUCTION_LEDGER_KEY) || "[]");
+      } catch {}
+      if (!Array.isArray(deductionLedger)) deductionLedger = [];
+      if (invoiceKey && deductionLedger.includes(invoiceKey)) {
+        throw new Error(`Inventory already deducted for ${invoiceKey}`);
+      }
+
+      const rawInv = localStorage.getItem(STORAGE_KEY_INVENTORY);
+      const inventory = rawInv ? JSON.parse(rawInv) : [];
       if (Array.isArray(inventory) && inventory.length) {
-        const usageByIngredient = new Map();
+        // Map to aggregate required deduction per inventory item id
+        const usageByIngredientId = new Map();
+
+        // Helper for unit conversion between recipe and inventory stock
+        const convertQuantity = (rawAmount, fromUnit, toUnit) => {
+          const from = String(fromUnit || "KG").toUpperCase();
+          const to = String(toUnit || "KG").toUpperCase();
+          if (from === to) return rawAmount;
+          // Weight
+          if (from === "G" && to === "KG") return rawAmount / 1000;
+          if (from === "KG" && to === "G") return rawAmount * 1000;
+          // Volume
+          if (from === "ML" && (to === "L" || to === "LITRES")) return rawAmount / 1000;
+          if ((from === "L" || from === "LITRES") && to === "ML") return rawAmount * 1000;
+          return rawAmount;
+        };
+
         (settlementData.items || []).forEach((orderedItem) => {
+          const cleanOrderedName = String(orderedItem?.name || orderedItem?.dishName || "").trim().toLowerCase();
           const dish = menuItems.find((item) =>
             String(item.id) === String(orderedItem.id) ||
-            item.name?.trim().toLowerCase() === orderedItem.name?.trim().toLowerCase(),
+            item.name?.trim().toLowerCase() === cleanOrderedName
           );
-          const dishCount = Number(orderedItem.quantity) || 1;
-          (dish?.recipe || []).forEach((ingredient) => {
-            const ingredientId = String(ingredient.inventoryId);
-            const amount = Number(ingredient.quantity) * dishCount;
-            if (ingredientId && Number.isFinite(amount) && amount > 0) {
-              usageByIngredient.set(ingredientId, (usageByIngredient.get(ingredientId) || 0) + amount);
-            }
-          });
+          const dishCount = Number(orderedItem.quantity ?? orderedItem.qty) || 1;
+
+          if (Array.isArray(dish?.recipe) && dish.recipe.length > 0) {
+            dish.recipe.forEach((ingredient) => {
+              // Find matching inventory item by ID first, then by canonical name
+              let matchedStock = null;
+              if (ingredient.inventoryId) {
+                matchedStock = inventory.find((inv) => String(inv.id) === String(ingredient.inventoryId));
+              }
+              if (!matchedStock && ingredient.name) {
+                const ingCleanName = String(ingredient.name).trim().toLowerCase();
+                matchedStock = inventory.find((inv) => String(inv.name || "").trim().toLowerCase() === ingCleanName);
+              }
+
+              if (matchedStock) {
+                const rawAmount = Number(ingredient.quantity) * dishCount;
+                if (Number.isFinite(rawAmount) && rawAmount > 0) {
+                  const convertedAmount = convertQuantity(rawAmount, ingredient.unit, matchedStock.unit);
+                  const existingTotal = usageByIngredientId.get(String(matchedStock.id)) || 0;
+                  usageByIngredientId.set(String(matchedStock.id), existingTotal + convertedAmount);
+                }
+              }
+            });
+          }
         });
 
-        if (usageByIngredient.size) {
-          const updatedInventory = inventory.map((ingredient) => {
-            const used = usageByIngredient.get(String(ingredient.id));
-            if (!used) return ingredient;
+        if (usageByIngredientId.size > 0) {
+          const lowStockAlerts = [];
+          const updatedInventory = inventory.map((stockItem) => {
+            const used = usageByIngredientId.get(String(stockItem.id));
+            if (!used) return stockItem;
+
+            const prevStock = Number(stockItem.stock ?? stockItem.currentStock ?? 0);
+            const prevUsed = Number(stockItem.totalUsed ?? 0);
+            const newStock = Math.max(0, Number((prevStock - used).toFixed(3)));
+            const newTotalUsed = Number((prevUsed + used).toFixed(3));
+
+            const threshold = Number(stockItem.minThreshold ?? stockItem.minimumThreshold ?? 5);
+            if (newStock <= threshold) {
+              lowStockAlerts.push(`${stockItem.name} (${newStock} ${stockItem.unit} remaining)`);
+            }
+
+            // Sync numeric backend inventory IDs only. Demo/local IDs remain local-safe.
+            const backendIngredientId = Number(stockItem.id);
+            if (Number.isFinite(backendIngredientId) && backendIngredientId > 0) {
+              try {
+                apiAdjustStock({
+                  ingredientId: backendIngredientId,
+                  quantityChange: -used,
+                  reason: `Live POS billing deduction (Invoice ${settlementData.invoiceNo || enrichedSettlement.id})`,
+                }).catch(() => {});
+              } catch {}
+            }
+
             return {
-              ...ingredient,
-              stock: Math.max(0, Number(ingredient.stock || 0) - used),
-              totalUsed: Number(ingredient.totalUsed || 0) + used,
+              ...stockItem,
+              stock: newStock,
+              currentStock: newStock,
+              totalUsed: newTotalUsed,
             };
           });
+
           localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(updatedInventory));
           pushGlobalSync({ [STORAGE_KEY_INVENTORY]: updatedInventory });
           window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: updatedInventory }));
+          if (invoiceKey) {
+            const nextLedger = [...new Set([...deductionLedger, invoiceKey])].slice(-1000);
+            localStorage.setItem(STOCK_DEDUCTION_LEDGER_KEY, JSON.stringify(nextLedger));
+          }
+
+          if (lowStockAlerts.length > 0) {
+            showToast(`⚠️ Low stock alert: ${lowStockAlerts.join(", ")}`);
+          }
         }
       }
-    } catch {}
+    } catch (invErr) {
+      console.warn("Live inventory deduction error:", invErr);
+    }
 
     const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);
@@ -1676,7 +1806,42 @@ export function App() {
       );
       pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
-    apiCreateOrder(enrichedSettlement).catch(() => {});
+    void (async () => {
+      try {
+        const createResult = await apiCreateOrder({
+          tableId: settlementData.tableId,
+          tableName: settlementData.tableName,
+          tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+          serverName: settlementData.server || "Server",
+          guests: enrichedSettlement.guests,
+          discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+          serviceChargeEnabled: false,
+          tipAmount: 0,
+          status: "Active",
+          items: enrichedSettlement.items.map((item) => ({
+            menuItemId: Number(item.id ?? item.menuItemId ?? item.backendId) || undefined,
+            id: Number(item.id ?? item.menuItemId ?? item.backendId) || undefined,
+            name: item.name || item.dishName,
+            dishName: item.name || item.dishName,
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })),
+        });
+        const orderData = createResult?.data?.data || createResult?.data;
+        const backendOrderId = Number(orderData?.id ?? orderData?.Id);
+        if (createResult?.success && backendOrderId > 0) {
+          await apiSettleOrder(backendOrderId, {
+            discountPercent: settlementData.discountPercent,
+            serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
+            tipAmount: settlementData.tipAmount,
+            paymentMethod: enrichedSettlement.paymentMethod,
+          });
+        }
+      } catch (error) {
+        console.warn("Backend order settlement failed; local settlement retained:", error);
+      }
+    })();
 
     const updatedTables = tables.map((t) => {
       if (t.id !== settlementData.tableId) return t;
