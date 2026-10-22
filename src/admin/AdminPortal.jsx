@@ -2172,12 +2172,12 @@ export function AdminPortal({
                                   style={{
                                     width: "100%",
                                     padding: "0.42rem 0.5rem 0.42rem 1.6rem",
-                                    background: "#0c1829",
+                                    background: "var(--input-bg)",
                                     border: tableFilters.search
                                       ? "1px solid #f59e0b"
                                       : "1px solid rgba(255, 255, 255, 0.12)",
                                     borderRadius: "6px",
-                                    color: "#f1f5f9",
+                                    color: "var(--text-main)",
                                     fontSize: "0.78rem",
                                     outline: "none",
                                     boxSizing: "border-box",
@@ -2185,129 +2185,159 @@ export function AdminPortal({
                                 />
                               </div>
 
-                              {/* Only 2 Status Filters: Vacant & Occupied (with All Tables option) */}
+                              {/* Vacant & Occupied Status Filter Pills */}
                               <div
                                 style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.area
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.area ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
+                                  display: "inline-flex",
+                                  gap: "0.3rem",
+                                  background: "var(--input-bg)",
+                                  padding: "3px",
+                                  borderRadius: "7px",
+                                  border: "1px solid rgba(255, 255, 255, 0.08)",
                                 }}
                               >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Areas
-                                </option>
-                                {tableAreaOptions.map((area) => (
-                                  <option key={area} value={area} style={{ background: "#0c1829", color: "#fff" }}>
-                                    {area}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                                {/* All Tables */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateTableFilter("status", "all")}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    padding: "0.3rem 0.7rem",
+                                    borderRadius: "5px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.74rem",
+                                    fontWeight: (!tableFilters.status || tableFilters.status === "all") ? 700 : 500,
+                                    background: (!tableFilters.status || tableFilters.status === "all")
+                                      ? "rgba(245, 158, 11, 0.2)"
+                                      : "transparent",
+                                    color: (!tableFilters.status || tableFilters.status === "all")
+                                      ? "#f59e0b"
+                                      : "var(--text-dim)",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <span>All Tables</span>
+                                  <span
+                                    style={{
+                                      padding: "1px 5px",
+                                      borderRadius: "8px",
+                                      background: (!tableFilters.status || tableFilters.status === "all")
+                                        ? "#f59e0b"
+                                        : "rgba(255, 255, 255, 0.08)",
+                                      color: (!tableFilters.status || tableFilters.status === "all")
+                                        ? "#081628"
+                                        : "var(--text-dim)",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {tables.length}
+                                  </span>
+                                </button>
 
-                            {/* Col 3: Chairs / Capacity Filter */}
-                            <div>
-                              <select
-                                value={tableFilters.capacity}
-                                onChange={(e) => updateTableFilter("capacity", e.target.value)}
-                                style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.capacity
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.capacity ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
-                                }}
-                              >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Chairs / Capacity
-                                </option>
-                                {tableCapacityOptions.map((cap) => (
-                                  <option key={cap} value={cap} style={{ background: "#0c1829", color: "#fff" }}>
-                                    {cap} Chairs
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                                {/* Vacant Filter */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateTableFilter("status", "vacant")}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    padding: "0.3rem 0.7rem",
+                                    borderRadius: "5px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.74rem",
+                                    fontWeight: tableFilters.status === "vacant" ? 700 : 500,
+                                    background: tableFilters.status === "vacant"
+                                      ? "rgba(16, 185, 129, 0.2)"
+                                      : "transparent",
+                                    color: tableFilters.status === "vacant" ? "#10b981" : "var(--text-dim)",
+                                    boxShadow: tableFilters.status === "vacant"
+                                      ? "0 0 10px rgba(16, 185, 129, 0.15)"
+                                      : "none",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: "6px",
+                                      height: "6px",
+                                      borderRadius: "50%",
+                                      backgroundColor: "#10b981",
+                                      boxShadow: "0 0 6px #10b981",
+                                    }}
+                                  />
+                                  <span>Vacant</span>
+                                  <span
+                                    style={{
+                                      padding: "1px 5px",
+                                      borderRadius: "8px",
+                                      background: tableFilters.status === "vacant"
+                                        ? "#10b981"
+                                        : "rgba(255, 255, 255, 0.08)",
+                                      color: tableFilters.status === "vacant" ? "#081628" : "var(--text-dim)",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {vacantTablesCount}
+                                  </span>
+                                </button>
 
-                            {/* Col 4: Assigned Server Filter */}
-                            <div>
-                              <select
-                                value={tableFilters.server}
-                                onChange={(e) => updateTableFilter("server", e.target.value)}
-                                style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.server
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.server ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
-                                }}
-                              >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Assigned Servers
-                                </option>
-                                <option value="unassigned" style={{ background: "#0c1829", color: "#fff" }}>
-                                  Unassigned
-                                </option>
-                                {tableServerOptions.map((srv) => (
-                                  <option key={srv} value={srv} style={{ background: "#0c1829", color: "#fff" }}>
-                                    {srv}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Col 5: Status Filter */}
-                            <div>
-                              <select
-                                value={tableFilters.status}
-                                onChange={(e) => updateTableFilter("status", e.target.value)}
-                                style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.status
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.status ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
-                                }}
-                              >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Status
-                                </option>
-                                <option value="vacant" style={{ background: "#0c1829", color: "#fff" }}>
-                                  Vacant
-                                </option>
-                                <option value="occupied" style={{ background: "#0c1829", color: "#fff" }}>
-                                  Occupied
-                                </option>
-                              </select>
+                                {/* Occupied Filter */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateTableFilter("status", "occupied")}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    padding: "0.3rem 0.7rem",
+                                    borderRadius: "5px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.74rem",
+                                    fontWeight: tableFilters.status === "occupied" ? 700 : 500,
+                                    background: tableFilters.status === "occupied"
+                                      ? "rgba(245, 158, 11, 0.2)"
+                                      : "transparent",
+                                    color: tableFilters.status === "occupied" ? "#f59e0b" : "var(--text-dim)",
+                                    boxShadow: tableFilters.status === "occupied"
+                                      ? "0 0 10px rgba(245, 158, 11, 0.15)"
+                                      : "none",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: "6px",
+                                      height: "6px",
+                                      borderRadius: "50%",
+                                      backgroundColor: "#f59e0b",
+                                      boxShadow: "0 0 6px #f59e0b",
+                                    }}
+                                  />
+                                  <span>Occupied</span>
+                                  <span
+                                    style={{
+                                      padding: "1px 5px",
+                                      borderRadius: "8px",
+                                      background: tableFilters.status === "occupied"
+                                        ? "#f59e0b"
+                                        : "rgba(255, 255, 255, 0.08)",
+                                      color: tableFilters.status === "occupied" ? "#081628" : "var(--text-dim)",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {occupiedTablesCount}
+                                  </span>
+                                </button>
+                              </div>
                             </div>
 
                             {/* Right: Reset or Count Info */}
