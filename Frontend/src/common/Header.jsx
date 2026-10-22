@@ -1,3 +1,4 @@
+import { ThemeToggle } from './ThemeToggle';
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -377,42 +378,7 @@ export function Header({
           justifyContent: "flex-end",
         }}
       >
-        {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
-        <button
-          onClick={() => {
-            const nextTheme =
-              currentTheme === "light-bistro"
-                ? "royal-saffron"
-                : "light-bistro";
-            if (onChangeTheme) onChangeTheme(nextTheme);
-          }}
-          style={{
-            width: "36px",
-            height: "36px",
-            boxSizing: "border-box",
-            borderRadius: "50%",
-            background: "var(--bg-tertiary)",
-            border: "1.5px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            flexShrink: 0,
-          }}
-          title={
-            currentTheme === "light-bistro"
-              ? "Switch to Dark Theme"
-              : "Switch to Light Theme"
-          }
-        >
-          {currentTheme === "light-bistro" ? (
-            <Sun size={18} color="#ea580c" />
-          ) : (
-            <Moon size={18} color="#fbbf24" />
-          )}
-        </button>
+        <ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/>
 
         {/* Kitchen Status Notification Bell */}
         <div ref={notifRef} style={{ position: "relative" }}>
@@ -492,9 +458,10 @@ export function Header({
                 width: dropdownCoords ? `${dropdownCoords.width}px` : "360px",
                 maxWidth: "calc(100vw - 24px)",
                 background: "var(--bg-card)",
-                border: "1.5px solid var(--border-subtle)",
+                border: "1.5px solid rgba(245, 158, 11, 0.45)",
                 borderRadius: "14px",
-                boxShadow: "var(--shadow-lg)",
+                boxShadow:
+                  "0 20px 50px rgba(0,0,0,0.85), 0 0 25px rgba(245, 158, 11, 0.2)",
                 zIndex: 9999,
                 overflow: "hidden",
                 display: "flex",
@@ -506,8 +473,8 @@ export function Header({
               <div
                 style={{
                   padding: "0.85rem 1rem",
-                  background: "var(--bg-tertiary)",
-                  borderBottom: "1px solid var(--border-subtle)",
+                  background: "linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-card) 100%)",
+                  borderBottom: "1px solid var(--neutral-border)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -520,12 +487,12 @@ export function Header({
                     gap: "0.5rem",
                   }}
                 >
-                  <Bell size={16} color="var(--accent-amber)" />
+                  <Bell size={16} color="#f59e0b" />
                   <span
                     style={{
                       fontSize: "0.88rem",
                       fontWeight: 900,
-                      color: "var(--text-main)",
+                      color: "#ffffff",
                       letterSpacing: "-0.01em",
                     }}
                   >
@@ -535,7 +502,7 @@ export function Header({
                     <span
                       style={{
                         background: "rgba(245, 158, 11, 0.2)",
-                        color: "#fbbf24",
+                        color: "var(--accent-amber-light)",
                         border: "1px solid rgba(245, 158, 11, 0.4)",
                         padding: "1px 6px",
                         borderRadius: "10px",
@@ -556,7 +523,7 @@ export function Header({
                     style={{
                       background: "rgba(239, 68, 68, 0.12)",
                       border: "1px solid rgba(239, 68, 68, 0.3)",
-                      color: "#f87171",
+                      color: "var(--danger)",
                       fontSize: "0.72rem",
                       fontWeight: 800,
                       padding: "3px 8px",
@@ -690,7 +657,7 @@ export function Header({
                           <div
                             style={{
                               fontSize: "0.8rem",
-                              color: "var(--text-main)",
+                              color: "#f1f5f9",
                               lineHeight: 1.35,
                               fontWeight: 500,
                             }}
@@ -782,7 +749,7 @@ export function Header({
           alignItems: "center",
           justifyContent: "center",
           padding: "0.32rem 1.25rem",
-          background: "var(--bg-tertiary)",
+          background: "rgba(0, 0, 0, 0.14)",
           borderTop: "1px solid var(--border-subtle)",
           width: "100%",
         }}

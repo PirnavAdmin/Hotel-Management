@@ -296,7 +296,7 @@ export function LoginManagement({ currentAdminSession }) {
             title="Edit login details"
             style={{
               background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-              color: '#fbbf24', padding: '5px 8px', borderRadius: '7px',
+              color: 'var(--accent-amber-light)', padding: '5px 8px', borderRadius: '7px',
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
               fontSize: '0.72rem', fontWeight: 700
             }}
@@ -308,8 +308,8 @@ export function LoginManagement({ currentAdminSession }) {
             onClick={() => { setChangePwUser(user); setNewPw(''); setPwError(''); setPwSuccess(''); }}
             title="Change Password"
             style={{
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-              color: '#94a3b8', padding: '5px 9px', borderRadius: '7px',
+              background: 'var(--surface-tint)', border: '1px solid var(--neutral-border)',
+              color: 'var(--text-dim)', padding: '5px 9px', borderRadius: '7px',
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
               fontSize: '0.72rem', fontWeight: 700
             }}
@@ -325,7 +325,7 @@ export function LoginManagement({ currentAdminSession }) {
               title="Delete user"
               style={{
                 background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#f87171', padding: '5px 8px', borderRadius: '7px',
+                color: 'var(--danger)', padding: '5px 8px', borderRadius: '7px',
                 cursor: 'pointer', display: 'flex', alignItems: 'center'
               }}
             >
@@ -412,7 +412,7 @@ export function LoginManagement({ currentAdminSession }) {
       </div>
 
       {refreshMessage && !refreshMessage.toLowerCase().includes('could not') && !refreshMessage.toLowerCase().includes('failed') && !refreshMessage.toLowerCase().includes('error') && (
-        <div role="status" style={{ color: '#94a3b8', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
+        <div role="status" style={{ color: 'var(--text-dim)', fontSize: '0.76rem', fontWeight: 600, marginTop: '-0.75rem' }}>
           {refreshMessage}
         </div>
       )}
@@ -465,8 +465,8 @@ export function LoginManagement({ currentAdminSession }) {
             <button
               onClick={closeForm}
               style={{
-                background: 'rgba(255,255,255,0.06)', border: 'none',
-                color: '#94a3b8', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer'
+                background: 'var(--surface-tint)', border: 'none',
+                color: 'var(--text-dim)', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer'
               }}
             >
               <X size={16} />
@@ -477,7 +477,7 @@ export function LoginManagement({ currentAdminSession }) {
             <div style={{
               background: 'rgba(239,68,68,0.12)', border: '1.5px solid rgba(239,68,68,0.4)',
               borderRadius: '8px', padding: '0.55rem 0.85rem',
-              color: '#fca5a5', fontSize: '0.8rem', fontWeight: 700,
+              color: 'var(--danger)', fontSize: '0.8rem', fontWeight: 700,
               marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px'
             }}>
               <AlertCircle size={15} /> {formError}
@@ -487,7 +487,7 @@ export function LoginManagement({ currentAdminSession }) {
             <div style={{
               background: 'rgba(16,185,129,0.12)', border: '1.5px solid rgba(16,185,129,0.4)',
               borderRadius: '8px', padding: '0.55rem 0.85rem',
-              color: '#6ee7b7', fontSize: '0.8rem', fontWeight: 700,
+              color: 'var(--success)', fontSize: '0.8rem', fontWeight: 700,
               marginBottom: '0.85rem'
             }}>
               {formSuccess}
@@ -496,14 +496,14 @@ export function LoginManagement({ currentAdminSession }) {
 
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div>
-              <label htmlFor="new-login-role" style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+              <label htmlFor="new-login-role" style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 Account Role *
               </label>
               <select
                 id="new-login-role"
                 value={formRole}
                 onChange={(event) => setFormRole(event.target.value)}
-                style={{ width: '100%', padding: '0.7rem 0.8rem', background: 'var(--bg-tertiary)', border: '1.5px solid var(--border-subtle)', borderRadius: '9px', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
+                style={{ width: '100%', padding: '0.7rem 0.8rem', background: 'var(--bg-card)', border: '1.5px solid rgba(245,158,11,0.55)', borderRadius: '9px', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
               >
                 <option value="pos">User POS - Billing &amp; floor orders</option>
                 <option value="kot">Kitchen KOT - Kitchen display system</option>
@@ -514,7 +514,7 @@ export function LoginManagement({ currentAdminSession }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               {/* Display Name */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                   Display Name
                 </label>
                 <input
@@ -523,15 +523,15 @@ export function LoginManagement({ currentAdminSession }) {
                   onChange={e => setFormName(e.target.value)}
                   style={{
                     width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
+                    background: 'var(--surface-tint)', border: '1.5px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
                   }}
                 />
               </div>
 
               {/* Username */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                   Username *
                 </label>
                 <input
@@ -542,7 +542,7 @@ export function LoginManagement({ currentAdminSession }) {
                   style={{
                     width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box',
                     background: editingUser ? 'rgba(255,255,255,0.025)' : 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px', color: editingUser ? '#94a3b8' : '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none',
+                    borderRadius: '8px', color: editingUser ? 'var(--text-dim)' : 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none',
                     cursor: editingUser ? 'not-allowed' : 'text'
                   }}
                 />
@@ -552,7 +552,7 @@ export function LoginManagement({ currentAdminSession }) {
 
             {/* Mobile Number */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+              <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 📱 Mobile Number (10 digits)
               </label>
               <input
@@ -561,9 +561,9 @@ export function LoginManagement({ currentAdminSession }) {
                 onChange={e => setFormMobile(e.target.value.replace(/\D/g, ''))}
                 style={{
                   width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'var(--surface-tint)',
                   border: `1.5px solid ${formMobile && formMobile.length === 10 ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: '8px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none',
+                  borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none',
                   fontFamily: 'monospace', letterSpacing: '0.05em'
                 }}
               />
@@ -576,7 +576,7 @@ export function LoginManagement({ currentAdminSession }) {
 
             {editingUser && (
               <div>
-                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+                <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                   Email
                 </label>
                 <input
@@ -584,14 +584,14 @@ export function LoginManagement({ currentAdminSession }) {
                   placeholder="user@example.com"
                   value={formEmail}
                   onChange={e => setFormEmail(e.target.value)}
-                  style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', background: 'var(--surface-tint)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
                 />
               </div>
             )}
 
             {/* Password */}
             {!editingUser && <div>
-              <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
+              <label style={{ display: 'block', fontSize: '0.73rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
                 Password *
               </label>
               <div style={{ position: 'relative' }}>
@@ -602,12 +602,12 @@ export function LoginManagement({ currentAdminSession }) {
                   onChange={e => setFormPass(e.target.value)}
                   style={{
                     width: '100%', padding: '0.6rem 2.5rem 0.6rem 0.75rem', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
+                    background: 'var(--surface-tint)', border: '1.5px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
                   }}
                 />
                 <button type="button" onClick={() => setShowPass(p => !p)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -633,8 +633,8 @@ export function LoginManagement({ currentAdminSession }) {
                 type="button" onClick={closeForm}
                 style={{
                   flex: 1, padding: '0.65rem', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#94a3b8', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
+                  background: 'var(--surface-tint)', border: '1px solid var(--neutral-border)',
+                  color: 'var(--text-dim)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
                 }}
               >
                 Cancel
@@ -662,14 +662,14 @@ export function LoginManagement({ currentAdminSession }) {
       {/* Change Password Overlay */}
       {changePwUser && (
         <div onClick={() => setChangePwUser(null)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          position: 'fixed', inset: 0, background: 'var(--modal-overlay)',
           backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
           justifyContent: 'center', zIndex: 200, padding: '1rem'
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--bg-secondary)', border: '1.5px solid var(--border-subtle)',
+            background: 'var(--bg-card)', border: '1.5px solid rgba(245,158,11,0.4)',
             borderRadius: '16px', padding: '1.5rem', maxWidth: '360px', width: '100%',
-            boxShadow: 'var(--shadow-lg)'
+            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
@@ -680,17 +680,17 @@ export function LoginManagement({ currentAdminSession }) {
                 <X size={18} />
               </button>
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 600, marginBottom: '1rem' }}>
               Changing password for <strong style={{ color: 'var(--text-main)' }}>@{changePwUser.username}</strong> ({changePwUser.role.toUpperCase()})
             </div>
 
             {pwError && (
-              <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: '#fca5a5', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+              <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.75rem' }}>
                 {pwError}
               </div>
             )}
             {pwSuccess && (
-              <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: '#6ee7b7', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+              <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: 'var(--success)', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.75rem' }}>
                 {pwSuccess}
               </div>
             )}
@@ -704,12 +704,12 @@ export function LoginManagement({ currentAdminSession }) {
                   onChange={e => setNewPw(e.target.value)}
                   style={{
                     width: '100%', padding: '0.65rem 2.5rem 0.65rem 0.85rem', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)',
-                    borderRadius: '8px', color: '#ffffff', fontSize: '0.88rem', fontWeight: 600, outline: 'none'
+                    background: 'var(--surface-tint)', border: '1.5px solid var(--neutral-border)',
+                    borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: 600, outline: 'none'
                   }}
                 />
                 <button type="button" onClick={() => setShowNewPw(p => !p)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
                   {showNewPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -724,8 +724,8 @@ export function LoginManagement({ currentAdminSession }) {
                 </button>
                 <button type="button" onClick={() => setChangePwUser(null)} style={{
                   flex: 1, padding: '0.6rem', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#94a3b8', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
+                  background: 'var(--surface-tint)', border: '1px solid var(--neutral-border)',
+                  color: 'var(--text-dim)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer'
                 }}>
                   Cancel
                 </button>

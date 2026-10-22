@@ -23,8 +23,8 @@ export class ErrorBoundary extends React.Component {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0b0f17',
-          color: '#ffffff',
+          background: 'var(--bg-card)',
+          color: 'var(--text-main)',
           padding: '2rem',
           textAlign: 'center'
         }}>
@@ -35,14 +35,14 @@ export class ErrorBoundary extends React.Component {
             borderRadius: '12px',
             maxWidth: '520px'
           }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f87171', marginBottom: '0.75rem' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--danger)', marginBottom: '0.75rem' }}>
               Display Refresh Required
             </h2>
-            <p style={{ fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '1rem', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: 1.5 }}>
               The screen encountered a display refresh. Please click the button below to reload.
             </p>
             {this.state.error && (
-              <div style={{ background: 'rgba(0,0,0,0.4)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: '#fca5a5', fontFamily: 'monospace', marginBottom: '1.25rem', textAlign: 'left', wordBreak: 'break-all' }}>
+              <div style={{ background: 'var(--modal-overlay)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--danger)', fontFamily: 'monospace', marginBottom: '1.25rem', textAlign: 'left', wordBreak: 'break-all' }}>
                 {this.state.error.toString()}
               </div>
             )}

@@ -1231,7 +1231,7 @@
   "avsr_latest_kitchen_alert": null,
   "avsr_last_invoice_counter_v1": "214153",
   "avsr_daily_inv_cnt_12_Oct_2026": "1068",
-  "avsr_last_invoice_date_v2": "22 Oct 2026",
+  "avsr_last_invoice_date_v2": "21 Oct 2026",
   "avsr_daily_inv_cnt_13_Oct_2026": "1",
   "gourmet_pos_settings_v1": {
     "restaurantName": "AVSR FOOD COURT",
@@ -1249,6 +1249,5 @@
   "avsr_daily_inv_cnt_15_Oct_2026": "1",
   "avsr_daily_inv_cnt_16_Oct_2026": "2",
   "avsr_daily_inv_cnt_19_Oct_2026": "1",
-  "avsr_daily_inv_cnt_21_Oct_2026": "46",
-  "avsr_daily_inv_cnt_22_Oct_2026": "2"
+  "avsr_daily_inv_cnt_21_Oct_2026": "46"
 }

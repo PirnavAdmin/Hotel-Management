@@ -100,7 +100,7 @@ export function ItemDetailModal({
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.78)",
+        backgroundColor: "var(--modal-overlay)",
         backdropFilter: "blur(8px)",
         display: "flex",
         alignItems: "center",
@@ -114,7 +114,7 @@ export function ItemDetailModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--bg-secondary, #1a1d29)",
-          border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.12))",
+          border: "1px solid var(--border-subtle, var(--neutral-border))",
           borderRadius: "16px",
           width: "100%",
           maxWidth: "480px",
@@ -164,8 +164,7 @@ export function ItemDetailModal({
             style={{
               position: "absolute",
               inset: 0,
-              background:
-                "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 40%, rgba(15,23,42,0.85) 100%)",
+              background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 40%, rgba(15,23,42,0.85) 100%)",
             }}
           />
 
@@ -180,7 +179,7 @@ export function ItemDetailModal({
               width: "34px",
               height: "34px",
               borderRadius: "50%",
-              background: "rgba(0, 0, 0, 0.65)",
+              background: "var(--modal-overlay)",
               backdropFilter: "blur(4px)",
               border: "1px solid rgba(255, 255, 255, 0.2)",
               color: "#ffffff",
@@ -221,7 +220,7 @@ export function ItemDetailModal({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "5px",
-                background: "rgba(0, 0, 0, 0.7)",
+                background: "var(--modal-overlay)",
                 backdropFilter: "blur(6px)",
                 padding: "3px 8px",
                 borderRadius: "6px",
@@ -284,7 +283,7 @@ export function ItemDetailModal({
             {categoryObj && (
               <span
                 style={{
-                  background: "rgba(0, 0, 0, 0.55)",
+                  background: "var(--modal-overlay)",
                   backdropFilter: "blur(4px)",
                   padding: "2px 8px",
                   borderRadius: "4px",
@@ -304,7 +303,7 @@ export function ItemDetailModal({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "4px",
-                    background: "rgba(0, 0, 0, 0.55)",
+                    background: "var(--modal-overlay)",
                     backdropFilter: "blur(4px)",
                     padding: "2px 7px",
                     borderRadius: "4px",
@@ -322,11 +321,11 @@ export function ItemDetailModal({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "2px",
-                    background: "rgba(0, 0, 0, 0.55)",
+                    background: "var(--modal-overlay)",
                     backdropFilter: "blur(4px)",
                     padding: "2px 7px",
                     borderRadius: "4px",
-                    color: "#f87171",
+                    color: "var(--danger)",
                     fontWeight: 600,
                   }}
                   title={`Spice Level: ${item.spiceLevel}/3`}
