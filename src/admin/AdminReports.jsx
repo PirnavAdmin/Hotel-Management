@@ -414,12 +414,12 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           <button
             onClick={() => window.print()}
             style={{
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.14)',
-              borderRadius: '10px',
-              padding: '0.5rem 1rem',
-              color: '#ffffff',
-              fontSize: '0.82rem',
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "10px",
+              padding: "0.48rem 0.95rem",
+              color: "var(--text-main)",
+              fontSize: "0.8rem",
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
@@ -1009,7 +1009,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 style={{
                   fontSize: '0.95rem',
                   fontWeight: 700,
-                  color: '#ffffff',
+                  color: "var(--text-main)",
                   margin: 0,
                 }}
               >

@@ -371,7 +371,7 @@ export function ItemDetailModal({
                 style={{
                   fontSize: "1.25rem",
                   fontWeight: 800,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   lineHeight: 1.25,
                   margin: 0,
                 }}
@@ -405,7 +405,7 @@ export function ItemDetailModal({
                 style={{
                   fontSize: "1.25rem",
                   fontWeight: 800,
-                  color: "var(--accent-amber-light, #fbbf24)",
+                  color: "var(--accent-amber)",
                 }}
               >
                 {formatCurrency(item.price)}
@@ -413,7 +413,7 @@ export function ItemDetailModal({
               <div
                 style={{
                   fontSize: "0.7rem",
-                  color: "var(--text-dim, #94a3b8)",
+                  color: "var(--text-dim)",
                 }}
               >
                 per portion
@@ -427,12 +427,12 @@ export function ItemDetailModal({
               style={{
                 fontSize: "0.82rem",
                 lineHeight: 1.5,
-                color: "var(--text-secondary, #cbd5e1)",
+                color: "var(--text-muted)",
                 margin: 0,
-                background: "rgba(255, 255, 255, 0.03)",
+                background: "var(--bg-tertiary)",
                 padding: "0.6rem 0.8rem",
                 borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.05)",
+                border: "1px solid var(--border-subtle)",
               }}
             >
               {item.description}
@@ -442,8 +442,8 @@ export function ItemDetailModal({
           {/* Quantity Selector Card */}
           <div
             style={{
-              background: "rgba(0, 0, 0, 0.2)",
-              border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "10px",
               padding: "0.85rem 1rem",
               display: "flex",
@@ -456,7 +456,7 @@ export function ItemDetailModal({
                 style={{
                   fontSize: "0.82rem",
                   fontWeight: 700,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                 }}
               >
                 Quantity
@@ -464,7 +464,7 @@ export function ItemDetailModal({
               <div
                 style={{
                   fontSize: "0.72rem",
-                  color: "var(--text-dim, #94a3b8)",
+                  color: "var(--text-dim)",
                 }}
               >
                 {quantity > 0 ? (
@@ -486,10 +486,10 @@ export function ItemDetailModal({
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
-                background: "var(--bg-primary, #0f172a)",
+                background: "var(--bg-secondary)",
                 borderRadius: "8px",
                 padding: "4px 6px",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                border: "1px solid var(--border-subtle)",
               }}
             >
               <button
@@ -505,14 +505,14 @@ export function ItemDetailModal({
                   borderRadius: "6px",
                   background:
                     quantity <= 1 && isAlreadyInCart
-                      ? "rgba(239, 68, 68, 0.2)"
-                      : "rgba(255, 255, 255, 0.08)",
+                      ? "rgba(239, 68, 68, 0.15)"
+                      : "var(--bg-tertiary)",
                   border:
                     quantity <= 1 && isAlreadyInCart
                       ? "1px solid rgba(239, 68, 68, 0.4)"
-                      : "none",
+                      : "1px solid var(--border-subtle)",
                   color:
-                    quantity <= 1 && isAlreadyInCart ? "#ef4444" : "#ffffff",
+                    quantity <= 1 && isAlreadyInCart ? "#ef4444" : "var(--text-main)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -536,7 +536,7 @@ export function ItemDetailModal({
                   fontWeight: 800,
                   minWidth: "32px",
                   textAlign: "center",
-                  color: quantity === 0 ? "#ef4444" : "#ffffff",
+                  color: quantity === 0 ? "#ef4444" : "var(--text-main)",
                 }}
               >
                 {quantity}
@@ -584,7 +584,7 @@ export function ItemDetailModal({
                 style={{
                   fontSize: "0.78rem",
                   fontWeight: 700,
-                  color: "var(--text-secondary, #e2e8f0)",
+                  color: "var(--text-main)",
                 }}
               >
                 Kitchen Note / Customization
@@ -601,11 +601,11 @@ export function ItemDetailModal({
               }}
               style={{
                 width: "100%",
-                background: "var(--bg-primary, #0f172a)",
-                border: "1px solid rgba(255, 255, 255, 0.14)",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
                 borderRadius: "8px",
                 padding: "0.6rem 0.8rem",
-                color: "#ffffff",
+                color: "var(--text-main)",
                 fontSize: "0.82rem",
                 outline: "none",
                 transition: "border-color 0.2s",
@@ -615,7 +615,7 @@ export function ItemDetailModal({
                 e.target.style.borderColor = "var(--accent-amber)";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "rgba(255, 255, 255, 0.14)";
+                e.target.style.borderColor = "var(--border-subtle)";
               }}
             />
 
@@ -637,14 +637,14 @@ export function ItemDetailModal({
                     onClick={() => handlePresetClick(preset)}
                     style={{
                       background: isSelected
-                        ? "rgba(245, 158, 11, 0.2)"
-                        : "rgba(255, 255, 255, 0.05)",
+                        ? "rgba(245, 158, 11, 0.18)"
+                        : "var(--bg-tertiary)",
                       border: isSelected
                         ? "1px solid var(--accent-amber)"
-                        : "1px solid rgba(255, 255, 255, 0.08)",
+                        : "1px solid var(--border-subtle)",
                       color: isSelected
                         ? "var(--accent-amber)"
-                        : "var(--text-dim, #94a3b8)",
+                        : "var(--text-muted)",
                       padding: "3px 8px",
                       borderRadius: "6px",
                       fontSize: "0.68rem",
@@ -665,8 +665,8 @@ export function ItemDetailModal({
         <div
           style={{
             padding: "1rem 1.4rem",
-            background: "var(--bg-tertiary, #12151e)",
-            borderTop: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
+            background: "var(--bg-tertiary)",
+            borderTop: "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
             gap: "0.75rem",
@@ -680,19 +680,19 @@ export function ItemDetailModal({
               flex: 1,
               padding: "0.75rem 1rem",
               borderRadius: "8px",
-              background: "rgba(255, 255, 255, 0.06)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              color: "var(--text-secondary, #cbd5e1)",
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-main)",
               fontSize: "0.85rem",
               fontWeight: 700,
               cursor: "pointer",
               transition: "all 0.15s ease",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+              e.currentTarget.style.background = "var(--bg-card-hover)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)";
+              e.currentTarget.style.background = "var(--bg-secondary)";
             }}
           >
             Cancel

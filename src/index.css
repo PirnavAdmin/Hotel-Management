@@ -14,6 +14,7 @@
   --text-main: #ffffff;
   --text-muted: #cbd5e1;
   --text-dim: #94a3b8;
+  --text-secondary: #cbd5e1;
 
   --accent-amber: #f59e0b;
   --accent-amber-light: #fbbf24;
@@ -143,7 +144,8 @@
 
   --text-main: #0f172a;
   --text-muted: #334155;
-  --text-dim: #64748b;
+  --text-dim: #475569;
+  --text-secondary: #334155;
 
   --accent-amber: #d97706;
   --accent-amber-light: #b45309;
@@ -166,6 +168,22 @@
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.18);
   --radiance-glow: 0 0 20px rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="light-bistro"] {
+  color-scheme: light;
+}
+
+[data-theme="light-bistro"] input,
+[data-theme="light-bistro"] textarea,
+[data-theme="light-bistro"] select {
+  color: var(--text-main);
+  background-color: var(--bg-secondary);
+}
+
+[data-theme="light-bistro"] input::placeholder,
+[data-theme="light-bistro"] textarea::placeholder {
+  color: var(--text-dim);
 }
 
 * {

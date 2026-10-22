@@ -4215,19 +4215,18 @@ export function AdminPortal({
                   <AdminInvoices
                     pastOrders={pastOrders}
                     restaurantName={restaurantName}
-                    restaurantSettings={restaurantSettings}
                     onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                   />
                 )}
 
-            {/* ================= TAB 7: REPORTS ================= */}
-            {activeTab === "reports" && (
-              <AdminReports
-                pastOrders={pastOrders}
-                menuItems={menuItems}
-                restaurantSettings={restaurantSettings}
-              />
-            )}
+                {/* ================= TAB 7: REPORTS ================= */}
+                {activeTab === "reports" && (
+                  <AdminReports
+                    pastOrders={pastOrders}
+                    menuItems={menuItems}
+                    restaurantSettings={restaurantSettings}
+                  />
+                )}
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
                 {activeTab === "logins" && (
