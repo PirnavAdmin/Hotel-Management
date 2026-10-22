@@ -349,10 +349,12 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     endDate,
   ]);
 
-  const totalRevenue = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0),
-    0
-  );
+  const totalRevenue = filteredOrders.reduce((sum, order) => {
+    const grandTotal = Number(
+      order.grandTotal ?? order.totalAmount ?? order.finalTotal ?? order.amount ?? order.total ?? 0,
+    ) || 0;
+    return sum + Math.max(0, grandTotal);
+  }, 0);
 
   const totalTax = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.taxAmount) || 0),
@@ -446,6 +448,22 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     return Array.from(set).sort();
   }, [inventoryItems]);
 
+  const totalInventoryPurchaseCost = useMemo(() => {
+    return inventoryItems.reduce((sum, item) => {
+      const restocked = Number(item.totalRestocked ?? 0);
+      const cost = Number(item.mrp ?? item.unitCost ?? 0);
+      return sum + (restocked > 0 && cost > 0 ? restocked * cost : 0);
+    }, 0);
+  }, [inventoryItems]);
+
+  const totalIngredientUsageCost = useMemo(() => {
+    return inventoryItems.reduce((sum, item) => {
+      const used = Number(item.totalUsed ?? 0);
+      const cost = Number(item.mrp ?? item.unitCost ?? 0);
+      return sum + (used > 0 && cost > 0 ? used * cost : 0);
+    }, 0);
+  }, [inventoryItems]);
+
   const inventoryCategoryBreakdown = useMemo(() => {
     const map = {};
     inventoryItems.forEach((item) => {
@@ -472,7 +490,8 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   // ================= PROFIT & LOSS FORMULAS =================
   const plIncome = totalRevenue;
-  const plExpenditure = totalInventoryCost + totalDiscount;
+  const plExpenditure = totalInventoryPurchaseCost + totalDiscount;
+  const costOfGoodsSold = totalIngredientUsageCost;
   const plNet = plIncome - plExpenditure;
   const isProfit = plNet >= 0;
   const grossFoodSales = Math.max(0, totalRevenue - totalTax - totalService);
@@ -633,7 +652,8 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
       lines.push(`"Bill Discounts Given","${totalDiscount.toFixed(2)}","Promotions & reductions"`);
       lines.push(`"Net Operating Revenue","${netRevenueAfterDiscount.toFixed(2)}","Sales adjusted for discounts"`);
       lines.push(`"Total Inventory Stock Valuation","${totalInventoryCost.toFixed(2)}","${inventoryItems.length} items evaluated at unit cost"`);
-      lines.push(`"Total Operating Expenditure","${plExpenditure.toFixed(2)}","Inventory valuation + Discounts"`);
+      lines.push(`"Total Operating Expenditure","${plExpenditure.toFixed(2)}","Inventory restock/purchase cost + Discounts"`);
+      lines.push(`"Ingredient Usage Cost / COGS","${costOfGoodsSold.toFixed(2)}","Tracked quantity used multiplied by ingredient unit cost"`);
       lines.push(`"Net Operating ${isProfit ? "Profit" : "Loss"}","${(isProfit ? "+" : "-") + Math.abs(plNet).toFixed(2)}","Operating Margin: ${profitMarginPercent}%"`);
       lines.push(``);
       lines.push(`"SETTLED ORDERS IN PERIOD (${filteredOrders.length} Orders)"`);
@@ -1805,7 +1825,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               {formatCurrency(plExpenditure)}
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-              Stock: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalInventoryCost)}</strong> ({inventoryItems.length} items) + Discounts: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalDiscount)}</strong>
+              Restock Purchases: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalInventoryPurchaseCost)}</strong> + Discounts: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalDiscount)}</strong> · COGS: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(costOfGoodsSold)}</strong>
             </div>
           </div>
 
@@ -2347,10 +2367,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   </tr>
                   <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                     <td style={{ padding: '8px 14px', paddingLeft: '28px', color: 'var(--text-main)', fontWeight: 600 }}>
-                      Ingredient &amp; Raw Material Stock Valuation
+                      Current Ingredient &amp; Raw Material Stock Valuation
                     </td>
                     <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
-                      {inventoryItems.length} inventory items evaluated at unit cost
+                      {inventoryItems.length} inventory items evaluated at current stock and unit cost
                     </td>
                     <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: '#ef4444' }}>
                       -{formatCurrency(totalInventoryCost)}
@@ -2388,7 +2408,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                       Total Operating Expenditure
                     </td>
                     <td style={{ padding: '9px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
-                      Total materials, ingredient costs &amp; discounts
+                      Lifetime tracked restock purchases + customer discounts
                     </td>
                     <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: '#ef4444', fontSize: '0.92rem' }}>
                       -{formatCurrency(plExpenditure)}

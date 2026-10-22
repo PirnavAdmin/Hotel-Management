@@ -189,6 +189,72 @@ export function getStandardDishSuggestions(dishName = "", category = "") {
   ];
 }
 
+export function getApproximateIngredientMrp(rawName = "", unit = "KG") {
+  const name = String(rawName || "").toLowerCase();
+  const normalizedUnit = String(unit || "KG");
+
+  const approximateRates = {
+    chicken: 280,
+    mutton: 700,
+    paneer: 360,
+    egg: 8,
+    prawn: 650,
+    fish: 420,
+    rice: 120,
+    flour: 55,
+    noodles: 140,
+    pasta: 180,
+    milk: 65,
+    cheese: 420,
+    butter: 550,
+    cream: 280,
+    ghee: 650,
+    curd: 90,
+    onion: 40,
+    tomato: 50,
+    potato: 35,
+    garlic: 180,
+    ginger: 160,
+    coriander: 25,
+    mint: 30,
+    chilli: 120,
+    capsicum: 90,
+    carrot: 60,
+    lemon: 120,
+    vegetable: 70,
+    oil: 180,
+    sauce: 220,
+    sugar: 50,
+    spice: 250,
+    masala: 280,
+    salt: 25,
+    coffee: 900,
+    tea: 700,
+    syrup: 300,
+    juice: 120,
+    bread: 180,
+    bun: 120,
+    pizza: 180,
+  };
+
+  const matchingRate = Object.entries(approximateRates).find(([keyword]) =>
+    name.includes(keyword),
+  );
+  let rate = matchingRate?.[1] ?? 100;
+
+  if (normalizedUnit === "Pcs") {
+    rate = name.includes("egg") ? 8 : name.includes("bread") || name.includes("bun") ? 10 : 50;
+  } else if (normalizedUnit === "ml") {
+    rate = rate / 1000;
+  } else if (normalizedUnit === "g") {
+    rate = rate / 1000;
+  } else if (normalizedUnit === "L") {
+    rate = rate;
+  }
+
+  return Number(rate.toFixed(2));
+}
+
 export async function autoGenerateInventoryFromRecipe(recipe = []) {
   if (!Array.isArray(recipe) || recipe.length === 0) return [];
 
@@ -202,7 +268,7 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
 
   const updatedInventory = [...currentInventory];
   const mappedRecipe = [];
-  let addedAnyNew = false;
+  let inventoryChanged = false;
 
   for (const ing of recipe) {
     const rawName = String(ing?.name || "").trim();
@@ -225,6 +291,13 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
     }
 
     if (existingItem) {
+      const currentMrp = Number(existingItem.mrp ?? existingItem.unitCost ?? 0);
+      if (!Number.isFinite(currentMrp) || currentMrp <= 0) {
+        const sampleMrp = getApproximateIngredientMrp(rawName, existingItem.unit || unit);
+        existingItem.mrp = sampleMrp;
+        existingItem.unitCost = sampleMrp;
+        inventoryChanged = true;
+      }
       mappedRecipe.push({
         inventoryId: existingItem.id,
         name: existingItem.name,
@@ -235,6 +308,7 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
     } else {
       // Auto-generate new item in Inventory!
       const newId = `inv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const sampleMrp = getApproximateIngredientMrp(rawName, unit);
       const newStockItem = {
         id: newId,
         name: rawName,
@@ -244,8 +318,8 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
         unit: unit,
         stock: 50,
         minThreshold: 10,
-        unitCost: 0,
-        mrp: 0,
+        unitCost: sampleMrp,
+        mrp: sampleMrp,
         totalUsed: 0,
         totalRestocked: 50,
         lastRestocked: new Date().toLocaleDateString("en-GB", {
@@ -256,7 +330,7 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
       };
 
       updatedInventory.unshift(newStockItem);
-      addedAnyNew = true;
+      inventoryChanged = true;
 
       try {
         apiCreateInventoryItem(newStockItem).catch(() => {});
@@ -272,7 +346,7 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
     }
   }
 
-  if (addedAnyNew) {
+  if (inventoryChanged) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedInventory));
       window.dispatchEvent(
