@@ -14,10 +14,6 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
-import {
-  ConfirmDeleteModal,
-  useConfirmDelete,
-} from "./common/ConfirmDeleteModal";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
@@ -57,6 +53,7 @@ import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
+import { useAppDialog } from "./common/DialogContext";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -223,7 +220,7 @@ const getDeletedTableIds = () => {
 };
 
 export function App() {
-  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
+  const { confirmDialog } = useAppDialog();
   const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
 
   useEffect(() => {
@@ -1485,28 +1482,30 @@ export function App() {
   };
 
   // Clear / Void Table Order
-  const handleClearOrder = (tableId) => {
-    requestDelete({
-      title: "Clear table order?",
-      message: `Are you sure you want to clear the entire order for Table ${tableId}?`,
-      confirmLabel: "Yes, Clear Order",
-      onConfirm: () => {
-        setTables((prevTables) =>
-          prevTables.map((t) => {
-            if (t.id !== tableId) return t;
-            return {
-              ...t,
-              items: [],
-              status: "vacant",
-              guests: 0,
-              orderTime: null,
-              discountPercent: 0,
-            };
-          }),
-        );
-        showToast(`Table ${tableId} order cleared.`);
+  const handleClearOrder = async (tableId) => {
+    const confirmed = await confirmDialog(
+      `Are you sure you want to clear the entire order for Table ${tableId}?`,
+      {
+        title: "Clear table order?",
+        confirmText: "Yes, Clear Order",
       },
-    });
+    );
+    if (!confirmed) return;
+
+    setTables((prevTables) =>
+      prevTables.map((t) => {
+        if (t.id !== tableId) return t;
+        return {
+          ...t,
+          items: [],
+          status: "vacant",
+          guests: 0,
+          orderTime: null,
+          discountPercent: 0,
+        };
+      }),
+    );
+    showToast(`Table ${tableId} order cleared.`);
   };
 
   // Transfer Table Order
@@ -1701,85 +1700,30 @@ export function App() {
     setIsReceiptOpen(true);
   };
 
-  const handleUpdateInvoiceDiscount = async (orderId, discountPercent, editingOrder = null) => {
-    const discount = Math.max(0, Math.min(100, Number(discountPercent) || 0));
-    const targetIdStr = orderId != null ? String(orderId) : "";
-    const targetInvoiceNo = editingOrder?.invoiceNo || "";
-
-    const updatedPastOrders = pastOrders.map((order) => {
-      const isMatch =
-        (targetIdStr && (String(order.id) === targetIdStr || String(order.orderId) === targetIdStr)) ||
-        (targetInvoiceNo && order.invoiceNo === targetInvoiceNo) ||
-        (editingOrder?.id != null && String(order.id) === String(editingOrder.id));
-
-      if (isMatch) {
-        const items = Array.isArray(order.items) ? order.items : [];
-        let subtotal = 0;
-        if (items.length > 0) {
-          subtotal = items.reduce((sum, item) => {
-            const price = Number(item.price ?? item.unitPrice ?? item.Price ?? item.UnitPrice) || 0;
-            const qty = Number(item.quantity ?? item.qty ?? item.Quantity ?? item.Qty) || 1;
-            return sum + price * qty;
-          }, 0);
-        }
-        if (!subtotal || subtotal <= 0) {
-          subtotal = Number(order.subtotal ?? order.Subtotal) || 0;
-        }
-        if (!subtotal || subtotal <= 0) {
-          const prevTotal = Number(order.grandTotal ?? order.total ?? order.totalAmount) || 0;
-          subtotal = Math.round(prevTotal / 1.10);
-        }
-
-        const discountAmount = Number(((subtotal * discount) / 100).toFixed(2));
-        const taxableAmount = Math.max(0, subtotal - discountAmount);
-        const taxRate = 0.05;
-        const taxAmount = Number((taxableAmount * taxRate).toFixed(2));
-        const serviceChargePercent = Number(order.serviceCharge ?? order.ServiceCharge) || 5;
-        const serviceChargeAmount = Number((taxableAmount * (serviceChargePercent / 100)).toFixed(2));
-        const grandTotal = Math.round(taxableAmount + taxAmount + serviceChargeAmount);
-
-        return {
-          ...order,
-          discountPercent: discount,
-          discountAmount,
-          taxAmount,
-          serviceChargeAmount,
-          serviceCharge: serviceChargePercent,
-          subtotal,
-          grandTotal,
-          total: grandTotal,
-          totalAmount: grandTotal,
-          amountPaid: grandTotal,
-          paidAmount: grandTotal,
-        };
-      }
-      return order;
-    });
-
-    setPastOrders(updatedPastOrders);
-    try {
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updatedPastOrders));
-      pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
-    } catch {}
-
-    // Send discount update to server if available
-    try {
-      if (orderId) {
-        await apiUpdateOrderDiscount(orderId, discount);
-      }
-    } catch (err) {
-      console.warn("Could not reach backend to sync discount:", err);
+  const handleUpdateInvoiceDiscount = async (orderId, discountPercent) => {
+    const updateResult = await apiUpdateOrderDiscount(orderId, discountPercent);
+    if (!updateResult?.success || updateResult.data?.success === false) {
+      throw new Error(updateResult?.error || updateResult?.data?.message || "The server could not update this invoice discount.");
     }
 
-    const matched = updatedPastOrders.find(
-      (o) =>
-        (targetIdStr && (String(o.id) === targetIdStr || String(o.orderId) === targetIdStr)) ||
-        (targetInvoiceNo && o.invoiceNo === targetInvoiceNo),
-    );
-    showToast(
-      `✅ Updated discount (${discount}%) for ${matched?.invoiceNo || `Order #${orderId}`}. New Total: ₹${matched?.grandTotal ?? ""}`,
-    );
-    return true;
+    const historyResult = await apiGetOrderHistory();
+    const history = historyResult?.data ?? historyResult;
+    const orders = Array.isArray(history?.orders)
+      ? history.orders
+      : Array.isArray(history?.data)
+        ? history.data
+        : Array.isArray(history)
+          ? history
+          : null;
+    if (!historyResult?.success || !orders) {
+      throw new Error("The discount was sent to the server, but the updated invoice list could not be refreshed. Reload Admin Invoices to confirm it.");
+    }
+
+    const updatedOrders = dedupeOrders(orders);
+    setPastOrders(updatedOrders);
+    try {
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updatedOrders));
+    } catch {}
   };
 
   // ================= ADMIN ACTIONS =================
@@ -1999,28 +1943,15 @@ export function App() {
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
     const result = await apiCreateStaff(newPerson);
-    const createdStaff = result?.data?.data ?? result?.data;
-    const staffId = createdStaff?.staffId ?? createdStaff?.id;
-    if (!result?.success || !staffId) {
+    if (!result?.success) {
       showToast(
-        `⚠️  Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
 
-    const savedStaff = {
-      ...createdStaff,
-      id: staffId,
-      name: createdStaff.fullName || createdStaff.name || newPerson.name,
-      role: createdStaff.roleTitle || createdStaff.role || newPerson.role,
-      employeeId:
-        newPerson.employeeId ||
-        `EMP-${String(staffId).padStart(3, "0")}`,
-    };
-    setStaffList((prev) => [...prev, savedStaff]);
-    showToast(
-      `✅ ${savedStaff.name} saved with Employee ID ${savedStaff.employeeId || `EMP-${String(staffId).padStart(5, "0")}`}`,
-    );
+    setStaffList((prev) => [...prev, newPerson]);
+    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
     return true;
   };
 
@@ -2071,42 +2002,40 @@ export function App() {
       prev.filter((p) => (p.id ?? p.staffId) !== personId),
     );
     apiDeleteStaff(personId).catch(() => {});
-    showToast(`🗑️  Removed "${person?.name || person?.fullName || "Staff"}"`);
+    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
-  const handleResetData = () => {
-    requestDelete({
-      title: "Reset All Restaurant Data?",
-      message:
-        "Clear all dynamic tables, menu items, staff, invoices and inventory? This cannot be undone.",
-      confirmLabel: "Yes, Reset All",
-      onConfirm: () => {
-        setDeletedTableIds([]);
-        setTables(INITIAL_TABLES);
-        setMenuItems([]);
-        setStaffList([]);
-        setPastOrders([]);
-        setInventory([]);
-        localStorage.setItem(
-          STORAGE_KEY_TABLES,
-          JSON.stringify(INITIAL_TABLES),
-        );
-        localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
-        localStorage.setItem(STORAGE_KEY_MENU, "[]");
-        localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-        localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
-        localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
-        pushGlobalSync({
-          [STORAGE_KEY_TABLES]: INITIAL_TABLES,
-          [STORAGE_KEY_MENU]: [],
-          [STORAGE_KEY_STAFF]: [],
-          [STORAGE_KEY_ORDERS]: [],
-          [STORAGE_KEY_INVENTORY]: [],
-        });
-        showToast("Data reset to default 15 tables.");
+  const handleResetData = async () => {
+    const confirmed = await confirmDialog(
+      "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
+      {
+        title: "Reset all data?",
+        confirmText: "Yes, Reset Data",
       },
+    );
+    if (!confirmed) return;
+
+    setDeletedTableIds([]);
+    setTables(INITIAL_TABLES);
+    setMenuItems([]);
+    setStaffList([]);
+    setPastOrders([]);
+    setInventory([]);
+    localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
+    localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
+    localStorage.setItem(STORAGE_KEY_MENU, "[]");
+    localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+    localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
+    localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
+    pushGlobalSync({
+      [STORAGE_KEY_TABLES]: INITIAL_TABLES,
+      [STORAGE_KEY_MENU]: [],
+      [STORAGE_KEY_STAFF]: [],
+      [STORAGE_KEY_ORDERS]: [],
+      [STORAGE_KEY_INVENTORY]: [],
     });
+    showToast("Data reset to default 15 tables.");
   };
 
   return (
@@ -2124,7 +2053,6 @@ export function App() {
         (posSession.role === "pos" || posSession.role === "admin") && (
           <Header
             restaurantName={restaurantSettings.restaurantName}
-            restaurantLogo={restaurantSettings.logo}
             tables={tables}
             activeView={activeView}
             setActiveView={setActiveView}
@@ -2157,8 +2085,6 @@ export function App() {
               <KitchenKOTView
                 tables={tables}
                 pastOrders={pastOrders}
-                restaurantName={restaurantSettings.restaurantName}
-                restaurantLogo={restaurantSettings.logo}
                 currentTheme={theme}
                 onChangeTheme={setTheme}
                 onBackToFloor={() => {
@@ -2573,9 +2499,6 @@ export function App() {
           }}
         />
       )}
-
-      {/* Global Custom Delete Confirmation Modal */}
-      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }

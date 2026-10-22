@@ -23,7 +23,6 @@ import { API_BASE_URL } from "../api/apiConfig";
 import { apiGetInventory } from "../api/inventoryApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
-const INVENTORY_FORM_DRAFT_KEY = "gourmet_pos_inventory_form_draft_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans"];
 
 const normalizeUnit = (unit) => (unit === "Litres" ? "L" : unit);
@@ -32,14 +31,439 @@ const normalizeInventoryUnits = (items) =>
 
 const STORAGE_KEY_CUSTOM_INV_CATEGORIES = "pos_custom_inventory_categories";
 const STORAGE_KEY_CUSTOM_INV_UNITS = "pos_custom_inventory_units";
+const STORAGE_KEY_CUSTOM_INV_SUPPLIERS = "pos_custom_inventory_suppliers";
+const STORAGE_KEY_CUSTOM_INV_SUBCATEGORIES = "pos_custom_inventory_subcategories";
+const STORAGE_KEY_DELETED_INVENTORY_IDS = "pos_deleted_inventory_ids_v1";
+
+export const PRIMARY_CATEGORY_KEYS = [
+  "Grains & Rice",
+  "Meats & Poultry",
+  "Seafood",
+  "Dairy & Cheeses",
+  "Vegetables & Fresh Produce",
+  "Spices & Seasonings",
+  "Cooking Oils & Fats",
+  "Sauces, Pastes & Condiments",
+  "Bakery & Breads",
+  "Beverages & Soft Drinks",
+  "Desserts & Dry Fruits",
+  "Packaging & Disposables",
+  "Hygiene & Cleaning",
+];
+
+export const normalizeCategory = (cat) => {
+  if (!cat || typeof cat !== "string") return "Grains & Rice";
+  const trimmed = cat.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Legacy mappings from old POS versions
+  if (lower === "dairy") return "Dairy & Cheeses";
+  if (
+    lower === "spices & oils" ||
+    lower === "spices & oil" ||
+    lower === "spices" ||
+    lower === "masalas" ||
+    lower === "seasoning"
+  )
+    return "Spices & Seasonings";
+  if (lower === "cooking oil" || lower === "oils" || lower === "fats")
+    return "Cooking Oils & Fats";
+  if (
+    lower === "vegetables & fruits" ||
+    lower === "vegetables" ||
+    lower === "fruits"
+  )
+    return "Vegetables & Fresh Produce";
+  if (lower === "packaging" || lower === "disposables")
+    return "Packaging & Disposables";
+  if (lower === "beverages" || lower === "drinks")
+    return "Beverages & Soft Drinks";
+  if (lower === "desserts" || lower === "dry fruits" || lower === "sweets")
+    return "Desserts & Dry Fruits";
+  if (lower === "sauces" || lower === "condiments" || lower === "pastes")
+    return "Sauces, Pastes & Condiments";
+  if (lower === "bakery" || lower === "breads") return "Bakery & Breads";
+  if (lower === "cleaning" || lower === "hygiene") return "Hygiene & Cleaning";
+  if (lower === "poultry" || lower === "meat" || lower === "meats")
+    return "Meats & Poultry";
+
+  // Check against canonical keys case-insensitively
+  for (const key of PRIMARY_CATEGORY_KEYS) {
+    if (key.toLowerCase() === lower) {
+      return key;
+    }
+  }
+  return trimmed;
+};
+
+export const DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS = {
+  "Grains & Rice": [
+    "Basmati Biryani Rice",
+    "Jeera Samba Rice",
+    "Sona Masoori Rice",
+    "Wheat Flour (Atta)",
+    "Maida",
+    "Corn Flour",
+    "Dals & Pulses",
+    "Poha & Flakes",
+  ],
+  "Meats & Poultry": [
+    "Fresh Chicken (Curry Cut)",
+    "Boneless Chicken Breast",
+    "Chicken Wings & Legs",
+    "Chicken 65 Pieces",
+    "Fresh Mutton (Curry Cut)",
+    "Mutton Keema (Minced)",
+    "Mutton Chops",
+    "Fresh Eggs",
+  ],
+  "Seafood": [
+    "Tiger Prawns (Cleaned)",
+    "Medium Prawns",
+    "Fish Fillets (Basa / Rohu / Apollo)",
+    "Whole Fresh Fish",
+    "Crab",
+  ],
+  "Dairy & Cheeses": [
+    "Fresh Malai Paneer",
+    "Pure Desi Cooking Ghee",
+    "Fresh Curd (Dahi)",
+    "Cooking Butter",
+    "Fresh Milk",
+    "Cooking Cream",
+    "Mozzarella & Cheddar Cheese",
+  ],
+  "Vegetables & Fresh Produce": [
+    "Onions",
+    "Tomatoes",
+    "Ginger",
+    "Garlic",
+    "Fresh Coriander",
+    "Mint Leaves (Pudina)",
+    "Green Chillies",
+    "Lemons",
+    "Potatoes",
+    "Capsicum & Carrots",
+    "Cauliflower & Green Peas",
+    "Curry Leaves",
+  ],
+  "Spices & Seasonings": [
+    "Biryani Masala",
+    "Garam Masala",
+    "Kashmiri Chilli Powder",
+    "Turmeric Powder (Haldi)",
+    "Cumin Seeds (Jeera)",
+    "Coriander Powder (Dhania)",
+    "Whole Khada Spices (Cardamom, Cloves, Star Anise, Cinnamon, Bay Leaves)",
+    "Saffron (Kesar)",
+    "Kasuri Methi",
+    "Ginger-Garlic Paste",
+    "Table Salt & Rock Salt",
+    "Black Pepper",
+    "Chaat Masala",
+  ],
+  "Cooking Oils & Fats": [
+    "Refined Sunflower Oil",
+    "Mustard Oil",
+    "Deep Frying Oil",
+    "Dalda / Vanaspati Ghee",
+    "Sesame Oil",
+  ],
+  "Sauces, Pastes & Condiments": [
+    "Dark Soy Sauce",
+    "Chilli Sauce (Red/Green)",
+    "Tomato Puree & Ketchup",
+    "White Vinegar",
+    "Schezwan Sauce",
+    "Mayonnaise",
+    "Biryani Essence & Rose Water",
+    "Food Coloring (Orange/Red/Yellow)",
+  ],
+  "Bakery & Breads": [
+    "Rumali Roti",
+    "Naan & Kulcha Dough / Flour Mix",
+    "Burger Buns",
+    "Bread Crumbs",
+    "Shawarma Pita Breads",
+  ],
+  "Beverages & Soft Drinks": [
+    "Packaged Mineral Water (Bottles)",
+    "Club Soda",
+    "Soft Drinks (Cola, Lemon, Orange cans/bottles)",
+    "Fruit Pulps & Syrups",
+    "Tea Leaves & Chai Spices",
+    "Coffee Powder",
+  ],
+  "Desserts & Dry Fruits": [
+    "Cashews (Kaju)",
+    "Almonds (Badam)",
+    "Raisins (Kismis)",
+    "Gulab Jamun Mix",
+    "Khoya / Mawa",
+    "Refined White Sugar",
+    "Condensed Milk",
+  ],
+  "Packaging & Disposables": [
+    "Biryani Buckets & Handis",
+    "Foil Meal Trays & Containers",
+    "Aluminium Foil Rolls & Cling Film",
+    "Gravy & Raita Plastic Cups",
+    "Takeaway Carry Bags",
+    "Paper Napkins & Tissues",
+    "Wooden / Plastic Cutlery Sets",
+  ],
+  "Hygiene & Cleaning": [
+    "Commercial Dishwash Liquid",
+    "Floor Cleaner & Degreaser",
+    "Hand Wash & Sanitizer",
+    "Kitchen Gloves & Hairnets",
+    "Garbage Bags & Bins",
+  ],
+};
+
+// Aliases so subcategories are always available even if old category names are referenced
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Dairy"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Dairy & Cheeses"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Spices & Oils"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Spices & Seasonings"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Vegetables & Fruits"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Vegetables & Fresh Produce"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Packaging"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Packaging & Disposables"];
+DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Beverages"] =
+  DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS["Beverages & Soft Drinks"];
+
+export const DEFAULT_SUPPLIERS = [
+  "Metro Cash & Carry Wholesale",
+  "Fresh Farm Poultry & Chicken Supplies",
+  "Royal Halal Mutton Center",
+  "Ocean Fresh Seafoods & Fisheries",
+  "Local Mandi Vegetable & Fruit Market",
+  "Sri Lakshmi Rice & Grain Merchants",
+  "Heritage & Amul Dairy Distributors",
+  "National Spices & Oil Traders",
+  "City Packaging & Disposable Supplies",
+  "Beverage & Soft Drinks Depot",
+  "General Wholesale Supplier",
+];
+
+export const getCanonicalIngredientInfo = (rawName) => {
+  if (!rawName || typeof rawName !== "string") {
+    return { dedupeKey: "", canonicalName: "" };
+  }
+  const trimmed = rawName.trim().replace(/\s+/g, " ");
+  const lower = trimmed.toLowerCase();
+  const alphanumeric = lower.replace(/[^a-z0-9]/g, "");
+
+  // 1. Jeera / Cumin detection (unless it is explicitly Jeera Rice / Samba Rice)
+  if (alphanumeric.includes("jeera") || alphanumeric.includes("cumin")) {
+    if (!alphanumeric.includes("rice") && !alphanumeric.includes("samba")) {
+      return {
+        dedupeKey: "ingredient_spice_jeera",
+        canonicalName: "Cumin Seeds (Jeera)",
+        suggestedCategory: "Spices & Seasonings",
+        suggestedSubcategory: "Cumin Seeds (Jeera)",
+        suggestedUnit: "KG",
+      };
+    }
+  }
+
+  // 2. Containers / Trays / Food Packaging detection
+  if (
+    alphanumeric.includes("container") ||
+    alphanumeric === "foiltrays" ||
+    alphanumeric === "foiltray" ||
+    alphanumeric.includes("mealtray")
+  ) {
+    return {
+      dedupeKey: "ingredient_pack_containers",
+      canonicalName: "Foil Meal Trays & Containers",
+      suggestedCategory: "Packaging & Disposables",
+      suggestedSubcategory: "Foil Meal Trays & Containers",
+      suggestedUnit: "Pcs",
+    };
+  }
+
+  // 3. Basmati Biryani Rice detection
+  if (alphanumeric.includes("basmati")) {
+    return {
+      dedupeKey: "ingredient_grain_basmati",
+      canonicalName: "Basmati Biryani Rice",
+      suggestedCategory: "Grains & Rice",
+      suggestedSubcategory: "Basmati Biryani Rice",
+      suggestedUnit: "KG",
+    };
+  }
+
+  // 4. General normalized key (singularize common plural endings)
+  let baseKey = alphanumeric;
+  if (baseKey.endsWith("ies") && baseKey.length > 5) {
+    baseKey = baseKey.slice(0, -3) + "y";
+  } else if (baseKey.endsWith("es") && baseKey.length > 4) {
+    baseKey = baseKey.slice(0, -2);
+  } else if (baseKey.endsWith("s") && !baseKey.endsWith("ss") && baseKey.length > 3) {
+    baseKey = baseKey.slice(0, -1);
+  }
+
+  return {
+    dedupeKey: `ingredient_${baseKey}`,
+    canonicalName: trimmed,
+  };
+};
+
+export const deduplicateAndNormalizeInventory = (items) => {
+  if (!Array.isArray(items)) return [];
+
+  const map = new Map();
+
+  const isMeaningfulSupplier = (s) =>
+    Boolean(
+      s &&
+        s !== "Supplier not set" &&
+        s !== "Local Vendor" &&
+        s !== "Local Supplier" &&
+        s.trim().length > 0,
+    );
+
+  items.forEach((rawItem) => {
+    if (!rawItem || !rawItem.name) return;
+    const rawName = String(rawItem.name).trim();
+    if (!rawName) return;
+
+    const info = getCanonicalIngredientInfo(rawName);
+    const key = info.dedupeKey || rawName.toLowerCase();
+    const finalName = info.canonicalName || rawName;
+
+    const rawSupplier = String(rawItem.supplier || "").trim();
+    const supplier =
+      rawSupplier && rawSupplier !== "Supplier not set"
+        ? rawSupplier
+        : "Metro Cash & Carry Wholesale";
+
+    const category =
+      info.suggestedCategory || normalizeCategory(rawItem.category);
+    const unit = info.suggestedUnit || normalizeUnit(rawItem.unit || "KG");
+    const stock = Number(rawItem.stock ?? 0);
+    const minThreshold = Number(rawItem.minThreshold ?? 5);
+    const mrp =
+      rawItem.mrp != null && rawItem.mrp !== "" ? Number(rawItem.mrp) : null;
+    const totalUsed = Number(rawItem.totalUsed ?? 0);
+    const totalRestocked = Number(rawItem.totalRestocked ?? 0);
+
+    const defaultSubs =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[category] || ["General Supplies"];
+    const subcategory =
+      info.suggestedSubcategory ||
+      (rawItem.subcategory && rawItem.subcategory.trim()
+        ? rawItem.subcategory.trim()
+        : defaultSubs[0]);
+
+    if (map.has(key)) {
+      // DUPLICATE DETECTED: Merge duplicate records into one unique item
+      const existing = map.get(key);
+      existing.stock = Number(
+        (
+          Number(existing.stock || 0) + (isNaN(stock) ? 0 : stock)
+        ).toFixed(3),
+      );
+      existing.totalUsed = Number(
+        (
+          Number(existing.totalUsed || 0) + (isNaN(totalUsed) ? 0 : totalUsed)
+        ).toFixed(3),
+      );
+      existing.totalRestocked = Number(
+        (
+          Number(existing.totalRestocked || 0) +
+          (isNaN(totalRestocked) ? 0 : totalRestocked)
+        ).toFixed(3),
+      );
+      // Prefer meaningful supplier over generic placeholder
+      if (
+        !isMeaningfulSupplier(existing.supplier) &&
+        isMeaningfulSupplier(supplier)
+      ) {
+        existing.supplier = supplier;
+      }
+      if (
+        !existing.subcategory ||
+        existing.subcategory === "General Supplies"
+      ) {
+        existing.subcategory = subcategory;
+      }
+      if (rawItem.id || rawItem.ingredientId) {
+        const thisId = String(rawItem.id || rawItem.ingredientId);
+        if (!existing.associatedIds) existing.associatedIds = [String(existing.id)];
+        if (!existing.associatedIds.includes(thisId)) {
+          existing.associatedIds.push(thisId);
+        }
+      }
+      if (
+        (existing.mrp == null || isNaN(existing.mrp)) &&
+        mrp != null &&
+        !isNaN(mrp)
+      ) {
+        existing.mrp = mrp;
+      }
+      if (rawItem.lastRestocked && rawItem.lastRestocked !== "Not restocked") {
+        existing.lastRestocked = rawItem.lastRestocked;
+      }
+    } else {
+      map.set(key, {
+        ...rawItem,
+        id: String(
+          rawItem.id ||
+            `inv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        ),
+        associatedIds: [String(rawItem.id || rawItem.ingredientId || "")].filter(Boolean),
+        name: finalName,
+        category,
+        subcategory,
+        supplier,
+        unit,
+        stock: isNaN(stock) ? 0 : Number(stock.toFixed(3)),
+        minThreshold: isNaN(minThreshold) ? 5 : minThreshold,
+        mrp: mrp != null && !isNaN(mrp) ? mrp : null,
+        totalUsed: isNaN(totalUsed) ? 0 : Number(totalUsed.toFixed(3)),
+        totalRestocked:
+          isNaN(totalRestocked) ? 0 : Number(totalRestocked.toFixed(3)),
+        lastRestocked: rawItem.lastRestocked || "Not restocked",
+      });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [inventory, setInventory] = useState(() => {
     try {
       const saved = localStorage.getItem(INVENTORY_STORAGE_KEY);
-      return saved
-        ? normalizeInventoryUnits(JSON.parse(saved))
-        : [];
+      let deletedIds = new Set();
+      try {
+        const d = JSON.parse(
+          localStorage.getItem(STORAGE_KEY_DELETED_INVENTORY_IDS) || "[]",
+        );
+        deletedIds = new Set(d.map(String));
+      } catch {}
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const nonDeleted = (Array.isArray(parsed) ? parsed : []).filter(
+          (item) => {
+            const info = getCanonicalIngredientInfo(item.name);
+            return (
+              !deletedIds.has(String(item.id)) &&
+              !deletedIds.has(info.dedupeKey) &&
+              !deletedIds.has(String(item.name || "").toLowerCase().trim())
+            );
+          },
+        );
+        const cleaned = deduplicateAndNormalizeInventory(nonDeleted);
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(cleaned));
+        return cleaned;
+      }
+      return [];
     } catch {
       return [];
     }
@@ -48,7 +472,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [customInvCategories, setCustomInvCategories] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_CATEGORIES);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      const standardKeys = new Set(
+        PRIMARY_CATEGORY_KEYS.map((k) => k.toLowerCase()),
+      );
+      const filtered = parsed
+        .map(normalizeCategory)
+        .filter((c) => c && !standardKeys.has(c.toLowerCase()));
+      const unique = Array.from(new Set(filtered));
+      localStorage.setItem(
+        STORAGE_KEY_CUSTOM_INV_CATEGORIES,
+        JSON.stringify(unique),
+      );
+      return unique;
     } catch {
       return [];
     }
@@ -63,9 +501,32 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     }
   });
 
+  const [customInvSuppliers, setCustomInvSuppliers] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_SUPPLIERS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customInvSubcategories, setCustomInvSubcategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_INV_SUBCATEGORIES);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const saveCustomCategory = (newCat) => {
     if (!newCat || !newCat.trim()) return;
-    const trimmed = newCat.trim();
+    const trimmed = normalizeCategory(newCat.trim());
+    const standardKeys = new Set(
+      PRIMARY_CATEGORY_KEYS.map((k) => k.toLowerCase()),
+    );
+    if (standardKeys.has(trimmed.toLowerCase())) return;
+
     setCustomInvCategories((prev) => {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase()))
         return prev;
@@ -97,22 +558,95 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     });
   };
 
+  const saveCustomSupplier = (newSup) => {
+    if (!newSup || !newSup.trim()) return;
+    const trimmed = newSup.trim();
+    setCustomInvSuppliers((prev) => {
+      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_INV_SUPPLIERS,
+          JSON.stringify(updated),
+        );
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomSubcategory = (newSub) => {
+    if (!newSub || !newSub.trim()) return;
+    const trimmed = newSub.trim();
+    const currentCat = normalizeCategory(newItem.category || "General Supplies");
+    setCustomInvSubcategories((prev) => {
+      const existing = prev[currentCat] || [];
+      if (existing.some((s) => s.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = {
+        ...prev,
+        [currentCat]: [...existing, trimmed],
+      };
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_INV_SUBCATEGORIES,
+          JSON.stringify(updated),
+        );
+      } catch {}
+      return updated;
+    });
+  };
+
   const allCategoryOptions = useMemo(() => {
     const map = new Map();
-    customInvCategories.forEach((c) => {
+    // 1. Only canonical standard categories
+    PRIMARY_CATEGORY_KEYS.forEach((c) => {
       if (c && !map.has(c.toLowerCase()))
         map.set(c.toLowerCase(), { value: c, label: c });
     });
+    // 2. Custom categories (normalized to skip duplicates of standard ones)
+    customInvCategories.forEach((c) => {
+      const norm = normalizeCategory(c);
+      if (norm && !map.has(norm.toLowerCase()))
+        map.set(norm.toLowerCase(), { value: norm, label: norm });
+    });
+    // 3. Normalized inventory item categories
     (inventory || []).forEach((item) => {
-      if (item.category && !map.has(item.category.toLowerCase())) {
-        map.set(item.category.toLowerCase(), {
-          value: item.category,
-          label: item.category,
+      const norm = normalizeCategory(item.category);
+      if (norm && !map.has(norm.toLowerCase())) {
+        map.set(norm.toLowerCase(), {
+          value: norm,
+          label: norm,
         });
       }
     });
     return Array.from(map.values());
   }, [customInvCategories, inventory]);
+
+  const allSupplierOptions = useMemo(() => {
+    const map = new Map();
+    DEFAULT_SUPPLIERS.forEach((s) => {
+      if (s && !map.has(s.toLowerCase()))
+        map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    customInvSuppliers.forEach((s) => {
+      if (s && !map.has(s.toLowerCase()))
+        map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    (inventory || []).forEach((item) => {
+      if (
+        item.supplier &&
+        item.supplier !== "Supplier not set" &&
+        !map.has(item.supplier.toLowerCase())
+      ) {
+        map.set(item.supplier.toLowerCase(), {
+          value: item.supplier,
+          label: item.supplier,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [customInvSuppliers, inventory]);
 
   const allUnitOptions = useMemo(() => {
     const map = new Map();
@@ -146,79 +680,73 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [restockSupplier, setRestockSupplier] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
-  const [newItem, setNewItem] = useState(() => {
-    try {
-      const raw = localStorage.getItem(INVENTORY_FORM_DRAFT_KEY);
-      if (raw) {
-        const draft = JSON.parse(raw);
-        if (draft && typeof draft === "object") return draft;
-      }
-    } catch {}
-    return {
-      name: "",
-      category: "Grains & Rice",
-      subcategory: "Rice",
-      mrp: "",
-      stock: 10,
-      minThreshold: 5,
-      unit: "KG",
-      supplier: "Local Supplier",
-    };
+  const [newItem, setNewItem] = useState({
+    name: "",
+    category: "Grains & Rice",
+    subcategory: "Basmati Biryani Rice",
+    mrp: "",
+    stock: 10,
+    minThreshold: 5,
+    unit: "KG",
+    supplier: "Metro Cash & Carry Wholesale",
   });
 
-  const updateNewItemField = (field, value) => {
-    setNewItem((prev) => {
-      const next = { ...prev, [field]: value };
-      if (editingItemId === null) {
-        try {
-          localStorage.setItem(INVENTORY_FORM_DRAFT_KEY, JSON.stringify(next));
-          console.log(`[LocalStorage Draft Saved] Key: "${INVENTORY_FORM_DRAFT_KEY}"`, next);
-        } catch (err) {
-          console.error("Failed to save draft to localStorage:", err);
-        }
-      }
-      console.log(`[Inventory Form Input] "${field}":`, value);
-      return next;
-    });
-  };
-
-  const handleCategoryChange = (val) => {
-    setNewItem((prev) => {
-      const next = { ...prev, category: val, subcategory: "" };
-      if (editingItemId === null) {
-        try {
-          localStorage.setItem(INVENTORY_FORM_DRAFT_KEY, JSON.stringify(next));
-          console.log(`[LocalStorage Draft Saved] Key: "${INVENTORY_FORM_DRAFT_KEY}"`, next);
-        } catch (err) {
-          console.error("Failed to save draft to localStorage:", err);
-        }
-      }
-      console.log(`[Inventory Form Input] "category":`, val);
-      return next;
-    });
-  };
-
   const subcategoryOptions = useMemo(() => {
-    const subcategories = new Map();
+    const map = new Map();
+    const currentCatNorm = normalizeCategory(newItem.category);
+
+    const defaults =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[newItem.category] ||
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[currentCatNorm] ||
+      [];
+    defaults.forEach((sub) => {
+      if (sub && !map.has(sub.toLowerCase())) {
+        map.set(sub.toLowerCase(), { value: sub, label: sub });
+      }
+    });
+
+    const customs = [
+      ...(customInvSubcategories[newItem.category] || []),
+      ...(customInvSubcategories[currentCatNorm] || []),
+    ];
+    customs.forEach((sub) => {
+      if (sub && !map.has(sub.toLowerCase())) {
+        map.set(sub.toLowerCase(), { value: sub, label: sub });
+      }
+    });
+
     (inventory || [])
-      .filter((item) => item.category === newItem.category && item.subcategory)
+      .filter(
+        (item) =>
+          (item.category === newItem.category ||
+            normalizeCategory(item.category) === currentCatNorm) &&
+          item.subcategory,
+      )
       .forEach((item) => {
-        if (!subcategories.has(item.subcategory.toLowerCase())) {
-          subcategories.set(item.subcategory.toLowerCase(), {
+        if (!map.has(item.subcategory.toLowerCase())) {
+          map.set(item.subcategory.toLowerCase(), {
             value: item.subcategory,
             label: item.subcategory,
           });
         }
       });
-    return Array.from(subcategories.values());
-  }, [inventory, newItem.category]);
+
+    // Fallback: If custom category has no subcategories yet, provide a general default
+    if (map.size === 0 && newItem.category) {
+      map.set("general", {
+        value: "General Supplies",
+        label: "General Supplies",
+      });
+    }
+
+    return Array.from(map.values());
+  }, [inventory, newItem.category, customInvSubcategories]);
 
   const saveInventory = (updated) => {
-    const normalized = normalizeInventoryUnits(updated);
+    const normalized = deduplicateAndNormalizeInventory(updated);
     setInventory(normalized);
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
-      console.log(`[LocalStorage Saved] Key: "${INVENTORY_STORAGE_KEY}", items count: ${normalized.length}`, normalized);
       fetch(`${API_BASE_URL}/api/sync`, {
         method: "POST",
         headers: {
@@ -230,9 +758,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       window.dispatchEvent(
         new CustomEvent("avsr-inventory-updated", { detail: normalized }),
       );
-    } catch (e) {
-      console.error("[LocalStorage Error] Failed to save inventory:", e);
-    }
+    } catch {}
   };
 
   useEffect(() => {
@@ -251,26 +777,41 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       try {
         saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
       } catch {}
+
+      let deletedIds = new Set();
+      try {
+        const d = JSON.parse(
+          localStorage.getItem(STORAGE_KEY_DELETED_INVENTORY_IDS) || "[]",
+        );
+        deletedIds = new Set(d.map(String));
+      } catch {}
+
       const savedById = new Map((Array.isArray(saved) ? saved : []).map((item) => [String(item.id), item]));
-      const remote = rows.map((row) => {
-        const id = row.id ?? row.ingredientId ?? row.ingredient_id;
-        const previous = savedById.get(String(id)) || {};
-        return {
-          ...previous,
-          id: String(id),
-          name: row.name?.trim() || previous.name || `Unnamed ingredient #${id}`,
-          category: row.category?.trim() || previous.category || "General",
-          subcategory: row.subcategory?.trim() || previous.subcategory || "",
-          supplier: row.supplier?.trim() || previous.supplier || "Local Supplier",
-          unit: normalizeUnit(row.unit || previous.unit || "KG"),
-          stock: Number(row.currentStock ?? row.stock ?? previous.stock ?? 0),
-          minThreshold: Number(row.minimumThreshold ?? row.minThreshold ?? previous.minThreshold ?? 5),
-          mrp: Number(row.mrp ?? row.unitCost ?? previous.mrp ?? 0),
-          unitCost: Number(row.unitCost ?? row.mrp ?? previous.unitCost ?? 0),
-        };
-      });
+      const remote = rows
+        .filter((row) => {
+          const id = String(row.id ?? row.ingredientId ?? row.ingredient_id);
+          const info = getCanonicalIngredientInfo(row.name);
+          return (
+            !deletedIds.has(id) &&
+            !deletedIds.has(info.dedupeKey) &&
+            !deletedIds.has(String(row.name || "").toLowerCase().trim())
+          );
+        })
+        .map((row) => {
+          const id = row.id ?? row.ingredientId ?? row.ingredient_id;
+          const previous = savedById.get(String(id)) || {};
+          return {
+            ...previous,
+            id: String(id),
+            name: row.name?.trim() || previous.name || `Unnamed ingredient #${id}`,
+            unit: normalizeUnit(row.unit || previous.unit || "Pcs"),
+            stock: Number(row.currentStock ?? row.stock ?? previous.stock ?? 0),
+            minThreshold: Number(row.minimumThreshold ?? row.minThreshold ?? previous.minThreshold ?? 0),
+            mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
+          };
+        });
       const remoteIds = new Set(remote.map((item) => String(item.id)));
-      const merged = normalizeInventoryUnits([
+      const merged = deduplicateAndNormalizeInventory([
         ...remote,
         ...(Array.isArray(saved) ? saved.filter((item) => !remoteIds.has(String(item.id))) : []),
       ]);
@@ -283,7 +824,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
       if (Array.isArray(event.detail)) {
-        setInventory(normalizeInventoryUnits(event.detail));
+        setInventory(deduplicateAndNormalizeInventory(event.detail));
       }
     };
     const handleStorageUpdate = (event) => {
@@ -291,7 +832,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       try {
         const updated = JSON.parse(event.newValue);
         if (Array.isArray(updated)) {
-          setInventory(normalizeInventoryUnits(updated));
+          setInventory(deduplicateAndNormalizeInventory(updated));
         }
       } catch {}
     };
@@ -409,21 +950,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       month: "short",
       year: "numeric",
     });
-    const numId = Number(restockItem.id);
-    if (Number.isFinite(numId) && numId > 0) {
-      apiAdjustStock({
-        ingredientId: numId,
-        quantityChange: amount,
-        reason: `Restocked from ${restockSupplier.trim() || restockItem.supplier || "Supplier"}`,
-      }).then((res) => {
-        if (res?.success) {
-          console.log(`[Database API] Restock adjusted in MySQL DB for ingredient #${numId}: +${amount}`);
-        }
-      }).catch((err) => {
-        console.error("[Database API] Error saving stock adjustment to DB:", err);
-      });
-    }
-
     const updated = inventory.map((item) =>
       item.id === restockItem.id
         ? {
@@ -435,13 +961,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           }
         : item,
     );
-    if (restockItem?.id && !isNaN(Number(restockItem.id))) {
-      apiAdjustStock({
-        ingredientId: Number(restockItem.id),
-        quantityChange: amount,
-        reason: "Restocked from " + (restockSupplier.trim() || restockItem.supplier || "Supplier"),
-      }).catch(() => {});
-    }
     saveInventory(updated);
     setRestockItem(null);
     setRestockAmount("");
@@ -529,25 +1048,65 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     window.setTimeout(() => setExportMessage(""), 5000);
   };
 
-  const handleAddItem = async (e) => {
+  const handleAddItem = (e) => {
     e.preventDefault();
     if (!newItem.name.trim()) return;
 
-    if (newItem.category) saveCustomCategory(newItem.category);
+    const trimmedName = newItem.name.trim();
+    const info = getCanonicalIngredientInfo(trimmedName);
+    const finalName = info.canonicalName || trimmedName;
+    const finalCategory =
+      info.suggestedCategory || normalizeCategory(newItem.category);
+    const finalSupplier =
+      newItem.supplier.trim() || "Metro Cash & Carry Wholesale";
+
+    // Validate duplicate item by canonical ingredient identity
+    const duplicate = inventory.find((item) => {
+      if (item.id === editingItemId) return false;
+      const existingInfo = getCanonicalIngredientInfo(item.name);
+      return (
+        info.dedupeKey === existingInfo.dedupeKey ||
+        item.name.trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+    });
+
+    if (duplicate) {
+      requestDelete({
+        title: "Duplicate inventory item",
+        message: `"${trimmedName}" is already in your inventory as "${duplicate.name}". If restocking, use the Restock button or edit the existing item to add more quantity. Duplicate ingredients cannot be added multiple times.`,
+        confirmLabel: "OK",
+        cancelLabel: "Close",
+        icon: <AlertTriangle size={22} color="#f59e0b" />,
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    if (finalCategory) saveCustomCategory(finalCategory);
     if (newItem.unit) saveCustomUnit(newItem.unit);
+    if (finalSupplier) saveCustomSupplier(finalSupplier);
+    if (newItem.subcategory) saveCustomSubcategory(newItem.subcategory);
+
+    const defaultSubs =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[finalCategory] || [
+        "General Supplies",
+      ];
+    const finalSubcategory =
+      info.suggestedSubcategory ||
+      (newItem.subcategory && newItem.subcategory.trim()
+        ? newItem.subcategory.trim()
+        : defaultSubs[0]);
 
     const itemDetails = {
-      name: newItem.name.trim(),
-      category: newItem.category || "General",
-      subcategory: newItem.subcategory || "",
-      mrp: newItem.mrp === "" || newItem.mrp == null ? null : Number(newItem.mrp),
+      name: finalName,
+      category: finalCategory,
+      subcategory: finalSubcategory,
+      mrp: newItem.mrp === "" ? null : Number(newItem.mrp),
       stock: Number(newItem.stock) || 0,
       minThreshold: Number(newItem.minThreshold) || 5,
-      unit: newItem.unit || "KG",
-      supplier: newItem.supplier?.trim() || "Local Supplier",
+      unit: info.suggestedUnit || normalizeUnit(newItem.unit || "KG"),
+      supplier: finalSupplier,
     };
-
-    console.log("[Inventory Form Submit] Processing item for MySQL Database:", itemDetails);
 
     if (editingItemId !== null) {
       saveInventory(
@@ -577,59 +1136,41 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     setNewItem({
       name: "",
       category: "Grains & Rice",
-      subcategory: "Rice",
+      subcategory: "Basmati Biryani Rice",
       mrp: "",
       stock: 10,
       minThreshold: 5,
       unit: "KG",
-      supplier: "Local Supplier",
+      supplier: "Metro Cash & Carry Wholesale",
     });
   };
 
   const openNewItemModal = () => {
-    setEditingItemId(null);
-    let draft = null;
-    try {
-      const raw = localStorage.getItem(INVENTORY_FORM_DRAFT_KEY);
-      if (raw) draft = JSON.parse(raw);
-    } catch {}
-    if (draft && typeof draft === "object") {
-      setNewItem({
-        name: draft.name || "",
-        category: draft.category || "Grains & Rice",
-        subcategory: draft.subcategory || "",
-        mrp: draft.mrp !== undefined ? draft.mrp : "",
-        stock: draft.stock !== undefined ? draft.stock : 10,
-        minThreshold: draft.minThreshold !== undefined ? draft.minThreshold : 5,
-        unit: draft.unit || "KG",
-        supplier: draft.supplier !== undefined ? draft.supplier : "Local Supplier",
-      });
-      console.log("[Inventory Form] Restored draft from localStorage:", draft);
-    } else {
-      resetItemForm();
-    }
+    resetItemForm();
     setIsAddModalOpen(true);
   };
 
   const openEditItemModal = (item) => {
     setEditingItemId(item.id);
+    const cat = normalizeCategory(item.category || "Grains & Rice");
+    const defaultSubs =
+      DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[cat] || ["General Supplies"];
     setNewItem({
       name: item.name || "",
-      category: item.category || "Grains & Rice",
-      subcategory: item.subcategory || "",
+      category: cat,
+      subcategory: item.subcategory || defaultSubs[0],
       mrp: item.mrp == null ? "" : String(item.mrp),
       stock: String(item.stock ?? 0),
       minThreshold: String(item.minThreshold ?? 5),
-      unit: item.unit || "KG",
-      supplier: item.supplier || "",
+      unit: normalizeUnit(item.unit || "KG"),
+      supplier: item.supplier || "Metro Cash & Carry Wholesale",
     });
-    console.log("[Inventory Form] Editing item:", item);
     setIsAddModalOpen(true);
   };
 
   const closeItemModal = () => {
     setIsAddModalOpen(false);
-    console.log("[Inventory Form] Modal closed.");
+    resetItemForm();
   };
 
   const handleDeleteItem = (id) => {
@@ -639,22 +1180,67 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       title: "Remove Inventory Item?",
       message: `Are you sure you want to remove "${itemName}" from restaurant inventory? This action cannot be undone.`,
       confirmLabel: "Yes, Remove",
-      onConfirm: () => saveInventory(inventory.filter((i) => i.id !== id)),
+      onConfirm: () => {
+        // 1. Collect all local and backend IDs associated with this item
+        const idsToDelete = Array.from(
+          new Set([String(id), ...(item?.associatedIds || []).map(String)]),
+        );
+        const info = getCanonicalIngredientInfo(item?.name);
+        const dedupeKey =
+          info.dedupeKey || String(item?.name || "").toLowerCase().trim();
+
+        // 2. Track in deleted localStorage so backend sync never resurrects it
+        try {
+          const prevDeleted = JSON.parse(
+            localStorage.getItem(STORAGE_KEY_DELETED_INVENTORY_IDS) || "[]",
+          );
+          const updatedDeleted = Array.from(
+            new Set([...prevDeleted, ...idsToDelete, dedupeKey]),
+          );
+          localStorage.setItem(
+            STORAGE_KEY_DELETED_INVENTORY_IDS,
+            JSON.stringify(updatedDeleted),
+          );
+        } catch {}
+
+        // 3. Immediately update UI & localStorage
+        const remaining = inventory.filter((i) => String(i.id) !== String(id));
+        saveInventory(remaining);
+
+        // 4. Call backend API to permanently delete from remote database
+        idsToDelete.forEach((backendId) => {
+          if (
+            backendId &&
+            !backendId.startsWith("inv-") &&
+            !backendId.startsWith("recipe-")
+          ) {
+            void apiDeleteIngredient(backendId)
+              .then((result) => {
+                if (!result?.success) {
+                  console.error(
+                    `[Inventory] Failed to delete ingredient ${backendId}:`,
+                    result?.error || "Unknown API error",
+                  );
+                }
+              })
+              .catch((error) => {
+                console.error(
+                  `[Inventory] Failed to delete ingredient ${backendId}:`,
+                  error instanceof Error ? error.message : error,
+                );
+              });
+          }
+        });
+      },
     });
   };
 
-  const categories = [
-    "all",
-    "Grains & Rice",
-    "Meats & Poultry",
-    "Seafood",
-    "Dairy",
-    "Spices & Oils",
-    "Vegetables & Fruits",
-    "Packaging",
-    "Beverages",
-  ];
-  const suppliers = [...new Set(inventory.map((item) => item.supplier))].sort();
+  const categories = useMemo(() => {
+    return ["all", ...allCategoryOptions.map((opt) => opt.value)];
+  }, [allCategoryOptions]);
+  const suppliers = useMemo(() => {
+    return allSupplierOptions.map((opt) => opt.value);
+  }, [allSupplierOptions]);
   const inStockCount = inventory.filter(
     (item) => item.stock > item.minThreshold,
   ).length;
@@ -662,7 +1248,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
   const filtered = inventory.filter((item) => {
     const matchesCategory =
-      selectedCategory === "all" || item.category === selectedCategory;
+      selectedCategory === "all" ||
+      item.category === selectedCategory ||
+      normalizeCategory(item.category) === normalizeCategory(selectedCategory);
     const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
@@ -2100,23 +2688,17 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             >
               SUPPLIER
             </label>
-            <input
-              value={restockSupplier}
-              onChange={(event) => setRestockSupplier(event.target.value)}
-              placeholder="Supplier name"
-              style={{
-                width: "100%",
-                height: "38px",
-                boxSizing: "border-box",
-                padding: "0 0.65rem",
-                borderRadius: "8px",
-                border: "1px solid var(--border-card)",
-                background: "var(--bg-tertiary)",
-                color: "var(--text-main)",
-                fontSize: "0.82rem",
-                marginBottom: "0.9rem",
-              }}
-            />
+            <div style={{ marginBottom: "0.9rem" }}>
+              <CustomCreatableDropdown
+                value={restockSupplier}
+                onChange={(val) => setRestockSupplier(val)}
+                options={allSupplierOptions}
+                placeholder="Select or enter supplier..."
+                customPlaceholder="Type new supplier name..."
+                allowCustom
+                onSaveCustomOption={saveCustomSupplier}
+              />
+            </div>
             <div
               style={{
                 display: "flex",
@@ -2257,7 +2839,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   required
                   placeholder="e.g. Basmati Saffron"
                   value={newItem.name}
-                  onChange={(e) => updateNewItemField("name", e.target.value)}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, name: e.target.value })
+                  }
                   style={{
                     width: "100%",
                     background: "var(--bg-tertiary)",
@@ -2289,7 +2873,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   inputMode="decimal"
                   placeholder="e.g. 250.00"
                   value={newItem.mrp}
-                  onChange={(e) => updateNewItemField("mrp", e.target.value)}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, mrp: e.target.value })
+                  }
                   style={{
                     width: "100%",
                     background: "var(--bg-tertiary)",
@@ -2308,29 +2894,23 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   style={{
                     display: "block",
                     fontSize: "0.75rem",
-                    color: "var(--text-dim)",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
                     marginBottom: "4px",
                   }}
                 >
                   Supplier
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Local Supplier"
+                <CustomCreatableDropdown
                   value={newItem.supplier}
-                  onChange={(e) =>
-                    updateNewItemField("supplier", e.target.value)
+                  onChange={(val) =>
+                    setNewItem({ ...newItem, supplier: val })
                   }
-                  style={{
-                    width: "100%",
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-card)",
-                    borderRadius: "8px",
-                    padding: "0.6rem 0.8rem",
-                    color: "var(--text-main)",
-                    fontSize: "0.85rem",
-                    outline: "none",
-                  }}
+                  options={allSupplierOptions}
+                  placeholder="Select Supplier"
+                  customPlaceholder="Type new supplier name..."
+                  allowCustom
+                  onSaveCustomOption={saveCustomSupplier}
                 />
               </div>
 
@@ -2356,7 +2936,23 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   </label>
                   <CustomCreatableDropdown
                     value={newItem.category}
-                    onChange={handleCategoryChange}
+                    onChange={(val) => {
+                      const normalized = normalizeCategory(val);
+                      const defaultSubs =
+                        DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[normalized] ||
+                        DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[val] ||
+                        customInvSubcategories[val] ||
+                        customInvSubcategories[normalized] ||
+                        ["General Supplies"];
+                      setNewItem({
+                        ...newItem,
+                        category: normalized,
+                        subcategory:
+                          defaultSubs.length > 0
+                            ? defaultSubs[0]
+                            : "General Supplies",
+                      });
+                    }}
                     options={allCategoryOptions}
                     placeholder="Select Category"
                     customPlaceholder="Type new category..."
@@ -2379,7 +2975,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   </label>
                   <CustomCreatableDropdown
                     value={newItem.unit}
-                    onChange={(val) => updateNewItemField("unit", val)}
+                    onChange={(val) => setNewItem({ ...newItem, unit: val })}
                     options={allUnitOptions}
                     placeholder="Select Unit"
                     customPlaceholder="Type new unit..."
@@ -2403,11 +2999,14 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 </label>
                 <CustomCreatableDropdown
                   value={newItem.subcategory}
-                  onChange={(val) => updateNewItemField("subcategory", val)}
+                  onChange={(val) =>
+                    setNewItem({ ...newItem, subcategory: val })
+                  }
                   options={subcategoryOptions}
                   placeholder="Select Subcategory"
                   customPlaceholder="Type new subcategory..."
                   allowCustom
+                  onSaveCustomOption={saveCustomSubcategory}
                 />
               </div>
 
@@ -2435,7 +3034,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     type="number"
                     value={newItem.stock}
                     onChange={(e) =>
-                      updateNewItemField("stock", e.target.value)
+                      setNewItem({ ...newItem, stock: e.target.value })
                     }
                     style={{
                       width: "100%",
@@ -2464,7 +3063,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     type="number"
                     value={newItem.minThreshold}
                     onChange={(e) =>
-                      updateNewItemField("minThreshold", e.target.value)
+                      setNewItem({ ...newItem, minThreshold: e.target.value })
                     }
                     style={{
                       width: "100%",

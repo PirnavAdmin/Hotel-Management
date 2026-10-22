@@ -1204,7 +1204,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         matchesTableDropdown &&
         matchesSearch
       );
-    }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    });
   }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
 
   const hasActiveFilters =
