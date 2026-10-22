@@ -121,9 +121,27 @@
   background-color: var(--bg-secondary);
 }
 
+[data-theme="light-bistro"] select option,
+[data-theme="light-bistro"] option,
+[data-theme="light-bistro"] optgroup {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
 [data-theme="light-bistro"] input::placeholder,
 [data-theme="light-bistro"] textarea::placeholder {
   color: var(--text-dim);
+}
+
+select {
+  background-color: var(--bg-secondary);
+  color: var(--text-main);
+}
+
+option,
+optgroup {
+  background-color: var(--bg-secondary);
+  color: var(--text-main);
 }
 
 * {

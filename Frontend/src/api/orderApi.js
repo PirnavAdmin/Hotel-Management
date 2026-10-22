@@ -50,6 +50,18 @@ export async function apiRemoveOrderItem(orderId, itemId) {
   });
 }
 
+export async function apiSettleOrder(orderId, settlementData = {}) {
+  return apiClient(`/api/v1/orders/${orderId}/settle`, {
+    method: "POST",
+    body: JSON.stringify({
+      discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+      serviceChargeEnabled: settlementData.serviceChargeEnabled !== false,
+      tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
+      paymentMethod: settlementData.paymentMethod || "Cash",
+    }),
+  });
+}
+
 export async function apiUpdateOrderGuests(orderId, guests) {
   return await apiClient(`/api/v1/orders/${orderId}/guests`, {
     method: "PATCH",

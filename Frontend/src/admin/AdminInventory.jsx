@@ -20,7 +20,11 @@ import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
 import { API_BASE_URL } from "../api/apiConfig";
-import { apiGetInventory } from "../api/inventoryApi";
+import {
+  apiGetInventory,
+  apiCreateInventoryItem,
+  apiUpdateInventoryItem,
+} from "../api/inventoryApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans"];
@@ -295,7 +299,31 @@ export const getCanonicalIngredientInfo = (rawName) => {
     };
   }
 
-  // 4. General normalized key (singularize common plural endings)
+  // 4. Common Indian biryani ingredients
+  const biryaniIngredients = [
+    [/(allam|ginger).*?(velluli|garlic)|gingergarlic/, "ingredient_paste_garlicginger", "Ginger-Garlic Paste", "Ginger-Garlic Paste", "Sauces, Pastes & Condiments", "KG"],
+    [/\b(onion|onions)\b/, "ingredient_produce_onion", "Onions", "Onions", "Vegetables & Fresh Produce", "KG"],
+    [/\b(curd|yogurt|dahi)\b/, "ingredient_dairy_curd", "Fresh Curd (Dahi)", "Fresh Curd (Dahi)", "Dairy & Cheeses", "KG"],
+    [/\bsalt\b/, "ingredient_spice_salt", "Table Salt & Rock Salt", "Table Salt & Rock Salt", "Spices & Seasonings", "KG"],
+    [/\bturmeric|haldi\b/, "ingredient_spice_turmeric", "Turmeric Powder (Haldi)", "Turmeric Powder (Haldi)", "Spices & Seasonings", "KG"],
+    [/chicken.*masala|masala.*chicken/, "ingredient_spice_chickenmasala", "Chicken Masala Powder", "Chicken Masala Powder", "Spices & Seasonings", "KG"],
+    [/dalchini|cinnamon/, "ingredient_spice_cinnamon", "Cinnamon (Dalchini)", "Cinnamon (Dalchini)", "Spices & Seasonings", "KG"],
+    [/lawang|clove/, "ingredient_spice_clove", "Cloves (Lawang)", "Cloves (Lawang)", "Spices & Seasonings", "KG"],
+    [/biriyani|biryani.*leaf|bay.*leaf/, "ingredient_spice_bayleaf", "Biryani / Bay Leaves", "Biryani / Bay Leaves", "Spices & Seasonings", "KG"],
+  ];
+  for (const [pattern, key, canonicalName, subcategory, category, unit] of biryaniIngredients) {
+    if (pattern.test(alphanumeric) || pattern.test(lower)) {
+      return {
+        dedupeKey: key,
+        canonicalName,
+        suggestedCategory: category,
+        suggestedSubcategory: subcategory,
+        suggestedUnit: unit,
+      };
+    }
+  }
+
+  // 5. General normalized key (singularize common plural endings)
   let baseKey = alphanumeric;
   if (baseKey.endsWith("ies") && baseKey.length > 5) {
     baseKey = baseKey.slice(0, -3) + "y";
@@ -745,6 +773,14 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const saveInventory = (updated) => {
     const normalized = deduplicateAndNormalizeInventory(updated);
     setInventory(normalized);
+    normalized.forEach((item) => {
+      const backendId = Number(item.id);
+      if (!Number.isFinite(backendId) || backendId <= 0) {
+        apiCreateInventoryItem(item).catch(() => {});
+      } else {
+        apiUpdateInventoryItem(backendId, item).catch(() => {});
+      }
+    });
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
       fetch(`${API_BASE_URL}/api/sync`, {
@@ -789,7 +825,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       const savedById = new Map((Array.isArray(saved) ? saved : []).map((item) => [String(item.id), item]));
       const remote = rows
         .filter((row) => {
-          const id = String(row.id ?? row.ingredientId ?? row.ingredient_id);
+          const id = String(row.id ?? row.ingredientId ?? row.IngredientId ?? row.ingredient_id);
           const info = getCanonicalIngredientInfo(row.name);
           return (
             !deletedIds.has(id) &&

@@ -76,14 +76,31 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const invoiceNumber = table.invoiceNo || getNextInvoiceNumber();
   const currentDate = table.date || getTodayDateString();
   const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
-  const paidTime = formatReceiptTime(table.settledAt || table.time);
   const tableCapacity = Number(table.capacity) || 0;
   const guestCount =
     (Number(table.guests) > 0 ? Number(table.guests) : null) ??
     (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
     (tableCapacity > 0 ? tableCapacity : null) ??
     2;
-  const paymentMethod = table.paymentMethod ? table.paymentMethod.toUpperCase() : 'PAID';
+
+  // Determine if this bill has been settled and paid vs an unsettled active customer check
+  const isSettled = Boolean(
+    (table.isPaid === true ||
+     table.settled === true ||
+     String(table.status || '').toLowerCase() === 'settled' ||
+     String(table.status || '').toLowerCase() === 'paid' ||
+     Boolean(table.settledAt)) &&
+    String(table.status || '').toLowerCase() !== 'occupied' &&
+    String(table.status || '').toLowerCase() !== 'active'
+  );
+
+  const paidTime = isSettled
+    ? formatReceiptTime(table.settledAt || (table.paymentMethod ? table.time : null))
+    : null;
+
+  const paymentMethod = isSettled
+    ? (table.paymentMethod ? table.paymentMethod.toUpperCase() : (table.paymentMode ? table.paymentMode.toUpperCase() : 'PAID'))
+    : null;
 
   const handlePrint = () => {
     window.print();
@@ -245,6 +262,24 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               {restaurantTagline && <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#000000', margin: '2px 0' }}>{restaurantTagline}</p>}
               {(restaurantAddress || restaurantPhone) && <p style={{ fontSize: '0.66rem', color: '#333333', margin: '1px 0' }}>{[restaurantAddress, restaurantPhone].filter(Boolean).join(' • ')}</p>}
               {restaurantGstin && <p style={{ fontSize: '0.66rem', fontWeight: 700, color: '#000000', margin: '1px 0' }}>GSTIN: {restaurantGstin}</p>}
+
+              {/* Clear Paid vs Unpaid Status Badge */}
+              <div style={{
+                textAlign: 'center',
+                fontSize: '0.72rem',
+                fontWeight: 900,
+                letterSpacing: '0.04em',
+                padding: '3px 6px',
+                margin: '5px 0 2px',
+                borderRadius: '4px',
+                border: isSettled ? '1.5px solid #16a34a' : '1.5px dashed #dc2626',
+                color: isSettled ? '#15803d' : '#b91c1c',
+                background: isSettled ? 'rgba(22, 163, 74, 0.08)' : 'rgba(220, 38, 38, 0.08)'
+              }}>
+                {isSettled
+                  ? '★ PAID TAX INVOICE ★'
+                  : '⚠ GUEST BILL / ESTIMATE — UNPAID (PAYMENT DUE) ⚠'}
+              </div>
             </div>
 
             {/* Bill Meta Grid */}
@@ -255,8 +290,19 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Guests: <strong>{guestCount}</strong></span>
               <span>Date: <strong>{currentDate}</strong></span>
               {orderTime && <span style={{ textAlign: 'right' }}>Order: <strong>{orderTime}</strong></span>}
-              {paidTime && <span>Paid: <strong>{paidTime}</strong></span>}
-              {paymentMethod && <span style={{ textAlign: 'right', fontWeight: 800 }}>Mode: <strong>{paymentMethod}</strong></span>}
+              {isSettled ? (
+                <>
+                  {paidTime && <span>Paid: <strong>{paidTime}</strong></span>}
+                  <span style={{ textAlign: 'right', fontWeight: 800, color: '#15803d' }}>
+                    Mode: <strong>{paymentMethod ? `${paymentMethod} (PAID)` : 'PAID'}</strong>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={{ color: '#b91c1c', fontWeight: 800 }}>Payment: <strong>UNPAID</strong></span>
+                  <span style={{ textAlign: 'right', fontWeight: 800, color: '#b91c1c' }}>Status: <strong>BILL DUE</strong></span>
+                </>
+              )}
             </div>
 
             {/* Itemized Table Header */}
@@ -356,12 +402,31 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   ₹{grandTotal.toFixed(2)}
                 </span>
               </div>
+
+              {!isSettled && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '4px 6px',
+                  marginTop: '6px',
+                  border: '1.5px dashed #b91c1c',
+                  color: '#b91c1c',
+                  fontWeight: 800,
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.03em',
+                  background: 'rgba(220, 38, 38, 0.05)',
+                  borderRadius: '3px'
+                }}>
+                  *** BILL DUE — PLEASE SETTLE AT CASHIER ***
+                </div>
+              )}
             </div>
 
             {/* Thermal Footer */}
             <div style={{ textAlign: 'center', marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed #000000' }}>
               <p style={{ fontSize: '0.72rem', fontWeight: 800, color: '#000000', margin: '2px 0 0' }}>
-                THANK YOU FOR DINING AT {restaurantName.toUpperCase()}!
+                {isSettled
+                  ? `THANK YOU FOR DINING AT ${restaurantName.toUpperCase()}!`
+                  : `THANK YOU FOR VISITING ${restaurantName.toUpperCase()}!`}
               </p>
               <p style={{ fontSize: '0.64rem', color: '#444444', margin: '1px 0 0' }}>
                 Please visit again{restaurantPhone ? ` • For orders: ${restaurantPhone}` : ""}
@@ -405,10 +470,16 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               </div>
 
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', letterSpacing: '0.04em' }}>TAX INVOICE</div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Original for Recipient</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: isSettled ? '#0f172a' : '#b91c1c', letterSpacing: '0.04em' }}>
+                  {isSettled ? 'TAX INVOICE' : 'GUEST ESTIMATE / UNPAID BILL'}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: isSettled ? '#15803d' : '#b91c1c', fontWeight: 800 }}>
+                  {isSettled ? 'Original for Recipient (Settled & Paid)' : 'PAYMENT DUE — UNSETTLED'}
+                </div>
                 <div style={{ fontSize: '0.86rem', fontWeight: 800, marginTop: '4px' }}>Invoice: #{invoiceNumber}</div>
-                <div style={{ fontSize: '0.74rem', color: '#475569' }}>Date: {currentDate} {orderTime ? `• ${orderTime}` : ''}</div>
+                <div style={{ fontSize: '0.74rem', color: '#475569' }}>
+                  Date: {currentDate} {orderTime ? `• Order: ${orderTime}` : ''} {paidTime ? `• Paid: ${paidTime}` : ''}
+                </div>
               </div>
             </div>
 
@@ -417,7 +488,12 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               <div><span style={{ color: '#64748b' }}>Table:</span> <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></div>
               <div><span style={{ color: '#64748b' }}>Server:</span> <strong>{table.server || 'Staff'}</strong></div>
               <div><span style={{ color: '#64748b' }}>Guests:</span> <strong>{guestCount} Persons</strong></div>
-              <div><span style={{ color: '#64748b' }}>Payment Mode:</span> <strong style={{ color: '#16a34a' }}>{paymentMethod}</strong></div>
+              <div>
+                <span style={{ color: '#64748b' }}>Payment Status:</span>{' '}
+                <strong style={{ color: isSettled ? '#16a34a' : '#dc2626' }}>
+                  {isSettled ? (paymentMethod ? `${paymentMethod} (PAID)` : 'PAID') : 'UNPAID / BILL DUE'}
+                </strong>
+              </div>
             </div>
 
             {/* Itemized Table */}
@@ -547,7 +623,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             }}
           >
             <Printer size={15} />
-            <span>Print {printFormat === 'a4' ? 'A4 Invoice' : 'Thermal Receipt'}</span>
+            <span>
+              Print {isSettled ? (printFormat === 'a4' ? 'A4 Tax Invoice' : 'Thermal Receipt') : (printFormat === 'a4' ? 'A4 Bill (Unpaid)' : 'Bill / Estimate')}
+            </span>
           </button>
         </div>
       </div>

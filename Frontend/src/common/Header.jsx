@@ -116,8 +116,10 @@ export function Header({
   const vacantCount = safeTables.filter((t) => t?.status === "vacant").length;
 
   const totalGuests = safeTables
-    .filter((t) => t?.status !== "vacant")
-    .reduce((acc, t) => acc + (t?.guests || 0), 0);
+    .reduce((acc, t) => {
+      const g = Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0);
+      return acc + (t?.status !== "vacant" ? g : 0);
+    }, 0);
 
   const totalRunningRevenue = safeTables
     .filter((t) => t?.status !== "vacant")
