@@ -23,6 +23,7 @@ import { API_BASE_URL } from "../api/apiConfig";
 import { apiGetInventory } from "../api/inventoryApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+const INVENTORY_FORM_DRAFT_KEY = "gourmet_pos_inventory_form_draft_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans"];
 
 const normalizeUnit = (unit) => (unit === "Litres" ? "L" : unit);
@@ -145,16 +146,57 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [restockSupplier, setRestockSupplier] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
-  const [newItem, setNewItem] = useState({
-    name: "",
-    category: "Grains & Rice",
-    subcategory: "Rice",
-    mrp: "",
-    stock: 10,
-    minThreshold: 5,
-    unit: "KG",
-    supplier: "Local Supplier",
+  const [newItem, setNewItem] = useState(() => {
+    try {
+      const raw = localStorage.getItem(INVENTORY_FORM_DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft && typeof draft === "object") return draft;
+      }
+    } catch {}
+    return {
+      name: "",
+      category: "Grains & Rice",
+      subcategory: "Rice",
+      mrp: "",
+      stock: 10,
+      minThreshold: 5,
+      unit: "KG",
+      supplier: "Local Supplier",
+    };
   });
+
+  const updateNewItemField = (field, value) => {
+    setNewItem((prev) => {
+      const next = { ...prev, [field]: value };
+      if (editingItemId === null) {
+        try {
+          localStorage.setItem(INVENTORY_FORM_DRAFT_KEY, JSON.stringify(next));
+          console.log(`[LocalStorage Draft Saved] Key: "${INVENTORY_FORM_DRAFT_KEY}"`, next);
+        } catch (err) {
+          console.error("Failed to save draft to localStorage:", err);
+        }
+      }
+      console.log(`[Inventory Form Input] "${field}":`, value);
+      return next;
+    });
+  };
+
+  const handleCategoryChange = (val) => {
+    setNewItem((prev) => {
+      const next = { ...prev, category: val, subcategory: "" };
+      if (editingItemId === null) {
+        try {
+          localStorage.setItem(INVENTORY_FORM_DRAFT_KEY, JSON.stringify(next));
+          console.log(`[LocalStorage Draft Saved] Key: "${INVENTORY_FORM_DRAFT_KEY}"`, next);
+        } catch (err) {
+          console.error("Failed to save draft to localStorage:", err);
+        }
+      }
+      console.log(`[Inventory Form Input] "category":`, val);
+      return next;
+    });
+  };
 
   const subcategoryOptions = useMemo(() => {
     const subcategories = new Map();
@@ -176,6 +218,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     setInventory(normalized);
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
+      console.log(`[LocalStorage Saved] Key: "${INVENTORY_STORAGE_KEY}", items count: ${normalized.length}`, normalized);
       fetch(`${API_BASE_URL}/api/sync`, {
         method: "POST",
         headers: {
@@ -187,7 +230,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       window.dispatchEvent(
         new CustomEvent("avsr-inventory-updated", { detail: normalized }),
       );
-    } catch {}
+    } catch (e) {
+      console.error("[LocalStorage Error] Failed to save inventory:", e);
+    }
   };
 
   useEffect(() => {
@@ -214,10 +259,14 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           ...previous,
           id: String(id),
           name: row.name?.trim() || previous.name || `Unnamed ingredient #${id}`,
-          unit: normalizeUnit(row.unit || previous.unit || "Pcs"),
+          category: row.category?.trim() || previous.category || "General",
+          subcategory: row.subcategory?.trim() || previous.subcategory || "",
+          supplier: row.supplier?.trim() || previous.supplier || "Local Supplier",
+          unit: normalizeUnit(row.unit || previous.unit || "KG"),
           stock: Number(row.currentStock ?? row.stock ?? previous.stock ?? 0),
-          minThreshold: Number(row.minimumThreshold ?? row.minThreshold ?? previous.minThreshold ?? 0),
-          mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
+          minThreshold: Number(row.minimumThreshold ?? row.minThreshold ?? previous.minThreshold ?? 5),
+          mrp: Number(row.mrp ?? row.unitCost ?? previous.mrp ?? 0),
+          unitCost: Number(row.unitCost ?? row.mrp ?? previous.unitCost ?? 0),
         };
       });
       const remoteIds = new Set(remote.map((item) => String(item.id)));
@@ -360,6 +409,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       month: "short",
       year: "numeric",
     });
+    const numId = Number(restockItem.id);
+    if (Number.isFinite(numId) && numId > 0) {
+      apiAdjustStock({
+        ingredientId: numId,
+        quantityChange: amount,
+        reason: `Restocked from ${restockSupplier.trim() || restockItem.supplier || "Supplier"}`,
+      }).then((res) => {
+        if (res?.success) {
+          console.log(`[Database API] Restock adjusted in MySQL DB for ingredient #${numId}: +${amount}`);
+        }
+      }).catch((err) => {
+        console.error("[Database API] Error saving stock adjustment to DB:", err);
+      });
+    }
+
     const updated = inventory.map((item) =>
       item.id === restockItem.id
         ? {
@@ -371,6 +435,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           }
         : item,
     );
+    if (restockItem?.id && !isNaN(Number(restockItem.id))) {
+      apiAdjustStock({
+        ingredientId: Number(restockItem.id),
+        quantityChange: amount,
+        reason: "Restocked from " + (restockSupplier.trim() || restockItem.supplier || "Supplier"),
+      }).catch(() => {});
+    }
     saveInventory(updated);
     setRestockItem(null);
     setRestockAmount("");
@@ -458,7 +529,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     window.setTimeout(() => setExportMessage(""), 5000);
   };
 
-  const handleAddItem = (e) => {
+  const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItem.name.trim()) return;
 
@@ -467,14 +538,16 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
     const itemDetails = {
       name: newItem.name.trim(),
-      category: newItem.category,
-      subcategory: newItem.subcategory,
-      mrp: newItem.mrp === "" ? null : Number(newItem.mrp),
+      category: newItem.category || "General",
+      subcategory: newItem.subcategory || "",
+      mrp: newItem.mrp === "" || newItem.mrp == null ? null : Number(newItem.mrp),
       stock: Number(newItem.stock) || 0,
       minThreshold: Number(newItem.minThreshold) || 5,
-      unit: newItem.unit,
-      supplier: newItem.supplier.trim() || "Local Vendor",
+      unit: newItem.unit || "KG",
+      supplier: newItem.supplier?.trim() || "Local Supplier",
     };
+
+    console.log("[Inventory Form Submit] Processing item for MySQL Database:", itemDetails);
 
     if (editingItemId !== null) {
       saveInventory(
@@ -514,7 +587,27 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   };
 
   const openNewItemModal = () => {
-    resetItemForm();
+    setEditingItemId(null);
+    let draft = null;
+    try {
+      const raw = localStorage.getItem(INVENTORY_FORM_DRAFT_KEY);
+      if (raw) draft = JSON.parse(raw);
+    } catch {}
+    if (draft && typeof draft === "object") {
+      setNewItem({
+        name: draft.name || "",
+        category: draft.category || "Grains & Rice",
+        subcategory: draft.subcategory || "",
+        mrp: draft.mrp !== undefined ? draft.mrp : "",
+        stock: draft.stock !== undefined ? draft.stock : 10,
+        minThreshold: draft.minThreshold !== undefined ? draft.minThreshold : 5,
+        unit: draft.unit || "KG",
+        supplier: draft.supplier !== undefined ? draft.supplier : "Local Supplier",
+      });
+      console.log("[Inventory Form] Restored draft from localStorage:", draft);
+    } else {
+      resetItemForm();
+    }
     setIsAddModalOpen(true);
   };
 
@@ -530,16 +623,17 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       unit: item.unit || "KG",
       supplier: item.supplier || "",
     });
+    console.log("[Inventory Form] Editing item:", item);
     setIsAddModalOpen(true);
   };
 
   const closeItemModal = () => {
     setIsAddModalOpen(false);
-    resetItemForm();
+    console.log("[Inventory Form] Modal closed.");
   };
 
   const handleDeleteItem = (id) => {
-    const item = inventory.find((i) => i.id === id);
+    const item = inventory.find((i) => String(i.id) === String(id));
     const itemName = item?.name || "this item";
     requestDelete({
       title: "Remove Inventory Item?",
@@ -2163,9 +2257,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   required
                   placeholder="e.g. Basmati Saffron"
                   value={newItem.name}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, name: e.target.value })
-                  }
+                  onChange={(e) => updateNewItemField("name", e.target.value)}
                   style={{
                     width: "100%",
                     background: "var(--bg-tertiary)",
@@ -2197,9 +2289,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   inputMode="decimal"
                   placeholder="e.g. 250.00"
                   value={newItem.mrp}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, mrp: e.target.value })
-                  }
+                  onChange={(e) => updateNewItemField("mrp", e.target.value)}
                   style={{
                     width: "100%",
                     background: "var(--bg-tertiary)",
@@ -2229,7 +2319,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   placeholder="e.g. Local Supplier"
                   value={newItem.supplier}
                   onChange={(e) =>
-                    setNewItem({ ...newItem, supplier: e.target.value })
+                    updateNewItemField("supplier", e.target.value)
                   }
                   style={{
                     width: "100%",
@@ -2266,13 +2356,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   </label>
                   <CustomCreatableDropdown
                     value={newItem.category}
-                    onChange={(val) =>
-                      setNewItem({
-                        ...newItem,
-                        category: val,
-                        subcategory: "",
-                      })
-                    }
+                    onChange={handleCategoryChange}
                     options={allCategoryOptions}
                     placeholder="Select Category"
                     customPlaceholder="Type new category..."
@@ -2295,7 +2379,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   </label>
                   <CustomCreatableDropdown
                     value={newItem.unit}
-                    onChange={(val) => setNewItem({ ...newItem, unit: val })}
+                    onChange={(val) => updateNewItemField("unit", val)}
                     options={allUnitOptions}
                     placeholder="Select Unit"
                     customPlaceholder="Type new unit..."
@@ -2319,9 +2403,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 </label>
                 <CustomCreatableDropdown
                   value={newItem.subcategory}
-                  onChange={(val) =>
-                    setNewItem({ ...newItem, subcategory: val })
-                  }
+                  onChange={(val) => updateNewItemField("subcategory", val)}
                   options={subcategoryOptions}
                   placeholder="Select Subcategory"
                   customPlaceholder="Type new subcategory..."
@@ -2353,7 +2435,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     type="number"
                     value={newItem.stock}
                     onChange={(e) =>
-                      setNewItem({ ...newItem, stock: e.target.value })
+                      updateNewItemField("stock", e.target.value)
                     }
                     style={{
                       width: "100%",
@@ -2382,7 +2464,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     type="number"
                     value={newItem.minThreshold}
                     onChange={(e) =>
-                      setNewItem({ ...newItem, minThreshold: e.target.value })
+                      updateNewItemField("minThreshold", e.target.value)
                     }
                     style={{
                       width: "100%",

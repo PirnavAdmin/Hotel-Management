@@ -271,47 +271,128 @@ textarea {
 }
 
 /* Print Styles for Receipts and Reports */
+@page {
+  size: auto;
+  margin: 0mm;
+}
+
 @media print {
-  body * {
-    visibility: hidden;
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Reset fixed modal overlay for natural top-of-page printing */
+  .receipt-modal-overlay,
+  .receipt-modal-container {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+    max-width: none !important;
+  }
+
   #printable-receipt,
   #printable-receipt *,
   #printable-report,
   #printable-report * {
-    visibility: visible;
+    visibility: visible !important;
   }
-  #printable-receipt {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    margin: 0;
-    padding: 10mm;
+
+  /* 80mm Thermal Receipt Print Styling */
+  #printable-receipt.format-thermal,
+  #printable-receipt:not(.format-a4) {
+    display: block !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    padding: 4mm 3mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
     border: none !important;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
+
+  /* A4 Full Page Invoice Print Styling */
+  #printable-receipt.format-a4 {
+    display: block !important;
+    position: relative !important;
+    margin: 8mm auto !important;
+    width: 100% !important;
+    max-width: 190mm !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
   #printable-report {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 12mm 15mm;
+    position: relative !important;
+    margin: 10mm auto !important;
+    width: 100% !important;
+    max-width: 190mm !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
     border: none !important;
   }
-  .no-print {
-    display: none !important;
-  }
+
   .receipt-items-scroll {
     max-height: none !important;
     overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Force print text and borders to black for thermal roll clarity */
+  #printable-receipt * {
+    color: #000000 !important;
   }
 }
 
@@ -362,28 +443,32 @@ textarea {
   /* Navigation Header compact on mobile */
   .mobile-header-nav {
     padding: 0.5rem 0.75rem !important;
-    gap: 0.4rem !important;
-    align-items: stretch !important;
   }
 
-  .mobile-header-nav > div:first-of-type {
+  .mobile-header-primary {
+    padding: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-header-primary > div:first-of-type {
     width: 100%;
     flex-wrap: wrap !important;
     justify-content: space-between;
     gap: 0.5rem !important;
   }
 
-  .mobile-header-nav > div:first-of-type > nav {
+  .mobile-header-primary > div:first-of-type > nav {
     width: 100%;
     display: grid !important;
     grid-template-columns: 1fr 1fr;
   }
 
-  .mobile-header-nav > div:first-of-type > nav > button {
+  .mobile-header-primary > div:first-of-type > nav > button {
     justify-content: center;
   }
 
-  .mobile-header-nav > div:last-child {
+  .mobile-header-primary > div:last-child {
     width: 100%;
     justify-content: space-between;
   }
@@ -580,3 +665,10 @@ textarea {
     justify-self: end;
   }
 }
+
+.login-account-tabs { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.login-account-tabs button { display: flex; flex: 1 1 160px; min-width: 0; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-tertiary); color: var(--text-muted); font-family: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+.login-account-tabs button svg { flex-shrink: 0; }
+.login-account-tabs button span { overflow-wrap: anywhere; }
+.login-account-tabs button[aria-selected="true"] { background: rgba(245,158,11,0.14); border-color: var(--accent-amber); color: var(--accent-amber); }
+.login-account-tabs button:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }

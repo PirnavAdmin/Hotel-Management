@@ -1,8 +1,14 @@
+using System.Text.Json.Serialization;
+
 namespace HMS.DTOs;
 
 public class CreateOrderRequest
 {
-    public long TableId { get; set; }
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
+    public long? TableId { get; set; }
+
+    public string? TableName { get; set; }
+    public string? TableNumber { get; set; }
 
     private string _serverName = string.Empty;
     public string ServerName
@@ -29,17 +35,24 @@ public class CreateOrderRequest
 
 public class OrderItemInput
 {
-    private long _menuItemId;
-    public long MenuItemId
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
+    private long? _menuItemId;
+    public long? MenuItemId
     {
-        get => _menuItemId > 0 ? _menuItemId : (Id > 0 ? Id : (BackendId > 0 ? BackendId : (ItemId > 0 ? ItemId : 1)));
+        get => _menuItemId.HasValue && _menuItemId.Value > 0 ? _menuItemId : (Id.HasValue && Id.Value > 0 ? Id : (BackendId.HasValue && BackendId.Value > 0 ? BackendId : (ItemId.HasValue && ItemId.Value > 0 ? ItemId : null)));
         set => _menuItemId = value;
     }
 
-    public long Id { get; set; }
-    public long BackendId { get; set; }
-    public long ItemId { get; set; }
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
+    public long? Id { get; set; }
 
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
+    public long? BackendId { get; set; }
+
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
+    public long? ItemId { get; set; }
+
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
     public long? VariantId { get; set; }
 
     private string _name = string.Empty;

@@ -85,23 +85,78 @@ public class KotService
 
     public async Task<KotOrderResponseDto> CreateKotOrderAsync(CreateKotOrderDto dto)
     {
+        // Resolve TableId if not provided or 0
+        long? tableId = dto.TableId;
+        if (!tableId.HasValue || tableId.Value <= 0)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.TableName))
+            {
+                try
+                {
+                    var resolvedId = await _spService.ExecuteSqlScalarAsync<long?>(
+                        "SELECT table_id FROM restaurant_tables WHERE table_number = @tname OR table_name = @tname LIMIT 1;",
+                        new Dictionary<string, object?> { { "tname", dto.TableName.Trim() } });
+                    if (resolvedId.HasValue && resolvedId.Value > 0)
+                    {
+                        tableId = resolvedId.Value;
+                    }
+                }
+                catch { }
+            }
+        }
+
         var parameters = new Dictionary<string, object?>
         {
-            { "p_table_id", dto.TableId },
+            { "p_table_id", tableId },
             { "p_table_name", dto.TableName.Trim() },
             { "p_section_area", string.IsNullOrWhiteSpace(dto.SectionArea) ? "Main Hall" : dto.SectionArea.Trim() },
-            { "p_server_name", dto.ServerName.Trim() },
+            { "p_server_name", string.IsNullOrWhiteSpace(dto.ServerName) ? "Staff" : dto.ServerName.Trim() },
             { "p_order_status", "PENDING" }
         };
 
         long orderId = await _spService.ExecuteScalarAsync<long>("sp_CreateKotOrder", parameters);
 
+        // Update kot_number and table_number if supported
+        try
+        {
+            var kotNum = $"KOT-{orderId:D4}";
+            await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE kot_orders SET kot_number = @knum, table_number = @tnum, status = 'PENDING' WHERE order_id = @oid;",
+                new Dictionary<string, object?> { { "knum", kotNum }, { "tnum", dto.TableName.Trim() }, { "oid", orderId } });
+        }
+        catch { }
+
+        // Mark table as occupied in restaurant_tables
+        try
+        {
+            await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE restaurant_tables SET status = 'occupied', updated_at = NOW() WHERE (table_id = @tid AND @tid > 0) OR table_number = @tname OR table_name = @tname;",
+                new Dictionary<string, object?> { { "tid", tableId ?? 0 }, { "tname", dto.TableName.Trim() } });
+        }
+        catch { }
+
         foreach (var item in dto.Items)
         {
+            long? menuItemId = item.MenuItemId;
+            if (!menuItemId.HasValue || menuItemId.Value <= 0)
+            {
+                try
+                {
+                    var resolvedMenuId = await _spService.ExecuteSqlScalarAsync<long?>(
+                        "SELECT menu_item_id FROM menu_items WHERE dish_name = @dname LIMIT 1;",
+                        new Dictionary<string, object?> { { "dname", item.DishName.Trim() } });
+                    if (resolvedMenuId.HasValue && resolvedMenuId.Value > 0)
+                    {
+                        menuItemId = resolvedMenuId.Value;
+                    }
+                }
+                catch { }
+            }
+
             var itemParams = new Dictionary<string, object?>
             {
                 { "p_order_id", orderId },
-                { "p_menu_item_id", item.MenuItemId },
+                { "p_menu_item_id", menuItemId },
                 { "p_dish_name", item.DishName.Trim() },
                 { "p_quantity", item.Quantity > 0 ? item.Quantity : 1 },
                 { "p_item_status", "PENDING" }

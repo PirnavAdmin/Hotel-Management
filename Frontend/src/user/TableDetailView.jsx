@@ -4030,7 +4030,7 @@ export function TableDetailView({
                   }}
                 >
                   <button
-                    onClick={() => onSendKOT(table.id)}
+                    onClick={() => onSendKOT(table.id, safeItems)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4411,7 +4411,7 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onSendKOT(table.id);
+                    onSendKOT(table.id, safeItems);
                   }}
                   style={{
                     padding: "0.55rem",

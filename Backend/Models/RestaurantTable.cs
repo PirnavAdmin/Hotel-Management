@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,6 +10,24 @@ public class RestaurantTable
     [Key]
     [Column("table_id")]
     public long TableId { get; set; }
+
+    [Column("branch_id")]
+    public long BranchId { get; set; } = 1;
+
+    [MaxLength(50)]
+    [Column("table_number")]
+    public string TableNumber { get; set; } = string.Empty;
+
+    [Column("capacity")]
+    public int Capacity { get; set; } = 4;
+
+    [MaxLength(50)]
+    [Column("location")]
+    public string Location { get; set; } = "Main Hall";
+
+    [MaxLength(255)]
+    [Column("qr_code_url")]
+    public string? QrCodeUrl { get; set; }
 
     [Required]
     [MaxLength(50)]
@@ -29,7 +48,7 @@ public class RestaurantTable
     [Required]
     [MaxLength(20)]
     [Column("status")]
-    public string Status { get; set; } = "VACANT"; // "VACANT", "OCCUPIED", "RESERVED"
+    public string Status { get; set; } = "available"; // "available", "occupied", "reserved", "cleaning", "inactive"
 
     [Column("assigned_server_id")]
     public long? AssignedServerId { get; set; }
