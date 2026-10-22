@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>(() => { let theme = 'royal-saffron'; try { const saved = localStorage.getItem('gourmet_pos_theme_v2'); if (saved === 'light-bistro' || saved === 'light') theme = 'light-bistro'; } catch {} document.documentElement.dataset.theme = theme; document.documentElement.style.colorScheme = theme === 'light-bistro' ? 'light' : 'dark'; })();</script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'><path d='M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-8.03c2.09-.13 3.75-1.85 3.75-3.97V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z'/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AVSR FOOD COURT - Restaurant Table Billing & Order System</title>

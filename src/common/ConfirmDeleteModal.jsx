@@ -30,7 +30,7 @@ export function ConfirmDeleteModal({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.72)',
+        background: 'var(--modal-overlay)',
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         display: 'flex',
@@ -47,13 +47,13 @@ export function ConfirmDeleteModal({
         .cdm-confirm-btn { transition: all 0.15s ease; }
         .cdm-confirm-btn:hover { filter: brightness(1.12); transform: scale(1.02); }
         .cdm-cancel-btn { transition: all 0.15s ease; }
-        .cdm-cancel-btn:hover { background: rgba(255,255,255,0.12) !important; color: #ffffff !important; }
+        .cdm-cancel-btn:hover { background: var(--surface-tint-hover) !important; color: var(--text-main) !important; }
       `}</style>
 
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#0e1726',
+          background: 'var(--bg-card)',
           border: '1.5px solid rgba(239,68,68,0.45)',
           borderRadius: '16px',
           padding: '1.6rem 1.5rem 1.4rem',
@@ -83,7 +83,7 @@ export function ConfirmDeleteModal({
         {/* Title */}
         <h3 style={{
           fontSize: '1.1rem', fontWeight: 900,
-          color: '#ffffff', margin: '0 0 0.5rem',
+          color: 'var(--text-main)', margin: '0 0 0.5rem',
           letterSpacing: '-0.01em',
         }}>
           {title}
@@ -91,7 +91,7 @@ export function ConfirmDeleteModal({
 
         {/* Message */}
         <p style={{
-          fontSize: '0.82rem', color: '#94a3b8',
+          fontSize: '0.82rem', color: 'var(--text-dim)',
           fontWeight: 500, margin: '0 0 1.5rem',
           lineHeight: 1.55,
         }}>
@@ -120,9 +120,9 @@ export function ConfirmDeleteModal({
             style={{
               flex: 1, padding: '0.65rem 1rem',
               borderRadius: '12px',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.13)',
-              color: '#94a3b8', fontWeight: 700,
+              background: 'var(--surface-tint)',
+              border: '1px solid var(--neutral-border)',
+              color: 'var(--text-dim)', fontWeight: 700,
               fontSize: '0.85rem', cursor: 'pointer',
             }}
           >

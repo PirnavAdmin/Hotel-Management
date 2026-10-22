@@ -16,7 +16,7 @@ export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmT
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
+      background: 'var(--modal-overlay)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',

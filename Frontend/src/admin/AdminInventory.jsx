@@ -1371,7 +1371,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               style={{
                 height: "36px",
                 background: "var(--bg-tertiary)",
-                color: "#34d399",
+                color: "var(--success)",
                 border: "1px solid rgba(52, 211, 153, 0.4)",
                 borderRadius: "9px",
                 padding: "0 0.85rem",
@@ -1567,7 +1567,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           <div
             role="status"
             style={{
-              color: "#34d399",
+              color: "var(--success)",
               fontSize: "0.76rem",
               fontWeight: 600,
               margin: "-0.75rem 0 1rem",
@@ -1633,7 +1633,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 width: "100%",
                 padding: "0.65rem 0.8rem",
                 background: "var(--bg-tertiary)",
-                border: `1px solid ${selectedStatus === status ? color : "var(--border-subtle)"}`,
+                border: `1px solid ${selectedStatus === status ? color: "var(--border-subtle)"}`,
                 borderRadius: "10px",
                 color: "inherit",
                 textAlign: "left",
@@ -2005,9 +2005,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         <button
                           onClick={() => handleAdjustStock(item.id, -5)}
                           style={{
-                            background: "rgba(255, 255, 255, 0.05)",
+                            background: "var(--surface-tint)",
                             border: "1px solid rgba(255, 255, 255, 0.1)",
-                            color: "#ffffff",
+                            color: "var(--text-main)",
                             borderRadius: "6px",
                             padding: "4px 8px",
                             fontSize: "0.75rem",
@@ -2075,7 +2075,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     colSpan={8}
                     style={{
                       padding: "2rem 1rem",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       textAlign: "center",
                     }}
                   >
@@ -2269,7 +2269,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             inset: 0,
             zIndex: 170,
             padding: "1rem",
-            background: "rgba(0,0,0,0.72)",
+            background: "var(--modal-overlay)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -2524,7 +2524,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 role="alert"
                 style={{
                   marginBottom: "0.7rem",
-                  color: "#fca5a5",
+                  color: "var(--danger)",
                   fontSize: "0.76rem",
                 }}
               >
@@ -2608,7 +2608,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             inset: 0,
             zIndex: 175,
             padding: "1rem",
-            background: "rgba(0,0,0,0.72)",
+            background: "var(--modal-overlay)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -2750,7 +2750,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: "var(--modal-overlay)",
             backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",

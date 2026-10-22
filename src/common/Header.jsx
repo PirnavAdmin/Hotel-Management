@@ -1,3 +1,4 @@
+import { ThemeToggle } from './ThemeToggle';
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -377,42 +378,7 @@ export function Header({
           justifyContent: "flex-end",
         }}
       >
-        {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
-        <button
-          onClick={() => {
-            const nextTheme =
-              currentTheme === "light-bistro"
-                ? "royal-saffron"
-                : "light-bistro";
-            if (onChangeTheme) onChangeTheme(nextTheme);
-          }}
-          style={{
-            width: "36px",
-            height: "36px",
-            boxSizing: "border-box",
-            borderRadius: "50%",
-            background: "var(--bg-tertiary)",
-            border: "1.5px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            flexShrink: 0,
-          }}
-          title={
-            currentTheme === "light-bistro"
-              ? "Switch to Dark Theme"
-              : "Switch to Light Theme"
-          }
-        >
-          {currentTheme === "light-bistro" ? (
-            <Sun size={18} color="#ea580c" />
-          ) : (
-            <Moon size={18} color="#fbbf24" />
-          )}
-        </button>
+        <ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/>
 
         {/* Kitchen Status Notification Bell */}
         <div ref={notifRef} style={{ position: "relative" }}>
@@ -491,7 +457,7 @@ export function Header({
                 left: dropdownCoords ? `${dropdownCoords.left}px` : "12px",
                 width: dropdownCoords ? `${dropdownCoords.width}px` : "360px",
                 maxWidth: "calc(100vw - 24px)",
-                background: "#0d1527",
+                background: "var(--bg-card)",
                 border: "1.5px solid rgba(245, 158, 11, 0.45)",
                 borderRadius: "14px",
                 boxShadow:
@@ -507,9 +473,8 @@ export function Header({
               <div
                 style={{
                   padding: "0.85rem 1rem",
-                  background:
-                    "linear-gradient(135deg, #172339 0%, #0d1527 100%)",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                  background: "linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-card) 100%)",
+                  borderBottom: "1px solid var(--neutral-border)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -537,7 +502,7 @@ export function Header({
                     <span
                       style={{
                         background: "rgba(245, 158, 11, 0.2)",
-                        color: "#fbbf24",
+                        color: "var(--accent-amber-light)",
                         border: "1px solid rgba(245, 158, 11, 0.4)",
                         padding: "1px 6px",
                         borderRadius: "10px",
@@ -558,7 +523,7 @@ export function Header({
                     style={{
                       background: "rgba(239, 68, 68, 0.12)",
                       border: "1px solid rgba(239, 68, 68, 0.3)",
-                      color: "#f87171",
+                      color: "var(--danger)",
                       fontSize: "0.72rem",
                       fontWeight: 800,
                       padding: "3px 8px",
@@ -587,7 +552,7 @@ export function Header({
                     style={{
                       padding: "2rem 1rem",
                       textAlign: "center",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       fontSize: "0.82rem",
                     }}
                   >
@@ -681,7 +646,7 @@ export function Header({
                             <span
                               style={{
                                 fontSize: "0.68rem",
-                                color: "#94a3b8",
+                                color: "var(--text-dim)",
                                 fontWeight: 700,
                                 fontFamily: "monospace",
                               }}

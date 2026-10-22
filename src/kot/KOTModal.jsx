@@ -13,7 +13,7 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
     <div className="receipt-modal-overlay" style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
+      background: 'var(--modal-overlay)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
@@ -22,7 +22,7 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
       padding: '1rem'
     }}>
       <div className="receipt-modal-container" style={{
-        background: '#ffffff',
+        background: 'var(--bg-card)',
         color: '#1a1a1a',
         width: '100%',
         maxWidth: '360px',
@@ -34,8 +34,8 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
       }}>
         {/* Header (No print) */}
         <div className="no-print" style={{
-          background: '#1e293b',
-          color: '#ffffff',
+          background: 'var(--bg-card)',
+          color: 'var(--text-main)',
           padding: '0.75rem 1rem',
           display: 'flex',
           alignItems: 'center',
@@ -45,7 +45,7 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
             <ChefHat size={18} color="#f59e0b" />
             <span style={{ fontSize: '0.88rem', fontWeight: 700 }}>Kitchen Order Ticket (KOT)</span>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', color: '#94a3b8' }}>
+          <button onClick={onClose} style={{ background: 'transparent', color: 'var(--text-dim)' }}>
             <X size={18} />
           </button>
         </div>
@@ -99,7 +99,7 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
         {/* Buttons (No print) */}
         <div className="no-print" style={{
           padding: '0.75rem 1rem',
-          background: '#f8fafc',
+          background: 'var(--bg-card)',
           borderTop: '1px solid #e2e8f0',
           display: 'flex',
           gap: '0.5rem'
@@ -123,8 +123,8 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
               flex: 1,
               padding: '0.6rem',
               borderRadius: '6px',
-              background: '#0f172a',
-              color: '#ffffff',
+              background: 'var(--bg-card)',
+              color: 'var(--text-main)',
               fontWeight: 700,
               fontSize: '0.8rem',
               display: 'flex',

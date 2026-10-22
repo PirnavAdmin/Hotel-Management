@@ -413,7 +413,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0, 0, 0, 0.78)',
+      background: 'var(--modal-overlay)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
@@ -463,7 +463,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255,255,255,0.05)',
+              background: 'var(--surface-tint)',
               border: '1px solid var(--border-subtle)',
               color: 'var(--text-muted)',
               display: 'flex',
@@ -698,7 +698,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                   style={{
                     background: 'rgba(245, 158, 11, 0.15)',
                     border: '1px solid var(--accent-amber)',
-                    color: '#fbbf24',
+                    color: 'var(--accent-amber-light)',
                     padding: '0.4rem 0.75rem',
                     borderRadius: '6px',
                     cursor: 'pointer',
@@ -810,7 +810,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                   style={{
                     background: 'rgba(245, 158, 11, 0.15)',
                     border: '1px solid var(--accent-amber)',
-                    color: '#fbbf24',
+                    color: 'var(--accent-amber-light)',
                     padding: '0.4rem 0.75rem',
                     borderRadius: '6px',
                     cursor: 'pointer',
@@ -907,7 +907,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                     key={p.id}
                     onClick={() => handlePreset(p.id)}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.06)',
+                      background: 'var(--surface-tint)',
                       border: '1px solid var(--border-subtle)',
                       color: 'var(--text-main)',
                       padding: '0.32rem 0.6rem',
@@ -1174,7 +1174,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                         </span>
                         <span style={{
                           background: 'rgba(245, 158, 11, 0.15)',
-                          color: '#fbbf24',
+                          color: 'var(--accent-amber-light)',
                           fontSize: '0.72rem',
                           fontWeight: 800,
                           padding: '2px 8px',
@@ -1332,7 +1332,7 @@ function OrderCard({ order, onReprintReceipt }) {
             padding: '0.28rem 0.65rem',
             borderRadius: '4px',
             background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(234, 88, 12, 0.18))',
-            color: '#fbbf24',
+            color: 'var(--accent-amber-light)',
             border: '1px solid rgba(245, 158, 11, 0.45)',
             fontSize: '0.72rem',
             fontWeight: 800,

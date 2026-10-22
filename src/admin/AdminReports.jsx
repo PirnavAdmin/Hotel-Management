@@ -1054,7 +1054,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   style={{
                     padding: '2rem 1rem',
                     textAlign: 'center',
-                    color: '#64748b',
+                    color: 'var(--text-dim)',
                     fontSize: '0.82rem',
                   }}
                 >
@@ -1110,7 +1110,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     style={{
                       fontSize: "0.82rem",
                       fontWeight: 700,
-                      color: "#fbbf24",
+                      color: "var(--accent-amber-light)",
                     }}
                   >
                     {qty} orders
@@ -2233,7 +2233,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             >
               {restaurantSettings?.restaurantName?.trim() || 'Restaurant'}
             </h1>
-            <div style={{ fontSize: "11px", color: "#475569", fontWeight: 500 }}>
+            <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>
               {[restaurantSettings?.address, restaurantSettings?.phone, restaurantSettings?.gstin && `GSTIN: ${restaurantSettings.gstin}`].filter(Boolean).join(" • ")}
             </div>
             <div
@@ -2248,7 +2248,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               SALES, REVENUE &amp; PROFIT/LOSS AUDIT REPORT
             </div>
           </div>
-          <div style={{ textAlign: "right", fontSize: "11px", color: "#334155" }}>
+          <div style={{ textAlign: "right", fontSize: "11px", color: "var(--text-muted)" }}>
             <div>
               <strong>Generated:</strong>{' '}
               {new Date().toLocaleDateString('en-IN', {
@@ -2295,7 +2295,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             }}
           >
             <thead>
-              <tr style={{ background: "#f1f5f9" }}>
+              <tr style={{ background: "var(--bg-card)" }}>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Gross Revenue</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Net Food Sales</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total GST (5%)</th>
@@ -2354,7 +2354,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
               <thead>
-                <tr style={{ background: "#f1f5f9" }}>
+                <tr style={{ background: "var(--bg-card)" }}>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Channel</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Amount</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Share %</th>
@@ -2382,7 +2382,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   </td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cardPercent}%</td>
                 </tr>
-                <tr style={{ background: "#f8fafc", fontWeight: 800 }}>
+                <tr style={{ background: "var(--bg-card)", fontWeight: 800 }}>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>Total Settlement</td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>
                     {formatCurrency(totalRevenue)}
@@ -2409,7 +2409,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
               <thead>
-                <tr style={{ background: "#f1f5f9" }}>
+                <tr style={{ background: "var(--bg-card)" }}>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", width: "35px", textAlign: "center" }}>#</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Dish / Item Name</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Qty Sold</th>
@@ -2418,7 +2418,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               <tbody>
                 {sortedDishes.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "center", color: "#64748b" }}>
+                    <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "center", color: "var(--text-dim)" }}>
                       No items sold during this period.
                     </td>
                   </tr>
@@ -2457,7 +2457,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px" }}>
               <thead>
-                <tr style={{ background: "#f1f5f9" }}>
+                <tr style={{ background: "var(--bg-card)" }}>
                   <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Order #</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Date / Time</th>
                   <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Table</th>
@@ -2518,7 +2518,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             paddingTop: '12px',
             borderTop: '1px solid #cbd5e1',
             fontSize: '11px',
-            color: '#64748b',
+            color: 'var(--text-dim)',
             pageBreakInside: 'avoid',
           }}
         >

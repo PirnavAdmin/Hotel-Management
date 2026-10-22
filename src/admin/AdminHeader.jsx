@@ -1,5 +1,6 @@
+import { ThemeToggle } from '../common/ThemeToggle';
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, Moon, Sun, Utensils, Wine } from "lucide-react";
+import { Calendar, Clock, Utensils, Wine } from "lucide-react";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 
 export function AdminHeader({
@@ -18,18 +19,6 @@ export function AdminHeader({
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const handleToggleTheme = () => {
-    const nextTheme =
-      currentTheme === "light-bistro" ? "royal-saffron" : "light-bistro";
-    document.documentElement.setAttribute("data-theme", nextTheme);
-    try {
-      localStorage.setItem("gourmet_pos_theme_v2", nextTheme);
-    } catch {}
-    if (onChangeTheme) {
-      onChangeTheme(nextTheme);
-    }
-  };
 
   const formattedDate = currentTime.toLocaleDateString("en-GB", {
     weekday: "short",
@@ -199,35 +188,7 @@ export function AdminHeader({
           </span>
         </div>
 
-        {/* Circular Theme Toggle Button (Moon / Sun) */}
-        <button
-          onClick={handleToggleTheme}
-          style={{
-            width: "38px",
-            height: "38px",
-            borderRadius: "50%",
-            background: "var(--bg-tertiary)",
-            border: "1.5px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            flexShrink: 0,
-          }}
-          title={
-            currentTheme === "light-bistro"
-              ? "Switch to Dark Theme"
-              : "Switch to Light Theme"
-          }
-        >
-          {currentTheme === "light-bistro" ? (
-            <Sun size={17} color="#ea580c" />
-          ) : (
-            <Moon size={17} color="#fbbf24" />
-          )}
-        </button>
+        <ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/>
 
         {/* Profile Avatar Pill & Dropdown */}
         <ProfileDropdown

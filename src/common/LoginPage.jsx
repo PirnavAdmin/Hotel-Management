@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import './LoginPage.css';
+import { ThemeToggle } from './ThemeToggle';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import {
   ChefHat, Lock, User, Eye, EyeOff,
   Utensils, MonitorCheck, ShieldCheck,
   UserPlus, LogIn, CheckCircle, Mail,
   Phone, Send, RefreshCw, ArrowLeft,
-  KeyRound
+  Settings, Printer, TrendingUp, Heart, Sparkles, KeyRound
 } from 'lucide-react';
 import { loginUser, createUser, registerUser, updateUserPassword, getUsers } from '../utils/auth';
 import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '../api/authApi';
@@ -13,7 +15,7 @@ import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '.
  * LoginPage — role-specific login/register screen.
  * Register (admin only) includes: Name, Username, Mobile, Email + OTP, Password.
  */
-export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Restaurant' }) {
+export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Restaurant', currentTheme = 'royal-saffron', onChangeTheme }) {
   const [currentRole, setCurrentRole] = useState(role);
   const [mode, setMode] = useState('login'); // 'login' | 'register'
 
@@ -55,8 +57,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       iconBg: 'linear-gradient(135deg,#f59e0b,#ea580c)',
       iconGlow: 'rgba(245,158,11,0.5)',
       accent: '#f59e0b', accentLight: '#fbbf24',
-      btnBg: 'linear-gradient(135deg,#f59e0b,#ea580c)',
-      btnShadow: '0 4px 18px rgba(245,158,11,0.45)',
+      btnBg: 'var(--primary-gradient)',
+      btnShadow: '0 4px 18px rgba(255,157,0,.25)',
       badge: '🍽️ POS TERMINAL',
       badgeBg: 'rgba(245,158,11,0.15)', badgeBorder: 'rgba(245,158,11,0.4)',
       hint: 'Access: Billing, Table orders, Settlements'
@@ -66,8 +68,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       iconBg: 'linear-gradient(135deg,#ea580c,#c2410c)',
       iconGlow: 'rgba(234,88,12,0.5)',
       accent: '#ea580c', accentLight: '#fb923c',
-      btnBg: 'linear-gradient(135deg,#ea580c,#c2410c)',
-      btnShadow: '0 4px 18px rgba(234,88,12,0.45)',
+      btnBg: 'var(--primary-gradient)',
+      btnShadow: '0 4px 18px rgba(255,157,0,.25)',
       badge: '🔥 KITCHEN TERMINAL',
       badgeBg: 'rgba(234,88,12,0.15)', badgeBorder: 'rgba(234,88,12,0.4)',
       hint: 'Access: KOT view, Order preparation status'
@@ -77,8 +79,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       iconBg: 'linear-gradient(135deg,#6366f1,#4f46e5)',
       iconGlow: 'rgba(99,102,241,0.5)',
       accent: '#6366f1', accentLight: '#818cf8',
-      btnBg: 'linear-gradient(135deg,#6366f1,#4f46e5)',
-      btnShadow: '0 4px 18px rgba(99,102,241,0.45)',
+      btnBg: 'var(--primary-gradient)',
+      btnShadow: '0 4px 18px rgba(255,157,0,.25)',
       badge: '⚙️ ADMIN PORTAL',
       badgeBg: 'rgba(99,102,241,0.15)', badgeBorder: 'rgba(99,102,241,0.4)',
       hint: 'Access: Menu, Tables, Staff, User management'
@@ -238,7 +240,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   const inp = (val, extraStyle = {}) => ({
     width: '100%',
     padding: '0.42rem 0.75rem 0.42rem 2.2rem',
-    background: 'rgba(255,255,255,0.05)',
+    background: 'var(--surface-tint)',
     border: `1.5px solid ${val ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}`,
     borderRadius: '8px', color: '#ffffff',
     fontSize: '0.8rem', fontWeight: 600,
@@ -248,64 +250,20 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   });
 
   return (
-    <div style={{
-      height: '100vh',
-      maxHeight: '100vh',
-      boxSizing: 'border-box',
-      background: 'radial-gradient(ellipse 120% 80% at 50% -10%, rgba(15,23,42,0.98) 0%, #0a0f1e 100%)',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      padding: '0.5rem 1rem', position: 'relative', overflow: 'hidden',
-      fontFamily: "'Inter','Outfit',system-ui,sans-serif"
-    }}>
-      {/* BG decoration */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-        <div style={{
-          position: 'absolute', top: '-15%', left: '-10%',
-          width: '500px', height: '500px', borderRadius: '50%',
-          background: `radial-gradient(circle, ${cfg.iconGlow} 0%, transparent 70%)`,
-          opacity: 0.35
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '-10%', right: '-10%',
-          width: '420px', height: '420px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
-          opacity: 0.35
-        }} />
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px)',
-          backgroundSize: '48px 48px'
-        }} />
-      </div>
-
-      {/* Brand */}
-      <div style={{ textAlign: 'center', marginBottom: '0.4rem', position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-          <div style={{
-            background: 'linear-gradient(135deg,#f59e0b,#ea580c)', padding: '5px',
-            borderRadius: '8px', boxShadow: '0 4px 16px rgba(245,158,11,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <ChefHat size={18} color="#fff" />
-          </div>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-              {restaurantName}
-            </div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Restaurant Management System
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <main className="bhanu-login" data-mode={mode}>
+      <div className="auth-theme-toggle"><ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/></div>
+      <section className="bhanu-story" aria-label="Welcome to Bhanu"><header><div className="bhanu-brand"><span className="bhanu-logo"><Utensils size={30}/></span><div><strong>Bhanu</strong><small>RESTAURANT MANAGEMENT SYSTEM</small></div></div><div className="bhanu-restaurant">AVSR FOOD COURT</div></header>
+      <div className="bhanu-welcome"><h1>Welcome back to<br/><em>Bhanu</em></h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
+      <div className="bhanu-features">{[{title:'POS Billing',description:'Fast & Easy Billing',icon:<Printer/>},{title:'Kitchen KOT',description:'Real-time Order Management',icon:<ChefHat/>},{title:'Admin Portal',description:'Complete Restaurant Control',icon:<Settings/>}].map(feature => <div key={feature.title}><span className="bhanu-feature-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.description}</p></div>)}</div></div>
+      <img className="bhanu-dish" src="/assets/chicken-dum-biryani.jpg" alt="Restaurant biryani"/>
+      <div className="bhanu-benefits"><span><Sparkles size={16}/>Better Food &mdash; Better Business.</span><span><TrendingUp size={16}/>Smart Management &mdash; Higher Profits.</span><span><Heart size={16}/>Happy Customers &mdash; Everyday.</span></div></section>
+      <section className="bhanu-login-side" aria-label="Restaurant sign in"><div className="bhanu-login-card" style={{animation:shake?'shakeCard .5s ease':undefined}}><header className="bhanu-card-brand"><div className="bhanu-brand"><span className="bhanu-logo"><Utensils size={30}/></span><div><strong>Bhanu</strong><small>RESTAURANT MANAGEMENT SYSTEM</small></div></div><div className="bhanu-restaurant">AVSR FOOD COURT</div></header>
       {/* Global 3-Terminal Role Selector Bar */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr',
         gap: '5px',
-        background: 'rgba(14,22,40,0.92)',
+        background: 'var(--bg-glass)',
         padding: '4px',
         borderRadius: '12px',
         border: '1.5px solid rgba(255, 255, 255, 0.1)',
@@ -317,11 +275,12 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
         boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)'
       }}>
         {[
-          { id: 'pos', label: 'User POS', icon: '🍽️', accent: '#f59e0b', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
-          { id: 'kot', label: 'Kitchen KOT', icon: '🔥', accent: '#ea580c', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
-          { id: 'admin', label: 'Admin Portal', icon: '⚙️', accent: '#6366f1', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
+          { id: 'pos', label: 'User POS', icon: <MonitorCheck size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
+          { id: 'kot', label: 'Kitchen KOT', icon: <ChefHat size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
+          { id: 'admin', label: 'Admin Portal', icon: <Settings size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
         ].map(t => (
           <button
+            aria-pressed={currentRole === t.id}
             key={t.id}
             type="button"
             onClick={() => {
@@ -335,7 +294,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
               borderRadius: '8px',
               fontSize: '0.75rem',
               fontWeight: currentRole === t.id ? 800 : 600,
-              background: currentRole === t.id ? cfgMap[t.id].btnBg : 'transparent',
+              background: currentRole === t.id ? 'var(--primary-gradient)' : 'transparent',
               color: currentRole === t.id ? '#ffffff' : '#94a3b8',
               border: currentRole === t.id ? `1.5px solid ${t.accent}` : 'none',
               cursor: 'pointer',
@@ -353,58 +312,24 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
         ))}
       </div>
 
-      {/* Card */}
-      <div style={{
-        width: '100%', maxWidth: '400px',
-        maxHeight: 'calc(100vh - 125px)',
-        display: 'flex', flexDirection: 'column',
-        background: 'rgba(14,22,40,0.93)', backdropFilter: 'blur(20px)',
-        border: `1.5px solid ${cfg.accent}45`, borderRadius: '16px',
-        boxShadow: `0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06)`,
-        overflow: 'hidden', position: 'relative', zIndex: 2,
-        animation: shake ? 'shakeCard 0.5s ease' : 'none'
-      }}>
-        {/* Top accent bar */}
-        <div style={{ height: '3px', background: cfg.btnBg, boxShadow: `0 0 16px ${cfg.iconGlow}`, flexShrink: 0 }} />
-
-        {/* Card header */}
-        <div style={{ padding: '0.55rem 1rem 0.35rem', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: '38px', height: '38px', borderRadius: '10px',
-            background: cfg.iconBg,
-            boxShadow: `0 6px 20px ${cfg.iconGlow}, inset 0 1px 0 rgba(255,255,255,0.25)`,
-            marginBottom: '0.3rem'
-          }}>
-            {cfg.icon}
-          </div>
-          <div>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-              background: cfg.badgeBg, border: `1px solid ${cfg.badgeBorder}`,
-              color: cfg.accentLight, fontSize: '0.6rem', fontWeight: 800,
-              letterSpacing: '0.06em', padding: '1px 7px', borderRadius: '20px',
-              marginBottom: '0.25rem'
-            }}>
-              {cfg.badge}
-            </span>
-          </div>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, color: '#fff', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
+      <div className="bhanu-form-content">
+        <div className="bhanu-form-heading">
+          <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
             {mode === 'register' ? 'Create Admin Account' : mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
           </h1>
-          <p style={{ fontSize: '0.67rem', color: '#64748b', margin: 0, fontWeight: 600 }}>
+          <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600 }}>
             {mode === 'register' ? 'Set up your administrator account' : mode === 'forgot' ? (forgotOtpStep ? 'Enter verification OTP & set new password' : 'Enter email to receive OTP verification code') : loginSub}
           </p>
         </div>
 
         {/* Tab toggle — Admin only */}
         {currentRole === 'admin' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', padding: '0.5rem 1.25rem 0' }}>
+          <div className="bhanu-mode-tabs">
             {[
               { key: 'login',    label: 'Sign In',  icon: <LogIn size={13} /> },
               { key: 'register', label: 'Register', icon: <UserPlus size={13} /> }
             ].map(t => (
-              <button key={t.key} type="button"
+              <button key={t.key} type="button" aria-pressed={mode === t.key}
                 onClick={() => { setMode(t.key); clearAll(); }}
                 style={{
                   padding: '0.42rem', borderRadius: '8px',
@@ -425,10 +350,10 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
         {/* ── LOGIN FORM ── */}
         {mode === 'login' && (
-          <form onSubmit={handleLogin} style={{ padding: '0.65rem 1rem 0.85rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <form className="bhanu-signin-form" onSubmit={handleLogin} style={{ padding: '0.65rem 1rem 0.85rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {error && <Err msg={error} />}
             <Fld label="Username or Email" icon={<User size={13} color="#475569" />} mb="0.45rem">
-              <input id="login-username" type="text" placeholder="Username or Email address"
+              <input id="login-username" aria-label="Username or Email" type="text" placeholder="Username or Email address"
                 value={username} onChange={e => { setUsername(e.target.value); setError(''); }}
                 style={inp(username)} autoComplete="username"
                 onFocus={e => e.target.style.borderColor = cfg.accent}
@@ -437,10 +362,24 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
             </Fld>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.24rem' }}>
-                <label style={{ fontSize: '0.64rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ fontSize: '0.64rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   PASSWORD
                 </label>
-                <button
+
+              </div>
+              <div style={{ position: 'relative' }}>
+                <Lock size={13} color="#475569" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input id="login-password" aria-label="Password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
+                  value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+                  style={inp(password, { paddingRight: '2.5rem' })} autoComplete="current-password"
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = password ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+                <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
+              </div>
+            </div>
+
+            <div className="bhanu-recovery">                <button
                   type="button"
                   onClick={() => {
                     setMode('forgot');
@@ -454,35 +393,18 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                     padding: 0,
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    color: cfg.accentLight || '#fbbf24',
+                    color: 'var(--accent-amber-light)',
                     cursor: 'pointer',
                     textDecoration: 'underline'
                   }}
                 >
                   Forgot Password?
-                </button>
-              </div>
-              <div style={{ position: 'relative' }}>
-                <Lock size={13} color="#475569" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input id="login-password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
-                  value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
-                  style={inp(password, { paddingRight: '2.5rem' })} autoComplete="current-password"
-                  onFocus={e => e.target.style.borderColor = cfg.accent}
-                  onBlur={e => e.target.style.borderColor = password ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-                />
-                <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
-              </div>
-            </div>
-
+                </button></div>
             <div style={{ marginTop: '0.65rem' }}>
               <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
             </div>
 
-            <div style={{ marginTop: '0.55rem', padding: '0.35rem 0.55rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '7px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>
-                {cfg.hint} • Sign in with username <strong style={{color:'#64748b'}}>or</strong> email
-              </div>
-            </div>
+            <div className="bhanu-security"><Lock size={17}/><strong>Secure Access to AVSR Food Court</strong><span>POS, Kitchen &amp; Admin - All in One System</span></div>
           </form>
         )}
 
@@ -493,7 +415,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
               type="button"
               onClick={() => { setMode('login'); setError(''); setSuccess(''); setForgotOtpStep(false); }}
               style={{
-                background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700,
+                background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.75rem', fontWeight: 700,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', width: 'fit-content', padding: 0
               }}
             >
@@ -561,7 +483,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
             {error   && <Err msg={error} />}
             {success && <Suc msg={success} />}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem 0.65rem' }}>
+            <div className="bhanu-registration-grid">
               {/* ─ Row 1 Left: Full Name */}
               <Fld label="Full Name *" icon={<User size={13} color="#475569" />} mb="0">
                 <input type="text" placeholder="e.g. SURESH REDDY"
@@ -631,9 +553,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
             </div>
 
             <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
-              <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600 }}>Already have an account? </span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Already have an account? </span>
               <button type="button" onClick={() => { setMode('login'); clearAll(); }}
-                style={{ background: 'none', border: 'none', color: cfg.accentLight, fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}>
+                style={{ background: 'none', border: 'none', color: 'var(--accent-amber-light)', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}>
                 Sign In
               </button>
             </div>
@@ -641,22 +563,18 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
         )}
       </div>
 
-      {/* Footer */}
-      <div style={{ marginTop: '0.45rem', textAlign: 'center', color: '#334155', fontSize: '0.64rem', fontWeight: 700, position: 'relative', zIndex: 2 }}>
-        © 2026 AVSR Food Court • Secured by Restaurant Auth System
-      </div>
-
+      </div></section>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shakeCard {
           0%,100%{transform:translateX(0)} 15%{transform:translateX(-8px)} 30%{transform:translateX(8px)}
           45%{transform:translateX(-6px)} 60%{transform:translateX(6px)} 75%{transform:translateX(-3px)} 90%{transform:translateX(3px)}
         }
-        input::placeholder { color: #334155; }
+        .bhanu-login input::placeholder { color: var(--text-dim); }
         input[type=tel]::-webkit-inner-spin-button,
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
       `}</style>
-    </div>
+    </main>
   );
 }
 
@@ -664,9 +582,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 function Err({ msg }) {
   return (
     <div style={{
-      background:'rgba(239,68,68,0.12)', border:'1.5px solid rgba(239,68,68,0.4)',
+      background: 'rgba(239,68,68,0.12)', border: '1.5px solid rgba(239,68,68,0.4)',
       borderRadius:'8px', padding:'0.45rem 0.75rem',
-      color:'#fca5a5', fontSize:'0.76rem', fontWeight:700,
+      color: 'var(--danger)', fontSize:'0.76rem', fontWeight:700,
       marginBottom:'0.65rem', display:'flex', alignItems:'center', gap:'0.4rem'
     }}>
       <span>⚠️</span><span>{msg}</span>
@@ -676,9 +594,9 @@ function Err({ msg }) {
 function Suc({ msg }) {
   return (
     <div style={{
-      background:'rgba(16,185,129,0.12)', border:'1.5px solid rgba(16,185,129,0.4)',
+      background: 'rgba(16,185,129,0.12)', border: '1.5px solid rgba(16,185,129,0.4)',
       borderRadius:'8px', padding:'0.45rem 0.75rem',
-      color:'#6ee7b7', fontSize:'0.76rem', fontWeight:700,
+      color: 'var(--success)', fontSize:'0.76rem', fontWeight:700,
       marginBottom:'0.65rem', display:'flex', alignItems:'center', gap:'0.4rem'
     }}>
       <CheckCircle size={14}/><span>{msg}</span>
@@ -686,22 +604,26 @@ function Suc({ msg }) {
   );
 }
 function Fld({ label, icon, children, mb='0.65rem' }) {
+  const generatedId = useId();
+  const input = React.Children.toArray(children).find(child => React.isValidElement(child) && child.type === 'input');
+  const inputId = input?.props.id || generatedId;
+  const fields = React.Children.map(children, child => React.isValidElement(child) && child.type === 'input' ? React.cloneElement(child,{id:inputId}) : child);
   return (
-    <div style={{ marginBottom: mb }}>
-      <label style={{ display:'block', fontSize:'0.66rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'0.24rem' }}>
+    <div className="bhanu-field" style={{ marginBottom: mb }}>
+      <label htmlFor={inputId} style={{ display:'block', fontSize:'0.66rem', fontWeight:800, color: 'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'0.24rem' }}>
         {label}
       </label>
-      <div style={{ position:'relative' }}>
-        <div style={{ position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)' }}>{icon}</div>
-        {children}
+      <div className="bhanu-input-wrap">
+        <span className="bhanu-input-icon" aria-hidden="true">{icon}</span>
+        {fields}
       </div>
     </div>
   );
 }
 function PwEye({ show, toggle }) {
   return (
-    <button type="button" onClick={toggle}
-      style={{ position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'#64748b', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center' }}>
+    <button type="button" aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} onClick={toggle}
+      style={{ position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center' }}>
       {show ? <EyeOff size={14}/> : <Eye size={14}/>}
     </button>
   );
@@ -711,14 +633,14 @@ function Btn({ loading, bg, shadow, label, icon }) {
     <button type="submit" disabled={loading} style={{
       width:'100%', padding:'0.62rem', borderRadius:'9px',
       background: loading ? 'rgba(255,255,255,0.08)' : bg,
-      color:'#fff', fontWeight:900, fontSize:'0.85rem',
-      border:'none', cursor: loading ? 'not-allowed' : 'pointer',
+      color: '#fff', fontWeight:900, fontSize:'0.85rem',
+      border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
       boxShadow: loading ? 'none' : shadow,
       display:'flex', alignItems:'center', justifyContent:'center', gap:'0.45rem',
       transition:'all 0.2s', letterSpacing:'0.02em'
     }}>
       {loading
-        ? <><div style={{ width:'16px',height:'16px',borderRadius:'50%',border:'2px solid rgba(255,255,255,0.25)',borderTopColor:'#fff',animation:'spin 0.7s linear infinite' }}/><span>Please wait...</span></>
+        ? <><div style={{ width:'16px',height:'16px',borderRadius:'50%',border: '2px solid rgba(255,255,255,0.25)',borderTopColor:'#fff',animation:'spin 0.7s linear infinite' }}/><span>Please wait...</span></>
         : <>{icon}<span>{label}</span></>
       }
     </button>

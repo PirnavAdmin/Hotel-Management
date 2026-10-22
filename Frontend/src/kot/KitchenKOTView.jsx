@@ -1,3 +1,4 @@
+import { ThemeToggle } from '../common/ThemeToggle';
 // import React, { useState, useEffect, useRef } from 'react';
 // import {
 //   ChefHat,
@@ -621,7 +622,7 @@
 //               background: sortOrder === 'recent-first'
 //                 ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(234, 88, 12, 0.16))'
 //                 : 'var(--bg-tertiary)',
-//               color: '#fbbf24',
+//               color: 'var(--accent-amber-light)',
 //               border: '1.5px solid rgba(245, 158, 11, 0.45)',
 //               display: 'flex',
 //               alignItems: 'center',
@@ -656,7 +657,7 @@
 //                   title="Logout from Kitchen Display"
 //                   style={{
 //                     background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-//                     color: '#f87171', padding: '5px 10px', borderRadius: '7px',
+//                     color: 'var(--danger)', padding: '5px 10px', borderRadius: '7px',
 //                     fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
 //                     display: 'flex', alignItems: 'center', gap: '4px'
 //                   }}
@@ -722,7 +723,7 @@
 //           <span>All Tables</span>
 //           <span style={{
 //             background: '#000000',
-//             color: '#fbbf24',
+//             color: 'var(--accent-amber-light)',
 //             padding: '2px 6px',
 //             borderRadius: '8px',
 //             fontSize: '0.72rem',
@@ -794,7 +795,7 @@
 //                 background: dotColor,
 //                 boxShadow: `0 0 6px ${dotColor}`
 //               }} />
-//               <strong style={{ color: '#ffffff', fontSize: '0.84rem' }}>{tbl.name}</strong>
+//               <strong style={{ color: 'var(--text-main)', fontSize: '0.84rem' }}>{tbl.name}</strong>
 //               {hasOrders && (
 //                 <span style={{
 //                   background: isSelected ? '#000000' : badgeBg,
@@ -1052,7 +1053,7 @@
 //                   <div style={{
 //                     padding: '0.45rem 0.65rem',
 //                     background: headerBg,
-//                     borderBottom: '1px solid rgba(255,255,255,0.08)',
+//                     borderBottom: '1px solid var(--neutral-border)',
 //                     display: 'flex',
 //                     alignItems: 'center',
 //                     justifyContent: 'space-between',
@@ -1086,7 +1087,7 @@
 //                         <h3 style={{
 //                           fontSize: '0.94rem',
 //                           fontWeight: 900,
-//                           color: '#ffffff',
+//                           color: 'var(--text-main)',
 //                           margin: 0,
 //                           lineHeight: 1.15,
 //                           whiteSpace: 'nowrap',
@@ -1115,7 +1116,7 @@
 //                       {tbl.isPaid && (
 //                         <span style={{
 //                           background: 'rgba(16, 185, 129, 0.22)',
-//                           color: '#34d399',
+//                           color: 'var(--success)',
 //                           border: '1px solid rgba(16, 185, 129, 0.5)',
 //                           padding: '2px 5px',
 //                           borderRadius: '5px',
@@ -1132,8 +1133,8 @@
 //                           setActivePrintTable(tbl);
 //                         }}
 //                         style={{
-//                           background: 'rgba(255,255,255,0.08)',
-//                           border: '1px solid rgba(255,255,255,0.15)',
+//                           background: 'var(--surface-tint)',
+//                           border: '1px solid var(--neutral-border)',
 //                           color: 'var(--text-muted)',
 //                           padding: '3px 6px',
 //                           borderRadius: '5px',
@@ -1170,7 +1171,7 @@
 //                   {/* --- CARD HEADER TIER 3: NEAT & CLEAR 3-COLUMN LIFECYCLE TIMESTAMPS BAR --- */}
 //                   <div style={{
 //                     background: 'rgba(0, 0, 0, 0.32)',
-//                     borderBottom: '1px solid rgba(255,255,255,0.08)',
+//                     borderBottom: '1px solid var(--neutral-border)',
 //                     padding: '0.32rem 0.55rem',
 //                     display: 'grid',
 //                     gridTemplateColumns: 'repeat(3, 1fr)',
@@ -1189,7 +1190,7 @@
 //                       gap: '1px',
 //                       textAlign: 'center'
 //                     }}>
-//                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', color: '#fbbf24', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.04em' }}>
+//                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', color: 'var(--accent-amber-light)', fontSize: '0.54rem', fontWeight: 800, letterSpacing: '0.04em' }}>
 //                         <Clock size={10} />
 //                         <span>RECEIVED</span>
 //                       </div>
@@ -1284,7 +1285,7 @@
 //                       letterSpacing: '0.05em',
 //                       display: 'flex',
 //                       justifyContent: 'space-between',
-//                       borderBottom: '1px solid rgba(255,255,255,0.08)',
+//                       borderBottom: '1px solid var(--neutral-border)',
 //                       paddingBottom: '0.28rem'
 //                     }}>
 //                       <span>Ordered Dishes ({tbl.items?.length || 0})</span>
@@ -1347,7 +1348,7 @@
 //                               {item.notes ? (
 //                                 <div style={{
 //                                   fontSize: '0.66rem',
-//                                   color: '#f87171',
+//                                   color: 'var(--danger)',
 //                                   fontWeight: 700,
 //                                   marginTop: '2px',
 //                                   background: 'rgba(239, 68, 68, 0.15)',
@@ -1407,7 +1408,7 @@
 //                   <div style={{
 //                     padding: '0.5rem 0.65rem',
 //                     background: 'rgba(0,0,0,0.35)',
-//                     borderTop: '1px solid rgba(255,255,255,0.08)',
+//                     borderTop: '1px solid var(--neutral-border)',
 //                     display: 'flex',
 //                     flexDirection: 'column',
 //                     gap: '0.42rem'
@@ -1506,8 +1507,8 @@
 //                             flex: 1,
 //                             padding: '0.52rem 0.5rem',
 //                             borderRadius: 'var(--radius-sm)',
-//                             background: 'rgba(255, 255, 255, 0.06)',
-//                             border: '1px solid rgba(255,255,255,0.12)',
+//                             background: 'var(--surface-tint)',
+//                             border: '1px solid var(--neutral-border)',
 //                             color: 'var(--text-muted)',
 //                             fontWeight: 600,
 //                             fontSize: '0.72rem',
@@ -1542,7 +1543,7 @@
 //                           gap: '0.25rem'
 //                         }}>
 //                           <div style={{
-//                             color: '#34d399',
+//                             color: 'var(--success)',
 //                             fontWeight: 900,
 //                             fontSize: '0.8rem',
 //                             display: 'flex',
@@ -1553,14 +1554,14 @@
 //                             <CheckCircle2 size={14} />
 //                             <span>{tbl.isPaid ? 'PREPARATION COMPLETED & BILL PAID' : 'PREPARATION COMPLETED'}</span>
 //                           </div>
-//                           <p style={{ fontSize: '0.68rem', color: '#e2e8f0', textAlign: 'center', fontWeight: 600, margin: 0 }}>
+//                           <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textAlign: 'center', fontWeight: 600, margin: 0 }}>
 //                             {tbl.isPaid ? (
 //                               <>
-//                                 Table <strong style={{ color: '#ffffff' }}>{tbl.name}</strong> bill settled via {(tbl.paymentMethod || 'UPI').toUpperCase()} at {tbl.settledAt}. Order remained in KDS!
+//                                 Table <strong style={{ color: 'var(--text-main)' }}>{tbl.name}</strong> bill settled via {(tbl.paymentMethod || 'UPI').toUpperCase()} at {tbl.settledAt}. Order remained in KDS!
 //                               </>
 //                             ) : (
 //                               <>
-//                                 Order for <strong style={{ color: '#ffffff' }}>{tbl.name}</strong> is cooked & ready to be served to guests!
+//                                 Order for <strong style={{ color: 'var(--text-main)' }}>{tbl.name}</strong> is cooked & ready to be served to guests!
 //                               </>
 //                             )}
 //                           </p>
@@ -1578,9 +1579,9 @@
 //                                 flex: 1,
 //                                 padding: '0.42rem',
 //                                 borderRadius: 'var(--radius-sm)',
-//                                 background: 'rgba(255, 255, 255, 0.08)',
-//                                 border: '1px solid rgba(255,255,255,0.15)',
-//                                 color: '#ffffff',
+//                                 background: 'var(--surface-tint)',
+//                                 border: '1px solid var(--neutral-border)',
+//                                 color: 'var(--text-main)',
 //                                 fontWeight: 700,
 //                                 fontSize: '0.72rem',
 //                                 display: 'flex',
@@ -1605,7 +1606,7 @@
 //                                 borderRadius: 'var(--radius-sm)',
 //                                 background: 'rgba(239, 68, 68, 0.12)',
 //                                 border: '1px solid rgba(239, 68, 68, 0.35)',
-//                                 color: '#f87171',
+//                                 color: 'var(--danger)',
 //                                 fontWeight: 700,
 //                                 fontSize: '0.72rem',
 //                                 display: 'flex',
@@ -1771,7 +1772,7 @@
 //             style={{
 //               position: 'fixed',
 //               inset: 0,
-//               background: 'rgba(0, 0, 0, 0.78)',
+//               background: 'var(--modal-overlay)',
 //               backdropFilter: 'blur(8px)',
 //               display: 'flex',
 //               alignItems: 'center',
@@ -1830,7 +1831,7 @@
 
 //                   <div>
 //                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-//                       <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+//                       <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
 //                         {modalTicket.name} Order Details
 //                       </h2>
 //                       <span style={{
@@ -1846,7 +1847,7 @@
 //                       </span>
 //                     </div>
 //                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted, #94a3b8)', marginTop: '3px' }}>
-//                       📍 {modalTicket.section} • 👤 Server: <strong style={{ color: '#ffffff' }}>{modalTicket.server}</strong> • 👥 {modalTicket.capacity || 4} Guests
+//                       📍 {modalTicket.section} • 👤 Server: <strong style={{ color: 'var(--text-main)' }}>{modalTicket.server}</strong> • 👥 {modalTicket.capacity || 4} Guests
 //                     </div>
 //                   </div>
 //                 </div>
@@ -1854,9 +1855,9 @@
 //                 <button
 //                   onClick={() => setSelectedDetailTicket(null)}
 //                   style={{
-//                     background: 'rgba(255,255,255,0.08)',
-//                     border: '1px solid rgba(255,255,255,0.15)',
-//                     color: '#cbd5e1',
+//                     background: 'var(--surface-tint)',
+//                     border: '1px solid var(--neutral-border)',
+//                     color: 'var(--text-muted)',
 //                     width: '32px',
 //                     height: '32px',
 //                     borderRadius: '8px',
@@ -1906,14 +1907,14 @@
 //                       padding: '0.65rem 0.5rem',
 //                       textAlign: 'center'
 //                     }}>
-//                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fbbf24', fontSize: '0.68rem', fontWeight: 800 }}>
+//                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--accent-amber-light)', fontSize: '0.68rem', fontWeight: 800 }}>
 //                         <Clock size={12} />
 //                         <span>RECEIVED</span>
 //                       </div>
 //                       <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace', marginTop: '3px' }}>
 //                         {modalTicket.orderTime || '--:--'}
 //                       </div>
-//                       <div style={{ fontSize: '0.65rem', color: '#fbbf24', marginTop: '2px', fontWeight: 700 }}>
+//                       <div style={{ fontSize: '0.65rem', color: 'var(--accent-amber-light)', marginTop: '2px', fontWeight: 700 }}>
 //                         Kitchen Queue
 //                       </div>
 //                     </div>
@@ -2029,7 +2030,7 @@
 //                               {item.notes && (
 //                                 <div style={{
 //                                   fontSize: '0.72rem',
-//                                   color: '#f87171',
+//                                   color: 'var(--danger)',
 //                                   fontWeight: 700,
 //                                   marginTop: '2px',
 //                                   background: 'rgba(239, 68, 68, 0.15)',
@@ -2087,21 +2088,21 @@
 //                     borderRadius: '8px',
 //                     padding: '0.75rem 1rem',
 //                     fontSize: '0.82rem',
-//                     color: '#e2e8f0',
+//                     color: 'var(--text-muted)',
 //                     display: 'flex',
 //                     alignItems: 'center',
 //                     justifyContent: 'space-between'
 //                   }}>
 //                     <div>
-//                       <div style={{ fontWeight: 800, color: '#34d399' }}>
+//                       <div style={{ fontWeight: 800, color: 'var(--success)' }}>
 //                         💰 Bill Paid & Settled
 //                       </div>
-//                       <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
+//                       <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '2px' }}>
 //                         Payment Method: {(modalTicket.paymentMethod || 'cash').toUpperCase()} • Settled At: {modalTicket.settledAt}
 //                       </div>
 //                     </div>
 //                     {modalTicket.invoiceNo && (
-//                       <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#fbbf24', background: '#000000', padding: '3px 8px', borderRadius: '6px' }}>
+//                       <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--accent-amber-light)', background: '#000000', padding: '3px 8px', borderRadius: '6px' }}>
 //                         #{modalTicket.invoiceNo}
 //                       </span>
 //                     )}
@@ -2111,7 +2112,7 @@
 
 //               {/* Modal Footer Controls */}
 //               <div style={{
-//                 background: 'rgba(0,0,0,0.4)',
+//                 background: 'var(--modal-overlay)',
 //                 borderTop: '1px solid rgba(255,255,255,0.1)',
 //                 padding: '0.85rem 1.25rem',
 //                 display: 'flex',
@@ -2127,9 +2128,9 @@
 //                   style={{
 //                     padding: '0.55rem 0.95rem',
 //                     borderRadius: 'var(--radius-sm)',
-//                     background: 'rgba(255, 255, 255, 0.08)',
+//                     background: 'var(--surface-tint)',
 //                     border: '1px solid rgba(255, 255, 255, 0.18)',
-//                     color: '#ffffff',
+//                     color: 'var(--text-main)',
 //                     fontWeight: 700,
 //                     fontSize: '0.8rem',
 //                     display: 'flex',
@@ -2198,7 +2199,7 @@
 //                       color: 'var(--text-main, #ffffff)',
 //                       fontWeight: 700,
 //                       fontSize: '0.8rem',
-//                       border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+//                       border: '1px solid var(--border-subtle, var(--neutral-border))',
 //                       cursor: 'pointer'
 //                     }}
 //                   >
@@ -2457,7 +2458,7 @@ export function KitchenKOTView({
         value: "high",
         label: "HIGH",
         emoji: "🟡",
-        color: "#fbbf24",
+        color: "var(--accent-amber-light)",
         bg: "rgba(251, 191, 36, 0.14)",
         border: "rgba(251, 191, 36, 0.45)",
       },
@@ -3123,43 +3124,8 @@ export function KitchenKOTView({
               </div>
             </div>
 
-            {/* Single Theme Toggle Icon Button (Dark <-> Light) */}
-            {onChangeTheme && (
-              <button
-                onClick={() => {
-                  const nextTheme =
-                    currentTheme === "light-bistro"
-                      ? "royal-saffron"
-                      : "light-bistro";
-                  onChangeTheme(nextTheme);
-                }}
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  boxSizing: "border-box",
-                  borderRadius: "50%",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                  flexShrink: 0,
-                }}
-                title={
-                  currentTheme === "light-bistro"
-                    ? "Switch to Dark Theme"
-                    : "Switch to Light Theme"
-                }
-              >
-                {currentTheme === "light-bistro" ? (
-                  <Sun size={18} color="#ea580c" />
-                ) : (
-                  <Moon size={18} color="#fbbf24" />
-                )}
-              </button>
+            {/* Shared theme control */}
+            {onChangeTheme && (<ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/>
             )}
 
             {/* Profile Dropdown Pill with Details & Logout (Far Right Corner) */}
@@ -3512,7 +3478,7 @@ export function KitchenKOTView({
                 sortOrder === "recent-first"
                   ? "linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(234, 88, 12, 0.16))"
                   : "var(--bg-secondary)",
-              color: "#fbbf24",
+              color: "var(--accent-amber-light)",
               border: "1.5px solid rgba(245, 158, 11, 0.45)",
               display: "flex",
               alignItems: "center",
@@ -3988,7 +3954,7 @@ export function KitchenKOTView({
                           <span
                             style={{
                               background: "rgba(16, 185, 129, 0.22)",
-                              color: "#34d399",
+                              color: "var(--success)",
                               border: "1px solid rgba(16, 185, 129, 0.5)",
                               padding: "2px 5px",
                               borderRadius: "5px",
@@ -4412,7 +4378,7 @@ export function KitchenKOTView({
                                       <div
                                         style={{
                                           fontSize: "0.66rem",
-                                          color: "#f87171",
+                                          color: "var(--danger)",
                                           fontWeight: 700,
                                           marginTop: "2px",
                                           background: "rgba(239, 68, 68, 0.15)",
@@ -4566,8 +4532,7 @@ export function KitchenKOTView({
                               flex: 2,
                               padding: "0.52rem 0.65rem",
                               borderRadius: "var(--radius-sm)",
-                              background:
-                                "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                               color: "#ffffff",
                               fontWeight: 800,
                               fontSize: "0.78rem",
@@ -4627,8 +4592,7 @@ export function KitchenKOTView({
                               flex: 2,
                               padding: "0.52rem 0.65rem",
                               borderRadius: "var(--radius-sm)",
-                              background:
-                                "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                               color: "#ffffff",
                               fontWeight: 800,
                               fontSize: "0.78rem",
@@ -4809,7 +4773,7 @@ export function KitchenKOTView({
                                   borderRadius: "var(--radius-sm)",
                                   background: "rgba(239, 68, 68, 0.12)",
                                   border: "1px solid rgba(239, 68, 68, 0.35)",
-                                  color: "#f87171",
+                                  color: "var(--danger)",
                                   fontWeight: 700,
                                   fontSize: "0.72rem",
                                   display: "flex",
@@ -5007,7 +4971,7 @@ export function KitchenKOTView({
                 style={{
                   position: "fixed",
                   inset: 0,
-                  background: "rgba(0, 0, 0, 0.78)",
+                  background: "var(--modal-overlay)",
                   backdropFilter: "blur(8px)",
                   display: "flex",
                   alignItems: "center",
@@ -5058,8 +5022,7 @@ export function KitchenKOTView({
                     >
                       <div
                         style={{
-                          background:
-                            "linear-gradient(135deg, #f59e0b, #ea580c)",
+                          background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                           color: "#ffffff",
                           padding: "0.4rem 0.75rem",
                           borderRadius: "8px",
@@ -5508,7 +5471,7 @@ export function KitchenKOTView({
                                       <div
                                         style={{
                                           fontSize: "0.72rem",
-                                          color: "#f87171",
+                                          color: "var(--danger)",
                                           fontWeight: 700,
                                           marginTop: "2px",
                                           background: "rgba(239, 68, 68, 0.15)",
@@ -5629,7 +5592,7 @@ export function KitchenKOTView({
                             style={{
                               fontSize: "0.74rem",
                               fontWeight: 800,
-                              color: "#fbbf24",
+                              color: "var(--accent-amber-light)",
                               background: "#000000",
                               padding: "3px 8px",
                               borderRadius: "6px",
@@ -5696,8 +5659,7 @@ export function KitchenKOTView({
                           style={{
                             padding: "0.55rem 1.1rem",
                             borderRadius: "var(--radius-sm)",
-                            background:
-                              "linear-gradient(135deg, #f59e0b, #ea580c)",
+                            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                             color: "#ffffff",
                             fontWeight: 800,
                             fontSize: "0.82rem",
@@ -5726,8 +5688,7 @@ export function KitchenKOTView({
                           style={{
                             padding: "0.55rem 1.1rem",
                             borderRadius: "var(--radius-sm)",
-                            background:
-                              "linear-gradient(135deg, #10b981, #059669)",
+                            background: "linear-gradient(135deg, #10b981, #059669)",
                             color: "#ffffff",
                             fontWeight: 800,
                             fontSize: "0.82rem",
@@ -5757,8 +5718,7 @@ export function KitchenKOTView({
                           color: "var(--text-main, #ffffff)",
                           fontWeight: 700,
                           fontSize: "0.8rem",
-                          border:
-                            "1px solid var(--border-subtle, rgba(255,255,255,0.15))",
+                          border: "1px solid var(--border-subtle, var(--neutral-border))",
                           cursor: "pointer",
                         }}
                       >
