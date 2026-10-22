@@ -1533,6 +1533,7 @@ export function AdminPortal({
 
   return (
     <div
+      className="admin-portal-root"
       style={
         isFullPage
           ? {
@@ -1556,7 +1557,7 @@ export function AdminPortal({
       }
     >
       <div
-        className="no-scrollbar"
+        className="admin-portal-inner no-scrollbar"
         style={
           isFullPage
             ? {
@@ -1601,6 +1602,7 @@ export function AdminPortal({
 
         {/* Right Main Content Pane */}
         <div
+          className="admin-portal-main-pane"
           style={{
             flex: 1,
             display: "flex",
@@ -1626,6 +1628,7 @@ export function AdminPortal({
           {/* Scrollable Work Area */}
           <div
             id="admin-work-area"
+            className="admin-work-area"
             style={{
               flex: 1,
               overflowY: "auto",

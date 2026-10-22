@@ -154,7 +154,7 @@ export function Header({
 
   return (
     <header
-      className="mobile-header-nav"
+      className="mobile-header-nav no-print"
       style={{
         background: "var(--bg-secondary)",
         borderBottom: "1px solid var(--border-subtle)",

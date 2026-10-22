@@ -246,17 +246,23 @@ textarea {
   display: none;
 }
 
+@media screen {
+  #printable-report {
+    display: none !important;
+  }
+}
+
 /* Print Styles for Receipts and Reports */
 @page {
   size: auto;
-  margin: 0mm;
+  margin: 5mm;
 }
 
 @media print {
   *,
   *::before,
   *::after {
-    box-sizing: border-box;
+    box-sizing: border-box !important;
   }
 
   html,
@@ -273,30 +279,56 @@ textarea {
     print-color-adjust: exact !important;
   }
 
-  body * {
-    visibility: hidden !important;
-  }
-
-  .no-print,
-  .no-print * {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Reset fixed modal overlay for natural top-of-page printing */
-  .receipt-modal-overlay,
-  .receipt-modal-container {
-    all: unset !important;
+  /* Reset all layout locks, fixed viewports and scroll containers */
+  #root,
+  #root > div,
+  main,
+  .admin-portal-root,
+  .admin-portal-inner,
+  .admin-portal-main-pane,
+  #admin-work-area,
+  .admin-work-area,
+  .no-scrollbar {
     display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
     background: transparent !important;
     box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
+    transform: none !important;
+    float: none !important;
+  }
+
+  /* Completely remove non-printable screen UI */
+  .no-print,
+  .no-print *,
+  header,
+  aside,
+  nav,
+  .admin-sidebar,
+  .admin-header,
+  .mobile-header-nav {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
     margin: 0 !important;
-    overflow: visible !important;
-    max-height: none !important;
-    max-width: none !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  /* Default visibility hidden; printable containers force visibility */
+  body * {
+    visibility: hidden;
   }
 
   #printable-receipt,
@@ -304,6 +336,36 @@ textarea {
   #printable-report,
   #printable-report * {
     visibility: visible !important;
+  }
+
+  /* Reset fixed modal overlay for natural top-of-page printing */
+  .receipt-modal-overlay {
+    all: unset !important;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .receipt-modal-container {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+    max-width: none !important;
   }
 
   /* 80mm Thermal Receipt Print Styling */
@@ -314,7 +376,7 @@ textarea {
     margin: 0 auto !important;
     width: 76mm !important;
     max-width: 76mm !important;
-    padding: 4mm 3mm !important;
+    padding: 2mm 3mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
@@ -331,7 +393,7 @@ textarea {
   #printable-receipt.format-a4 {
     display: block !important;
     position: relative !important;
-    margin: 8mm auto !important;
+    margin: 4mm auto !important;
     width: 100% !important;
     max-width: 190mm !important;
     padding: 0 !important;
@@ -347,17 +409,20 @@ textarea {
     max-height: none !important;
   }
 
+  /* Printable Audit Report Sheet */
   #printable-report {
     display: block !important;
     position: relative !important;
-    margin: 10mm auto !important;
+    margin: 4mm auto !important;
     width: 100% !important;
-    max-width: 190mm !important;
+    max-width: 195mm !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
     border: none !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 
   .receipt-items-scroll {
@@ -366,9 +431,25 @@ textarea {
     height: auto !important;
   }
 
-  /* Force print text and borders to black for thermal roll clarity */
-  #printable-receipt * {
+  /* Universal text & table sharpness in print */
+  #printable-receipt *,
+  #printable-report * {
     color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #printable-report table,
+  #printable-receipt table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    page-break-inside: auto !important;
+  }
+
+  #printable-report tr,
+  #printable-receipt tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 
@@ -389,6 +470,28 @@ textarea {
 
 .pulse-indicator {
   animation: pulse-ring 2s infinite ease-in-out;
+}
+
+/* Reports overview metric alignment */
+.reports-metric-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reports-metric-grid > div {
+  min-height: 112px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1180px) {
+  .reports-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .reports-metric-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================================ */

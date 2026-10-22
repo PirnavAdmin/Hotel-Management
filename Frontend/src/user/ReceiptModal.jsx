@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Printer, X, FileText, Receipt as ReceiptIcon } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getTodayDateString, getNextInvoiceNumber } from '../utils/invoiceCounter';
+import { printSurface } from '../utils/printSurface';
 
 const formatReceiptTime = (value) => {
   if (!value) return '';
@@ -102,8 +103,12 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     ? (table.paymentMethod ? table.paymentMethod.toUpperCase() : (table.paymentMode ? table.paymentMode.toUpperCase() : 'PAID'))
     : null;
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    await printSurface("printable-receipt", {
+      title: `Invoice ${invoiceNumber}`,
+      format: printFormat,
+      emptyMessage: "Cannot print an empty invoice. Add items first.",
+    });
     if (onPrint) onPrint();
   };
 
