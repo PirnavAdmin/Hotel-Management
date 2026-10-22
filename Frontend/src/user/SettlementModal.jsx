@@ -521,7 +521,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
               {/* Real Payment QR */}
               <div style={{
-                background: '#ffffff',
+                background: 'var(--bg-card)',
                 padding: '6px',
                 borderRadius: '10px',
                 display: 'flex',
@@ -608,7 +608,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               }}>
                 {/* GPay Badge */}
                 <div style={{
-                  background: '#ffffff',
+                  background: 'var(--bg-card)',
                   color: '#1e293b',
                   padding: '3px 9px',
                   borderRadius: '16px',
@@ -637,7 +637,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                   gap: '4px',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
                 }}>
-                  <span style={{ background: '#ffffff', color: '#5f259f', width: '12px', height: '12px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900 }}>पे</span>
+                  <span style={{ background: 'var(--bg-card)', color: '#5f259f', width: '12px', height: '12px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900 }}>पे</span>
                   <span>PhonePe</span>
                 </div>
 
@@ -660,9 +660,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
                 {/* BHIM Badge */}
                 <div style={{
-                  background: '#0f172a',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: '#ffffff',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--neutral-border)',
+                  color: 'var(--text-main)',
                   padding: '3px 9px',
                   borderRadius: '16px',
                   fontSize: '0.68rem',

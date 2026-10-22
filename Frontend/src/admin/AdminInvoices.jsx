@@ -918,7 +918,7 @@ export function AdminInvoices({
               </label>
             </div>
           )}
-          {invalidCustomDate && <span role="alert" style={{ color: "#fca5a5", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
+          {invalidCustomDate && <span role="alert" style={{ color: "var(--danger)", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
           <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Showing {filteredOrders.length} invoices</span>
         </div>
 
@@ -1252,7 +1252,7 @@ export function AdminInvoices({
                     colSpan={7}
                     style={{
                       padding: "2rem 1rem",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       textAlign: "center",
                     }}
                   >
@@ -1348,7 +1348,7 @@ export function AdminInvoices({
                       visiblePage === 1
                         ? "rgba(255, 255, 255, 0.02)"
                         : "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    border: "1px solid var(--neutral-border)",
                     color: visiblePage === 1 ? "#475569" : "#cbd5e1",
                     cursor: visiblePage === 1 ? "not-allowed" : "pointer",
                     display: "flex",
@@ -1411,7 +1411,7 @@ export function AdminInvoices({
                       visiblePage === pageCount
                         ? "rgba(255, 255, 255, 0.02)"
                         : "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    border: "1px solid var(--neutral-border)",
                     color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
                     cursor:
                       visiblePage === pageCount ? "not-allowed" : "pointer",
@@ -1453,7 +1453,7 @@ export function AdminInvoices({
             display: "grid",
             placeItems: "center",
             padding: "1rem",
-            background: "rgba(0, 0, 0, 0.72)",
+            background: "var(--modal-overlay)",
             backdropFilter: "blur(5px)",
           }}
         >
@@ -1499,7 +1499,7 @@ export function AdminInvoices({
             <p style={{ color: "var(--text-muted)", fontSize: "0.74rem", lineHeight: 1.5 }}>
               Saving updates the bill discount on the server and reloads the invoice history.
             </p>
-            {editError && <div role="alert" style={{ color: "#f87171", fontSize: "0.78rem", marginBottom: "0.8rem" }}>{editError}</div>}
+            {editError && <div role="alert" style={{ color: "var(--danger)", fontSize: "0.78rem", marginBottom: "0.8rem" }}>{editError}</div>}
             <div style={{ display: "flex", gap: "0.6rem", marginTop: "1rem" }}>
               <button type="button" onClick={() => setEditingInvoice(null)} disabled={isSavingEdit} style={{ flex: 1, padding: "0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "transparent", cursor: "pointer" }}>
                 Cancel

@@ -298,12 +298,22 @@ export function AdminPortal({
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
+  const isTableOccupied = (tbl) => {
+    const rawStatus = String(tbl?.status || "").trim().toLowerCase();
+    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
+      return true;
+    }
+    if (Array.isArray(tbl?.items) && tbl.items.length > 0) {
+      return tbl.items.some(
+        (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
+      );
+    }
+    return false;
+  };
+
   const emptyTableFilters = {
     search: "",
-    area: "",
-    capacity: "",
-    status: "",
-    server: "",
+    status: "all",
   };
   const [tableFilters, setTableFilters] = useState(emptyTableFilters);
   const updateTableFilter = (key, value) =>
@@ -311,10 +321,7 @@ export function AdminPortal({
   const clearTableFilters = () => setTableFilters(emptyTableFilters);
   const hasActiveTableFilters = Boolean(
     tableFilters.search ||
-    tableFilters.area ||
-    tableFilters.capacity ||
-    tableFilters.status ||
-    tableFilters.server
+    (tableFilters.status && tableFilters.status !== "all")
   );
 
   const normalizeTableFilterText = (value) =>
@@ -322,43 +329,13 @@ export function AdminPortal({
       .trim()
       .toLowerCase();
 
-  const tableAreaOptions = [
-    ...new Map(
-      tables
-        .map((table) => String(table.section ?? "").trim())
-        .filter(Boolean)
-        .map((area) => [normalizeTableFilterText(area), area]),
-    ).values(),
-  ];
-
-  const tableCapacityOptions = [
-    ...new Set(tables.map((table) => Number(table.capacity || 0)).filter(Boolean)),
-  ].sort((a, b) => a - b);
-
-  const tableServerOptions = [
-    ...new Map(
-      [
-        ...staffList.map(
-          (staff) =>
-            staff?.name ||
-            staff?.fullName ||
-            staff?.FullName ||
-            staff?.username,
-        ),
-        ...tables.map((table) => table.server),
-      ]
-        .map((name) => String(name ?? "").trim())
-        .filter(Boolean)
-        .map((name) => [normalizeTableFilterText(name), name]),
-    ).values(),
-  ];
+  const vacantTablesCount = tables.filter((t) => !isTableOccupied(t)).length;
+  const occupiedTablesCount = tables.filter((t) => isTableOccupied(t)).length;
 
   const filteredTables = tables.filter((table) => {
     const query = normalizeTableFilterText(tableFilters.search);
-    const server = normalizeTableFilterText(table.server);
-    const area = normalizeTableFilterText(table.section);
-    const status = normalizeTableFilterText(table.status) === "vacant" ? "vacant" : "occupied";
-    const capacity = String(table.capacity || "");
+    const isOccupied = isTableOccupied(table);
+    const tableStatus = isOccupied ? "occupied" : "vacant";
 
     const matchesSearch =
       !query ||
@@ -369,33 +346,16 @@ export function AdminPortal({
         table.id,
         `table ${table.id}`,
         `t${table.id}`,
+        table.section,
+        table.server,
       ].some((value) => normalizeTableFilterText(value).includes(query));
-
-    const matchesArea =
-      !tableFilters.area ||
-      area === normalizeTableFilterText(tableFilters.area);
-
-    const matchesCapacity =
-      !tableFilters.capacity ||
-      capacity === String(tableFilters.capacity);
-
-    const matchesServer =
-      !tableFilters.server ||
-      (tableFilters.server === "unassigned"
-        ? !server || server === "unassigned" || server === "staff"
-        : server === normalizeTableFilterText(tableFilters.server));
 
     const matchesStatus =
       !tableFilters.status ||
-      status === normalizeTableFilterText(tableFilters.status);
+      tableFilters.status === "all" ||
+      tableStatus === normalizeTableFilterText(tableFilters.status);
 
-    return (
-      matchesSearch &&
-      matchesArea &&
-      matchesCapacity &&
-      matchesServer &&
-      matchesStatus
-    );
+    return matchesSearch && matchesStatus;
   }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 
   const [tableSortField, setTableSortField] = useState("id");
@@ -431,8 +391,8 @@ export function AdminPortal({
         aVal = String(a.server || "").toLowerCase();
         bVal = String(b.server || "").toLowerCase();
       } else if (tableSortField === "status") {
-        aVal = String(a.status || "").toLowerCase();
-        bVal = String(b.status || "").toLowerCase();
+        aVal = isTableOccupied(a) ? "occupied" : "vacant";
+        bVal = isTableOccupied(b) ? "occupied" : "vacant";
       } else {
         aVal = String(aVal || "").toLowerCase();
         bVal = String(bVal || "").toLowerCase();
@@ -1039,10 +999,15 @@ export function AdminPortal({
         server: assignedServer,
       });
     } else {
+      const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
+      const formattedName = tableForm.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i)
+        ? `Table ${parsedNum}`
+        : (/^\d+$/.test(tableForm.name.trim()) ? `Table ${tableForm.name.trim()}` : tableForm.name.trim());
       onAddTable({
-        id: maxId + 1,
-        name: tableForm.name,
+        id: chosenId,
+        name: formattedName,
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 4,
         status: "vacant",
@@ -1193,7 +1158,7 @@ export function AdminPortal({
           : {
               position: "fixed",
               inset: 0,
-              background: "rgba(0, 0, 0, 0.82)",
+              background: "var(--modal-overlay)",
               backdropFilter: "blur(10px)",
               display: "flex",
               alignItems: "center",
@@ -1334,8 +1299,7 @@ export function AdminPortal({
                             width: "38px",
                             height: "38px",
                             borderRadius: "10px",
-                            background:
-                              "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -1407,8 +1371,7 @@ export function AdminPortal({
                           onClick={() => handleOpenItemModal()}
                           style={{
                             height: "36px",
-                            background:
-                              "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                             color: "#ffffff",
                             border: "none",
                             borderRadius: "8px",
@@ -1624,8 +1587,7 @@ export function AdminPortal({
                                 <tr
                                   key={item.id}
                                   style={{
-                                    borderBottom:
-                                      "1px solid var(--border-subtle)",
+                                    borderBottom: "1px solid var(--border-subtle)",
                                     transition:
                                       "background 0.15s ease, opacity 0.2s ease",
                                     opacity: isAvail ? 1 : 0.6,
@@ -1739,10 +1701,8 @@ export function AdminPortal({
                                     {item.isVeg ? (
                                       <span
                                         style={{
-                                          background:
-                                            "rgba(16, 185, 129, 0.12)",
-                                          border:
-                                            "1px solid rgba(16, 185, 129, 0.28)",
+                                          background: "rgba(16, 185, 129, 0.12)",
+                                          border: "1px solid rgba(16, 185, 129, 0.28)",
                                           color: "#10b981",
                                           borderRadius: "14px",
                                           padding: "3px 10px",
@@ -1759,8 +1719,7 @@ export function AdminPortal({
                                       <span
                                         style={{
                                           background: "rgba(239, 68, 68, 0.12)",
-                                          border:
-                                            "1px solid rgba(239, 68, 68, 0.28)",
+                                          border: "1px solid rgba(239, 68, 68, 0.28)",
                                           color: "#ef4444",
                                           borderRadius: "14px",
                                           padding: "3px 10px",
@@ -1863,10 +1822,8 @@ export function AdminPortal({
                                           handleOpenItemModal(item)
                                         }
                                         style={{
-                                          border:
-                                            "1px solid rgba(245, 158, 11, 0.45)",
-                                          background:
-                                            "rgba(245, 158, 11, 0.06)",
+                                          border: "1px solid rgba(245, 158, 11, 0.45)",
+                                          background: "rgba(245, 158, 11, 0.06)",
                                           color: "#f59e0b",
                                           borderRadius: "6px",
                                           padding: "4px 12px",
@@ -1895,8 +1852,7 @@ export function AdminPortal({
                                           });
                                         }}
                                         style={{
-                                          border:
-                                            "1px solid rgba(239, 68, 68, 0.45)",
+                                          border: "1px solid rgba(239, 68, 68, 0.45)",
                                           background: "rgba(239, 68, 68, 0.06)",
                                           color: "#ef4444",
                                           borderRadius: "6px",
@@ -2053,7 +2009,7 @@ export function AdminPortal({
                                     safeMenuPage === 1
                                       ? "rgba(255, 255, 255, 0.02)"
                                       : "rgba(255, 255, 255, 0.06)",
-                                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                                  border: "1px solid var(--neutral-border)",
                                   color:
                                     safeMenuPage === 1 ? "#475569" : "#cbd5e1",
                                   cursor:
@@ -2123,7 +2079,7 @@ export function AdminPortal({
                                     safeMenuPage === totalMenuPages
                                       ? "rgba(255, 255, 255, 0.02)"
                                       : "rgba(255, 255, 255, 0.06)",
-                                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                                  border: "1px solid var(--neutral-border)",
                                   color:
                                     safeMenuPage === totalMenuPages
                                       ? "#475569"
@@ -2190,7 +2146,7 @@ export function AdminPortal({
                           style={{
                             fontSize: "1.25rem",
                             fontWeight: 800,
-                            color: "#ffffff",
+                            color: "var(--text-main)",
                             letterSpacing: "-0.01em",
                             margin: 0,
                           }}
@@ -2236,36 +2192,36 @@ export function AdminPortal({
                       style={{
                         background: "rgba(6, 17, 31, 0.6)",
                         borderRadius: "10px",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        border: "1px solid var(--neutral-border)",
                         overflow: "hidden",
                       }}
                     >
                       <div style={{ overflowX: "auto" }}>
                         <div style={{ minWidth: "960px", padding: "0.6rem" }}>
-                          {/* Column Filters (Replacing header text) */}
+                          {/* Filter Toolbar: Vacant / Occupied Pills + Search */}
                           <div
                             style={{
-                              display: "grid",
-                              gridTemplateColumns: "1.3fr 1.3fr 1.6fr 1.3fr 1.1fr 2.4fr",
+                              display: "flex",
+                              justifyContent: "space-between",
                               alignItems: "center",
-                              padding: "0.55rem 1.1rem",
+                              flexWrap: "wrap",
+                              gap: "0.75rem",
+                              padding: "0.55rem 0.85rem",
                               background: "#081628",
                               borderRadius: "8px",
                               marginBottom: "0.5rem",
-                              color: "#7e9bb7",
-                              fontSize: "0.78rem",
-                              gap: "0.6rem",
+                              border: "1px solid rgba(255, 255, 255, 0.05)",
                             }}
                           >
-                            {/* Col 1: Table # Search Filter */}
-                            <div>
-                              <div style={{ position: "relative" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+                              {/* Table # Search Filter */}
+                              <div style={{ position: "relative", minWidth: "170px" }}>
                                 <Search
-                                  size={12}
+                                  size={13}
                                   color="#7e9bb7"
                                   style={{
                                     position: "absolute",
-                                    left: "8px",
+                                    left: "9px",
                                     top: "50%",
                                     transform: "translateY(-50%)",
                                     pointerEvents: "none",
@@ -2279,149 +2235,177 @@ export function AdminPortal({
                                   style={{
                                     width: "100%",
                                     padding: "0.42rem 0.5rem 0.42rem 1.6rem",
+                                    background: "var(--input-bg)",
+                                    padding: "0.4rem 0.5rem 0.4rem 1.65rem",
                                     background: "#0c1829",
                                     border: tableFilters.search
                                       ? "1px solid #f59e0b"
                                       : "1px solid rgba(255, 255, 255, 0.12)",
                                     borderRadius: "6px",
-                                    color: "#f1f5f9",
+                                    color: "var(--text-main)",
                                     fontSize: "0.78rem",
                                     outline: "none",
                                     boxSizing: "border-box",
                                   }}
                                 />
                               </div>
-                            </div>
 
-                            {/* Col 2: Area Filter */}
-                            <div>
-                              <select
-                                value={tableFilters.area}
-                                onChange={(e) => updateTableFilter("area", e.target.value)}
+                              {/* Vacant & Occupied Status Filter Pills */}
+                              <div
                                 style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.area
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.area ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
+                                  display: "inline-flex",
+                                  gap: "0.3rem",
+                                  background: "var(--input-bg)",
+                                  padding: "3px",
+                                  borderRadius: "7px",
+                                  border: "1px solid rgba(255, 255, 255, 0.08)",
                                 }}
                               >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Areas
-                                </option>
-                                {tableAreaOptions.map((area) => (
-                                  <option key={area} value={area} style={{ background: "#0c1829", color: "#fff" }}>
-                                    {area}
-                                  </option>
-                                ))}
-                              </select>
+                                {/* All Tables */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateTableFilter("status", "all")}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    padding: "0.3rem 0.7rem",
+                                    borderRadius: "5px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.74rem",
+                                    fontWeight: (!tableFilters.status || tableFilters.status === "all") ? 700 : 500,
+                                    background: (!tableFilters.status || tableFilters.status === "all")
+                                      ? "rgba(245, 158, 11, 0.2)"
+                                      : "transparent",
+                                    color: (!tableFilters.status || tableFilters.status === "all")
+                                      ? "#f59e0b"
+                                      : "#94a3b8",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <span>All Tables</span>
+                                  <span
+                                    style={{
+                                      padding: "1px 5px",
+                                      borderRadius: "8px",
+                                      background: (!tableFilters.status || tableFilters.status === "all")
+                                        ? "#f59e0b"
+                                        : "rgba(255, 255, 255, 0.08)",
+                                      color: (!tableFilters.status || tableFilters.status === "all")
+                                        ? "#081628"
+                                        : "#94a3b8",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {tables.length}
+                                  </span>
+                                </button>
+
+                                {/* Vacant Filter */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateTableFilter("status", "vacant")}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    padding: "0.3rem 0.7rem",
+                                    borderRadius: "5px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.74rem",
+                                    fontWeight: tableFilters.status === "vacant" ? 700 : 500,
+                                    background: tableFilters.status === "vacant"
+                                      ? "rgba(16, 185, 129, 0.2)"
+                                      : "transparent",
+                                    color: tableFilters.status === "vacant" ? "#10b981" : "#94a3b8",
+                                    boxShadow: tableFilters.status === "vacant"
+                                      ? "0 0 10px rgba(16, 185, 129, 0.15)"
+                                      : "none",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: "6px",
+                                      height: "6px",
+                                      borderRadius: "50%",
+                                      backgroundColor: "#10b981",
+                                      boxShadow: "0 0 6px #10b981",
+                                    }}
+                                  />
+                                  <span>Vacant</span>
+                                  <span
+                                    style={{
+                                      padding: "1px 5px",
+                                      borderRadius: "8px",
+                                      background: tableFilters.status === "vacant"
+                                        ? "#10b981"
+                                        : "rgba(255, 255, 255, 0.08)",
+                                      color: tableFilters.status === "vacant" ? "#081628" : "#94a3b8",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {vacantTablesCount}
+                                  </span>
+                                </button>
+
+                                {/* Occupied Filter */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateTableFilter("status", "occupied")}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    padding: "0.3rem 0.7rem",
+                                    borderRadius: "5px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.74rem",
+                                    fontWeight: tableFilters.status === "occupied" ? 700 : 500,
+                                    background: tableFilters.status === "occupied"
+                                      ? "rgba(245, 158, 11, 0.2)"
+                                      : "transparent",
+                                    color: tableFilters.status === "occupied" ? "#f59e0b" : "#94a3b8",
+                                    boxShadow: tableFilters.status === "occupied"
+                                      ? "0 0 10px rgba(245, 158, 11, 0.15)"
+                                      : "none",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: "6px",
+                                      height: "6px",
+                                      borderRadius: "50%",
+                                      backgroundColor: "#f59e0b",
+                                      boxShadow: "0 0 6px #f59e0b",
+                                    }}
+                                  />
+                                  <span>Occupied</span>
+                                  <span
+                                    style={{
+                                      padding: "1px 5px",
+                                      borderRadius: "8px",
+                                      background: tableFilters.status === "occupied"
+                                        ? "#f59e0b"
+                                        : "rgba(255, 255, 255, 0.08)",
+                                      color: tableFilters.status === "occupied" ? "#081628" : "#94a3b8",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {occupiedTablesCount}
+                                  </span>
+                                </button>
+                              </div>
                             </div>
 
-                            {/* Col 3: Chairs / Capacity Filter */}
-                            <div>
-                              <select
-                                value={tableFilters.capacity}
-                                onChange={(e) => updateTableFilter("capacity", e.target.value)}
-                                style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.capacity
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.capacity ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
-                                }}
-                              >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Chairs / Capacity
-                                </option>
-                                {tableCapacityOptions.map((cap) => (
-                                  <option key={cap} value={cap} style={{ background: "#0c1829", color: "#fff" }}>
-                                    {cap} Chairs
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Col 4: Assigned Server Filter */}
-                            <div>
-                              <select
-                                value={tableFilters.server}
-                                onChange={(e) => updateTableFilter("server", e.target.value)}
-                                style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.server
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.server ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
-                                }}
-                              >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Assigned Servers
-                                </option>
-                                <option value="unassigned" style={{ background: "#0c1829", color: "#fff" }}>
-                                  Unassigned
-                                </option>
-                                {tableServerOptions.map((srv) => (
-                                  <option key={srv} value={srv} style={{ background: "#0c1829", color: "#fff" }}>
-                                    {srv}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Col 5: Status Filter */}
-                            <div>
-                              <select
-                                value={tableFilters.status}
-                                onChange={(e) => updateTableFilter("status", e.target.value)}
-                                style={{
-                                  width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
-                                  border: tableFilters.status
-                                    ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
-                                  borderRadius: "6px",
-                                  color: tableFilters.status ? "#f59e0b" : "#f1f5f9",
-                                  fontSize: "0.78rem",
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  boxSizing: "border-box",
-                                }}
-                              >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
-                                  All Status
-                                </option>
-                                <option value="vacant" style={{ background: "#0c1829", color: "#fff" }}>
-                                  Vacant
-                                </option>
-                                <option value="occupied" style={{ background: "#0c1829", color: "#fff" }}>
-                                  Occupied
-                                </option>
-                              </select>
-                            </div>
-
-                            {/* Col 6: Seat Configuration / Reset Filter */}
+                            {/* Right: Reset or Count Info */}
                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                               {hasActiveTableFilters ? (
                                 <button
@@ -2434,18 +2418,12 @@ export function AdminPortal({
                                     background: "rgba(239, 68, 68, 0.15)",
                                     border: "1px solid rgba(239, 68, 68, 0.4)",
                                     color: "#ef4444",
-                                    padding: "0.42rem 0.75rem",
+                                    padding: "0.38rem 0.75rem",
                                     borderRadius: "6px",
-                                    fontSize: "0.78rem",
+                                    fontSize: "0.75rem",
                                     fontWeight: 700,
                                     cursor: "pointer",
                                     transition: "all 0.15s ease",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
                                   }}
                                   title="Clear all active table filters"
                                 >
@@ -2453,10 +2431,68 @@ export function AdminPortal({
                                   <span>Reset Filters</span>
                                 </button>
                               ) : (
-                                <span style={{ fontSize: "0.76rem", color: "#64748b", fontWeight: 500 }}>
+                                <span style={{ fontSize: "0.76rem", color: "var(--text-dim)", fontWeight: 500 }}>
                                   Showing all {tables.length} tables
                                 </span>
                               )}
+                            </div>
+                          </div>
+
+                          {/* Column Headers */}
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "1.3fr 1.3fr 1.6fr 1.3fr 1.1fr 2.4fr",
+                              alignItems: "center",
+                              padding: "0.55rem 1.1rem",
+                              background: "#081628",
+                              borderRadius: "8px",
+                              marginBottom: "0.5rem",
+                              color: "#7e9bb7",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                              gap: "0.6rem",
+                            }}
+                          >
+                            <div
+                              onClick={() => handleTableSort("name")}
+                              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                            >
+                              <span>Table #</span>
+                              {tableSortField === "name" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+                            </div>
+                            <div
+                              onClick={() => handleTableSort("area")}
+                              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                            >
+                              <span>Area</span>
+                              {tableSortField === "area" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+                            </div>
+                            <div
+                              onClick={() => handleTableSort("capacity")}
+                              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                            >
+                              <span>Chairs / Capacity</span>
+                              {tableSortField === "capacity" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+                            </div>
+                            <div
+                              onClick={() => handleTableSort("server")}
+                              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                            >
+                              <span>Assigned Server</span>
+                              {tableSortField === "server" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+                            </div>
+                            <div
+                              onClick={() => handleTableSort("status")}
+                              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                            >
+                              <span>Status</span>
+                              {tableSortField === "status" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+                            </div>
+                            <div style={{ textAlign: "right", paddingRight: "0.5rem" }}>
+                              Actions
                             </div>
                           </div>
 
@@ -2498,29 +2534,12 @@ export function AdminPortal({
 
                           {/* Rows List */}
                           {sortedTables.map((tbl) => {
-                            const rawStatus = String(tbl.status || "").toLowerCase();
-                            const isOccupied = rawStatus === "occupied";
-                            const isVacant = rawStatus === "vacant";
-
-                            let dotColor = "#10b981";
-                            let textColor = "#10b981";
-                            let bgColor = "rgba(16, 185, 129, 0.12)";
-                            let borderColor = "rgba(16, 185, 129, 0.3)";
-                            let label = "AVAILABLE";
-
-                            if (isOccupied) {
-                              dotColor = "#f59e0b";
-                              textColor = "#f59e0b";
-                              bgColor = "rgba(245, 158, 11, 0.12)";
-                              borderColor = "rgba(245, 158, 11, 0.3)";
-                              label = "OCCUPIED";
-                            } else if (isVacant) {
-                              dotColor = "#06b6d4";
-                              textColor = "#06b6d4";
-                              bgColor = "rgba(6, 182, 212, 0.12)";
-                              borderColor = "rgba(6, 182, 212, 0.3)";
-                              label = "VACANT";
-                            }
+                            const isOccupied = isTableOccupied(tbl);
+                            const dotColor = isOccupied ? "#f59e0b" : "#10b981";
+                            const textColor = isOccupied ? "#f59e0b" : "#10b981";
+                            const bgColor = isOccupied ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)";
+                            const borderColor = isOccupied ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)";
+                            const label = isOccupied ? "OCCUPIED" : "VACANT";
 
                             return (
                               <div
@@ -2531,7 +2550,7 @@ export function AdminPortal({
                                   alignItems: "center",
                                   padding: "0.58rem 1.1rem",
                                   background: "#081627",
-                                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                                  border: "1px solid var(--neutral-border)",
                                   borderRadius: "8px",
                                   marginBottom: "0.45rem",
                                   transition: "background 0.15s ease, border-color 0.15s ease",
@@ -2562,7 +2581,7 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                   >
-                                    T{tbl.id}
+                                    T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}
                                   </div>
                                   <span
                                     style={{
@@ -2579,7 +2598,7 @@ export function AdminPortal({
                                 {/* Col 2: Area */}
                                 <div
                                   style={{
-                                    color: "#cbd5e1",
+                                    color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
                                   }}
@@ -2590,7 +2609,7 @@ export function AdminPortal({
                                 {/* Col 3: Chairs / Capacity */}
                                 <div
                                   style={{
-                                    color: "#cbd5e1",
+                                    color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
                                   }}
@@ -2601,7 +2620,7 @@ export function AdminPortal({
                                 {/* Col 4: Assigned Server */}
                                 <div
                                   style={{
-                                    color: "#cbd5e1",
+                                    color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
                                   }}
@@ -2678,7 +2697,7 @@ export function AdminPortal({
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (tbl.status === "occupied") {
+                                      if (isTableOccupied(tbl)) {
                                         requestDelete({
                                           title: "Cannot Delete Table",
                                           message: `Cannot delete ${tbl.name || `Table ${tbl.id}`} because it is currently occupied with diners. Clear or settle bill first.`,
@@ -2772,7 +2791,7 @@ export function AdminPortal({
                             style={{
                               fontSize: "1.25rem",
                               fontWeight: 800,
-                              color: "#ffffff",
+                              color: "var(--text-main)",
                               letterSpacing: "-0.01em",
                               margin: 0,
                             }}
@@ -2828,7 +2847,7 @@ export function AdminPortal({
                       style={{
                         background: "rgba(6, 17, 31, 0.6)",
                         borderRadius: "10px",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        border: "1px solid var(--neutral-border)",
                         overflow: "hidden",
                       }}
                     >
@@ -2872,7 +2891,7 @@ export function AdminPortal({
                                   style={{
                                     width: "100%",
                                     padding: "0.42rem 0.5rem 0.42rem 1.6rem",
-                                    background: "#0c1829",
+                                    background: "var(--input-bg)",
                                     border: staffFilters.search
                                       ? "1px solid #f59e0b"
                                       : "1px solid rgba(255, 255, 255, 0.12)",
@@ -2894,7 +2913,7 @@ export function AdminPortal({
                                 style={{
                                   width: "100%",
                                   padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
+                                  background: "var(--input-bg)",
                                   border: staffFilters.role
                                     ? "1px solid #f59e0b"
                                     : "1px solid rgba(255, 255, 255, 0.12)",
@@ -2906,11 +2925,11 @@ export function AdminPortal({
                                   boxSizing: "border-box",
                                 }}
                               >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
+                                <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
                                   All Roles
                                 </option>
                                 {staffRoleOptions.map((role) => (
-                                  <option key={role} value={role} style={{ background: "#0c1829", color: "#fff" }}>
+                                  <option key={role} value={role} style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                                     {role}
                                   </option>
                                 ))}
@@ -2932,7 +2951,7 @@ export function AdminPortal({
                                 style={{
                                   width: "100%",
                                   padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
+                                  background: "var(--input-bg)",
                                   border: staffFilters.shift
                                     ? "1px solid #f59e0b"
                                     : "1px solid rgba(255, 255, 255, 0.12)",
@@ -2944,11 +2963,11 @@ export function AdminPortal({
                                   boxSizing: "border-box",
                                 }}
                               >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
+                                <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
                                   All Shifts
                                 </option>
                                 {staffShiftOptions.map((shift) => (
-                                  <option key={shift} value={shift} style={{ background: "#0c1829", color: "#fff" }}>
+                                  <option key={shift} value={shift} style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                                     {shift}
                                   </option>
                                 ))}
@@ -2963,7 +2982,7 @@ export function AdminPortal({
                                 style={{
                                   width: "100%",
                                   padding: "0.42rem 0.5rem",
-                                  background: "#0c1829",
+                                  background: "var(--input-bg)",
                                   border: staffFilters.assigned
                                     ? "1px solid #f59e0b"
                                     : "1px solid rgba(255, 255, 255, 0.12)",
@@ -2975,13 +2994,13 @@ export function AdminPortal({
                                   boxSizing: "border-box",
                                 }}
                               >
-                                <option value="" style={{ background: "#0c1829", color: "#94a3b8" }}>
+                                <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
                                   All Assigned Status
                                 </option>
-                                <option value="assigned" style={{ background: "#0c1829", color: "#fff" }}>
+                                <option value="assigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                                   Has Tables Assigned
                                 </option>
-                                <option value="unassigned" style={{ background: "#0c1829", color: "#fff" }}>
+                                <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                                   No Tables Assigned
                                 </option>
                               </select>
@@ -3019,7 +3038,7 @@ export function AdminPortal({
                                   <span>Reset Filters</span>
                                 </button>
                               ) : (
-                                <span style={{ fontSize: "0.76rem", color: "#64748b", fontWeight: 500 }}>
+                                <span style={{ fontSize: "0.76rem", color: "var(--text-dim)", fontWeight: 500 }}>
                                   Showing all {staffList.length} staff
                                 </span>
                               )}
@@ -3089,7 +3108,7 @@ export function AdminPortal({
                                   alignItems: "center",
                                   padding: "0.58rem 1.1rem",
                                   background: "#081627",
-                                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                                  border: "1px solid var(--neutral-border)",
                                   borderRadius: "8px",
                                   marginBottom: "0.45rem",
                                   gap: "0.6rem",
@@ -3140,7 +3159,7 @@ export function AdminPortal({
                                 {/* Col 2: Role */}
                                 <div
                                   style={{
-                                    color: "#cbd5e1",
+                                    color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
                                     whiteSpace: "nowrap",
@@ -3155,7 +3174,7 @@ export function AdminPortal({
                                 {/* Col 3: Phone */}
                                 <div
                                   style={{
-                                    color: "#cbd5e1",
+                                    color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
                                     whiteSpace: "nowrap",
@@ -3167,7 +3186,7 @@ export function AdminPortal({
                                 {/* Col 4: Shift (Full Description without truncation) */}
                                 <div
                                   style={{
-                                    color: "#cbd5e1",
+                                    color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
                                     whiteSpace: "nowrap",
@@ -3367,8 +3386,7 @@ export function AdminPortal({
                             gap: "0.4rem",
                             padding: "0.55rem 1rem",
                             borderRadius: "var(--radius-sm)",
-                            background:
-                              "linear-gradient(135deg, #f59e0b, #ea580c)",
+                            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                             color: "#ffffff",
                             fontWeight: 800,
                             fontSize: "0.82rem",
@@ -3568,8 +3586,7 @@ export function AdminPortal({
                               <div
                                 style={{
                                   padding: "0.5rem 0.65rem 0.45rem",
-                                  borderBottom:
-                                    "1px solid var(--border-subtle)",
+                                  borderBottom: "1px solid var(--border-subtle)",
                                   flexShrink: 0,
                                 }}
                               >
@@ -4025,8 +4042,7 @@ export function AdminPortal({
                                   style={{
                                     padding: "0.85rem 1.1rem",
                                     background: "var(--bg-primary)",
-                                    borderBottom:
-                                      "1px solid var(--border-subtle)",
+                                    borderBottom: "1px solid var(--border-subtle)",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "space-between",
@@ -4112,8 +4128,7 @@ export function AdminPortal({
                                           padding: "0.5rem 0.65rem",
                                           borderRadius: "var(--radius-sm)",
                                           background: "var(--bg-primary)",
-                                          border:
-                                            "1px solid var(--border-subtle)",
+                                          border: "1px solid var(--border-subtle)",
                                         }}
                                       >
                                         <div
@@ -4149,7 +4164,7 @@ export function AdminPortal({
                                               <div
                                                 style={{
                                                   fontSize: "0.72rem",
-                                                  color: "#f87171",
+                                                  color: "var(--danger)",
                                                   fontWeight: 600,
                                                 }}
                                               >
@@ -4195,8 +4210,7 @@ export function AdminPortal({
                                   <div
                                     style={{
                                       padding: "0.75rem 1.1rem",
-                                      borderTop:
-                                        "1px solid var(--border-subtle)",
+                                      borderTop: "1px solid var(--border-subtle)",
                                       background: "var(--bg-primary)",
                                       display: "flex",
                                       gap: "0.5rem",
@@ -4212,8 +4226,7 @@ export function AdminPortal({
                                           width: "100%",
                                           padding: "0.65rem",
                                           borderRadius: "var(--radius-sm)",
-                                          background:
-                                            "linear-gradient(135deg, #10b981, #059669)",
+                                          background: "linear-gradient(135deg, #10b981, #059669)",
                                           color: "#ffffff",
                                           fontWeight: 800,
                                           fontSize: "0.84rem",
@@ -4236,8 +4249,7 @@ export function AdminPortal({
                                           width: "100%",
                                           padding: "0.6rem",
                                           borderRadius: "var(--radius-sm)",
-                                          background:
-                                            "rgba(16, 185, 129, 0.15)",
+                                          background: "rgba(16, 185, 129, 0.15)",
                                           color: "#10b981",
                                           fontWeight: 800,
                                           fontSize: "0.82rem",
@@ -4282,15 +4294,14 @@ export function AdminPortal({
                   />
                 )}
 
-                {/* ================= TAB 7: REPORTS ================= */}
-                {activeTab === "reports" && (
-                  <AdminReports
-                    pastOrders={pastOrders}
-                    menuItems={menuItems}
-                    restaurantSettings={restaurantSettings}
-                    inventory={inventory}
-                  />
-                )}
+            {/* ================= TAB 7: REPORTS ================= */}
+            {activeTab === "reports" && (
+              <AdminReports
+                pastOrders={pastOrders}
+                menuItems={menuItems}
+                restaurantSettings={restaurantSettings}
+              />
+            )}
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
                 {activeTab === "logins" && (
@@ -4320,7 +4331,7 @@ export function AdminPortal({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.8)",
+            background: "var(--modal-overlay)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -4737,7 +4748,7 @@ export function AdminPortal({
                         objectFit: "cover",
                         borderRadius: "6px",
                         border: "1px solid var(--border-card)",
-                        background: "#0f172a",
+                        background: "var(--bg-card)",
                         flexShrink: 0,
                       }}
                     />
@@ -4868,7 +4879,7 @@ export function AdminPortal({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.7)",
+            background: "var(--modal-overlay)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
@@ -5184,7 +5195,7 @@ export function AdminPortal({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.7)",
+            background: "var(--modal-overlay)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",

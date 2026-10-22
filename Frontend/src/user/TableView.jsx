@@ -1068,7 +1068,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                 background: "#081322",
                 border: "1.5px solid #f59e0b",
                 borderRadius: "20px",
-                color: "#ffffff",
+                color: "var(--text-main)",
                 outline: "none",
                 boxShadow: "0 0 10px rgba(245, 158, 11, 0.5)",
               }}
@@ -1204,7 +1204,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         matchesTableDropdown &&
         matchesSearch
       );
-    }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    });
   }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
 
   const hasActiveFilters =
@@ -1437,7 +1437,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
               style={{
                 background: "rgba(239, 68, 68, 0.14)",
                 border: "1px solid rgba(239, 68, 68, 0.35)",
-                color: "#f87171",
+                color: "var(--danger)",
                 borderRadius: "var(--radius-md)",
                 padding: "0.45rem 0.75rem",
                 fontSize: "0.8rem",
@@ -1467,7 +1467,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           >
             {[
               { id: "all", label: `All (${tables.length})` },
-              { id: "vacant", label: "Available", dot: "var(--status-vacant)" },
+              { id: "vacant", label: "Vacant", dot: "var(--status-vacant)" },
               {
                 id: "occupied",
                 label: "Occupied",
@@ -1676,7 +1676,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
             );
 
             let statusColor = "var(--status-vacant)";
-            let statusText = "Available";
+            let statusText = "Vacant";
             let statusBg = "var(--status-vacant-bg)";
 
             if (table.status === "occupied") {
@@ -1798,7 +1798,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           flexShrink: 0,
                         }}
                       >
-                        T{table.id}
+                        T{table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id}
                       </span>
                       <h3
                         style={{
@@ -1816,7 +1816,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           textOverflow: "ellipsis",
                         }}
                       >
-                        Table {table.id}
+                        {table.name ? (table.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i) ? `Table ${table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "")}` : table.name) : `Table ${table.id}`}
                       </h3>
                     </div>
                     <span
@@ -1846,7 +1846,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       justifyContent: "space-between",
                       gap: "0.5rem",
                       paddingBottom: "0.35rem",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      borderBottom: "1px solid var(--neutral-border)",
                     }}
                   >
                     <span
@@ -1990,7 +1990,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                             style={{
                               fontSize: "0.68rem",
                               fontWeight: 900,
-                              color: "#34d399",
+                              color: "var(--success)",
                               display: "flex",
                               alignItems: "center",
                               gap: "3px",
@@ -2011,7 +2011,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           <span
                             style={{
                               fontSize: "0.6rem",
-                              color: "#6ee7b7",
+                              color: "var(--success)",
                               fontWeight: 800,
                             }}
                           >
@@ -2061,7 +2061,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                             style={{
                               fontSize: "0.68rem",
                               fontWeight: 800,
-                              color: "#34d399",
+                              color: "var(--success)",
                             }}
                           >
                             🔔 Dishes Ready ({readyCount}/{items.length})
@@ -2356,7 +2356,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         lineHeight: 1.25,
                       }}
                     >
-                      Table {selectedSeatTable.id} — Select Seats
+                      {selectedSeatTable.name || `Table ${selectedSeatTable.id}`} — Select Seats
                     </h2>
                     <div
                       style={{
@@ -2856,7 +2856,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ color: "var(--text-dim)" }}>Table No:</span>
                         <span style={{ color: "var(--text-main)", fontWeight: 700, fontSize: "0.88rem" }}>
-                          T{selectedSeatTable.id}
+                          T{selectedSeatTable.name ? selectedSeatTable.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : selectedSeatTable.id}
                         </span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

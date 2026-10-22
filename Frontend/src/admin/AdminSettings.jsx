@@ -523,7 +523,7 @@ export function AdminSettings({
           {saveError && (
             <div
               role="alert"
-              style={{ color: "#f87171", fontSize: "0.8rem", fontWeight: 700 }}
+              style={{ color: "var(--danger)", fontSize: "0.8rem", fontWeight: 700 }}
             >
               {saveError}
             </div>
@@ -779,7 +779,7 @@ export function AdminSettings({
                         padding: "0.58rem 0.75rem",
                         borderRadius: "8px",
                         border: "1px solid rgba(239, 68, 68, 0.35)",
-                        color: "#f87171",
+                        color: "var(--danger)",
                         background: "transparent",
                         fontSize: "0.8rem",
                         fontWeight: 700,
@@ -799,7 +799,7 @@ export function AdminSettings({
                   <div
                     role="alert"
                     style={{
-                      color: "#f87171",
+                      color: "var(--danger)",
                       fontSize: "0.75rem",
                       marginTop: "0.4rem",
                     }}
@@ -1199,7 +1199,7 @@ export function AdminSettings({
                               fontWeight: 600,
                               padding: "2px 7px",
                               borderRadius: "12px",
-                              background: "rgba(255, 255, 255, 0.06)",
+                              background: "var(--surface-tint)",
                               color: "var(--text-dim)",
                               border: "1px dashed rgba(255, 255, 255, 0.2)",
                             }}
@@ -1264,7 +1264,7 @@ export function AdminSettings({
                       {qr.image ? (
                         <div
                           style={{
-                            background: "#ffffff",
+                            background: "var(--bg-card)",
                             padding: "6px",
                             borderRadius: "8px",
                             boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
@@ -1299,7 +1299,7 @@ export function AdminSettings({
                               width: "42px",
                               height: "42px",
                               borderRadius: "10px",
-                              background: "rgba(255, 255, 255, 0.04)",
+                              background: "var(--surface-tint)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -1732,7 +1732,7 @@ export function AdminSettings({
                     width: "24px",
                     height: "24px",
                     borderRadius: "50%",
-                    background: "#ffffff",
+                    background: "var(--bg-card)",
                     boxShadow: "0 2px 5px rgba(0,0,0,0.25)",
                     transition: "left 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
@@ -1759,7 +1759,7 @@ export function AdminSettings({
               <div
                 role="alert"
                 style={{
-                  color: "#f87171",
+                  color: "var(--danger)",
                   fontSize: "0.82rem",
                   fontWeight: 700,
                 }}

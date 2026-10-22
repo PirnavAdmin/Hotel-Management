@@ -1,3 +1,4 @@
+import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
@@ -140,26 +141,24 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       const num = parseTableNumber(table);
 
       let targetId = null;
-      if (num && num >= 1 && num <= 15) {
+      if (num && num >= 1) {
         targetId = num;
       } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
         targetId = Number(table.id);
-      } else if (num) {
-        targetId = num;
       }
 
       if (!targetId || deletedIds.includes(String(targetId))) return;
 
-      const isStandard = targetId >= 1 && targetId <= 15;
-      if (!isStandard && isRogueName(rawName)) return;
+      if (isRogueName(rawName)) return;
+
+      // If this table previously had an arbitrary backend auto-increment ID (e.g. 55) in tablesById, remove it
+      if (table.id && Number(table.id) !== targetId && tablesById.has(Number(table.id))) {
+        tablesById.delete(Number(table.id));
+      }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = isStandard
-        ? isRogueName(rawName) || !rawName
-          ? `Table ${targetId}`
-          : rawName.match(/^(?:table|t)\s*(\d+)$/i)
-            ? `Table ${targetId}`
-            : rawName
+      const cleanName = rawName.match(/^(?:table|t)\s*(\d+)$/i)
+        ? `Table ${num || targetId}`
         : rawName || `Table ${targetId}`;
 
       const normalized = {
@@ -266,13 +265,10 @@ export function App() {
   }, []);
 
   // Theme state: 'royal-saffron' | 'emerald-spice' | 'light-bistro'
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem(STORAGE_KEY_THEME) || "royal-saffron";
-  });
+  const [theme, setTheme] = useState(getSavedTheme);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(STORAGE_KEY_THEME, theme);
+    applyTheme(theme);
   }, [theme]);
 
   // Track permanently deleted table IDs so cross-tabs or reloads never resurrect them
@@ -967,7 +963,7 @@ export function App() {
           }
         } catch {}
       } else if (e.key === STORAGE_KEY_THEME) {
-        setTheme(e.newValue);
+        setTheme(normalizeTheme(e.newValue));
       } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
           const alert = JSON.parse(e.newValue);
@@ -1244,6 +1240,22 @@ export function App() {
   const handleSendKOT = (tableId) => {
     sounds.playBell();
     const tbl = tables.find((t) => t.id === tableId);
+    try {
+      const saved = localStorage.getItem("gourmet_kot_dismissed_tickets_v1");
+      if (saved) {
+        const list = JSON.parse(saved);
+        const updated = list.filter(
+          (id) =>
+            id !== String(tableId) &&
+            id !== Number(tableId) &&
+            id !== `active-${tableId}`,
+        );
+        localStorage.setItem(
+          "gourmet_kot_dismissed_tickets_v1",
+          JSON.stringify(updated),
+        );
+      }
+    } catch {}
     setTables((prevTables) =>
       prevTables.map((t) => {
         if (t.id !== tableId) return t;
@@ -2103,7 +2115,7 @@ export function App() {
               />
             </ErrorBoundary>
           ) : (
-            <LoginPage role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
@@ -2137,7 +2149,7 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
@@ -2192,7 +2204,7 @@ export function App() {
               )}
             </>
           ) : (
-            <LoginPage role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
           ))}
       </main>
 
@@ -2281,9 +2293,9 @@ export function App() {
             <button
               onClick={() => setActiveKitchenAlert(null)}
               style={{
-                background: "rgba(255,255,255,0.08)",
+                background: "var(--surface-tint)",
                 border: "none",
-                color: "#94a3b8",
+                color: "var(--text-dim)",
                 width: "26px",
                 height: "26px",
                 borderRadius: "50%",
@@ -2320,7 +2332,7 @@ export function App() {
             }}
           >
             <span
-              style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 700 }}
+              style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700 }}
             >
               ⏰ {activeKitchenAlert.timestamp}
             </span>

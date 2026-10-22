@@ -316,10 +316,10 @@ export function ProfileDropdown({
                 style={{
                   width: '100%',
                   padding: '0.6rem 1rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'var(--surface-tint)',
                   border: '1.5px solid rgba(245, 158, 11, 0.35)',
                   borderRadius: '10px',
-                  color: '#fbbf24',
+                  color: 'var(--accent-amber-light)',
                   fontSize: '0.84rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -331,11 +331,11 @@ export function ProfileDropdown({
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'rgba(245, 158, 11, 0.15)';
-                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.color = 'var(--text-main)';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.color = '#fbbf24';
+                  e.currentTarget.style.background = 'var(--surface-tint)';
+                  e.currentTarget.style.color = 'var(--accent-amber-light)';
                 }}
               >
                 <ArrowLeft size={16} />
@@ -368,7 +368,7 @@ export function ProfileDropdown({
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'var(--danger)';
-                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.color = 'var(--text-main)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.background = 'var(--danger-bg)';
