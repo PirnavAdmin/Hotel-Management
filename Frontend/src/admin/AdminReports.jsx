@@ -20,92 +20,60 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetOrderHistory } from "../api/orderApi";
 import { apiGetInvoices } from "../api/invoiceApi";
+import { apiGetInventory } from "../api/inventoryApi";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
   normalizePaymentMethod,
   parseOrderToYMD,
   mergeSettledOrders,
-} from "../utils/orderDedupe";
+} from '../utils/orderDedupe';
+import { deduplicateAndNormalizeInventory } from './AdminInventory';
 
-function normalizeInvoicesToOrders(invoices, orders) {
-  const ordersById = new Map(orders.map((order) => [String(order.id), order]));
-
-  return invoices
-    .map((invoice) => {
-      const orderId = invoice.orderId ?? invoice.OrderId;
-      const existingOrder = ordersById.get(String(orderId));
-      const payments = invoice.payments ?? invoice.Payments ?? [];
-      const paymentTotal = payments.reduce(
-        (sum, payment) => sum + (Number(payment.amount ?? payment.Amount) || 0),
-        0,
-      );
-      const paidAmount =
-        Number(
-          invoice.paidAmount ??
-            invoice.amountPaid ??
-            invoice.PaidAmount ??
-            invoice.AmountPaid,
-        ) || 0;
-      const totalAmount =
-        Number(invoice.totalAmount ?? invoice.TotalAmount) || 0;
-      const status = String(
-        invoice.status ?? invoice.Status ?? "",
-      ).toLowerCase();
-
-      if (["void", "cancelled", "canceled"].includes(status)) return null;
-      if (paidAmount <= 0 && paymentTotal <= 0 && status !== "paid")
-        return null;
-
-      const createdAt =
-        invoice.createdAt ?? invoice.CreatedAt ?? existingOrder?.date;
-      const invoiceItems = invoice.items ?? invoice.Items;
-
-      return {
-        ...existingOrder,
-        id:
-          orderId ??
-          existingOrder?.id ??
-          invoice.invoiceId ??
-          invoice.InvoiceId,
-        invoiceNo:
-          invoice.invoiceNumber ??
-          invoice.InvoiceNumber ??
-          existingOrder?.invoiceNo,
-        date: createdAt,
-        settledDate: createdAt,
-        grandTotal: paidAmount || paymentTotal || totalAmount,
-        taxAmount:
-          Number(
-            invoice.taxAmount ?? invoice.TaxAmount ?? existingOrder?.taxAmount,
-          ) || 0,
-        discountAmount:
-          Number(
-            invoice.discountAmount ??
-              invoice.DiscountAmount ??
-              existingOrder?.discountAmount,
-          ) || 0,
-        serviceChargeAmount: Number(existingOrder?.serviceChargeAmount) || 0,
-        paymentMethod:
-          invoice.paymentMethod ??
-          invoice.PaymentMethod ??
-          payments.at(-1)?.paymentMode ??
-          payments.at(-1)?.PaymentMode ??
-          existingOrder?.paymentMethod,
-        payments,
-        items: Array.isArray(invoiceItems)
-          ? invoiceItems.map((item) => ({
-              ...item,
-              name: item.name ?? item.itemName ?? item.Name ?? item.ItemName,
-              quantity: item.quantity ?? item.Quantity,
-              price:
-                item.price ?? item.unitPrice ?? item.Price ?? item.UnitPrice,
-            }))
-          : (existingOrder?.items ?? []),
-      };
-    })
-    .filter(Boolean);
-}
+export const normalizeInventoryList = (items) => {
+  if (!Array.isArray(items)) return [];
+  try {
+    if (typeof deduplicateAndNormalizeInventory === "function") {
+      const res = deduplicateAndNormalizeInventory(items);
+      if (Array.isArray(res) && res.length > 0) return res;
+    }
+  } catch {}
+  const map = new Map();
+  items.forEach((item, index) => {
+    if (!item) return;
+    const name = String(item.name || item.ingredientName || "").trim();
+    if (!name) return;
+    const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const stockVal = Number(item.stock ?? item.currentStock ?? 0);
+    const minVal = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    const mrpVal = Number(item.mrp ?? item.unitCost ?? 0);
+    const unitVal = item.unit === "Litres" ? "L" : (item.unit || "KG");
+    if (map.has(key)) {
+      const prev = map.get(key);
+      map.set(key, {
+        ...prev,
+        stock: Math.max(prev.stock, stockVal),
+        mrp: mrpVal || prev.mrp,
+        unitCost: mrpVal || prev.unitCost,
+      });
+    } else {
+      map.set(key, {
+        id: String(item.id || `inv-${index + 1}`),
+        name: name,
+        category: item.category || "General Supplies",
+        subcategory: item.subcategory || "",
+        supplier: item.supplier || "Local Supplier",
+        unit: unitVal,
+        stock: stockVal,
+        minThreshold: minVal,
+        mrp: mrpVal,
+        unitCost: mrpVal,
+        lastRestocked: item.lastRestocked || "Recent",
+      });
+    }
+  });
+  return Array.from(map.values());
+};
 
 export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const now = new Date();
@@ -134,37 +102,92 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const ordersLoaded = true;
   const startInputRef = useRef(null);
 
-  const ordersData = useMemo(() => {
-    const rawList = fetchedOrders || pastOrders;
-    return sortOrdersBySettlementTime(
-      dedupeOrders(Array.isArray(rawList) ? rawList : []),
-    );
-  }, [pastOrders, fetchedOrders]);
+  // Financial Sub-Tabs
+  const [activeFinanceTab, setActiveFinanceTab] = useState('statement'); // 'statement' | 'income' | 'expenditure'
+  const [incomeSearch, setIncomeSearch] = useState('');
+  const [invSearch, setInvSearch] = useState('');
+  const [invCategoryFilter, setInvCategoryFilter] = useState('all');
+
+  // Real-time Inventory State
+  const [liveInventory, setLiveInventory] = useState(() => {
+    if (Array.isArray(inventory) && inventory.length > 0)
+      return normalizeInventoryList(inventory);
+    try {
+      const saved = localStorage.getItem('gourmet_pos_inventory_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return normalizeInventoryList(parsed);
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (Array.isArray(inventory) && inventory.length > 0) {
+      setLiveInventory(normalizeInventoryList(inventory));
+    }
+  }, [inventory]);
 
   useEffect(() => {
     let active = true;
-    apiGetInvoices()
-      .then((response) => {
-        const invoiceList =
-          response?.data?.data ?? response?.data?.invoices ?? response?.data;
-        if (active && response?.success && Array.isArray(invoiceList)) {
-          setInvoicesData(invoiceList);
-        }
-      })
-      .catch(() => {});
+    if (!liveInventory || liveInventory.length === 0) {
+      apiGetInventory()
+        .then((response) => {
+          if (!active) return;
+          const payload = response?.data ?? response;
+          const rows = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.data)
+              ? payload.data
+              : Array.isArray(payload?.ingredients)
+                ? payload.ingredients
+                : [];
+          if (rows.length > 0) {
+            const normalized = normalizeInventoryList(rows);
+            setLiveInventory(normalized);
+            try {
+              localStorage.setItem('gourmet_pos_inventory_v1', JSON.stringify(normalized));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [liveInventory]);
+
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      if (Array.isArray(e.detail) && e.detail.length > 0)
+        setLiveInventory(normalizeInventoryList(e.detail));
+    };
+    const handleStorage = (e) => {
+      if (e.key === 'gourmet_pos_inventory_v1' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLiveInventory(normalizeInventoryList(parsed));
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('avsr-inventory-updated', handleUpdate);
+    window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('avsr-inventory-updated', handleUpdate);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
-  const reportOrders = useMemo(() => {
-    if (Array.isArray(invoicesData) && invoicesData.length > 0) {
-      const normalized = normalizeInvoicesToOrders(invoicesData, ordersData);
-      return mergeSettledOrders(ordersData, normalized);
-    }
-    return ordersData;
-  }, [ordersData, invoicesData]);
+  const ordersData = useMemo(() => {
+    const rawList = fetchedOrders || pastOrders;
+    return sortOrdersBySettlementTime(
+      dedupeOrders(Array.isArray(rawList) ? rawList : []),
+    );
+  }, [pastOrders, fetchedOrders]);
 
   const filteredOrders = useMemo(() => {
     return ordersData.filter((order) => {
@@ -500,11 +523,11 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           <button
             onClick={() => window.print()}
             style={{
-              background: "rgba(255, 255, 255, 0.06)",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
               borderRadius: "10px",
               padding: "0.48rem 0.95rem",
-              color: "#ffffff",
+              color: "var(--text-main)",
               fontSize: "0.8rem",
               fontWeight: 700,
               cursor: 'pointer',
@@ -750,43 +773,111 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
           </div>
 
-        {/* 4 Financial Metric Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-            gap: "1rem",
-            marginBottom: "1.5rem",
-          }}
-        >
+          {/* Quick Section Navigation Bar */}
           <div
             style={{
-              background: "var(--bg-tertiary)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "12px",
-              padding: "1.1rem",
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              marginBottom: '1.25rem',
+              padding: '0.6rem 0.85rem',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '12px',
+              flexWrap: 'wrap',
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+              Quick Navigation:
+            </span>
+            <button
+              type='button'
+              onClick={() => {
+                const el = document.getElementById('admin-work-area');
+                if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+                else window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                color: '#f59e0b',
+                borderRadius: '8px',
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <span>📊 Overview &amp; Metrics</span>
+            </button>
+            <button
+              type='button'
+              onClick={() => {
+                const target = document.getElementById('profit-loss-section');
+                if (target) {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
+                border: '1.5px solid #10b981',
+                color: '#10b981',
+                borderRadius: '8px',
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <span>💰 Income, Expenditure &amp; Profit / Loss Report ↓</span>
+            </button>
+          </div>
+
+        {/* 6 Metric Overview Cards */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+            gap: '1rem',
+            marginBottom: '1.5rem',
+          }}
+        >
+          {/* Card 1: Total Collected */}
+          <div
+            style={{
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '12px',
+              padding: '1.1rem',
+            }}
+          >
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
               Total Collected
             </div>
             <div
               style={{
-                fontSize: "1.4rem",
+                fontSize: '1.45rem',
                 fontWeight: 800,
-                color: "#f59e0b",
-                marginTop: "4px",
+                color: '#f59e0b',
+                marginTop: '4px',
               }}
             >
               {formatCurrency(totalRevenue)}
             </div>
-            <div
-              style={{
-                fontSize: "0.7rem",
-                color: "var(--text-dim)",
-                marginTop: "3px",
-              }}
-            >
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
               Across {filteredOrders.length} settled tickets
             </div>
           </div>
@@ -1100,7 +1191,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 style={{
                   fontSize: '0.95rem',
                   fontWeight: 700,
-                  color: "#ffffff",
+                  color: "var(--text-main)",
                   margin: 0,
                 }}
               >
@@ -1143,78 +1234,71 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               {displayedDishes.length === 0 ? (
                 <div
                   style={{
-                    padding: "2rem 1rem",
-                    textAlign: "center",
-                    color: "#64748b",
-                    fontSize: "0.82rem",
+                    padding: '2rem 1rem',
+                    textAlign: 'center',
+                    color: 'var(--text-dim)',
+                    fontSize: '0.82rem',
                   }}
                 >
               {ordersLoaded ? "No settled invoices recorded for this period" : "Loading settled invoice data..."}
                 </div>
               ) : (
                 displayedDishes.map(([name, qty], index) => (
-                  <div
-                    key={name}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "0.5rem 0.65rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-card)",
-                      border: "1px solid var(--border-subtle)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "22px",
-                          height: "22px",
-                          borderRadius: "50%",
-                          background:
-                            index === 0
-                              ? "#f59e0b"
-                              : index === 1
-                                ? "#64748b"
-                                : "var(--border-card)",
-                          color: index <= 1 ? "#000000" : "var(--text-main)",
-                          fontWeight: 800,
-                          fontSize: "0.72rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {index + 1}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                          color: "var(--text-main)",
-                        }}
-                      >
-                        {name}
-                      </span>
-                    </div>
+                <div
+                  key={name}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.5rem 0.65rem",
+                    borderRadius: "8px",
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span
                       style={{
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        color: "#fbbf24",
+                        width: "22px",
+                        height: "22px",
+                        borderRadius: "50%",
+                        background:
+                          index === 0
+                            ? "#f59e0b"
+                            : index === 1
+                            ? "#64748b"
+                            : "var(--border-card)",
+                        color: index <= 1 ? "#000000" : "var(--text-main)",
+                        fontWeight: 800,
+                        fontSize: "0.72rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      {qty} orders
+                      {index + 1}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: 700,
+                        color: "var(--text-main)",
+                      }}
+                    >
+                      {name}
                     </span>
                   </div>
-                ))
-              )}
+                  <span
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      color: "var(--accent-amber-light)",
+                    }}
+                  >
+                    {qty} orders
+                  </span>
+                </div>
+              )))}
             </div>
           </div>
         </div>
@@ -1224,7 +1308,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
       {/* CARD 2: INCOME, EXPENDITURE & PROFIT / LOSS REPORT (DETAILED & USER FRIENDLY) */}
       {/* ========================================================================= */}
       <div
-        id="printable-report"
+        id="profit-loss-section"
         style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-card)',
@@ -2320,69 +2404,204 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           }}
         >
           <div>
+            <h1
+              style={{
+                fontSize: '20px',
+                fontWeight: 900,
+                color: '#0f172a',
+                margin: '0 0 2px 0',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {restaurantSettings?.restaurantName?.trim() || 'Restaurant'}
+            </h1>
+            <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>
+              {[restaurantSettings?.address, restaurantSettings?.phone, restaurantSettings?.gstin && `GSTIN: ${restaurantSettings.gstin}`].filter(Boolean).join(" • ")}
+            </div>
+            <div
+              style={{
+                fontSize: '13px',
+                fontWeight: 800,
+                color: '#b45309',
+                marginTop: '4px',
+                letterSpacing: '0.02em',
+              }}
+            >
+              SALES, REVENUE &amp; PROFIT/LOSS AUDIT REPORT
+            </div>
+          </div>
+          <div style={{ textAlign: "right", fontSize: "11px", color: "var(--text-muted)" }}>
+            <div>
+              <strong>Generated:</strong>{' '}
+              {new Date().toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}{' '}
+              {new Date().toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+            <div>
+              <strong>Filter Period:</strong> {getFilterPeriodLabel()}
+            </div>
+            <div>
+              <strong>Settled Orders:</strong> {filteredOrders.length}
+            </div>
+            <div>
+              <strong>Inventory Items:</strong> {inventoryItems.length}
+            </div>
+          </div>
+        </div>
+
+        {/* Financial Executive Summary */}
+        <div style={{ marginBottom: '18px' }}>
+          <h3
+            style={{
+              fontSize: '12.5px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.03em',
+              margin: '0 0 6px 0',
+              color: '#0f172a',
+            }}
+          >
+            1. Executive Operating Summary
+          </h3>
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '11px',
+            }}
+          >
+            <thead>
+              <tr style={{ background: "var(--bg-card)" }}>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Gross Revenue</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Net Food Sales</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total GST (5%)</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Service Charges</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total Orders</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Avg Ticket</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 800, fontSize: "13px", color: "#047857" }}>
+                  {formatCurrency(totalRevenue)}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                  {formatCurrency(Math.max(0, totalRevenue - totalTax - totalService))}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>
+                  {formatCurrency(totalTax)}
+                </td>
+                <td style={{ border: '1px solid #cbd5e1', padding: '6px 8px' }}>
+                  {formatCurrency(totalDiscount)}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                  {filteredOrders.length}
+                </td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
+                  {formatCurrency(averageBill)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Payment Breakdown & Top Selling in 2 columns */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px',
+            marginBottom: '18px',
+          }}
+        >
+          {/* Payment Method Distribution */}
+          <div>
             <h3
               style={{
-                fontSize: "12.5px",
+                fontSize: '12.5px',
                 fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-                margin: "0 0 6px 0",
-                color: "#0f172a",
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em',
+                margin: '0 0 6px 0',
+                color: '#0f172a',
+              }}
+            >
+              2. Payment Channel Breakdown
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+              <thead>
+                <tr style={{ background: "var(--bg-card)" }}>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Channel</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Amount</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Share %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>UPI / QR Pay</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                    {formatCurrency(paymentStats.upi)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{upiPercent}%</td>
+                </tr>
+                <tr>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Cash</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                    {formatCurrency(paymentStats.cash)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cashPercent}%</td>
+                </tr>
+                <tr>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Card / POS Swipe</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
+                    {formatCurrency(paymentStats.card)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cardPercent}%</td>
+                </tr>
+                <tr style={{ background: "var(--bg-card)", fontWeight: 800 }}>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>Total Settlement</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>
+                    {formatCurrency(totalRevenue)}
+                  </td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>100%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Top Selling Items */}
+          <div>
+            <h3
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em',
+                margin: '0 0 6px 0',
+                color: '#0f172a',
               }}
             >
               3. Top Selling Items
             </h3>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "11px",
-              }}
-            >
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
               <thead>
-                <tr style={{ background: "#f1f5f9" }}>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "6px 8px",
-                      width: "35px",
-                      textAlign: "center",
-                    }}
-                  >
-                    #
-                  </th>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "6px 8px",
-                      textAlign: "left",
-                    }}
-                  >
-                    Dish / Item Name
-                  </th>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "6px 8px",
-                      textAlign: "right",
-                    }}
-                  >
-                    Qty Sold
-                  </th>
+                <tr style={{ background: "var(--bg-card)" }}>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", width: "35px", textAlign: "center" }}>#</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Dish / Item Name</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>Qty Sold</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedDishes.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={3}
-                      style={{
-                        border: "1px solid #cbd5e1",
-                        padding: "8px",
-                        textAlign: "center",
-                        color: "#64748b",
-                      }}
-                    >
+                    <td colSpan={3} style={{ border: "1px solid #cbd5e1", padding: "8px", textAlign: "center", color: "var(--text-dim)" }}>
                       No items sold during this period.
                     </td>
                   </tr>
@@ -2421,61 +2640,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px" }}>
               <thead>
-                <tr style={{ background: "#f1f5f9" }}>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "5px 7px",
-                      textAlign: "left",
-                    }}
-                  >
-                    Order #
-                  </th>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "5px 7px",
-                      textAlign: "left",
-                    }}
-                  >
-                    Date / Time
-                  </th>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "5px 7px",
-                      textAlign: "left",
-                    }}
-                  >
-                    Table
-                  </th>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "5px 7px",
-                      textAlign: "left",
-                    }}
-                  >
-                    Mode
-                  </th>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "5px 7px",
-                      textAlign: "left",
-                    }}
-                  >
-                    Items Summary
-                  </th>
-                  <th
-                    style={{
-                      border: "1px solid #cbd5e1",
-                      padding: "5px 7px",
-                      textAlign: "right",
-                    }}
-                  >
-                    Total
-                  </th>
+                <tr style={{ background: "var(--bg-card)" }}>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Order #</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Date / Time</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Table</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Mode</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "left" }}>Items Summary</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "5px 7px", textAlign: "right" }}>Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -2523,15 +2694,15 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
         {/* Footer Sign-off */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            marginTop: "24px",
-            paddingTop: "12px",
-            borderTop: "1px solid #cbd5e1",
-            fontSize: "11px",
-            color: "#64748b",
-            pageBreakInside: "avoid",
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            marginTop: '24px',
+            paddingTop: '12px',
+            borderTop: '1px solid #cbd5e1',
+            fontSize: '11px',
+            color: 'var(--text-dim)',
+            pageBreakInside: 'avoid',
           }}
         >
           <div>
