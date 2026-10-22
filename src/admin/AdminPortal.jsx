@@ -2197,7 +2197,7 @@ export function AdminPortal({
                       }}
                     >
                       <div style={{ overflowX: "auto" }}>
-                        <div style={{ minWidth: "960px", padding: "0.6rem" }}>
+                        <div style={{ width: "100%", minWidth: "720px", padding: "0.6rem", boxSizing: "border-box" }}>
                           {/* Filter Toolbar: Vacant / Occupied Only + Search */}
                           <div
                             style={{
@@ -2667,7 +2667,7 @@ export function AdminPortal({
                                       display: "inline-flex",
                                       alignItems: "center",
                                       gap: "0.35rem",
-                                      padding: "0.35rem 0.75rem",
+                                      padding: "0.32rem 0.6rem",
                                       background: "rgba(245, 158, 11, 0.08)",
                                       color: "#f59e0b",
                                       border: "1px solid rgba(245, 158, 11, 0.45)",
@@ -2677,6 +2677,7 @@ export function AdminPortal({
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
                                       whiteSpace: "nowrap",
+                                      flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
@@ -2719,7 +2720,7 @@ export function AdminPortal({
                                       display: "inline-flex",
                                       alignItems: "center",
                                       justifyContent: "center",
-                                      padding: "0.35rem 0.55rem",
+                                      padding: "0.32rem 0.5rem",
                                       background: "rgba(239, 68, 68, 0.08)",
                                       color: "#ef4444",
                                       border: "1px solid rgba(239, 68, 68, 0.35)",
@@ -2727,6 +2728,7 @@ export function AdminPortal({
                                       fontSize: "0.74rem",
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
+                                      flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(239, 68, 68, 0.22)";
@@ -2850,21 +2852,21 @@ export function AdminPortal({
                       }}
                     >
                       <div style={{ overflowX: "auto" }}>
-                        <div style={{ minWidth: "1100px", padding: "0.6rem" }}>
+                        <div style={{ width: "100%", minWidth: "720px", padding: "0.6rem", boxSizing: "border-box" }}>
                           {/* Column Filters Bar (Matching Image 2 header) */}
                           <div
                             style={{
                               display: "grid",
                               gridTemplateColumns:
-                                "minmax(160px, 1.4fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr) minmax(240px, 2.4fr) minmax(110px, 1fr) minmax(140px, 1.2fr)",
+                                "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
                               alignItems: "center",
-                              padding: "0.55rem 1.1rem",
+                              padding: "0.55rem 0.85rem",
                               background: "#081628",
                               borderRadius: "8px",
                               marginBottom: "0.5rem",
                               color: "#7e9bb7",
                               fontSize: "0.78rem",
-                              gap: "0.6rem",
+                              gap: "0.5rem",
                             }}
                           >
                             {/* Col 1: Search Filter */}
@@ -2883,7 +2885,7 @@ export function AdminPortal({
                                 />
                                 <input
                                   type="text"
-                                  placeholder="Search Staff Name..."
+                                  placeholder="Search Staff..."
                                   value={staffFilters.search}
                                   onChange={(e) => updateStaffFilter("search", e.target.value)}
                                   style={{
@@ -2993,19 +2995,19 @@ export function AdminPortal({
                                 }}
                               >
                                 <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
-                                  All Assigned Status
+                                  All Tables
                                 </option>
                                 <option value="assigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
-                                  Has Tables Assigned
+                                  Has Tables
                                 </option>
                                 <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
-                                  No Tables Assigned
+                                  No Tables
                                 </option>
                               </select>
                             </div>
 
                             {/* Col 6: Reset / Count */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
                               {hasActiveStaffFilters ? (
                                 <button
                                   type="button"
@@ -3013,16 +3015,17 @@ export function AdminPortal({
                                   style={{
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "0.35rem",
+                                    gap: "0.3rem",
                                     background: "rgba(239, 68, 68, 0.15)",
                                     border: "1px solid rgba(239, 68, 68, 0.4)",
                                     color: "#ef4444",
-                                    padding: "0.42rem 0.75rem",
+                                    padding: "0.35rem 0.65rem",
                                     borderRadius: "6px",
-                                    fontSize: "0.78rem",
+                                    fontSize: "0.74rem",
                                     fontWeight: 700,
                                     cursor: "pointer",
                                     transition: "all 0.15s ease",
+                                    whiteSpace: "nowrap",
                                   }}
                                   onMouseEnter={(e) => {
                                     e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
@@ -3032,12 +3035,12 @@ export function AdminPortal({
                                   }}
                                   title="Clear all active staff filters"
                                 >
-                                  <RotateCcw size={12} />
-                                  <span>Reset Filters</span>
+                                  <RotateCcw size={11} />
+                                  <span>Reset</span>
                                 </button>
                               ) : (
-                                <span style={{ fontSize: "0.76rem", color: "var(--text-dim)", fontWeight: 500 }}>
-                                  Showing all {staffList.length} staff
+                                <span style={{ fontSize: "0.74rem", color: "var(--text-dim)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                                  {staffList.length} Staff
                                 </span>
                               )}
                             </div>
@@ -3102,14 +3105,14 @@ export function AdminPortal({
                                 style={{
                                   display: "grid",
                                   gridTemplateColumns:
-                                    "minmax(160px, 1.4fr) minmax(130px, 1.2fr) minmax(130px, 1.2fr) minmax(240px, 2.4fr) minmax(110px, 1fr) minmax(140px, 1.2fr)",
+                                    "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
                                   alignItems: "center",
-                                  padding: "0.58rem 1.1rem",
+                                  padding: "0.55rem 0.85rem",
                                   background: "#081627",
                                   border: "1px solid var(--neutral-border)",
                                   borderRadius: "8px",
                                   marginBottom: "0.45rem",
-                                  gap: "0.6rem",
+                                  gap: "0.5rem",
                                   transition: "background 0.15s ease, border-color 0.15s ease",
                                 }}
                                 onMouseEnter={(e) => {
@@ -3238,7 +3241,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions (Edit Staff + Delete button matching Image 2) */}
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
                                   {/* Edit Staff button */}
                                   <button
                                     type="button"

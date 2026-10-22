@@ -31,94 +31,112 @@ import {
   normalizePaymentMethod,
   parseOrderToYMD,
   mergeSettledOrders,
-} from "../utils/orderDedupe";
+} from '../utils/orderDedupe';
+import { deduplicateAndNormalizeInventory } from './AdminInventory';
 
-function normalizeInvoicesToOrders(invoices, orders) {
-  const ordersById = new Map(orders.map((order) => [String(order.id), order]));
-
-  return invoices
-    .map((invoice) => {
-      const orderId = invoice.orderId ?? invoice.OrderId;
-      const existingOrder = ordersById.get(String(orderId));
-      const payments = invoice.payments ?? invoice.Payments ?? [];
-      const paymentTotal = payments.reduce(
-        (sum, payment) => sum + (Number(payment.amount ?? payment.Amount) || 0),
-        0,
-      );
-      const paidAmount =
-        Number(
-          invoice.paidAmount ??
-            invoice.amountPaid ??
-            invoice.PaidAmount ??
-            invoice.AmountPaid,
-        ) || 0;
-      const totalAmount =
-        Number(invoice.totalAmount ?? invoice.TotalAmount) || 0;
-      const status = String(
-        invoice.status ?? invoice.Status ?? "",
-      ).toLowerCase();
-
-      if (["void", "cancelled", "canceled"].includes(status)) return null;
-      if (paidAmount <= 0 && paymentTotal <= 0 && status !== "paid")
-        return null;
-
-      const createdAt =
-        invoice.createdAt ?? invoice.CreatedAt ?? existingOrder?.date;
-      const invoiceItems = invoice.items ?? invoice.Items;
-
-      return {
-        ...existingOrder,
-        id:
-          orderId ??
-          existingOrder?.id ??
-          invoice.invoiceId ??
-          invoice.InvoiceId,
-        invoiceNo:
-          invoice.invoiceNumber ??
-          invoice.InvoiceNumber ??
-          existingOrder?.invoiceNo,
-        date: createdAt,
-        settledDate: createdAt,
-        grandTotal: paidAmount || paymentTotal || totalAmount,
-        taxAmount:
-          Number(
-            invoice.taxAmount ?? invoice.TaxAmount ?? existingOrder?.taxAmount,
-          ) || 0,
-        discountAmount:
-          Number(
-            invoice.discountAmount ??
-              invoice.DiscountAmount ??
-              existingOrder?.discountAmount,
-          ) || 0,
-        serviceChargeAmount: Number(existingOrder?.serviceChargeAmount) || 0,
-        paymentMethod:
-          invoice.paymentMethod ??
-          invoice.PaymentMethod ??
-          payments.at(-1)?.paymentMode ??
-          payments.at(-1)?.PaymentMode ??
-          existingOrder?.paymentMethod,
-        payments,
-        items: Array.isArray(invoiceItems)
-          ? invoiceItems.map((item) => ({
-              ...item,
-              name: item.name ?? item.itemName ?? item.Name ?? item.ItemName,
-              quantity: item.quantity ?? item.Quantity,
-              price:
-                item.price ?? item.unitPrice ?? item.Price ?? item.UnitPrice,
-            }))
-          : (existingOrder?.items ?? []),
-      };
-    })
-    .filter(Boolean);
-}
+const normalizeInventoryList = (items) => {
+  if (!Array.isArray(items)) return [];
+  try {
+    if (typeof deduplicateAndNormalizeInventory === "function") {
+      const res = deduplicateAndNormalizeInventory(items);
+      if (Array.isArray(res) && res.length > 0) return res;
+    }
+  } catch {}
+  const map = new Map();
+  items.forEach((item, index) => {
+    if (!item) return;
+    const name = String(item.name || item.ingredientName || "").trim();
+    if (!name) return;
+    const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const stockVal = Number(item.stock ?? item.currentStock ?? 0);
+    const minVal = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    const mrpVal = Number(item.mrp ?? item.unitCost ?? 0);
+    const unitVal = item.unit === "Litres" ? "L" : (item.unit || "KG");
+    if (map.has(key)) {
+      const prev = map.get(key);
+      map.set(key, {
+        ...prev,
+        stock: Math.max(prev.stock, stockVal),
+        mrp: mrpVal || prev.mrp,
+        unitCost: mrpVal || prev.unitCost,
+      });
+    } else {
+      map.set(key, {
+        id: String(item.id || `inv-${index + 1}`),
+        name: name,
+        category: item.category || "General Supplies",
+        subcategory: item.subcategory || "",
+        supplier: item.supplier || "Local Supplier",
+        unit: unitVal,
+        stock: stockVal,
+        minThreshold: minVal,
+        mrp: mrpVal,
+        unitCost: mrpVal,
+        lastRestocked: item.lastRestocked || "Recent",
+      });
+    }
+  });
+  return Array.from(map.values());
+};
 
 export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const now = new Date();
-  const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const sevenDaysYMD = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
-  const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const monthStartYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDate = now.getDate();
+  const currentDayOfWeek = now.getDay();
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const formatYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+  // Daily
+  const todayYMD = formatYMD(now);
+  const yesterdayDate = new Date(currentYear, currentMonth, currentDate - 1);
+  const yesterdayYMD = formatYMD(yesterdayDate);
+
+  // Weekly
+  const sevenDaysAgoDate = new Date(currentYear, currentMonth, currentDate - 6);
+  const sevenDaysYMD = formatYMD(sevenDaysAgoDate);
+  const mondayOffset = (currentDayOfWeek + 6) % 7;
+  const thisWeekStartDate = new Date(currentYear, currentMonth, currentDate - mondayOffset);
+  const thisWeekStartYMD = formatYMD(thisWeekStartDate);
+  const lastWeekStartDate = new Date(currentYear, currentMonth, currentDate - mondayOffset - 7);
+  const lastWeekEndDate = new Date(currentYear, currentMonth, currentDate - mondayOffset - 1);
+  const lastWeekStartYMD = formatYMD(lastWeekStartDate);
+  const lastWeekEndYMD = formatYMD(lastWeekEndDate);
+
+  // Monthly
+  const currentMonthPrefix = `${currentYear}-${pad2(currentMonth + 1)}`;
+  const thisMonthStartYMD = `${currentMonthPrefix}-01`;
+  const thisMonthEndDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const thisMonthEndYMD = `${currentMonthPrefix}-${pad2(thisMonthEndDay)}`;
+  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const lastMonthYear = lastMonthDate.getFullYear();
+  const lastMonthNum = lastMonthDate.getMonth() + 1;
+  const lastMonthPrefix = `${lastMonthYear}-${pad2(lastMonthNum)}`;
+  const lastMonthStartYMD = `${lastMonthPrefix}-01`;
+  const lastMonthEndDay = new Date(lastMonthYear, lastMonthNum, 0).getDate();
+  const lastMonthEndYMD = `${lastMonthPrefix}-${pad2(lastMonthEndDay)}`;
+
+  // Quarterly
+  const currentQNum = Math.floor(currentMonth / 3) + 1;
+  const qStartMonth = (currentQNum - 1) * 3;
+  const currentQStartDate = new Date(currentYear, qStartMonth, 1);
+  const currentQEndDate = new Date(currentYear, qStartMonth + 3, 0);
+  const currentQStartYMD = formatYMD(currentQStartDate);
+  const currentQEndYMD = formatYMD(currentQEndDate);
+  const lastQNum = currentQNum === 1 ? 4 : currentQNum - 1;
+  const lastQYear = currentQNum === 1 ? currentYear - 1 : currentYear;
+  const lastQStartMonth = (lastQNum - 1) * 3;
+  const lastQStartDate = new Date(lastQYear, lastQStartMonth, 1);
+  const lastQEndDate = new Date(lastQYear, lastQStartMonth + 3, 0);
+  const lastQStartYMD = formatYMD(lastQStartDate);
+  const lastQEndYMD = formatYMD(lastQEndDate);
+
+  // Yearly
+  const thisYearStartYMD = `${currentYear}-01-01`;
+  const thisYearEndYMD = `${currentYear}-12-31`;
+  const lastYearStartYMD = `${currentYear - 1}-01-01`;
+  const lastYearEndYMD = `${currentYear - 1}-12-31`;
 
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState("all");
@@ -219,13 +237,60 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     };
   }, []);
 
-  const reportOrders = useMemo(() => {
-    if (Array.isArray(invoicesData) && invoicesData.length > 0) {
-      const normalized = normalizeInvoicesToOrders(invoicesData, ordersData);
-      return mergeSettledOrders(ordersData, normalized);
+  const ordersData = useMemo(() => {
+    const rawList = fetchedOrders || pastOrders;
+    return sortOrdersBySettlementTime(
+      dedupeOrders(Array.isArray(rawList) ? rawList : []),
+    );
+  }, [pastOrders, fetchedOrders]);
+
+  const handleSelectPeriod = (periodId) => {
+    setFilterPeriod(periodId);
+    if (periodId === "today") {
+      setStartDate(todayYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "yesterday") {
+      setStartDate(yesterdayYMD);
+      setEndDate(yesterdayYMD);
+    } else if (periodId === "single_date") {
+      const target = startDate && startDate <= todayYMD ? startDate : todayYMD;
+      setStartDate(target);
+      setEndDate(target);
+    } else if (periodId === "this_week") {
+      setStartDate(thisWeekStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "week") {
+      setStartDate(sevenDaysYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_week") {
+      setStartDate(lastWeekStartYMD);
+      setEndDate(lastWeekEndYMD);
+    } else if (periodId === "this_month" || periodId === "month") {
+      setStartDate(thisMonthStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_month") {
+      setStartDate(lastMonthStartYMD);
+      setEndDate(lastMonthEndYMD);
+    } else if (periodId === "this_quarter") {
+      setStartDate(currentQStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_quarter") {
+      setStartDate(lastQStartYMD);
+      setEndDate(lastQEndYMD);
+    } else if (periodId === "this_year") {
+      setStartDate(thisYearStartYMD);
+      setEndDate(todayYMD);
+    } else if (periodId === "last_year") {
+      setStartDate(lastYearStartYMD);
+      setEndDate(lastYearEndYMD);
+    } else if (periodId === "custom") {
+      if (!startDate) setStartDate(thisMonthStartYMD);
+      if (!endDate) setEndDate(todayYMD);
+    } else if (periodId === "all") {
+      setStartDate("");
+      setEndDate("");
     }
-    return ordersData;
-  }, [ordersData, invoicesData]);
+  };
 
   const filteredOrders = useMemo(() => {
     return ordersData.filter((order) => {
