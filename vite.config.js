@@ -262,7 +262,7 @@ function globalSyncPlugin() {
           return;
         }
 
-        // REST API: /api/v1/tables
+        // REST API: /api/v1/tables (GET)
         if (req.url.startsWith("/api/v1/tables") && req.method === "GET") {
           db = loadDb();
           const tables = db.gourmet_pos_tables_v2_inr || [];
@@ -275,6 +275,165 @@ function globalSyncPlugin() {
               data: tables,
             }),
           );
+        }
+
+        // REST API: /api/v1/tables/:id/vacate (POST)
+        const tableVacateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)\/vacate$/i);
+        if (tableVacateMatch && req.method === "POST") {
+          const rawId = decodeURIComponent(tableVacateMatch[1]);
+          db = loadDb();
+          const list = db.gourmet_pos_tables_v2_inr || [];
+          let updatedTable = null;
+          db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+            const match =
+              String(tbl.id) === rawId ||
+              String(tbl.backendTableId) === rawId ||
+              String(tbl.tableId) === rawId ||
+              String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+            if (match) {
+              updatedTable = {
+                ...tbl,
+                status: "vacant",
+                items: [],
+                guests: 0,
+                occupiedChairs: 0,
+                selectedSeats: [],
+                occupiedSince: null,
+                activeOrderId: null,
+                orderTime: null,
+                orderTimestamp: null,
+                cookingStartedAt: null,
+                completedAt: null,
+                completedDuration: null,
+                discountPercent: 0,
+                discountAmount: 0,
+                subtotal: 0,
+                taxAmount: 0,
+                serviceChargeAmount: 0,
+                grandTotal: 0,
+              };
+              return updatedTable;
+            }
+            return tbl;
+          });
+          saveDb(db);
+          broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, message: "Table vacated successfully", table: updatedTable }));
+        }
+
+        // REST API: /api/v1/tables/:id/status (PATCH)
+        const tableStatusMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)\/status$/i);
+        if (tableStatusMatch && req.method === "PATCH") {
+          const rawId = decodeURIComponent(tableStatusMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const { status } = JSON.parse(body || "{}");
+              db = loadDb();
+              const list = db.gourmet_pos_tables_v2_inr || [];
+              let updatedTable = null;
+              db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+                const match =
+                  String(tbl.id) === rawId ||
+                  String(tbl.backendTableId) === rawId ||
+                  String(tbl.tableId) === rawId ||
+                  String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+                if (match) {
+                  const isVacant = String(status).toLowerCase() === "vacant";
+                  updatedTable = {
+                    ...tbl,
+                    status: isVacant ? "vacant" : status,
+                    ...(isVacant ? {
+                      items: [],
+                      guests: 0,
+                      occupiedChairs: 0,
+                      selectedSeats: [],
+                      occupiedSince: null,
+                      activeOrderId: null,
+                      orderTime: null,
+                      orderTimestamp: null,
+                      cookingStartedAt: null,
+                      completedAt: null,
+                      completedDuration: null,
+                      discountPercent: 0,
+                      discountAmount: 0,
+                      subtotal: 0,
+                      taxAmount: 0,
+                      serviceChargeAmount: 0,
+                      grandTotal: 0,
+                    } : {}),
+                  };
+                  return updatedTable;
+                }
+                return tbl;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, table: updatedTable }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/tables/:id (PUT)
+        const tableUpdateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)$/i);
+        if (tableUpdateMatch && req.method === "PUT") {
+          const rawId = decodeURIComponent(tableUpdateMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const list = db.gourmet_pos_tables_v2_inr || [];
+              let updatedTable = null;
+              db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+                const match =
+                  String(tbl.id) === rawId ||
+                  String(tbl.backendTableId) === rawId ||
+                  String(tbl.tableId) === rawId ||
+                  String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+                if (match) {
+                  const isVacant = String(payload.status || tbl.status).toLowerCase() === "vacant";
+                  updatedTable = {
+                    ...tbl,
+                    ...payload,
+                    status: isVacant ? "vacant" : (payload.status || tbl.status),
+                    ...(isVacant ? {
+                      items: [],
+                      guests: 0,
+                      occupiedChairs: 0,
+                      selectedSeats: [],
+                      occupiedSince: null,
+                      activeOrderId: null,
+                      orderTime: null,
+                      orderTimestamp: null,
+                      cookingStartedAt: null,
+                      completedAt: null,
+                      completedDuration: null,
+                      discountPercent: 0,
+                    } : {}),
+                  };
+                  return updatedTable;
+                }
+                return tbl;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, table: updatedTable }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
         }
 
         // REST API: /api/v1/menu-items (DELETE)

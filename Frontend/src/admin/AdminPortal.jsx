@@ -56,6 +56,7 @@ import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
+import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { API_BASE_URL } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
@@ -608,16 +609,25 @@ export function AdminPortal({
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const isTableOccupied = (tbl) => {
+    if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
+    if (rawStatus === "vacant") {
+      return false;
+    }
+    const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
+    );
+    const hasActiveGuests = Number(tbl?.guests || tbl?.occupiedChairs || 0) > 0;
+
+    // Once bill is settled, a table has no active items and no guests, so it is strictly vacant!
+    if (!hasActiveItems && !hasActiveGuests) {
+      return false;
+    }
+
     if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
       return true;
     }
-    if (Array.isArray(tbl?.items) && tbl.items.length > 0) {
-      return tbl.items.some(
-        (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
-      );
-    }
-    return false;
+    return hasActiveItems;
   };
 
   const emptyTableFilters = {
@@ -3047,7 +3057,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions */}
-                                <div className="floor-table-actions">
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
                                   {/* Edit Chairs / Area */}
                                   <button
                                     type="button"
