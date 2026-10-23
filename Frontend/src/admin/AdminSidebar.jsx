@@ -147,7 +147,7 @@ export function AdminSidebar({
         borderRight: "1px solid var(--border-subtle)",
         display: "flex",
         flexDirection: "column",
-        padding: "1.25rem 0.95rem",
+        padding: "0 0.95rem 1.25rem",
         boxSizing: "border-box",
         userSelect: "none",
         position: "relative",
@@ -160,7 +160,10 @@ export function AdminSidebar({
           display: "flex",
           alignItems: "center",
           gap: "0.75rem",
-          padding: "0.25rem 0.5rem 1.25rem 0.5rem",
+          height: "76px",
+          minHeight: "76px",
+          boxSizing: "border-box",
+          padding: "0 0.5rem 0.1rem",
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >

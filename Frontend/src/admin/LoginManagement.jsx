@@ -27,6 +27,7 @@ export function LoginManagement({ currentAdminSession }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState('');
+  const [activeAccountTab, setActiveAccountTab] = useState('pos');
 
   // Password change modal
   const [changePwUser, setChangePwUser] = useState(null);
@@ -417,39 +418,6 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
-        {[
-          { label: 'POS Users', count: posUsers.length, color: 'var(--accent-amber-light)', icon: <Utensils size={18} /> },
-          { label: 'KOT Users', count: kotUsers.length, color: 'var(--accent-amber-light)', icon: <ChefHat size={18} /> },
-          { label: 'Admins', count: adminUsers.length, color: 'var(--accent-indigo)', icon: <ShieldCheck size={18} /> }
-        ].map(stat => (
-          <div key={stat.label} style={{
-            background: 'var(--bg-tertiary)',
-            border: `1px solid var(--border-subtle)`,
-            borderRadius: '10px', padding: '0.85rem 1rem',
-            display: 'flex', alignItems: 'center', gap: '0.75rem'
-          }}>
-            <div style={{
-              width: '38px', height: '38px', borderRadius: '10px',
-              background: `color-mix(in srgb, ${stat.color} 12.55%, transparent)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: stat.color
-            }}>
-              {stat.icon}
-            </div>
-            <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-main)', lineHeight: 1 }}>
-                {stat.count}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700 }}>
-                {stat.label}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Create Login Form */}
       {showForm && (
         <div style={{
@@ -644,9 +612,79 @@ export function LoginManagement({ currentAdminSession }) {
         </div>
       )}
 
-      <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />
-      <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
-      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="var(--accent-indigo)" users={adminUsers} emptyMsg="No admin accounts found." />
+      <div
+        role="tablist"
+        aria-label="Account types"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: '0.4rem',
+          padding: '0.35rem',
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '12px',
+        }}
+      >
+        {[
+          { id: 'pos', label: 'User POS Accounts', count: posUsers.length, icon: <Utensils size={16} /> },
+          { id: 'kot', label: 'Kitchen KOT Accounts', count: kotUsers.length, icon: <ChefHat size={16} /> },
+          { id: 'admin', label: 'Admin Accounts', count: adminUsers.length, icon: <ShieldCheck size={16} /> },
+        ].map((tab) => {
+          const isActive = activeAccountTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              id={`account-tab-${tab.id}`}
+              aria-selected={isActive}
+              aria-controls={`account-panel-${tab.id}`}
+              onClick={() => setActiveAccountTab(tab.id)}
+              style={{
+                minWidth: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.7rem 0.55rem',
+                border: isActive ? '1px solid var(--border-card)' : '1px solid transparent',
+                borderRadius: '9px',
+                background: isActive ? 'var(--bg-card)' : 'transparent',
+                color: isActive ? 'var(--text-main)' : 'var(--text-dim)',
+                boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+                fontSize: '0.78rem',
+                fontWeight: isActive ? 800 : 700,
+                cursor: 'pointer',
+                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+              }}
+            >
+              <span style={{ display: 'flex', flexShrink: 0, color: isActive ? 'var(--accent-amber-light)' : 'inherit' }}>{tab.icon}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
+              <span style={{
+                flexShrink: 0,
+                minWidth: '1.4rem',
+                padding: '1px 6px',
+                borderRadius: '20px',
+                background: isActive ? 'var(--surface-tint)' : 'transparent',
+                color: isActive ? 'var(--text-main)' : 'var(--text-dim)',
+                fontSize: '0.68rem',
+                textAlign: 'center',
+              }}>{tab.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tabpanel"
+        id={`account-panel-${activeAccountTab}`}
+        aria-labelledby={`account-tab-${activeAccountTab}`}
+        style={{ minWidth: 0 }}
+      >
+        {activeAccountTab === 'pos' && <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />}
+        {activeAccountTab === 'kot' && <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />}
+        {activeAccountTab === 'admin' && <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="var(--accent-indigo)" users={adminUsers} emptyMsg="No admin accounts found." />}
+      </div>
 
       {/* Global Delete Confirm Modal */}
       <ConfirmDeleteModal
