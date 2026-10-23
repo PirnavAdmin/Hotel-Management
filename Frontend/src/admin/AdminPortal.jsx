@@ -56,6 +56,7 @@ import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
+import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { API_BASE_URL } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
@@ -608,16 +609,25 @@ export function AdminPortal({
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const isTableOccupied = (tbl) => {
+    if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
+    if (rawStatus === "vacant") {
+      return false;
+    }
+    const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
+    );
+    const hasActiveGuests = Number(tbl?.guests || tbl?.occupiedChairs || 0) > 0;
+
+    // Once bill is settled, a table has no active items and no guests, so it is strictly vacant!
+    if (!hasActiveItems && !hasActiveGuests) {
+      return false;
+    }
+
     if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
       return true;
     }
-    if (Array.isArray(tbl?.items) && tbl.items.length > 0) {
-      return tbl.items.some(
-        (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
-      );
-    }
-    return false;
+    return hasActiveItems;
   };
 
   const emptyTableFilters = {
@@ -3049,6 +3059,81 @@ export function AdminPortal({
 
                                 {/* Col 6: Actions */}
                                 <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                  {/* Vacate Table Action (if occupied) */}
+                                  {isOccupied && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        requestDelete({
+                                          title: "Vacate Table?",
+                                          message: `Mark ${tbl.name || `Table ${tbl.id}`} as VACANT? This will clear any active order, guests, and seated chairs.`,
+                                          confirmLabel: "Yes, Mark Vacant",
+                                          cancelLabel: "Cancel",
+                                          icon: <CheckCircle2 size={22} color="#10b981" />,
+                                          onConfirm: () => {
+                                            const vacatedTable = {
+                                              ...tbl,
+                                              status: "vacant",
+                                              items: [],
+                                              guests: 0,
+                                              occupiedChairs: 0,
+                                              selectedSeats: [],
+                                              occupiedSince: null,
+                                              activeOrderId: null,
+                                              orderTime: null,
+                                              orderTimestamp: null,
+                                              cookingStartedAt: null,
+                                              completedAt: null,
+                                              completedDuration: null,
+                                              discountPercent: 0,
+                                              discountAmount: 0,
+                                              subtotal: 0,
+                                              taxAmount: 0,
+                                              serviceChargeAmount: 0,
+                                              grandTotal: 0,
+                                            };
+                                            if (onUpdateTable) {
+                                              onUpdateTable(vacatedTable);
+                                            }
+                                            try {
+                                              const targetId = tbl.backendTableId || tbl.id;
+                                              apiVacateTable(targetId).catch(() => {});
+                                              apiUpdateTableStatus(targetId, "vacant").catch(() => {});
+                                            } catch {}
+                                          },
+                                        });
+                                      }}
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.35rem",
+                                        padding: "0.32rem 0.6rem",
+                                        background: "rgba(245, 158, 11, 0.08)",
+                                        color: "#f59e0b",
+                                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                                        borderRadius: "6px",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        transition: "all 0.15s ease",
+                                        whiteSpace: "nowrap",
+                                        flexShrink: 0,
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
+                                        e.currentTarget.style.borderColor = "#f59e0b";
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
+                                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                                      }}
+                                      title={`Mark ${tbl.name || `Table ${tbl.id}`} as Vacant`}
+                                    >
+                                      <CheckCircle2 size={13} color="#f59e0b" />
+                                      <span>Vacate Table</span>
+                                    </button>
+                                  )}
+
                                   {/* Edit Chairs / Area */}
                                   <button
                                     type="button"
