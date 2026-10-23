@@ -23,6 +23,8 @@ import {
   apiCreateTable,
   apiUpdateTable,
   apiDeleteTable,
+  apiVacateTable,
+  apiUpdateTableStatus,
 } from "./api/tableApi";
 import {
   apiGetMenuItems,
@@ -169,6 +171,28 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         ? `Table ${num || targetId}`
         : rawName || `Table ${targetId}`;
 
+      const rawStatus = String(table.status || "").trim().toLowerCase();
+      const isExplicitlyVacant = rawStatus === "vacant";
+
+      const hasActiveItems = Array.isArray(table.items)
+        ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
+        : false;
+
+      const incomingGuests = Number(table.occupiedChairs ?? table.guests ?? (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ?? 0);
+      const hasActiveGuests = incomingGuests > 0;
+
+      let finalStatus = "vacant";
+      if (isExplicitlyVacant || (!hasActiveItems && !hasActiveGuests)) {
+        // Individual table is strictly vacant once bill is done and guests leave
+        finalStatus = "vacant";
+      } else if (hasActiveItems || hasActiveGuests) {
+        finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
+      } else {
+        finalStatus = "vacant";
+      }
+
+      const isFinalVacant = finalStatus === "vacant";
+
       const normalized = {
         ...existing,
         ...table,
@@ -181,32 +205,33 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         capacity: Number(
           table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
         ),
-        status:
-          (table.status && String(table.status).toLowerCase() !== "vacant")
-            ? String(table.status).toLowerCase()
-            : (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0) || (Array.isArray(table.items) && table.items.length > 0))
-              ? "occupied"
-              : "vacant",
+        status: finalStatus,
         server:
           table.assignedServerName || table.server || existing.server || "Staff",
-        guests:
-          Number(table.occupiedChairs ?? table.guests ?? (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ?? existing.guests ?? 0),
-        items: Array.isArray(table.items)
-          ? table.items
-          : Array.isArray(existing.items)
-            ? existing.items
-            : [],
-        orderTime: table.orderTime ?? existing.orderTime ?? null,
+        guests: isFinalVacant ? 0 : (incomingGuests || existingGuests || 0),
+        occupiedChairs: isFinalVacant ? 0 : Number(table.occupiedChairs ?? existing.occupiedChairs ?? 0),
+        selectedSeats: isFinalVacant
+          ? []
+          : (Array.isArray(table.selectedSeats) ? table.selectedSeats : (Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
+        items: isFinalVacant
+          ? []
+          : (Array.isArray(table.items)
+            ? table.items
+            : Array.isArray(existing.items)
+              ? existing.items
+              : []),
+        orderTime: isFinalVacant ? null : (table.orderTime ?? existing.orderTime ?? null),
+        orderTimestamp: isFinalVacant ? null : (table.orderTimestamp ?? existing.orderTimestamp ?? null),
+        cookingStartedAt: isFinalVacant ? null : (table.cookingStartedAt ?? existing.cookingStartedAt ?? null),
+        completedAt: isFinalVacant ? null : (table.completedAt ?? existing.completedAt ?? null),
+        completedDuration: isFinalVacant ? null : (table.completedDuration ?? existing.completedDuration ?? null),
         discountPercent: Number(
           table.discountPercent ?? existing.discountPercent ?? 0,
         ),
         serviceCharge: Number(
           table.serviceCharge ?? existing.serviceCharge ?? 5,
         ),
-        occupiedSince:
-          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
-            ? null
-            : (table.occupiedSince || existing.occupiedSince || null),
+        occupiedSince: isFinalVacant ? null : (table.occupiedSince || existing.occupiedSince || null),
       };
 
       tablesById.set(targetId, normalized);
@@ -1573,53 +1598,104 @@ export function App() {
     );
     if (!confirmed) return;
 
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
         return {
           ...t,
-          items: [],
           status: "vacant",
+          items: [],
           guests: 0,
+          occupiedChairs: 0,
+          selectedSeats: [],
+          occupiedSince: null,
+          activeOrderId: null,
           orderTime: null,
+          orderTimestamp: null,
+          cookingStartedAt: null,
+          completedAt: null,
+          completedDuration: null,
           discountPercent: 0,
+          discountAmount: 0,
+          subtotal: 0,
+          taxAmount: 0,
+          serviceChargeAmount: 0,
+          grandTotal: 0,
         };
-      }),
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+      return nextTables;
+    });
+
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
+    const targetApiId = tbl?.backendTableId || tableId;
+    try {
+      apiVacateTable(targetApiId).catch(() => {});
+      apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
+    } catch {}
+
     showToast(`Table ${tableId} order cleared.`);
   };
 
   // Transfer Table Order
   const handleConfirmTransfer = (sourceId, targetId) => {
-    const source = tables.find((t) => t.id === sourceId);
+    const source = tables.find((t) => String(t.id) === String(sourceId));
     if (!source) return;
 
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id === targetId) {
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) === String(targetId)) {
           return {
             ...t,
             items: [...source.items],
             status: "occupied",
             guests: source.guests,
+            occupiedChairs: source.occupiedChairs || source.guests,
+            selectedSeats: source.selectedSeats || [],
             orderTime: source.orderTime,
+            orderTimestamp: source.orderTimestamp,
             discountPercent: source.discountPercent,
             serviceCharge: source.serviceCharge,
           };
         }
-        if (t.id === sourceId) {
+        if (String(t.id) === String(sourceId)) {
           return {
             ...t,
-            items: [],
             status: "vacant",
+            items: [],
             guests: 0,
+            occupiedChairs: 0,
+            selectedSeats: [],
+            occupiedSince: null,
+            activeOrderId: null,
             orderTime: null,
+            orderTimestamp: null,
+            cookingStartedAt: null,
+            completedAt: null,
+            completedDuration: null,
             discountPercent: 0,
+            discountAmount: 0,
+            subtotal: 0,
+            taxAmount: 0,
+            serviceChargeAmount: 0,
+            grandTotal: 0,
           };
         }
         return t;
-      }),
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+      return nextTables;
+    });
 
     setIsTransferOpen(false);
     setSelectedTableId(targetId);
@@ -1850,14 +1926,30 @@ export function App() {
     })();
 
     const updatedTables = tables.map((t) => {
-      if (t.id !== settlementData.tableId) return t;
+      const isTarget =
+        String(t.id) === String(settlementData.tableId) ||
+        t.name === settlementData.tableName;
+      if (!isTarget) return t;
       return {
         ...t,
-        items: [],
         status: "vacant",
-        orderTime: null,
-        discountPercent: 0,
+        items: [],
         guests: 0,
+        occupiedChairs: 0,
+        selectedSeats: [],
+        occupiedSince: null,
+        activeOrderId: null,
+        orderTime: null,
+        orderTimestamp: null,
+        cookingStartedAt: null,
+        completedAt: null,
+        completedDuration: null,
+        discountPercent: 0,
+        discountAmount: 0,
+        subtotal: 0,
+        taxAmount: 0,
+        serviceChargeAmount: 0,
+        grandTotal: 0,
       };
     });
     setTables(updatedTables);
@@ -1870,6 +1962,17 @@ export function App() {
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
+      pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: cleanTables }));
+    } catch {}
+
+    try {
+      const targetApiId = tableObj?.backendTableId || tableObj?.id || settlementData.tableId;
+      if (targetApiId) {
+        apiVacateTable(targetApiId).catch(() => {});
+        apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
+      }
     } catch {}
 
     setIsSettlementOpen(false);
@@ -2079,6 +2182,9 @@ export function App() {
       const updated = [...prev, normalizedTable];
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: updated });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
       } catch {}
       return updated;
     });
@@ -2093,6 +2199,9 @@ export function App() {
       );
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: updated });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
       } catch {}
       return updated;
     });
@@ -2127,6 +2236,9 @@ export function App() {
     setTables(nextTables);
     try {
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+      pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
     } catch {}
 
     // 3. If currently selected table in billing view is this deleted table, switch to first remaining table
@@ -2700,6 +2812,9 @@ export function App() {
           onClose={() => {
             setIsReceiptOpen(false);
             setReprintReceiptData(null);
+            if (activeView === "order") {
+              setActiveView("table");
+            }
           }}
         />
       )}

@@ -2477,7 +2477,7 @@ export function KitchenKOTView({
         value: "urgent",
         label: "URGENT",
         emoji: "🔴",
-        color: "#ef4444",
+        color: "var(--danger)",
         bg: "rgba(239, 68, 68, 0.14)",
         border: "rgba(239, 68, 68, 0.45)",
       },
@@ -3117,7 +3117,7 @@ export function KitchenKOTView({
                   label: "All Orders",
                   count: totalOrdersCount,
                   dot: "#fbbf24",
-                  badgeColor: "#fbbf24",
+                  badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(245, 158, 11, 0.25)",
                   badgeBorder: "rgba(245, 158, 11, 0.5)",
                 },
@@ -3126,7 +3126,7 @@ export function KitchenKOTView({
                   label: "Received",
                   count: pendingOrdersCount,
                   dot: "#f59e0b",
-                  badgeColor: "#fbbf24",
+                  badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(245, 158, 11, 0.25)",
                   badgeBorder: "rgba(245, 158, 11, 0.5)",
                 },
@@ -3135,7 +3135,7 @@ export function KitchenKOTView({
                   label: "Cooking",
                   count: cookingOrdersCount,
                   dot: "#ea580c",
-                  badgeColor: "#fb923c",
+                  badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(234, 88, 12, 0.25)",
                   badgeBorder: "rgba(234, 88, 12, 0.5)",
                 },
@@ -3144,7 +3144,7 @@ export function KitchenKOTView({
                   label: "Completed",
                   count: completedOrdersCount,
                   dot: "#10b981",
-                  badgeColor: "#34d399",
+                  badgeColor: "var(--success)",
                   badgeBg: "rgba(16, 185, 129, 0.25)",
                   badgeBorder: "rgba(16, 185, 129, 0.5)",
                 },
@@ -3610,20 +3610,20 @@ export function KitchenKOTView({
 
                 let headerBg = isLightTheme
                   ? "#f8fafc"
-                  : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)";
+                  : "linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)";
                 let badgeText = "📥 ORDER RECEIVED";
-                let badgeColor = "#f59e0b";
+                let badgeColor = "var(--status-occupied)";
                 let badgeBg = "rgba(245, 158, 11, 0.18)";
                 let tableBadgeBg = "linear-gradient(135deg, #f59e0b, #d97706)";
 
                 if (tbl.isPaid) {
                   badgeText = "💰 COMPLETED (PAID)";
-                  badgeColor = "#34d399";
+                  badgeColor = "var(--success)";
                   badgeBg = "rgba(16, 185, 129, 0.2)";
                   tableBadgeBg = "linear-gradient(135deg, #059669, #047857)";
                 } else if (allServed) {
                   badgeText = "✅ PREPARATION COMPLETED";
-                  badgeColor = "#10b981";
+                  badgeColor = "var(--success)";
                   badgeBg = "rgba(16, 185, 129, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #10b981, #059669)";
                 } else if (isCooking) {
@@ -3631,7 +3631,7 @@ export function KitchenKOTView({
                     preparedCount > 0
                       ? `🔥 COOKING (${preparedCount}/${totalCount} PREPARED)`
                       : "🔥 COOKING IN PROGRESS";
-                  badgeColor = "#ea580c";
+                  badgeColor = "var(--accent-saffron)";
                   badgeBg = "rgba(234, 88, 12, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #ea580c, #c2410c)";
                 } else {
@@ -3643,12 +3643,12 @@ export function KitchenKOTView({
 
                 if (delayMeta.isDelayed) {
                   badgeText = `🔴 DELAYED ${delayMeta.deltaText}`;
-                  badgeColor = "#ef4444";
+                  badgeColor = "var(--danger)";
                   badgeBg = "rgba(239, 68, 68, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #ef4444, #b91c1c)";
                 } else if (delayMeta.isOnTime && tbl.cookingStartedAt) {
                   badgeText = "🟢 ON TIME";
-                  badgeColor = "#22c55e";
+                  badgeColor = "var(--success)";
                   badgeBg = "rgba(34, 197, 94, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #22c55e, #16a34a)";
                 }
@@ -3745,7 +3745,7 @@ export function KitchenKOTView({
                         background: headerBg,
                         borderBottom: isLightTheme
                           ? "1px solid #e2e8f0"
-                          : "1px solid rgba(255,255,255,0.08)",
+                          : "1px solid rgba(var(--surface-rgb),0.08)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
@@ -3771,7 +3771,7 @@ export function KitchenKOTView({
                             fontSize: "0.86rem",
                             letterSpacing: "-0.02em",
                             boxShadow:
-                              "0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)",
+                              "0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(var(--surface-rgb),0.3)",
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
@@ -3839,7 +3839,7 @@ export function KitchenKOTView({
                           <span
                             style={{
                               background: "rgba(239, 68, 68, 0.14)",
-                              color: "#ef4444",
+                              color: "var(--danger)",
                               border: "1px solid rgba(239, 68, 68, 0.45)",
                               padding: "2px 6px",
                               borderRadius: "5px",
@@ -3895,10 +3895,10 @@ export function KitchenKOTView({
                           style={{
                             background: isLightTheme
                               ? "#ffffff"
-                              : "rgba(255,255,255,0.08)",
+                              : "rgba(var(--surface-rgb),0.08)",
                             border: isLightTheme
                               ? "1px solid #cbd5e1"
-                              : "1px solid rgba(255,255,255,0.15)",
+                              : "1px solid rgba(var(--surface-rgb),0.15)",
                             color: isLightTheme
                               ? "#1f2937"
                               : "var(--text-muted)",
@@ -3921,7 +3921,7 @@ export function KitchenKOTView({
                       style={{
                         padding: "0.26rem 0.65rem",
                         background: badgeBg,
-                        borderBottom: `1px solid ${badgeColor}35`,
+                        borderBottom: `1px solid color-mix(in srgb, ${badgeColor} 20.78%, transparent)`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -3944,7 +3944,7 @@ export function KitchenKOTView({
                           : "rgba(0, 0, 0, 0.32)",
                         borderBottom: isLightTheme
                           ? "1px solid #e2e8f0"
-                          : "1px solid rgba(255,255,255,0.08)",
+                          : "1px solid rgba(var(--surface-rgb),0.08)",
                         padding: "0.32rem 0.55rem",
                         display: "grid",
                         gridTemplateColumns: "repeat(3, 1fr)",
@@ -3976,7 +3976,7 @@ export function KitchenKOTView({
                             alignItems: "center",
                             justifyContent: "center",
                             gap: "2px",
-                            color: isLightTheme ? "#b45309" : "#fbbf24",
+                            color: isLightTheme ? "#b45309" : "var(--accent-amber-light)",
                             fontSize: "0.54rem",
                             fontWeight: 800,
                             letterSpacing: "0.04em",
@@ -4007,7 +4007,7 @@ export function KitchenKOTView({
                                 : "rgba(255, 123, 0, 0.12)"
                               : isLightTheme
                                 ? "#f8fafc"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                           border:
                             isCooking || allServed || tbl.isPaid
                               ? isLightTheme
@@ -4015,7 +4015,7 @@ export function KitchenKOTView({
                                 : "1.5px solid rgba(255, 123, 0, 0.4)"
                               : isLightTheme
                                 ? "1px solid #cbd5e1"
-                                : "1px solid rgba(255, 255, 255, 0.08)",
+                                : "1px solid rgba(var(--surface-rgb),0.08)",
                           borderRadius: "5px",
                           padding: "0.22rem 0.35rem",
                           display: "flex",
@@ -4075,7 +4075,7 @@ export function KitchenKOTView({
                                 : "rgba(16, 185, 129, 0.14)"
                               : isLightTheme
                                 ? "#f8fafc"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                           border:
                             allServed || tbl.isPaid
                               ? isLightTheme
@@ -4083,7 +4083,7 @@ export function KitchenKOTView({
                                 : "1.5px solid rgba(16, 185, 129, 0.45)"
                               : isLightTheme
                                 ? "1px solid #cbd5e1"
-                                : "1px solid rgba(255, 255, 255, 0.08)",
+                                : "1px solid rgba(var(--surface-rgb),0.08)",
                           borderRadius: "5px",
                           padding: "0.22rem 0.35rem",
                           display: "flex",
@@ -4152,7 +4152,7 @@ export function KitchenKOTView({
                             <span
                               style={{
                                 fontSize: "0.58rem",
-                                color: "#10b981",
+                                color: "var(--success)",
                                 fontWeight: 800,
                                 fontFamily: "monospace",
                               }}
@@ -4194,14 +4194,14 @@ export function KitchenKOTView({
                         style={{
                           fontSize: "0.64rem",
                           fontWeight: 800,
-                          color: isLightTheme ? "#475569" : "var(--text-muted)",
+                          color: isLightTheme ? "var(--text-dim)" : "var(--text-muted)",
                           textTransform: "uppercase",
                           letterSpacing: "0.05em",
                           display: "flex",
                           justifyContent: "space-between",
                           borderBottom: isLightTheme
                             ? "1px solid #e2e8f0"
-                            : "1px solid rgba(255,255,255,0.08)",
+                            : "1px solid rgba(var(--surface-rgb),0.08)",
                           paddingBottom: "0.28rem",
                         }}
                       >
@@ -4234,7 +4234,7 @@ export function KitchenKOTView({
                                       ? "rgba(255, 123, 0, 0.1)"
                                       : isLightTheme
                                         ? "#f8fafc"
-                                        : "rgba(255, 255, 255, 0.04)",
+                                        : "rgba(var(--surface-rgb),0.04)",
                                   borderRadius: "var(--radius-sm)",
                                   padding: "0.42rem 0.55rem",
                                   border: itemReady
@@ -4243,7 +4243,7 @@ export function KitchenKOTView({
                                       ? "1.5px solid rgba(255, 123, 0, 0.4)"
                                       : isLightTheme
                                         ? "1px solid #cbd5e1"
-                                        : "1px solid rgba(255,255,255,0.08)",
+                                        : "1px solid rgba(var(--surface-rgb),0.08)",
                                   display: "flex",
                                   alignItems: "flex-start",
                                   justifyContent: "space-between",
@@ -4410,7 +4410,7 @@ export function KitchenKOTView({
                           border: isLightTheme
                             ? "1px solid rgba(180, 83, 9, 0.45)"
                             : "1px solid rgba(245, 158, 11, 0.4)",
-                          color: isLightTheme ? "#b45309" : "#fbbf24",
+                          color: isLightTheme ? "#b45309" : "var(--accent-amber-light)",
                           fontWeight: 800,
                           fontSize: "0.72rem",
                           display: "flex",
@@ -4435,7 +4435,7 @@ export function KitchenKOTView({
                           : "rgba(0,0,0,0.35)",
                         borderTop: isLightTheme
                           ? "1px solid #e2e8f0"
-                          : "1px solid rgba(255,255,255,0.08)",
+                          : "1px solid rgba(var(--surface-rgb),0.08)",
                         display: "flex",
                         flexDirection: "column",
                         gap: "0.42rem",
@@ -4485,7 +4485,7 @@ export function KitchenKOTView({
                               borderRadius: "var(--radius-sm)",
                               background: "rgba(16, 185, 129, 0.15)",
                               border: "1px solid rgba(16, 185, 129, 0.4)",
-                              color: "#10b981",
+                              color: "var(--success)",
                               fontWeight: 700,
                               fontSize: "0.72rem",
                               display: "flex",
@@ -4545,10 +4545,10 @@ export function KitchenKOTView({
                               borderRadius: "var(--radius-sm)",
                               background: isLightTheme
                                 ? "#ffffff"
-                                : "rgba(255, 255, 255, 0.06)",
+                                : "rgba(var(--surface-rgb),0.06)",
                               border: isLightTheme
                                 ? "1px solid #cbd5e1"
-                                : "1px solid rgba(255,255,255,0.12)",
+                                : "1px solid rgba(var(--surface-rgb),0.12)",
                               color: isLightTheme
                                 ? "#475569"
                                 : "var(--text-muted)",
@@ -4600,7 +4600,7 @@ export function KitchenKOTView({
                           >
                             <div
                               style={{
-                                color: isLightTheme ? "#047857" : "#34d399",
+                                color: isLightTheme ? "#047857" : "var(--success)",
                                 fontWeight: 900,
                                 fontSize: "0.8rem",
                                 display: "flex",
@@ -4645,10 +4645,10 @@ export function KitchenKOTView({
                                   borderRadius: "var(--radius-sm)",
                                   background: isLightTheme
                                     ? "#ffffff"
-                                    : "rgba(255, 255, 255, 0.08)",
+                                    : "rgba(var(--surface-rgb),0.08)",
                                   border: isLightTheme
                                     ? "1px solid #cbd5e1"
-                                    : "1px solid rgba(255,255,255,0.15)",
+                                    : "1px solid rgba(var(--surface-rgb),0.15)",
                                   color: isLightTheme ? "#1f2937" : "#ffffff",
                                   fontWeight: 700,
                                   fontSize: "0.72rem",
@@ -4703,7 +4703,7 @@ export function KitchenKOTView({
                                   borderRadius: "var(--radius-sm)",
                                   background: "rgba(234, 88, 12, 0.12)",
                                   border: "1px solid rgba(234, 88, 12, 0.35)",
-                                  color: "#fb923c",
+                                  color: "var(--accent-amber-light)",
                                   fontWeight: 700,
                                   fontSize: "0.72rem",
                                   display: "flex",
@@ -4841,12 +4841,12 @@ export function KitchenKOTView({
 
             if (modalTicket.isPaid) {
               statusBadgeText = "💰 COMPLETED (PAID)";
-              statusBadgeColor = "#34d399";
+              statusBadgeColor = "var(--success)";
               statusBadgeBg = "rgba(16, 185, 129, 0.22)";
               statusBadgeBorder = "rgba(16, 185, 129, 0.55)";
             } else if (allServed) {
               statusBadgeText = "✅ PREPARATION COMPLETED";
-              statusBadgeColor = "#10b981";
+              statusBadgeColor = "var(--success)";
               statusBadgeBg = "rgba(16, 185, 129, 0.22)";
               statusBadgeBorder = "rgba(16, 185, 129, 0.55)";
             } else if (isCooking) {
@@ -4903,11 +4903,11 @@ export function KitchenKOTView({
                     style={{
                       background: isLightTheme
                         ? "#f8fafc"
-                        : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                        : "linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)",
                       padding: "1rem 1.25rem",
                       borderBottom: isLightTheme
                         ? "1.5px solid #e2e8f0"
-                        : "1.5px solid rgba(255,255,255,0.1)",
+                        : "1.5px solid rgba(var(--surface-rgb),0.1)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
@@ -5013,11 +5013,11 @@ export function KitchenKOTView({
                       style={{
                         background: isLightTheme
                           ? "#ffffff"
-                          : "rgba(255,255,255,0.08)",
+                          : "rgba(var(--surface-rgb),0.08)",
                         border: isLightTheme
                           ? "1px solid #cbd5e1"
-                          : "1px solid rgba(255,255,255,0.15)",
-                        color: isLightTheme ? "#475569" : "#cbd5e1",
+                          : "1px solid rgba(var(--surface-rgb),0.15)",
+                        color: isLightTheme ? "var(--text-dim)" : "var(--text-muted)",
                         width: "32px",
                         height: "32px",
                         borderRadius: "8px",
@@ -5081,7 +5081,7 @@ export function KitchenKOTView({
                               alignItems: "center",
                               justifyContent: "center",
                               gap: "4px",
-                              color: isLightTheme ? "#92400e" : "#fbbf24",
+                              color: isLightTheme ? "#92400e" : "var(--accent-amber-light)",
                               fontSize: "0.68rem",
                               fontWeight: 800,
                             }}
@@ -5103,7 +5103,7 @@ export function KitchenKOTView({
                           <div
                             style={{
                               fontSize: "0.65rem",
-                              color: isLightTheme ? "#92400e" : "#fbbf24",
+                              color: isLightTheme ? "#92400e" : "var(--accent-amber-light)",
                               marginTop: "2px",
                               fontWeight: 700,
                             }}
@@ -5118,11 +5118,11 @@ export function KitchenKOTView({
                             background:
                               isCooking || allServed || modalTicket.isPaid
                                 ? "rgba(255, 123, 0, 0.12)"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                             border:
                               isCooking || allServed || modalTicket.isPaid
                                 ? "1.5px solid rgba(255, 123, 0, 0.45)"
-                                : "1px solid rgba(255, 255, 255, 0.1)",
+                                : "1px solid rgba(var(--surface-rgb),0.1)",
                             borderRadius: "8px",
                             padding: "0.65rem 0.5rem",
                             textAlign: "center",
@@ -5194,11 +5194,11 @@ export function KitchenKOTView({
                             background:
                               allServed || modalTicket.isPaid
                                 ? "rgba(16, 185, 129, 0.14)"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                             border:
                               allServed || modalTicket.isPaid
                                 ? "1.5px solid rgba(16, 185, 129, 0.5)"
-                                : "1px solid rgba(255, 255, 255, 0.1)",
+                                : "1px solid rgba(var(--surface-rgb),0.1)",
                             borderRadius: "8px",
                             padding: "0.65rem 0.5rem",
                             textAlign: "center",
@@ -5252,7 +5252,7 @@ export function KitchenKOTView({
                           <div
                             style={{
                               fontSize: "0.65rem",
-                              color: isLightTheme ? "#047857" : "#10b981",
+                              color: isLightTheme ? "#047857" : "var(--success)",
                               marginTop: "2px",
                               fontWeight: 800,
                               fontFamily: "monospace",
@@ -5312,14 +5312,14 @@ export function KitchenKOTView({
                                     ? "rgba(16, 185, 129, 0.12)"
                                     : itemCooking
                                       ? "rgba(255, 123, 0, 0.12)"
-                                      : "rgba(255, 255, 255, 0.04)",
+                                      : "rgba(var(--surface-rgb),0.04)",
                                   borderRadius: "8px",
                                   padding: "0.65rem 0.85rem",
                                   border: itemReady
                                     ? "1.5px solid rgba(16, 185, 129, 0.45)"
                                     : itemCooking
                                       ? "1.5px solid rgba(255, 123, 0, 0.45)"
-                                      : "1px solid rgba(255,255,255,0.1)",
+                                      : "1px solid rgba(var(--surface-rgb),0.1)",
                                   animation: itemCooking
                                     ? "kot-cooking-pulse 1.8s ease-in-out infinite"
                                     : "none",
@@ -5466,7 +5466,7 @@ export function KitchenKOTView({
                           <div
                             style={{
                               fontWeight: 800,
-                              color: isLightTheme ? "#047857" : "#34d399",
+                              color: isLightTheme ? "#047857" : "var(--success)",
                             }}
                           >
                             💰 Bill Paid & Settled
@@ -5477,7 +5477,7 @@ export function KitchenKOTView({
                               color:
                                 currentTheme === "light-bistro"
                                   ? "#64748b"
-                                  : "#94a3b8",
+                                  : "var(--text-dim)",
                               marginTop: "2px",
                             }}
                           >
@@ -5512,7 +5512,7 @@ export function KitchenKOTView({
                       background: isLightTheme ? "#f1f5f9" : "rgba(0,0,0,0.4)",
                       borderTop: isLightTheme
                         ? "1px solid #cbd5e1"
-                        : "1px solid rgba(255,255,255,0.1)",
+                        : "1px solid rgba(var(--surface-rgb),0.1)",
                       padding: "0.85rem 1.25rem",
                       display: "flex",
                       alignItems: "center",
@@ -5530,10 +5530,10 @@ export function KitchenKOTView({
                         borderRadius: "var(--radius-sm)",
                         background: isLightTheme
                           ? "#ffffff"
-                          : "rgba(255, 255, 255, 0.08)",
+                          : "rgba(var(--surface-rgb),0.08)",
                         border: isLightTheme
                           ? "1px solid #cbd5e1"
-                          : "1px solid rgba(255, 255, 255, 0.18)",
+                          : "1px solid rgba(var(--surface-rgb),0.18)",
                         color: isLightTheme ? "#1f2937" : "#ffffff",
                         fontWeight: 700,
                         fontSize: "0.8rem",

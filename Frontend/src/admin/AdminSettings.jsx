@@ -506,7 +506,7 @@ export function AdminSettings({
               style={{
                 background: "rgba(16, 185, 129, 0.15)",
                 border: "1px solid rgba(16, 185, 129, 0.35)",
-                color: "#10b981",
+                color: "var(--success)",
                 padding: "6px 14px",
                 borderRadius: "20px",
                 fontSize: "0.8rem",
@@ -828,7 +828,7 @@ export function AdminSettings({
                 marginBottom: "1rem",
               }}
             >
-              <Percent size={18} color="#10b981" />
+              <Percent size={18} color="var(--success)" />
               <h3
                 style={{
                   fontSize: "0.98rem",
@@ -1053,7 +1053,7 @@ export function AdminSettings({
                 style={{
                   fontSize: "0.72rem",
                   fontWeight: 700,
-                  color: "#f59e0b",
+                  color: "var(--accent-amber-light)",
                   background: "rgba(245, 158, 11, 0.12)",
                   border: "1px solid rgba(245, 158, 11, 0.3)",
                   padding: "3px 10px",
@@ -1096,13 +1096,13 @@ export function AdminSettings({
                     }
                     style={{
                       background: isSelected
-                        ? "linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, rgba(20, 24, 33, 0.95) 100%)"
+                        ? "linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, var(--bg-card) 100%)"
                         : "var(--bg-secondary)",
                       border: isSelected
                         ? "2px solid #f59e0b"
                         : hasImage
-                        ? "1px solid rgba(255, 255, 255, 0.14)"
-                        : "1px dashed rgba(255, 255, 255, 0.18)",
+                        ? "1px solid rgba(var(--surface-rgb),0.14)"
+                        : "1px dashed rgba(var(--surface-rgb),0.18)",
                       boxShadow: isSelected
                         ? "0 0 20px rgba(245, 158, 11, 0.28), 0 4px 14px rgba(0, 0, 0, 0.5)"
                         : "0 2px 8px rgba(0, 0, 0, 0.2)",
@@ -1125,8 +1125,8 @@ export function AdminSettings({
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         e.currentTarget.style.borderColor = hasImage
-                          ? "rgba(255, 255, 255, 0.14)"
-                          : "rgba(255, 255, 255, 0.18)";
+                          ? "rgba(var(--surface-rgb),0.14)"
+                          : "rgba(var(--surface-rgb),0.18)";
                         e.currentTarget.style.transform = "translateY(0)";
                       }
                     }}
@@ -1149,8 +1149,8 @@ export function AdminSettings({
                             border: isSelected
                               ? "5px solid #10b981"
                               : hasImage
-                              ? "2px solid rgba(255, 255, 255, 0.3)"
-                              : "1.5px dashed rgba(255, 255, 255, 0.2)",
+                              ? "2px solid rgba(var(--surface-rgb),0.3)"
+                              : "1.5px dashed rgba(var(--surface-rgb),0.2)",
                             background: isSelected ? "#ffffff" : "transparent",
                             boxShadow: isSelected ? "0 0 10px rgba(16, 185, 129, 0.7)" : "none",
                             transition: "all 0.15s ease",
@@ -1161,7 +1161,7 @@ export function AdminSettings({
                           style={{
                             fontSize: "0.78rem",
                             fontWeight: 800,
-                            color: isSelected ? "#10b981" : "var(--text-main)",
+                            color: isSelected ? "var(--success)" : "var(--text-main)",
                             textTransform: "uppercase",
                             letterSpacing: "0.04em",
                           }}
@@ -1201,7 +1201,7 @@ export function AdminSettings({
                               borderRadius: "12px",
                               background: "var(--surface-tint)",
                               color: "var(--text-dim)",
-                              border: "1px dashed rgba(255, 255, 255, 0.2)",
+                              border: "1px dashed rgba(var(--surface-rgb),0.2)",
                             }}
                           >
                             Click to Select
@@ -1250,8 +1250,8 @@ export function AdminSettings({
                       style={{
                         background: "var(--bg-tertiary)",
                         border: qr.image
-                          ? "1px solid rgba(255, 255, 255, 0.08)"
-                          : "1.5px dashed rgba(255, 255, 255, 0.16)",
+                          ? "1px solid rgba(var(--surface-rgb),0.08)"
+                          : "1.5px dashed rgba(var(--surface-rgb),0.16)",
                         borderRadius: "10px",
                         minHeight: "155px",
                         display: "flex",
@@ -1348,7 +1348,7 @@ export function AdminSettings({
                             : "none",
                           borderRadius: "8px",
                           padding: "0.55rem 0.75rem",
-                          color: "#ffffff",
+                          color: qr.image ? "var(--accent-amber-light)" : "var(--text-on-accent)",
                           fontSize: "0.78rem",
                           fontWeight: 700,
                           cursor: "pointer",
@@ -1383,7 +1383,7 @@ export function AdminSettings({
                             border: "1px solid rgba(239, 68, 68, 0.28)",
                             borderRadius: "8px",
                             padding: "0.55rem 0.65rem",
-                            color: "#ef4444",
+                            color: "var(--danger)",
                             fontSize: "0.78rem",
                             fontWeight: 700,
                             cursor: "pointer",
@@ -1423,7 +1423,7 @@ export function AdminSettings({
                 marginBottom: "1rem",
               }}
             >
-              <Receipt size={18} color="#38bdf8" />
+              <Receipt size={18} color="var(--info)" />
               <h3
                 style={{
                   fontSize: "0.98rem",
@@ -1667,7 +1667,7 @@ export function AdminSettings({
                       background: isBarToggleOn
                         ? "rgba(16, 185, 129, 0.15)"
                         : "rgba(100, 116, 139, 0.15)",
-                      color: isBarToggleOn ? "#10b981" : "#64748b",
+                      color: isBarToggleOn ? "var(--success)" : "#64748b",
                       border: isBarToggleOn
                         ? "1px solid rgba(16, 185, 129, 0.3)"
                         : "1px solid rgba(100, 116, 139, 0.2)",
@@ -1776,13 +1776,13 @@ export function AdminSettings({
                   ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
                   : isDirty && !isSaving
                   ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                  : "rgba(255, 255, 255, 0.05)",
+                  : "rgba(var(--surface-rgb),0.05)",
                 color: savedSuccess || (isDirty && !isSaving) ? "#ffffff" : "#64748b",
                 border: savedSuccess
                   ? "1px solid rgba(16, 185, 129, 0.6)"
                   : isDirty && !isSaving
                   ? "1px solid rgba(245, 158, 11, 0.5)"
-                  : "1px solid rgba(255, 255, 255, 0.08)",
+                  : "1px solid rgba(var(--surface-rgb),0.08)",
                 borderRadius: "10px",
                 padding: "0.72rem 1.85rem",
                 fontSize: "0.88rem",
