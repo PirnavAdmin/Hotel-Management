@@ -119,7 +119,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.82)',
+        background: 'var(--modal-overlay)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
@@ -133,8 +133,8 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
         className="receipt-modal-container"
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#ffffff',
-          color: '#1a1a1a',
+          background: 'var(--bg-card)',
+          color: 'var(--text-main)',
           width: '100%',
           maxWidth: printFormat === 'a4' ? '760px' : '400px',
           borderRadius: '12px',
@@ -148,14 +148,14 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
       >
         {/* Receipt Controls Bar (hidden during print) */}
         <div className="no-print" style={{
-          background: '#0f172a',
+          background: 'var(--bg-secondary)',
           padding: '0.55rem 1rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.5rem',
-          color: '#ffffff'
+          color: 'var(--text-main)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <Printer size={16} color="#f59e0b" />
@@ -163,7 +163,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           </div>
 
           {/* Print Format Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.08)', padding: '2px', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(var(--surface-rgb),0.08)', padding: '2px', borderRadius: '6px' }}>
             <button
               type="button"
               onClick={() => setPrintFormat('thermal')}
@@ -178,7 +178,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 alignItems: 'center',
                 gap: '4px',
                 background: printFormat === 'thermal' ? '#f59e0b' : 'transparent',
-                color: printFormat === 'thermal' ? '#000000' : '#cbd5e1',
+                color: printFormat === 'thermal' ? '#000000' : 'var(--text-muted)',
                 transition: 'all 0.15s'
               }}
               title="80mm Thermal Receipt Paper (Roll Printer)"
@@ -201,7 +201,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 alignItems: 'center',
                 gap: '4px',
                 background: printFormat === 'a4' ? '#f59e0b' : 'transparent',
-                color: printFormat === 'a4' ? '#000000' : '#cbd5e1',
+                color: printFormat === 'a4' ? '#000000' : 'var(--text-muted)',
                 transition: 'all 0.15s'
               }}
               title="A4 Full Page / PDF Tax Invoice"
@@ -214,9 +214,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: 'rgba(var(--surface-rgb),0.1)',
               border: 'none',
-              color: '#94a3b8',
+              color: 'var(--text-dim)',
               width: '26px',
               height: '26px',
               borderRadius: '6px',
@@ -586,8 +586,8 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
         {/* Action Buttons (no print) */}
         <div className="no-print" style={{
           padding: '0.5rem 1rem',
-          background: '#f8fafc',
-          borderTop: '1px solid #e2e8f0',
+          background: 'var(--bg-secondary)',
+          borderTop: '1px solid var(--border-card)',
           display: 'flex',
           gap: '0.65rem'
         }}>
@@ -597,8 +597,8 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               flex: 1,
               padding: '0.48rem',
               borderRadius: '6px',
-              background: '#e2e8f0',
-              color: '#334155',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-main)',
               fontWeight: 700,
               fontSize: '0.78rem',
               border: 'none',

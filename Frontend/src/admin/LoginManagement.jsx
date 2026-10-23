@@ -195,7 +195,7 @@ export function LoginManagement({ currentAdminSession }) {
     pos: {
       label: 'User POS',
       icon: <Utensils size={15} />,
-      color: '#f59e0b',
+      color: 'var(--accent-amber-light)',
       bg: 'rgba(245, 158, 11, 0.15)',
       border: 'rgba(245, 158, 11, 0.4)',
       gradient: 'linear-gradient(135deg, #f59e0b, #ea580c)'
@@ -203,7 +203,7 @@ export function LoginManagement({ currentAdminSession }) {
     kot: {
       label: 'Kitchen KOT',
       icon: <ChefHat size={15} />,
-      color: '#fb923c',
+      color: 'var(--accent-amber-light)',
       bg: 'rgba(234, 88, 12, 0.15)',
       border: 'rgba(234, 88, 12, 0.4)',
       gradient: 'linear-gradient(135deg, #ea580c, #c2410c)'
@@ -211,7 +211,7 @@ export function LoginManagement({ currentAdminSession }) {
     admin: {
       label: 'Admin',
       icon: <ShieldCheck size={15} />,
-      color: '#818cf8',
+      color: 'var(--accent-indigo)',
       bg: 'rgba(99, 102, 241, 0.15)',
       border: 'rgba(99, 102, 241, 0.4)',
       gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)'
@@ -235,7 +235,7 @@ export function LoginManagement({ currentAdminSession }) {
           background: rc.gradient,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-          boxShadow: `0 3px 10px ${rc.color}40`
+          boxShadow: `0 3px 10px color-mix(in srgb, ${rc.color} 25.10%, transparent)`
         }}>
           <span style={{ color: '#fff', fontSize: '1rem', fontWeight: 900 }}>
             {(user.name || user.username).charAt(0).toUpperCase()}
@@ -263,12 +263,12 @@ export function LoginManagement({ currentAdminSession }) {
           {(user.mobile || user.email) && (
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2px', flexWrap: 'wrap' }}>
               {user.mobile && (
-                <span style={{ fontSize: '0.68rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--success)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
                   📱 {user.mobile}
                 </span>
               )}
               {user.email && (
-                <span style={{ fontSize: '0.68rem', color: '#818cf8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--accent-indigo)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
                   ✉️ {user.email}
                 </span>
               )}
@@ -351,7 +351,7 @@ export function LoginManagement({ currentAdminSession }) {
         <span style={{ color }}>{icon}</span>
         <span style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--text-main)' }}>{title}</span>
         <span style={{
-          background: `${color}20`, border: `1px solid ${color}40`,
+          background: `color-mix(in srgb, ${color} 12.55%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 25.10%, transparent)`,
           color, fontSize: '0.68rem', fontWeight: 900,
           padding: '1px 7px', borderRadius: '20px', marginLeft: 'auto'
         }}>
@@ -420,9 +420,9 @@ export function LoginManagement({ currentAdminSession }) {
       {/* Quick Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
         {[
-          { label: 'POS Users', count: posUsers.length, color: '#f59e0b', icon: <Utensils size={18} /> },
-          { label: 'KOT Users', count: kotUsers.length, color: '#fb923c', icon: <ChefHat size={18} /> },
-          { label: 'Admins', count: adminUsers.length, color: '#818cf8', icon: <ShieldCheck size={18} /> }
+          { label: 'POS Users', count: posUsers.length, color: 'var(--accent-amber-light)', icon: <Utensils size={18} /> },
+          { label: 'KOT Users', count: kotUsers.length, color: 'var(--accent-amber-light)', icon: <ChefHat size={18} /> },
+          { label: 'Admins', count: adminUsers.length, color: 'var(--accent-indigo)', icon: <ShieldCheck size={18} /> }
         ].map(stat => (
           <div key={stat.label} style={{
             background: 'var(--bg-tertiary)',
@@ -432,7 +432,7 @@ export function LoginManagement({ currentAdminSession }) {
           }}>
             <div style={{
               width: '38px', height: '38px', borderRadius: '10px',
-              background: `${stat.color}20`,
+              background: `color-mix(in srgb, ${stat.color} 12.55%, transparent)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: stat.color
             }}>
@@ -523,7 +523,7 @@ export function LoginManagement({ currentAdminSession }) {
                   onChange={e => setFormName(e.target.value)}
                   style={{
                     width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box',
-                    background: 'var(--surface-tint)', border: '1.5px solid rgba(255,255,255,0.1)',
+                    background: 'var(--surface-tint)', border: '1.5px solid rgba(var(--surface-rgb),0.1)',
                     borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
                   }}
                 />
@@ -541,7 +541,7 @@ export function LoginManagement({ currentAdminSession }) {
                   disabled={!!editingUser}
                   style={{
                     width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box',
-                    background: editingUser ? 'rgba(255,255,255,0.025)' : 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)',
+                    background: editingUser ? 'rgba(var(--surface-rgb),0.025)' : 'rgba(var(--surface-rgb),0.05)', border: '1.5px solid rgba(var(--surface-rgb),0.1)',
                     borderRadius: '8px', color: editingUser ? 'var(--text-dim)' : 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none',
                     cursor: editingUser ? 'not-allowed' : 'text'
                   }}
@@ -562,13 +562,13 @@ export function LoginManagement({ currentAdminSession }) {
                 style={{
                   width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box',
                   background: 'var(--surface-tint)',
-                  border: `1.5px solid ${formMobile && formMobile.length === 10 ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  border: `1.5px solid ${formMobile && formMobile.length === 10 ? 'rgba(16,185,129,0.5)' : 'rgba(var(--surface-rgb),0.1)'}`,
                   borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none',
                   fontFamily: 'monospace', letterSpacing: '0.05em'
                 }}
               />
               {formMobile && (
-                <div style={{ marginTop: '3px', fontSize: '0.68rem', fontWeight: 700, color: formMobile.length === 10 ? '#10b981' : '#f59e0b' }}>
+                <div style={{ marginTop: '3px', fontSize: '0.68rem', fontWeight: 700, color: formMobile.length === 10 ? 'var(--success)' : 'var(--accent-amber-light)' }}>
                   {formMobile.length === 10 ? '✅ Valid mobile number' : `${formMobile.length}/10 digits entered`}
                 </div>
               )}
@@ -584,7 +584,7 @@ export function LoginManagement({ currentAdminSession }) {
                   placeholder="user@example.com"
                   value={formEmail}
                   onChange={e => setFormEmail(e.target.value)}
-                  style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', background: 'var(--surface-tint)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', boxSizing: 'border-box', background: 'var(--surface-tint)', border: '1.5px solid rgba(var(--surface-rgb),0.1)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none' }}
                 />
               </div>
             )}
@@ -602,7 +602,7 @@ export function LoginManagement({ currentAdminSession }) {
                   onChange={e => setFormPass(e.target.value)}
                   style={{
                     width: '100%', padding: '0.6rem 2.5rem 0.6rem 0.75rem', boxSizing: 'border-box',
-                    background: 'var(--surface-tint)', border: '1.5px solid rgba(255,255,255,0.1)',
+                    background: 'var(--surface-tint)', border: '1.5px solid rgba(var(--surface-rgb),0.1)',
                     borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
                   }}
                 />
@@ -646,7 +646,7 @@ export function LoginManagement({ currentAdminSession }) {
 
       <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />
       <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />
-      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="#818cf8" users={adminUsers} emptyMsg="No admin accounts found." />
+      <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="var(--accent-indigo)" users={adminUsers} emptyMsg="No admin accounts found." />
 
       {/* Global Delete Confirm Modal */}
       <ConfirmDeleteModal
