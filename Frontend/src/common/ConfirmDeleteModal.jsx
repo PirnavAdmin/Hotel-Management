@@ -77,7 +77,7 @@ export function ConfirmDeleteModal({
           margin: '0 auto 0.9rem',
           boxShadow: '0 0 20px rgba(239,68,68,0.2)',
         }}>
-          {icon || <Trash2 size={22} color="#f87171" />}
+          {icon || <Trash2 size={22} color="var(--danger)" />}
         </div>
 
         {/* Title */}

@@ -1416,7 +1416,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   style={{
                     background: "rgba(245, 158, 11, 0.15)",
                     border: "1px solid rgba(245, 158, 11, 0.35)",
-                    color: "#f59e0b",
+                    color: "var(--accent-amber-light)",
                     fontSize: "0.75rem",
                     fontWeight: 700,
                     padding: "2px 10px",
@@ -1676,28 +1676,28 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               label: "Total Items",
               value: inventory.length,
               status: "all",
-              color: "#38bdf8",
+              color: "var(--info)",
               icon: Package,
             },
             {
               label: "In Stock",
               value: inStockCount,
               status: "in-stock",
-              color: "#10b981",
+              color: "var(--success)",
               icon: CheckCircle2,
             },
             {
               label: "Low Stock",
               value: lowStockCount,
               status: "low-stock",
-              color: "#f59e0b",
+              color: "var(--accent-amber-light)",
               icon: AlertTriangle,
             },
             {
               label: "Out of Stock",
               value: outOfStockCount,
               status: "out-of-stock",
-              color: "#ef4444",
+              color: "var(--danger)",
               icon: TrendingDown,
             },
           ].map(({ label, value, status, color, icon: Icon }) => (
@@ -1733,7 +1733,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   display: "grid",
                   placeItems: "center",
                   color,
-                  background: `${color}20`,
+                  background: `color-mix(in srgb, ${color} 12.55%, transparent)`,
                   borderRadius: "9px",
                 }}
               >
@@ -1839,7 +1839,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 height: "36px",
                 padding: "0 0.75rem",
                 background: "rgba(245, 158, 11, 0.14)",
-                color: "#f59e0b",
+                color: "var(--accent-amber-light)",
                 border: "1px solid rgba(245, 158, 11, 0.35)",
                 borderRadius: "7px",
                 fontWeight: 700,
@@ -1899,10 +1899,10 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 const isLowStock =
                   !isOutOfStock && item.stock <= item.minThreshold;
                 const statusColor = isOutOfStock
-                  ? "#ef4444"
+                  ? "var(--danger)"
                   : isLowStock
-                    ? "#f59e0b"
-                    : "#10b981";
+                    ? "var(--status-occupied)"
+                    : "var(--success)";
                 return (
                   <tr
                     key={item.id}
@@ -2069,8 +2069,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     <td style={{ padding: "0.55rem 0.6rem", textAlign: "center", whiteSpace: "nowrap" }}>
                       <span
                         style={{
-                          background: `${statusColor}18`,
-                          border: `1px solid ${statusColor}40`,
+                          background: `${statusColor}1f`,
+                          border: `1px solid ${statusColor}4d`,
                           color: statusColor,
                           borderRadius: "12px",
                           padding: "2px 8px",
@@ -2145,7 +2145,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                           onClick={() => handleAdjustStock(item.id, -5)}
                           style={{
                             background: "var(--surface-tint)",
-                            border: "1px solid rgba(255, 255, 255, 0.12)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
                             color: "var(--text-main)",
                             borderRadius: "6px",
                             padding: "3px 7px",
@@ -2198,8 +2198,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                             );
                           }}
                           style={{
-                            background: "rgba(16, 185, 129, 0.12)",
-                            border: "1px solid rgba(16, 185, 129, 0.35)",
+                            background: "rgba(16, 185, 129, 0.1)",
+                            border: "1px solid rgba(16, 185, 129, 0.3)",
                             color: "#10b981",
                             borderRadius: "6px",
                             padding: "3px 7px",
@@ -2222,7 +2222,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                           onClick={() => handleDeleteItem(item.id)}
                           style={{
                             background: "rgba(239, 68, 68, 0.08)",
-                            border: "1px solid rgba(239, 68, 68, 0.25)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
                             color: "#ef4444",
                             borderRadius: "6px",
                             padding: "4px 6px",
@@ -2681,7 +2681,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         height: "32px",
                         border: "1px solid rgba(239,68,68,0.3)",
                         borderRadius: "7px",
-                        color: "#ef4444",
+                        color: "var(--danger)",
                         background: "rgba(239,68,68,0.08)",
                         cursor: "pointer",
                       }}
