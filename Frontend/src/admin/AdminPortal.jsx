@@ -2888,7 +2888,7 @@ export function AdminPortal({
                               <span>Status</span>
                               {tableSortField === "status" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
                             </div>
-                            <div className="floor-table-actions-heading">
+                            <div className="floor-table-actions-heading" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                               Actions
                             </div>
                           </div>
@@ -3057,7 +3057,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions */}
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
                                   {/* Edit Chairs / Area */}
                                   <button
                                     type="button"
@@ -3065,17 +3065,15 @@ export function AdminPortal({
                                     style={{
                                       display: "inline-flex",
                                       alignItems: "center",
-                                      gap: "0.35rem",
-                                      padding: "0.32rem 0.6rem",
+                                      justifyContent: "center",
+                                      padding: "0.32rem 0.5rem",
                                       background: "rgba(245, 158, 11, 0.08)",
-                                      color: "var(--accent-amber-light)",
+                                      color: "#f59e0b",
                                       border: "1px solid rgba(245, 158, 11, 0.45)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
-                                      fontWeight: 700,
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
-                                      whiteSpace: "nowrap",
                                       flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
@@ -3086,9 +3084,10 @@ export function AdminPortal({
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
                                       e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
                                     }}
+                                    title="Edit Chairs / Area"
+                                    aria-label="Edit Chairs / Area"
                                   >
-                                    <Edit3 size={13} color="#f59e0b" />
-                                    <span>Edit Chairs / Area</span>
+                                    <SquarePen size={13} color="#f59e0b" />
                                   </button>
 
                                   {/* Delete Table */}
@@ -3648,17 +3647,15 @@ export function AdminPortal({
                                     style={{
                                       display: "inline-flex",
                                       alignItems: "center",
-                                      gap: "0.35rem",
-                                      padding: "0.35rem 0.75rem",
+                                      justifyContent: "center",
+                                      padding: "0.35rem 0.55rem",
                                       background: "rgba(245, 158, 11, 0.08)",
-                                      color: "var(--accent-amber-light)",
+                                      color: "#f59e0b",
                                       border: "1px solid rgba(245, 158, 11, 0.45)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
-                                      fontWeight: 700,
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
-                                      whiteSpace: "nowrap",
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
@@ -3668,9 +3665,10 @@ export function AdminPortal({
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
                                       e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
                                     }}
+                                    title="Edit Staff"
+                                    aria-label="Edit Staff"
                                   >
-                                    <Edit3 size={13} color="#f59e0b" />
-                                    <span>Edit Staff</span>
+                                    <SquarePen size={13} color="#f59e0b" />
                                   </button>
 
                                   {/* Delete Staff button */}
