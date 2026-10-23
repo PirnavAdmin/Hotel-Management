@@ -19,6 +19,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { ReceiptModal } from "../user/ReceiptModal";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
@@ -90,6 +91,7 @@ const formatInvoiceTime = (value) => {
 export function AdminInvoices({
   pastOrders = [],
   restaurantName = "Restaurant",
+  restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
 }) {
   const allOrders = sortOrdersBySettlementTime(
@@ -133,14 +135,14 @@ export function AdminInvoices({
       setEditError("Enter a discount between 0% and 100%.");
       return;
     }
-    if (!editingInvoice?.id || !onUpdateInvoiceDiscount) {
-      setEditError("This invoice cannot be edited because it has no server order ID.");
+    if (!onUpdateInvoiceDiscount) {
+      setEditError("Invoice editing is not available.");
       return;
     }
     setIsSavingEdit(true);
     setEditError("");
     try {
-      await onUpdateInvoiceDiscount(editingInvoice.id, discountPercent);
+      await onUpdateInvoiceDiscount(editingInvoice?.id, discountPercent, editingInvoice);
       setEditingInvoice(null);
     } catch (error) {
       setEditError(error?.message || "Could not update the invoice discount.");
@@ -224,6 +226,7 @@ export function AdminInvoices({
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {/* Outer Card Matching Design */}
       <div
+        className="no-print"
         style={{
           background: "var(--bg-card)",
           border: "1px solid var(--border-card)",
@@ -916,7 +919,7 @@ export function AdminInvoices({
               </label>
             </div>
           )}
-          {invalidCustomDate && <span role="alert" style={{ color: "#fca5a5", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
+          {invalidCustomDate && <span role="alert" style={{ color: "var(--danger)", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
           <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Showing {filteredOrders.length} invoices</span>
         </div>
 
@@ -1219,7 +1222,7 @@ export function AdminInvoices({
                         </button>
                         <button
                           onClick={() => openDiscountEditor(order)}
-                          disabled={!onUpdateInvoiceDiscount || !order.id}
+                          disabled={!onUpdateInvoiceDiscount || (!order.id && !order.invoiceNo)}
                           title="Edit bill discount"
                           style={{
                             background: "rgba(59, 130, 246, 0.08)",
@@ -1229,8 +1232,8 @@ export function AdminInvoices({
                             padding: "5px 9px",
                             fontSize: "0.75rem",
                             fontWeight: 700,
-                            cursor: onUpdateInvoiceDiscount && order.id ? "pointer" : "not-allowed",
-                            opacity: onUpdateInvoiceDiscount && order.id ? 1 : 0.5,
+                            cursor: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? "pointer" : "not-allowed",
+                            opacity: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? 1 : 0.5,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "4px",
@@ -1250,7 +1253,7 @@ export function AdminInvoices({
                     colSpan={7}
                     style={{
                       padding: "2rem 1rem",
-                      color: "#94a3b8",
+                      color: "var(--text-dim)",
                       textAlign: "center",
                     }}
                   >
@@ -1346,7 +1349,7 @@ export function AdminInvoices({
                       visiblePage === 1
                         ? "rgba(255, 255, 255, 0.02)"
                         : "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    border: "1px solid var(--neutral-border)",
                     color: visiblePage === 1 ? "#475569" : "#cbd5e1",
                     cursor: visiblePage === 1 ? "not-allowed" : "pointer",
                     display: "flex",
@@ -1409,7 +1412,7 @@ export function AdminInvoices({
                       visiblePage === pageCount
                         ? "rgba(255, 255, 255, 0.02)"
                         : "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    border: "1px solid var(--neutral-border)",
                     color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
                     cursor:
                       visiblePage === pageCount ? "not-allowed" : "pointer",
@@ -1431,232 +1434,15 @@ export function AdminInvoices({
 
       {/* Receipt Modal */}
       {selectedReceipt && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(6px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 160,
-            padding: "1rem",
-          }}
-        >
-          <div
-            style={{
-              background: "#111827",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "16px",
-              padding: "1.75rem",
-              width: "100%",
-              maxWidth: "420px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
-              color: "#ffffff",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-                paddingBottom: "0.75rem",
-                marginBottom: "1rem",
-              }}
-            >
-              <div>
-                <h3
-                  style={{
-                    fontSize: "1.1rem",
-                    fontWeight: 800,
-                    margin: 0,
-                    color: "#f59e0b",
-                  }}
-                >
-                  {restaurantName}
-                </h3>
-                <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                  Invoice: {selectedReceipt.invoiceNo || "INV-001"}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedReceipt(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#94a3b8",
-                  cursor: "pointer",
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: "#cbd5e1",
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "0.85rem",
-              }}
-            >
-              <div>
-                <div>
-                  <strong>Table:</strong> {selectedReceipt.tableName}
-                </div>
-                <div>
-                  <strong>Waiter:</strong> {selectedReceipt.server || "Staff"}
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div>{invoiceDisplayDate(selectedReceipt)}</div>
-                <div>{formatInvoiceTime(selectedReceipt.settledAt || selectedReceipt.orderTime)}</div>
-              </div>
-            </div>
-
-            {/* Items List */}
-            <div
-              style={{
-                borderTop: "1px dashed rgba(255, 255, 255, 0.15)",
-                borderBottom: "1px dashed rgba(255, 255, 255, 0.15)",
-                padding: "0.75rem 0",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.45rem",
-                maxHeight: "180px",
-                overflowY: "auto",
-              }}
-            >
-              {(selectedReceipt.items || []).map((item, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.82rem",
-                  }}
-                >
-                  <div>
-                    <span>{item.name}</span>
-                    <span style={{ color: "#64748b", marginLeft: "6px" }}>
-                      x{item.quantity || 1}
-                    </span>
-                  </div>
-                  <span style={{ fontWeight: 700 }}>
-                    ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Bill Summary */}
-            <div
-              style={{
-                marginTop: "0.85rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.35rem",
-                fontSize: "0.8rem",
-                color: "#94a3b8",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Subtotal</span>
-                <span>{formatCurrency(selectedReceipt.subtotal || 0)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>GST / Tax</span>
-                <span>{formatCurrency(selectedReceipt.taxAmount || 0)}</span>
-              </div>
-              {Number(selectedReceipt.serviceChargeAmount) > 0 && (
-                <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <span>Service Charge</span>
-                  <span>
-                    {formatCurrency(selectedReceipt.serviceChargeAmount)}
-                  </span>
-                </div>
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "1rem",
-                  fontWeight: 800,
-                  color: "#f59e0b",
-                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                  paddingTop: "0.5rem",
-                  marginTop: "0.3rem",
-                }}
-              >
-                <span>Grand Total</span>
-                <span>{formatCurrency(selectedReceipt.grandTotal)}</span>
-              </div>
-              <div
-                style={{
-                  fontSize: "0.72rem",
-                  color: "#10b981",
-                  marginTop: "3px",
-                  textAlign: "right",
-                  textTransform: "uppercase",
-                  fontWeight: 700,
-                }}
-              >
-                Paid via {normalizePaymentMethod(selectedReceipt).toUpperCase()}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: "0.75rem",
-                marginTop: "1.25rem",
-              }}
-            >
-              <button
-                onClick={() => window.print()}
-                style={{
-                  flex: 1,
-                  padding: "0.6rem",
-                  background: "rgba(255, 255, 255, 0.08)",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#ffffff",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                <Printer size={14} />
-                <span>Print Receipt</span>
-              </button>
-              <button
-                onClick={() => setSelectedReceipt(null)}
-                style={{
-                  flex: 1,
-                  padding: "0.6rem",
-                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#ffffff",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReceiptModal
+          table={selectedReceipt}
+          restaurantSettings={
+            restaurantSettings?.restaurantName
+              ? restaurantSettings
+              : { ...restaurantSettings, restaurantName }
+          }
+          onClose={() => setSelectedReceipt(null)}
+        />
       )}
 
       {editingInvoice && (
@@ -1668,7 +1454,7 @@ export function AdminInvoices({
             display: "grid",
             placeItems: "center",
             padding: "1rem",
-            background: "rgba(0, 0, 0, 0.72)",
+            background: "var(--modal-overlay)",
             backdropFilter: "blur(5px)",
           }}
         >
@@ -1714,7 +1500,7 @@ export function AdminInvoices({
             <p style={{ color: "var(--text-muted)", fontSize: "0.74rem", lineHeight: 1.5 }}>
               Saving updates the bill discount on the server and reloads the invoice history.
             </p>
-            {editError && <div role="alert" style={{ color: "#f87171", fontSize: "0.78rem", marginBottom: "0.8rem" }}>{editError}</div>}
+            {editError && <div role="alert" style={{ color: "var(--danger)", fontSize: "0.78rem", marginBottom: "0.8rem" }}>{editError}</div>}
             <div style={{ display: "flex", gap: "0.6rem", marginTop: "1rem" }}>
               <button type="button" onClick={() => setEditingInvoice(null)} disabled={isSavingEdit} style={{ flex: 1, padding: "0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "transparent", cursor: "pointer" }}>
                 Cancel

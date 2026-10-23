@@ -27,6 +27,45 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   const [selectedWallet, setSelectedWallet] = useState('paytm');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    return (
+      document.documentElement.getAttribute("data-theme") ||
+      localStorage.getItem("gourmet_pos_theme_v2") ||
+      "emerald-spice"
+    );
+  });
+
+  useEffect(() => {
+    const handleThemeChange = () => {
+      const activeTheme =
+        document.documentElement.getAttribute("data-theme") ||
+        localStorage.getItem("gourmet_pos_theme_v2") ||
+        "emerald-spice";
+      setCurrentTheme(activeTheme);
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "data-theme"
+        ) {
+          handleThemeChange();
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    window.addEventListener("storage", handleThemeChange);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("storage", handleThemeChange);
+    };
+  }, []);
+
+  const isLight = currentTheme === "light-bistro";
+
   const getQrConfig = () => {
     try {
       const saved = localStorage.getItem("gourmet_pos_settings_v1");
@@ -153,8 +192,10 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           price: item.price,
         })),
         subtotal,
+        discountPercent: Number(table?.discountPercent) || 0,
         discountAmount,
         taxAmount,
+        serviceCharge: Number(table?.serviceCharge) || 5,
         serviceChargeAmount,
         tipAmount: 0,
         grandTotal,
@@ -176,7 +217,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(5, 9, 18, 0.82)',
+      background: isLight ? 'rgba(15, 23, 42, 0.45)' : 'rgba(5, 9, 18, 0.82)',
       backdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
@@ -187,11 +228,11 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
       <style>{`
         .payment-tab-btn {
           position: relative;
-          background: rgba(15, 23, 42, 0.65);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)'};
+          border: 1px solid ${isLight ? 'var(--border-subtle, #e2e8f0)' : 'rgba(255, 255, 255, 0.08)'};
           border-radius: 12px;
           padding: 0.9rem 0.5rem;
-          color: #94a3b8;
+          color: ${isLight ? 'var(--text-dim, #64748b)' : '#94a3b8'};
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -202,14 +243,14 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           transition: all 0.18s ease;
         }
         .payment-tab-btn:hover {
-          background: rgba(245, 158, 11, 0.08);
-          border-color: rgba(245, 158, 11, 0.4);
-          color: #f8fafc;
+          background: ${isLight ? 'rgba(217, 119, 6, 0.08)' : 'rgba(245, 158, 11, 0.08)'};
+          border-color: var(--accent-amber, #f59e0b);
+          color: ${isLight ? 'var(--text-main, #0f172a)' : '#f8fafc'};
         }
         .payment-tab-btn.active {
-          background: linear-gradient(180deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.06) 100%);
-          border: 1.5px solid #f59e0b;
-          color: #f59e0b;
+          background: ${isLight ? 'linear-gradient(180deg, rgba(217, 119, 6, 0.16) 0%, rgba(217, 119, 6, 0.05) 100%)' : 'linear-gradient(180deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.06) 100%)'};
+          border: 1.5px solid var(--accent-amber, #f59e0b);
+          color: var(--accent-amber, #f59e0b);
           box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
         }
         .payment-tab-btn.active::after {
@@ -222,17 +263,19 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           height: 0;
           border-left: 6px solid transparent;
           border-right: 6px solid transparent;
-          border-top: 6px solid #f59e0b;
+          border-top: 6px solid var(--accent-amber, #f59e0b);
         }
       `}</style>
 
       <div style={{
-        background: 'linear-gradient(180deg, #0f172a 0%, #0b1120 100%)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        background: isLight ? 'var(--bg-secondary, #ffffff)' : 'linear-gradient(180deg, #0f172a 0%, #0b1120 100%)',
+        border: isLight ? '1.5px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.1)',
         width: '100%',
         maxWidth: '660px',
         borderRadius: '18px',
-        boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 40px rgba(245, 158, 11, 0.08)',
+        boxShadow: isLight
+          ? '0 25px 60px -10px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0,0,0,0.1)'
+          : '0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 40px rgba(245, 158, 11, 0.08)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -255,7 +298,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#1a1001',
+              color: '#ffffff',
               boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
               flexShrink: 0
             }}>
@@ -266,7 +309,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               <h2 style={{
                 fontSize: '1.25rem',
                 fontWeight: 800,
-                color: '#ffffff',
+                color: 'var(--text-main, #ffffff)',
                 margin: 0,
                 letterSpacing: '-0.01em'
               }}>
@@ -274,7 +317,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               </h2>
               <div style={{
                 fontSize: '0.74rem',
-                color: '#94a3b8',
+                color: 'var(--text-dim, #94a3b8)',
                 marginTop: '4px',
                 display: 'flex',
                 alignItems: 'center',
@@ -282,24 +325,24 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 flexWrap: 'wrap'
               }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  <Building2 size={12} color="#64748b" />
+                  <Building2 size={12} color="var(--text-dim, #64748b)" />
                   {table.section || 'Main Hall'}
                 </span>
-                <span style={{ color: '#475569' }}>•</span>
+                <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  <Users size={12} color="#64748b" />
+                  <Users size={12} color="var(--text-dim, #64748b)" />
                   {table.guests || 0} Guests
                 </span>
-                <span style={{ color: '#475569' }}>•</span>
+                <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
                 <span>Server: {table.server || '-'}</span>
-                <span style={{ color: '#475569' }}>•</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#f59e0b', fontWeight: 600 }}>
-                  <Calendar size={12} color="#f59e0b" />
+                <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber, #f59e0b)', fontWeight: 600 }}>
+                  <Calendar size={12} color="var(--accent-amber, #f59e0b)" />
                   {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
-                <span style={{ color: '#475569' }}>•</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#f59e0b', fontWeight: 600 }}>
-                  <Clock size={12} color="#f59e0b" />
+                <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber, #f59e0b)', fontWeight: 600 }}>
+                  <Clock size={12} color="var(--accent-amber, #f59e0b)" />
                   {table.orderTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -312,9 +355,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               width: '36px',
               height: '36px',
               borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: '#94a3b8',
+              border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.1)',
+              background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.05)',
+              color: 'var(--text-dim, #94a3b8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -322,12 +365,12 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               transition: 'all 0.15s ease'
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.color = 'var(--text-main, #ffffff)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.color = '#94a3b8';
+              e.currentTarget.style.background = isLight ? '#f1f5f9' : 'rgba(255,255,255,0.05)';
+              e.currentTarget.style.color = 'var(--text-dim, #94a3b8)';
             }}
             title="Close"
           >
@@ -337,8 +380,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
         {/* Net Amount Due Banner */}
         <div style={{
-          background: 'rgba(15, 23, 42, 0.65)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
+          border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '14px',
           padding: '1rem 1.35rem',
           display: 'flex',
@@ -351,25 +394,25 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
+              background: isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)',
+              border: isLight ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#f59e0b',
+              color: 'var(--accent-amber, #f59e0b)',
               flexShrink: 0
             }}>
               <Wallet size={20} />
             </div>
 
             <div>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600, display: 'block' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600, display: 'block' }}>
                 Net Amount Due
               </span>
               <span className="font-mono" style={{
                 fontSize: '1.95rem',
                 fontWeight: 900,
-                color: '#f59e0b',
+                color: 'var(--accent-amber, #f59e0b)',
                 lineHeight: 1.1,
                 display: 'block'
               }}>
@@ -386,22 +429,22 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             textAlign: 'right',
             fontSize: '0.82rem'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: '#94a3b8' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
               <span>Subtotal</span>
-              <span className="font-mono" style={{ color: '#ffffff', fontWeight: 700 }}>
+              <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
                 {formatCurrency(subtotal)}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: '#94a3b8' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
               <span>GST (5%)</span>
-              <span className="font-mono" style={{ color: '#ffffff', fontWeight: 700 }}>
+              <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
                 {formatCurrency(taxAmount)}
               </span>
             </div>
             {serviceChargeAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
                 <span>Service (5%)</span>
-                <span className="font-mono" style={{ color: '#ffffff', fontWeight: 700 }}>
+                <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
                   {formatCurrency(serviceChargeAmount)}
                 </span>
               </div>
@@ -418,9 +461,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             marginBottom: '0.6rem',
             fontSize: '0.82rem',
             fontWeight: 700,
-            color: '#cbd5e1'
+            color: 'var(--text-main, #cbd5e1)'
           }}>
-            <CreditCard size={15} color="#94a3b8" />
+            <CreditCard size={15} color="var(--text-dim, #94a3b8)" />
             <span>Select Payment Mode</span>
           </div>
 
@@ -456,8 +499,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         {/* Payment Mode Dynamic Content Box */}
         {paymentMethod === 'upi' && (
           <div style={{
-            background: 'rgba(15, 23, 42, 0.65)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
+            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '14px',
             padding: '1.25rem 1.5rem',
             display: 'flex',
@@ -471,20 +514,20 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               flexShrink: 0
             }}>
               {/* Corner Brackets */}
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '15px', height: '15px', borderTop: '2.5px solid #f59e0b', borderLeft: '2.5px solid #f59e0b', borderRadius: '4px 0 0 0' }} />
-              <div style={{ position: 'absolute', top: 0, right: 0, width: '15px', height: '15px', borderTop: '2.5px solid #f59e0b', borderRight: '2.5px solid #f59e0b', borderRadius: '0 4px 0 0' }} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid #f59e0b', borderLeft: '2.5px solid #f59e0b', borderRadius: '0 0 0 4px' }} />
-              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid #f59e0b', borderRight: '2.5px solid #f59e0b', borderRadius: '0 0 4px 0' }} />
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '15px', height: '15px', borderTop: '2.5px solid var(--accent-amber, #f59e0b)', borderLeft: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '4px 0 0 0' }} />
+              <div style={{ position: 'absolute', top: 0, right: 0, width: '15px', height: '15px', borderTop: '2.5px solid var(--accent-amber, #f59e0b)', borderRight: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 4px 0 0' }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderLeft: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 0 4px' }} />
+              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderRight: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 4px 0' }} />
 
               {/* Real Payment QR */}
               <div style={{
-                background: '#ffffff',
+                background: 'var(--bg-card)',
                 padding: '6px',
                 borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                boxShadow: isLight ? '0 4px 15px rgba(0,0,0,0.12)' : '0 4px 20px rgba(0,0,0,0.5)'
               }}>
                 <img
                   src={activeQr?.image || paymentQrImage}
@@ -504,19 +547,19 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.45rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Zap size={16} color="#f59e0b" fill="#f59e0b" />
-                  <span style={{ fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
+                  <Zap size={16} color="var(--accent-amber, #f59e0b)" fill="var(--accent-amber, #f59e0b)" />
+                  <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
                     Scan & Pay
                   </span>
                 </div>
-                <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f59e0b' }}>
+                <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-amber, #f59e0b)' }}>
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
 
               {/* Configured QR Label */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-dim, #cbd5e1)', fontWeight: 600 }}>
                   {activeQr?.label || "UPI / QR to Pay"}
                 </span>
               </div>
@@ -530,9 +573,17 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                       type="button"
                       onClick={() => handleSelectQr(idx)}
                       style={{
-                        background: selectedQrIndex === idx ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)' : 'rgba(255, 255, 255, 0.08)',
-                        color: selectedQrIndex === idx ? '#ffffff' : '#cbd5e1',
-                        border: selectedQrIndex === idx ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
+                        background: selectedQrIndex === idx
+                          ? 'var(--accent-amber, #f59e0b)'
+                          : isLight
+                          ? '#f1f5f9'
+                          : 'rgba(255, 255, 255, 0.08)',
+                        color: selectedQrIndex === idx ? '#ffffff' : 'var(--text-main, #cbd5e1)',
+                        border: selectedQrIndex === idx
+                          ? '1px solid var(--accent-amber, #f59e0b)'
+                          : isLight
+                          ? '1px solid #cbd5e1'
+                          : '1px solid rgba(255, 255, 255, 0.12)',
                         borderRadius: '6px',
                         padding: '2px 8px',
                         fontSize: '0.72rem',
@@ -557,7 +608,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               }}>
                 {/* GPay Badge */}
                 <div style={{
-                  background: '#ffffff',
+                  background: 'var(--bg-card)',
                   color: '#1e293b',
                   padding: '3px 9px',
                   borderRadius: '16px',
@@ -566,7 +617,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                  border: isLight ? '1px solid #e2e8f0' : 'none'
                 }}>
                   <span style={{ color: '#4285F4', fontWeight: 900 }}>G</span>
                   <span>Pay</span>
@@ -583,9 +635,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
                 }}>
-                  <span style={{ background: '#ffffff', color: '#5f259f', width: '12px', height: '12px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900 }}>पे</span>
+                  <span style={{ background: 'var(--bg-card)', color: '#5f259f', width: '12px', height: '12px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900 }}>पे</span>
                   <span>PhonePe</span>
                 </div>
 
@@ -600,7 +652,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                   display: 'flex',
                   alignItems: 'center',
                   gap: '2px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
                 }}>
                   <span>Pay</span>
                   <span style={{ color: '#00b9f1' }}>tm</span>
@@ -608,9 +660,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
                 {/* BHIM Badge */}
                 <div style={{
-                  background: '#0f172a',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: '#ffffff',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--neutral-border)',
+                  color: 'var(--text-main)',
                   padding: '3px 9px',
                   borderRadius: '16px',
                   fontSize: '0.68rem',
@@ -630,7 +682,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 alignItems: 'center',
                 gap: '0.35rem',
                 fontSize: '0.72rem',
-                color: '#64748b',
+                color: 'var(--text-dim, #64748b)',
                 marginTop: '0.2rem'
               }}>
                 <ShieldCheck size={13} color="#10b981" />
@@ -642,54 +694,76 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
         {paymentMethod === 'cash' && (
           <div style={{
-            background: 'rgba(15, 23, 42, 0.65)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
+            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '14px',
             padding: '1.25rem 1.5rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.75rem'
           }}>
-            <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>
+            <label style={{ fontSize: '0.78rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600 }}>
               Cash Tendered (₹):
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="number"
-                step="10"
-                value={cashTendered}
-                onChange={e => setCashTendered(e.target.value)}
-                style={{
-                  flex: 1,
-                  background: 'rgba(2, 6, 23, 0.8)',
-                  border: '1.5px solid #f59e0b',
-                  borderRadius: '8px',
-                  padding: '0.6rem 0.85rem',
-                  color: '#ffffff',
-                  fontSize: '1.2rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 800
-                }}
-              />
-              {[grandTotal, 500, 1000, 2000, 5000].map((quickVal, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setCashTendered(quickVal)}
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 140px', minWidth: '130px' }}>
+                <input
+                  type="number"
+                  step="10"
+                  value={cashTendered}
+                  onChange={e => setCashTendered(e.target.value)}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    color: '#f8fafc',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '0.4rem 0.75rem',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    background: isLight ? '#ffffff' : 'rgba(2, 6, 23, 0.8)',
+                    border: '1.5px solid var(--accent-amber, #f59e0b)',
                     borderRadius: '8px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
+                    padding: '0.55rem 0.8rem',
+                    color: 'var(--text-main, #ffffff)',
+                    fontSize: '1.15rem',
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 800,
+                    outline: 'none'
                   }}
-                >
-                  {i === 0 ? 'Exact' : `₹${quickVal}`}
-                </button>
-              ))}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.35rem', flex: '2 1 300px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {[grandTotal, 500, 1000, 2000, 5000].map((quickVal, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setCashTendered(quickVal)}
+                    style={{
+                      flex: '1 1 0px',
+                      minWidth: '52px',
+                      background: Number(cashTendered) === Number(quickVal)
+                        ? 'var(--accent-amber, #f59e0b)'
+                        : isLight
+                        ? '#f1f5f9'
+                        : 'rgba(255, 255, 255, 0.06)',
+                      color: Number(cashTendered) === Number(quickVal)
+                        ? '#ffffff'
+                        : 'var(--text-main, #f8fafc)',
+                      border: Number(cashTendered) === Number(quickVal)
+                        ? '1px solid var(--accent-amber, #f59e0b)'
+                        : isLight
+                        ? '1px solid #cbd5e1'
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                      padding: '0.55rem 0.45rem',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {i === 0 ? 'Exact' : `₹${quickVal}`}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div style={{
@@ -697,10 +771,10 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               justifyContent: 'space-between',
               alignItems: 'center',
               paddingTop: '0.55rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              borderTop: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
               fontSize: '0.86rem'
             }}>
-              <span style={{ color: '#94a3b8', fontWeight: 600 }}>Change to Return:</span>
+              <span style={{ color: 'var(--text-dim, #94a3b8)', fontWeight: 600 }}>Change to Return:</span>
               <span className="font-mono" style={{
                 fontSize: '1.35rem',
                 fontWeight: 900,
@@ -714,8 +788,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
         {paymentMethod === 'card' && (
           <div style={{
-            background: 'rgba(15, 23, 42, 0.65)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
+            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '14px',
             padding: '1.4rem',
             textAlign: 'center',
@@ -728,18 +802,18 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'rgba(245, 158, 11, 0.15)',
+              background: isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#f59e0b'
+              color: 'var(--accent-amber, #f59e0b)'
             }}>
               <CreditCard size={26} />
             </div>
-            <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#ffffff' }}>
+            <div style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
               Tap or Insert Card on POS Terminal
             </div>
-            <p style={{ fontSize: '0.76rem', color: '#94a3b8', maxWidth: '320px', margin: 0 }}>
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-dim, #94a3b8)', maxWidth: '320px', margin: 0 }}>
               Supports Visa, MasterCard, RuPay, Maestro & Contactless Tap
             </p>
           </div>
@@ -747,15 +821,15 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
         {paymentMethod === 'wallet' && (
           <div style={{
-            background: 'rgba(15, 23, 42, 0.65)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
+            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '14px',
             padding: '1.25rem 1.5rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.75rem'
           }}>
-            <div style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600 }}>
               Choose Digital Wallet:
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem' }}>
@@ -771,16 +845,27 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                   style={{
                     padding: '0.65rem',
                     borderRadius: '8px',
-                    background: selectedWallet === w.id ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                    border: selectedWallet === w.id ? '1.5px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.08)',
-                    color: selectedWallet === w.id ? '#f59e0b' : '#ffffff',
+                    background: selectedWallet === w.id
+                      ? isLight
+                        ? 'rgba(217, 119, 6, 0.16)'
+                        : 'rgba(245, 158, 11, 0.2)'
+                      : isLight
+                      ? '#ffffff'
+                      : 'rgba(255, 255, 255, 0.04)',
+                    border: selectedWallet === w.id
+                      ? '1.5px solid var(--accent-amber, #f59e0b)'
+                      : isLight
+                      ? '1px solid #cbd5e1'
+                      : '1px solid rgba(255, 255, 255, 0.08)',
+                    color: selectedWallet === w.id ? 'var(--accent-amber, #f59e0b)' : 'var(--text-main, #ffffff)',
                     fontSize: '0.78rem',
                     fontWeight: 700,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.4rem'
+                    gap: '0.4rem',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   <span>{w.icon}</span>
@@ -807,9 +892,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               flex: 1,
               height: '46px',
               borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              background: 'rgba(255, 255, 255, 0.06)',
-              color: '#e2e8f0',
+              border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.12)',
+              background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.06)',
+              color: 'var(--text-main, #e2e8f0)',
               fontWeight: 700,
               fontSize: '0.88rem',
               display: 'flex',
@@ -819,8 +904,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+            onMouseEnter={e => e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.1)'}
+            onMouseLeave={e => e.currentTarget.style.background = isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.06)'}
           >
             <ArrowLeft size={16} />
             <span>Cancel</span>
@@ -867,5 +952,6 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         </div>
       </div>
     </div>
+
   );
 }

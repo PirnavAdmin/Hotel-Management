@@ -1,19 +1,32 @@
 :root,
 [data-theme="royal-saffron"] {
-  --bg-primary: #090e17;
-  --bg-secondary: #111827;
+  color-scheme: dark;
+  --primary-gradient: linear-gradient(135deg,#ff9d00,#ff5a00);
+  --text-on-accent:#fff;
+  --surface-tint:rgba(255,255,255,.04);
+  --surface-tint-hover:rgba(255,255,255,.08);
+  --neutral-border:rgba(255,255,255,.12);
+  --modal-overlay:rgba(4,10,22,.72);
+  --input-bg:#17243a;
+  --table-header-bg:#152239;
+  --auth-overlay:linear-gradient(105deg,rgba(6,12,24,.84) 0%,rgba(6,12,24,.75) 45%,rgba(6,12,24,.72) 75%,rgba(6,12,24,.80) 100%);
+  --auth-card:rgba(11,22,40,.94);
+  --auth-card-border:rgba(255,157,0,.25);
+  --bg-primary: #080d18;
+  --bg-secondary: #0b1220;
   --bg-tertiary: #1a253a;
-  --bg-card: rgba(19, 29, 49, 0.95);
+  --bg-card: #111c30;
   --bg-card-hover: rgba(26, 40, 68, 0.98);
   --bg-glass: rgba(17, 24, 39, 0.88);
 
   --border-subtle: rgba(245, 158, 11, 0.24);
-  --border-card: rgba(255, 255, 255, 0.09);
+  --border-card: #2b3a52;
   --border-focus: rgba(245, 158, 11, 0.7);
 
   --text-main: #ffffff;
   --text-muted: #cbd5e1;
   --text-dim: #94a3b8;
+  --text-secondary: #cbd5e1;
 
   --accent-amber: #f59e0b;
   --accent-amber-light: #fbbf24;
@@ -46,90 +59,18 @@
   --radius-xl: 22px;
 }
 
-/* Radiant Emerald & Jade Theme */
-[data-theme="emerald-spice"] {
-  --bg-primary: #05130d;
-  --bg-secondary: #092218;
-  --bg-tertiary: #103526;
-  --bg-card: rgba(12, 38, 27, 0.95);
-  --bg-card-hover: rgba(18, 54, 38, 0.98);
-  --bg-glass: rgba(9, 34, 24, 0.88);
-
-  --border-subtle: rgba(16, 185, 129, 0.3);
-  --border-card: rgba(255, 255, 255, 0.09);
-  --border-focus: rgba(0, 242, 170, 0.7);
-
-  --text-main: #ffffff;
-  --text-muted: #a7f3d0;
-  --text-dim: #6ee7b7;
-
-  --accent-amber: #10b981;
-  --accent-amber-light: #34d399;
-  --accent-saffron: #059669;
-  --accent-amber-glow: rgba(16, 185, 129, 0.35);
-
-  --status-vacant: #10b981;
-  --status-vacant-bg: rgba(16, 185, 129, 0.22);
-  --status-occupied: #f59e0b;
-  --status-occupied-bg: rgba(245, 158, 11, 0.22);
-  --status-billed: #c084fc;
-  --status-billed-bg: rgba(192, 132, 252, 0.22);
-
-  --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.16);
-  --success: #10b981;
-  --info: #00f2aa;
-
-  --radiance-glow: 0 0 25px rgba(16, 185, 129, 0.3);
-}
-
-/* Radiance Cyber Midnight Theme */
-[data-theme="radiance-midnight"] {
-  --bg-primary: #060a13;
-  --bg-secondary: #0c1424;
-  --bg-tertiary: #142038;
-  --bg-card: rgba(14, 24, 44, 0.95);
-  --bg-card-hover: rgba(22, 36, 66, 0.98);
-  --bg-glass: rgba(12, 20, 36, 0.88);
-
-  --border-subtle: rgba(56, 189, 248, 0.3);
-  --border-card: rgba(255, 255, 255, 0.1);
-  --border-focus: rgba(0, 210, 255, 0.75);
-
-  --text-main: #ffffff;
-  --text-muted: #cbd5e1;
-  --text-dim: #94a3b8;
-
-  --accent-amber: #00d2ff;
-  --accent-amber-light: #67e8f9;
-  --accent-saffron: #f59e0b;
-  --accent-amber-glow: rgba(0, 210, 255, 0.38);
-
-  --status-vacant: #00f2aa;
-  --status-vacant-bg: rgba(0, 242, 170, 0.2);
-  --status-occupied: #ff7b00;
-  --status-occupied-bg: rgba(255, 123, 0, 0.2);
-  --status-billed: #c084fc;
-  --status-billed-bg: rgba(192, 132, 252, 0.2);
-
-  --danger: #ff4466;
-  --danger-bg: rgba(255, 68, 102, 0.18);
-  --success: #00f2aa;
-  --info: #00d2ff;
-
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.45);
-  --shadow-md: 0 8px 26px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 16px 50px rgba(0, 0, 0, 0.75);
-  --radiance-glow: 0 0 30px rgba(0, 210, 255, 0.35);
-
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
-}
-
 /* Clean Daylight Light Theme */
 [data-theme="light-bistro"] {
+  --primary-gradient:linear-gradient(135deg,#ff9d00,#ff6500);
+  --surface-tint:rgba(23,32,51,.035);
+  --surface-tint-hover:rgba(23,32,51,.07);
+  --neutral-border:#e1e7f0;
+  --modal-overlay:rgba(23,32,51,.35);
+  --input-bg:#fff;
+  --table-header-bg:#f1f5f9;
+  --auth-overlay:linear-gradient(105deg,rgba(6,12,24,.84) 0%,rgba(6,12,24,.75) 45%,rgba(6,12,24,.72) 75%,rgba(6,12,24,.80) 100%);
+  --auth-card:rgba(255,255,255,.95);
+  --auth-card-border:rgba(180,100,0,.30);
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
   --bg-tertiary: #f1f5f9;
@@ -143,7 +84,8 @@
 
   --text-main: #0f172a;
   --text-muted: #334155;
-  --text-dim: #64748b;
+  --text-dim: #475569;
+  --text-secondary: #334155;
 
   --accent-amber: #d97706;
   --accent-amber-light: #b45309;
@@ -166,6 +108,40 @@
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.18);
   --radiance-glow: 0 0 20px rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="light-bistro"] {
+  color-scheme: light;
+}
+
+[data-theme="light-bistro"] input,
+[data-theme="light-bistro"] textarea,
+[data-theme="light-bistro"] select {
+  color: var(--text-main);
+  background-color: var(--bg-secondary);
+}
+
+[data-theme="light-bistro"] select option,
+[data-theme="light-bistro"] option,
+[data-theme="light-bistro"] optgroup {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light-bistro"] input::placeholder,
+[data-theme="light-bistro"] textarea::placeholder {
+  color: var(--text-dim);
+}
+
+select {
+  background-color: var(--bg-secondary);
+  color: var(--text-main);
+}
+
+option,
+optgroup {
+  background-color: var(--bg-secondary);
+  color: var(--text-main);
 }
 
 * {
@@ -270,48 +246,210 @@ textarea {
   display: none;
 }
 
+@media screen {
+  #printable-report {
+    display: none !important;
+  }
+}
+
 /* Print Styles for Receipts and Reports */
+@page {
+  size: auto;
+  margin: 5mm;
+}
+
 @media print {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Reset all layout locks, fixed viewports and scroll containers */
+  #root,
+  #root > div,
+  main,
+  .admin-portal-root,
+  .admin-portal-inner,
+  .admin-portal-main-pane,
+  #admin-work-area,
+  .admin-work-area,
+  .no-scrollbar {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    float: none !important;
+  }
+
+  /* Completely remove non-printable screen UI */
+  .no-print,
+  .no-print *,
+  header,
+  aside,
+  nav,
+  .admin-sidebar,
+  .admin-header,
+  .mobile-header-nav {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  /* Default visibility hidden; printable containers force visibility */
   body * {
     visibility: hidden;
   }
+
   #printable-receipt,
   #printable-receipt *,
   #printable-report,
   #printable-report * {
-    visibility: visible;
+    visibility: visible !important;
   }
-  #printable-receipt {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    margin: 0;
-    padding: 10mm;
+
+  /* Reset fixed modal overlay for natural top-of-page printing */
+  .receipt-modal-overlay {
+    all: unset !important;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .receipt-modal-container {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+    max-width: none !important;
+  }
+
+  /* 80mm Thermal Receipt Print Styling */
+  #printable-receipt.format-thermal,
+  #printable-receipt:not(.format-a4) {
+    display: block !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    padding: 2mm 3mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
     border: none !important;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
+
+  /* A4 Full Page Invoice Print Styling */
+  #printable-receipt.format-a4 {
+    display: block !important;
+    position: relative !important;
+    margin: 4mm auto !important;
+    width: 100% !important;
+    max-width: 190mm !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Printable Audit Report Sheet */
   #printable-report {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 12mm 15mm;
+    position: relative !important;
+    margin: 4mm auto !important;
+    width: 100% !important;
+    max-width: 195mm !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
     border: none !important;
+    overflow: visible !important;
+    height: auto !important;
   }
-  .no-print {
-    display: none !important;
-  }
+
   .receipt-items-scroll {
     max-height: none !important;
     overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Universal text & table sharpness in print */
+  #printable-receipt *,
+  #printable-report * {
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #printable-report table,
+  #printable-receipt table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    page-break-inside: auto !important;
+  }
+
+  #printable-report tr,
+  #printable-receipt tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 
@@ -332,6 +470,28 @@ textarea {
 
 .pulse-indicator {
   animation: pulse-ring 2s infinite ease-in-out;
+}
+
+/* Reports overview metric alignment */
+.reports-metric-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reports-metric-grid > div {
+  min-height: 112px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1180px) {
+  .reports-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .reports-metric-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================================ */
@@ -536,7 +696,7 @@ textarea {
   font-size: 0.82rem;
 }
 .menu-filter-field select {
-  color-scheme: dark;
+  color-scheme:inherit;
 }
 .menu-filter-field input:focus-visible,
 .menu-filter-field select:focus-visible,
@@ -591,3 +751,12 @@ textarea {
 .login-account-tabs button span { overflow-wrap: anywhere; }
 .login-account-tabs button[aria-selected="true"] { background: rgba(245,158,11,0.14); border-color: var(--accent-amber); color: var(--accent-amber); }
 .login-account-tabs button:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
+
+.theme-toggle { width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--border-card); border-radius:50%; background:var(--bg-tertiary); color:var(--accent-amber); box-shadow:var(--shadow-sm); }
+.theme-toggle:hover { background:var(--bg-card-hover); }
+.theme-toggle:focus-visible { outline:2px solid var(--accent-amber); outline-offset:3px; }
+.theme-toggle-label { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+input, select, textarea { color-scheme:inherit; accent-color:var(--accent-amber); }
+input::placeholder, textarea::placeholder { color:var(--text-dim); }
+select option { color:var(--text-main); background:var(--input-bg); }
+@media(prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; animation:none!important; } }

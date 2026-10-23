@@ -16,7 +16,7 @@ export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmT
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
+      background: 'var(--modal-overlay)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
@@ -44,7 +44,7 @@ export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmT
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ArrowRightLeft size={18} color="var(--accent-amber)" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Transfer {sourceTable.name} Order
             </h3>
           </div>

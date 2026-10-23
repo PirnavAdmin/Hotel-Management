@@ -1,3 +1,4 @@
+import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
@@ -14,10 +15,6 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
-import {
-  ConfirmDeleteModal,
-  useConfirmDelete,
-} from "./common/ConfirmDeleteModal";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
@@ -26,8 +23,6 @@ import {
   apiCreateTable,
   apiUpdateTable,
   apiDeleteTable,
-  apiUpdateTableStatus,
-  apiVacateTable,
 } from "./api/tableApi";
 import {
   apiGetMenuItems,
@@ -43,8 +38,6 @@ import {
   apiGetKotOrders,
   apiCreateKotOrder,
   apiUpdateKotStatus,
-  apiUpdateKotItemStatus,
-  apiMarkAllPrepared,
 } from "./api/kotApi";
 import {
   apiGetStaff,
@@ -56,11 +49,18 @@ import {
   apiGetOrderHistory,
   apiCreateOrder,
   apiUpdateOrderDiscount,
+  apiSettleOrder,
 } from "./api/orderApi";
+import { apiAdjustStock } from "./api/inventoryApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
+import { useAppDialog } from "./common/DialogContext";
+import {
+  autoGenerateInventoryFromRecipe,
+  getStandardDishSuggestions,
+} from "./admin/AdminPortal";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -69,6 +69,7 @@ const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
+const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
 const readRestaurantSettings = () => {
@@ -101,86 +102,6 @@ const dedupeStaff = (staff) => {
   return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
-<<<<<<< HEAD
-const isAllowedTableFormat = (str) => {
-  if (!str) return false;
-  const trimmed = String(str).trim();
-  return /^(Table|table)[-\s]?\d+$/i.test(trimmed);
-};
-
-const standardizeTableName = (str, fallbackId) => {
-  const trimmed = String(str || "").trim();
-  const match = trimmed.match(/^(Table|table)[-\s]?(\d+)$/i);
-  if (match) {
-    return `Table-${match[2]}`;
-  }
-  const digitsOnly = trimmed.match(/^(\d+)$/);
-  if (digitsOnly) {
-    return `Table-${digitsOnly[1]}`;
-  }
-  return fallbackId ? `Table-${fallbackId}` : trimmed;
-};
-
-const mergeIncomingTables = (incomingTables, deletedTableIds) => {
-  // A server response is the authoritative table collection. Start with it so
-  // deleted defaults and extra defaults cannot be reintroduced on every load.
-  const tablesById = new Map();
-
-  incomingTables.forEach((table) => {
-    const id = Number(table.tableId ?? table.id);
-    if (!Number.isFinite(id)) return;
-
-    const rawIdentifier = String(table.tableNumber || table.tableName || table.name || "").trim();
-    // Exclude mock / non-Table-X format tables (like T-01, PAT-01, VIP-01, HYD-01, ROOF-01, BOM-01)
-    const isMock = /^(T-\d+|PAT|VIP|HYD|ROOF|BOM)/i.test(rawIdentifier);
-    if (isMock) {
-      return;
-    }
-
-    const existing = tablesById.get(id) || {};
-    let tableNum = standardizeTableName(rawIdentifier || existing.tableNumber || existing.name, id);
-    if (!isAllowedTableFormat(tableNum)) {
-      return;
-    }
-
-    const normalized = {
-      ...existing,
-      ...table,
-      id,
-      tableId: id,
-      name: tableNum,
-      tableName: tableNum,
-      tableNumber: tableNum,
-      branchId: Number(table.branchId || existing.branchId || 1),
-      section:
-        table.location || table.sectionArea || table.section || existing.section || "Main Hall",
-      location:
-        table.location || table.sectionArea || table.section || existing.location || "Main Hall",
-      capacity:
-        table.capacity ?? table.capacityChairs ?? existing.capacity ?? 4,
-      status:
-        String(table.status || existing.status || "vacant").toLowerCase() === "occupied"
-          ? "occupied"
-          : "vacant",
-      server:
-        table.assignedServerName || table.server || existing.server || "Staff",
-      guests: table.occupiedChairs ?? table.guests ?? existing.guests ?? 0,
-      items: Array.isArray(table.items)
-        ? table.items
-        : Array.isArray(existing.items)
-          ? existing.items
-          : [],
-      orderTime: table.orderTime ?? existing.orderTime ?? null,
-      discountPercent:
-        table.discountPercent ?? existing.discountPercent ?? 0,
-      serviceCharge: table.serviceCharge ?? existing.serviceCharge ?? 5,
-      occupiedSince:
-        table.occupiedSince || existing.occupiedSince || "10:00 AM",
-    };
-    tablesById.set(id, normalized);
-  });
-
-=======
 const isRogueName = (name) => {
   if (!name) return false;
   const lower = String(name).trim().toLowerCase();
@@ -207,7 +128,6 @@ const parseTableNumber = (table) => {
 };
 
 const mergeIncomingTables = (incomingTables, deletedTableIds) => {
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
     : [];
@@ -228,26 +148,24 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       const num = parseTableNumber(table);
 
       let targetId = null;
-      if (num && num >= 1 && num <= 15) {
+      if (num && num >= 1) {
         targetId = num;
       } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
         targetId = Number(table.id);
-      } else if (num) {
-        targetId = num;
       }
 
       if (!targetId || deletedIds.includes(String(targetId))) return;
 
-      const isStandard = targetId >= 1 && targetId <= 15;
-      if (!isStandard && isRogueName(rawName)) return;
+      if (isRogueName(rawName)) return;
+
+      // If this table previously had an arbitrary backend auto-increment ID (e.g. 55) in tablesById, remove it
+      if (table.id && Number(table.id) !== targetId && tablesById.has(Number(table.id))) {
+        tablesById.delete(Number(table.id));
+      }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = isStandard
-        ? isRogueName(rawName) || !rawName
-          ? `Table ${targetId}`
-          : rawName.match(/^(?:table|t)\s*(\d+)$/i)
-            ? `Table ${targetId}`
-            : rawName
+      const cleanName = rawName.match(/^(?:table|t)\s*(\d+)$/i)
+        ? `Table ${num || targetId}`
         : rawName || `Table ${targetId}`;
 
       const normalized = {
@@ -262,13 +180,16 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         capacity: Number(
           table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
         ),
-        status: String(table.status || existing.status || "vacant").toLowerCase(),
+        status:
+          (table.status && String(table.status).toLowerCase() !== "vacant")
+            ? String(table.status).toLowerCase()
+            : (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0) || (Array.isArray(table.items) && table.items.length > 0))
+              ? "occupied"
+              : "vacant",
         server:
           table.assignedServerName || table.server || existing.server || "Staff",
         guests:
-          String(table.status || existing.status || "vacant").toLowerCase() === "vacant"
-            ? 0
-            : Number(table.occupiedChairs ?? table.guests ?? existing.guests ?? 0),
+          Number(table.occupiedChairs ?? table.guests ?? (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ?? existing.guests ?? 0),
         items: Array.isArray(table.items)
           ? table.items
           : Array.isArray(existing.items)
@@ -308,7 +229,7 @@ const getDeletedTableIds = () => {
 };
 
 export function App() {
-  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
+  const { confirmDialog } = useAppDialog();
   const [restaurantSettings, setRestaurantSettings] = useState(readRestaurantSettings);
 
   useEffect(() => {
@@ -354,13 +275,10 @@ export function App() {
   }, []);
 
   // Theme state: 'royal-saffron' | 'emerald-spice' | 'light-bistro'
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem(STORAGE_KEY_THEME) || "royal-saffron";
-  });
+  const [theme, setTheme] = useState(getSavedTheme);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(STORAGE_KEY_THEME, theme);
+    applyTheme(theme);
   }, [theme]);
 
   // Track permanently deleted table IDs so cross-tabs or reloads never resurrect them
@@ -378,21 +296,16 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_TABLES);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const merged = mergeIncomingTables(parsed, delList)
+        if (Array.isArray(parsed)) {
+          return mergeIncomingTables(parsed, delList)
             .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
             .filter((t) => !isDeleted(t.id));
-          if (merged.length > 0) return merged;
         }
       }
     } catch {
       // Fallback
     }
-<<<<<<< HEAD
-    return INITIAL_TABLES;
-=======
     return [];
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   });
 
   // Load dynamic menu items (supports Admin additions/deletions)
@@ -413,6 +326,46 @@ export function App() {
     }
     return [];
   });
+
+  useEffect(() => {
+    if (!Array.isArray(menuItems) || menuItems.length === 0) return;
+
+    let cancelled = false;
+
+    const syncMenuIngredientsToInventory = async () => {
+      let menuChanged = false;
+      const syncedMenu = await Promise.all(
+        menuItems.map(async (item) => {
+          const hasRecipe = Array.isArray(item.recipe) && item.recipe.length > 0;
+          const recipe = hasRecipe
+            ? item.recipe
+            : getStandardDishSuggestions(
+                item.name || item.dishName || "",
+                item.category || "",
+              );
+          const mappedRecipe = await autoGenerateInventoryFromRecipe(recipe);
+          if (mappedRecipe.length === 0) return item;
+
+          if (JSON.stringify(mappedRecipe) !== JSON.stringify(item.recipe)) {
+            menuChanged = true;
+            return { ...item, recipe: mappedRecipe };
+          }
+          return item;
+        }),
+      );
+
+      if (cancelled || !menuChanged) return;
+      setMenuItems(syncedMenu);
+      try {
+        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(syncedMenu));
+      } catch {}
+    };
+
+    syncMenuIngredientsToInventory();
+    return () => {
+      cancelled = true;
+    };
+  }, [menuItems]);
 
   // Load staff personnel (supports Admin staff additions/deletions)
   const [staffList, setStaffList] = useState(() => {
@@ -459,23 +412,11 @@ export function App() {
     apiGetTables().then((response) => {
       const backendTables = Array.isArray(response)
         ? response
-<<<<<<< HEAD
-        : response?.success && Array.isArray(response.data?.data)
-          ? response.data.data
-          : response?.success && Array.isArray(response.data?.tables)
-            ? response.data.tables
-            : response?.success && Array.isArray(response.data)
-              ? response.data
-              : response?.success && Array.isArray(response.tables)
-                ? response.tables
-                : null;
-=======
         : response?.success && Array.isArray(response.data)
           ? response.data
           : response?.success && Array.isArray(response.tables)
             ? response.tables
           : null;
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
       if (Array.isArray(backendTables)) {
         const merged = mergeIncomingTables(
           backendTables,
@@ -521,22 +462,13 @@ export function App() {
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((backendStaff) => {
-      const staffList = Array.isArray(backendStaff)
-        ? backendStaff
-        : Array.isArray(backendStaff?.data)
-          ? backendStaff.data
-          : Array.isArray(backendStaff?.staff)
-            ? backendStaff.staff
-            : [];
-      if (staffList.length > 0) {
-        const uniqueStaff = dedupeStaff(
-          staffList.map((s) => ({
-            ...s,
-            id: s.staffId ?? s.id,
-            name: s.fullName || s.name,
-            role: s.roleTitle || s.role || "Waiter",
-          })),
-        );
+      if (Array.isArray(backendStaff)) {
+        const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
+          ...s,
+          id: s.staffId ?? s.id,
+          name: s.fullName || s.name,
+          role: s.roleTitle || s.role || "Waiter",
+        })));
         setStaffList(uniqueStaff);
         try {
           localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(uniqueStaff));
@@ -833,13 +765,17 @@ export function App() {
         }
 
         // Menu items are officially loaded from /api/v1/menu-items (which includes isChefsSpecial).
+        // Only fallback to /api/state if menuItems has not been loaded at all.
         const incomingMenu = data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
-        if (Array.isArray(incomingMenu)) {
-          const normalizedMenu = incomingMenu.map(normalizeMenuItem);
-          setMenuItems(normalizedMenu);
-          try {
-            localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
-          } catch {}
+        if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
+          setMenuItems((prev) => {
+            if (prev && prev.length > 0) return prev;
+            const normalizedMenu = incomingMenu.map(normalizeMenuItem);
+            try {
+              localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
+            } catch {}
+            return normalizedMenu;
+          });
         }
 
         const incomingStaff =
@@ -1077,7 +1013,7 @@ export function App() {
           }
         } catch {}
       } else if (e.key === STORAGE_KEY_THEME) {
-        setTheme(e.newValue);
+        setTheme(normalizeTheme(e.newValue));
       } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
           const alert = JSON.parse(e.newValue);
@@ -1269,8 +1205,6 @@ export function App() {
       }),
     );
 
-    apiUpdateTableStatus(tableId, "occupied").catch(() => {});
-
     showToast(
       `Added ${menuItem.name} to ${tables.find((t) => t.id === tableId)?.name}`,
     );
@@ -1331,9 +1265,22 @@ export function App() {
 
   // Update Guests Count
   const handleUpdateGuests = (tableId, count) => {
-    setTables((prevTables) =>
-      prevTables.map((t) => (t.id === tableId ? { ...t, guests: count } : t)),
-    );
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (t.id !== tableId) return t;
+        const newCount = Math.max(0, Number(count) || 0);
+        return {
+          ...t,
+          guests: newCount,
+          status: newCount > 0 && t.status === "vacant" ? "occupied" : t.status,
+        };
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+      } catch {}
+      return nextTables;
+    });
   };
 
   // Update Discount
@@ -1353,38 +1300,29 @@ export function App() {
   };
 
   // 1. Send KOT (Kitchen Order Ticket): Transitions items to 'received' status in Kitchen
-  const handleSendKOT = async (tableId, explicitItems = null) => {
+  const handleSendKOT = (tableId) => {
     sounds.playBell();
-    const tbl =
-      tables.find(
-        (t) =>
-          String(t.id) === String(tableId) ||
-          String(t.tableNumber) === String(tableId) ||
-          String(t.name) === String(tableId),
-      ) ||
-      (selectedTableId &&
-        tables.find((t) => String(t.id) === String(selectedTableId))) ||
-      {};
-
-    const rawItems =
-      explicitItems && Array.isArray(explicitItems) && explicitItems.length > 0
-        ? explicitItems
-        : tbl?.items || [];
-
-    if (!rawItems || rawItems.length === 0) {
-      showToast("⚠️ Cannot send KOT: Table order has no items.", "error");
-      return;
-    }
-
+    const tbl = tables.find((t) => t.id === tableId);
+    try {
+      const saved = localStorage.getItem("gourmet_kot_dismissed_tickets_v1");
+      if (saved) {
+        const list = JSON.parse(saved);
+        const updated = list.filter(
+          (id) =>
+            id !== String(tableId) &&
+            id !== Number(tableId) &&
+            id !== `active-${tableId}`,
+        );
+        localStorage.setItem(
+          "gourmet_kot_dismissed_tickets_v1",
+          JSON.stringify(updated),
+        );
+      }
+    } catch {}
     setTables((prevTables) =>
       prevTables.map((t) => {
-        if (
-          String(t.id) !== String(tableId) &&
-          String(t.tableNumber) !== String(tableId) &&
-          String(t.name) !== String(tableId)
-        )
-          return t;
-        const updatedItems = (t.items || []).map((i) => ({
+        if (t.id !== tableId) return t;
+        const updatedItems = t.items.map((i) => ({
           ...i,
           kotStatus:
             i.kotStatus === "ready" ||
@@ -1406,7 +1344,6 @@ export function App() {
 
         return {
           ...t,
-          status: "occupied",
           orderTime:
             t.orderTime ||
             new Date().toLocaleTimeString([], {
@@ -1420,79 +1357,13 @@ export function App() {
         };
       }),
     );
-
-    const resolvedTableId =
-      Number.isInteger(Number(tbl?.id)) && Number(tbl?.id) > 0
-        ? Number(tbl?.id)
-        : Number.isInteger(Number(tableId)) && Number(tableId) > 0
-          ? Number(tableId)
-          : null;
-
-    const resolvedTableName =
-      tbl?.name ||
-      tbl?.tableNumber ||
-      (typeof tableId === "string" ? tableId : `Table ${tableId}`);
-
-    const kotPayload = {
-      tableId: resolvedTableId,
-      tableName: resolvedTableName,
-      name: resolvedTableName,
-      sectionArea: tbl?.section || tbl?.location || "Main Hall",
-      section: tbl?.section || tbl?.location || "Main Hall",
-      serverName: tbl?.server || tbl?.assignedServer || "Staff",
-      server: tbl?.server || tbl?.assignedServer || "Staff",
-      items: rawItems.map((item) => ({
-        menuItemId:
-          Number.isInteger(Number(item.id)) && Number(item.id) > 0
-            ? Number(item.id)
-            : Number.isInteger(Number(item.backendId)) &&
-                Number(item.backendId) > 0
-              ? Number(item.backendId)
-              : null,
-        id:
-          Number.isInteger(Number(item.id)) && Number(item.id) > 0
-            ? Number(item.id)
-            : Number.isInteger(Number(item.backendId)) &&
-                Number(item.backendId) > 0
-              ? Number(item.backendId)
-              : null,
-        backendId:
-          Number.isInteger(Number(item.backendId)) &&
-          Number(item.backendId) > 0
-            ? Number(item.backendId)
-            : Number.isInteger(Number(item.id)) && Number(item.id) > 0
-              ? Number(item.id)
-              : null,
-        dishName: item.name || item.dishName || "Dish Item",
-        name: item.name || item.dishName || "Dish Item",
-        quantity: Math.max(1, Number(item.quantity || 1)),
-      })),
-    };
-
-    try {
-      const res = await apiCreateKotOrder(kotPayload);
-      if (res && res.success === false) {
-        console.error("Failed to create KOT order:", res.error);
-        showToast(
-          `❌ KOT Failed: ${res.error || "Could not save KOT to backend"}`,
-          "error",
-        );
-        return;
-      }
-      if (resolvedTableId) {
-        apiUpdateTableStatus(resolvedTableId, "occupied").catch(() => {});
-      }
-      setIsKOTOpen(true);
-      showToast(
-        `📥 KOT Sent: Order Received from ${resolvedTableName}!`,
-      );
-    } catch (err) {
-      console.error("Error creating KOT order:", err);
-      showToast(
-        `❌ KOT Error: ${err.message || "Failed to dispatch KOT order"}`,
-        "error",
-      );
-    }
+    apiCreateKotOrder({ tableId, items: tbl?.items, status: "received" }).catch(
+      () => {},
+    );
+    setIsKOTOpen(true);
+    showToast(
+      `📥 KOT Sent: Order Received from ${tbl?.name || `Table ${tableId}`}!`,
+    );
   };
 
   // 2. Kitchen KDS Action: Start cooking or update status
@@ -1606,14 +1477,6 @@ export function App() {
         `✅ ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
       );
     }
-
-    if (itemId) {
-      const kotItemStatus = status === "ready" ? "READY" : (status === "cooking" ? "IN PREP" : "PENDING");
-      apiUpdateKotItemStatus(tableId, itemId, kotItemStatus).catch(() => {});
-    } else {
-      const kotOrderStatus = status === "ready" ? "PREPARATION COMPLETED" : (status === "cooking" ? "IN PREPARATION" : "PENDING");
-      apiUpdateKotStatus(tableId, kotOrderStatus).catch(() => {});
-    }
   };
 
   // 3. Kitchen KDS Action: Mark preparation completed
@@ -1674,12 +1537,6 @@ export function App() {
       }),
     );
 
-    if (itemId) {
-      apiUpdateKotItemStatus(tableId, itemId, "READY").catch(() => {});
-    } else {
-      apiMarkAllPrepared(tableId).catch(() => {});
-    }
-
     const isSingleItem = Boolean(itemObj);
     triggerKitchenNotification({
       tableId,
@@ -1700,29 +1557,30 @@ export function App() {
   };
 
   // Clear / Void Table Order
-  const handleClearOrder = (tableId) => {
-    if (
-      window.confirm(
-        `Are you sure you want to clear the entire order for Table ${tableId}?`,
-      )
-    ) {
-      setTables((prevTables) =>
-        prevTables.map((t) => {
-          if (t.id !== tableId) return t;
-          return {
-            ...t,
-            items: [],
-            status: "vacant",
-            guests: 0,
-            orderTime: null,
-            discountPercent: 0,
-          };
-        }),
-      );
-      apiVacateTable(tableId).catch(() => {});
-      apiUpdateTableStatus(tableId, "available").catch(() => {});
-      showToast(`Table ${tableId} order cleared.`);
-    }
+  const handleClearOrder = async (tableId) => {
+    const confirmed = await confirmDialog(
+      `Are you sure you want to clear the entire order for Table ${tableId}?`,
+      {
+        title: "Clear table order?",
+        confirmText: "Yes, Clear Order",
+      },
+    );
+    if (!confirmed) return;
+
+    setTables((prevTables) =>
+      prevTables.map((t) => {
+        if (t.id !== tableId) return t;
+        return {
+          ...t,
+          items: [],
+          status: "vacant",
+          guests: 0,
+          orderTime: null,
+          discountPercent: 0,
+        };
+      }),
+    );
+    showToast(`Table ${tableId} order cleared.`);
   };
 
   // Transfer Table Order
@@ -1756,10 +1614,6 @@ export function App() {
         return t;
       }),
     );
-
-    apiUpdateTableStatus(targetId, "occupied").catch(() => {});
-    apiVacateTable(sourceId).catch(() => {});
-    apiUpdateTableStatus(sourceId, "available").catch(() => {});
 
     setIsTransferOpen(false);
     setSelectedTableId(targetId);
@@ -1823,91 +1677,128 @@ export function App() {
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
     };
 
-    // Deduct recipe ingredients once the bill is paid.
+    // Deduct recipe ingredients once the bill is paid. A ledger prevents
+    // repeated settlement/re-render events from deducting the same invoice twice.
     try {
-      const inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INVENTORY) || "[]");
+      const invoiceKey = String(
+        settlementData.invoiceNo || enrichedSettlement.id || enrichedSettlement.orderId || settlementData.id,
+      ).trim();
+      let deductionLedger = [];
+      try {
+        deductionLedger = JSON.parse(localStorage.getItem(STOCK_DEDUCTION_LEDGER_KEY) || "[]");
+      } catch {}
+      if (!Array.isArray(deductionLedger)) deductionLedger = [];
+      if (invoiceKey && deductionLedger.includes(invoiceKey)) {
+        throw new Error(`Inventory already deducted for ${invoiceKey}`);
+      }
+
+      const rawInv = localStorage.getItem(STORAGE_KEY_INVENTORY);
+      const inventory = rawInv ? JSON.parse(rawInv) : [];
       if (Array.isArray(inventory) && inventory.length) {
-        const usageByIngredient = new Map();
+        // Map to aggregate required deduction per inventory item id
+        const usageByIngredientId = new Map();
+
+        // Helper for unit conversion between recipe and inventory stock
+        const convertQuantity = (rawAmount, fromUnit, toUnit) => {
+          const from = String(fromUnit || "KG").toUpperCase();
+          const to = String(toUnit || "KG").toUpperCase();
+          if (from === to) return rawAmount;
+          // Weight
+          if (from === "G" && to === "KG") return rawAmount / 1000;
+          if (from === "KG" && to === "G") return rawAmount * 1000;
+          // Volume
+          if (from === "ML" && (to === "L" || to === "LITRES")) return rawAmount / 1000;
+          if ((from === "L" || from === "LITRES") && to === "ML") return rawAmount * 1000;
+          return rawAmount;
+        };
+
         (settlementData.items || []).forEach((orderedItem) => {
+          const cleanOrderedName = String(orderedItem?.name || orderedItem?.dishName || "").trim().toLowerCase();
           const dish = menuItems.find((item) =>
             String(item.id) === String(orderedItem.id) ||
-            item.name?.trim().toLowerCase() === orderedItem.name?.trim().toLowerCase(),
+            item.name?.trim().toLowerCase() === cleanOrderedName
           );
-          const dishCount = Number(orderedItem.quantity) || 1;
-          (dish?.recipe || []).forEach((ingredient) => {
-            const ingredientId = String(ingredient.inventoryId);
-            const amount = Number(ingredient.quantity) * dishCount;
-            if (ingredientId && Number.isFinite(amount) && amount > 0) {
-              usageByIngredient.set(ingredientId, (usageByIngredient.get(ingredientId) || 0) + amount);
-            }
-          });
+          const dishCount = Number(orderedItem.quantity ?? orderedItem.qty) || 1;
+
+          if (Array.isArray(dish?.recipe) && dish.recipe.length > 0) {
+            dish.recipe.forEach((ingredient) => {
+              // Find matching inventory item by ID first, then by canonical name
+              let matchedStock = null;
+              if (ingredient.inventoryId) {
+                matchedStock = inventory.find((inv) => String(inv.id) === String(ingredient.inventoryId));
+              }
+              if (!matchedStock && ingredient.name) {
+                const ingCleanName = String(ingredient.name).trim().toLowerCase();
+                matchedStock = inventory.find((inv) => String(inv.name || "").trim().toLowerCase() === ingCleanName);
+              }
+
+              if (matchedStock) {
+                const rawAmount = Number(ingredient.quantity) * dishCount;
+                if (Number.isFinite(rawAmount) && rawAmount > 0) {
+                  const convertedAmount = convertQuantity(rawAmount, ingredient.unit, matchedStock.unit);
+                  const existingTotal = usageByIngredientId.get(String(matchedStock.id)) || 0;
+                  usageByIngredientId.set(String(matchedStock.id), existingTotal + convertedAmount);
+                }
+              }
+            });
+          }
         });
 
-        if (usageByIngredient.size) {
-          const updatedInventory = inventory.map((ingredient) => {
-            const used = usageByIngredient.get(String(ingredient.id));
-            if (!used) return ingredient;
+        if (usageByIngredientId.size > 0) {
+          const lowStockAlerts = [];
+          const updatedInventory = inventory.map((stockItem) => {
+            const used = usageByIngredientId.get(String(stockItem.id));
+            if (!used) return stockItem;
+
+            const prevStock = Number(stockItem.stock ?? stockItem.currentStock ?? 0);
+            const prevUsed = Number(stockItem.totalUsed ?? 0);
+            const newStock = Math.max(0, Number((prevStock - used).toFixed(3)));
+            const newTotalUsed = Number((prevUsed + used).toFixed(3));
+
+            const threshold = Number(stockItem.minThreshold ?? stockItem.minimumThreshold ?? 5);
+            if (newStock <= threshold) {
+              lowStockAlerts.push(`${stockItem.name} (${newStock} ${stockItem.unit} remaining)`);
+            }
+
+            // Sync numeric backend inventory IDs only. Demo/local IDs remain local-safe.
+            const backendIngredientId = Number(stockItem.id);
+            if (Number.isFinite(backendIngredientId) && backendIngredientId > 0) {
+              try {
+                apiAdjustStock({
+                  ingredientId: backendIngredientId,
+                  quantityChange: -used,
+                  reason: `Live POS billing deduction (Invoice ${settlementData.invoiceNo || enrichedSettlement.id})`,
+                }).catch(() => {});
+              } catch {}
+            }
+
             return {
-              ...ingredient,
-              stock: Math.max(0, Number(ingredient.stock || 0) - used),
-              totalUsed: Number(ingredient.totalUsed || 0) + used,
+              ...stockItem,
+              stock: newStock,
+              currentStock: newStock,
+              totalUsed: newTotalUsed,
             };
           });
+
           localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(updatedInventory));
           pushGlobalSync({ [STORAGE_KEY_INVENTORY]: updatedInventory });
           window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: updatedInventory }));
+          if (invoiceKey) {
+            const nextLedger = [...new Set([...deductionLedger, invoiceKey])].slice(-1000);
+            localStorage.setItem(STOCK_DEDUCTION_LEDGER_KEY, JSON.stringify(nextLedger));
+          }
+
+          if (lowStockAlerts.length > 0) {
+            showToast(`⚠️ Low stock alert: ${lowStockAlerts.join(", ")}`);
+          }
         }
       }
-    } catch {}
+    } catch (invErr) {
+      console.warn("Live inventory deduction error:", invErr);
+    }
 
     const updatedPastOrders = dedupeOrders([enrichedSettlement, ...pastOrders]);
     setPastOrders(updatedPastOrders);
-<<<<<<< HEAD
-
-    const orderPayload = {
-      tableId: Number.isInteger(Number(settlementData.tableId)) ? Number(settlementData.tableId) : null,
-      tableName: tableObj?.name || tableObj?.tableNumber || `Table ${settlementData.tableId}`,
-      tableNumber: tableObj?.tableNumber || tableObj?.name || `Table ${settlementData.tableId}`,
-      serverName: tableObj?.server || "Staff",
-      guests: Number(enrichedSettlement.guests) || 1,
-      paymentMethod: settlementData.paymentMethod || "Cash",
-      discountPercent: Number(settlementData.discountPercent) || 0,
-      serviceChargeEnabled: true,
-      tipAmount: Number(settlementData.tipAmount) || 0,
-      status: "Settled",
-      items: billableItems.map((item) => ({
-        id: Number.isInteger(Number(item.id)) ? Number(item.id) : null,
-        backendId: Number.isInteger(Number(item.backendId)) ? Number(item.backendId) : null,
-        menuItemId: Number.isInteger(Number(item.id || item.backendId)) ? Number(item.id || item.backendId) : null,
-        dishName: item.name,
-        name: item.name,
-        price: Number(item.price) || 0,
-        quantity: Math.max(1, Number(item.quantity) || 1),
-      })),
-    };
-
-    apiCreateOrder(orderPayload)
-      .then((res) => {
-        if (res && res.success !== false) {
-          apiGetOrderHistory()
-            .then((hRes) => {
-              const resData = hRes?.data ?? hRes;
-              const freshHistory = Array.isArray(resData)
-                ? resData
-                : Array.isArray(resData?.data)
-                  ? resData.data
-                  : [];
-              if (freshHistory.length > 0) {
-                setPastOrders(dedupeOrders(freshHistory));
-              }
-            })
-            .catch(() => {});
-        }
-      })
-      .catch(() => {});
-
-=======
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
     try {
       localStorage.setItem(
         STORAGE_KEY_ORDERS,
@@ -1915,7 +1806,42 @@ export function App() {
       );
       pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
-    apiCreateOrder(enrichedSettlement).catch(() => {});
+    void (async () => {
+      try {
+        const createResult = await apiCreateOrder({
+          tableId: settlementData.tableId,
+          tableName: settlementData.tableName,
+          tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+          serverName: settlementData.server || "Server",
+          guests: enrichedSettlement.guests,
+          discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+          serviceChargeEnabled: false,
+          tipAmount: 0,
+          status: "Active",
+          items: enrichedSettlement.items.map((item) => ({
+            menuItemId: Number(item.id ?? item.menuItemId ?? item.backendId) || undefined,
+            id: Number(item.id ?? item.menuItemId ?? item.backendId) || undefined,
+            name: item.name || item.dishName,
+            dishName: item.name || item.dishName,
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })),
+        });
+        const orderData = createResult?.data?.data || createResult?.data;
+        const backendOrderId = Number(orderData?.id ?? orderData?.Id);
+        if (createResult?.success && backendOrderId > 0) {
+          await apiSettleOrder(backendOrderId, {
+            discountPercent: settlementData.discountPercent,
+            serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
+            tipAmount: settlementData.tipAmount,
+            paymentMethod: enrichedSettlement.paymentMethod,
+          });
+        }
+      } catch (error) {
+        console.warn("Backend order settlement failed; local settlement retained:", error);
+      }
+    })();
 
     const updatedTables = tables.map((t) => {
       if (t.id !== settlementData.tableId) return t;
@@ -1929,8 +1855,6 @@ export function App() {
       };
     });
     setTables(updatedTables);
-    apiVacateTable(settlementData.tableId).catch(() => {});
-    apiUpdateTableStatus(settlementData.tableId, "available").catch(() => {});
     try {
       const isDeleted = (id) =>
         (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
@@ -2088,14 +2012,8 @@ export function App() {
 
   const handleDeleteMenuItem = async (itemId) => {
     try {
-      const res = await apiDeleteMenuItem(itemId);
-      if (res && res.success === false) {
-        showToast(`Failed to delete menu item: ${res.error || res.message || 'API error'}`);
-        return false;
-      }
-    } catch (err) {
-      console.warn("Delete menu item API error:", err);
-    }
+      await apiDeleteMenuItem(itemId);
+    } catch {}
     const item = menuItems.find((i) => String(i.id) === String(itemId));
     const nextMenu = menuItems.filter((i) => String(i.id) !== String(itemId));
     setMenuItems(nextMenu);
@@ -2130,93 +2048,46 @@ export function App() {
     return true;
   };
   // 2. Tables & Chairs Admin
-  const handleAddTable = async (newTable) => {
-    const tableNum = String(newTable.tableNumber || newTable.name || newTable.tableName || "").trim();
-    if (!tableNum) {
-      showToast("❌ Table Number is required.");
-      return false;
-    }
-    if (tableNum.length > 10) {
-      showToast("❌ Table Number must not exceed 10 characters.");
-      return false;
-    }
-
-    const branch = Number(newTable.branchId) || 1;
-    const capacity = Number(newTable.capacity || newTable.capacityChairs) || 4;
-    const section = String(newTable.section || newTable.sectionArea || newTable.location || "Main Hall").trim();
-    const assignedServerId = newTable.assignedServerId ? Number(newTable.assignedServerId) : null;
-    const serverName = newTable.server || newTable.assignedServerName || "";
-
+  const handleAddTable = (newTable) => {
+    const normalizedTable = {
+      ...newTable,
+      id: Number(newTable.id),
+      name: String(newTable.name || "").trim(),
+    };
+    const nextDeleted = deletedTableIds.filter(
+      (id) => String(id) !== String(normalizedTable.id),
+    );
+    setDeletedTableIds(nextDeleted);
     try {
-      const response = await apiCreateTable({
-        tableNumber: tableNum,
-        name: tableNum,
-        tableName: tableNum,
-        branchId: branch,
-        section: section,
-        sectionArea: section,
-        location: section,
-        capacity: capacity,
-        capacityChairs: capacity,
-        status: "available",
-        assignedServerId: assignedServerId,
-        server: serverName
-      });
-
-      if (!response?.success) {
-        const errorMsg = response?.error || response?.data?.message || "Failed to create table on server.";
-        showToast(`❌ ${errorMsg}`);
-        return false;
-      }
-
-      const serverTable = response?.data?.data || response?.data || response;
-      const assignedId = Number(serverTable?.tableId || serverTable?.id || newTable.id);
-
-      const normalizedTable = {
-        ...newTable,
-        id: assignedId,
-        tableId: assignedId,
-        name: serverTable?.tableNumber || serverTable?.tableName || tableNum,
-        tableName: serverTable?.tableName || serverTable?.tableNumber || tableNum,
-        tableNumber: serverTable?.tableNumber || tableNum,
-        branchId: Number(serverTable?.branchId || branch),
-        section: serverTable?.sectionArea || serverTable?.location || section,
-        location: serverTable?.location || serverTable?.sectionArea || section,
-        capacity: Number(serverTable?.capacity || serverTable?.capacityChairs || capacity),
-        status: String(serverTable?.status || "available").toLowerCase(),
-        server: serverTable?.assignedServerName || serverTable?.server || serverName || "Staff",
-        assignedServerId: serverTable?.assignedServerId || assignedServerId
-      };
-
-      const nextDeleted = deletedTableIds.filter(
-        (id) => String(id) !== String(assignedId),
+      localStorage.setItem(
+        STORAGE_KEY_DELETED_TABLES,
+        JSON.stringify(nextDeleted),
       );
-      setDeletedTableIds(nextDeleted);
+    } catch {}
+
+    setTables((prev) => {
+      if (prev.some((table) => Number(table.id) === normalizedTable.id)) {
+        showToast(`Table ID ${normalizedTable.id} already exists. Please choose another table number.`);
+        return prev;
+      }
+      const updated = [...prev, normalizedTable];
       try {
-        localStorage.setItem(
-          STORAGE_KEY_DELETED_TABLES,
-          JSON.stringify(nextDeleted),
-        );
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
       } catch {}
-<<<<<<< HEAD
+      return updated;
+    });
+    apiCreateTable(normalizedTable).catch(() => {});
+    showToast(`✅ Created ${normalizedTable.name} with ${normalizedTable.capacity} chairs!`);
+  };
 
-      setTables((prev) => {
-        const filtered = prev.filter((t) => Number(t.id) !== assignedId);
-        const updated = [...filtered, normalizedTable];
-        try {
-          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-
-      showToast(`✅ Created Table ${normalizedTable.tableNumber} with ${normalizedTable.capacity} chairs!`);
-      return true;
-    } catch (err) {
-      console.error("Failed to create table via API:", err);
-      showToast(`❌ Failed to connect to server: ${err.message || "Network Error"}`);
-      return false;
-    }
-=======
+  const handleUpdateTable = (updatedTable) => {
+    setTables((prev) => {
+      const updated = prev.map((t) =>
+        String(t.id) === String(updatedTable.id) ? updatedTable : t,
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+      } catch {}
       return updated;
     });
     const targetApiId = updatedTable.backendTableId || updatedTable.id;
@@ -2224,82 +2095,10 @@ export function App() {
     showToast(
       `✅ Updated ${updatedTable.name} (${updatedTable.capacity} chairs)`,
     );
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
-  const handleUpdateTable = async (updatedTable) => {
-    const tableNum = String(updatedTable.tableNumber || updatedTable.name || updatedTable.tableName || "").trim();
-    if (!tableNum) {
-      showToast("❌ Table Number is required.");
-      return false;
-    }
-    if (tableNum.length > 10) {
-      showToast("❌ Table Number must not exceed 10 characters.");
-      return false;
-    }
-    const branch = Number(updatedTable.branchId) || 1;
-    const capacity = Number(updatedTable.capacity || updatedTable.capacityChairs) || 4;
-    const section = String(updatedTable.section || updatedTable.sectionArea || updatedTable.location || "Main Hall").trim();
-    const assignedServerId = updatedTable.assignedServerId ? Number(updatedTable.assignedServerId) : null;
-    const serverName = updatedTable.server || updatedTable.assignedServerName || "";
-
-    try {
-      const response = await apiUpdateTable(updatedTable.id, {
-        tableNumber: tableNum,
-        name: tableNum,
-        tableName: tableNum,
-        branchId: branch,
-        section: section,
-        sectionArea: section,
-        location: section,
-        capacity: capacity,
-        capacityChairs: capacity,
-        status: updatedTable.status || "available",
-        assignedServerId: assignedServerId,
-        server: serverName
-      });
-
-      if (!response?.success) {
-        const errorMsg = response?.error || response?.data?.message || "Failed to update table on server.";
-        showToast(`❌ ${errorMsg}`);
-        return false;
-      }
-
-      setTables((prev) => {
-        const updated = prev.map((t) =>
-          String(t.id) === String(updatedTable.id)
-            ? { ...updatedTable, name: tableNum, tableNumber: tableNum, tableName: tableNum, branchId: branch, location: section, section: section, capacity: capacity, server: serverName, assignedServerId: assignedServerId }
-            : t,
-        );
-        try {
-          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-
-      showToast(`✅ Updated ${tableNum} (${capacity} chairs)`);
-      return true;
-    } catch (err) {
-      console.warn("Update table API error:", err);
-      showToast(`❌ Failed to connect to server: ${err.message || "Network Error"}`);
-      return false;
-    }
-  };
-
-  const handleDeleteTable = async (tableId) => {
+  const handleDeleteTable = (tableId) => {
     const tbl = tables.find((t) => String(t.id) === String(tableId));
-    try {
-      const response = await apiDeleteTable(tableId);
-      if (!response?.success) {
-        const errorMsg = response?.error || response?.data?.message || "Failed to delete table on server.";
-        showToast(`❌ ${errorMsg}`);
-        return false;
-      }
-    } catch (err) {
-      console.warn("Delete table API error:", err);
-      showToast(`❌ Failed to connect to server: ${err.message || "Network Error"}`);
-      return false;
-    }
 
     // 1. Permanently register this table ID as deleted
     const nextDeleted = [
@@ -2329,41 +2128,23 @@ export function App() {
       setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
     }
 
-<<<<<<< HEAD
-    showToast(`🗑️  Permanently Deleted ${tbl?.name || "Table"}`);
-    return true;
-=======
     const targetApiId = tbl?.backendTableId || tableId;
     apiDeleteTable(targetApiId).catch(() => {});
     showToast(`🗑️  Permanently Deleted ${tbl?.name || "Table"}`);
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
   };
 
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
     const result = await apiCreateStaff(newPerson);
-    const createdStaff = result?.data?.data ?? result?.data;
-    const staffId = createdStaff?.staffId ?? createdStaff?.id;
-    if (!result?.success || !staffId) {
+    if (!result?.success) {
       showToast(
-        `⚠️  Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
 
-    const savedStaff = {
-      ...createdStaff,
-      id: staffId,
-      name: createdStaff.fullName || createdStaff.name || newPerson.name,
-      role: createdStaff.roleTitle || createdStaff.role || newPerson.role,
-      employeeId:
-        newPerson.employeeId ||
-        `EMP-${String(staffId).padStart(3, "0")}`,
-    };
-    setStaffList((prev) => [...prev, savedStaff]);
-    showToast(
-      `✅ ${savedStaff.name} saved with Employee ID ${savedStaff.employeeId || `EMP-${String(staffId).padStart(5, "0")}`}`,
-    );
+    setStaffList((prev) => [...prev, newPerson]);
+    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
     return true;
   };
 
@@ -2408,61 +2189,46 @@ export function App() {
     return true;
   };
 
-  const handleDeleteStaff = async (personId) => {
+  const handleDeleteStaff = (personId) => {
     const person = staffList.find((p) => (p.id ?? p.staffId) === personId);
-<<<<<<< HEAD
-    try {
-      await apiDeleteStaff(personId);
-    } catch (err) {
-      console.warn("Delete staff API error:", err);
-    }
-    const nextStaff = staffList.filter((p) => (p.id ?? p.staffId) !== personId);
-    setStaffList(nextStaff);
-    try {
-      localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
-    } catch {}
-=======
     setStaffList((prev) =>
       prev.filter((p) => (p.id ?? p.staffId) !== personId),
     );
     apiDeleteStaff(personId).catch(() => {});
->>>>>>> 4f6f6355e5450a66e56126e52fac8b40f2572b2d
-    showToast(`🗑️  Removed "${person?.name || person?.fullName || "Staff"}"`);
+    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
-  const handleResetData = () => {
-    requestDelete({
-      title: "Reset All Restaurant Data?",
-      message:
-        "Clear all dynamic tables, menu items, staff, invoices and inventory? This cannot be undone.",
-      confirmLabel: "Yes, Reset All",
-      onConfirm: () => {
-        setDeletedTableIds([]);
-        setTables(INITIAL_TABLES);
-        setMenuItems([]);
-        setStaffList([]);
-        setPastOrders([]);
-        setInventory([]);
-        localStorage.setItem(
-          STORAGE_KEY_TABLES,
-          JSON.stringify(INITIAL_TABLES),
-        );
-        localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
-        localStorage.setItem(STORAGE_KEY_MENU, "[]");
-        localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-        localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
-        localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
-        pushGlobalSync({
-          [STORAGE_KEY_TABLES]: INITIAL_TABLES,
-          [STORAGE_KEY_MENU]: [],
-          [STORAGE_KEY_STAFF]: [],
-          [STORAGE_KEY_ORDERS]: [],
-          [STORAGE_KEY_INVENTORY]: [],
-        });
-        showToast("Data reset to default 15 tables.");
+  const handleResetData = async () => {
+    const confirmed = await confirmDialog(
+      "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
+      {
+        title: "Reset all data?",
+        confirmText: "Yes, Reset Data",
       },
+    );
+    if (!confirmed) return;
+
+    setDeletedTableIds([]);
+    setTables(INITIAL_TABLES);
+    setMenuItems([]);
+    setStaffList([]);
+    setPastOrders([]);
+    setInventory([]);
+    localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
+    localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
+    localStorage.setItem(STORAGE_KEY_MENU, "[]");
+    localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+    localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
+    localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
+    pushGlobalSync({
+      [STORAGE_KEY_TABLES]: INITIAL_TABLES,
+      [STORAGE_KEY_MENU]: [],
+      [STORAGE_KEY_STAFF]: [],
+      [STORAGE_KEY_ORDERS]: [],
+      [STORAGE_KEY_INVENTORY]: [],
     });
+    showToast("Data reset to default 15 tables.");
   };
 
   return (
@@ -2480,7 +2246,6 @@ export function App() {
         (posSession.role === "pos" || posSession.role === "admin") && (
           <Header
             restaurantName={restaurantSettings.restaurantName}
-            restaurantLogo={restaurantSettings.logo}
             tables={tables}
             activeView={activeView}
             setActiveView={setActiveView}
@@ -2513,8 +2278,6 @@ export function App() {
               <KitchenKOTView
                 tables={tables}
                 pastOrders={pastOrders}
-                restaurantName={restaurantSettings.restaurantName}
-                restaurantLogo={restaurantSettings.logo}
                 currentTheme={theme}
                 onChangeTheme={setTheme}
                 onBackToFloor={() => {
@@ -2533,7 +2296,7 @@ export function App() {
               />
             </ErrorBoundary>
           ) : (
-            <LoginPage role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
           ))}
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
@@ -2567,7 +2330,7 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
@@ -2576,7 +2339,11 @@ export function App() {
           (posSession.role === "pos" || posSession.role === "admin") ? (
             <>
               {activeView === "tables" && (
-                <TableView tables={tables} onSelectTable={handleSelectTable} />
+                <TableView
+                  tables={tables}
+                  onSelectTable={handleSelectTable}
+                  onUpdateTable={handleUpdateTable}
+                />
               )}
               {activeView === "order" && (
                 <TableDetailView
@@ -2618,7 +2385,7 @@ export function App() {
               )}
             </>
           ) : (
-            <LoginPage role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} />
+            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
           ))}
       </main>
 
@@ -2707,9 +2474,9 @@ export function App() {
             <button
               onClick={() => setActiveKitchenAlert(null)}
               style={{
-                background: "rgba(255,255,255,0.08)",
+                background: "var(--surface-tint)",
                 border: "none",
-                color: "#94a3b8",
+                color: "var(--text-dim)",
                 width: "26px",
                 height: "26px",
                 borderRadius: "50%",
@@ -2746,7 +2513,7 @@ export function App() {
             }}
           >
             <span
-              style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 700 }}
+              style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700 }}
             >
               ⏰ {activeKitchenAlert.timestamp}
             </span>
@@ -2869,7 +2636,12 @@ export function App() {
 
       {/* Kitchen Order Ticket (KOT) Thermal Pop-up Modal */}
       {isKOTOpen && (
-        <KOTModal table={currentTable} onClose={() => setIsKOTOpen(false)} />
+        <KOTModal
+          table={currentTable}
+          restaurantName={restaurantSettings?.restaurantName || "Restaurant"}
+          restaurantLogo={restaurantSettings?.logo || ""}
+          onClose={() => setIsKOTOpen(false)}
+        />
       )}
 
       {/* Past Orders & Invoices Modal */}
@@ -2925,9 +2697,6 @@ export function App() {
           }}
         />
       )}
-
-      {/* Global Custom Delete Confirmation Modal */}
-      <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
     </div>
   );
 }

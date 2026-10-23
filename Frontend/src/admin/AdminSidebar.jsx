@@ -137,6 +137,7 @@ export function AdminSidebar({
 
   return (
     <aside
+      className="admin-sidebar no-print"
       style={{
         width: "250px",
         minWidth: "250px",
@@ -210,7 +211,7 @@ export function AdminSidebar({
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#64748b",
+              color: "var(--text-dim)",
               fontWeight: 500,
               marginTop: "2px",
               whiteSpace: "nowrap",
@@ -245,7 +246,7 @@ export function AdminSidebar({
               style={{
                 fontSize: "0.68rem",
                 fontWeight: 800,
-                color: "#64748b",
+                color: "var(--text-dim)",
                 letterSpacing: "1px",
                 padding: "0 0.65rem 0.55rem 0.65rem",
                 textTransform: "uppercase",
@@ -260,7 +261,7 @@ export function AdminSidebar({
                   style={{
                     fontSize: "0.68rem",
                     fontWeight: 700,
-                    color: "#64748b",
+                    color: "var(--text-dim)",
                     letterSpacing: "1px",
                     padding: "0 0.65rem 0.45rem 0.65rem",
                     textTransform: "uppercase",
@@ -349,7 +350,7 @@ export function AdminSidebar({
               style={{
                 fontSize: "0.68rem",
                 fontWeight: 700,
-                color: "#64748b",
+                color: "var(--text-dim)",
                 letterSpacing: "1px",
                 padding: "0 0.65rem 0.45rem 0.65rem",
                 textTransform: "uppercase",

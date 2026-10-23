@@ -263,7 +263,7 @@
 //             <button
 //               onClick={() => onUpdateGuests(table.id, Math.max(1, table.guests - 1))}
 //               style={{
-//                 background: 'rgba(255,255,255,0.08)',
+//                 background: 'var(--surface-tint)',
 //                 color: 'var(--text-main)',
 //                 width: '20px',
 //                 height: '20px',
@@ -279,7 +279,7 @@
 //             <button
 //               onClick={() => onUpdateGuests(table.id, table.guests + 1)}
 //               style={{
-//                 background: 'rgba(255,255,255,0.08)',
+//                 background: 'var(--surface-tint)',
 //                 color: 'var(--text-main)',
 //                 width: '20px',
 //                 height: '20px',
@@ -931,7 +931,7 @@
 //                         top: '4px',
 //                         left: '4px',
 //                         zIndex: 2,
-//                         background: 'rgba(0, 0, 0, 0.82)',
+//                         background: 'var(--modal-overlay)',
 //                         backdropFilter: 'blur(3px)',
 //                         padding: '1px 4px',
 //                         borderRadius: '3px',
@@ -982,7 +982,7 @@
 //                         bottom: '4px',
 //                         right: '4px',
 //                         zIndex: 2,
-//                         background: 'rgba(0, 0, 0, 0.78)',
+//                         background: 'var(--modal-overlay)',
 //                         color: '#ffffff',
 //                         padding: '1px 4px',
 //                         borderRadius: '3px',
@@ -1093,7 +1093,7 @@
 //                                 onUpdateItemQuantity(table.id, item.id, currentQty - 1);
 //                               }}
 //                               style={{
-//                                 background: 'rgba(255,255,255,0.08)',
+//                                 background: 'var(--surface-tint)',
 //                                 color: 'var(--text-main)',
 //                                 width: '20px',
 //                                 height: '20px',
@@ -1236,7 +1236,7 @@
 //                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
 //                       <span style={{ fontSize: '1.2rem' }}>🔔</span>
 //                       <div>
-//                         <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#34d399', letterSpacing: '0.02em' }}>
+//                         <div style={{ fontSize: '0.78rem', fontWeight: 900, color: 'var(--success)', letterSpacing: '0.02em' }}>
 //                           FOOD IS READY TO SERVE!
 //                         </div>
 //                         <div style={{ fontSize: '0.68rem', color: '#a7f3d0', fontWeight: 600 }}>
@@ -1288,10 +1288,10 @@
 //                   }}>
 //                     <span style={{ fontSize: '1.1rem' }}>🔔</span>
 //                     <div>
-//                       <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#34d399' }}>
+//                       <div style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--success)' }}>
 //                         Some Dishes Prepared ({readyCount}/{table.items.length})
 //                       </div>
-//                       <div style={{ fontSize: '0.66rem', color: '#6ee7b7' }}>
+//                       <div style={{ fontSize: '0.66rem', color: 'var(--success)' }}>
 //                         Partial items are ready to serve to guests
 //                       </div>
 //                     </div>
@@ -1387,7 +1387,7 @@
 //                     justifyContent: 'space-between',
 //                     marginTop: '0.2rem',
 //                     paddingTop: '0.4rem',
-//                     borderTop: '1px solid rgba(255,255,255,0.05)'
+//                     borderTop: '1px solid var(--neutral-border)'
 //                   }}>
 //                     {/* Stepper */}
 //                     <div style={{
@@ -1923,7 +1923,7 @@ export function TableDetailView({
           height: 70px;
           min-height: 70px;
           overflow: hidden;
-          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+          background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
         }
 
         .pos-menu-card-image img {
@@ -2265,11 +2265,12 @@ export function TableDetailView({
             <Users size={13} color="var(--text-muted)" />
             <span style={{ color: "var(--text-muted)" }}>Guests:</span>
             <button
-              onClick={() =>
-                onUpdateGuests(table.id, Math.max(1, table.guests - 1))
-              }
+              onClick={() => {
+                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
+                onUpdateGuests(table.id, Math.max(1, currentG - 1));
+              }}
               style={{
-                background: "rgba(255,255,255,0.08)",
+                background: "var(--surface-tint)",
                 color: "var(--text-main)",
                 width: "20px",
                 height: "20px",
@@ -2284,12 +2285,15 @@ export function TableDetailView({
             <span
               style={{ fontWeight: 700, minWidth: "16px", textAlign: "center" }}
             >
-              {table.guests}
+              {Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0)}
             </span>
             <button
-              onClick={() => onUpdateGuests(table.id, table.guests + 1)}
+              onClick={() => {
+                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
+                onUpdateGuests(table.id, currentG + 1);
+              }}
               style={{
-                background: "rgba(255,255,255,0.08)",
+                background: "var(--surface-tint)",
                 color: "var(--text-main)",
                 width: "20px",
                 height: "20px",
@@ -3054,7 +3058,7 @@ export function TableDetailView({
                           style={{
                             position: "absolute",
                             inset: 0,
-                            background: "rgba(15, 23, 42, 0.65)",
+                            background: "var(--bg-glass)",
                             backdropFilter: "blur(1.5px)",
                             display: "flex",
                             alignItems: "center",
@@ -3204,7 +3208,7 @@ export function TableDetailView({
                                 );
                               }}
                               style={{
-                                background: "rgba(255,255,255,0.08)",
+                                background: "var(--surface-tint)",
                                 color: "var(--text-main)",
                                 border: "none",
                               }}
@@ -3370,8 +3374,7 @@ export function TableDetailView({
                     return (
                       <div
                         style={{
-                          background:
-                            "linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.12))",
+                          background: "linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.12))",
                           border: "1.5px solid #10b981",
                           borderRadius: "8px",
                           padding: "0.65rem 0.85rem",
@@ -3395,7 +3398,7 @@ export function TableDetailView({
                               style={{
                                 fontSize: "0.78rem",
                                 fontWeight: 900,
-                                color: "#34d399",
+                                color: "var(--success)",
                                 letterSpacing: "0.02em",
                               }}
                             >
@@ -3481,14 +3484,14 @@ export function TableDetailView({
                             style={{
                               fontSize: "0.76rem",
                               fontWeight: 800,
-                              color: "#34d399",
+                              color: "var(--success)",
                             }}
                           >
                             Some Dishes Prepared ({readyCount}/
                             {safeItems.length})
                           </div>
                           <div
-                            style={{ fontSize: "0.66rem", color: "#6ee7b7" }}
+                            style={{ fontSize: "0.66rem", color: "var(--success)" }}
                           >
                             Partial items are ready to serve to guests
                           </div>
@@ -3635,7 +3638,7 @@ export function TableDetailView({
                         justifyContent: "space-between",
                         marginTop: "0.2rem",
                         paddingTop: "0.4rem",
-                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                        borderTop: "1px solid var(--neutral-border)",
                       }}
                     >
                       {/* Stepper */}
@@ -3823,7 +3826,7 @@ export function TableDetailView({
                             setTempNote("");
                           }}
                           style={{
-                            background: "rgba(255, 255, 255, 0.08)",
+                            background: "var(--surface-tint)",
                             color: "var(--text-dim)",
                             border: "1px solid rgba(255, 255, 255, 0.1)",
                             padding: "0 0.4rem",
@@ -4030,7 +4033,7 @@ export function TableDetailView({
                   }}
                 >
                   <button
-                    onClick={() => onSendKOT(table.id)}
+                    onClick={() => onSendKOT(table.id, safeItems)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4151,7 +4154,7 @@ export function TableDetailView({
           </div>
           <div
             style={{
-              background: "#ffffff",
+              background: "var(--bg-card)",
               color: "#000000",
               padding: "0.4rem 0.8rem",
               borderRadius: "8px",
@@ -4174,7 +4177,7 @@ export function TableDetailView({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: "var(--modal-overlay)",
             backdropFilter: "blur(4px)",
             zIndex: 1000,
             display: "flex",
@@ -4306,7 +4309,7 @@ export function TableDetailView({
                         width: "26px",
                         height: "26px",
                         borderRadius: "6px",
-                        background: "rgba(255, 255, 255, 0.08)",
+                        background: "var(--surface-tint)",
                         color: "var(--text-main)",
                         display: "flex",
                         alignItems: "center",
@@ -4411,7 +4414,7 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onSendKOT(table.id);
+                    onSendKOT(table.id, safeItems);
                   }}
                   style={{
                     padding: "0.55rem",
@@ -4463,8 +4466,7 @@ export function TableDetailView({
                   width: "100%",
                   padding: "0.7rem",
                   borderRadius: "8px",
-                  background:
-                    "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                   color: "#ffffff",
                   fontWeight: 800,
                   fontSize: "0.88rem",

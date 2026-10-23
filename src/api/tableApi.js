@@ -5,25 +5,61 @@ export async function apiGetTables() {
 }
 
 export async function apiCreateTable(tableData) {
+  const tableNum = String(tableData.tableNumber || tableData.name || tableData.tableName || "").trim();
+  const branch = Number(tableData.branchId) || 1;
+  const section = String(tableData.section || tableData.sectionArea || tableData.location || "Main Hall").trim();
+  const cap = parseInt(tableData.capacity || tableData.capacityChairs || 4, 10);
+  const status = tableData.status ? String(tableData.status).toLowerCase() : "vacant";
+  const serverId = tableData.assignedServerId ? Number(tableData.assignedServerId) : null;
+  const serverName = tableData.server || tableData.assignedServerName || null;
+
   return await apiClient('/api/v1/tables', {
     method: 'POST',
     body: JSON.stringify({
-      tableName: tableData.name,
-      sectionArea: tableData.section || 'Main Hall',
-      capacityChairs: parseInt(tableData.capacity || 4, 10),
-      status: 'VACANT'
+      tableNumber: tableNum,
+      tableName: tableNum,
+      name: tableNum,
+      branchId: branch,
+      sectionArea: section,
+      section: section,
+      location: section,
+      capacityChairs: cap,
+      capacity: cap,
+      status: status,
+      assignedServerId: serverId,
+      server: serverName,
+      assignedServerName: serverName,
+      qrCodeUrl: tableData.qrCodeUrl || null
     })
   });
 }
 
 export async function apiUpdateTable(id, tableData) {
+  const tableNum = String(tableData.tableNumber || tableData.name || tableData.tableName || "").trim();
+  const branch = Number(tableData.branchId) || 1;
+  const section = String(tableData.section || tableData.sectionArea || tableData.location || "Main Hall").trim();
+  const cap = parseInt(tableData.capacity || tableData.capacityChairs || 4, 10);
+  const status = tableData.status ? String(tableData.status).toLowerCase() : "vacant";
+  const serverId = tableData.assignedServerId ? Number(tableData.assignedServerId) : null;
+  const serverName = tableData.server || tableData.assignedServerName || null;
+
   return await apiClient(`/api/v1/tables/${id}`, {
     method: 'PUT',
     body: JSON.stringify({
-      tableName: tableData.name,
-      sectionArea: tableData.section,
-      capacityChairs: parseInt(tableData.capacity || 4, 10),
-      status: tableData.status ? String(tableData.status).toUpperCase() : 'VACANT'
+      tableNumber: tableNum,
+      tableName: tableNum,
+      name: tableNum,
+      branchId: branch,
+      sectionArea: section,
+      section: section,
+      location: section,
+      capacityChairs: cap,
+      capacity: cap,
+      status: status,
+      assignedServerId: serverId,
+      server: serverName,
+      assignedServerName: serverName,
+      qrCodeUrl: tableData.qrCodeUrl || null
     })
   });
 }
@@ -44,5 +80,12 @@ export async function apiTransferTable(fromId, toId) {
 export async function apiVacateTable(id) {
   return await apiClient(`/api/v1/tables/${id}/vacate`, {
     method: 'POST'
+  });
+}
+
+export async function apiUpdateTableStatus(id, status) {
+  return await apiClient(`/api/v1/tables/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
   });
 }
