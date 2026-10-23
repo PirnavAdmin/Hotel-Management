@@ -1,91 +1,153 @@
-html:has(.bhanu-login), body:has(.bhanu-login) { overflow:hidden!important; height:100%!important; }
-.bhanu-login { position:relative; isolation:isolate; display:grid; grid-template-columns:58% 42%; height:100dvh; max-height:100dvh; width:100%; overflow:hidden; background-image:var(--auth-overlay),url('/assets/login-restaurant.jpg'); background-size:cover; background-position:center center; background-repeat:no-repeat; font-family:var(--font-sans); color:var(--text-main); }
-.bhanu-login *, .bhanu-login *::before, .bhanu-login *::after { box-sizing:border-box; }
-.auth-theme-toggle { position:absolute; right:12px; top:12px; z-index:5; }
-.bhanu-story { position:relative; height:100%; max-height:100dvh; min-height:0; padding:clamp(20px,2.8vw,44px); display:flex; flex-direction:column; justify-content:space-between; gap:16px; min-width:0; color:#fff; overflow:hidden; background:transparent; }
-.bhanu-brand { display:flex; align-items:center; gap:10px; }
-.bhanu-brand>div { min-width:0; }
-.bhanu-logo { display:flex; align-items:center; justify-content:center; width:46px; height:46px; flex-shrink:0; border-radius:14px; background:var(--primary-gradient); color:#fff; box-shadow:0 6px 24px #ff78002b; overflow:hidden; }
-.bhanu-logo img { width:100%; height:100%; object-fit:contain; border-radius:12px; padding:2px; display:block; }
-.bhanu-brand strong { display:block; font-size:30px; font-weight:800; line-height:1.15; letter-spacing:-1px; }
-.bhanu-brand small { display:block; margin-top:5px; font-size:9px; letter-spacing:2px; overflow-wrap:anywhere; }
-.bhanu-restaurant { margin-top:10px; color:#ff9d00; font-size:12px; font-weight:700; letter-spacing:3px; }
-.bhanu-welcome { margin:14px 0; position:relative; z-index:1; }
-.bhanu-welcome h1 { font-family:Georgia,serif; font-size:clamp(42px,4vw,60px); line-height:1.1; letter-spacing:-1.5px; margin:0 0 14px; color:#ff9d00; font-weight:700; text-shadow:0 2px 14px rgba(0,0,0,0.5); }
-.bhanu-welcome em { font-style:normal; color:#ff9d00; }
-.bhanu-welcome h2 { font-size:clamp(20px,1.8vw,26px); font-weight:700; color:#ffffff; margin:0 0 10px; letter-spacing:-0.4px; text-shadow:0 2px 8px rgba(0,0,0,0.6); }
-.bhanu-welcome>p { max-width:490px; font-size:14.5px; line-height:1.65; color:#cbd5e1; margin:0 0 24px; text-shadow:0 1px 4px rgba(0,0,0,0.5); }
-.bhanu-features { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:8px; }
-.bhanu-features>div { min-width:0; background:rgba(10,20,36,0.68); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:18px 16px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 10px 24px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08); transition:transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
-.bhanu-features>div:hover { transform:translateY(-2px); border-color:rgba(255,255,255,0.24); box-shadow:0 14px 28px -4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15); }
-.bhanu-features>div+div { border-left:none; padding-left:16px; }
-.bhanu-feature-icon { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:12px; background:#ea580c; box-shadow:0 4px 14px rgba(234,88,12,0.35); color:#ffffff; }
-.bhanu-feature-icon svg { width:22px; height:22px; stroke-width:2.2; }
-.bhanu-features>div:nth-child(2) .bhanu-feature-icon { background:#1d4ed8; box-shadow:0 4px 14px rgba(29,78,216,0.35); }
-.bhanu-features>div:nth-child(3) .bhanu-feature-icon { background:#78350f; box-shadow:0 4px 14px rgba(120,53,15,0.35); }
-.bhanu-features h3 { font-size:16px; font-weight:700; color:#ffffff; margin:14px 0 4px; letter-spacing:-0.2px; }
-.bhanu-features p { font-size:12px; line-height:1.45; color:#94a3b8; margin:0; }
-.bhanu-dish { display:none; }
-.bhanu-benefits { position:relative; z-index:1; width:100%; overflow:hidden; display:flex; align-items:center; padding:6px 0; mask-image:linear-gradient(to right, transparent, black 4%, black 96%, transparent); -webkit-mask-image:linear-gradient(to right, transparent, black 4%, black 96%, transparent); }
-.bhanu-benefits-track { display:flex; width:max-content; will-change:transform; animation:bhanuMarquee 24s linear infinite; }
-.bhanu-benefits-track:hover { animation-play-state:paused; }
-.bhanu-benefits-group { display:flex; align-items:center; gap:20px; padding-right:20px; flex-shrink:0; }
-.bhanu-benefits-group span:not(.ticker-sep) { display:inline-flex; align-items:center; gap:7px; color:#cbd5e1; font-size:11.5px; font-weight:500; letter-spacing:0.3px; white-space:nowrap; }
-.bhanu-benefits-group svg { flex-shrink:0; color:#ff9d00; }
-.ticker-sep { color:#ff9d0080; font-size:13px; user-select:none; }
-@keyframes bhanuMarquee { 0% { transform:translateX(0); } 100% { transform:translateX(-50%); } }
+﻿/* Override the existing component's inline scroll lock only while this page is mounted. */
+html:has(.bhanu-login), body:has(.bhanu-login) {
+  height: auto !important;
+  overflow: auto !important;
+}
 
+.bhanu-login {
+  --primary-gradient: linear-gradient(110deg, #ff8a00, #ff6500);
+  --text-main: #f8fafc;
+  --text-muted: #a5b2c5;
+  --text-dim: #a5b2c5;
+  --accent-amber: #ff8a00;
+  --accent-amber-light: #ffb45c;
+  --input-bg: #19283e;
+  --border-card: #2b3b52;
+  --surface-tint: rgba(255,255,255,.04);
+  --surface-tint-hover: rgba(255,255,255,.08);
+  color-scheme: dark;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(340px, 1fr);
+  gap: clamp(28px, 4vw, 64px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  padding: clamp(28px, 5vh, 52px) max(28px, calc((100vw - 1320px) / 2));
+  background: #080d17;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+}
+.bhanu-login::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, rgba(8,13,23,.85), rgba(8,13,23,.62) 55%, rgba(8,13,23,.42)), url('/assets/login-restaurant.jpg') center / cover no-repeat;
+}
+.bhanu-login *, .bhanu-login *::before, .bhanu-login *::after { box-sizing: border-box; }
+.bhanu-login .auth-theme-toggle { position: absolute; top: 12px; right: 14px; z-index: 2; }
+.bhanu-login .theme-toggle { background: #0e192a; color: #ffb45c; border-color: #2b3b52; box-shadow: none; }
+.bhanu-login .bhanu-story { display: grid; grid-template-rows: auto 1fr auto; gap: 28px; min-width: 0; }
+.bhanu-login .bhanu-brand { display: flex; align-items: center; gap: 12px; }
+.bhanu-login .bhanu-brand > div { min-width: 0; }
+.bhanu-login .bhanu-logo { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: linear-gradient(140deg, #ffb457, #e87520); color: #fff; }
+.bhanu-login .bhanu-logo img { display: block; width: 100%; height: 100%; padding: 3px; object-fit: contain; }
+.bhanu-login .bhanu-brand strong { display: block; font-family: Georgia, serif; font-size: clamp(22px, 2vw, 30px); font-weight: 600; letter-spacing: -.4px; line-height: 1.2; overflow-wrap: anywhere; }
+.bhanu-login .bhanu-brand small { display: block; margin-top: 5px; color: #cbd5e1; font-size: 9px; line-height: 1.6; letter-spacing: 1.6px; }
+.bhanu-login .bhanu-welcome { align-self: center; width: 100%; max-width: 620px; padding-block: 12px; }
+.bhanu-login .bhanu-welcome h1 { margin: 0 0 16px; font-family: Georgia, serif; font-size: clamp(42px, 4.4vw, 66px); font-weight: 500; letter-spacing: -1.5px; line-height: 1.08; color: #ff8a00 !important; }
+.bhanu-login .bhanu-welcome h2 { max-width: 520px; margin-bottom: 12px; font-size: clamp(19px, 1.8vw, 25px); font-weight: 600; letter-spacing: -.5px; line-height: 1.4; color: #f8fafc; }
+.bhanu-login .bhanu-welcome > p { max-width: 480px; margin: 0 0 26px; color: #c1ccdc; font-size: 14px; line-height: 1.8; }
+.bhanu-login .bhanu-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 12px; max-width: 600px; }
+.bhanu-login .bhanu-features > div { --feature-accent: #ffac57; min-width: 0; padding: 18px 15px; border: 1px solid rgba(192,209,232,.2); border-radius: 20px; background: rgba(14,25,42,.76); backdrop-filter: blur(12px); transition: transform .2s ease, border-color .2s ease, background .2s ease; }
+.bhanu-login .bhanu-features > div:nth-child(2) { --feature-accent: #83b8f4; }
+.bhanu-login .bhanu-features > div:nth-child(3) { --feature-accent: #d6bb87; }
+.bhanu-login .bhanu-features > div:hover { transform: translateY(-3px); border-color: rgba(223,235,250,.36); background: rgba(20,35,55,.9); }
+.bhanu-login .bhanu-feature-icon { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; color: var(--feature-accent); background: color-mix(in srgb, var(--feature-accent) 12%, transparent); }
+.bhanu-login .bhanu-feature-icon svg { width: 20px; height: 20px; }
+.bhanu-login .bhanu-features h3 { margin: 12px 0 6px; font-size: 14px; font-weight: 650; line-height: 1.4; color: #f8fafc; }
+.bhanu-login .bhanu-features p { margin: 0; color: #a5b2c5; font-size: 11px; line-height: 1.65; overflow-wrap: anywhere; }
+.bhanu-login .bhanu-dish { display: none; }
+/* Present one copy of the existing promotional messages without a moving or masked strip. */
+.bhanu-login .bhanu-benefits, .bhanu-login .bhanu-benefits-track { min-width: 0; width: 100%; }
+.bhanu-login .bhanu-benefits-group { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.bhanu-login .bhanu-benefits-group[aria-hidden=true], .bhanu-login .bhanu-benefits-group > .ticker-sep, .bhanu-login .bhanu-benefits .bhanu-benefits-group > span:nth-child(n+7) { display: none; }
+.bhanu-login .bhanu-benefits-group > span:not(.ticker-sep) { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; color: #bcc9d9; font-size: 10px; line-height: 1.6; }
+.bhanu-login .bhanu-benefits-group svg { flex-shrink: 0; color: #ffb45c; }
 
+.bhanu-login .bhanu-login-side { display: flex; align-items: center; justify-content: center; min-width: 0; padding-block: 12px; }
+.bhanu-login .bhanu-login-card { width: 100%; max-width: 560px; padding: clamp(26px, 2.6vw, 36px); border: 1px solid #2b3b52; border-radius: 24px; background: #0e192a; color: #f8fafc; box-shadow: 0 16px 48px rgba(0,0,0,.2); }
+.bhanu-login .bhanu-card-brand { margin-bottom: 22px; }
+.bhanu-login .bhanu-card-brand .bhanu-brand strong { font-size: clamp(21px, 1.9vw, 27px); }
+.bhanu-login .bhanu-card-brand .bhanu-brand small { color: #a5b2c5; font-size: 8px; letter-spacing: 1.4px; }
+/* The role strip retains its existing handlers and inline selected-state values. */
+.bhanu-login .bhanu-login-card > div:not(.bhanu-form-content) { max-width: none !important; padding: 4px !important; margin-bottom: 6px !important; border: 0 !important; background: #192638 !important; box-shadow: none !important; }
+.bhanu-login .bhanu-login-card > div > button { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 42px; padding: 8px 5px !important; border: 0 !important; box-shadow: none !important; font-size: 11px !important; line-height: 1.4; }
+.bhanu-login .bhanu-login-card > div > button[aria-pressed=false] { color: #a5b2c5 !important; }
+.bhanu-login .bhanu-login-card > div > button[aria-pressed=false]:hover { background: #24364d !important; color: #f8fafc !important; }
+.bhanu-login .bhanu-login-card > div > button > span:first-child { display: flex; }
+.bhanu-login .bhanu-login-card button svg { flex-shrink: 0; }
+.bhanu-login .bhanu-login-card button span { min-width: 0; }
+.bhanu-login .bhanu-form-content { width: 100%; min-width: 0; }
+.bhanu-login .bhanu-form-heading { padding: 14px 0 18px; text-align: center; }
+.bhanu-login .bhanu-form-heading h1 { margin-bottom: 4px !important; font-size: 22px !important; font-weight: 650 !important; color: #f8fafc !important; overflow-wrap: anywhere; }
+.bhanu-login .bhanu-form-heading p { color: #a5b2c5 !important; font-size: 12px !important; line-height: 1.6; }
+.bhanu-login .bhanu-mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.bhanu-login .bhanu-mode-tabs button { min-width: 0; min-height: 38px; border: 0 !important; background: #19283e !important; color: #a5b2c5 !important; }
+.bhanu-login .bhanu-mode-tabs button[aria-pressed=true] { background: var(--primary-gradient) !important; color: #fff !important; }
+.bhanu-login .bhanu-login-card form { min-width: 0; padding: 0 !important; overflow: visible !important; }
+.bhanu-login .bhanu-field { min-width: 0; width: 100%; }
+.bhanu-login .bhanu-login-card label { display: block !important; position: static; margin-left: 0; padding: 0; font-size: 10px !important; font-weight: 600 !important; letter-spacing: .6px !important; line-height: 1.6; color: #a5b2c5 !important; text-align: left; white-space: normal; transform: none; }
+/* Only the input draws a surface: its wrapper and icon controls remain transparent. */
+.bhanu-login .bhanu-input-wrap { position: relative; display: flex; align-items: center; min-width: 0; width: 100%; border: 0; background: transparent; box-shadow: none; }
+.bhanu-login .bhanu-input-icon { display: flex; align-items: center; justify-content: center; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.bhanu-login .bhanu-login-card input { display: block; width: 100%; min-width: 0; height: 50px; padding: 10px 42px !important; border: 1px solid #2b3b52 !important; border-radius: 10px !important; background: #19283e !important; color: #f8fafc !important; font-size: 13px !important; font-weight: 500 !important; box-shadow: none; }
+.bhanu-login .bhanu-login-card input::placeholder { color: #a5b2c5 !important; opacity: 1; }
+.bhanu-login .bhanu-login-card input:focus { border-color: #ff8a00 !important; box-shadow: 0 0 0 3px rgba(255,138,0,.12); }
+.bhanu-login .bhanu-login-card input:focus-visible { outline: none; }
+.bhanu-login .bhanu-input-icon, .bhanu-login .bhanu-input-icon svg, .bhanu-login .bhanu-login-card input + button, .bhanu-login .bhanu-signin-form input + button svg, .bhanu-login .bhanu-signin-form div > svg { color: #a5b2c5 !important; }
+.bhanu-login .bhanu-login-card input + button { display: flex; align-items: center; justify-content: center; width: 30px; height: 34px; padding: 0 !important; border: 0; background: transparent; box-shadow: none; }
+.bhanu-login .bhanu-login-card input + button:hover { color: #f8fafc !important; }
+.bhanu-login .bhanu-registration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.bhanu-login .bhanu-signin-form > div { margin-bottom: 10px !important; }
+.bhanu-login .bhanu-recovery { text-align: right; }
+.bhanu-login .bhanu-recovery button { color: #ffb45c !important; text-decoration: none !important; }
+.bhanu-login .bhanu-recovery button:hover { color: #ffd3a0 !important; text-decoration: underline !important; }
+.bhanu-login .bhanu-login-card button[type=submit] { min-height: 56px; border-radius: 12px !important; background: var(--primary-gradient) !important; color: #fff !important; font-weight: 650 !important; box-shadow: none !important; }
+.bhanu-login .bhanu-login-card button[type=submit]:disabled { opacity: .6; cursor: wait !important; }
+.bhanu-login .bhanu-login-card button[type=submit]:hover:not(:disabled) { filter: brightness(1.06); }
+.bhanu-login .bhanu-login-card button[type=submit]:active:not(:disabled) { transform: translateY(1px); }
+.bhanu-login button:focus-visible { outline: 2px solid #ffb45c; outline-offset: 3px; }
 
-.bhanu-login-side { display:flex; align-items:center; justify-content:center; padding:16px 20px; min-width:0; height:100%; max-height:100dvh; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; background:transparent; align-self:stretch; }
-.bhanu-login-side::-webkit-scrollbar { display:none; }
-.bhanu-login-card { width:100%; max-width:470px; min-height:0; height:fit-content; padding:22px 26px; border:1px solid var(--auth-card-border); border-radius:20px; background:var(--auth-card); backdrop-filter:blur(12px); box-shadow:var(--shadow-lg); }
-.bhanu-card-brand { text-align:center; margin-bottom:14px; }
-.bhanu-card-brand .bhanu-brand { justify-content:center; text-align:left; }
-.bhanu-card-brand .bhanu-brand small { color:var(--text-muted); }
-.bhanu-card-brand .bhanu-restaurant { font-size:10px; margin-top:8px; }
-.bhanu-login-card>div:not(.bhanu-form-content) { max-width:none!important; background:var(--surface-tint)!important; border-color:var(--border-card)!important; }
-.bhanu-login-card>div>button { min-width:0; min-height:36px; }
-.bhanu-login-card button svg { flex-shrink:0; }
-.bhanu-login-card button span { min-width:0; }
-.bhanu-form-content { width:100%; min-width:0; }
-.bhanu-form-heading { text-align:center; padding:12px 0; }
-.bhanu-form-heading h1 { color:var(--text-main)!important; font-size:22px!important; margin-bottom:4px!important; overflow-wrap:anywhere; }
-.bhanu-form-heading p { color:var(--text-muted)!important; font-size:12px!important; }
-.bhanu-mode-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
-.bhanu-mode-tabs button { height:36px; width:100%; min-width:0; color:var(--text-muted)!important; background:var(--surface-tint)!important; border-color:var(--border-card)!important; }
-.bhanu-mode-tabs button[aria-pressed=true] { background:var(--primary-gradient)!important; color:#fff!important; border-color:var(--accent-amber)!important; }
-.bhanu-login-card form { padding:0!important; overflow:visible!important; min-width:0; }
-.bhanu-field { min-width:0; width:100%; }
-.bhanu-login-card label { display:block!important; position:static; text-align:left; color:var(--text-muted)!important; line-height:1.5; padding:0; margin-left:0; transform:none; white-space:normal; }
-.bhanu-input-wrap { position:relative; display:flex; align-items:center; min-width:0; width:100%; }
-.bhanu-input-icon { display:flex; align-items:center; justify-content:center; position:absolute; left:12px; top:50%; transform:translateY(-50%); pointer-events:none; }
-.bhanu-login-card input { display:block; width:100%; min-width:0; height:48px; padding:10px 38px!important; background:var(--input-bg)!important; border:1px solid var(--border-card)!important; border-radius:9px!important; color:var(--text-main)!important; font-size:13px!important; }
-.bhanu-login-card input::placeholder { color:var(--text-dim)!important; }
-.bhanu-login-card input:focus { border-color:var(--accent-amber)!important; }
-.bhanu-input-icon, .bhanu-input-icon svg, .bhanu-login-card input+button { color:var(--text-dim)!important; }
-.bhanu-login-card input+button { display:flex; align-items:center; justify-content:center; width:24px; height:28px; }
-.bhanu-registration-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; }
-.bhanu-signin-form>div { margin-bottom:7px!important; }
-.bhanu-login-card button[type=submit] { min-height:54px; border-radius:12px!important; background:var(--primary-gradient)!important; color:#fff!important; }
-.bhanu-login-card button[type=submit]:disabled { opacity:.6; }
-.bhanu-login-card button[type=submit]:hover:not(:disabled) { filter:brightness(1.06); }
-.bhanu-recovery { text-align:right; }
-.bhanu-recovery button { color:var(--accent-amber-light)!important; }
-.bhanu-security { display:grid; grid-template-columns:18px auto; justify-content:center; text-align:center; gap:7px; margin:12px 0 0!important; color:var(--text-dim); }
-.bhanu-security strong { font-size:11px; font-weight:500; color:var(--text-muted); }
-.bhanu-security span { grid-column:1/-1; font-size:10px; }
-.bhanu-login button:focus-visible, .bhanu-login input:focus-visible { outline:2px solid var(--accent-amber); outline-offset:3px; }
-@media(max-width:1100px) { .bhanu-login { grid-template-columns:50% 50%; } .bhanu-story { padding:24px; } .bhanu-login-card { padding:18px 22px; } .bhanu-features { gap:10px; } .bhanu-features>div { padding:14px 10px; } }
-@media(min-width:761px) and (max-height:800px) { .bhanu-welcome h1 { font-size:clamp(30px,3.2vw,44px); margin-bottom:6px; } .bhanu-welcome h2 { font-size:16px; margin-bottom:4px; } .bhanu-welcome>p { font-size:13px; line-height:1.4; margin-bottom:12px; } .bhanu-story { padding:16px 24px; gap:8px; } .bhanu-features { gap:8px; margin-top:4px; } .bhanu-features>div { padding:10px 10px; } .bhanu-features h3 { font-size:14px; margin:6px 0 2px; } .bhanu-features p { font-size:10.5px; } .bhanu-login-side { padding:12px 16px; } .bhanu-login-card { padding:14px 20px; } .bhanu-form-heading { padding:6px 0; } .bhanu-card-brand { margin-bottom:8px; } }
-@media(max-width:760px) { .bhanu-login { display:flex; flex-direction:column; } .bhanu-story { position:relative; height:auto; min-height:0; padding:24px; } .bhanu-welcome { margin:0; } .bhanu-welcome h1 { font-size:34px; } .bhanu-welcome h2 { font-size:16px; } .bhanu-features { gap:10px; margin-top:16px; } .bhanu-features>div { padding:14px 10px; } .bhanu-benefits { flex-wrap:wrap; } .bhanu-login-side { padding:16px; } .bhanu-login-card { padding:20px; min-height:0; } .bhanu-brand small { font-size:8px; letter-spacing:1px; } }
-@media(max-width:480px) { .bhanu-registration-grid { grid-template-columns:minmax(0,1fr); } .bhanu-login-card>div>button { font-size:.68rem!important; gap:4px!important; padding-inline:3px!important; } }
-
-
-.bhanu-login-card>div:not(.bhanu-form-content) { box-shadow:none!important; }
-
-/* Login cards size to their remaining form content. Expanded flows retain their layout. */
-.bhanu-login .bhanu-login-card { min-height:0; height:fit-content; }
-@media(min-width:761px) {
-  .bhanu-login .bhanu-login-side { align-self:stretch; align-items:center; padding:20px; }
+@media (max-width: 1100px) {
+  .bhanu-login { gap: 28px; padding: 32px 24px; }
+  .bhanu-login .bhanu-story { gap: 22px; }
+  .bhanu-login .bhanu-login-card { padding: 28px; }
+  .bhanu-login .bhanu-features { gap: 10px; }
+  .bhanu-login .bhanu-features > div { padding: 16px 12px; }
+}
+@media (max-width: 900px) {
+  .bhanu-login { grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr); gap: 24px; padding-inline: 20px; }
+  .bhanu-login .bhanu-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bhanu-login .bhanu-login-card { padding: 26px 22px; }
+  .bhanu-login .bhanu-brand strong { font-size: 23px; }
+}
+@media (max-width: 700px) {
+  .bhanu-login { grid-template-columns: minmax(0, 1fr); padding: 28px clamp(18px, 5vw, 32px); }
+  .bhanu-login .bhanu-story { width: 100%; max-width: 600px; justify-self: center; gap: 24px; }
+  .bhanu-login .bhanu-story > header { padding-right: 32px; }
+  .bhanu-login .bhanu-welcome { padding: 0; }
+  .bhanu-login .bhanu-login-side { padding: 0; }
+  .bhanu-login .bhanu-login-card { padding: 30px; }
+}
+@media (max-width: 480px) {
+  .bhanu-login .bhanu-features, .bhanu-login .bhanu-registration-grid { grid-template-columns: minmax(0, 1fr); }
+  .bhanu-login .bhanu-features > div { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 4px 12px; padding: 16px; }
+  .bhanu-login .bhanu-feature-icon { grid-row: span 2; align-self: center; }
+  .bhanu-login .bhanu-features h3 { margin: 0; }
+  .bhanu-login .bhanu-login-card { padding: 26px 20px; }
+  .bhanu-login .bhanu-login-card > div > button { font-size: 10px !important; gap: 4px !important; padding-inline: 3px !important; }
+  .bhanu-login .bhanu-benefits-group { gap: 10px; }
+}
+@media (min-width: 901px) and (max-height: 700px) {
+  .bhanu-login { padding-block: 24px; }
+  .bhanu-login .bhanu-story { gap: 18px; }
+  .bhanu-login .bhanu-login-card { padding: 26px 30px; }
+  .bhanu-login .bhanu-card-brand { margin-bottom: 16px; }
+  .bhanu-login .bhanu-form-heading { padding-block: 10px 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bhanu-login *, .bhanu-login *::before, .bhanu-login *::after { transition: none !important; animation: none !important; }
 }
