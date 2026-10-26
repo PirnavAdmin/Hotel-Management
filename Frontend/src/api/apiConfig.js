@@ -2,14 +2,35 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   "";
 
+// The Vite dev server provides its own same-origin SSE endpoint for local
+// cross-tab/device synchronization. Production can use the configured API.
+const EVENTS_URL = import.meta.env.DEV
+  ? "/api/events"
+  : `${API_BASE_URL.replace(/\/$/, "")}/api/events`;
+
+export function openOptionalEventStream() {
+  if (typeof EventSource === "undefined") return null;
+
+  try {
+    const stream = new EventSource(EVENTS_URL);
+    // EventSource retries automatically. This stream is an optional UI sync
+    // enhancement, so stop after a failure instead of retrying indefinitely.
+    stream.onerror = () => stream.close();
+    return stream;
+  } catch {
+    return null;
+  }
+}
+
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
   "ngrok-skip-browser-warning": "true",
 };
 
 export async function apiClient(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
     const token =
       typeof localStorage !== "undefined"
         ? localStorage.getItem("avsr_jwt_token")
@@ -39,8 +60,7 @@ export async function apiClient(endpoint, options = {}) {
     }
 
     if (res.status === 401 || res.status === 403) {
-      // Handle unauthorized (maybe logout user)
-      // Optional: dispatch event or clear storage
+      // Handle unauthorized (optional: dispatch event or clear storage)
     }
 
     if (!res.ok) {
@@ -48,7 +68,7 @@ export async function apiClient(endpoint, options = {}) {
       let errorJson;
       try {
         errorJson = JSON.parse(errorText);
-      } catch (e) {
+      } catch {
         // Not JSON
       }
 
@@ -82,8 +102,6 @@ export async function apiClient(endpoint, options = {}) {
         }
       }
 
-      console.error(`[API Error ${res.status}] ${endpoint}:`, errorText);
-
       return {
         success: false,
         error: displayError,
@@ -101,7 +119,6 @@ export async function apiClient(endpoint, options = {}) {
     const data = JSON.parse(text);
     return { success: true, data };
   } catch (err) {
-    console.error(`[API Error] Failed request to ${endpoint}:`, err);
     return { success: false, error: err.message || "Network error occurred" };
   }
 }

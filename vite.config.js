@@ -162,7 +162,33 @@ function globalSyncPlugin() {
   return {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+            server.middlewares.use((req, res, next) => {
+        // Centralized Backend HTTP Request/Response Logger
+        const start = Date.now();
+        const method = req.method || "GET";
+        const url = req.url || "/";
+        const isApi = url.startsWith("/api/") || url === "/api" || url.startsWith("/api?");
+
+        if (isApi) {
+          const clientIp = req.socket?.remoteAddress || "127.0.0.1";
+          const timeStr = new Date().toLocaleTimeString();
+          console.log(`\x1b[34m[BACKEND HTTP REQUEST]\x1b[0m \x1b[1m${method}\x1b[0m ${url} (from ${clientIp} at ${timeStr})`);
+
+          const originalEnd = res.end;
+          res.end = function (...args) {
+            const duration = Date.now() - start;
+            const code = res.statusCode || 200;
+            if (code >= 500) {
+              console.error(`\x1b[31m[BACKEND HTTP SERVER ERROR]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            } else if (code >= 400) {
+              console.warn(`\x1b[33m[BACKEND HTTP CLIENT ERROR]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            } else {
+              console.log(`\x1b[32m[BACKEND HTTP RESPONSE]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            }
+            return originalEnd.apply(this, args);
+          };
+        }
+
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning");

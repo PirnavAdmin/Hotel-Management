@@ -1,4 +1,5 @@
 import './LoginPage.css';
+import { logFormSubmission, logUserAction } from '../utils/logger';
 import { ThemeToggle } from './ThemeToggle';
 import React, { useState, useEffect, useRef, useId } from 'react';
 import {

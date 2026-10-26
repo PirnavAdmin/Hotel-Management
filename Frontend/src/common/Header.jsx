@@ -253,6 +253,7 @@ export function Header({
           }}
         >
           <button
+            className={isUserRoute ? "primary-action-button" : undefined}
             onClick={() => {
               setActiveView("tables");
               navigate("/");
