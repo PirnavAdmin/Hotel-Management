@@ -330,7 +330,7 @@ public class OrdersController : ControllerBase
                 i.VariantId == itemInput.VariantId &&
                 (i.KotStatus == "Queued" ||
                  i.KotStatus == "queued") &&
-                i.KotId.GetValueOrDefault() > 0);
+                (i.KotId == null || i.KotId == 0));
 
             if (existingItem != null)
             {
