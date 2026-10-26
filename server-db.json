@@ -3101,13 +3101,13 @@
       "verifiedAt": 1793006831641
     },
     "admin2@gmail.com": {
-      "otp": "273730",
-      "expiresAt": 1793009266849,
+      "otp": "472309",
+      "expiresAt": 1793015326990,
       "fullName": "admin2",
-      "phone": "1234567898",
-      "createdAt": 1793008666849,
+      "phone": "",
+      "createdAt": 1793014726990,
       "verified": true,
-      "verifiedAt": 1793008698753
+      "verifiedAt": 1793014750265
     }
   },
   "avsr_daily_inv_cnt_26_Oct_2026": "216"

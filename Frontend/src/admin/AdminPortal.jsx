@@ -4901,6 +4901,7 @@ export function AdminPortal({
                     onSaveSettings={handleSaveRestaurantSettings}
                     showBarHeaderToggle={showBarHeaderToggle}
                     onToggleShowBarHeader={handleToggleShowBarHeader}
+                    currentAdminSession={currentSession}
                   />
                 )}
               </>

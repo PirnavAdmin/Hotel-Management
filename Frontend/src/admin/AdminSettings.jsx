@@ -15,8 +15,11 @@ import {
   Package,
   Wine,
   Utensils,
+  Lock,
 } from "lucide-react";
 import defaultPaymentQr from "../assets/payment-qr.png";
+import { UpiOtpVerificationModal } from "../common/UpiOtpVerificationModal";
+import { getUsers } from "../utils/auth";
 
 const DEFAULT_PAYMENT_QRS = [
   {
@@ -113,13 +116,71 @@ export function AdminSettings({
   onSaveSettings,
   showBarHeaderToggle,
   onToggleShowBarHeader,
+  currentAdminSession = null,
 }) {
+  const isLight = currentTheme === "light-bistro";
   const [settings, setSettings] = useState(() => getInitialSettings(initialSettings));
   const [lastSavedSettings, setLastSavedSettings] = useState(() => getInitialSettings(initialSettings));
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [logoError, setLogoError] = useState("");
+
+  // OTP Verification state for UPI stream change
+  const [upiOtpModalOpen, setUpiOtpModalOpen] = useState(false);
+  const [pendingUpiAction, setPendingUpiAction] = useState(null);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminName, setAdminName] = useState("Admin");
+
+  useEffect(() => {
+    let resolvedEmail = "";
+    let resolvedName = "Admin";
+
+    if (currentAdminSession?.email && currentAdminSession.email.includes("@")) {
+      resolvedEmail = currentAdminSession.email.trim();
+      resolvedName = currentAdminSession.name || currentAdminSession.username || "Admin";
+    } else {
+      try {
+        const sess = JSON.parse(
+          localStorage.getItem("avsr_admin_session") ||
+          localStorage.getItem("avsr_auth_session_v1") ||
+          localStorage.getItem("auth_user") ||
+          "{}"
+        );
+        if (sess?.email && sess.email.includes("@")) {
+          resolvedEmail = sess.email.trim();
+          resolvedName = sess.name || sess.username || "Admin";
+        }
+      } catch {}
+    }
+
+    if (!resolvedEmail) {
+      getUsers().then(({ users }) => {
+        if (Array.isArray(users)) {
+          const admin = users.find(
+            (u) =>
+              (u.role === "admin" || u.role === "0") &&
+              u.email &&
+              u.email.includes("@")
+          );
+          if (admin?.email) {
+            setAdminEmail(admin.email.trim());
+            setAdminName(admin.name || admin.username || "Admin");
+            return;
+          }
+        }
+      }).catch(() => {});
+    }
+
+    if (!resolvedEmail && settings?.email && settings.email.includes("@")) {
+      resolvedEmail = settings.email.trim();
+    }
+
+    if (resolvedEmail) {
+      setAdminEmail(resolvedEmail);
+      setAdminName(resolvedName);
+    }
+  }, [currentAdminSession, settings?.email]);
 
   const isBarToggleOn =
     showBarHeaderToggle !== undefined
@@ -224,7 +285,7 @@ export function AdminSettings({
   const fileInputRef2 = useRef(null);
   const fileInputRefs = [fileInputRef0, fileInputRef1, fileInputRef2];
 
-  const selectActiveQr = (selectedIndex) => {
+  const executeSelectActiveQr = (selectedIndex) => {
     const currentQrs = settings.paymentQrs || DEFAULT_PAYMENT_QRS;
     const targetQr = currentQrs[selectedIndex];
 
@@ -298,7 +359,7 @@ export function AdminSettings({
     reader.readAsDataURL(file);
   };
 
-  const handleQrUpload = (index, file) => {
+  const executeQrUpload = (index, file) => {
     if (!file) return;
     processImageFile(file, (dataUrl) => {
       setSettings((prev) => {
@@ -350,7 +411,7 @@ export function AdminSettings({
     });
   };
 
-  const removeQrImage = (index) => {
+  const executeRemoveQrImage = (index) => {
     setSettings((prev) => {
       const nextQrs = [...(prev.paymentQrs || DEFAULT_PAYMENT_QRS)];
       const wasActive =
@@ -389,6 +450,38 @@ export function AdminSettings({
       }
       return updated;
     });
+  };
+
+  // Intercept changing the UPI stream (active slot, upload, or remove) and require registered admin OTP
+  const requestUpiChange = (action) => {
+    const currentQrs = settings.paymentQrs || DEFAULT_PAYMENT_QRS;
+    const currentActiveIdx = currentQrs.findIndex((q) =>
+      settings.selectedQrId ? q.id === settings.selectedQrId : q.active
+    );
+    action.currentActiveIndex = currentActiveIdx !== -1 ? currentActiveIdx : 0;
+    action.currentActiveQr = currentQrs[action.currentActiveIndex];
+    action.targetQr = currentQrs[action.index];
+
+    // If clicking the slot that is already active, no change is made
+    if (action.type === "select_active") {
+      if (action.index === action.currentActiveIndex) return;
+      if (!action.targetQr?.image) return;
+    }
+
+    setPendingUpiAction(action);
+    setUpiOtpModalOpen(true);
+  };
+
+  const handleUpiOtpVerified = (action) => {
+    if (!action) return;
+    if (action.type === "select_active") {
+      executeSelectActiveQr(action.index);
+    } else if (action.type === "upload_image") {
+      executeQrUpload(action.index, action.file);
+    } else if (action.type === "remove_image") {
+      executeRemoveQrImage(action.index);
+    }
+    setPendingUpiAction(null);
   };
 
   const handleSave = async (e) => {
@@ -1049,19 +1142,38 @@ export function AdminSettings({
                   </p>
                 </div>
               </div>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  fontWeight: 700,
-                  color: "var(--accent-amber-light)",
-                  background: "rgba(245, 158, 11, 0.12)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
-                  padding: "3px 10px",
-                  borderRadius: "20px",
-                }}
-              >
-                3 QR Slots (Click to Select Active)
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 800,
+                    color: "#10b981",
+                    background: "rgba(16, 185, 129, 0.12)",
+                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                    padding: "3px 10px",
+                    borderRadius: "20px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Lock size={11} strokeWidth={2.4} />
+                  OTP Protected Stream
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "#f59e0b",
+                    background: "rgba(245, 158, 11, 0.12)",
+                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    padding: "3px 10px",
+                    borderRadius: "20px",
+                  }}
+                >
+                  3 QR Slots (Click to Select Active)
+                </span>
+              </div>
             </div>
 
             {/* 3 Upload Cards Grid */}
@@ -1085,7 +1197,9 @@ export function AdminSettings({
                   <div
                     key={qr.id || index}
                     onClick={() => {
-                      if (hasImage) selectActiveQr(index);
+                      if (hasImage && !isSelected) {
+                        requestUpiChange({ type: "select_active", index });
+                      }
                     }}
                     title={
                       isSelected
@@ -1325,7 +1439,9 @@ export function AdminSettings({
                       style={{ display: "none" }}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) handleQrUpload(index, file);
+                        if (file) {
+                          requestUpiChange({ type: "upload_image", index, file });
+                        }
                         e.target.value = "";
                       }}
                     />
@@ -1376,7 +1492,7 @@ export function AdminSettings({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeQrImage(index);
+                            requestUpiChange({ type: "remove_image", index });
                           }}
                           style={{
                             background: "rgba(239, 68, 68, 0.12)",
@@ -1828,6 +1944,19 @@ export function AdminSettings({
           </div>
         </form>
       </div>
+      {/* High-Security OTP Verification Modal for Changing UPI Stream */}
+      <UpiOtpVerificationModal
+        isOpen={upiOtpModalOpen}
+        onClose={() => {
+          setUpiOtpModalOpen(false);
+          setPendingUpiAction(null);
+        }}
+        onVerified={handleUpiOtpVerified}
+        actionDetails={pendingUpiAction}
+        adminEmail={adminEmail}
+        adminName={adminName}
+        isLight={isLight}
+      />
     </div>
   );
 }
