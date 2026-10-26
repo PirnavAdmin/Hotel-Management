@@ -762,6 +762,12 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     }
     if (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0) {
       setSelectedSeatIds([...table.selectedSeats]);
+    } else if (Number(table.guests) > 0) {
+      const initialIds = [];
+      for (let i = 1; i <= Math.min(Number(table.capacity) || 4, Number(table.guests)); i++) {
+        initialIds.push(`S${i}`);
+      }
+      setSelectedSeatIds(initialIds);
     } else {
       setSelectedSeatIds([]);
     }
@@ -794,6 +800,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
     } catch (e) {
@@ -819,18 +826,23 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     const count =
       selectedSeatIds.length > 0
         ? selectedSeatIds.length
-        : selectedSeatTable.guests > 0
-        ? selectedSeatTable.guests
-        : selectedSeatTable.capacity;
+        : Number(selectedSeatTable.guests) > 0
+        ? Number(selectedSeatTable.guests)
+        : Number(selectedSeatTable.capacity) || 2;
 
     const finalStatus = count > 0 ? "occupied" : selectedSeatTable.status;
+    const finalSeats =
+      selectedSeatIds.length > 0
+        ? [...selectedSeatIds]
+        : Array.from({ length: count }, (_, i) => `S${i + 1}`);
 
     const finalTable = {
       ...selectedSeatTable,
       capacity: selectedSeatTable.capacity,
       seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
       guests: count,
-      selectedSeats: selectedSeatIds,
+      occupiedChairs: count,
+      selectedSeats: finalSeats,
       status: finalStatus,
     };
 
@@ -846,13 +858,15 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                   capacity: selectedSeatTable.capacity,
                   seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
                   guests: count,
-                  selectedSeats: selectedSeatIds,
+                  occupiedChairs: count,
+                  selectedSeats: finalSeats,
                   status: finalStatus,
                 }
               : t
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
     } catch (e) {
@@ -1900,8 +1914,8 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       <Armchair size={11} color="#f59e0b" />
                       <span>
                         {table.capacity} Seats ·{" "}
-                        {table.status !== "vacant"
-                          ? `${table.guests || 0} Seated`
+                        {Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0)
+                          ? `${Number(table.guests) || table.selectedSeats.length} Seated`
                           : "0 Seated"}
                       </span>
                     </button>

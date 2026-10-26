@@ -47,7 +47,17 @@ export async function apiClient(endpoint, options = {}) {
       headers,
     };
 
-    const res = await fetch(url, config);
+    let res;
+    try {
+      res = await fetch(url, config);
+    } catch (fetchErr) {
+      if (API_BASE_URL) {
+        console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
+        res = await fetch(endpoint, config);
+      } else {
+        throw fetchErr;
+      }
+    }
 
     if (res.status === 401 || res.status === 403) {
       // Handle unauthorized (optional: dispatch event or clear storage)

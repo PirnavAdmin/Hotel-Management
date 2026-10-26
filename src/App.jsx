@@ -144,6 +144,25 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
     }
   });
 
+  // 1b. Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
+  try {
+    const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
+    if (rawSaved) {
+      const parsedSaved = JSON.parse(rawSaved);
+      if (Array.isArray(parsedSaved)) {
+        parsedSaved.forEach((st) => {
+          if (st && st.id && !deletedIds.includes(String(st.id))) {
+            const num = parseTableNumber(st) || Number(st.id);
+            if (num) {
+              const existingDef = tablesById.get(num) || {};
+              tablesById.set(num, { ...existingDef, ...st });
+            }
+          }
+        });
+      }
+    }
+  } catch {}
+
   // 2. Overlay incoming live tables from server or localStorage
   if (Array.isArray(incomingTables)) {
     incomingTables.forEach((table) => {
@@ -175,16 +194,25 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       const rawStatus = String(table.status || "").trim().toLowerCase();
       const isExplicitlyVacant = rawStatus === "vacant";
 
-      const hasActiveItems = Array.isArray(table.items)
-        ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
-        : false;
+      const hasActiveItems =
+        (Array.isArray(table.items) && table.items.length > 0)
+          ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
+          : (Array.isArray(existing.items) && existing.items.length > 0
+              ? existing.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
+              : false);
 
-      const incomingGuests = Number(table.occupiedChairs ?? table.guests ?? (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ?? 0);
+      const incomingGuests =
+        (Number(table.guests) > 0 ? Number(table.guests) : null) ??
+        (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
+        (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+        (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
+        (Array.isArray(existing.selectedSeats) && existing.selectedSeats.length > 0 ? existing.selectedSeats.length : null) ??
+        (Number(existing.occupiedChairs) > 0 ? Number(existing.occupiedChairs) : null) ??
+        0;
       const hasActiveGuests = incomingGuests > 0;
 
       let finalStatus = "vacant";
-      if (isExplicitlyVacant || (!hasActiveItems && !hasActiveGuests)) {
-        // Individual table is strictly vacant once bill is done and guests leave
+      if (!hasActiveItems && !hasActiveGuests) {
         finalStatus = "vacant";
       } else if (hasActiveItems || hasActiveGuests) {
         finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
@@ -193,6 +221,13 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       }
 
       const isFinalVacant = finalStatus === "vacant";
+
+      const resolvedItems =
+        (Array.isArray(table.items) && table.items.length > 0)
+          ? table.items
+          : (Array.isArray(existing.items) && existing.items.length > 0
+              ? existing.items
+              : (Array.isArray(table.items) ? table.items : []));
 
       const normalized = {
         ...existing,
@@ -209,18 +244,14 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         status: finalStatus,
         server:
           table.assignedServerName || table.server || existing.server || "Staff",
-        guests: isFinalVacant ? 0 : (incomingGuests || existingGuests || 0),
-        occupiedChairs: isFinalVacant ? 0 : Number(table.occupiedChairs ?? existing.occupiedChairs ?? 0),
+        guests: isFinalVacant ? 0 : incomingGuests,
+        occupiedChairs: isFinalVacant ? 0 : incomingGuests,
         selectedSeats: isFinalVacant
           ? []
-          : (Array.isArray(table.selectedSeats) ? table.selectedSeats : (Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
-        items: isFinalVacant
-          ? []
-          : (Array.isArray(table.items)
-            ? table.items
-            : Array.isArray(existing.items)
-              ? existing.items
-              : []),
+          : (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0
+              ? table.selectedSeats
+              : (Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
+        items: isFinalVacant ? [] : resolvedItems,
         orderTime: isFinalVacant ? null : (table.orderTime ?? existing.orderTime ?? null),
         orderTimestamp: isFinalVacant ? null : (table.orderTimestamp ?? existing.orderTimestamp ?? null),
         cookingStartedAt: isFinalVacant ? null : (table.cookingStartedAt ?? existing.cookingStartedAt ?? null),
@@ -1195,11 +1226,13 @@ export function App() {
 
   // Add Item to Table Order
   const handleAddItemToTable = (tableId, menuItem) => {
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
+    let targetUpdatedTable = null;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
 
-        const existingIndex = t.items.findIndex((i) => i.id === menuItem.id);
+        const currentItems = Array.isArray(t.items) ? t.items : [];
+        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
         let newItems;
 
         const specifiedQty =
@@ -1208,21 +1241,23 @@ export function App() {
           typeof menuItem.notes === "string" ? menuItem.notes : null;
 
         if (specifiedQty === 0) {
-          newItems = t.items.filter((i) => i.id !== menuItem.id);
+          newItems = currentItems.filter((i) => String(i.id) !== String(menuItem.id));
         } else if (existingIndex > -1) {
-          newItems = t.items.map((item, idx) =>
+          newItems = currentItems.map((item, idx) =>
             idx === existingIndex
               ? {
                   ...item,
                   quantity:
                     specifiedQty !== null ? specifiedQty : item.quantity + 1,
                   notes: specifiedNotes !== null ? specifiedNotes : item.notes,
+                  kotStatus: item.kotStatus === "ready" ? "new" : (item.kotStatus || "new"),
+                  kotSent: item.kotStatus === "ready" ? false : Boolean(item.kotSent),
                 }
               : item,
           );
         } else {
           newItems = [
-            ...t.items,
+            ...currentItems,
             {
               id: menuItem.id,
               name: menuItem.name,
@@ -1234,13 +1269,15 @@ export function App() {
                 hour: "2-digit",
                 minute: "2-digit",
               }),
-              kotStatus: "received",
+              kotStatus: "new",
+              kotSent: false,
             },
           ];
         }
 
-        return {
+        const updated = {
           ...t,
+          kotSent: newItems.length > 0 && newItems.every((i) => i.kotSent),
           items: newItems,
           status: t.status === "vacant" ? "occupied" : t.status,
           orderTime:
@@ -1253,85 +1290,171 @@ export function App() {
           completedAt: null,
           completedDuration: null,
         };
-      }),
-    );
+        targetUpdatedTable = updated;
+        return updated;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+
+      return nextTables;
+    });
+
+    if (targetUpdatedTable) {
+      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch(() => {});
+    }
 
     showToast(
-      `Added ${menuItem.name} to ${tables.find((t) => t.id === tableId)?.name}`,
+      `Added ${menuItem.name} to ${tables.find((t) => String(t.id) === String(tableId))?.name || `Table ${tableId}`}`,
     );
   };
 
   // Update Item Quantity
   const handleUpdateItemQuantity = (tableId, itemId, newQty) => {
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
+    let targetUpdatedTable = null;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
 
+        const currentItems = Array.isArray(t.items) ? t.items : [];
         let newItems;
         if (newQty <= 0) {
-          newItems = t.items.filter((i) => i.id !== itemId);
+          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
         } else {
-          newItems = t.items.map((i) =>
-            i.id === itemId ? { ...i, quantity: newQty } : i,
+          newItems = currentItems.map((i) =>
+            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i,
           );
         }
 
-        return {
+        const updated = {
           ...t,
           items: newItems,
-          status: newItems.length === 0 ? "vacant" : t.status,
+          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
         };
-      }),
-    );
+        targetUpdatedTable = updated;
+        return updated;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+
+      return nextTables;
+    });
+
+    if (targetUpdatedTable) {
+      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch(() => {});
+    }
   };
 
   // Remove Item
   const handleRemoveItemFromTable = (tableId, itemId) => {
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        const newItems = t.items.filter((i) => i.id !== itemId);
-        return {
+    let targetUpdatedTable = null;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
+        const currentItems = Array.isArray(t.items) ? t.items : [];
+        const newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        const updated = {
           ...t,
           items: newItems,
-          status: newItems.length === 0 ? "vacant" : t.status,
+          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
         };
-      }),
-    );
+        targetUpdatedTable = updated;
+        return updated;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+
+      return nextTables;
+    });
+
+    if (targetUpdatedTable) {
+      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch(() => {});
+    }
   };
 
   // Update Item Notes
   const handleUpdateItemNotes = (tableId, itemId, notes) => {
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        return {
+    let targetUpdatedTable = null;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
+        const currentItems = Array.isArray(t.items) ? t.items : [];
+        const updated = {
           ...t,
-          items: t.items.map((i) => (i.id === itemId ? { ...i, notes } : i)),
+          items: currentItems.map((i) => (String(i.id) === String(itemId) ? { ...i, notes } : i)),
         };
-      }),
-    );
+        targetUpdatedTable = updated;
+        return updated;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+
+      return nextTables;
+    });
+
+    if (targetUpdatedTable) {
+      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch(() => {});
+    }
+
     showToast("Kitchen note updated");
   };
 
   // Update Guests Count
   const handleUpdateGuests = (tableId, count) => {
+    const newCount = Math.max(0, Number(count) || 0);
+    const updatedSeats = Array.from({ length: newCount }, (_, i) => `S${i + 1}`);
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
+    const targetStatus = newCount > 0
+      ? (tbl?.status === "vacant" ? "occupied" : tbl?.status || "occupied")
+      : (Array.isArray(tbl?.items) && tbl.items.length > 0 ? tbl.status : "vacant");
+
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        const newCount = Math.max(0, Number(count) || 0);
+        if (String(t.id) !== String(tableId)) return t;
         return {
           ...t,
           guests: newCount,
-          status: newCount > 0 && t.status === "vacant" ? "occupied" : t.status,
+          occupiedChairs: newCount,
+          selectedSeats: updatedSeats,
+          status: targetStatus,
         };
       });
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
       return nextTables;
     });
+
+    const targetApiId = tbl?.backendTableId || tableId;
+    apiUpdateTable(targetApiId, {
+      ...tbl,
+      guests: newCount,
+      occupiedChairs: newCount,
+      selectedSeats: updatedSeats,
+      status: targetStatus,
+    }).catch(() => {});
   };
 
   // Update Discount
@@ -1353,16 +1476,15 @@ export function App() {
   // 1. Send KOT (Kitchen Order Ticket): Transitions items to 'received' status in Kitchen
   const handleSendKOT = (tableId) => {
     sounds.playBell();
-    const tbl = tables.find((t) => t.id === tableId);
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
     try {
       const saved = localStorage.getItem("gourmet_kot_dismissed_tickets_v1");
       if (saved) {
         const list = JSON.parse(saved);
         const updated = list.filter(
           (id) =>
-            id !== String(tableId) &&
-            id !== Number(tableId) &&
-            id !== `active-${tableId}`,
+            String(id) !== String(tableId) &&
+            String(id) !== `active-${tableId}`,
         );
         localStorage.setItem(
           "gourmet_kot_dismissed_tickets_v1",
@@ -1370,11 +1492,15 @@ export function App() {
         );
       }
     } catch {}
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        const updatedItems = t.items.map((i) => ({
+
+    let targetUpdatedTable = null;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
+        const currentItems = Array.isArray(t.items) ? t.items : [];
+        const updatedItems = currentItems.map((i) => ({
           ...i,
+          kotSent: true,
           kotStatus:
             i.kotStatus === "ready" ||
             i.kotStatus === "served" ||
@@ -1393,8 +1519,10 @@ export function App() {
               i.kotStatus === "completed",
           );
 
-        return {
+        const updated = {
           ...t,
+          kotSent: true,
+          status: t.status === "vacant" ? "occupied" : t.status,
           orderTime:
             t.orderTime ||
             new Date().toLocaleTimeString([], {
@@ -1406,34 +1534,58 @@ export function App() {
           completedAt: allReady ? t.completedAt : null,
           completedDuration: allReady ? t.completedDuration : null,
         };
-      }),
-    );
+        targetUpdatedTable = updated;
+        return updated;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+
+      return nextTables;
+    });
+
+    if (targetUpdatedTable) {
+      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch(() => {});
+    }
+
     apiCreateKotOrder({ tableId, items: tbl?.items, status: "received" }).catch(
       () => {},
     );
     setIsKOTOpen(true);
+    triggerKitchenNotification({
+      tableId,
+      tableName: tbl?.name || `Table ${tableId}`,
+      type: "order_received",
+      title: "📥 KOT Sent to Kitchen",
+      message: `Order for ${tbl?.name || `Table ${tableId}`} sent to kitchen. Waiting for cooking to complete!`,
+    });
     showToast(
-      `📥 KOT Sent: Order Received from ${tbl?.name || `Table ${tableId}`}!`,
+      `📥 KOT Sent: Order Received in Kitchen for ${tbl?.name || `Table ${tableId}`}!`,
     );
   };
 
   // 2. Kitchen KDS Action: Start cooking or update status
   const handleUpdateItemKotStatus = (tableId, status, itemId = null) => {
-    const tbl = tables.find((t) => t.id === tableId);
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
     const itemObj =
-      itemId && tbl ? tbl.items.find((i) => i.id === itemId) : null;
+      itemId && tbl && Array.isArray(tbl.items) ? tbl.items.find((i) => String(i.id) === String(itemId)) : null;
     const itemName = itemObj ? itemObj.name : null;
 
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        const updatedItems = t.items.map((i) => {
+    let targetUpdatedTable = null;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
+        const currentItems = Array.isArray(t.items) ? t.items : [];
+        const updatedItems = currentItems.map((i) => {
           if (itemId) {
-            return i.id === itemId ? { ...i, kotStatus: status } : i;
+            return String(i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
           // Table-level status change
           if (status === "cooking") {
-            // If starting cooking for the table, DO NOT revert already prepared/served/completed dishes back to cooking!
             if (
               i.kotStatus === "ready" ||
               i.kotStatus === "served" ||
@@ -1441,12 +1593,12 @@ export function App() {
             ) {
               return i;
             }
-            return { ...i, kotStatus: "cooking" };
+            return { ...i, kotStatus: "cooking", kotSent: true };
           }
           if (status === "ready") {
-            return { ...i, kotStatus: "ready" };
+            return { ...i, kotStatus: "ready", kotSent: true };
           }
-          return { ...i, kotStatus: status };
+          return { ...i, kotStatus: status, kotSent: true };
         });
         const allReady =
           updatedItems.length > 0 &&
@@ -1484,20 +1636,35 @@ export function App() {
             finalCookingStartedAt = t.orderTime || finalCompletedAt;
           }
         } else {
-          // Table is not fully ready (e.g. some items cooking or received)
           finalDuration = null;
           finalCompletedAt = null;
         }
 
-        return {
+        const updated = {
           ...t,
+          kotSent: true,
           items: updatedItems,
           cookingStartedAt: finalCookingStartedAt,
           completedAt: finalCompletedAt,
           completedDuration: finalDuration,
         };
-      }),
-    );
+        targetUpdatedTable = updated;
+        return updated;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+
+      return nextTables;
+    });
+
+    if (targetUpdatedTable) {
+      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch(() => {});
+    }
 
     if (status === "cooking") {
       triggerKitchenNotification({
@@ -1537,9 +1704,9 @@ export function App() {
     completedDuration = null,
     completedAt = null,
   ) => {
-    const tbl = tables.find((t) => t.id === tableId);
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
     const itemObj =
-      itemId && tbl ? tbl.items.find((i) => i.id === itemId) : null;
+      itemId && tbl && Array.isArray(tbl.items) ? tbl.items.find((i) => String(i.id) === String(itemId)) : null;
     const nowTimeStr =
       completedAt ||
       new Date().toLocaleTimeString([], {
@@ -1548,12 +1715,14 @@ export function App() {
         hour12: true,
       });
 
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        const updatedItems = t.items.map((i) => {
-          if (itemId && i.id !== itemId) return i;
-          return { ...i, kotStatus: "ready" };
+    let targetUpdatedTable = null;
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
+        const currentItems = Array.isArray(t.items) ? t.items : [];
+        const updatedItems = currentItems.map((i) => {
+          if (itemId && String(i.id) !== String(itemId)) return i;
+          return { ...i, kotStatus: "ready", kotSent: true };
         });
         const allReady =
           updatedItems.length > 0 &&
@@ -1578,15 +1747,31 @@ export function App() {
           finalCompletedAt = t.completedAt || nowTimeStr;
         }
 
-        return {
+        const updated = {
           ...t,
+          kotSent: true,
           items: updatedItems,
           cookingStartedAt: t.cookingStartedAt || t.orderTime || nowTimeStr,
           completedAt: finalCompletedAt,
           completedDuration: finalDuration,
         };
-      }),
-    );
+        targetUpdatedTable = updated;
+        return updated;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+      } catch {}
+
+      return nextTables;
+    });
+
+    if (targetUpdatedTable) {
+      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch(() => {});
+    }
 
     const isSingleItem = Boolean(itemObj);
     triggerKitchenNotification({
@@ -1598,12 +1783,12 @@ export function App() {
         : "🔔 Cooking Completed!",
       message: isSingleItem
         ? `"${itemObj.name}" is prepared! Ready to serve.`
-        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! 🍽️`,
+        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! 🍽️ Settle & checkout enabled.`,
     });
     showToast(
       isSingleItem
         ? `✅ ${tbl?.name || `Table ${tableId}`}: "${itemObj.name}" marked prepared!`
-        : `✅ ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to serve.`,
+        : `✅ ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to settle.`,
     );
   };
 
@@ -2504,8 +2689,29 @@ export function App() {
                     setReprintReceiptData(null);
                     setIsReceiptOpen(true);
                   }}
-                  onOpenSettlement={() => {
-                    const items = Array.isArray(currentTable?.items) ? currentTable.items : [];
+                  onOpenSettlement={(requestedTableId) => {
+                    const targetTable = (requestedTableId && tables.find((t) => String(t.id) === String(requestedTableId))) || currentTable;
+                    const items = Array.isArray(targetTable?.items) ? targetTable.items : [];
+                    if (items.length === 0) {
+                      showToast("Cannot settle: No items in order.");
+                      return;
+                    }
+
+                    const isItemSent = (i) => Boolean(i && (i.kotSent || i.kotStatus === "received" || i.kotStatus === "cooking" || i.kotStatus === "ready" || i.kotStatus === "served" || i.kotStatus === "completed"));
+                    const isItemDone = (i) => Boolean(i && (i.kotStatus === "ready" || i.kotStatus === "served" || i.kotStatus === "completed"));
+
+                    const hasUnsent = items.some((i) => i && i.status !== "cancelled" && !isItemSent(i));
+                    if (hasUnsent) {
+                      showToast("⚠️ Send KOT to kitchen first before settling.");
+                      return;
+                    }
+
+                    const allDoneCooking = items.length > 0 && items.every((i) => i && (i.status === "cancelled" || isItemDone(i)));
+                    if (!allDoneCooking) {
+                      showToast("👨‍🍳 Cooking is in progress. Settle & checkout will enable once kitchen marks food ready.");
+                      return;
+                    }
+
                     const hasValidItems = items.length > 0 && items.every((item) =>
                       String(item?.name || item?.dishName || menuItems.find((menuItem) => String(menuItem.id) === String(item?.menuItemId ?? item?.id))?.name || "").trim() &&
                       Number(item?.quantity ?? item?.qty) > 0 &&
@@ -2521,6 +2727,7 @@ export function App() {
                   onOpenTransferModal={() => setIsTransferOpen(true)}
                   onClearOrder={handleClearOrder}
                   onOpenKOTView={() => navigate("/kot")}
+                  onShowToast={showToast}
                 />
               )}
             </>

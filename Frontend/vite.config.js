@@ -303,6 +303,121 @@ function globalSyncPlugin() {
           );
         }
 
+        // REST API: /api/v1/tables/:id/vacate (POST)
+        const tableVacateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)\/vacate$/i);
+        if (tableVacateMatch && req.method === "POST") {
+          const rawId = decodeURIComponent(tableVacateMatch[1]);
+          db = loadDb();
+          const list = db.gourmet_pos_tables_v2_inr || [];
+          let updatedTable = null;
+          db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+            const match =
+              String(tbl.id) === rawId ||
+              String(tbl.backendTableId) === rawId ||
+              String(tbl.tableId) === rawId ||
+              String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+            if (match) {
+              updatedTable = {
+                ...tbl,
+                status: "vacant",
+                items: [],
+                guests: 0,
+                occupiedChairs: 0,
+                selectedSeats: [],
+                occupiedSince: null,
+                activeOrderId: null,
+                orderTime: null,
+                orderTimestamp: null,
+                cookingStartedAt: null,
+                completedAt: null,
+                completedDuration: null,
+                discountPercent: 0,
+                discountAmount: 0,
+                subtotal: 0,
+                taxAmount: 0,
+                serviceChargeAmount: 0,
+                grandTotal: 0,
+              };
+              return updatedTable;
+            }
+            return tbl;
+          });
+          saveDb(db);
+          broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, table: updatedTable }));
+        }
+
+        // REST API: /api/v1/tables/:id (PUT)
+        const tableUpdateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)$/i);
+        if (tableUpdateMatch && req.method === "PUT") {
+          const rawId = decodeURIComponent(tableUpdateMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const list = db.gourmet_pos_tables_v2_inr || [];
+              let updatedTable = null;
+              db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+                const match =
+                  String(tbl.id) === rawId ||
+                  String(tbl.backendTableId) === rawId ||
+                  String(tbl.tableId) === rawId ||
+                  String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+                if (match) {
+                  const incomingGuests = Number(payload.guests) || (Array.isArray(payload.selectedSeats) ? payload.selectedSeats.length : 0);
+                  const hasGuests = incomingGuests > 0;
+                  const payloadItems = Array.isArray(payload.items) ? payload.items : null;
+                  const existingItems = Array.isArray(tbl.items) ? tbl.items : [];
+                  const resolvedItems = (payloadItems && payloadItems.length > 0)
+                    ? payloadItems
+                    : (existingItems.length > 0 ? existingItems : (payloadItems || []));
+                  const hasItems = resolvedItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+                  const isVacant = !hasGuests && !hasItems && String(payload.status || tbl.status).toLowerCase() === "vacant";
+                  const resolvedStatus = (hasGuests || hasItems)
+                    ? ((payload.status === "dining" || payload.status === "billed") ? payload.status : "occupied")
+                    : (isVacant ? "vacant" : (payload.status || tbl.status || "vacant"));
+                  updatedTable = {
+                    ...tbl,
+                    ...payload,
+                    status: resolvedStatus,
+                    items: isVacant ? [] : resolvedItems,
+                    guests: isVacant ? 0 : (hasGuests ? incomingGuests : (payload.guests ?? tbl.guests ?? 0)),
+                    occupiedChairs: isVacant ? 0 : (hasGuests ? (Number(payload.occupiedChairs) || incomingGuests) : (payload.occupiedChairs ?? tbl.occupiedChairs ?? 0)),
+                    selectedSeats: isVacant ? [] : (Array.isArray(payload.selectedSeats) && payload.selectedSeats.length > 0 ? payload.selectedSeats : (hasGuests ? Array.from({ length: incomingGuests }, (_, i) => `S${i + 1}`) : tbl.selectedSeats || [])),
+                    ...(isVacant ? {
+                      items: [],
+                      guests: 0,
+                      occupiedChairs: 0,
+                      selectedSeats: [],
+                      occupiedSince: null,
+                      activeOrderId: null,
+                      orderTime: null,
+                      orderTimestamp: null,
+                      cookingStartedAt: null,
+                      completedAt: null,
+                      completedDuration: null,
+                      discountPercent: 0,
+                    } : {}),
+                  };
+                  return updatedTable;
+                }
+                return tbl;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, table: updatedTable }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
         // REST API: /api/v1/menu-items (DELETE)
         const menuItemDeleteMatch = req.url.match(/^\/api\/v1\/menu-items\/([^/?]+)$/i);
         if (menuItemDeleteMatch && req.method === "DELETE") {

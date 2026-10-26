@@ -22,17 +22,30 @@
       "name": "Table-2",
       "tableNumber": "Table-2",
       "section": "Main Hall",
-      "capacity": 4,
-      "status": "vacant",
-      "server": "Staff",
-      "guests": 0,
+      "capacity": 5,
+      "status": "occupied",
+      "server": "Rajesh K.",
+      "guests": 2,
       "items": [],
       "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 2
+      "backendTableId": 2,
+      "tableName": "Table-2",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 5,
+      "occupiedChairs": 2,
+      "selectedSeats": [
+        "S3",
+        "S4"
+      ],
+      "assignedServerId": 1,
+      "assignedServerName": "Rajesh K.",
+      "qrCodeUrl": null
     },
     {
       "id": 3,
@@ -42,36 +55,52 @@
       "capacity": 4,
       "status": "occupied",
       "server": "Staff",
-      "guests": 0,
+      "guests": 3,
       "items": [
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "11:48 AM",
-          "kotStatus": "received"
-        },
         {
           "id": "bir-4",
           "name": "Chicken 65 Biryani",
           "price": 360,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "11:48 AM",
-          "kotStatus": "received"
+          "timeAdded": "12:47 PM",
+          "kotStatus": "ready",
+          "kotSent": true
+        },
+        {
+          "id": "bir-3",
+          "name": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "12:47 PM",
+          "kotStatus": "ready",
+          "kotSent": true
         }
       ],
-      "orderTime": "11:48 AM",
+      "orderTime": "12:47 PM",
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
       "backendTableId": 3,
-      "orderTimestamp": 1792736283973,
+      "orderTimestamp": 1792999043198,
       "completedAt": null,
-      "completedDuration": null
+      "completedDuration": null,
+      "tableName": "Table-3",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 4,
+      "occupiedChairs": 3,
+      "selectedSeats": [
+        "S2",
+        "S1",
+        "S3"
+      ],
+      "assignedServerId": null,
+      "assignedServerName": "Staff",
+      "qrCodeUrl": null
     },
     {
       "id": 4,
@@ -2929,5 +2958,43 @@
       "lastRestocked": "22 Oct 2026"
     }
   ],
-  "avsr_daily_inv_cnt_23_Oct_2026": "507"
+  "avsr_daily_inv_cnt_23_Oct_2026": "507",
+  "avsr_pending_otps": {
+    "test@example.com": {
+      "otp": "711951",
+      "expiresAt": 1792993369179,
+      "fullName": "Test",
+      "phone": "",
+      "createdAt": 1792992769179,
+      "verified": true,
+      "verifiedAt": 1792992805743
+    },
+    "csrivarun@gmail.com": {
+      "otp": "308758",
+      "expiresAt": 1792994597121,
+      "fullName": "sri",
+      "phone": "3456789654",
+      "createdAt": 1792993997121,
+      "verified": true,
+      "verifiedAt": 1792994028597
+    },
+    "csrivarun1@gmail.com": {
+      "otp": "515663",
+      "expiresAt": 1792994671687,
+      "fullName": "sri",
+      "phone": "3456789654",
+      "createdAt": 1792994071687,
+      "verified": true,
+      "verifiedAt": 1792994085510
+    },
+    "newadmin@gmail.com": {
+      "otp": "730210",
+      "expiresAt": 1792995023656,
+      "fullName": "newadmin",
+      "phone": "8765432345",
+      "createdAt": 1792994423656,
+      "verified": true,
+      "verifiedAt": 1792994434521
+    }
+  }
 }
