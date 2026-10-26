@@ -1735,7 +1735,7 @@ export function AdminPortal({
                               style={{
                                 background: "rgba(245, 158, 11, 0.15)",
                                 border: "1px solid rgba(245, 158, 11, 0.3)",
-                                color: "#f59e0b",
+                                color: "var(--accent-amber-light)",
                                 fontSize: "0.74rem",
                                 fontWeight: 700,
                                 padding: "2px 8px",
@@ -2103,7 +2103,7 @@ export function AdminPortal({
                                         style={{
                                           background: "rgba(16, 185, 129, 0.12)",
                                           border: "1px solid rgba(16, 185, 129, 0.28)",
-                                          color: "#10b981",
+                                          color: "var(--success)",
                                           borderRadius: "14px",
                                           padding: "3px 10px",
                                           fontSize: "0.68rem",
@@ -2120,7 +2120,7 @@ export function AdminPortal({
                                         style={{
                                           background: "rgba(239, 68, 68, 0.12)",
                                           border: "1px solid rgba(239, 68, 68, 0.28)",
-                                          color: "#ef4444",
+                                          color: "var(--danger)",
                                           borderRadius: "14px",
                                           padding: "3px 10px",
                                           fontSize: "0.68rem",
@@ -2138,7 +2138,7 @@ export function AdminPortal({
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       fontWeight: 800,
-                                      color: "#f59e0b",
+                                      color: "var(--accent-amber-light)",
                                       fontSize: "0.92rem",
                                       whiteSpace: "nowrap",
                                     }}
@@ -2224,7 +2224,7 @@ export function AdminPortal({
                                         style={{
                                           border: "1px solid rgba(245, 158, 11, 0.45)",
                                           background: "rgba(245, 158, 11, 0.06)",
-                                          color: "#f59e0b",
+                                          color: "var(--accent-amber-light)",
                                           borderRadius: "6px",
                                           padding: "4px 12px",
                                           fontSize: "0.78rem",
@@ -2254,7 +2254,7 @@ export function AdminPortal({
                                         style={{
                                           border: "1px solid rgba(239, 68, 68, 0.45)",
                                           background: "rgba(239, 68, 68, 0.06)",
-                                          color: "#ef4444",
+                                          color: "var(--danger)",
                                           borderRadius: "6px",
                                           padding: "4px 12px",
                                           fontSize: "0.78rem",
@@ -2407,11 +2407,11 @@ export function AdminPortal({
                                   borderRadius: "5px",
                                   background:
                                     safeMenuPage === 1
-                                      ? "rgba(255, 255, 255, 0.02)"
-                                      : "rgba(255, 255, 255, 0.06)",
+                                      ? "rgba(var(--surface-rgb),0.02)"
+                                      : "rgba(var(--surface-rgb),0.06)",
                                   border: "1px solid var(--neutral-border)",
                                   color:
-                                    safeMenuPage === 1 ? "#475569" : "#cbd5e1",
+                                    safeMenuPage === 1 ? "#475569" : "var(--text-muted)",
                                   cursor:
                                     safeMenuPage === 1
                                       ? "not-allowed"
@@ -2448,8 +2448,8 @@ export function AdminPortal({
                                         : "transparent",
                                       border: isActive
                                         ? "none"
-                                        : "1px solid rgba(255, 255, 255, 0.08)",
-                                      color: isActive ? "#ffffff" : "#94a3b8",
+                                        : "1px solid rgba(var(--surface-rgb),0.08)",
+                                      color: isActive ? "#ffffff" : "var(--text-dim)",
                                       cursor: "pointer",
                                       fontSize: "0.72rem",
                                       fontWeight: isActive ? 800 : 500,
@@ -2477,13 +2477,13 @@ export function AdminPortal({
                                   borderRadius: "5px",
                                   background:
                                     safeMenuPage === totalMenuPages
-                                      ? "rgba(255, 255, 255, 0.02)"
-                                      : "rgba(255, 255, 255, 0.06)",
+                                      ? "rgba(var(--surface-rgb),0.02)"
+                                      : "rgba(var(--surface-rgb),0.06)",
                                   border: "1px solid var(--neutral-border)",
                                   color:
                                     safeMenuPage === totalMenuPages
                                       ? "#475569"
-                                      : "#cbd5e1",
+                                      : "var(--text-muted)",
                                   cursor:
                                     safeMenuPage === totalMenuPages
                                       ? "not-allowed"
@@ -2537,7 +2537,7 @@ export function AdminPortal({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: "#f59e0b",
+                            color: "var(--accent-amber-light)",
                           }}
                         >
                           <Armchair size={22} color="#f59e0b" />
@@ -2590,14 +2590,14 @@ export function AdminPortal({
                     {/* Table Rows Container */}
                     <div
                       style={{
-                        background: "rgba(6, 17, 31, 0.6)",
+                        background: "var(--bg-tertiary)",
                         borderRadius: "10px",
                         border: "1px solid var(--neutral-border)",
                         overflow: "hidden",
                       }}
                     >
-                      <div style={{ overflowX: "auto" }}>
-                        <div style={{ width: "100%", minWidth: "720px", padding: "0.6rem", boxSizing: "border-box" }}>
+                      <div className="floor-table-scroll" style={{ overflowX: "auto" }}>
+                        <div className="floor-table-layout">
                           {/* Filter Toolbar: Vacant / Occupied Only + Search */}
                           <div
                             style={{
@@ -2607,10 +2607,10 @@ export function AdminPortal({
                               flexWrap: "wrap",
                               gap: "0.75rem",
                               padding: "0.55rem 0.85rem",
-                              background: "#081628",
+                              background: "var(--bg-secondary)",
                               borderRadius: "8px",
                               marginBottom: "0.5rem",
-                              border: "1px solid rgba(255, 255, 255, 0.05)",
+                              border: "1px solid rgba(var(--surface-rgb),0.05)",
                             }}
                           >
                             <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
@@ -2618,7 +2618,7 @@ export function AdminPortal({
                               <div style={{ position: "relative", minWidth: "170px" }}>
                                 <Search
                                   size={13}
-                                  color="#7e9bb7"
+                                  color="var(--text-dim)"
                                   style={{
                                     position: "absolute",
                                     left: "9px",
@@ -2638,7 +2638,7 @@ export function AdminPortal({
                                     background: "var(--input-bg)",
                                     border: tableFilters.search
                                       ? "1px solid #f59e0b"
-                                      : "1px solid rgba(255, 255, 255, 0.12)",
+                                      : "1px solid rgba(var(--surface-rgb),0.12)",
                                     borderRadius: "6px",
                                     color: "var(--text-main)",
                                     fontSize: "0.78rem",
@@ -2656,7 +2656,7 @@ export function AdminPortal({
                                   background: "var(--input-bg)",
                                   padding: "3px",
                                   borderRadius: "7px",
-                                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                                  border: "1px solid rgba(var(--surface-rgb),0.08)",
                                 }}
                               >
                                 {/* All Tables */}
@@ -2689,7 +2689,7 @@ export function AdminPortal({
                                       borderRadius: "8px",
                                       background: (!tableFilters.status || tableFilters.status === "all")
                                         ? "#f59e0b"
-                                        : "rgba(255, 255, 255, 0.08)",
+                                        : "rgba(var(--surface-rgb),0.08)",
                                       color: (!tableFilters.status || tableFilters.status === "all")
                                         ? "#081628"
                                         : "var(--text-dim)",
@@ -2718,7 +2718,7 @@ export function AdminPortal({
                                     background: tableFilters.status === "vacant"
                                       ? "rgba(16, 185, 129, 0.2)"
                                       : "transparent",
-                                    color: tableFilters.status === "vacant" ? "#10b981" : "var(--text-dim)",
+                                    color: tableFilters.status === "vacant" ? "var(--success)" : "var(--text-dim)",
                                     boxShadow: tableFilters.status === "vacant"
                                       ? "0 0 10px rgba(16, 185, 129, 0.15)"
                                       : "none",
@@ -2730,7 +2730,7 @@ export function AdminPortal({
                                       width: "6px",
                                       height: "6px",
                                       borderRadius: "50%",
-                                      backgroundColor: "#10b981",
+                                      backgroundColor: "var(--success)",
                                       boxShadow: "0 0 6px #10b981",
                                     }}
                                   />
@@ -2741,7 +2741,7 @@ export function AdminPortal({
                                       borderRadius: "8px",
                                       background: tableFilters.status === "vacant"
                                         ? "#10b981"
-                                        : "rgba(255, 255, 255, 0.08)",
+                                        : "rgba(var(--surface-rgb),0.08)",
                                       color: tableFilters.status === "vacant" ? "#081628" : "var(--text-dim)",
                                       fontSize: "0.68rem",
                                       fontWeight: 800,
@@ -2768,7 +2768,7 @@ export function AdminPortal({
                                     background: tableFilters.status === "occupied"
                                       ? "rgba(245, 158, 11, 0.2)"
                                       : "transparent",
-                                    color: tableFilters.status === "occupied" ? "#f59e0b" : "var(--text-dim)",
+                                    color: tableFilters.status === "occupied" ? "var(--accent-amber-light)" : "var(--text-dim)",
                                     boxShadow: tableFilters.status === "occupied"
                                       ? "0 0 10px rgba(245, 158, 11, 0.15)"
                                       : "none",
@@ -2791,7 +2791,7 @@ export function AdminPortal({
                                       borderRadius: "8px",
                                       background: tableFilters.status === "occupied"
                                         ? "#f59e0b"
-                                        : "rgba(255, 255, 255, 0.08)",
+                                        : "rgba(var(--surface-rgb),0.08)",
                                       color: tableFilters.status === "occupied" ? "#081628" : "var(--text-dim)",
                                       fontSize: "0.68rem",
                                       fontWeight: 800,
@@ -2815,7 +2815,7 @@ export function AdminPortal({
                                     gap: "0.35rem",
                                     background: "rgba(239, 68, 68, 0.15)",
                                     border: "1px solid rgba(239, 68, 68, 0.4)",
-                                    color: "#ef4444",
+                                    color: "var(--danger)",
                                     padding: "0.38rem 0.75rem",
                                     borderRadius: "6px",
                                     fontSize: "0.75rem",
@@ -2838,20 +2838,19 @@ export function AdminPortal({
 
                           {/* Column Headers */}
                           <div
+                            className="floor-table-grid floor-table-heading"
                             style={{
                               display: "grid",
-                              gridTemplateColumns: "1.3fr 1.3fr 1.6fr 1.3fr 1.1fr 2.4fr",
                               alignItems: "center",
-                              padding: "0.55rem 1.1rem",
-                              background: "#081628",
+                              paddingBlock: "0.55rem",
+                              background: "var(--bg-secondary)",
                               borderRadius: "8px",
                               marginBottom: "0.5rem",
-                              color: "#7e9bb7",
+                              color: "var(--text-dim)",
                               fontSize: "0.74rem",
                               fontWeight: 700,
                               letterSpacing: "0.04em",
                               textTransform: "uppercase",
-                              gap: "0.6rem",
                             }}
                           >
                             <div
@@ -2889,7 +2888,7 @@ export function AdminPortal({
                               <span>Status</span>
                               {tableSortField === "status" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
                             </div>
-                            <div style={{ textAlign: "right", paddingRight: "0.5rem" }}>
+                            <div className="floor-table-actions-heading" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                               Actions
                             </div>
                           </div>
@@ -2916,7 +2915,7 @@ export function AdminPortal({
                                     marginTop: "0.75rem",
                                     background: "transparent",
                                     border: "1px solid #f59e0b",
-                                    color: "#f59e0b",
+                                    color: "var(--accent-amber-light)",
                                     padding: "0.35rem 0.9rem",
                                     borderRadius: "6px",
                                     fontSize: "0.8rem",
@@ -2934,7 +2933,7 @@ export function AdminPortal({
                           {sortedTables.map((tbl) => {
                             const isOccupied = isTableOccupied(tbl);
                             const dotColor = isOccupied ? "#f59e0b" : "#10b981";
-                            const textColor = isOccupied ? "#f59e0b" : "#10b981";
+                            const textColor = isOccupied ? "var(--status-occupied)" : "var(--status-vacant)";
                             const bgColor = isOccupied ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)";
                             const borderColor = isOccupied ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)";
                             const label = isOccupied ? "OCCUPIED" : "VACANT";
@@ -2942,35 +2941,35 @@ export function AdminPortal({
                             return (
                               <div
                                 key={tbl.id}
+                                className="floor-table-grid floor-table-row"
                                 style={{
                                   display: "grid",
-                                  gridTemplateColumns: "1.3fr 1.3fr 1.6fr 1.3fr 1.1fr 2.4fr",
                                   alignItems: "center",
-                                  padding: "0.58rem 1.1rem",
-                                  background: "#081627",
+                                  paddingBlock: "0.58rem",
+                                  background: "var(--bg-secondary)",
                                   border: "1px solid var(--neutral-border)",
                                   borderRadius: "8px",
                                   marginBottom: "0.45rem",
                                   transition: "background 0.15s ease, border-color 0.15s ease",
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = "#0c1f36";
+                                  e.currentTarget.style.background = "var(--bg-tertiary)";
                                   e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = "#081627";
-                                  e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
+                                  e.currentTarget.style.background = "var(--bg-secondary)";
+                                  e.currentTarget.style.borderColor = "var(--neutral-border)";
                                 }}
                               >
                                 {/* Col 1: Table # */}
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                                   <div
                                     style={{
                                       width: "28px",
                                       height: "28px",
                                       borderRadius: "6px",
                                       background: "rgba(245, 158, 11, 0.15)",
-                                      color: "#f59e0b",
+                                      color: "var(--accent-amber-light)",
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
@@ -2979,14 +2978,14 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                   >
-                                    T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}
+                                    <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
                                   </div>
                                   <span
                                     style={{
                                       fontWeight: 700,
-                                      color: "#ffffff",
+                                      color: "var(--text-main)",
                                       fontSize: "0.88rem",
-                                      whiteSpace: "nowrap",
+                                      whiteSpace: "normal",
                                     }}
                                   >
                                     {tbl.name || `Table ${tbl.id}`}
@@ -3058,82 +3057,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions */}
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                                  {/* Vacate Table Action (if occupied) */}
-                                  {isOccupied && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        requestDelete({
-                                          title: "Vacate Table?",
-                                          message: `Mark ${tbl.name || `Table ${tbl.id}`} as VACANT? This will clear any active order, guests, and seated chairs.`,
-                                          confirmLabel: "Yes, Mark Vacant",
-                                          cancelLabel: "Cancel",
-                                          icon: <CheckCircle2 size={22} color="#10b981" />,
-                                          onConfirm: () => {
-                                            const vacatedTable = {
-                                              ...tbl,
-                                              status: "vacant",
-                                              items: [],
-                                              guests: 0,
-                                              occupiedChairs: 0,
-                                              selectedSeats: [],
-                                              occupiedSince: null,
-                                              activeOrderId: null,
-                                              orderTime: null,
-                                              orderTimestamp: null,
-                                              cookingStartedAt: null,
-                                              completedAt: null,
-                                              completedDuration: null,
-                                              discountPercent: 0,
-                                              discountAmount: 0,
-                                              subtotal: 0,
-                                              taxAmount: 0,
-                                              serviceChargeAmount: 0,
-                                              grandTotal: 0,
-                                            };
-                                            if (onUpdateTable) {
-                                              onUpdateTable(vacatedTable);
-                                            }
-                                            try {
-                                              const targetId = tbl.backendTableId || tbl.id;
-                                              apiVacateTable(targetId).catch(() => {});
-                                              apiUpdateTableStatus(targetId, "vacant").catch(() => {});
-                                            } catch {}
-                                          },
-                                        });
-                                      }}
-                                      style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "0.35rem",
-                                        padding: "0.32rem 0.6rem",
-                                        background: "rgba(245, 158, 11, 0.08)",
-                                        color: "#f59e0b",
-                                        border: "1px solid rgba(245, 158, 11, 0.45)",
-                                        borderRadius: "6px",
-                                        fontSize: "0.74rem",
-                                        fontWeight: 700,
-                                        cursor: "pointer",
-                                        transition: "all 0.15s ease",
-                                        whiteSpace: "nowrap",
-                                        flexShrink: 0,
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
-                                        e.currentTarget.style.borderColor = "#f59e0b";
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
-                                      }}
-                                      title={`Mark ${tbl.name || `Table ${tbl.id}`} as Vacant`}
-                                    >
-                                      <CheckCircle2 size={13} color="#f59e0b" />
-                                      <span>Vacate Table</span>
-                                    </button>
-                                  )}
-
+                                <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
                                   {/* Edit Chairs / Area */}
                                   <button
                                     type="button"
@@ -3141,17 +3065,15 @@ export function AdminPortal({
                                     style={{
                                       display: "inline-flex",
                                       alignItems: "center",
-                                      gap: "0.35rem",
-                                      padding: "0.32rem 0.6rem",
+                                      justifyContent: "center",
+                                      padding: "0.32rem 0.5rem",
                                       background: "rgba(245, 158, 11, 0.08)",
                                       color: "#f59e0b",
                                       border: "1px solid rgba(245, 158, 11, 0.45)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
-                                      fontWeight: 700,
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
-                                      whiteSpace: "nowrap",
                                       flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
@@ -3162,9 +3084,10 @@ export function AdminPortal({
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
                                       e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
                                     }}
+                                    title="Edit Chairs / Area"
+                                    aria-label="Edit Chairs / Area"
                                   >
-                                    <Edit3 size={13} color="#f59e0b" />
-                                    <span>Edit Chairs / Area</span>
+                                    <SquarePen size={13} color="#f59e0b" />
                                   </button>
 
                                   {/* Delete Table */}
@@ -3197,7 +3120,7 @@ export function AdminPortal({
                                       justifyContent: "center",
                                       padding: "0.32rem 0.5rem",
                                       background: "rgba(239, 68, 68, 0.08)",
-                                      color: "#ef4444",
+                                      color: "var(--danger)",
                                       border: "1px solid rgba(239, 68, 68, 0.35)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
@@ -3207,7 +3130,7 @@ export function AdminPortal({
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(239, 68, 68, 0.22)";
-                                      e.currentTarget.style.borderColor = "#ef4444";
+                                      e.currentTarget.style.borderColor = "var(--danger)";
                                     }}
                                     onMouseLeave={(e) => {
                                       e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
@@ -3215,7 +3138,7 @@ export function AdminPortal({
                                     }}
                                     title="Delete table"
                                   >
-                                    <Trash2 size={13} color="#ef4444" />
+                                    <Trash2 size={13} color="var(--danger)" />
                                   </button>
                                 </div>
                               </div>
@@ -3256,7 +3179,7 @@ export function AdminPortal({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: "#f59e0b",
+                            color: "var(--accent-amber-light)",
                           }}
                         >
                           <Users size={22} color="#f59e0b" />
@@ -3320,7 +3243,7 @@ export function AdminPortal({
                     {/* Staff Rows Container (Matching Image 2) */}
                     <div
                       style={{
-                        background: "rgba(6, 17, 31, 0.6)",
+                        background: "var(--bg-tertiary)",
                         borderRadius: "10px",
                         border: "1px solid var(--neutral-border)",
                         overflow: "hidden",
@@ -3336,10 +3259,10 @@ export function AdminPortal({
                                 "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
                               alignItems: "center",
                               padding: "0.55rem 0.85rem",
-                              background: "#081628",
+                              background: "var(--bg-secondary)",
                               borderRadius: "8px",
                               marginBottom: "0.5rem",
-                              color: "#7e9bb7",
+                              color: "var(--text-dim)",
                               fontSize: "0.78rem",
                               gap: "0.5rem",
                             }}
@@ -3349,7 +3272,7 @@ export function AdminPortal({
                               <div style={{ position: "relative" }}>
                                 <Search
                                   size={12}
-                                  color="#7e9bb7"
+                                  color="var(--text-dim)"
                                   style={{
                                     position: "absolute",
                                     left: "8px",
@@ -3369,9 +3292,9 @@ export function AdminPortal({
                                     background: "var(--input-bg)",
                                     border: staffFilters.search
                                       ? "1px solid #f59e0b"
-                                      : "1px solid rgba(255, 255, 255, 0.12)",
+                                      : "1px solid rgba(var(--surface-rgb),0.12)",
                                     borderRadius: "6px",
-                                    color: "#f1f5f9",
+                                    color: "var(--text-main)",
                                     fontSize: "0.78rem",
                                     outline: "none",
                                     boxSizing: "border-box",
@@ -3391,9 +3314,9 @@ export function AdminPortal({
                                   background: "var(--input-bg)",
                                   border: staffFilters.role
                                     ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
+                                    : "1px solid rgba(var(--surface-rgb),0.12)",
                                   borderRadius: "6px",
-                                  color: staffFilters.role ? "#f59e0b" : "#f1f5f9",
+                                  color: staffFilters.role ? "var(--accent-amber-light)" : "var(--text-main)",
                                   fontSize: "0.78rem",
                                   outline: "none",
                                   cursor: "pointer",
@@ -3413,7 +3336,7 @@ export function AdminPortal({
 
                             {/* Col 3: Phone Header */}
                             <div>
-                              <span style={{ color: "#7e9bb7", fontWeight: 600, fontSize: "0.78rem", paddingLeft: "4px" }}>
+                              <span style={{ color: "var(--text-dim)", fontWeight: 600, fontSize: "0.78rem", paddingLeft: "4px" }}>
                                 Phone / Contact
                               </span>
                             </div>
@@ -3429,9 +3352,9 @@ export function AdminPortal({
                                   background: "var(--input-bg)",
                                   border: staffFilters.shift
                                     ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
+                                    : "1px solid rgba(var(--surface-rgb),0.12)",
                                   borderRadius: "6px",
-                                  color: staffFilters.shift ? "#f59e0b" : "#f1f5f9",
+                                  color: staffFilters.shift ? "var(--accent-amber-light)" : "var(--text-main)",
                                   fontSize: "0.78rem",
                                   outline: "none",
                                   cursor: "pointer",
@@ -3460,9 +3383,9 @@ export function AdminPortal({
                                   background: "var(--input-bg)",
                                   border: staffFilters.assigned
                                     ? "1px solid #f59e0b"
-                                    : "1px solid rgba(255, 255, 255, 0.12)",
+                                    : "1px solid rgba(var(--surface-rgb),0.12)",
                                   borderRadius: "6px",
-                                  color: staffFilters.assigned ? "#f59e0b" : "#f1f5f9",
+                                  color: staffFilters.assigned ? "var(--accent-amber-light)" : "var(--text-main)",
                                   fontSize: "0.78rem",
                                   outline: "none",
                                   cursor: "pointer",
@@ -3493,7 +3416,7 @@ export function AdminPortal({
                                     gap: "0.3rem",
                                     background: "rgba(239, 68, 68, 0.15)",
                                     border: "1px solid rgba(239, 68, 68, 0.4)",
-                                    color: "#ef4444",
+                                    color: "var(--danger)",
                                     padding: "0.35rem 0.65rem",
                                     borderRadius: "6px",
                                     fontSize: "0.74rem",
@@ -3543,7 +3466,7 @@ export function AdminPortal({
                                     marginTop: "0.75rem",
                                     background: "transparent",
                                     border: "1px solid #f59e0b",
-                                    color: "#f59e0b",
+                                    color: "var(--accent-amber-light)",
                                     padding: "0.35rem 0.9rem",
                                     borderRadius: "6px",
                                     fontSize: "0.8rem",
@@ -3583,7 +3506,7 @@ export function AdminPortal({
                                     "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
                                   alignItems: "center",
                                   padding: "0.55rem 0.85rem",
-                                  background: "#081627",
+                                  background: "var(--bg-secondary)",
                                   border: "1px solid var(--neutral-border)",
                                   borderRadius: "8px",
                                   marginBottom: "0.45rem",
@@ -3591,12 +3514,12 @@ export function AdminPortal({
                                   transition: "background 0.15s ease, border-color 0.15s ease",
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = "#0c1f36";
+                                  e.currentTarget.style.background = "var(--bg-tertiary)";
                                   e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = "#081627";
-                                  e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
+                                  e.currentTarget.style.background = "var(--bg-secondary)";
+                                  e.currentTarget.style.borderColor = "rgba(var(--surface-rgb),0.05)";
                                 }}
                               >
                                 {/* Col 1: Staff Avatar Badge + Name (Matching Image 2 table badge) */}
@@ -3607,7 +3530,7 @@ export function AdminPortal({
                                       height: "28px",
                                       borderRadius: "6px",
                                       background: "rgba(245, 158, 11, 0.15)",
-                                      color: "#f59e0b",
+                                      color: "var(--accent-amber-light)",
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
@@ -3621,7 +3544,7 @@ export function AdminPortal({
                                   <span
                                     style={{
                                       fontWeight: 700,
-                                      color: "#ffffff",
+                                      color: "var(--text-main)",
                                       fontSize: "0.88rem",
                                       whiteSpace: "nowrap",
                                       overflow: "hidden",
@@ -3689,7 +3612,7 @@ export function AdminPortal({
                                         assignedCount > 0
                                           ? "1px solid rgba(16, 185, 129, 0.3)"
                                           : "1px solid rgba(100, 116, 139, 0.25)",
-                                      color: assignedCount > 0 ? "#10b981" : "#94a3b8",
+                                      color: assignedCount > 0 ? "var(--success)" : "var(--text-dim)",
                                       fontSize: "0.7rem",
                                       fontWeight: 800,
                                       letterSpacing: "0.04em",
@@ -3724,17 +3647,15 @@ export function AdminPortal({
                                     style={{
                                       display: "inline-flex",
                                       alignItems: "center",
-                                      gap: "0.35rem",
-                                      padding: "0.35rem 0.75rem",
+                                      justifyContent: "center",
+                                      padding: "0.35rem 0.55rem",
                                       background: "rgba(245, 158, 11, 0.08)",
                                       color: "#f59e0b",
                                       border: "1px solid rgba(245, 158, 11, 0.45)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
-                                      fontWeight: 700,
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
-                                      whiteSpace: "nowrap",
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
@@ -3744,9 +3665,10 @@ export function AdminPortal({
                                       e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
                                       e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
                                     }}
+                                    title="Edit Staff"
+                                    aria-label="Edit Staff"
                                   >
-                                    <Edit3 size={13} color="#f59e0b" />
-                                    <span>Edit Staff</span>
+                                    <SquarePen size={13} color="#f59e0b" />
                                   </button>
 
                                   {/* Delete Staff button */}
@@ -3766,7 +3688,7 @@ export function AdminPortal({
                                       justifyContent: "center",
                                       padding: "0.35rem 0.55rem",
                                       background: "rgba(239, 68, 68, 0.08)",
-                                      color: "#ef4444",
+                                      color: "var(--danger)",
                                       border: "1px solid rgba(239, 68, 68, 0.35)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
@@ -3775,7 +3697,7 @@ export function AdminPortal({
                                     }}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = "rgba(239, 68, 68, 0.22)";
-                                      e.currentTarget.style.borderColor = "#ef4444";
+                                      e.currentTarget.style.borderColor = "var(--danger)";
                                     }}
                                     onMouseLeave={(e) => {
                                       e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
@@ -3783,7 +3705,7 @@ export function AdminPortal({
                                     }}
                                     title="Remove staff member"
                                   >
-                                    <Trash2 size={13} color="#ef4444" />
+                                    <Trash2 size={13} color="var(--danger)" />
                                   </button>
                                 </div>
                               </div>
@@ -4486,16 +4408,16 @@ export function AdminPortal({
                               tbl.items.some((i) => i.kotStatus === "cooking");
 
                             let statusBadge = "ORDER RECEIVED FROM TABLE";
-                            let statusColor = "#f59e0b";
+                            let statusColor = "var(--status-occupied)";
                             let statusBg = "rgba(245, 158, 11, 0.15)";
 
                             if (allCompleted) {
                               statusBadge = "PREPARATION COMPLETED";
-                              statusColor = "#10b981";
+                              statusColor = "var(--success)";
                               statusBg = "rgba(16, 185, 129, 0.15)";
                             } else if (isCooking) {
                               statusBadge = "PREPARING / COOKING";
-                              statusColor = "#ea580c";
+                              statusColor = "var(--accent-saffron)";
                               statusBg = "rgba(234, 88, 12, 0.15)";
                             }
 
@@ -4575,7 +4497,7 @@ export function AdminPortal({
                                       fontWeight: 800,
                                       background: statusBg,
                                       color: statusColor,
-                                      border: `1px solid ${statusColor}40`,
+                                      border: `1px solid color-mix(in srgb, ${statusColor} 25.10%, transparent)`,
                                     }}
                                   >
                                     {statusBadge}
@@ -4726,7 +4648,7 @@ export function AdminPortal({
                                           padding: "0.6rem",
                                           borderRadius: "var(--radius-sm)",
                                           background: "rgba(16, 185, 129, 0.15)",
-                                          color: "#10b981",
+                                          color: "var(--success)",
                                           fontWeight: 800,
                                           fontSize: "0.82rem",
                                           textAlign: "center",
@@ -5255,7 +5177,7 @@ export function AdminPortal({
                     style={{
                       background: "transparent",
                       border: "none",
-                      color: "#ef4444",
+                      color: "var(--danger)",
                       fontSize: "0.75rem",
                       fontWeight: 600,
                       cursor: "pointer",
@@ -5335,7 +5257,7 @@ export function AdminPortal({
                         fontSize: "0.68rem",
                         fontWeight: 800,
                         background: "rgba(245, 158, 11, 0.15)",
-                        color: "#f59e0b",
+                        color: "var(--accent-amber-light)",
                         padding: "2px 7px",
                         borderRadius: "10px",
                       }}
@@ -5360,7 +5282,7 @@ export function AdminPortal({
                         padding: "0.3rem 0.6rem",
                         background: "rgba(16, 185, 129, 0.12)",
                         border: "1px solid rgba(16, 185, 129, 0.35)",
-                        color: "#10b981",
+                        color: "var(--success)",
                         borderRadius: "6px",
                         fontSize: "0.73rem",
                         fontWeight: 700,
@@ -5383,7 +5305,7 @@ export function AdminPortal({
                       padding: "0.3rem 0.65rem",
                       background: "rgba(245, 158, 11, 0.15)",
                       border: "1px solid rgba(245, 158, 11, 0.4)",
-                      color: "#f59e0b",
+                      color: "var(--accent-amber-light)",
                       borderRadius: "6px",
                       fontSize: "0.74rem",
                       fontWeight: 700,
@@ -5410,9 +5332,9 @@ export function AdminPortal({
                   }}
                 >
                   <span>No ingredients added yet. Click </span>
-                  <strong style={{ color: "#f59e0b" }}>"+ Add Ingredient"</strong>
+                  <strong style={{ color: "var(--accent-amber-light)" }}>"+ Add Ingredient"</strong>
                   <span> or </span>
-                  <strong style={{ color: "#10b981" }}>"Auto-Suggest"</strong>
+                  <strong style={{ color: "var(--success)" }}>"Auto-Suggest"</strong>
                   <span> to divide this dish into inventory stock items.</span>
                 </div>
               ) : (
@@ -5530,7 +5452,7 @@ export function AdminPortal({
                           alignItems: "center",
                           justifyContent: "center",
                           background: "rgba(239, 68, 68, 0.12)",
-                          color: "#ef4444",
+                          color: "var(--danger)",
                           border: "1px solid rgba(239, 68, 68, 0.3)",
                           borderRadius: "5px",
                           cursor: "pointer",
