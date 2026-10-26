@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { logRouteChange, logUserAction } from "../utils/logger";
 import {
   X,
   Plus,
@@ -413,6 +414,15 @@ export function AdminPortal({
   inventory: propInventory = [],
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Track Admin Portal Tab Navigation
+  const prevTabRef = useRef(activeTab);
+  useEffect(() => {
+    if (prevTabRef.current !== activeTab) {
+      logRouteChange(`Admin Tab: ${prevTabRef.current}`, `Admin Tab: ${activeTab}`);
+      prevTabRef.current = activeTab;
+    }
+  }, [activeTab]);
 
   const [inventory, setInventory] = useState(() => {
     if (Array.isArray(propInventory) && propInventory.length > 0) return propInventory;

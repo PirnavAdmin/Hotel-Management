@@ -16,6 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
+import { logFormSubmission, logUserAction } from '../utils/logger';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
 import paymentQrImage from '../assets/payment-qr.png';

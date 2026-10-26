@@ -28,8 +28,9 @@ const DEFAULT_HEADERS = {
 };
 
 export async function apiClient(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
     const token =
       typeof localStorage !== "undefined"
         ? localStorage.getItem("avsr_jwt_token")
@@ -49,8 +50,7 @@ export async function apiClient(endpoint, options = {}) {
     const res = await fetch(url, config);
 
     if (res.status === 401 || res.status === 403) {
-      // Handle unauthorized (maybe logout user)
-      // Optional: dispatch event or clear storage
+      // Handle unauthorized (optional: dispatch event or clear storage)
     }
 
     if (!res.ok) {
@@ -58,7 +58,7 @@ export async function apiClient(endpoint, options = {}) {
       let errorJson;
       try {
         errorJson = JSON.parse(errorText);
-      } catch (e) {
+      } catch {
         // Not JSON
       }
 
@@ -92,8 +92,6 @@ export async function apiClient(endpoint, options = {}) {
         }
       }
 
-      console.error(`[API Error ${res.status}] ${endpoint}:`, errorText);
-
       return {
         success: false,
         error: displayError,
@@ -111,7 +109,6 @@ export async function apiClient(endpoint, options = {}) {
     const data = JSON.parse(text);
     return { success: true, data };
   } catch (err) {
-    console.error(`[API Error] Failed request to ${endpoint}:`, err);
     return { success: false, error: err.message || "Network error occurred" };
   }
 }

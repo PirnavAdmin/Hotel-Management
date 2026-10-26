@@ -235,6 +235,48 @@ if (!Directory.Exists(uploadsDir))
 
 app.UseCors("FrontendPolicy");
 
+// Centralized HTTP Request / Response Logging Middleware
+app.Use(async (context, next) =>
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    var method = context.Request.Method;
+    var path = context.Request.Path + context.Request.QueryString;
+    var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+    var timeStr = DateTime.Now.ToString("HH:mm:ss");
+
+    Console.WriteLine($"[BACKEND HTTP REQUEST] {method} {path} (from {clientIp} at {timeStr})");
+
+    try
+    {
+        await next();
+        sw.Stop();
+        var status = context.Response.StatusCode;
+        var duration = sw.ElapsedMilliseconds;
+
+        if (status >= 500)
+        {
+            Console.Error.WriteLine($"[BACKEND HTTP SERVER ERROR] {method} {path} -> {status} ({duration}ms)");
+        }
+        else if (status >= 400)
+        {
+            Console.WriteLine($"[BACKEND HTTP CLIENT ERROR] {method} {path} -> {status} ({duration}ms)");
+        }
+        else
+        {
+            Console.WriteLine($"[BACKEND HTTP RESPONSE] {method} {path} -> {status} ({duration}ms)");
+        }
+    }
+    catch (Exception ex)
+    {
+        sw.Stop();
+        var duration = sw.ElapsedMilliseconds;
+        Console.Error.WriteLine($"[BACKEND EXCEPTION] {method} {path} failed ({duration}ms): {ex.Message}\n{ex.StackTrace}");
+        throw;
+    }
+});
+
+
+
 
 app.UseStaticFiles();
 
