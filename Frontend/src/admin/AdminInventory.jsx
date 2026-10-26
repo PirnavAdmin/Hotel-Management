@@ -1886,17 +1886,17 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.65rem 0.8rem" }}>
+                <th style={{ padding: "0.55rem 0.65rem" }}>
                   Ingredient / Supply
                 </th>
-                <th style={{ padding: "0.65rem 0.8rem" }}>Category</th>
-                <th style={{ padding: "0.65rem 0.8rem" }}>MRP</th>
-                <th style={{ padding: "0.65rem 0.8rem" }}>In-Stock Level</th>
-                <th style={{ padding: "0.65rem 0.8rem" }}>Used</th>
-                <th style={{ padding: "0.65rem 0.8rem" }}>Threshold</th>
-                <th style={{ padding: "0.65rem 0.8rem" }}>Status</th>
-                <th style={{ padding: "0.65rem 0.8rem", textAlign: "right" }}>
-                  Quick Adjust & Actions
+                <th style={{ padding: "0.55rem 0.65rem" }}>Category</th>
+                <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>MRP</th>
+                <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>In-Stock</th>
+                <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Used</th>
+                <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Threshold</th>
+                <th style={{ padding: "0.55rem 0.6rem", textAlign: "center" }}>Status</th>
+                <th style={{ padding: "0.55rem 0.65rem", textAlign: "right" }}>
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -1925,22 +1925,28 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     }
                   >
                     {/* Item Name */}
-                    <td style={{ padding: "0.7rem 0.8rem" }}>
+                    <td style={{ padding: "0.55rem 0.65rem" }}>
                       <div
                         style={{
                           fontWeight: 800,
                           color: "var(--text-main)",
                           fontSize: "0.84rem",
+                          lineHeight: "1.25",
                         }}
                       >
                         {item.name}
                       </div>
                       <div
                         style={{
-                          fontSize: "0.72rem",
+                          fontSize: "0.7rem",
                           color: "var(--text-muted)",
                           marginTop: "2px",
+                          maxWidth: "180px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
+                        title={`Supplier: ${item.supplier}`}
                       >
                         Supplier: {item.supplier}
                       </div>
@@ -1949,20 +1955,25 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     {/* Category */}
                     <td
                       style={{
-                        padding: "0.7rem 0.8rem",
+                        padding: "0.55rem 0.65rem",
                         color: "var(--text-main)",
                         fontWeight: 600,
                       }}
                     >
-                      {item.category}
+                      <div style={{ lineHeight: "1.25" }}>{item.category}</div>
                       {item.subcategory && (
                         <div
                           style={{
                             color: "var(--text-muted)",
-                            fontSize: "0.72rem",
+                            fontSize: "0.7rem",
                             fontWeight: 500,
-                            marginTop: "2px",
+                            marginTop: "1px",
+                            maxWidth: "140px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
+                          title={item.subcategory}
                         >
                           {item.subcategory}
                         </div>
@@ -1972,10 +1983,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     {/* MRP */}
                     <td
                       style={{
-                        padding: "0.7rem 0.8rem",
+                        padding: "0.55rem 0.5rem",
                         color: "var(--text-main)",
                         fontWeight: 700,
                         whiteSpace: "nowrap",
+                        textAlign: "right",
                       }}
                     >
                       {item.mrp == null || item.mrp === ""
@@ -1984,7 +1996,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     </td>
 
                     {/* In-Stock */}
-                    <td style={{ padding: "0.7rem 0.8rem" }}>
+                    <td style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>
                       <div
                         style={{
                           fontWeight: 800,
@@ -1993,7 +2005,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                             : isLowStock
                               ? "#f59e0b"
                               : "#10b981",
-                          fontSize: "0.85rem",
+                          fontSize: "0.82rem",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {item.stock} {item.unit}
@@ -2003,7 +2016,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     {/* Used since recipe tracking started */}
                     <td
                       style={{
-                        padding: "0.7rem 0.8rem",
+                        padding: "0.55rem 0.5rem",
+                        textAlign: "center",
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -2018,15 +2032,16 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         style={{
                           background: "transparent",
                           border: "1px dashed transparent",
-                          padding: "2px 6px",
+                          padding: "1px 5px",
                           borderRadius: "4px",
                           cursor: "pointer",
                           color: "var(--text-main)",
                           fontWeight: 700,
-                          fontSize: "0.82rem",
+                          fontSize: "0.8rem",
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "4px",
+                          gap: "3px",
+                          whiteSpace: "nowrap",
                           transition: "all 0.15s ease",
                         }}
                         onMouseEnter={(e) => {
@@ -2039,47 +2054,47 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         }}
                       >
                         <span>{Number(item.totalUsed || 0)} {item.unit}</span>
-                        <Pencil size={11} color="var(--accent-amber)" />
+                        <Pencil size={10} color="var(--accent-amber)" />
                       </button>
                     </td>
 
                     {/* Min Threshold */}
                     <td
                       style={{
-                        padding: "0.7rem 0.8rem",
+                        padding: "0.55rem 0.5rem",
                         color: "var(--text-muted)",
                         fontWeight: 600,
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.8rem",
                       }}
                     >
                       {item.minThreshold} {item.unit}
                     </td>
 
                     {/* Status Badge */}
-                    <td style={{ padding: "0.7rem 0.8rem" }}>
+                    <td style={{ padding: "0.55rem 0.6rem", textAlign: "center", whiteSpace: "nowrap" }}>
                       <span
                         style={{
-                          background: `color-mix(in srgb, ${statusColor} 12.16%, transparent)`,
-                          border: `1px solid color-mix(in srgb, ${statusColor} 30.20%, transparent)`,
+                          background: `${statusColor}1f`,
+                          border: `1px solid ${statusColor}4d`,
                           color: statusColor,
-                          borderRadius: "20px",
-                          width: "118px",
-                          height: "32px",
-                          boxSizing: "border-box",
-                          padding: "0 8px",
-                          fontSize: "0.72rem",
+                          borderRadius: "12px",
+                          padding: "2px 8px",
+                          fontSize: "0.7rem",
                           fontWeight: 700,
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: "5px",
+                          gap: "4px",
                           whiteSpace: "nowrap",
-                          flexShrink: 0,
+                          lineHeight: "1.2",
                         }}
                       >
                         <span
                           style={{
-                            width: 6,
-                            height: 6,
+                            width: 5,
+                            height: 5,
                             borderRadius: "50%",
                             background: statusColor,
                           }}
@@ -2094,13 +2109,18 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
                     {/* Actions */}
                     <td
-                      style={{ padding: "0.7rem 0.8rem", textAlign: "right" }}
+                      style={{
+                        padding: "0.55rem 0.65rem",
+                        textAlign: "right",
+                        whiteSpace: "nowrap",
+                      }}
                     >
                       <div
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "0.45rem",
+                          gap: "0.25rem",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         <button
@@ -2113,29 +2133,34 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                             border: "1px solid var(--border-subtle)",
                             color: "var(--text-main)",
                             borderRadius: "6px",
-                            padding: "5px 7px",
-                            fontSize: "0.75rem",
+                            padding: "3px 6px",
+                            fontSize: "0.72rem",
                             fontWeight: 700,
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "4px",
+                            gap: "3px",
                             cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                           }}
                         >
-                          <Pencil size={13} />
-                          Edit
+                          <Pencil size={11} />
+                          <span>Edit</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleAdjustStock(item.id, -5)}
                           style={{
                             background: "var(--surface-tint)",
-                            border: "1px solid rgba(var(--surface-rgb),0.1)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
                             color: "var(--text-main)",
                             borderRadius: "6px",
-                            padding: "4px 8px",
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
+                            padding: "3px 7px",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
                             cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                           }}
                           title="Quick consume -5 units"
                         >
@@ -2149,24 +2174,27 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                             setConsumeReason("Kitchen Usage");
                           }}
                           style={{
-                            background: "rgba(245, 158, 11, 0.12)",
-                            border: "1px solid rgba(245, 158, 11, 0.35)",
+                            background: "rgba(245, 158, 11, 0.14)",
+                            border: "1px solid rgba(245, 158, 11, 0.38)",
                             color: "#f59e0b",
                             borderRadius: "6px",
-                            padding: "4px 8px",
-                            fontSize: "0.75rem",
+                            padding: "3px 7px",
+                            fontSize: "0.72rem",
                             fontWeight: 700,
                             cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "3px",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                           }}
                           title="Record custom used quantity manually (e.g. 20 KG)"
                         >
-                          <MinusCircle size={13} />
-                          - Use
+                          <MinusCircle size={11} />
+                          <span>Use</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => {
                             setRestockItem(item);
                             setRestockAmount("");
@@ -2179,38 +2207,43 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                           style={{
                             background: "rgba(16, 185, 129, 0.1)",
                             border: "1px solid rgba(16, 185, 129, 0.3)",
-                            color: "var(--success)",
+                            color: "#10b981",
                             borderRadius: "6px",
-                            padding: "4px 8px",
-                            fontSize: "0.75rem",
+                            padding: "3px 7px",
+                            fontSize: "0.72rem",
                             fontWeight: 700,
                             cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                           }}
                           title="Record received stock quantity"
                         >
-                          <PackagePlus
-                            size={13}
-                            style={{
-                              verticalAlign: "middle",
-                              marginRight: "3px",
-                            }}
-                          />
-                          Receive
+                          <PackagePlus size={12} />
+                          <span>Receive</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDeleteItem(item.id)}
                           style={{
                             background: "rgba(239, 68, 68, 0.08)",
                             border: "1px solid rgba(239, 68, 68, 0.3)",
-                            color: "var(--danger)",
+                            color: "#ef4444",
                             borderRadius: "6px",
-                            padding: "5px 7px",
-                            fontSize: "0.75rem",
+                            padding: "4px 6px",
+                            fontSize: "0.72rem",
                             cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                           }}
                           title="Delete item"
                         >
-                          <Trash2 size={13} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </td>

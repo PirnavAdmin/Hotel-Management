@@ -119,7 +119,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'var(--modal-overlay)',
+        background: 'rgba(0, 0, 0, 0.82)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
@@ -133,8 +133,8 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
         className="receipt-modal-container"
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--bg-card)',
-          color: 'var(--text-main)',
+          background: '#ffffff',
+          color: '#0f172a',
           width: '100%',
           maxWidth: printFormat === 'a4' ? '760px' : '400px',
           borderRadius: '12px',
@@ -148,14 +148,15 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
       >
         {/* Receipt Controls Bar (hidden during print) */}
         <div className="no-print" style={{
-          background: 'var(--bg-secondary)',
+          background: '#0f172a',
           padding: '0.55rem 1rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.5rem',
-          color: 'var(--text-main)'
+          color: '#ffffff',
+          borderBottom: '1px solid #1e293b'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <Printer size={16} color="#f59e0b" />
@@ -163,7 +164,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           </div>
 
           {/* Print Format Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(var(--surface-rgb),0.08)', padding: '2px', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.08)', padding: '2px', borderRadius: '6px' }}>
             <button
               type="button"
               onClick={() => setPrintFormat('thermal')}
@@ -178,7 +179,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 alignItems: 'center',
                 gap: '4px',
                 background: printFormat === 'thermal' ? '#f59e0b' : 'transparent',
-                color: printFormat === 'thermal' ? '#000000' : 'var(--text-muted)',
+                color: printFormat === 'thermal' ? '#000000' : '#cbd5e1',
                 transition: 'all 0.15s'
               }}
               title="80mm Thermal Receipt Paper (Roll Printer)"
@@ -201,7 +202,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 alignItems: 'center',
                 gap: '4px',
                 background: printFormat === 'a4' ? '#f59e0b' : 'transparent',
-                color: printFormat === 'a4' ? '#000000' : 'var(--text-muted)',
+                color: printFormat === 'a4' ? '#000000' : '#cbd5e1',
                 transition: 'all 0.15s'
               }}
               title="A4 Full Page / PDF Tax Invoice"
@@ -214,9 +215,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(var(--surface-rgb),0.1)',
+              background: 'rgba(255, 255, 255, 0.1)',
               border: 'none',
-              color: 'var(--text-dim)',
+              color: '#94a3b8',
               width: '26px',
               height: '26px',
               borderRadius: '6px',
@@ -244,6 +245,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
               fontSize: '0.78rem',
               lineHeight: '1.35',
+              background: '#ffffff',
               color: '#000000',
               display: 'flex',
               flexDirection: 'column',
@@ -450,6 +452,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
               fontSize: '0.84rem',
               lineHeight: '1.45',
+              background: '#ffffff',
               color: '#0f172a',
               display: 'flex',
               flexDirection: 'column',
@@ -536,7 +539,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 </div>
               </div>
 
-              <div style={{ width: '260px', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.8rem' }}>
+              <div style={{ width: '260px', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.8rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0' }}>
                   <span style={{ color: '#64748b' }}>Subtotal:</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{subtotal.toFixed(2)}</span>
@@ -585,9 +588,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
         {/* Action Buttons (no print) */}
         <div className="no-print" style={{
-          padding: '0.5rem 1rem',
-          background: 'var(--bg-secondary)',
-          borderTop: '1px solid var(--border-card)',
+          padding: '0.65rem 1rem',
+          background: '#0f172a',
+          borderTop: '1px solid #1e293b',
           display: 'flex',
           gap: '0.65rem'
         }}>
@@ -595,14 +598,15 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             onClick={onClose}
             style={{
               flex: 1,
-              padding: '0.48rem',
+              padding: '0.55rem',
               borderRadius: '6px',
-              background: 'var(--bg-tertiary)',
-              color: 'var(--text-main)',
+              background: '#334155',
+              color: '#f8fafc',
               fontWeight: 700,
-              fontSize: '0.78rem',
-              border: 'none',
-              cursor: 'pointer'
+              fontSize: '0.82rem',
+              border: '1px solid #475569',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             Close
