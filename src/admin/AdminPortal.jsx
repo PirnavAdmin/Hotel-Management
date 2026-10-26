@@ -4470,7 +4470,7 @@ export function AdminPortal({
                               tbl.items &&
                               tbl.items.some((i) => i.kotStatus === "cooking");
 
-                            let statusBadge = "ORDER RECEIVED FROM TABLE";
+                            let statusBadge = "ORDER RECEIVED";
                             let statusColor = "var(--status-occupied)";
                             let statusBg = "rgba(245, 158, 11, 0.15)";
 
@@ -4479,7 +4479,7 @@ export function AdminPortal({
                               statusColor = "var(--success)";
                               statusBg = "rgba(16, 185, 129, 0.15)";
                             } else if (isCooking) {
-                              statusBadge = "PREPARING / COOKING";
+                              statusBadge = "IN PREPARATION";
                               statusColor = "var(--accent-saffron)";
                               statusBg = "rgba(234, 88, 12, 0.15)";
                             }
@@ -4502,25 +4502,24 @@ export function AdminPortal({
                                     : "0 4px 18px rgba(245, 158, 11, 0.08)",
                                 }}
                               >
-                                {/* Table Number Header */}
+                                {/* Table Number Header - 2 Clean Rows for Zero Crowding */}
                                 <div
                                   style={{
-                                    padding: "0.85rem 1.1rem",
+                                    padding: "0.8rem 1rem",
                                     background: "var(--bg-primary)",
                                     borderBottom: "1px solid var(--border-subtle)",
                                     display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    gap: "0.75rem",
+                                    flexDirection: "column",
+                                    gap: "0.5rem",
                                   }}
                                 >
+                                  {/* Row 1: Table Badge + Status Pill */}
                                   <div
                                     style={{
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: "0.75rem",
-                                      minWidth: 0,
-                                      flex: 1,
+                                      justifyContent: "space-between",
+                                      gap: "0.6rem",
                                     }}
                                   >
                                     <div
@@ -4529,66 +4528,89 @@ export function AdminPortal({
                                           ? "var(--status-vacant)"
                                           : "linear-gradient(135deg, #f59e0b, #ea580c)",
                                         color: "#ffffff",
-                                        padding: "0.35rem 0.75rem",
-                                        borderRadius: "8px",
-                                        fontWeight: 900,
-                                        fontSize: "1.1rem",
+                                        padding: "0.28rem 0.65rem",
+                                        borderRadius: "7px",
+                                        fontWeight: 800,
+                                        fontSize: "0.95rem",
+                                        letterSpacing: "0.02em",
                                         whiteSpace: "nowrap",
-                                        flexShrink: 0,
                                         display: "inline-flex",
                                         alignItems: "center",
                                         justifyContent: "center",
-                                        minWidth: "fit-content",
-                                        lineHeight: 1.2,
-                                        letterSpacing: "0.02em",
+                                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.25)",
                                       }}
                                     >
                                       {tbl.name}
                                     </div>
-                                    <div style={{ minWidth: 0, flex: 1 }}>
-                                      <div
-                                        style={{
-                                          fontSize: "0.82rem",
-                                          fontWeight: 700,
-                                          color: "var(--text-main)",
-                                          whiteSpace: "nowrap",
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                        }}
-                                      >
-                                        {tbl.section} • Server: {tbl.server}
-                                      </div>
-                                      <div
-                                        style={{
-                                          fontSize: "0.72rem",
-                                          color: "var(--accent-amber-light)",
-                                          whiteSpace: "nowrap",
-                                          marginTop: "2px",
-                                        }}
-                                      >
-                                        Order Received:{" "}
-                                        {tbl.orderTime || "Just Now"}
-                                      </div>
-                                    </div>
+
+                                    <span
+                                      style={{
+                                        padding: "3.5px 9px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.68rem",
+                                        fontWeight: 800,
+                                        letterSpacing: "0.04em",
+                                        textTransform: "uppercase",
+                                        background: statusBg,
+                                        color: statusColor,
+                                        border: `1px solid color-mix(in srgb, ${statusColor} 30%, transparent)`,
+                                        whiteSpace: "nowrap",
+                                        flexShrink: 0,
+                                        textAlign: "center",
+                                      }}
+                                    >
+                                      {statusBadge}
+                                    </span>
                                   </div>
 
-                                  <span
+                                  {/* Row 2: Section, Server & Order Received Time */}
+                                  <div
                                     style={{
-                                      padding: "4px 10px",
-                                      borderRadius: "8px",
-                                      fontSize: "0.68rem",
-                                      fontWeight: 800,
-                                      letterSpacing: "0.03em",
-                                      background: statusBg,
-                                      color: statusColor,
-                                      border: `1px solid color-mix(in srgb, ${statusColor} 25.10%, transparent)`,
-                                      whiteSpace: "nowrap",
-                                      flexShrink: 0,
-                                      textAlign: "center",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      gap: "0.5rem",
+                                      fontSize: "0.75rem",
+                                      lineHeight: 1.3,
                                     }}
                                   >
-                                    {statusBadge}
-                                  </span>
+                                    <div
+                                      style={{
+                                        color: "var(--text-main)",
+                                        fontWeight: 600,
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        minWidth: 0,
+                                        flex: 1,
+                                      }}
+                                      title={`${tbl.section || "Main Hall"} • Server: ${tbl.server || "Staff"}`}
+                                    >
+                                      <span style={{ color: "var(--text-dim)" }}>
+                                        {tbl.section || "Main Hall"}
+                                      </span>
+                                      <span style={{ margin: "0 5px", color: "var(--border-card)" }}>
+                                        •
+                                      </span>
+                                      <span>Server: {tbl.server || "Staff"}</span>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        color: "var(--accent-amber-light)",
+                                        fontWeight: 700,
+                                        fontSize: "0.72rem",
+                                        whiteSpace: "nowrap",
+                                        flexShrink: 0,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <Clock size={11} strokeWidth={2.4} />
+                                      <span>{tbl.orderTime || "Just Now"}</span>
+                                    </div>
+                                  </div>
                                 </div>
 
                                 {/* Ordered Items List */}
@@ -4629,13 +4651,15 @@ export function AdminPortal({
                                           }}
                                         >
                                           <span
+                                            className="font-mono"
                                             style={{
-                                              background: "var(--accent-amber)",
-                                              color: "#000000",
-                                              padding: "2px 6px",
-                                              borderRadius: "4px",
-                                              fontWeight: 900,
-                                              fontSize: "0.8rem",
+                                              background: "rgba(245, 158, 11, 0.16)",
+                                              border: "1px solid rgba(245, 158, 11, 0.4)",
+                                              color: "var(--accent-amber-light, #f59e0b)",
+                                              padding: "2px 7px",
+                                              borderRadius: "5px",
+                                              fontWeight: 800,
+                                              fontSize: "0.78rem",
                                               flexShrink: 0,
                                               minWidth: "26px",
                                               textAlign: "center",
@@ -4646,12 +4670,14 @@ export function AdminPortal({
                                           <div style={{ minWidth: 0, flex: 1 }}>
                                             <div
                                               style={{
-                                                fontSize: "0.86rem",
+                                                fontSize: "0.88rem",
                                                 fontWeight: 700,
                                                 color: "var(--text-main)",
+                                                textTransform: "capitalize",
                                                 whiteSpace: "nowrap",
                                                 overflow: "hidden",
                                                 textOverflow: "ellipsis",
+                                                letterSpacing: "-0.01em",
                                               }}
                                               title={item.name}
                                             >

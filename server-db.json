@@ -6,9 +6,9 @@
       "tableNumber": "Table-1",
       "section": "VIP Lounge",
       "capacity": 6,
-      "status": "occupied",
+      "status": "vacant",
       "server": "Rajesh K.",
-      "guests": 5,
+      "guests": 0,
       "items": [],
       "orderTime": null,
       "discountPercent": 0,
@@ -21,18 +21,21 @@
       "sectionArea": "VIP Lounge",
       "location": "VIP Lounge",
       "capacityChairs": 6,
-      "occupiedChairs": 5,
-      "selectedSeats": [
-        "S1",
-        "S2",
-        "S3",
-        "S6",
-        "S5"
-      ],
+      "occupiedChairs": 0,
+      "selectedSeats": [],
       "orderTimestamp": null,
       "assignedServerId": 1,
       "assignedServerName": "Rajesh K.",
-      "qrCodeUrl": null
+      "qrCodeUrl": null,
+      "activeOrderId": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
+      "discountAmount": 0,
+      "subtotal": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "grandTotal": 0
     },
     {
       "id": 2,
@@ -2135,6 +2138,47 @@
   "gourmet_pos_staff_v1": [],
   "gourmet_pos_past_orders_v2_inr": [
     {
+      "tableId": 1,
+      "tableName": "Table-1",
+      "tableNumber": "1",
+      "serverName": "Rajesh K.",
+      "guests": 5,
+      "discountPercent": 0,
+      "serviceChargeEnabled": false,
+      "tipAmount": 0,
+      "status": "Active",
+      "items": [
+        {
+          "name": "Royal Mutton Dum Biryani",
+          "dishName": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "name": "Special Boneless Chicken Biryani",
+          "dishName": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "name": "Chicken 65 Biryani",
+          "dishName": "Chicken 65 Biryani",
+          "price": 360,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "name": "Hyderabadi Veg Dum Biryani",
+          "dishName": "Hyderabadi Veg Dum Biryani",
+          "price": 240,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    },
+    {
       "tableId": 3,
       "tableName": "Table 3",
       "tableNumber": "3",
@@ -3110,5 +3154,5 @@
       "verifiedAt": 1793014750265
     }
   },
-  "avsr_daily_inv_cnt_26_Oct_2026": "216"
+  "avsr_daily_inv_cnt_26_Oct_2026": "217"
 }
