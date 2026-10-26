@@ -117,8 +117,8 @@ export function Header({
 
   const totalGuests = safeTables
     .reduce((acc, t) => {
-      const g = Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0);
-      return acc + (t?.status !== "vacant" ? g : 0);
+      const g = Math.max(0, Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0) || Number(t?.occupiedChairs) || 0);
+      return acc + (t?.status !== "vacant" || g > 0 ? g : 0);
     }, 0);
 
   const totalRunningRevenue = safeTables

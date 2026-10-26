@@ -1755,6 +1755,7 @@ export function TableDetailView({
   onOpenTransferModal,
   onClearOrder,
   onOpenKOTView,
+  onShowToast,
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -1762,6 +1763,19 @@ export function TableDetailView({
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+  const activeTable =
+    (Array.isArray(allTables) && table?.id
+      ? allTables.find((t) => String(t.id) === String(table.id))
+      : null) || table || {};
+
+  const activeGuests =
+    (Number(activeTable?.guests) > 0 ? Number(activeTable.guests) : null) ??
+    (Array.isArray(activeTable?.selectedSeats) && activeTable.selectedSeats.length > 0 ? activeTable.selectedSeats.length : null) ??
+    (Number(activeTable?.occupiedChairs) > 0 ? Number(activeTable.occupiedChairs) : null) ??
+    (Number(table?.guests) > 0 ? Number(table.guests) : null) ??
+    (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
+    (Number(table?.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+    0;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // all | veg | non-veg | special
@@ -1807,18 +1821,51 @@ export function TableDetailView({
   }, [selectedCategory, dietaryFilter, searchQuery, menuItems]);
 
   // Financial calculations in Rupees
-  const safeItems = Array.isArray(table?.items) ? table.items : [];
+  const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
+  const propItems = Array.isArray(table?.items) ? table.items : [];
+  const safeItems = activeItems.length > 0 ? activeItems : propItems;
+  const targetTableId = activeTable?.id ?? table?.id;
+
+  // KOT Flow Helpers: Enforce Send KOT first, then Cooking, then Settle enabled
+  const isItemSentToKot = (item) => {
+    if (!item) return false;
+    return Boolean(
+      item.kotSent ||
+      item.kotStatus === "received" ||
+      item.kotStatus === "cooking" ||
+      item.kotStatus === "ready" ||
+      item.kotStatus === "served" ||
+      item.kotStatus === "completed"
+    );
+  };
+
+  const isItemCookedReady = (item) => {
+    if (!item) return false;
+    return (
+      item.kotStatus === "ready" ||
+      item.kotStatus === "served" ||
+      item.kotStatus === "completed"
+    );
+  };
+
+  const hasUnsentItems = safeItems.length > 0 && safeItems.some((i) => !isItemSentToKot(i));
+  const allItemsSentToKot = safeItems.length > 0 && safeItems.every((i) => isItemSentToKot(i));
+  const allCookingReady = safeItems.length > 0 && safeItems.every((i) => isItemCookedReady(i));
+  const canSettleAndCheckout = safeItems.length > 0 && allItemsSentToKot && allCookingReady;
+
   const subtotal = safeItems.reduce(
     (sum, item) =>
       sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
     0,
   );
-  const discountAmount = (subtotal * (table?.discountPercent || 0)) / 100;
+  const currentDiscountPercent = Number(activeTable?.discountPercent ?? table?.discountPercent ?? 0);
+  const currentServiceCharge = Number(activeTable?.serviceCharge ?? table?.serviceCharge ?? 0);
+  const discountAmount = (subtotal * currentDiscountPercent) / 100;
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxRate = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
   const taxAmount = taxableAmount * taxRate;
-  const serviceChargeAmount = table?.serviceCharge
-    ? taxableAmount * (table.serviceCharge / 100)
+  const serviceChargeAmount = currentServiceCharge
+    ? taxableAmount * (currentServiceCharge / 100)
     : 0;
   const grandTotal = Math.round(
     taxableAmount + taxAmount + serviceChargeAmount,
@@ -1826,17 +1873,17 @@ export function TableDetailView({
 
   // Find quantity of an item already in the table order
   const getItemQuantityInCart = (itemId) => {
-    const found = safeItems.find((i) => i.id === itemId);
+    const found = safeItems.find((i) => String(i.id) === String(itemId));
     return found ? found.quantity : 0;
   };
 
   const handleAddItem = (item) => {
     sounds.playAddItem();
-    onAddItemToTable(table.id, item);
+    onAddItemToTable(targetTableId, item);
   };
 
   const handleSaveNote = (itemId) => {
-    onUpdateItemNotes(table.id, itemId, tempNote.trim());
+    onUpdateItemNotes(targetTableId, itemId, tempNote.trim());
     setEditingNoteItemId(null);
     setTempNote("");
   };
@@ -1846,11 +1893,11 @@ export function TableDetailView({
   };
 
   const handleConfirmItemModal = (customizedItem) => {
-    onAddItemToTable(table.id, customizedItem);
+    onAddItemToTable(targetTableId, customizedItem);
   };
 
   const handleRemoveItemFromModal = (itemId) => {
-    onRemoveItemFromTable(table.id, itemId);
+    onRemoveItemFromTable(targetTableId, itemId);
   };
 
   return (
@@ -2232,18 +2279,18 @@ export function TableDetailView({
                     fontWeight: 700,
                     textTransform: "uppercase",
                     color:
-                      table.status === "vacant"
+                      (activeTable.status === "vacant" && activeGuests <= 0)
                         ? "var(--status-vacant)"
                         : "var(--status-occupied)",
                     background:
-                      table.status === "vacant"
+                      (activeTable.status === "vacant" && activeGuests <= 0)
                         ? "var(--status-vacant-bg)"
                         : "var(--status-occupied-bg)",
                     padding: "1px 6px",
                     borderRadius: "4px",
                   }}
                 >
-                  {table.status}
+                  {(activeTable.status === "vacant" && activeGuests > 0) ? "occupied" : (activeTable.status || "vacant")}
                 </span>
               </div>
             </div>
@@ -2265,9 +2312,12 @@ export function TableDetailView({
             <Users size={13} color="var(--text-muted)" />
             <span style={{ color: "var(--text-muted)" }}>Guests:</span>
             <button
+              type="button"
               onClick={() => {
-                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
-                onUpdateGuests(table.id, Math.max(1, currentG - 1));
+                const currentG = activeGuests;
+                if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, Math.max(0, currentG - 1));
+                }
               }}
               style={{
                 background: "var(--surface-tint)",
@@ -2278,6 +2328,8 @@ export function TableDetailView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
               }}
             >
               -
@@ -2285,12 +2337,15 @@ export function TableDetailView({
             <span
               style={{ fontWeight: 700, minWidth: "16px", textAlign: "center" }}
             >
-              {Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0)}
+              {activeGuests}
             </span>
             <button
+              type="button"
               onClick={() => {
-                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
-                onUpdateGuests(table.id, currentG + 1);
+                const currentG = activeGuests;
+                if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, currentG + 1);
+                }
               }}
               style={{
                 background: "var(--surface-tint)",
@@ -2301,6 +2356,8 @@ export function TableDetailView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
               }}
             >
               +
@@ -3313,7 +3370,7 @@ export function TableDetailView({
                   whiteSpace: "nowrap",
                 }}
               >
-                #{table.id}0{safeItems.length}
+                #{targetTableId}0{safeItems.length}
               </div>
             </div>
 
@@ -3634,7 +3691,7 @@ export function TableDetailView({
                           onClick={() => {
                             sounds.playRemoveItem();
                             onUpdateItemQuantity(
-                              table.id,
+                              targetTableId,
                               item.id,
                               item.quantity - 1,
                             );
@@ -3668,7 +3725,7 @@ export function TableDetailView({
                           onClick={() => {
                             sounds.playAddItem();
                             onUpdateItemQuantity(
-                              table.id,
+                              targetTableId,
                               item.id,
                               item.quantity + 1,
                             );
@@ -3700,7 +3757,7 @@ export function TableDetailView({
                             if (editingNoteItemId === item.id) {
                               // If closed again with empty input, clear the note
                               if (!tempNote.trim() && item.notes) {
-                                onUpdateItemNotes(table.id, item.id, "");
+                                onUpdateItemNotes(targetTableId, item.id, "");
                               }
                               setEditingNoteItemId(null);
                               setTempNote("");
@@ -3731,7 +3788,7 @@ export function TableDetailView({
                         <button
                           onClick={() => {
                             sounds.playRemoveItem();
-                            onRemoveItemFromTable(table.id, item.id);
+                            onRemoveItemFromTable(targetTableId, item.id);
                           }}
                           style={{
                             background: "transparent",
@@ -3875,14 +3932,14 @@ export function TableDetailView({
                   {[0, 5, 10, 15].map((pct) => (
                     <button
                       key={pct}
-                      onClick={() => onUpdateDiscount(table.id, pct)}
+                      onClick={() => onUpdateDiscount(targetTableId, pct)}
                       style={{
                         background:
-                          (table.discountPercent || 0) === pct
+                          currentDiscountPercent === pct
                             ? "var(--accent-amber)"
                             : "var(--bg-tertiary)",
                         color:
-                          (table.discountPercent || 0) === pct
+                          currentDiscountPercent === pct
                             ? "#000000"
                             : "var(--text-muted)",
                         padding: "0px 5px",
@@ -3897,7 +3954,7 @@ export function TableDetailView({
                 </div>
               </div>
 
-              {table.discountPercent > 0 && (
+              {currentDiscountPercent > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -3906,7 +3963,7 @@ export function TableDetailView({
                     color: "var(--success)",
                   }}
                 >
-                  <span>Discount ({table.discountPercent}%)</span>
+                  <span>Discount ({currentDiscountPercent}%)</span>
                   <span className="font-mono">
                     -{formatCurrency(discountAmount)}
                   </span>
@@ -3945,9 +4002,9 @@ export function TableDetailView({
                 >
                   <input
                     type="checkbox"
-                    checked={table.serviceCharge > 0}
+                    checked={currentServiceCharge > 0}
                     onChange={(e) =>
-                      onToggleServiceCharge(table.id, e.target.checked ? 5 : 0)
+                      onToggleServiceCharge(targetTableId, e.target.checked ? 5 : 0)
                     }
                     style={{
                       accentColor: "var(--accent-amber)",
@@ -4011,7 +4068,7 @@ export function TableDetailView({
                   }}
                 >
                   <button
-                    onClick={() => onSendKOT(table.id, safeItems)}
+                    onClick={() => onSendKOT(targetTableId, safeItems)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4036,7 +4093,7 @@ export function TableDetailView({
                     <span>Send KOT</span>
                   </button>
                   <button
-                    onClick={() => onOpenReceipt(table.id)}
+                    onClick={() => onOpenReceipt(targetTableId)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4063,7 +4120,7 @@ export function TableDetailView({
                 </div>
 
                 <button
-                  onClick={() => onOpenSettlement(table.id)}
+                  onClick={() => onOpenSettlement(targetTableId)}
                   disabled={safeItems.length === 0}
                   style={{
                     display: "flex",
@@ -4278,7 +4335,7 @@ export function TableDetailView({
                     <button
                       onClick={() =>
                         onUpdateItemQuantity(
-                          table.id,
+                          targetTableId,
                           item.id,
                           item.quantity - 1,
                         )
@@ -4310,7 +4367,7 @@ export function TableDetailView({
                     <button
                       onClick={() =>
                         onUpdateItemQuantity(
-                          table.id,
+                          targetTableId,
                           item.id,
                           item.quantity + 1,
                         )
@@ -4392,7 +4449,7 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onSendKOT(table.id, safeItems);
+                    onSendKOT(targetTableId, safeItems);
                   }}
                   style={{
                     padding: "0.55rem",
@@ -4414,7 +4471,7 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onOpenReceipt(table.id);
+                    onOpenReceipt(targetTableId);
                   }}
                   style={{
                     padding: "0.55rem",
@@ -4438,7 +4495,7 @@ export function TableDetailView({
               <button
                 onClick={() => {
                   setIsMobileOrderSlipOpen(false);
-                  onOpenSettlement(table.id);
+                  onOpenSettlement(targetTableId);
                 }}
                 style={{
                   width: "100%",

@@ -1755,6 +1755,7 @@ export function TableDetailView({
   onOpenTransferModal,
   onClearOrder,
   onOpenKOTView,
+  onShowToast,
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -1762,6 +1763,19 @@ export function TableDetailView({
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+  const activeTable =
+    (Array.isArray(allTables) && table?.id
+      ? allTables.find((t) => String(t.id) === String(table.id))
+      : null) || table || {};
+
+  const activeGuests =
+    (Number(activeTable?.guests) > 0 ? Number(activeTable.guests) : null) ??
+    (Array.isArray(activeTable?.selectedSeats) && activeTable.selectedSeats.length > 0 ? activeTable.selectedSeats.length : null) ??
+    (Number(activeTable?.occupiedChairs) > 0 ? Number(activeTable.occupiedChairs) : null) ??
+    (Number(table?.guests) > 0 ? Number(table.guests) : null) ??
+    (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
+    (Number(table?.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+    0;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // all | veg | non-veg | special
@@ -1807,18 +1821,51 @@ export function TableDetailView({
   }, [selectedCategory, dietaryFilter, searchQuery, menuItems]);
 
   // Financial calculations in Rupees
-  const safeItems = Array.isArray(table?.items) ? table.items : [];
+  const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
+  const propItems = Array.isArray(table?.items) ? table.items : [];
+  const safeItems = activeItems.length > 0 ? activeItems : propItems;
+  const targetTableId = activeTable?.id ?? table?.id;
+
+  // KOT Flow Helpers: Enforce Send KOT first, then Cooking, then Settle enabled
+  const isItemSentToKot = (item) => {
+    if (!item) return false;
+    return Boolean(
+      item.kotSent ||
+      item.kotStatus === "received" ||
+      item.kotStatus === "cooking" ||
+      item.kotStatus === "ready" ||
+      item.kotStatus === "served" ||
+      item.kotStatus === "completed"
+    );
+  };
+
+  const isItemCookedReady = (item) => {
+    if (!item) return false;
+    return (
+      item.kotStatus === "ready" ||
+      item.kotStatus === "served" ||
+      item.kotStatus === "completed"
+    );
+  };
+
+  const hasUnsentItems = safeItems.length > 0 && safeItems.some((i) => !isItemSentToKot(i));
+  const allItemsSentToKot = safeItems.length > 0 && safeItems.every((i) => isItemSentToKot(i));
+  const allCookingReady = safeItems.length > 0 && safeItems.every((i) => isItemCookedReady(i));
+  const canSettleAndCheckout = safeItems.length > 0 && allItemsSentToKot && allCookingReady;
+
   const subtotal = safeItems.reduce(
     (sum, item) =>
       sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
     0,
   );
-  const discountAmount = (subtotal * (table?.discountPercent || 0)) / 100;
+  const currentDiscountPercent = Number(activeTable?.discountPercent ?? table?.discountPercent ?? 0);
+  const currentServiceCharge = Number(activeTable?.serviceCharge ?? table?.serviceCharge ?? 0);
+  const discountAmount = (subtotal * currentDiscountPercent) / 100;
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxRate = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
   const taxAmount = taxableAmount * taxRate;
-  const serviceChargeAmount = table?.serviceCharge
-    ? taxableAmount * (table.serviceCharge / 100)
+  const serviceChargeAmount = currentServiceCharge
+    ? taxableAmount * (currentServiceCharge / 100)
     : 0;
   const grandTotal = Math.round(
     taxableAmount + taxAmount + serviceChargeAmount,
@@ -1826,17 +1873,17 @@ export function TableDetailView({
 
   // Find quantity of an item already in the table order
   const getItemQuantityInCart = (itemId) => {
-    const found = safeItems.find((i) => i.id === itemId);
+    const found = safeItems.find((i) => String(i.id) === String(itemId));
     return found ? found.quantity : 0;
   };
 
   const handleAddItem = (item) => {
     sounds.playAddItem();
-    onAddItemToTable(table.id, item);
+    onAddItemToTable(targetTableId, item);
   };
 
   const handleSaveNote = (itemId) => {
-    onUpdateItemNotes(table.id, itemId, tempNote.trim());
+    onUpdateItemNotes(targetTableId, itemId, tempNote.trim());
     setEditingNoteItemId(null);
     setTempNote("");
   };
@@ -1846,11 +1893,11 @@ export function TableDetailView({
   };
 
   const handleConfirmItemModal = (customizedItem) => {
-    onAddItemToTable(table.id, customizedItem);
+    onAddItemToTable(targetTableId, customizedItem);
   };
 
   const handleRemoveItemFromModal = (itemId) => {
-    onRemoveItemFromTable(table.id, itemId);
+    onRemoveItemFromTable(targetTableId, itemId);
   };
 
   return (
@@ -2232,18 +2279,18 @@ export function TableDetailView({
                     fontWeight: 700,
                     textTransform: "uppercase",
                     color:
-                      table.status === "vacant"
+                      (activeTable.status === "vacant" && activeGuests <= 0)
                         ? "var(--status-vacant)"
                         : "var(--status-occupied)",
                     background:
-                      table.status === "vacant"
+                      (activeTable.status === "vacant" && activeGuests <= 0)
                         ? "var(--status-vacant-bg)"
                         : "var(--status-occupied-bg)",
                     padding: "1px 6px",
                     borderRadius: "4px",
                   }}
                 >
-                  {table.status}
+                  {(activeTable.status === "vacant" && activeGuests > 0) ? "occupied" : (activeTable.status || "vacant")}
                 </span>
               </div>
             </div>
@@ -2265,9 +2312,12 @@ export function TableDetailView({
             <Users size={13} color="var(--text-muted)" />
             <span style={{ color: "var(--text-muted)" }}>Guests:</span>
             <button
+              type="button"
               onClick={() => {
-                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
-                onUpdateGuests(table.id, Math.max(1, currentG - 1));
+                const currentG = activeGuests;
+                if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, Math.max(0, currentG - 1));
+                }
               }}
               style={{
                 background: "var(--surface-tint)",
@@ -2278,6 +2328,8 @@ export function TableDetailView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
               }}
             >
               -
@@ -2285,12 +2337,15 @@ export function TableDetailView({
             <span
               style={{ fontWeight: 700, minWidth: "16px", textAlign: "center" }}
             >
-              {Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0)}
+              {activeGuests}
             </span>
             <button
+              type="button"
               onClick={() => {
-                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
-                onUpdateGuests(table.id, currentG + 1);
+                const currentG = activeGuests;
+                if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, currentG + 1);
+                }
               }}
               style={{
                 background: "var(--surface-tint)",
@@ -2301,6 +2356,8 @@ export function TableDetailView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
               }}
             >
               +
@@ -3313,7 +3370,7 @@ export function TableDetailView({
                   whiteSpace: "nowrap",
                 }}
               >
-                #{table.id}0{safeItems.length}
+                #{targetTableId}0{safeItems.length}
               </div>
             </div>
 
@@ -3332,12 +3389,49 @@ export function TableDetailView({
               {/* Live Kitchen Status Banner */}
               {safeItems.length > 0 &&
                 (() => {
-                  const allReady = safeItems.every(
-                    (i) =>
-                      i.kotStatus === "ready" ||
-                      i.kotStatus === "served" ||
-                      i.kotStatus === "completed",
-                  );
+                  if (hasUnsentItems) {
+                    return (
+                      <div
+                        style={{
+                          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(234, 88, 12, 0.08))",
+                          border: "1.5px dashed var(--accent-amber)",
+                          borderRadius: "8px",
+                          padding: "0.55rem 0.8rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <span style={{ fontSize: "1.1rem" }}>📝</span>
+                          <div>
+                            <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--accent-amber-light)" }}>
+                              Order Not Sent to Kitchen Yet
+                            </div>
+                            <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
+                              Click "Send KOT" below to send order to kitchen & start cooking.
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          style={{
+                            background: "rgba(245, 158, 11, 0.2)",
+                            color: "var(--accent-amber-light)",
+                            border: "1px solid rgba(245, 158, 11, 0.4)",
+                            fontSize: "0.65rem",
+                            fontWeight: 800,
+                            padding: "2px 7px",
+                            borderRadius: "10px",
+                          }}
+                        >
+                          KOT REQUIRED
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  const allReady = allCookingReady;
                   const hasCooking = safeItems.some(
                     (i) => i.kotStatus === "cooking",
                   );
@@ -3389,8 +3483,7 @@ export function TableDetailView({
                                 fontWeight: 600,
                               }}
                             >
-                              Chef has completed cooking. All dishes prepared
-                              hot.
+                              All dishes cooked & ready. Settle & checkout is enabled!
                             </div>
                           </div>
                         </div>
@@ -3404,7 +3497,7 @@ export function TableDetailView({
                             borderRadius: "12px",
                           }}
                         >
-                          SERVE NOW
+                          READY TO SETTLE
                         </span>
                       </div>
                     );
@@ -3561,37 +3654,81 @@ export function TableDetailView({
                           >
                             {formatCurrency(item.price)} × {item.quantity}
                           </span>
-                          {item.kotStatus && (
-                            <span
-                              style={{
-                                fontSize: "0.6rem",
-                                fontWeight: 800,
-                                padding: "0px 5px",
-                                borderRadius: "3px",
-                                background:
-                                  item.kotStatus === "ready" ||
-                                  item.kotStatus === "served"
-                                    ? "rgba(16, 185, 129, 0.15)"
-                                    : item.kotStatus === "cooking"
-                                      ? "rgba(234, 88, 12, 0.15)"
-                                      : "rgba(245, 158, 11, 0.15)",
-                                color:
-                                  item.kotStatus === "ready" ||
-                                  item.kotStatus === "served"
-                                    ? "#10b981"
-                                    : item.kotStatus === "cooking"
-                                      ? "#ea580c"
-                                      : "#f59e0b",
-                              }}
-                            >
-                              {item.kotStatus === "ready" ||
-                              item.kotStatus === "served"
-                                ? "✓ Ready"
-                                : item.kotStatus === "cooking"
-                                  ? "🔥 Cooking"
-                                  : "📥 KOT"}
-                            </span>
-                          )}
+                          {(() => {
+                            const isReady = item.kotStatus === "ready" || item.kotStatus === "served" || item.kotStatus === "completed";
+                            const isCooking = item.kotStatus === "cooking";
+                            const isSent = isItemSentToKot(item);
+
+                            if (isReady) {
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                    padding: "1px 5px",
+                                    borderRadius: "3px",
+                                    background: "rgba(16, 185, 129, 0.15)",
+                                    color: "#10b981",
+                                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                                  }}
+                                >
+                                  ✓ Ready
+                                </span>
+                              );
+                            }
+
+                            if (isCooking) {
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                    padding: "1px 5px",
+                                    borderRadius: "3px",
+                                    background: "rgba(234, 88, 12, 0.15)",
+                                    color: "#ea580c",
+                                    border: "1px solid rgba(234, 88, 12, 0.35)",
+                                  }}
+                                >
+                                  🔥 Cooking
+                                </span>
+                              );
+                            }
+
+                            if (isSent) {
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                    padding: "1px 5px",
+                                    borderRadius: "3px",
+                                    background: "rgba(245, 158, 11, 0.15)",
+                                    color: "#f59e0b",
+                                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                                  }}
+                                >
+                                  📥 KOT Sent
+                                </span>
+                              );
+                            }
+
+                            return (
+                              <span
+                                style={{
+                                  fontSize: "0.6rem",
+                                  fontWeight: 800,
+                                  padding: "1px 5px",
+                                  borderRadius: "3px",
+                                  background: "rgba(148, 163, 184, 0.12)",
+                                  color: "#94a3b8",
+                                  border: "1px solid rgba(148, 163, 184, 0.25)",
+                                }}
+                              >
+                                📝 Unsent
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                       <span
@@ -3634,7 +3771,7 @@ export function TableDetailView({
                           onClick={() => {
                             sounds.playRemoveItem();
                             onUpdateItemQuantity(
-                              table.id,
+                              targetTableId,
                               item.id,
                               item.quantity - 1,
                             );
@@ -3668,7 +3805,7 @@ export function TableDetailView({
                           onClick={() => {
                             sounds.playAddItem();
                             onUpdateItemQuantity(
-                              table.id,
+                              targetTableId,
                               item.id,
                               item.quantity + 1,
                             );
@@ -3700,7 +3837,7 @@ export function TableDetailView({
                             if (editingNoteItemId === item.id) {
                               // If closed again with empty input, clear the note
                               if (!tempNote.trim() && item.notes) {
-                                onUpdateItemNotes(table.id, item.id, "");
+                                onUpdateItemNotes(targetTableId, item.id, "");
                               }
                               setEditingNoteItemId(null);
                               setTempNote("");
@@ -3731,7 +3868,7 @@ export function TableDetailView({
                         <button
                           onClick={() => {
                             sounds.playRemoveItem();
-                            onRemoveItemFromTable(table.id, item.id);
+                            onRemoveItemFromTable(targetTableId, item.id);
                           }}
                           style={{
                             background: "transparent",
@@ -3875,14 +4012,14 @@ export function TableDetailView({
                   {[0, 5, 10, 15].map((pct) => (
                     <button
                       key={pct}
-                      onClick={() => onUpdateDiscount(table.id, pct)}
+                      onClick={() => onUpdateDiscount(targetTableId, pct)}
                       style={{
                         background:
-                          (table.discountPercent || 0) === pct
+                          currentDiscountPercent === pct
                             ? "var(--accent-amber)"
                             : "var(--bg-tertiary)",
                         color:
-                          (table.discountPercent || 0) === pct
+                          currentDiscountPercent === pct
                             ? "#000000"
                             : "var(--text-muted)",
                         padding: "0px 5px",
@@ -3897,7 +4034,7 @@ export function TableDetailView({
                 </div>
               </div>
 
-              {table.discountPercent > 0 && (
+              {currentDiscountPercent > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -3906,7 +4043,7 @@ export function TableDetailView({
                     color: "#10b981",
                   }}
                 >
-                  <span>Discount ({table.discountPercent}%)</span>
+                  <span>Discount ({currentDiscountPercent}%)</span>
                   <span className="font-mono">
                     -{formatCurrency(discountAmount)}
                   </span>
@@ -3945,9 +4082,9 @@ export function TableDetailView({
                 >
                   <input
                     type="checkbox"
-                    checked={table.serviceCharge > 0}
+                    checked={currentServiceCharge > 0}
                     onChange={(e) =>
-                      onToggleServiceCharge(table.id, e.target.checked ? 5 : 0)
+                      onToggleServiceCharge(targetTableId, e.target.checked ? 5 : 0)
                     }
                     style={{
                       accentColor: "var(--accent-amber)",
@@ -4011,7 +4148,7 @@ export function TableDetailView({
                   }}
                 >
                   <button
-                    onClick={() => onSendKOT(table.id, safeItems)}
+                    onClick={() => onSendKOT(targetTableId, safeItems)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4020,23 +4157,30 @@ export function TableDetailView({
                       gap: "0.3rem",
                       padding: "0.5rem",
                       borderRadius: "6px",
-                      background: "var(--bg-tertiary)",
+                      background: hasUnsentItems
+                        ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                        : "var(--bg-tertiary)",
                       color:
                         safeItems.length === 0
                           ? "var(--text-dim)"
-                          : "var(--text-main)",
-                      border: "1px solid var(--border-subtle)",
+                          : (hasUnsentItems ? "var(--accent-amber-light)" : "var(--text-main)"),
+                      border: hasUnsentItems
+                        ? "1.5px solid var(--accent-amber)"
+                        : "1px solid var(--border-subtle)",
                       fontSize: "0.74rem",
                       fontWeight: 700,
                       cursor:
                         safeItems.length === 0 ? "not-allowed" : "pointer",
+                      boxShadow: hasUnsentItems
+                        ? "0 0 10px rgba(245, 158, 11, 0.3)"
+                        : "none",
                     }}
                   >
                     <ChefHat size={13} color="var(--accent-amber)" />
-                    <span>Send KOT</span>
+                    <span>{hasUnsentItems ? "Send KOT (Required)" : "Send KOT"}</span>
                   </button>
                   <button
-                    onClick={() => onOpenReceipt(table.id)}
+                    onClick={() => onOpenReceipt(targetTableId)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4063,8 +4207,18 @@ export function TableDetailView({
                 </div>
 
                 <button
-                  onClick={() => onOpenSettlement(table.id)}
-                  disabled={safeItems.length === 0}
+                  onClick={() => {
+                    if (!canSettleAndCheckout) {
+                      if (hasUnsentItems) {
+                        onShowToast?.("⚠️ Please Send KOT to kitchen first before settling!");
+                      } else if (!allCookingReady) {
+                        onShowToast?.("👨‍🍳 Cooking in progress! Settle will unlock once kitchen marks food ready.");
+                      }
+                      return;
+                    }
+                    onOpenSettlement(targetTableId);
+                  }}
+                  disabled={!canSettleAndCheckout}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -4073,22 +4227,34 @@ export function TableDetailView({
                     padding: "0.65rem",
                     borderRadius: "8px",
                     background:
-                      safeItems.length === 0
-                        ? "rgba(245, 158, 11, 0.2)"
-                        : "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                      !canSettleAndCheckout
+                        ? "rgba(100, 116, 139, 0.15)"
+                        : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                     color:
-                      safeItems.length === 0 ? "var(--text-dim)" : "#ffffff",
+                      !canSettleAndCheckout ? "var(--text-dim)" : "#ffffff",
+                    border: !canSettleAndCheckout
+                      ? "1px solid rgba(148, 163, 184, 0.2)"
+                      : "1px solid #10b981",
                     fontSize: "0.82rem",
                     fontWeight: 800,
                     boxShadow:
-                      safeItems.length === 0
+                      !canSettleAndCheckout
                         ? "none"
-                        : "0 3px 10px rgba(245, 158, 11, 0.4)",
-                    cursor: safeItems.length === 0 ? "not-allowed" : "pointer",
+                        : "0 4px 14px rgba(16, 185, 129, 0.4)",
+                    cursor: !canSettleAndCheckout ? "not-allowed" : "pointer",
+                    transition: "all 0.2s ease",
                   }}
                 >
                   <CreditCard size={15} />
-                  <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
+                  <span>
+                    {safeItems.length === 0
+                      ? `Settle & Checkout — ${formatCurrency(0)}`
+                      : hasUnsentItems
+                        ? "🔒 Send KOT First to Settle"
+                        : !allCookingReady
+                          ? "👨‍🍳 Cooking in KOT... (Waiting Ready)"
+                          : `✓ Settle & Checkout — ${formatCurrency(grandTotal)}`}
+                  </span>
                 </button>
               </div>
             </div>
@@ -4278,7 +4444,7 @@ export function TableDetailView({
                     <button
                       onClick={() =>
                         onUpdateItemQuantity(
-                          table.id,
+                          targetTableId,
                           item.id,
                           item.quantity - 1,
                         )
@@ -4310,7 +4476,7 @@ export function TableDetailView({
                     <button
                       onClick={() =>
                         onUpdateItemQuantity(
-                          table.id,
+                          targetTableId,
                           item.id,
                           item.quantity + 1,
                         )
@@ -4392,14 +4558,21 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onSendKOT(table.id, safeItems);
+                    onSendKOT(targetTableId, safeItems);
                   }}
+                  disabled={safeItems.length === 0}
                   style={{
                     padding: "0.55rem",
                     borderRadius: "8px",
-                    background: "var(--bg-primary)",
-                    color: "var(--text-main)",
-                    border: "1px solid var(--border-subtle)",
+                    background: hasUnsentItems
+                      ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                      : "var(--bg-primary)",
+                    color: safeItems.length === 0
+                      ? "var(--text-dim)"
+                      : (hasUnsentItems ? "var(--accent-amber-light)" : "var(--text-main)"),
+                    border: hasUnsentItems
+                      ? "1.5px solid var(--accent-amber)"
+                      : "1px solid var(--border-subtle)",
                     fontWeight: 700,
                     fontSize: "0.78rem",
                     display: "flex",
@@ -4409,13 +4582,14 @@ export function TableDetailView({
                   }}
                 >
                   <ChefHat size={14} color="var(--accent-amber)" />
-                  <span>Send KOT</span>
+                  <span>{hasUnsentItems ? "Send KOT (Required)" : "Send KOT"}</span>
                 </button>
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onOpenReceipt(table.id);
+                    onOpenReceipt(targetTableId);
                   }}
+                  disabled={safeItems.length === 0}
                   style={{
                     padding: "0.55rem",
                     borderRadius: "8px",
@@ -4437,26 +4611,53 @@ export function TableDetailView({
 
               <button
                 onClick={() => {
+                  if (!canSettleAndCheckout) {
+                    if (hasUnsentItems) {
+                      onShowToast?.("⚠️ Please Send KOT to kitchen first before settling!");
+                    } else if (!allCookingReady) {
+                      onShowToast?.("👨‍🍳 Cooking in progress! Settle will unlock once kitchen marks food ready.");
+                    }
+                    return;
+                  }
                   setIsMobileOrderSlipOpen(false);
-                  onOpenSettlement(table.id);
+                  onOpenSettlement(targetTableId);
                 }}
+                disabled={!canSettleAndCheckout}
                 style={{
                   width: "100%",
                   padding: "0.7rem",
                   borderRadius: "8px",
-                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                  color: "#ffffff",
+                  background:
+                    !canSettleAndCheckout
+                      ? "rgba(100, 116, 139, 0.15)"
+                      : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  color: !canSettleAndCheckout ? "var(--text-dim)" : "#ffffff",
                   fontWeight: 800,
                   fontSize: "0.88rem",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "0.4rem",
-                  boxShadow: "0 4px 14px rgba(245, 158, 11, 0.4)",
+                  border: !canSettleAndCheckout
+                    ? "1px solid rgba(148, 163, 184, 0.2)"
+                    : "1px solid #10b981",
+                  boxShadow:
+                    !canSettleAndCheckout
+                      ? "none"
+                      : "0 4px 14px rgba(16, 185, 129, 0.4)",
+                  cursor: !canSettleAndCheckout ? "not-allowed" : "pointer",
                 }}
               >
                 <CreditCard size={16} />
-                <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
+                <span>
+                  {safeItems.length === 0
+                    ? `Settle & Checkout — ${formatCurrency(0)}`
+                    : hasUnsentItems
+                      ? "🔒 Send KOT First to Settle"
+                      : !allCookingReady
+                        ? "👨‍🍳 Cooking in KOT... (Waiting Ready)"
+                        : `✓ Settle & Checkout — ${formatCurrency(grandTotal)}`}
+                </span>
               </button>
             </div>
           </div>
