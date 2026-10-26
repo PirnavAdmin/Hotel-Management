@@ -2962,6 +2962,7 @@ export function TableDetailView({
                   or click "All Items".
                 </p>
                 <button
+                  className="primary-action-button"
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedCategory("all");

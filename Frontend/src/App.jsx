@@ -162,6 +162,13 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       }
 
       const existing = tablesById.get(targetId) || {};
+      const existingGuests = Number(
+        existing.occupiedChairs ??
+          existing.guests ??
+          (Array.isArray(existing.selectedSeats)
+            ? existing.selectedSeats.length
+            : 0),
+      ) || 0;
       const cleanName = rawName.match(/^(?:table|t)\s*(\d+)$/i)
         ? `Table ${num || targetId}`
         : rawName || `Table ${targetId}`;
@@ -174,7 +181,8 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         : false;
 
       const incomingGuests = Number(table.occupiedChairs ?? table.guests ?? (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ?? 0);
-      const hasActiveGuests = incomingGuests > 0;
+      const mergedGuests = incomingGuests || existingGuests;
+      const hasActiveGuests = mergedGuests > 0;
 
       let finalStatus = "vacant";
       if (isExplicitlyVacant || (!hasActiveItems && !hasActiveGuests)) {
@@ -205,8 +213,8 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         status: finalStatus,
         server:
           table.assignedServerName || table.server || existing.server || "Staff",
-        guests: isFinalVacant ? 0 : (incomingGuests || existingGuests || 0),
-        occupiedChairs: isFinalVacant ? 0 : Number(table.occupiedChairs ?? existing.occupiedChairs ?? 0),
+        guests: isFinalVacant ? 0 : mergedGuests,
+        occupiedChairs: isFinalVacant ? 0 : mergedGuests,
         selectedSeats: isFinalVacant
           ? []
           : (Array.isArray(table.selectedSeats) ? table.selectedSeats : (Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),

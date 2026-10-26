@@ -2879,6 +2879,47 @@ export function KitchenKOTView({
   return (
     <>
       <style>{`
+        .kot-start-cooking-button {
+          background: #f97316;
+          color: #ffffff;
+          font-weight: 600;
+          font-size: 0.78rem;
+          line-height: 1.2;
+          box-shadow: 0 1px 4px rgba(194, 65, 12, 0.22);
+          transition: background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .kot-start-cooking-button:hover {
+          background: #ea580c;
+          color: #ffffff;
+          box-shadow: 0 2px 6px rgba(194, 65, 12, 0.28);
+        }
+
+        .kot-start-cooking-button:active {
+          background: #c2410c;
+        }
+
+        .kot-start-cooking-button:focus-visible {
+          outline: 2px solid #ffffff;
+          outline-offset: 2px;
+        }
+
+        .kot-start-cooking-button:disabled {
+          background: #c2410c;
+          color: #ffffff;
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+
+        .kot-start-cooking-button > *,
+        .kot-start-cooking-button svg {
+          color: #ffffff !important;
+        }
+
+        .kot-start-cooking-button svg {
+          stroke: currentColor !important;
+        }
+
         .kot-cards-grid {
           width: 100%;
         }
@@ -4568,6 +4609,7 @@ export function KitchenKOTView({
                       {isReceived && (
                         <div style={{ display: "flex", gap: "0.45rem" }}>
                           <button
+                            className="kot-start-cooking-button"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleStartCooking(tbl.uniqueKey);
@@ -4576,24 +4618,19 @@ export function KitchenKOTView({
                               flex: 2,
                               padding: "0.52rem 0.65rem",
                               borderRadius: "var(--radius-sm)",
-                              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                              color: "#ffffff",
-                              fontWeight: 800,
-                              fontSize: "0.78rem",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               gap: "0.35rem",
                               border: "none",
                               cursor: "pointer",
-                              boxShadow: "0 3px 10px rgba(245, 158, 11, 0.35)",
                             }}
                           >
                             <Flame size={14} />
                             <span>
                               {preparedCount > 0
-                                ? `🔥 COOK REMAINING (${totalCount - preparedCount})`
-                                : "🔥 START COOKING"}
+                                ? `COOK REMAINING (${totalCount - preparedCount})`
+                                : "START COOKING"}
                             </span>
                           </button>
 
