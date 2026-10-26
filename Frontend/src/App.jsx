@@ -1,5 +1,5 @@
 import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
 import { AdminPortal } from "./admin";
@@ -37,11 +37,6 @@ import {
 } from "./api/menuApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import {
-  apiGetKotOrders,
-  apiCreateKotOrder,
-  apiUpdateKotStatus,
-} from "./api/kotApi";
-import {
   apiGetStaff,
   apiCreateStaff,
   apiUpdateStaff,
@@ -50,11 +45,12 @@ import {
 import {
   apiGetOrderHistory,
   apiCreateOrder,
+  apiSendOrderKot,
   apiUpdateOrderDiscount,
   apiSettleOrder,
 } from "./api/orderApi";
 import { apiAdjustStock } from "./api/inventoryApi";
-import { API_BASE_URL } from "./api/apiConfig";
+import { API_BASE_URL, openOptionalEventStream } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
@@ -196,6 +192,8 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         ...existing,
         ...table,
         id: targetId,
+        activeOrderId: table.activeOrderId ?? existing.activeOrderId ?? null,
+        pendingKotSubmission: table.pendingKotSubmission ?? existing.pendingKotSubmission ?? null,
         name: cleanName,
         backendTableId:
           table.tableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
@@ -286,16 +284,15 @@ export function App() {
       .then((response) => response.ok ? response.json() : null)
       .then((data) => applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
       .catch(() => {});
-    let events;
-    try {
-      events = new EventSource(`${API_BASE_URL}/api/events`);
+    const events = openOptionalEventStream();
+    if (events) {
       events.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
           applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
         } catch {}
       };
-    } catch {}
+    }
     return () => { active = false; events?.close(); };
   }, []);
 
@@ -423,6 +420,7 @@ export function App() {
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const kotSubmissionLocks = useRef(new Set());
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -844,11 +842,8 @@ export function App() {
       .catch(() => {});
 
     // 2. Connect to realtime SSE stream push for instant multi-device updates
-    let es;
-    try {
-      es = new EventSource(
-        `${API_BASE_URL}/api/events`,
-      );
+    const es = openOptionalEventStream();
+    if (es) {
       es.onmessage = (e) => {
         try {
           const parsedMsg = JSON.parse(e.data);
@@ -977,7 +972,7 @@ export function App() {
           }
         } catch {}
       };
-    } catch {}
+    }
 
     const handleStorageChange = (e) => {
       if (!e.key || !e.newValue) return;
@@ -1324,86 +1319,178 @@ export function App() {
     );
   };
 
-  // 1. Send KOT (Kitchen Order Ticket): Transitions items to 'received' status in Kitchen
-  const handleSendKOT = (tableId) => {
-    sounds.playBell();
-    const tbl = tables.find((t) => t.id === tableId);
+  // Persist an active order, then dispatch its queued items through the order-backed Kitchen API.
+  const handleSendKOT = async (tableId) => {
+    const lockKey = String(tableId);
+    if (kotSubmissionLocks.current.has(lockKey)) return;
+    kotSubmissionLocks.current.add(lockKey);
+
+    const persistTable = (updateTable) => {
+      setTables((previous) => {
+        const next = previous.map((entry) =>
+          String(entry.id) === lockKey ? updateTable(entry) : entry,
+        );
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(next));
+          pushGlobalSync({ [STORAGE_KEY_TABLES]: next });
+          broadcastSync("SYNC_TABLES", next);
+        } catch (error) {
+          if (import.meta.env.DEV) console.warn("Could not persist KOT submission state locally:", error);
+        }
+        return next;
+      });
+    };
+
     try {
-      const saved = localStorage.getItem("gourmet_kot_dismissed_tickets_v1");
-      if (saved) {
-        const list = JSON.parse(saved);
-        const updated = list.filter(
-          (id) =>
-            id !== String(tableId) &&
-            id !== Number(tableId) &&
-            id !== `active-${tableId}`,
-        );
-        localStorage.setItem(
-          "gourmet_kot_dismissed_tickets_v1",
-          JSON.stringify(updated),
-        );
+      const table = tables.find((entry) => String(entry.id) === lockKey);
+      if (!table) {
+        showToast("Could not send KOT: table was not found.");
+        return;
       }
-    } catch {}
-    setTables((prevTables) =>
-      prevTables.map((t) => {
-        if (t.id !== tableId) return t;
-        const updatedItems = t.items.map((i) => ({
-          ...i,
-          kotStatus:
-            i.kotStatus === "ready" ||
-            i.kotStatus === "served" ||
-            i.kotStatus === "completed"
-              ? i.kotStatus
-              : i.kotStatus === "cooking"
-                ? "cooking"
-                : "received",
-        }));
-        const allReady =
-          updatedItems.length > 0 &&
-          updatedItems.every(
-            (i) =>
-              i.kotStatus === "ready" ||
-              i.kotStatus === "served" ||
-              i.kotStatus === "completed",
-          );
+      const items = Array.isArray(table.items) ? table.items : [];
+      if (items.length === 0) {
+        showToast("Add at least one item before sending a KOT.");
+        return;
+      }
 
-        return {
-          ...t,
-          orderTime:
-            t.orderTime ||
-            new Date().toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          orderTimestamp: t.orderTimestamp || Date.now(),
-          items: updatedItems,
-          completedAt: allReady ? t.completedAt : null,
-          completedDuration: allReady ? t.completedDuration : null,
+      const pendingSubmission = table.pendingKotSubmission;
+      const unsentItems = items
+        .map((item) => ({
+          item,
+          itemKey: String(item.id ?? item.menuItemId ?? item.name),
+          quantity: Math.max(0, Number(item.quantity) || 0),
+        }))
+        .filter(({ item, quantity }) => quantity > (Number(item.sentQuantity) || 0));
+      if (!pendingSubmission && unsentItems.length === 0) {
+        showToast("All current items have already been sent to Kitchen.");
+        return;
+      }
+
+      let orderId = Number(pendingSubmission?.orderId || table.activeOrderId) || null;
+      let pendingItems = pendingSubmission?.items || null;
+      if (!pendingSubmission) {
+        const requestBody = {
+          tableId: Number(table.backendTableId ?? table.id),
+          tableName: table.name || `Table ${tableId}`,
+          tableNumber: String(table.tableNumber || table.name || tableId),
+          serverName: table.server || "Server",
+          guests: Math.max(1, Number(table.guests) || 1),
+          items: unsentItems.map(({ item, quantity }) => ({
+            menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
+            name: item.name || item.dishName || "Order Item",
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: quantity - (Number(item.sentQuantity) || 0),
+            notes: item.notes || "",
+          })),
         };
-      }),
-    );
-    apiCreateKotOrder({ tableId, items: tbl?.items, status: "received" }).catch(
-      () => {},
-    );
-    setIsKOTOpen(true);
-    showToast(
-      `📥 KOT Sent: Order Received from ${tbl?.name || `Table ${tableId}`}!`,
-    );
-  };
+        if (import.meta.env.DEV) {
+          console.debug("[KOT] POST /api/v1/orders", {
+            tableId: requestBody.tableId,
+            itemCount: requestBody.items.length,
+            items: requestBody.items.map(({ menuItemId, name, quantity }) => ({ menuItemId, name, quantity })),
+          });
+        }
+        const createResult = await apiCreateOrder(requestBody);
+        const order = createResult?.data?.data ?? createResult?.data;
+        orderId = Number(order?.id ?? order?.Id) || null;
+        if (!createResult?.success || !orderId) {
+          const error = createResult?.error || "The server did not return an order ID.";
+          if (import.meta.env.DEV) console.error("[KOT] Order create failed", { status: createResult?.status, error });
+          showToast(`Could not save order for Kitchen: ${error}`);
+          return;
+        }
+        if (import.meta.env.DEV) {
+          console.info("[KOT] Order persisted", {
+            endpoint: "/api/v1/orders",
+            status: createResult.status,
+            orderId,
+            itemCount: requestBody.items.length,
+          });
+        }
 
+        pendingItems = unsentItems.map(({ itemKey, quantity }) => ({ itemKey, quantity }));
+        // Save the server ID before dispatch so a retry resumes this KOT without re-adding items.
+        persistTable((entry) => ({
+          ...entry,
+          activeOrderId: orderId,
+          pendingKotSubmission: { orderId, items: pendingItems },
+          backendOrderItems: Array.isArray(order?.items) ? order.items : entry.backendOrderItems,
+        }));
+      }
+
+      if (!orderId) {
+        showToast("Could not send KOT: the saved order ID is missing.");
+        return;
+      }
+      if (import.meta.env.DEV) console.debug("[KOT] POST /api/v1/orders/{id}/send-kot", { orderId });
+      const sendResult = await apiSendOrderKot(orderId);
+      const sendResponse = sendResult?.data?.data ?? sendResult?.data;
+      if (!sendResult?.success) {
+        if (import.meta.env.DEV) console.error("[KOT] Dispatch failed", { orderId, status: sendResult?.status, error: sendResult?.error });
+        showToast(`Order saved, but Kitchen did not confirm the KOT: ${sendResult?.error || "Request failed."} Retry Send KOT to dispatch it.`);
+        return;
+      }
+
+      persistTable((entry) => ({
+        ...entry,
+        activeOrderId: orderId,
+        pendingKotSubmission: null,
+        kotId: sendResponse?.kotId ?? sendResponse?.kotData?.kotId ?? entry.kotId,
+        orderTime: entry.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        orderTimestamp: entry.orderTimestamp || Date.now(),
+        items: entry.items.map((item) => {
+          const key = String(item.id ?? item.menuItemId ?? item.name);
+          const submitted = pendingItems?.find((pending) => pending.itemKey === key);
+          if (!submitted) return item;
+          return {
+            ...item,
+            sentQuantity: Math.max(Number(item.sentQuantity) || 0, submitted.quantity),
+            kotStatus: ["ready", "served", "completed"].includes(String(item.kotStatus).toLowerCase()) ? item.kotStatus : "received",
+          };
+        }),
+        completedAt: null,
+        completedDuration: null,
+      }));
+
+      try {
+        const saved = localStorage.getItem("gourmet_kot_dismissed_tickets_v1");
+        if (saved) {
+          const dismissed = JSON.parse(saved).filter((id) =>
+            id !== String(tableId) && id !== Number(tableId) && id !== `active-${tableId}`,
+          );
+          localStorage.setItem("gourmet_kot_dismissed_tickets_v1", JSON.stringify(dismissed));
+        }
+      } catch {}
+
+      if (import.meta.env.DEV) console.info("[KOT] Dispatch confirmed", {
+        endpoint: `/api/v1/orders/${orderId}/send-kot`,
+        status: sendResult.status,
+        orderId,
+        kotId: sendResponse?.kotId ?? sendResponse?.kotData?.kotId,
+      });
+      sounds.playBell();
+      setIsKOTOpen(true);
+      showToast(`KOT sent to Kitchen for ${table.name || `Table ${tableId}`}.`);
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("[KOT] Unexpected Send KOT error", error);
+      showToast(`Could not send KOT: ${error?.message || "Unexpected request error."}`);
+    } finally {
+      kotSubmissionLocks.current.delete(lockKey);
+    }
+  };
   // 2. Kitchen KDS Action: Start cooking or update status
   const handleUpdateItemKotStatus = (tableId, status, itemId = null) => {
-    const tbl = tables.find((t) => t.id === tableId);
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
     const itemObj =
-      itemId && tbl ? tbl.items.find((i) => i.id === itemId) : null;
+      itemId && tbl ? tbl.items.find((i) => String(i.id) === String(itemId)) : null;
     const itemName = itemObj ? itemObj.name : null;
 
     setTables((prevTables) =>
       prevTables.map((t) => {
-        if (t.id !== tableId) return t;
+        if (String(t.id) !== String(tableId)) return t;
         const updatedItems = t.items.map((i) => {
           if (itemId) {
-            return i.id === itemId ? { ...i, kotStatus: status } : i;
+            return String(i.id) === String(itemId) ? { ...i, kotStatus: status } : i;
           }
           // Table-level status change
           if (status === "cooking") {
@@ -1511,9 +1598,9 @@ export function App() {
     completedDuration = null,
     completedAt = null,
   ) => {
-    const tbl = tables.find((t) => t.id === tableId);
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
     const itemObj =
-      itemId && tbl ? tbl.items.find((i) => i.id === itemId) : null;
+      itemId && tbl ? tbl.items.find((i) => String(i.id) === String(itemId)) : null;
     const nowTimeStr =
       completedAt ||
       new Date().toLocaleTimeString([], {
@@ -1524,9 +1611,9 @@ export function App() {
 
     setTables((prevTables) =>
       prevTables.map((t) => {
-        if (t.id !== tableId) return t;
+        if (String(t.id) !== String(tableId)) return t;
         const updatedItems = t.items.map((i) => {
-          if (itemId && i.id !== itemId) return i;
+          if (itemId && String(i.id) !== String(itemId)) return i;
           return { ...i, kotStatus: "ready" };
         });
         const allReady =

@@ -57,7 +57,7 @@ import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
-import { API_BASE_URL } from "../api/apiConfig";
+import { API_BASE_URL, openOptionalEventStream } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -844,9 +844,8 @@ export function AdminPortal({
       )
       .catch(() => {});
 
-    let events;
-    try {
-      events = new EventSource(`${API_BASE_URL}/api/events`);
+    const events = openOptionalEventStream();
+    if (events) {
       events.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
@@ -856,7 +855,7 @@ export function AdminPortal({
           if (settings) applySettings(settings);
         } catch {}
       };
-    } catch {}
+    }
 
     return () => {
       active = false;
