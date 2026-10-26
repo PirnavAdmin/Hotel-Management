@@ -22,10 +22,10 @@
       "name": "Table-2",
       "tableNumber": "Table-2",
       "section": "Main Hall",
-      "capacity": 5,
-      "status": "occupied",
-      "server": "Rajesh K.",
-      "guests": 2,
+      "capacity": 4,
+      "status": "vacant",
+      "server": "Staff",
+      "guests": 0,
       "items": [],
       "orderTime": null,
       "discountPercent": 0,
@@ -37,15 +37,17 @@
       "branchId": 1,
       "sectionArea": "Main Hall",
       "location": "Main Hall",
-      "capacityChairs": 5,
-      "occupiedChairs": 2,
-      "selectedSeats": [
-        "S3",
-        "S4"
-      ],
-      "assignedServerId": 1,
-      "assignedServerName": "Rajesh K.",
-      "qrCodeUrl": null
+      "capacityChairs": 4,
+      "occupiedChairs": 0,
+      "selectedSeats": [],
+      "assignedServerId": null,
+      "assignedServerName": "Staff",
+      "qrCodeUrl": null,
+      "orderTimestamp": null,
+      "activeOrderId": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null
     },
     {
       "id": 3,
@@ -53,38 +55,17 @@
       "tableNumber": "Table-3",
       "section": "Main Hall",
       "capacity": 4,
-      "status": "occupied",
+      "status": "vacant",
       "server": "Staff",
-      "guests": 3,
-      "items": [
-        {
-          "id": "bir-4",
-          "name": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:47 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        },
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:47 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        }
-      ],
-      "orderTime": "12:47 PM",
+      "guests": 0,
+      "items": [],
+      "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
       "backendTableId": 3,
-      "orderTimestamp": 1792999043198,
+      "orderTimestamp": null,
       "completedAt": null,
       "completedDuration": null,
       "tableName": "Table-3",
@@ -92,15 +73,18 @@
       "sectionArea": "Main Hall",
       "location": "Main Hall",
       "capacityChairs": 4,
-      "occupiedChairs": 3,
-      "selectedSeats": [
-        "S2",
-        "S1",
-        "S3"
-      ],
+      "occupiedChairs": 0,
+      "selectedSeats": [],
       "assignedServerId": null,
       "assignedServerName": "Staff",
-      "qrCodeUrl": null
+      "qrCodeUrl": null,
+      "activeOrderId": null,
+      "cookingStartedAt": null,
+      "discountAmount": 0,
+      "subtotal": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "grandTotal": 0
     },
     {
       "id": 4,
@@ -2095,8 +2079,46 @@
     }
   ],
   "gourmet_pos_staff_v1": [],
-  "gourmet_pos_past_orders_v2_inr": [],
+  "gourmet_pos_past_orders_v2_inr": [
+    {
+      "tableId": 3,
+      "tableName": "Table 3",
+      "tableNumber": "3",
+      "serverName": "Staff",
+      "guests": 2,
+      "discountPercent": 0,
+      "serviceChargeEnabled": false,
+      "tipAmount": 0,
+      "status": "Active",
+      "items": [
+        {
+          "name": "Royal Mutton Dum Biryani",
+          "dishName": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "name": "Special Boneless Chicken Biryani",
+          "dishName": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    }
+  ],
   "avsr_auth_users_v1": [
+    {
+      "id": "local-1793006151119-vutzzd",
+      "username": "newadmin3",
+      "email": "newadmin3@gmail.com",
+      "phone": "8765432345",
+      "fullName": "newadmin3",
+      "password": "123456",
+      "role": "admin",
+      "createdAt": "2026-10-26T09:15:51.120Z"
+    },
     {
       "id": "user-001",
       "username": "user",
@@ -2217,7 +2239,7 @@
   "avsr_latest_kitchen_alert": null,
   "avsr_last_invoice_counter_v1": "214153",
   "avsr_daily_inv_cnt_12_Oct_2026": "1068",
-  "avsr_last_invoice_date_v2": "23 Oct 2026",
+  "avsr_last_invoice_date_v2": "26 Oct 2026",
   "avsr_daily_inv_cnt_13_Oct_2026": "1",
   "gourmet_pos_settings_v1": {
     "restaurantName": "Bhanu Bistro",
@@ -2995,6 +3017,16 @@
       "createdAt": 1792994423656,
       "verified": true,
       "verifiedAt": 1792994434521
+    },
+    "newadmin3@gmail.com": {
+      "otp": "994800",
+      "expiresAt": 1793006738171,
+      "fullName": "newadmin3",
+      "phone": "8765432345",
+      "createdAt": 1793006138171,
+      "verified": true,
+      "verifiedAt": 1793006150959
     }
-  }
+  },
+  "avsr_daily_inv_cnt_26_Oct_2026": "2"
 }
