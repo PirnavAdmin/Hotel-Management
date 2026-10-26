@@ -2,12 +2,19 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import fs from "fs";
 import path from "path";
-import nodemailer from "nodemailer";
+let nodemailer = null;
+try {
+  const nmMod = await import("nodemailer");
+  nodemailer = nmMod.default || nmMod;
+} catch {
+  nodemailer = null;
+}
 
 const env = loadEnv("development", process.cwd(), "");
 
 let mailTransporter = null;
 const getMailTransporter = async () => {
+  if (!nodemailer) return null;
   // Dynamically load .env so changes are picked up without server restart
   const currentEnv = loadEnv("development", process.cwd(), "");
   const host = currentEnv.SMTP_HOST || process.env.SMTP_HOST || currentEnv.EMAIL_HOST || process.env.EMAIL_HOST;
@@ -99,7 +106,7 @@ const sendOtpEmail = async (email, otp, fullName = "Admin") => {
         html,
       });
       console.log(`[nodemailer] Verification OTP sent to ${email} (MessageId: ${info.messageId}) [isLive: ${mailConfig.isLive}]`);
-      const previewUrl = nodemailer.getTestMessageUrl(info);
+      const previewUrl = typeof nodemailer?.getTestMessageUrl === "function" ? nodemailer.getTestMessageUrl(info) : null;
       if (previewUrl) {
         console.log(`[nodemailer] Email Preview URL: ${previewUrl}`);
       }
