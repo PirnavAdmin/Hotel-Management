@@ -4,30 +4,66 @@
       "id": 1,
       "name": "Table-1",
       "tableNumber": "Table-1",
-      "section": "Main Hall",
-      "capacity": 2,
-      "status": "vacant",
-      "server": "Staff",
-      "guests": 0,
+      "section": "VIP Lounge",
+      "capacity": 6,
+      "status": "occupied",
+      "server": "Rajesh K.",
+      "guests": 5,
       "items": [],
       "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 1
+      "backendTableId": 1,
+      "tableName": "Table-1",
+      "branchId": 1,
+      "sectionArea": "VIP Lounge",
+      "location": "VIP Lounge",
+      "capacityChairs": 6,
+      "occupiedChairs": 5,
+      "selectedSeats": [
+        "S1",
+        "S2",
+        "S3",
+        "S6",
+        "S5"
+      ],
+      "orderTimestamp": null,
+      "assignedServerId": 1,
+      "assignedServerName": "Rajesh K.",
+      "qrCodeUrl": null
     },
     {
       "id": 2,
       "name": "Table-2",
       "tableNumber": "Table-2",
       "section": "Main Hall",
-      "capacity": 4,
-      "status": "vacant",
-      "server": "Staff",
-      "guests": 0,
-      "items": [],
-      "orderTime": null,
+      "capacity": 5,
+      "status": "occupied",
+      "server": "Rajesh K.",
+      "guests": 2,
+      "items": [
+        {
+          "id": 41,
+          "name": "bagara with mutton",
+          "price": 280,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "12:44 PM",
+          "kotStatus": "received"
+        },
+        {
+          "id": 35,
+          "name": "Paneer Butter Masala",
+          "price": 250,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "12:44 PM",
+          "kotStatus": "received"
+        }
+      ],
+      "orderTime": "12:44 PM",
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
@@ -37,13 +73,16 @@
       "branchId": 1,
       "sectionArea": "Main Hall",
       "location": "Main Hall",
-      "capacityChairs": 4,
-      "occupiedChairs": 0,
-      "selectedSeats": [],
-      "assignedServerId": null,
-      "assignedServerName": "Staff",
+      "capacityChairs": 5,
+      "occupiedChairs": 2,
+      "selectedSeats": [
+        "S3",
+        "S4"
+      ],
+      "assignedServerId": 1,
+      "assignedServerName": "Rajesh K.",
       "qrCodeUrl": null,
-      "orderTimestamp": null,
+      "orderTimestamp": 1792998883485,
       "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
@@ -92,16 +131,31 @@
       "tableNumber": "Table-4",
       "section": "Main Hall",
       "capacity": 6,
-      "status": "vacant",
-      "server": "Staff",
-      "guests": 0,
+      "status": "occupied",
+      "server": "Karan D.",
+      "guests": 3,
       "items": [],
       "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 4
+      "backendTableId": 4,
+      "tableName": "Table-4",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 6,
+      "occupiedChairs": 3,
+      "selectedSeats": [
+        "S3",
+        "S2",
+        "S5"
+      ],
+      "orderTimestamp": null,
+      "assignedServerId": 6,
+      "assignedServerName": "Karan D.",
+      "qrCodeUrl": null
     },
     {
       "id": 5,
@@ -2110,6 +2164,16 @@
   ],
   "avsr_auth_users_v1": [
     {
+      "id": "local-1793008699594-4u3r17",
+      "username": "admin2",
+      "email": "admin2@gmail.com",
+      "phone": "1234567898",
+      "fullName": "admin2",
+      "password": "123456",
+      "role": "admin",
+      "createdAt": "2026-10-26T09:58:19.594Z"
+    },
+    {
       "id": "local-1793006151119-vutzzd",
       "username": "newadmin3",
       "email": "newadmin3@gmail.com",
@@ -3026,7 +3090,25 @@
       "createdAt": 1793006138171,
       "verified": true,
       "verifiedAt": 1793006150959
+    },
+    "abcd@gmail.com": {
+      "otp": "694741",
+      "expiresAt": 1793007405830,
+      "fullName": "12",
+      "phone": "1234567897",
+      "createdAt": 1793006805830,
+      "verified": true,
+      "verifiedAt": 1793006831641
+    },
+    "admin2@gmail.com": {
+      "otp": "273730",
+      "expiresAt": 1793009266849,
+      "fullName": "admin2",
+      "phone": "1234567898",
+      "createdAt": 1793008666849,
+      "verified": true,
+      "verifiedAt": 1793008698753
     }
   },
-  "avsr_daily_inv_cnt_26_Oct_2026": "2"
+  "avsr_daily_inv_cnt_26_Oct_2026": "216"
 }

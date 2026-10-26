@@ -379,7 +379,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           </button>
         </div>
 
-        {/* Net Amount Due Banner */}
+        {/* Total Amount Due Banner */}
         <div style={{
           background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
           border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
@@ -403,26 +403,27 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               color: 'var(--accent-amber, #f59e0b)',
               flexShrink: 0
             }}>
-              <Wallet size={20} />
+              <Receipt size={22} strokeWidth={2.2} />
             </div>
 
             <div>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600, display: 'block' }}>
-                Net Amount Due
+                Total Amount Due
               </span>
               <span className="font-mono" style={{
                 fontSize: '1.95rem',
                 fontWeight: 900,
-                color: 'var(--accent-amber, #f59e0b)',
+                color: isLight ? '#16a34a' : '#4ade80',
                 lineHeight: 1.1,
-                display: 'block'
+                display: 'block',
+                textShadow: isLight ? 'none' : '0 0 16px rgba(74, 222, 128, 0.28)'
               }}>
                 {formatCurrency(grandTotal)}
               </span>
             </div>
           </div>
 
-          {/* Subtotal & GST breakdown */}
+          {/* Subtotal & GST breakdown (Highlighted in cyan as 2nd image) */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -432,20 +433,28 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
               <span>Subtotal</span>
-              <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
+              <span className="font-mono" style={{ color: isLight ? '#0891b2' : '#22d3ee', fontWeight: 800 }}>
                 {formatCurrency(subtotal)}
               </span>
             </div>
+            {discountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
+                <span>Discount</span>
+                <span className="font-mono" style={{ color: '#f87171', fontWeight: 800 }}>
+                  -{formatCurrency(discountAmount)}
+                </span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
               <span>GST (5%)</span>
-              <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
+              <span className="font-mono" style={{ color: isLight ? '#0891b2' : '#22d3ee', fontWeight: 800 }}>
                 {formatCurrency(taxAmount)}
               </span>
             </div>
             {serviceChargeAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
                 <span>Service (5%)</span>
-                <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
+                <span className="font-mono" style={{ color: isLight ? '#0891b2' : '#22d3ee', fontWeight: 800 }}>
                   {formatCurrency(serviceChargeAmount)}
                 </span>
               </div>

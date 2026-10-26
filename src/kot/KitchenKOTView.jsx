@@ -2551,10 +2551,25 @@ export function KitchenKOTView({
     };
   };
 
+  const getTicketTimeValue = (ticket) => {
+    if (Number(ticket?.orderTimestamp) > 0) return Number(ticket.orderTimestamp);
+    const value = ticket?.orderTime || ticket?.createdAt || ticket?.orderReceivedAt;
+    if (!value) return 0;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : parseTimeToSeconds(value);
+  };
+
   // 1. Active Floor Tables with Orders in Preparation (Only from POS)
   const activeTickets = tables
     .filter((t) => Array.isArray(t.items) && t.items.length > 0)
     .filter((t) => {
+      // Must have been sent to KOT from POS
+      const isSent = Boolean(
+        t.kotSent ||
+        (Array.isArray(t.items) && t.items.some((i) => i.kotSent || (i.kotStatus && i.kotStatus !== "new")))
+      );
+      if (!isSent) return false;
+
       // If table has incomplete items (received or cooking), ALWAYS show it!
       const allCompleted = t.items.length > 0 && t.items.every(isItemCompleted);
       if (!allCompleted) return true;
