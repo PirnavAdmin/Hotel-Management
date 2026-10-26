@@ -58,6 +58,7 @@ import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
+import { MENU_ITEMS } from "./data/menuData";
 import { useAppDialog } from "./common/DialogContext";
 import {
   autoGenerateInventoryFromRecipe,
@@ -339,7 +340,7 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_MENU);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((item) => ({
             ...item,
             image: item.image || getRelevantLocalFallback(item),
@@ -349,7 +350,12 @@ export function App() {
     } catch {
       // Fallback
     }
-    return [];
+    return MENU_ITEMS.map((item) => ({
+      ...item,
+      image: item.image || getRelevantLocalFallback(item),
+      isAvailable: item.isAvailable !== false,
+      recipe: Array.isArray(item.recipe) ? item.recipe : [],
+    }));
   });
 
   useEffect(() => {
@@ -463,7 +469,7 @@ export function App() {
         response?.data?.menuItems,
         response?.menuItems,
       ].find((candidate) => Array.isArray(candidate));
-      if (Array.isArray(backendMenu)) {
+      if (Array.isArray(backendMenu) && backendMenu.length > 0) {
         let localMenu = [];
         try {
           localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
