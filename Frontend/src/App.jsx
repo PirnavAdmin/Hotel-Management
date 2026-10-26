@@ -1,5 +1,5 @@
 import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
 import { AdminPortal } from "./admin";
@@ -16,6 +16,7 @@ import {
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
 import { sounds } from "./utils/audio";
+import { logRouteChange, logUserAction } from "./utils/logger";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
 import {
@@ -430,6 +431,25 @@ export function App() {
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
   const isUserRoute = !isKotRoute && !isAdminRoute;
+
+  // ── Route & POS View Change Logging ──
+  const prevPathRef = useRef(location.pathname + location.search);
+  useEffect(() => {
+    const current = location.pathname + location.search;
+    if (prevPathRef.current !== current) {
+      logRouteChange(prevPathRef.current, current);
+      prevPathRef.current = current;
+    }
+  }, [location.pathname, location.search]);
+
+  const prevViewRef = useRef(activeView);
+  useEffect(() => {
+    if (prevViewRef.current !== activeView) {
+      logRouteChange(`POS View: ${prevViewRef.current}`, `POS View: ${activeView}`);
+      prevViewRef.current = activeView;
+    }
+  }, [activeView]);
+
 
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
