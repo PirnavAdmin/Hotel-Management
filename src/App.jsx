@@ -1976,6 +1976,8 @@ export function App() {
     } catch {}
 
     setIsSettlementOpen(false);
+    setSelectedTableId(null);
+    setActiveView("tables");
     showToast(
       `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
     );
@@ -2812,8 +2814,9 @@ export function App() {
           onClose={() => {
             setIsReceiptOpen(false);
             setReprintReceiptData(null);
-            if (activeView === "order") {
-              setActiveView("table");
+            if (activeView === "order" || activeView === "table") {
+              setActiveView("tables");
+              setSelectedTableId(null);
             }
           }}
         />
