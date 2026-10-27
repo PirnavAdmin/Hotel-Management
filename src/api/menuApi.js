@@ -5,7 +5,12 @@ export function normalizeMenuItem(item = {}) {
   const prepTime = item.prepTime ?? item.prep_time;
   const prepTimeMinutes = item.prepTimeMinutes ?? item.prep_time_minutes;
   const dietaryType = item.dietaryType ?? item.dietary_type;
-  const rawImagePath = item.image ?? item.imageUrl ?? item.image_url ?? "";
+  // Some API responses include an empty `image` field alongside a populated
+  // imageUrl. Choose the first non-empty image reference, independent of item
+  // name/category, then resolve it as the item's own stored path.
+  const rawImagePath = [item.imageUrl, item.image_url, item.image, item.ImageUrl].find(
+    (value) => typeof value === "string" && value.trim().length > 0,
+  )?.trim() || "";
 
   const resolvedImagePath =
     typeof rawImagePath === "string" &&
@@ -52,7 +57,9 @@ export function normalizeMenuItem(item = {}) {
 
   return {
     ...intermediate,
-    image: getMenuItemImage(intermediate),
+    // Pass only the resolved canonical reference so the raw API fields on
+    // `intermediate` cannot shadow the API-base-resolved path.
+    image: getMenuItemImage({ image: resolvedImagePath }),
   };
 }
 

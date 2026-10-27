@@ -117,8 +117,8 @@ export function Header({
 
   const totalGuests = safeTables
     .reduce((acc, t) => {
-      const g = Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0);
-      return acc + (t?.status !== "vacant" ? g : 0);
+      const g = Math.max(0, Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0) || Number(t?.occupiedChairs) || 0);
+      return acc + (t?.status !== "vacant" || g > 0 ? g : 0);
     }, 0);
 
   const totalRunningRevenue = safeTables
@@ -253,6 +253,7 @@ export function Header({
           }}
         >
           <button
+            className={isUserRoute ? "primary-action-button" : undefined}
             onClick={() => {
               setActiveView("tables");
               navigate("/");
@@ -414,7 +415,7 @@ export function Header({
             {Array.isArray(kitchenNotifications) && kitchenNotifications.some(
               (n) => n.type === "cooking_completed",
             ) ? (
-              <BellRing size={16} color="#10b981" />
+              <BellRing size={16} color="var(--success)" />
             ) : (
               <Bell size={16} />
             )}
@@ -494,7 +495,7 @@ export function Header({
                     style={{
                       fontSize: "0.88rem",
                       fontWeight: 900,
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       letterSpacing: "-0.01em",
                     }}
                   >
@@ -639,7 +640,7 @@ export function Header({
                               style={{
                                 fontSize: "0.84rem",
                                 fontWeight: 900,
-                                color: isCompleted ? "#34d399" : "#fb923c",
+                                color: isCompleted ? "var(--success)" : "var(--accent-amber-light)",
                                 letterSpacing: "-0.01em",
                               }}
                             >
@@ -659,7 +660,7 @@ export function Header({
                           <div
                             style={{
                               fontSize: "0.8rem",
-                              color: "#f1f5f9",
+                              color: "var(--text-main)",
                               lineHeight: 1.35,
                               fontWeight: 500,
                             }}
@@ -682,7 +683,7 @@ export function Header({
                                   background: isCompleted
                                     ? "rgba(16, 185, 129, 0.2)"
                                     : "rgba(245, 158, 11, 0.2)",
-                                  color: isCompleted ? "#34d399" : "#fbbf24",
+                                  color: isCompleted ? "var(--success)" : "var(--accent-amber-light)",
                                   padding: "1px 6px",
                                   borderRadius: "4px",
                                 }}
@@ -692,7 +693,7 @@ export function Header({
                               <span
                                 style={{
                                   fontSize: "0.68rem",
-                                  color: "#38bdf8",
+                                  color: "var(--info)",
                                   fontWeight: 700,
                                   display: "flex",
                                   alignItems: "center",

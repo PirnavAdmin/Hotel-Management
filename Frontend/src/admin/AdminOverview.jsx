@@ -246,7 +246,7 @@ export function AdminOverview({
               style={{
                 background: pendingKOTCount > 0 ? "rgba(239, 68, 68, 0.15)" : "var(--bg-card)",
                 border: pendingKOTCount > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
-                color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-main)",
+                color: pendingKOTCount > 0 ? "var(--danger)" : "var(--text-main)",
                 borderRadius: "8px",
                 padding: "0.42rem 0.85rem",
                 fontSize: "0.76rem",
@@ -359,7 +359,7 @@ export function AdminOverview({
           >
             <span>{todayOrders.length} Bills</span>
             <span style={{ margin: "0 3px" }}>•</span>
-            <span style={{ color: "#10b981" }}>₹{todayCashRevenue.toFixed(0)}</span>
+            <span style={{ color: "var(--success)" }}>₹{todayCashRevenue.toFixed(0)}</span>
             <span style={{ margin: "0 2px" }}>/</span>
             <span style={{ color: "#3b82f6" }}>₹{todayUpiRevenue.toFixed(0)}</span>
           </div>
@@ -382,7 +382,7 @@ export function AdminOverview({
             overflow: "hidden",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "#ef4444";
+            e.currentTarget.style.borderColor = "var(--danger)";
             e.currentTarget.style.transform = "translateY(-2px)";
           }}
           onMouseLeave={(e) => {
@@ -414,16 +414,16 @@ export function AdminOverview({
                 flexShrink: 0,
               }}
             >
-              <ChefHat size={12} color={pendingKOTCount > 0 ? "#ef4444" : "#94a3b8"} />
+              <ChefHat size={12} color={pendingKOTCount > 0 ? "#ef4444" : "var(--text-dim)"} />
             </div>
           </div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingKOTCount > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {pendingKOTCount} {pendingKOTCount === 1 ? "Active KOT" : "Active KOTs"}
           </div>
           <div
             style={{
               fontSize: "0.66rem",
-              color: pendingKOTCount > 0 ? "#ef4444" : "var(--text-muted)",
+              color: pendingKOTCount > 0 ? "var(--danger)" : "var(--text-muted)",
               fontWeight: 600,
               marginTop: "2px",
               whiteSpace: "nowrap",
@@ -481,7 +481,7 @@ export function AdminOverview({
                 flexShrink: 0,
               }}
             >
-              <Armchair size={12} color="#10b981" />
+              <Armchair size={12} color="var(--success)" />
             </div>
           </div>
           <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -490,7 +490,7 @@ export function AdminOverview({
           <div
             style={{
               fontSize: "0.66rem",
-              color: occupiedTables.length > 0 ? "#f59e0b" : "var(--status-vacant)",
+              color: occupiedTables.length > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)",
               fontWeight: 600,
               marginTop: "2px",
               whiteSpace: "nowrap",
@@ -551,13 +551,13 @@ export function AdminOverview({
               <Package size={12} color={lowStockItems.length > 0 ? "#ef4444" : "#10b981"} />
             </div>
           </div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockItems.length > 0 ? "#ef4444" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockItems.length > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {inventoryList.length} Items
           </div>
           <div
             style={{
               fontSize: "0.66rem",
-              color: lowStockItems.length > 0 ? "#ef4444" : "var(--text-muted)",
+              color: lowStockItems.length > 0 ? "var(--danger)" : "var(--text-muted)",
               fontWeight: 600,
               marginTop: "2px",
               whiteSpace: "nowrap",
@@ -682,7 +682,7 @@ export function AdminOverview({
                   fontSize: "0.68rem",
                   fontWeight: 700,
                   background: occupiedTables.length > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
-                  color: occupiedTables.length > 0 ? "#f59e0b" : "#10b981",
+                  color: occupiedTables.length > 0 ? "var(--accent-amber-light)" : "var(--success)",
                   padding: "1px 6px",
                   borderRadius: "10px",
                 }}
@@ -763,7 +763,7 @@ export function AdminOverview({
                     <div
                       style={{
                         fontSize: "0.64rem",
-                        color: isOccupied ? "#f59e0b" : "var(--status-vacant)",
+                        color: isOccupied ? "var(--accent-amber-light)" : "var(--status-vacant)",
                         marginTop: "2px",
                         fontWeight: 700,
                         display: "flex",
@@ -839,7 +839,7 @@ export function AdminOverview({
                   style={{
                     background: "rgba(245, 158, 11, 0.15)",
                     border: "1px solid rgba(245, 158, 11, 0.35)",
-                    color: "#f59e0b",
+                    color: "var(--accent-amber-light)",
                     borderRadius: "6px",
                     padding: "0.25rem 0.55rem",
                     fontSize: "0.72rem",
@@ -939,7 +939,7 @@ export function AdminOverview({
                   >
                     {dish.prepTime || "15 mins"} • {dish.category}
                     {Array.isArray(dish.recipe) && dish.recipe.length > 0 && (
-                      <span style={{ color: "#f59e0b", marginLeft: "4px" }}>
+                      <span style={{ color: "var(--accent-amber-light)", marginLeft: "4px" }}>
                         ({dish.recipe.length} ingr.)
                       </span>
                     )}
@@ -1115,7 +1115,7 @@ export function AdminOverview({
                           fontSize: "0.68rem",
                           fontWeight: 700,
                           background: mode === "CASH" ? "rgba(16, 185, 129, 0.12)" : "rgba(59, 130, 246, 0.12)",
-                          color: mode === "CASH" ? "#10b981" : "#3b82f6",
+                          color: mode === "CASH" ? "var(--success)" : "#3b82f6",
                           border: mode === "CASH" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(59, 130, 246, 0.3)",
                         }}
                       >
@@ -1132,7 +1132,7 @@ export function AdminOverview({
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "3px",
-                          color: "#10b981",
+                          color: "var(--success)",
                           fontSize: "0.72rem",
                           fontWeight: 700,
                         }}

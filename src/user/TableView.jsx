@@ -762,6 +762,12 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     }
     if (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0) {
       setSelectedSeatIds([...table.selectedSeats]);
+    } else if (Number(table.guests) > 0) {
+      const initialIds = [];
+      for (let i = 1; i <= Math.min(Number(table.capacity) || 4, Number(table.guests)); i++) {
+        initialIds.push(`S${i}`);
+      }
+      setSelectedSeatIds(initialIds);
     } else {
       setSelectedSeatIds([]);
     }
@@ -794,6 +800,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
     } catch (e) {
@@ -819,18 +826,23 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     const count =
       selectedSeatIds.length > 0
         ? selectedSeatIds.length
-        : selectedSeatTable.guests > 0
-        ? selectedSeatTable.guests
-        : selectedSeatTable.capacity;
+        : Number(selectedSeatTable.guests) > 0
+        ? Number(selectedSeatTable.guests)
+        : Number(selectedSeatTable.capacity) || 2;
 
     const finalStatus = count > 0 ? "occupied" : selectedSeatTable.status;
+    const finalSeats =
+      selectedSeatIds.length > 0
+        ? [...selectedSeatIds]
+        : Array.from({ length: count }, (_, i) => `S${i + 1}`);
 
     const finalTable = {
       ...selectedSeatTable,
       capacity: selectedSeatTable.capacity,
       seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
       guests: count,
-      selectedSeats: selectedSeatIds,
+      occupiedChairs: count,
+      selectedSeats: finalSeats,
       status: finalStatus,
     };
 
@@ -846,13 +858,15 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                   capacity: selectedSeatTable.capacity,
                   seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
                   guests: count,
-                  selectedSeats: selectedSeatIds,
+                  occupiedChairs: count,
+                  selectedSeats: finalSeats,
                   status: finalStatus,
                 }
               : t
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
     } catch (e) {
@@ -878,7 +892,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     const isSelected = seat.isSelected;
 
     let glowFilter = "drop-shadow(0 8px 16px rgba(0,0,0,0.65))";
-    let pillBorder = "rgba(255, 255, 255, 0.22)";
+    let pillBorder = "rgba(var(--surface-rgb),0.22)";
     let pillBg = "rgba(10, 18, 30, 0.88)";
     let pillColor = "#f1f5f9";
 
@@ -950,9 +964,9 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           <defs>
             <linearGradient id={`chrome-${seat.defaultId}`} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="35%" stopColor="#cbd5e1" />
+              <stop offset="35%" stopColor="var(--text-muted)" />
               <stop offset="70%" stopColor="#475569" />
-              <stop offset="100%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="var(--text-dim)" />
             </linearGradient>
             <linearGradient id={`leatherSeat-${seat.defaultId}`} x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#373c44" />
@@ -974,10 +988,10 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           <line x1="70" y1="70" x2="79" y2="79" stroke={`url(#chrome-${seat.defaultId})`} strokeWidth="3.5" strokeLinecap="round" />
 
           {/* Chrome Glides / Feet */}
-          <circle cx="11" cy="11" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
-          <circle cx="79" cy="11" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
-          <circle cx="11" cy="79" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
-          <circle cx="79" cy="79" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
+          <circle cx="11" cy="11" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
+          <circle cx="79" cy="11" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
+          <circle cx="11" cy="79" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
+          <circle cx="79" cy="79" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
 
           {/* Chrome Side Frames */}
           <path
@@ -1007,7 +1021,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
             height="40"
             rx="8"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.08)"
+            stroke="rgba(var(--surface-rgb),0.08)"
             strokeWidth="1"
           />
 
@@ -1830,7 +1844,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         height: "9px",
                         borderRadius: "50%",
                         background: statusColor,
-                        boxShadow: `0 0 6px ${statusColor}80`,
+                        boxShadow: `0 0 6px color-mix(in srgb, ${statusColor} 50.20%, transparent)`,
                         display: "inline-block",
                         flexShrink: 0,
                       }}
@@ -1900,8 +1914,8 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       <Armchair size={11} color="#f59e0b" />
                       <span>
                         {table.capacity} Seats ·{" "}
-                        {table.status !== "vacant"
-                          ? `${table.guests || 0} Seated`
+                        {Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0)
+                          ? `${Number(table.guests) || table.selectedSeats.length} Seated`
                           : "0 Seated"}
                       </span>
                     </button>
@@ -1924,7 +1938,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                               .toLowerCase()
                               .includes(searchQuery.trim().toLowerCase()))
                           ? "rgba(245, 158, 11, 0.22)"
-                          : "rgba(255, 255, 255, 0.04)",
+                          : "rgba(var(--surface-rgb),0.04)",
                       border:
                         (serverFilter !== "all" &&
                           (table.server || "Staff").toLowerCase() ===
@@ -1934,7 +1948,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                               .toLowerCase()
                               .includes(searchQuery.trim().toLowerCase()))
                           ? "1px solid var(--accent-amber)"
-                          : "1px solid rgba(255, 255, 255, 0.06)",
+                          : "1px solid rgba(var(--surface-rgb),0.06)",
                       borderRadius: "5px",
                       fontSize: "0.68rem",
                       transition: "all 0.15s ease",
@@ -2038,7 +2052,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                             style={{
                               fontSize: "0.68rem",
                               fontWeight: 800,
-                              color: "#fb923c",
+                              color: "var(--accent-amber-light)",
                               display: "flex",
                               alignItems: "center",
                               gap: "3px",
@@ -2087,7 +2101,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                             style={{
                               fontSize: "0.68rem",
                               fontWeight: 700,
-                              color: "#93c5fd",
+                              color: "var(--info)",
                             }}
                           >
                             📥 Order in Kitchen
@@ -2198,7 +2212,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       borderRadius: "var(--radius-sm)",
                       background:
                         table.status === "vacant"
-                          ? "rgba(255, 255, 255, 0.05)"
+                          ? "rgba(var(--surface-rgb),0.05)"
                           : "linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.12))",
                       color:
                         table.status === "vacant"
@@ -2499,7 +2513,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         alignItems: "center",
                         gap: "0.35rem",
                         background: isLight ? "#ffffff" : "#070e1b",
-                        border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255, 255, 255, 0.15)",
+                        border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(var(--surface-rgb),0.15)",
                         borderRadius: "8px",
                         padding: "2px 4px",
                       }}
@@ -2514,7 +2528,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           borderRadius: "6px",
                           background: capacity <= 1 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
                           border: "none",
-                          color: capacity <= 1 ? "#94a3b8" : "var(--accent-amber)",
+                          color: capacity <= 1 ? "var(--text-dim)" : "var(--accent-amber)",
                           fontWeight: 900,
                           fontSize: "1.1rem",
                           cursor: capacity <= 1 ? "not-allowed" : "pointer",
@@ -2546,7 +2560,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           borderRadius: "6px",
                           background: capacity >= 24 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
                           border: "none",
-                          color: capacity >= 24 ? "#94a3b8" : "var(--accent-amber)",
+                          color: capacity >= 24 ? "var(--text-dim)" : "var(--accent-amber)",
                           fontWeight: 900,
                           fontSize: "1.1rem",
                           cursor: capacity >= 24 ? "not-allowed" : "pointer",
@@ -2586,14 +2600,14 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                                 ? "var(--accent-amber)"
                                 : isLight
                                 ? "#f1f5f9"
-                                : "rgba(255, 255, 255, 0.06)",
-                            color: capacity === num ? "#ffffff" : isLight ? "#334155" : "#cbd5e1",
+                                : "rgba(var(--surface-rgb),0.06)",
+                            color: capacity === num ? "#ffffff" : isLight ? "#334155" : "var(--text-muted)",
                             border:
                               capacity === num
                                 ? "1px solid var(--accent-amber)"
                                 : isLight
                                 ? "1px solid #e2e8f0"
-                                : "1px solid rgba(255, 255, 255, 0.1)",
+                                : "1px solid rgba(var(--surface-rgb),0.1)",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
                           }}
@@ -2625,7 +2639,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       ? "radial-gradient(circle at 50% 50%, #fbf8f2 0%, #f1eae0 100%)"
                       : "radial-gradient(circle at 50% 50%, #151e2f 0%, #090e18 100%)",
                     borderRadius: "16px",
-                    border: isLight ? "1px solid #e5dccf" : "1px solid rgba(255, 255, 255, 0.08)",
+                    border: isLight ? "1px solid #e5dccf" : "1px solid rgba(var(--surface-rgb),0.08)",
                     boxShadow: isLight
                       ? "inset 0 0 35px rgba(220, 205, 185, 0.45)"
                       : "inset 0 0 45px rgba(0, 0, 0, 0.65)",

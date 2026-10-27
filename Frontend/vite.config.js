@@ -52,7 +52,33 @@ function globalSyncPlugin() {
   return {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+            server.middlewares.use((req, res, next) => {
+        // Centralized Backend HTTP Request/Response Logger
+        const start = Date.now();
+        const method = req.method || "GET";
+        const url = req.url || "/";
+        const isApi = url.startsWith("/api/") || url === "/api" || url.startsWith("/api?");
+
+        if (isApi) {
+          const clientIp = req.socket?.remoteAddress || "127.0.0.1";
+          const timeStr = new Date().toLocaleTimeString();
+          console.log(`\x1b[34m[BACKEND HTTP REQUEST]\x1b[0m \x1b[1m${method}\x1b[0m ${url} (from ${clientIp} at ${timeStr})`);
+
+          const originalEnd = res.end;
+          res.end = function (...args) {
+            const duration = Date.now() - start;
+            const code = res.statusCode || 200;
+            if (code >= 500) {
+              console.error(`\x1b[31m[BACKEND HTTP SERVER ERROR]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            } else if (code >= 400) {
+              console.warn(`\x1b[33m[BACKEND HTTP CLIENT ERROR]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            } else {
+              console.log(`\x1b[32m[BACKEND HTTP RESPONSE]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            }
+            return originalEnd.apply(this, args);
+          };
+        }
+
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning");
@@ -275,6 +301,121 @@ function globalSyncPlugin() {
               data: tables,
             }),
           );
+        }
+
+        // REST API: /api/v1/tables/:id/vacate (POST)
+        const tableVacateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)\/vacate$/i);
+        if (tableVacateMatch && req.method === "POST") {
+          const rawId = decodeURIComponent(tableVacateMatch[1]);
+          db = loadDb();
+          const list = db.gourmet_pos_tables_v2_inr || [];
+          let updatedTable = null;
+          db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+            const match =
+              String(tbl.id) === rawId ||
+              String(tbl.backendTableId) === rawId ||
+              String(tbl.tableId) === rawId ||
+              String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+            if (match) {
+              updatedTable = {
+                ...tbl,
+                status: "vacant",
+                items: [],
+                guests: 0,
+                occupiedChairs: 0,
+                selectedSeats: [],
+                occupiedSince: null,
+                activeOrderId: null,
+                orderTime: null,
+                orderTimestamp: null,
+                cookingStartedAt: null,
+                completedAt: null,
+                completedDuration: null,
+                discountPercent: 0,
+                discountAmount: 0,
+                subtotal: 0,
+                taxAmount: 0,
+                serviceChargeAmount: 0,
+                grandTotal: 0,
+              };
+              return updatedTable;
+            }
+            return tbl;
+          });
+          saveDb(db);
+          broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, table: updatedTable }));
+        }
+
+        // REST API: /api/v1/tables/:id (PUT)
+        const tableUpdateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)$/i);
+        if (tableUpdateMatch && req.method === "PUT") {
+          const rawId = decodeURIComponent(tableUpdateMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const list = db.gourmet_pos_tables_v2_inr || [];
+              let updatedTable = null;
+              db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+                const match =
+                  String(tbl.id) === rawId ||
+                  String(tbl.backendTableId) === rawId ||
+                  String(tbl.tableId) === rawId ||
+                  String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+                if (match) {
+                  const incomingGuests = Number(payload.guests) || (Array.isArray(payload.selectedSeats) ? payload.selectedSeats.length : 0);
+                  const hasGuests = incomingGuests > 0;
+                  const payloadItems = Array.isArray(payload.items) ? payload.items : null;
+                  const existingItems = Array.isArray(tbl.items) ? tbl.items : [];
+                  const resolvedItems = (payloadItems && payloadItems.length > 0)
+                    ? payloadItems
+                    : (existingItems.length > 0 ? existingItems : (payloadItems || []));
+                  const hasItems = resolvedItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+                  const isVacant = !hasGuests && !hasItems && String(payload.status || tbl.status).toLowerCase() === "vacant";
+                  const resolvedStatus = (hasGuests || hasItems)
+                    ? ((payload.status === "dining" || payload.status === "billed") ? payload.status : "occupied")
+                    : (isVacant ? "vacant" : (payload.status || tbl.status || "vacant"));
+                  updatedTable = {
+                    ...tbl,
+                    ...payload,
+                    status: resolvedStatus,
+                    items: isVacant ? [] : resolvedItems,
+                    guests: isVacant ? 0 : (hasGuests ? incomingGuests : (payload.guests ?? tbl.guests ?? 0)),
+                    occupiedChairs: isVacant ? 0 : (hasGuests ? (Number(payload.occupiedChairs) || incomingGuests) : (payload.occupiedChairs ?? tbl.occupiedChairs ?? 0)),
+                    selectedSeats: isVacant ? [] : (Array.isArray(payload.selectedSeats) && payload.selectedSeats.length > 0 ? payload.selectedSeats : (hasGuests ? Array.from({ length: incomingGuests }, (_, i) => `S${i + 1}`) : tbl.selectedSeats || [])),
+                    ...(isVacant ? {
+                      items: [],
+                      guests: 0,
+                      occupiedChairs: 0,
+                      selectedSeats: [],
+                      occupiedSince: null,
+                      activeOrderId: null,
+                      orderTime: null,
+                      orderTimestamp: null,
+                      cookingStartedAt: null,
+                      completedAt: null,
+                      completedDuration: null,
+                      discountPercent: 0,
+                    } : {}),
+                  };
+                  return updatedTable;
+                }
+                return tbl;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, table: updatedTable }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
         }
 
         // REST API: /api/v1/menu-items (DELETE)

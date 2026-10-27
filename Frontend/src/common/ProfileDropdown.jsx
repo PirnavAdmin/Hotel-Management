@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, ChevronDown, ShieldCheck, Mail, Phone, CheckCircle2, ArrowLeft } from 'lucide-react';
+import './ProfileDropdown.css';
 
 export function ProfileDropdown({ 
   currentSession = null, 
@@ -61,7 +62,6 @@ export function ProfileDropdown({
 
   // Extract user details or fallbacks
   const displayName = currentSession?.name || currentSession?.username || 'User';
-  const username = currentSession?.username || 'user';
   const email = currentSession?.email || '';
   const mobile = currentSession?.mobile || '';
   const userRole = currentSession?.role || role || 'pos';
@@ -124,7 +124,7 @@ export function ProfileDropdown({
           outline: 'none',
           position: 'relative'
         }}
-        title={`Profile: ${displayName} (@${username})`}
+        title={`Profile: ${displayName}`}
       >
         {/* Circular Avatar: Image OR 1st Letter */}
         <div style={{
@@ -239,13 +239,8 @@ export function ProfileDropdown({
             </div>
 
             {/* Full Display Name */}
-            <div style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '2px' }}>
+            <div style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>
               {displayName}
-            </div>
-            
-            {/* Username handle */}
-            <div style={{ fontSize: '0.78rem', color: 'var(--accent-amber)', marginBottom: '8px', fontFamily: 'monospace', fontWeight: 700 }}>
-              @{username}
             </div>
 
             {/* Role Chip */}
@@ -352,12 +347,9 @@ export function ProfileDropdown({
                 style={{
                   width: '100%',
                   padding: '0.65rem 1rem',
-                  background: 'var(--danger-bg)',
-                  border: '1.5px solid var(--danger)',
                   borderRadius: '10px',
-                  color: 'var(--danger)',
                   fontSize: '0.86rem',
-                  fontWeight: 800,
+                  fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -366,14 +358,7 @@ export function ProfileDropdown({
                   transition: 'all 0.15s ease',
                   boxShadow: 'var(--shadow-sm)'
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'var(--danger)';
-                  e.currentTarget.style.color = 'var(--text-main)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'var(--danger-bg)';
-                  e.currentTarget.style.color = 'var(--danger)';
-                }}
+                className="profile-logout-button"
               >
                 <LogOut size={16} />
                 <span>Log Out</span>

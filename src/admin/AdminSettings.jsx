@@ -15,8 +15,11 @@ import {
   Package,
   Wine,
   Utensils,
+  Lock,
 } from "lucide-react";
 import defaultPaymentQr from "../assets/payment-qr.png";
+import { UpiOtpVerificationModal } from "../common/UpiOtpVerificationModal";
+import { getUsers } from "../utils/auth";
 
 const DEFAULT_PAYMENT_QRS = [
   {
@@ -113,13 +116,71 @@ export function AdminSettings({
   onSaveSettings,
   showBarHeaderToggle,
   onToggleShowBarHeader,
+  currentAdminSession = null,
 }) {
+  const isLight = currentTheme === "light-bistro";
   const [settings, setSettings] = useState(() => getInitialSettings(initialSettings));
   const [lastSavedSettings, setLastSavedSettings] = useState(() => getInitialSettings(initialSettings));
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [logoError, setLogoError] = useState("");
+
+  // OTP Verification state for UPI stream change
+  const [upiOtpModalOpen, setUpiOtpModalOpen] = useState(false);
+  const [pendingUpiAction, setPendingUpiAction] = useState(null);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminName, setAdminName] = useState("Admin");
+
+  useEffect(() => {
+    let resolvedEmail = "";
+    let resolvedName = "Admin";
+
+    if (currentAdminSession?.email && currentAdminSession.email.includes("@")) {
+      resolvedEmail = currentAdminSession.email.trim();
+      resolvedName = currentAdminSession.name || currentAdminSession.username || "Admin";
+    } else {
+      try {
+        const sess = JSON.parse(
+          localStorage.getItem("avsr_admin_session") ||
+          localStorage.getItem("avsr_auth_session_v1") ||
+          localStorage.getItem("auth_user") ||
+          "{}"
+        );
+        if (sess?.email && sess.email.includes("@")) {
+          resolvedEmail = sess.email.trim();
+          resolvedName = sess.name || sess.username || "Admin";
+        }
+      } catch {}
+    }
+
+    if (!resolvedEmail) {
+      getUsers().then(({ users }) => {
+        if (Array.isArray(users)) {
+          const admin = users.find(
+            (u) =>
+              (u.role === "admin" || u.role === "0") &&
+              u.email &&
+              u.email.includes("@")
+          );
+          if (admin?.email) {
+            setAdminEmail(admin.email.trim());
+            setAdminName(admin.name || admin.username || "Admin");
+            return;
+          }
+        }
+      }).catch(() => {});
+    }
+
+    if (!resolvedEmail && settings?.email && settings.email.includes("@")) {
+      resolvedEmail = settings.email.trim();
+    }
+
+    if (resolvedEmail) {
+      setAdminEmail(resolvedEmail);
+      setAdminName(resolvedName);
+    }
+  }, [currentAdminSession, settings?.email]);
 
   const isBarToggleOn =
     showBarHeaderToggle !== undefined
@@ -224,7 +285,7 @@ export function AdminSettings({
   const fileInputRef2 = useRef(null);
   const fileInputRefs = [fileInputRef0, fileInputRef1, fileInputRef2];
 
-  const selectActiveQr = (selectedIndex) => {
+  const executeSelectActiveQr = (selectedIndex) => {
     const currentQrs = settings.paymentQrs || DEFAULT_PAYMENT_QRS;
     const targetQr = currentQrs[selectedIndex];
 
@@ -298,7 +359,7 @@ export function AdminSettings({
     reader.readAsDataURL(file);
   };
 
-  const handleQrUpload = (index, file) => {
+  const executeQrUpload = (index, file) => {
     if (!file) return;
     processImageFile(file, (dataUrl) => {
       setSettings((prev) => {
@@ -350,7 +411,7 @@ export function AdminSettings({
     });
   };
 
-  const removeQrImage = (index) => {
+  const executeRemoveQrImage = (index) => {
     setSettings((prev) => {
       const nextQrs = [...(prev.paymentQrs || DEFAULT_PAYMENT_QRS)];
       const wasActive =
@@ -389,6 +450,38 @@ export function AdminSettings({
       }
       return updated;
     });
+  };
+
+  // Intercept changing the UPI stream (active slot, upload, or remove) and require registered admin OTP
+  const requestUpiChange = (action) => {
+    const currentQrs = settings.paymentQrs || DEFAULT_PAYMENT_QRS;
+    const currentActiveIdx = currentQrs.findIndex((q) =>
+      settings.selectedQrId ? q.id === settings.selectedQrId : q.active
+    );
+    action.currentActiveIndex = currentActiveIdx !== -1 ? currentActiveIdx : 0;
+    action.currentActiveQr = currentQrs[action.currentActiveIndex];
+    action.targetQr = currentQrs[action.index];
+
+    // If clicking the slot that is already active, no change is made
+    if (action.type === "select_active") {
+      if (action.index === action.currentActiveIndex) return;
+      if (!action.targetQr?.image) return;
+    }
+
+    setPendingUpiAction(action);
+    setUpiOtpModalOpen(true);
+  };
+
+  const handleUpiOtpVerified = (action) => {
+    if (!action) return;
+    if (action.type === "select_active") {
+      executeSelectActiveQr(action.index);
+    } else if (action.type === "upload_image") {
+      executeQrUpload(action.index, action.file);
+    } else if (action.type === "remove_image") {
+      executeRemoveQrImage(action.index);
+    }
+    setPendingUpiAction(null);
   };
 
   const handleSave = async (e) => {
@@ -506,7 +599,7 @@ export function AdminSettings({
               style={{
                 background: "rgba(16, 185, 129, 0.15)",
                 border: "1px solid rgba(16, 185, 129, 0.35)",
-                color: "#10b981",
+                color: "var(--success)",
                 padding: "6px 14px",
                 borderRadius: "20px",
                 fontSize: "0.8rem",
@@ -828,7 +921,7 @@ export function AdminSettings({
                 marginBottom: "1rem",
               }}
             >
-              <Percent size={18} color="#10b981" />
+              <Percent size={18} color="var(--success)" />
               <h3
                 style={{
                   fontSize: "0.98rem",
@@ -1049,19 +1142,38 @@ export function AdminSettings({
                   </p>
                 </div>
               </div>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  fontWeight: 700,
-                  color: "#f59e0b",
-                  background: "rgba(245, 158, 11, 0.12)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
-                  padding: "3px 10px",
-                  borderRadius: "20px",
-                }}
-              >
-                3 QR Slots (Click to Select Active)
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 800,
+                    color: "#10b981",
+                    background: "rgba(16, 185, 129, 0.12)",
+                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                    padding: "3px 10px",
+                    borderRadius: "20px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Lock size={11} strokeWidth={2.4} />
+                  OTP Protected Stream
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "#f59e0b",
+                    background: "rgba(245, 158, 11, 0.12)",
+                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    padding: "3px 10px",
+                    borderRadius: "20px",
+                  }}
+                >
+                  3 QR Slots (Click to Select Active)
+                </span>
+              </div>
             </div>
 
             {/* 3 Upload Cards Grid */}
@@ -1085,7 +1197,9 @@ export function AdminSettings({
                   <div
                     key={qr.id || index}
                     onClick={() => {
-                      if (hasImage) selectActiveQr(index);
+                      if (hasImage && !isSelected) {
+                        requestUpiChange({ type: "select_active", index });
+                      }
                     }}
                     title={
                       isSelected
@@ -1096,13 +1210,13 @@ export function AdminSettings({
                     }
                     style={{
                       background: isSelected
-                        ? "linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, rgba(20, 24, 33, 0.95) 100%)"
+                        ? "linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, var(--bg-card) 100%)"
                         : "var(--bg-secondary)",
                       border: isSelected
                         ? "2px solid #f59e0b"
                         : hasImage
-                        ? "1px solid rgba(255, 255, 255, 0.14)"
-                        : "1px dashed rgba(255, 255, 255, 0.18)",
+                        ? "1px solid rgba(var(--surface-rgb),0.14)"
+                        : "1px dashed rgba(var(--surface-rgb),0.18)",
                       boxShadow: isSelected
                         ? "0 0 20px rgba(245, 158, 11, 0.28), 0 4px 14px rgba(0, 0, 0, 0.5)"
                         : "0 2px 8px rgba(0, 0, 0, 0.2)",
@@ -1125,8 +1239,8 @@ export function AdminSettings({
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         e.currentTarget.style.borderColor = hasImage
-                          ? "rgba(255, 255, 255, 0.14)"
-                          : "rgba(255, 255, 255, 0.18)";
+                          ? "rgba(var(--surface-rgb),0.14)"
+                          : "rgba(var(--surface-rgb),0.18)";
                         e.currentTarget.style.transform = "translateY(0)";
                       }
                     }}
@@ -1149,8 +1263,8 @@ export function AdminSettings({
                             border: isSelected
                               ? "5px solid #10b981"
                               : hasImage
-                              ? "2px solid rgba(255, 255, 255, 0.3)"
-                              : "1.5px dashed rgba(255, 255, 255, 0.2)",
+                              ? "2px solid rgba(var(--surface-rgb),0.3)"
+                              : "1.5px dashed rgba(var(--surface-rgb),0.2)",
                             background: isSelected ? "#ffffff" : "transparent",
                             boxShadow: isSelected ? "0 0 10px rgba(16, 185, 129, 0.7)" : "none",
                             transition: "all 0.15s ease",
@@ -1161,7 +1275,7 @@ export function AdminSettings({
                           style={{
                             fontSize: "0.78rem",
                             fontWeight: 800,
-                            color: isSelected ? "#10b981" : "var(--text-main)",
+                            color: isSelected ? "var(--success)" : "var(--text-main)",
                             textTransform: "uppercase",
                             letterSpacing: "0.04em",
                           }}
@@ -1201,7 +1315,7 @@ export function AdminSettings({
                               borderRadius: "12px",
                               background: "var(--surface-tint)",
                               color: "var(--text-dim)",
-                              border: "1px dashed rgba(255, 255, 255, 0.2)",
+                              border: "1px dashed rgba(var(--surface-rgb),0.2)",
                             }}
                           >
                             Click to Select
@@ -1250,8 +1364,8 @@ export function AdminSettings({
                       style={{
                         background: "var(--bg-tertiary)",
                         border: qr.image
-                          ? "1px solid rgba(255, 255, 255, 0.08)"
-                          : "1.5px dashed rgba(255, 255, 255, 0.16)",
+                          ? "1px solid rgba(var(--surface-rgb),0.08)"
+                          : "1.5px dashed rgba(var(--surface-rgb),0.16)",
                         borderRadius: "10px",
                         minHeight: "155px",
                         display: "flex",
@@ -1325,7 +1439,9 @@ export function AdminSettings({
                       style={{ display: "none" }}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) handleQrUpload(index, file);
+                        if (file) {
+                          requestUpiChange({ type: "upload_image", index, file });
+                        }
                         e.target.value = "";
                       }}
                     />
@@ -1348,7 +1464,7 @@ export function AdminSettings({
                             : "none",
                           borderRadius: "8px",
                           padding: "0.55rem 0.75rem",
-                          color: "#ffffff",
+                          color: qr.image ? "var(--accent-amber-light)" : "var(--text-on-accent)",
                           fontSize: "0.78rem",
                           fontWeight: 700,
                           cursor: "pointer",
@@ -1376,14 +1492,14 @@ export function AdminSettings({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeQrImage(index);
+                            requestUpiChange({ type: "remove_image", index });
                           }}
                           style={{
                             background: "rgba(239, 68, 68, 0.12)",
                             border: "1px solid rgba(239, 68, 68, 0.28)",
                             borderRadius: "8px",
                             padding: "0.55rem 0.65rem",
-                            color: "#ef4444",
+                            color: "var(--danger)",
                             fontSize: "0.78rem",
                             fontWeight: 700,
                             cursor: "pointer",
@@ -1423,7 +1539,7 @@ export function AdminSettings({
                 marginBottom: "1rem",
               }}
             >
-              <Receipt size={18} color="#38bdf8" />
+              <Receipt size={18} color="var(--info)" />
               <h3
                 style={{
                   fontSize: "0.98rem",
@@ -1667,7 +1783,7 @@ export function AdminSettings({
                       background: isBarToggleOn
                         ? "rgba(16, 185, 129, 0.15)"
                         : "rgba(100, 116, 139, 0.15)",
-                      color: isBarToggleOn ? "#10b981" : "#64748b",
+                      color: isBarToggleOn ? "var(--success)" : "#64748b",
                       border: isBarToggleOn
                         ? "1px solid rgba(16, 185, 129, 0.3)"
                         : "1px solid rgba(100, 116, 139, 0.2)",
@@ -1776,13 +1892,13 @@ export function AdminSettings({
                   ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
                   : isDirty && !isSaving
                   ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                  : "rgba(255, 255, 255, 0.05)",
+                  : "rgba(var(--surface-rgb),0.05)",
                 color: savedSuccess || (isDirty && !isSaving) ? "#ffffff" : "#64748b",
                 border: savedSuccess
                   ? "1px solid rgba(16, 185, 129, 0.6)"
                   : isDirty && !isSaving
                   ? "1px solid rgba(245, 158, 11, 0.5)"
-                  : "1px solid rgba(255, 255, 255, 0.08)",
+                  : "1px solid rgba(var(--surface-rgb),0.08)",
                 borderRadius: "10px",
                 padding: "0.72rem 1.85rem",
                 fontSize: "0.88rem",
@@ -1828,6 +1944,19 @@ export function AdminSettings({
           </div>
         </form>
       </div>
+      {/* High-Security OTP Verification Modal for Changing UPI Stream */}
+      <UpiOtpVerificationModal
+        isOpen={upiOtpModalOpen}
+        onClose={() => {
+          setUpiOtpModalOpen(false);
+          setPendingUpiAction(null);
+        }}
+        onVerified={handleUpiOtpVerified}
+        actionDetails={pendingUpiAction}
+        adminEmail={adminEmail}
+        adminName={adminName}
+        isLight={isLight}
+      />
     </div>
   );
 }

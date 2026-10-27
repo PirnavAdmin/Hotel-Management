@@ -2,6 +2,123 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import fs from "fs";
 import path from "path";
+let nodemailer = null;
+try {
+  const nmMod = await import("nodemailer");
+  nodemailer = nmMod.default || nmMod;
+} catch {
+  nodemailer = null;
+}
+
+const env = loadEnv("development", process.cwd(), "");
+
+let mailTransporter = null;
+const getMailTransporter = async () => {
+  if (!nodemailer) return null;
+  // Dynamically load .env so changes are picked up without server restart
+  const currentEnv = loadEnv("development", process.cwd(), "");
+  const host = currentEnv.SMTP_HOST || process.env.SMTP_HOST || currentEnv.EMAIL_HOST || process.env.EMAIL_HOST;
+  const port = Number(currentEnv.SMTP_PORT || process.env.SMTP_PORT || currentEnv.EMAIL_PORT || process.env.EMAIL_PORT || 587);
+  const user = currentEnv.SMTP_USER || process.env.SMTP_USER || currentEnv.EMAIL_USER || process.env.EMAIL_USER;
+  const pass = currentEnv.SMTP_PASS || process.env.SMTP_PASS || currentEnv.EMAIL_PASS || process.env.EMAIL_PASS || currentEnv.EMAIL_PASSWORD || process.env.EMAIL_PASSWORD;
+
+  if (host && user && pass) {
+    return {
+      transporter: nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: { user, pass },
+        tls: { rejectUnauthorized: false },
+      }),
+      isLive: true,
+      sender: user
+    };
+  }
+
+  if (user && pass) {
+    return {
+      transporter: nodemailer.createTransport({
+        service: "gmail",
+        auth: { user, pass },
+      }),
+      isLive: true,
+      sender: user
+    };
+  }
+
+  if (!mailTransporter) {
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      mailTransporter = nodemailer.createTransport({
+        host: "smtp.ethereal.email",
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+      console.log(`[nodemailer] Test SMTP ready: ${testAccount.user}`);
+    } catch (err) {
+      console.warn("[nodemailer] Test account creation fallback:", err.message);
+    }
+  }
+  return { 
+    transporter: mailTransporter, 
+    isLive: false, 
+    sender: '"Telugu Taste" <no-reply@telugutaste.com>' 
+  };
+};
+
+const sendOtpEmail = async (email, otp, fullName = "Admin") => {
+  const brandName = "Telugu Taste";
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #0f172a; color: #f8fafc; border-radius: 14px; padding: 30px; border: 1.5px solid #ff9d00; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <div style="text-align: center; margin-bottom: 22px;">
+        <h2 style="color: #ff9d00; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: 0.5px;">🍽️ ${brandName}</h2>
+        <p style="color: #94a3b8; font-size: 13px; margin: 5px 0 0; font-weight: 600;">Heaven Food • Admin Portal</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 22px; text-align: center; border: 1px solid rgba(255,255,255,0.08);">
+        <p style="font-size: 15px; color: #f1f5f9; margin-top: 0; font-weight: 700;">Hello <strong>${fullName || "Admin"}</strong>,</p>
+        <p style="font-size: 13px; color: #94a3b8; line-height: 1.5;">Please use the one-time verification code below to verify your email address and activate your account:</p>
+        <div style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #ff9d00; background: rgba(255,157,0,0.12); border: 2px dashed #ff9d00; border-radius: 10px; padding: 14px 20px; margin: 20px 0; font-family: monospace;">
+          ${otp}
+        </div>
+        <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 0;">⏱️ This verification code is valid for <strong>10 minutes</strong>. Do not share this OTP with anyone.</p>
+      </div>
+      <p style="text-align: center; font-size: 11px; color: #64748b; margin-top: 22px; line-height: 1.4;">
+        If you did not initiate this request, you can safely disregard this email.<br/>
+        &copy; ${new Date().getFullYear()} ${brandName}. All rights reserved.
+      </p>
+    </div>
+  `;
+
+  try {
+    const mailConfig = await getMailTransporter();
+    if (mailConfig?.transporter) {
+      const fromAddr = mailConfig.sender || '"Telugu Taste" <no-reply@telugutaste.com>';
+      const info = await mailConfig.transporter.sendMail({
+        from: fromAddr,
+        to: email,
+        subject: `${brandName} - Email Verification Code: ${otp}`,
+        text: `Your ${brandName} admin verification code is: ${otp}. Valid for 10 minutes.`,
+        html,
+      });
+      console.log(`[nodemailer] Verification OTP sent to ${email} (MessageId: ${info.messageId}) [isLive: ${mailConfig.isLive}]`);
+      const previewUrl = typeof nodemailer?.getTestMessageUrl === "function" ? nodemailer.getTestMessageUrl(info) : null;
+      if (previewUrl) {
+        console.log(`[nodemailer] Email Preview URL: ${previewUrl}`);
+      }
+      return { success: true, messageId: info.messageId, previewUrl, isLive: mailConfig.isLive };
+    }
+  } catch (err) {
+    console.error(`[nodemailer] Failed to send email to ${email}:`, err.message);
+  }
+
+  console.log(`[OTP FALLBACK LOG] To: ${email} | Code: ${otp}`);
+  return { success: true, fallback: true, isLive: false };
+};
 
 function globalSyncPlugin() {
   let sseClients = [];
@@ -52,7 +169,33 @@ function globalSyncPlugin() {
   return {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+            server.middlewares.use((req, res, next) => {
+        // Centralized Backend HTTP Request/Response Logger
+        const start = Date.now();
+        const method = req.method || "GET";
+        const url = req.url || "/";
+        const isApi = url.startsWith("/api/") || url === "/api" || url.startsWith("/api?");
+
+        if (isApi) {
+          const clientIp = req.socket?.remoteAddress || "127.0.0.1";
+          const timeStr = new Date().toLocaleTimeString();
+          console.log(`\x1b[34m[BACKEND HTTP REQUEST]\x1b[0m \x1b[1m${method}\x1b[0m ${url} (from ${clientIp} at ${timeStr})`);
+
+          const originalEnd = res.end;
+          res.end = function (...args) {
+            const duration = Date.now() - start;
+            const code = res.statusCode || 200;
+            if (code >= 500) {
+              console.error(`\x1b[31m[BACKEND HTTP SERVER ERROR]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            } else if (code >= 400) {
+              console.warn(`\x1b[33m[BACKEND HTTP CLIENT ERROR]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            } else {
+              console.log(`\x1b[32m[BACKEND HTTP RESPONSE]\x1b[0m ${method} ${url} -> \x1b[1m${code}\x1b[0m (${duration}ms)`);
+            }
+            return originalEnd.apply(this, args);
+          };
+        }
+
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning");
@@ -203,6 +346,105 @@ function globalSyncPlugin() {
           return;
         }
 
+        // Send Email Verification OTP using Nodemailer
+        if ((req.url === "/api/v1/auth/send-otp" || req.url === "/api/auth/send-otp") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", async () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const email = String(payload.email || payload.Email || "").trim();
+              const phone = String(payload.phone || payload.Phone || "").trim();
+              const fullName = String(payload.fullName || payload.FullName || payload.name || "Admin").trim();
+
+              if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Please provide a valid email address." }));
+              }
+
+              db = loadDb();
+              const otp = Math.floor(100000 + Math.random() * 900000).toString();
+              db.avsr_pending_otps = db.avsr_pending_otps || {};
+              db.avsr_pending_otps[email.toLowerCase()] = {
+                otp,
+                expiresAt: Date.now() + 10 * 60 * 1000,
+                fullName,
+                phone,
+                createdAt: Date.now(),
+              };
+              saveDb(db);
+
+              const mailResult = await sendOtpEmail(email, otp, fullName);
+
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({
+                success: true,
+                message: mailResult?.isLive
+                  ? `Verification code delivered to ${email} via email.`
+                  : `Verification OTP generated. Code sent via Nodemailer.`,
+                email,
+                otp,
+                isLive: !!mailResult?.isLive,
+                previewUrl: mailResult?.previewUrl || null,
+              }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // Verify Email OTP
+        if ((req.url === "/api/v1/auth/verify-otp" || req.url === "/api/auth/verify-otp") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const email = String(payload.email || payload.Email || "").trim();
+              const otp = String(payload.otp || payload.Otp || payload.code || payload.Code || "").trim();
+
+              if (!email || !otp) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Email and OTP code are required." }));
+              }
+
+              db = loadDb();
+              const record = db.avsr_pending_otps?.[email.toLowerCase()];
+              if (!record) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "No OTP request found for this email. Please request a new OTP." }));
+              }
+
+              if (Date.now() > record.expiresAt) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "OTP code has expired. Please request a fresh OTP." }));
+              }
+
+              if (String(record.otp).trim() !== String(otp).trim()) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Invalid verification code. Please check and try again." }));
+              }
+
+              record.verified = true;
+              record.verifiedAt = Date.now();
+              saveDb(db);
+
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({
+                success: true,
+                message: "Email address verified successfully!",
+                email,
+              }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
         // Register POS, KOT, and admin accounts in the shared local database.
         if (req.url === "/api/v1/auth/register" && req.method === "POST") {
           let body = "";
@@ -262,7 +504,7 @@ function globalSyncPlugin() {
           return;
         }
 
-        // REST API: /api/v1/tables
+        // REST API: /api/v1/tables (GET)
         if (req.url.startsWith("/api/v1/tables") && req.method === "GET") {
           db = loadDb();
           const tables = db.gourmet_pos_tables_v2_inr || [];
@@ -275,6 +517,180 @@ function globalSyncPlugin() {
               data: tables,
             }),
           );
+        }
+
+        // REST API: /api/v1/tables/:id/vacate (POST)
+        const tableVacateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)\/vacate$/i);
+        if (tableVacateMatch && req.method === "POST") {
+          const rawId = decodeURIComponent(tableVacateMatch[1]);
+          db = loadDb();
+          const list = db.gourmet_pos_tables_v2_inr || [];
+          let updatedTable = null;
+          db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+            const match =
+              String(tbl.id) === rawId ||
+              String(tbl.backendTableId) === rawId ||
+              String(tbl.tableId) === rawId ||
+              String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+            if (match) {
+              updatedTable = {
+                ...tbl,
+                status: "vacant",
+                items: [],
+                guests: 0,
+                occupiedChairs: 0,
+                selectedSeats: [],
+                occupiedSince: null,
+                activeOrderId: null,
+                orderTime: null,
+                orderTimestamp: null,
+                cookingStartedAt: null,
+                completedAt: null,
+                completedDuration: null,
+                discountPercent: 0,
+                discountAmount: 0,
+                subtotal: 0,
+                taxAmount: 0,
+                serviceChargeAmount: 0,
+                grandTotal: 0,
+              };
+              return updatedTable;
+            }
+            return tbl;
+          });
+          saveDb(db);
+          broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, message: "Table vacated successfully", table: updatedTable }));
+        }
+
+        // REST API: /api/v1/tables/:id/status (PATCH)
+        const tableStatusMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)\/status$/i);
+        if (tableStatusMatch && req.method === "PATCH") {
+          const rawId = decodeURIComponent(tableStatusMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const { status } = JSON.parse(body || "{}");
+              db = loadDb();
+              const list = db.gourmet_pos_tables_v2_inr || [];
+              let updatedTable = null;
+              db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+                const match =
+                  String(tbl.id) === rawId ||
+                  String(tbl.backendTableId) === rawId ||
+                  String(tbl.tableId) === rawId ||
+                  String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+                if (match) {
+                  const isVacant = String(status).toLowerCase() === "vacant";
+                  updatedTable = {
+                    ...tbl,
+                    status: isVacant ? "vacant" : status,
+                    ...(isVacant ? {
+                      items: [],
+                      guests: 0,
+                      occupiedChairs: 0,
+                      selectedSeats: [],
+                      occupiedSince: null,
+                      activeOrderId: null,
+                      orderTime: null,
+                      orderTimestamp: null,
+                      cookingStartedAt: null,
+                      completedAt: null,
+                      completedDuration: null,
+                      discountPercent: 0,
+                      discountAmount: 0,
+                      subtotal: 0,
+                      taxAmount: 0,
+                      serviceChargeAmount: 0,
+                      grandTotal: 0,
+                    } : {}),
+                  };
+                  return updatedTable;
+                }
+                return tbl;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, table: updatedTable }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/tables/:id (PUT)
+        const tableUpdateMatch = req.url.match(/^\/api\/v1\/tables\/([^/?]+)$/i);
+        if (tableUpdateMatch && req.method === "PUT") {
+          const rawId = decodeURIComponent(tableUpdateMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const list = db.gourmet_pos_tables_v2_inr || [];
+              let updatedTable = null;
+              db.gourmet_pos_tables_v2_inr = list.map((tbl) => {
+                const match =
+                  String(tbl.id) === rawId ||
+                  String(tbl.backendTableId) === rawId ||
+                  String(tbl.tableId) === rawId ||
+                  String(tbl.name || "").replace(/^(?:table|t)\s*[-–—]?\s*/i, "") === rawId;
+                if (match) {
+                  const incomingGuests = Number(payload.guests) || (Array.isArray(payload.selectedSeats) ? payload.selectedSeats.length : 0);
+                  const hasGuests = incomingGuests > 0;
+                  const payloadItems = Array.isArray(payload.items) ? payload.items : null;
+                  const existingItems = Array.isArray(tbl.items) ? tbl.items : [];
+                  const resolvedItems = (payloadItems && payloadItems.length > 0)
+                    ? payloadItems
+                    : (existingItems.length > 0 ? existingItems : (payloadItems || []));
+                  const hasItems = resolvedItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+                  const isVacant = !hasGuests && !hasItems && String(payload.status || tbl.status).toLowerCase() === "vacant";
+                  const resolvedStatus = (hasGuests || hasItems)
+                    ? ((payload.status === "dining" || payload.status === "billed") ? payload.status : "occupied")
+                    : (isVacant ? "vacant" : (payload.status || tbl.status || "vacant"));
+                  updatedTable = {
+                    ...tbl,
+                    ...payload,
+                    status: resolvedStatus,
+                    items: isVacant ? [] : resolvedItems,
+                    guests: isVacant ? 0 : (hasGuests ? incomingGuests : (payload.guests ?? tbl.guests ?? 0)),
+                    occupiedChairs: isVacant ? 0 : (hasGuests ? (Number(payload.occupiedChairs) || incomingGuests) : (payload.occupiedChairs ?? tbl.occupiedChairs ?? 0)),
+                    selectedSeats: isVacant ? [] : (Array.isArray(payload.selectedSeats) && payload.selectedSeats.length > 0 ? payload.selectedSeats : (hasGuests ? Array.from({ length: incomingGuests }, (_, i) => `S${i + 1}`) : tbl.selectedSeats || [])),
+                    ...(isVacant ? {
+                      items: [],
+                      guests: 0,
+                      occupiedChairs: 0,
+                      selectedSeats: [],
+                      occupiedSince: null,
+                      activeOrderId: null,
+                      orderTime: null,
+                      orderTimestamp: null,
+                      cookingStartedAt: null,
+                      completedAt: null,
+                      completedDuration: null,
+                      discountPercent: 0,
+                    } : {}),
+                  };
+                  return updatedTable;
+                }
+                return tbl;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_tables_v2_inr: db.gourmet_pos_tables_v2_inr });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, table: updatedTable }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
         }
 
         // REST API: /api/v1/menu-items (DELETE)
@@ -632,6 +1048,49 @@ function globalSyncPlugin() {
         }
 
         // REST API: /api/v1/orders
+        // REST API: /api/Kitchen/active-tickets
+        if (req.url.match(/^\/api\/kitchen\/active-tickets/i) && req.method === "GET") {
+          db = loadDb();
+          const tables = db.gourmet_pos_tables_v2_inr || [];
+          const tickets = [];
+          tables.forEach((t) => {
+            if (Array.isArray(t.items) && t.items.length) {
+              tickets.push({
+                ticketId: t.id,
+                orderId: t.id,
+                tableId: t.id,
+                tableName: t.name || `Table ${t.id}`,
+                section: t.area || "",
+                serverName: t.server || "",
+                kotBatch: 1,
+                orderTime: new Date().toISOString(),
+                ticketStatus: "Queued",
+                items: t.items.map((it, idx) => ({
+                  ...it,
+                  id: it.id ?? idx + 1,
+                  dishName: it.name,
+                  category: it.category || "Beverage",
+                  kotStatus: it.kotStatus || "Queued",
+                })),
+              });
+            }
+          });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify(tickets));
+        }
+
+        // REST API: /api/Kitchen/items/:id/status
+        if (req.url.match(/^\/api\/kitchen\/items\/[^/]+\/status/i) && req.method === "PATCH") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true }));
+        }
+
+        // REST API: /api/Kitchen/tickets/...
+        if (req.url.match(/^\/api\/kitchen\/tickets\//i) && req.method === "POST") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true }));
+        }
+
         if (req.url.startsWith("/api/v1/orders") && req.method === "GET") {
           db = loadDb();
           const orders = db.gourmet_pos_past_orders_v2_inr || [];
@@ -742,6 +1201,7 @@ function globalSyncPlugin() {
               const otp = Math.floor(
                 100000 + Math.random() * 900000,
               ).toString();
+              sendOtpEmail(found ? found.email : query, otp, found ? (found.fullName || found.username) : "User").catch(() => {});
               res.writeHead(200, { "Content-Type": "application/json" });
               return res.end(
                 JSON.stringify({

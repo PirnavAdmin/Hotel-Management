@@ -81,6 +81,7 @@
       "name": "Table 2",
       "tableNumber": "Table-2",
       "section": "Main Hall",
+<<<<<<< HEAD
       "capacity": 4,
       "status": "occupied",
       "server": "Vikram S.",
@@ -97,15 +98,51 @@
         }
       ],
       "orderTime": "09:53 AM",
+=======
+      "capacity": 5,
+      "status": "occupied",
+      "server": "Rajesh K.",
+      "guests": 2,
+      "items": [
+        {
+          "id": 25,
+          "name": "Tandoori Roti",
+          "price": 25,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "03:27 PM",
+          "kotStatus": "new",
+          "kotSent": false
+        }
+      ],
+      "orderTime": "03:00 PM",
+>>>>>>> 05ab97db0bc9939cc35a7facc6c3dfce64121f67
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+<<<<<<< HEAD
       "orderTimestamp": 1791519839199,
       "completedAt": null,
       "completedDuration": null,
       "cookingStartedAt": "10:01 AM",
       "backendTableId": 2
+=======
+      "tableName": "Table-2",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 5,
+      "occupiedChairs": 2,
+      "selectedSeats": [
+        "S3",
+        "S4"
+      ],
+      "orderTimestamp": 1793007034697,
+      "assignedServerId": 1,
+      "assignedServerName": "Rajesh K.",
+      "qrCodeUrl": null
+>>>>>>> 05ab97db0bc9939cc35a7facc6c3dfce64121f67
     },
     {
       "id": 3,
@@ -368,6 +405,7 @@
   "gourmet_pos_menu_items_v2": [],
   "gourmet_pos_staff_v1": [],
   "gourmet_pos_past_orders_v2_inr": [],
+<<<<<<< HEAD
   "gourmet_pos_inventory_v1": [
     {
       "id": "inv-1792992842084-s6tl",
@@ -445,4 +483,9 @@
       "lastRestocked": "26 Oct 2026"
     }
   ]
+=======
+  "avsr_last_invoice_date_v2": "27 Oct 2026",
+  "avsr_daily_inv_cnt_23_Oct_2026": "12",
+  "avsr_daily_inv_cnt_27_Oct_2026": "34"
+>>>>>>> 05ab97db0bc9939cc35a7facc6c3dfce64121f67
 }
