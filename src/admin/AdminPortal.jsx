@@ -859,8 +859,8 @@ export function AdminPortal({
   };
 
   const themes = [
-    { id: "royal-saffron", name: "Dark Theme", icon: "ðŸŒ™", label: "Dark" },
-    { id: "light-bistro", name: "Light Theme", icon: "â˜€ï¸Â", label: "Light" },
+    { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
+    { id: "light-bistro", name: "Light Theme", icon: "☀️", label: "Light" },
   ];
 
   const handleThemeChange = (newTheme) => {
@@ -5414,7 +5414,7 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 />
-                <span>Mark as Chef's Special â­</span>
+                <span>Mark as Chef's Special ⭐</span>
               </label>
             </div>
 
