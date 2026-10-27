@@ -18,7 +18,7 @@ const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
 const BAR_ROLES = ["Bartender", "Head Bartender", "Bar Manager", "Bar Waiter", "Bar Server", "Mixologist", "Bar Assistant"];
 const BAR_SHIFTS = ["Morning (10 AM-4 PM)", "Evening (4 PM-10 PM)", "Night (6 PM-Close)"];
 const SETTINGS_DEFAULTS = {
-  barName: "Telugu Taste Bar", contact: "+91 80 4567 8900", area: "Ground Floor · East Wing",
+  barName: "Telugu Taste Bar", contact: "+91 80 4567 8900", area: "Ground Floor • East Wing",
   opening: "10:00", closing: "23:30", prepTime: 8, kotPrefix: "BKOT", autoPrint: false,
   allowCancellation: true, currency: "INR (₹)", tax: 5, service: 5,
   lowStock: 6, stockTracking: true, stockUnit: "Bottle",
@@ -28,12 +28,47 @@ const ACCESS_PAGES = ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar Staff", 
 const ACCESS_DEFAULTS = Object.fromEntries(ACCESS_ROLES.map((role, index) => [role, Object.fromEntries(ACCESS_PAGES.map((page) => [page, index === 0 || (index === 1 && page !== "Settings") || (index === 2 && ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar KOT"].includes(page)) || (index === 3 && ["Bar Overview", "Bar Tables", "Bar KOT"].includes(page)) || (index === 4 && ["Bar Overview", "Orders"].includes(page))]))]));
 
 const BAR_DRINK_UNITS = ["Glass", "Bottle", "Can", "Peg", "ml", "Litre"];
+
+export const BAR_CATEGORIES = [
+  "Cocktails",
+  "Mocktails",
+  "Beers",
+  "Whiskey",
+  "Vodka & Gin",
+  "Rum & Brandy",
+  "Wine & Champagne",
+  "Shots & Shooters",
+  "Juices & Shakes",
+  "Soft Drinks & Soda",
+  "Tea & Coffee",
+];
+
+export const BAR_SERVING_MEASURES = [
+  "30 ml (Single Peg)",
+  "60 ml (Double Peg)",
+  "90 ml (Large Peg)",
+  "Pint (330 ml)",
+  "Bottle (650 ml)",
+  "Bottle (750 ml)",
+  "Glass (150 ml)",
+  "Glass (250 ml)",
+  "Can (330 ml)",
+  "Can (500 ml)",
+  "Peg (60 ml)",
+  "Pitcher (1500 ml)",
+  "Tower (3000 ml)",
+];
 const FIELD_SETS = {
   drink: [
-    ["name", "Drink Name", "text", true], ["category", "Category", "text", true],
-    ["description", "Description", "textarea"], ["image", "Choose Image", "image"],
-    ["price", "Selling Price", "number", true],
+    ["name", "Drink Name", "text", true],
+    ["category", "Category", "category_selector", true],
+    ["drinkType", "Drink Type", "select", false, ["Alcoholic", "Non-Alcoholic"]],
+    ["abv", "Alcohol Content (ABV %)", "number", false],
+    ["measure", "Serving Measure / Volume", "measure_selector", false],
+    ["price", "Selling Price (₹)", "number", true],
     ["isAvailable", "Availability", "select", false, ["Available", "Unavailable"]],
+    ["description", "Description", "textarea"],
+    ["image", "Choose Image", "image"],
   ],
   table: [
     ["number", "Table Number", "text", true], ["area", "Area / Section", "select", true, BAR_AREAS],
@@ -115,12 +150,12 @@ function printBill(order) {
   const popup = window.open("", "_blank", "width=480,height=760");
   if (!popup) return false;
   const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
-  popup.document.write(`<html><head><title>${safe(order.id)} demo bill</title><style>body{font:14px Arial,sans-serif;padding:24px;color:#172033}h1{font-size:20px;margin:0 0 5px}p{color:#475569}.line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid #e2e8f0}.total{font-weight:700;font-size:17px}</style></head><body><h1>Telugu Taste · Bar</h1><p>DEMO BILL · Not saved to server</p><p><b>${safe(order.id)}</b> · ${safe(order.table)}<br/>${safe(order.customer)} · ${safe(order.time)}</p><div class="line"><span>Items</span><span>${safe(order.items)}</span></div><div class="line"><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></div><div class="line"><span>Discount</span><span>${formatCurrency(order.discount)}</span></div><div class="line"><span>GST</span><span>${formatCurrency(order.gst)}</span></div><div class="line"><span>Service charge</span><span>${formatCurrency(order.service)}</span></div><div class="line total"><span>Total</span><span>${formatCurrency(order.total)}</span></div><script>window.onload=()=>window.print()</script></body></html>`);
+  popup.document.write(`<html><head><title>${safe(order.id)} demo bill</title><style>body{font:14px Arial,sans-serif;padding:24px;color:#172033}h1{font-size:20px;margin:0 0 5px}p{color:#475569}.line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid #e2e8f0}.total{font-weight:700;font-size:17px}</style></head><body><h1>Telugu Taste • Bar</h1><p>DEMO BILL • Not saved to server</p><p><b>${safe(order.id)}</b> • ${safe(order.table)}<br/>${safe(order.customer)} • ${safe(order.time)}</p><div class="line"><span>Items</span><span>${safe(order.items)}</span></div><div class="line"><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></div><div class="line"><span>Discount</span><span>${formatCurrency(order.discount)}</span></div><div class="line"><span>GST</span><span>${formatCurrency(order.gst)}</span></div><div class="line"><span>Service charge</span><span>${formatCurrency(order.service)}</span></div><div class="line total"><span>Total</span><span>${formatCurrency(order.total)}</span></div><script>window.onload=()=>window.print()</script></body></html>`);
   popup.document.close();
   return true;
 }
 
-function EntityModal({ kind, initial, tables = [], staff = [], onClose, onSave }) {
+function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onClose, onSave }) {
   const fields = FIELD_SETS[kind] || [];
   const [values, setValues] = useState(() => ({
     ...(initial || {}),
@@ -129,10 +164,44 @@ function EntityModal({ kind, initial, tables = [], staff = [], onClose, onSave }
     ...(kind === "drink" && initial ? {
       isAvailable: initial.isAvailable === false || initial.isAvailable === "Unavailable" ? "Unavailable" : "Available",
       active: initial.active === false || initial.active === "Inactive" ? "Inactive" : "Active",
+      category: initial.category || "Cocktails",
+      drinkType: initial.drinkType || (initial.abv ? "Alcoholic" : "Non-Alcoholic"),
+      measure: initial.measure || "",
+      abv: initial.abv ?? "",
+    } : kind === "drink" ? {
+      category: "Cocktails",
+      drinkType: "Alcoholic",
+      measure: "60 ml (Double Peg)",
+      isAvailable: "Available",
+      abv: "",
     } : {}),
   }));
+
+  const allKnownCategories = useMemo(() => {
+    const list = [...BAR_CATEGORIES];
+    if (Array.isArray(drinks)) {
+      drinks.forEach((d) => {
+        if (d.category && !list.some((c) => c.toLowerCase() === d.category.toLowerCase())) {
+          list.push(d.category);
+        }
+      });
+    }
+    return list;
+  }, [drinks]);
+
+  const [isCustomCategory, setIsCustomCategory] = useState(() => {
+    if (kind !== "drink" || !initial?.category) return false;
+    return !BAR_CATEGORIES.some((c) => c.toLowerCase() === String(initial.category).toLowerCase());
+  });
+
+  const [isCustomMeasure, setIsCustomMeasure] = useState(() => {
+    if (kind !== "drink" || !initial?.measure) return false;
+    return !BAR_SERVING_MEASURES.some((m) => m.toLowerCase() === String(initial.measure).toLowerCase());
+  });
+
   const [error, setError] = useState("");
   const set = (key, value) => setValues((previous) => ({ ...previous, [key]: value }));
+
   const chooseImage = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -149,6 +218,7 @@ function EntityModal({ kind, initial, tables = [], staff = [], onClose, onSave }
     reader.onerror = () => setError("Could not read this image. Please try another file.");
     reader.readAsDataURL(file);
   };
+
   const submit = async (event) => {
     event.preventDefault();
     for (const [key, label, type, required] of fields) {
@@ -162,27 +232,211 @@ function EntityModal({ kind, initial, tables = [], staff = [], onClose, onSave }
         return;
       }
     }
-    if (kind === "drink" && values.abv !== "" && values.abv !== undefined && Number(values.abv) > 100) {
-      setError("Alcohol Percentage (ABV) must be 100 or less.");
+    if (kind === "drink" && values.abv !== "" && values.abv !== undefined && (Number(values.abv) < 0 || Number(values.abv) > 100)) {
+      setError("Alcohol Percentage (ABV) must be between 0 and 100.");
       return;
     }
     const result = await onSave(values);
     if (result === false) setError("The requested changes were not fully applied. Check the message and try again.");
   };
+
   return (
     <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-form-title">
-        <header className="bar-modal-head"><div><span className="bar-kicker">DEMO DATA · NOT SAVED TO SERVER</span><h2 id="bar-form-title">{initial ? "Edit" : "Add"} {kind === "drink" ? "Drink" : kind === "table" ? "Bar Table" : kind === "staff" ? "Bar Staff Member" : "Bar Order"}</h2></div><button className="bar-icon-button" aria-label="Close" onClick={onClose} type="button"><X size={18} /></button></header>
+        <header className="bar-modal-head">
+          <div>
+            <span className="bar-kicker">DEMO DATA • NOT SAVED TO SERVER</span>
+            <h2 id="bar-form-title">{initial ? "Edit" : "Add"} {kind === "drink" ? "Drink" : kind === "table" ? "Bar Table" : kind === "staff" ? "Bar Staff Member" : "Bar Order"}</h2>
+          </div>
+          <button className="bar-icon-button" aria-label="Close" onClick={onClose} type="button"><X size={18} /></button>
+        </header>
         <form onSubmit={submit} className="bar-form">
           <div className="bar-form-grid">
-            {fields.filter(([key]) => !(kind === "drink" && key === "abv" && !["Beer", "Whisky", "Vodka", "Rum", "Gin", "Wine", "Champagne", "Cocktails", "Brandy", "Tequila", "Liqueurs"].includes(values.category))).map(([key, label, type = "text", required, options]) => (
-              <label className={`bar-field ${type === "textarea" || type === "multiselect" ? "wide" : ""}`} key={key}><span>{label}{required && " *"}</span>
-                {type === "image" ? <div className="bar-image-picker">{values[key] && <img className="bar-image-preview" src={values[key]} alt="Selected drink preview" />}<label className="bar-button secondary bar-image-choose"><Plus size={15} />{values[key] ? "Change Image" : "Choose Image"}<input type="file" accept="image/*" onChange={chooseImage} /></label></div> : type === "select" ? <select required={required} value={values[key] ?? (key === "isAvailable" ? "Available" : key === "active" ? "Active" : "")} onChange={(event) => set(key, event.target.value)}><option value="">{key === "staffId" ? "Unassigned" : `Select ${label.toLowerCase()}`}</option>{(key === "staffId" ? staff.map((member) => ({ value: member.id, label: `${member.name} (${member.id})` })) : kind === "table" && key === "area" ? [...new Set([...BAR_AREAS, ...tables.map((table) => table.area)])] : kind === "staff" && key === "role" ? [...new Set([...options, ...staff.map((person) => person.role)])] : kind === "staff" && key === "shift" ? [...new Set([...options, ...staff.map((person) => person.shift).filter(Boolean)])] : options).map((option) => { const value = typeof option === "string" ? option : option.value; const text = typeof option === "string" ? option : option.label; return <option key={value} value={value}>{text}</option>; })}</select> : type === "multiselect" ? <select multiple aria-label={label} value={(Array.isArray(values[key]) ? values[key] : []).map(String).filter((tableId) => tables.some((table) => String(table.id) === tableId))} onChange={(event) => set(key, [...new Set(Array.from(event.target.selectedOptions, (option) => option.value))])}>{tables.map((table) => <option key={table.id} value={String(table.id)}>{table.number} · {table.area}</option>)}</select> : type === "textarea" ? <textarea rows="3" required={required} value={values[key] ?? ""} onChange={(event) => set(key, event.target.value)} /> : <input type={type} min={type === "number" ? "0" : undefined} step={type === "number" ? "any" : undefined} required={required} value={values[key] ?? ""} onChange={(event) => set(key, event.target.value)} />}
-              </label>
-            ))}
+            {fields.map(([key, label, type = "text", required, options]) => {
+              if (kind === "drink" && key === "abv") {
+                const isAlcoholic = values.drinkType === "Alcoholic" || ["Cocktails", "Beers", "Whiskey", "Vodka & Gin", "Rum & Brandy", "Wine & Champagne", "Shots & Shooters"].some((c) => c.toLowerCase() === String(values.category || "").toLowerCase());
+                if (!isAlcoholic) return null;
+              }
+
+              return (
+                <label className={`bar-field ${type === "textarea" || type === "multiselect" ? "wide" : ""}`} key={key}>
+                  <span>{label}{required && " *"}</span>
+                  {type === "category_selector" ? (
+                    isCustomCategory ? (
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <input
+                          required={required}
+                          type="text"
+                          placeholder="Type custom category name..."
+                          value={values.category ?? ""}
+                          onChange={(e) => set("category", e.target.value)}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="bar-button secondary small"
+                          style={{ whiteSpace: "nowrap" }}
+                          onClick={() => {
+                            setIsCustomCategory(false);
+                            set("category", allKnownCategories[0] || "Cocktails");
+                          }}
+                        >
+                          Choose from list
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <select
+                          required={required}
+                          value={values.category ?? ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__custom__") {
+                              setIsCustomCategory(true);
+                              set("category", "");
+                            } else {
+                              set("category", e.target.value);
+                            }
+                          }}
+                        >
+                          <option value="">Select category</option>
+                          {allKnownCategories.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                          <option value="__custom__">+ Type custom category...</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="bar-button secondary small"
+                          style={{ whiteSpace: "nowrap" }}
+                          onClick={() => {
+                            setIsCustomCategory(true);
+                            set("category", "");
+                          }}
+                        >
+                          + Custom
+                        </button>
+                      </div>
+                    )
+                  ) : type === "measure_selector" ? (
+                    isCustomMeasure ? (
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. 45 ml, 500 ml Pitcher..."
+                          value={values.measure ?? ""}
+                          onChange={(e) => set("measure", e.target.value)}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="bar-button secondary small"
+                          style={{ whiteSpace: "nowrap" }}
+                          onClick={() => {
+                            setIsCustomMeasure(false);
+                            set("measure", BAR_SERVING_MEASURES[0]);
+                          }}
+                        >
+                          Choose from list
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <select
+                          value={values.measure ?? ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__custom__") {
+                              setIsCustomMeasure(true);
+                              set("measure", "");
+                            } else {
+                              set("measure", e.target.value);
+                            }
+                          }}
+                        >
+                          <option value="">Select serving measure</option>
+                          {BAR_SERVING_MEASURES.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                          <option value="__custom__">+ Custom Measure...</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="bar-button secondary small"
+                          style={{ whiteSpace: "nowrap" }}
+                          onClick={() => {
+                            setIsCustomMeasure(true);
+                            set("measure", "");
+                          }}
+                        >
+                          + Custom
+                        </button>
+                      </div>
+                    )
+                  ) : type === "image" ? (
+                    <div className="bar-image-picker">
+                      {values[key] && <img className="bar-image-preview" src={values[key]} alt="Selected drink preview" />}
+                      <label className="bar-button secondary bar-image-choose">
+                        <Plus size={15} />
+                        {values[key] ? "Change Image" : "Choose Image"}
+                        <input type="file" accept="image/*" onChange={chooseImage} />
+                      </label>
+                    </div>
+                  ) : type === "select" ? (
+                    <select
+                      required={required}
+                      value={values[key] ?? (key === "isAvailable" ? "Available" : key === "active" ? "Active" : "")}
+                      onChange={(event) => set(key, event.target.value)}
+                    >
+                      <option value="">{key === "staffId" ? "Unassigned" : `Select ${label.toLowerCase()}`}</option>
+                      {(key === "staffId"
+                        ? staff.map((member) => ({ value: member.id, label: `${member.name} (${member.id})` }))
+                        : kind === "table" && key === "area"
+                        ? [...new Set([...BAR_AREAS, ...tables.map((table) => table.area)])]
+                        : kind === "staff" && key === "role"
+                        ? [...new Set([...options, ...staff.map((person) => person.role)])]
+                        : kind === "staff" && key === "shift"
+                        ? [...new Set([...options, ...staff.map((person) => person.shift).filter(Boolean)])]
+                        : options
+                      ).map((option) => {
+                        const val = typeof option === "string" ? option : option.value;
+                        const text = typeof option === "string" ? option : option.label;
+                        return <option key={val} value={val}>{text}</option>;
+                      })}
+                    </select>
+                  ) : type === "multiselect" ? (
+                    <select
+                      multiple
+                      aria-label={label}
+                      value={(Array.isArray(values[key]) ? values[key] : []).map(String).filter((tableId) => tables.some((table) => String(table.id) === tableId))}
+                      onChange={(event) => set(key, [...new Set(Array.from(event.target.selectedOptions, (option) => option.value))])}
+                    >
+                      {tables.map((table) => (
+                        <option key={table.id} value={String(table.id)}>
+                          {table.number} • {table.area}
+                        </option>
+                      ))}
+                    </select>
+                  ) : type === "textarea" ? (
+                    <textarea rows="3" required={required} value={values[key] ?? ""} onChange={(event) => set(key, event.target.value)} />
+                  ) : (
+                    <input
+                      type={type}
+                      min={type === "number" ? "0" : undefined}
+                      max={type === "number" && key === "abv" ? "100" : undefined}
+                      step={type === "number" ? (key === "abv" ? "0.1" : "any") : undefined}
+                      required={required}
+                      value={values[key] ?? ""}
+                      onChange={(event) => set(key, event.target.value)}
+                    />
+                  )}
+                </label>
+              );
+            })}
           </div>
           {error && <p className="bar-error" role="alert">{error}</p>}
-          <footer className="bar-modal-footer"><button className="bar-button secondary" type="button" onClick={onClose}>Cancel</button><button className="bar-button primary" type="submit">Save Demo Changes</button></footer>
+          <footer className="bar-modal-footer">
+            <button className="bar-button secondary" type="button" onClick={onClose}>Cancel</button>
+            <button className="bar-button primary" type="submit">Save Demo Changes</button>
+          </footer>
         </form>
       </section>
     </div>
@@ -264,6 +518,7 @@ export function BarWorkspace({
   const [stockFilter, setStockFilter] = useState("all");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [pricePreset, setPricePreset] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
@@ -278,7 +533,7 @@ export function BarWorkspace({
   const route = activeTab || "bar-overview";
 
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const drinks = useMemo(() => (Array.isArray(menuItems) ? menuItems : []).filter((item) => isBeverageCategory(item.category ?? item.categoryName)), [menuItems]);
+  const drinks = useMemo(() => (Array.isArray(menuItems) ? menuItems : []).filter((item) => isBeverageCategory(item.category ?? item.categoryName) || item.isBeverage || item.isBarDrink || item.category === "bar"), [menuItems]);
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
@@ -565,7 +820,20 @@ export function BarWorkspace({
     }
     if (kind === "order" && saved.subtotal !== undefined) saved.subtotal = Number(saved.subtotal);
     if (kind === "drink") {
-      const payload = { ...item, ...values, id: item?.id, name: String(values.name || "").trim(), category: values.category, price: Number(values.price), isAvailable: values.isAvailable === true || values.isAvailable === "Available" };
+      const payload = {
+        ...item,
+        ...values,
+        id: item?.id,
+        name: String(values.name || "").trim(),
+        category: values.category || "Cocktails",
+        price: Number(values.price),
+        isAvailable: values.isAvailable === true || values.isAvailable === "Available",
+        drinkType: values.drinkType || (values.abv ? "Alcoholic" : "Non-Alcoholic"),
+        measure: values.measure || "",
+        abv: values.abv !== undefined && values.abv !== "" ? Number(values.abv) : undefined,
+        isBeverage: true,
+        isBarDrink: true,
+      };
       const result = item ? await onUpdateMenuItem?.(payload) : await onAddMenuItem?.(payload);
       if (result === false || result?.success === false) { setToast(result?.error || "The shared menu item could not be be saved."); return false; }
     }
@@ -613,17 +881,17 @@ export function BarWorkspace({
   ];
 
   const listConfig = {
-    "bar-drinks": { title: "Drinks Menu", description: "Beverage items from the shared restaurant menu.", rows: drinks, kind: "drink", columns: ["Drink Name", "Category", "Price", "Availability", "Actions"] },
+    "bar-drinks": { title: "Drinks Menu", description: "Beverage items from the shared restaurant menu.", rows: drinks, kind: "drink", columns: ["Drink Name", "Category", "Serving / Measure", "Price", "Availability", "Actions"] },
     "bar-tables": { title: "Bar Tables", description: "The shared hotel table records and complete food-and-drink orders.", rows: tables, kind: "table", columns: ["Table #", "Area", "Chairs / Capacity", "Assigned Server", "Status", "Guests", "Current Order", "Order Amount", "Actions"] },
-    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records · changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Phone / Contact", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
+    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Phone / Contact", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
 
-  const filterChoices = route === "bar-drinks" ? ["all", ...new Set(drinks.map((drink) => drink.category).filter(Boolean))] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
+  const filterChoices = route === "bar-drinks" ? ["all", ...new Set([...BAR_CATEGORIES, ...drinks.map((drink) => drink.category).filter(Boolean)])] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
   const listRows = (() => {
     if (!listConfig) return [];
     return listConfig.rows.filter((row) => {
       const matchesQuery = !query.trim() || JSON.stringify(row).toLowerCase().includes(query.trim().toLowerCase());
-      const matchesFilter = route === "bar-drinks" ? (filter === "all" || row.category === filter) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice)) && (stockFilter === "all" || (stockFilter === "low" ? Number(row.currentStock) <= Number(row.minimumStock) : Number(row.currentStock) > Number(row.minimumStock)))
+      const matchesFilter = route === "bar-drinks" ? (filter === "all" || String(row.category || "").toLowerCase() === filter.toLowerCase()) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice))
         : route === "bar-tables" ? (filter === "all" || row.area === filter) && (extraFilter === "all" || row.status === extraFilter) && (capacityFilter === "all" || Number(row.capacity) >= Number(capacityFilter))
         : route === "bar-staff" ? (filter === "all" || row.role === filter) && (extraFilter === "all" || row.shift === extraFilter) && (assignmentFilter === "all" || (Array.isArray(row.tables) && row.tables.includes(assignmentFilter)))
         : true;
@@ -645,7 +913,7 @@ export function BarWorkspace({
   const filteredOrders = barOrders.filter((order) => (!query || JSON.stringify(order).toLowerCase().includes(query.toLowerCase())) && (filter === "all" || String(order.status).toLowerCase() === filter.toLowerCase()) && (paymentFilter === "all" || order.payment === paymentFilter));
   const visibleOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const primaryActions = (kind, row) => <div className="bar-actions"><button className="bar-icon-button" title="View" aria-label="View details" onClick={() => setDetails(row)}><Eye size={15} /></button><button className="bar-icon-button" title="Edit" aria-label="Edit" onClick={() => openForm(kind, row)}><Pencil size={15} /></button>{kind === "table" && <button className="bar-button secondary small" title="Change occupancy status" onClick={() => saveSharedTable({ ...row, status: ({ Available: "Occupied", Occupied: "Reserved", Reserved: "Available" })[row.status] || "Available" }, row)}>Status</button>}{kind === "drink" && <button className="bar-button secondary small" title="Enable or disable drink" onClick={() => onSetMenuAvailability?.(row.id, !row.isAvailable)}>{row.isAvailable ? "Disable" : "Enable"}</button>}<button className="bar-icon-button danger" title="Delete" aria-label="Delete" onClick={() => deleteItem(kind, row)}><Trash2 size={15} /></button></div>;
+  const primaryActions = (kind, row) => <div className="bar-actions"><button className="bar-icon-button" title="View" aria-label="View details" onClick={() => setDetails(row)}><Eye size={15} /></button><button className="bar-icon-button" title="Edit" aria-label="Edit" onClick={() => openForm(kind, row)}><Pencil size={15} /></button>{kind === "table" && <button className="bar-button secondary small" title="Change occupancy status" onClick={() => saveSharedTable({ ...row, status: ({ Available: "Occupied", Occupied: "Reserved", Reserved: "Available" })[row.status] || "Available" }, row)}>Status</button>}{kind === "drink" && <button type="button" className={`bar-button small ${row.isAvailable !== false && row.isAvailable !== "Unavailable" ? "warning" : "success"}`} title={row.isAvailable !== false && row.isAvailable !== "Unavailable" ? "Click to Disable drink" : "Click to Enable drink"} aria-label={row.isAvailable !== false && row.isAvailable !== "Unavailable" ? `Disable ${row.name}` : `Enable ${row.name}`} onClick={() => onSetMenuAvailability?.(row.id, row.isAvailable === false || row.isAvailable === "Unavailable")}>{row.isAvailable !== false && row.isAvailable !== "Unavailable" ? "Disable" : "Enable"}</button>}<button className="bar-icon-button danger" title="Delete" aria-label="Delete" onClick={() => deleteItem(kind, row)}><Trash2 size={15} /></button></div>;
 
   const renderListCell = (column, row, kind) => {
     if (column === "Actions") return primaryActions(kind, row);
@@ -662,7 +930,7 @@ export function BarWorkspace({
     }
     if (column === "Drink Name") return <><strong>{row.name}</strong>{row.description && <small>{row.description}</small>}</>;
     if (column === "Price" || column === "Order Amount") return formatCurrency(row.price ?? row.amount ?? 0);
-    if (column === "Stock") return <span className={`bar-stock-chip ${Number(row.currentStock) <= Number(row.minimumStock) ? "low" : ""}`}>{row.currentStock} {Number(row.currentStock) <= Number(row.minimumStock) ? "· Low" : ""}</span>;
+    if (column === "Stock") return <span className={`bar-stock-chip ${Number(row.currentStock) <= Number(row.minimumStock) ? "low" : ""}`}>{row.currentStock} {Number(row.currentStock) <= Number(row.minimumStock) ? "• Low" : ""}</span>;
     if (column === "Availability") return <Status>{row.isAvailable === false || row.isAvailable === "Unavailable" ? "Unavailable" : "Available"}</Status>;
     if (column === "Status") return <Status>{row.status}</Status>;
     const map = {
@@ -680,7 +948,51 @@ export function BarWorkspace({
   const listPage = listConfig && <section className="bar-page-card">
     <div className="bar-section-head"><div><h2>{listConfig.title}</h2><p>{listConfig.description}</p></div><button className="bar-button primary" disabled={sharedListKey && sharedListStatus !== "ready"} onClick={() => openForm(listConfig.kind)}><Plus size={16} /> Add {listConfig.kind === "drink" ? "Drink" : listConfig.kind === "table" ? "Table" : "Staff"}</button></div>
     <div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={`Search ${listConfig.title.toLowerCase()}...`} /></label><label className="bar-select-label"><span>{route === "bar-staff" ? "Role" : route === "bar-tables" ? "Area" : "Category"}</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All {route === "bar-staff" ? "Roles" : route === "bar-tables" ? "Areas" : "Categories"}</option>{filterChoices.slice(1).map((choice) => <option key={choice}>{choice}</option>)}</select></label>
-      {route === "bar-drinks" && <><label className="bar-select-label"><span>Availability</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All</option><option value="available">Available</option><option value="unavailable">Unavailable</option></select></label><label className="bar-select-label"><span>Stock</span><select value={stockFilter} onChange={(event) => { setStockFilter(event.target.value); setPage(1); }}><option value="all">All stock</option><option value="low">Low stock</option><option value="healthy">In stock</option></select></label><label className="bar-price-range"><span>Price</span><input aria-label="Minimum drink price" type="number" min="0" placeholder="Min ₹" value={minPrice} onChange={(event) => { setMinPrice(event.target.value); setPage(1); }} /><input aria-label="Maximum drink price" type="number" min="0" placeholder="Max ₹" value={maxPrice} onChange={(event) => { setMaxPrice(event.target.value); setPage(1); }} /></label></>}
+      {route === "bar-drinks" && (
+        <>
+          <label className="bar-select-label">
+            <span>Availability</span>
+            <select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}>
+              <option value="all">All</option>
+              <option value="available">Available</option>
+              <option value="unavailable">Unavailable</option>
+            </select>
+          </label>
+          <label className="bar-select-label">
+            <span>Price Range</span>
+            <select
+              value={pricePreset}
+              onChange={(e) => {
+                const val = e.target.value;
+                setPricePreset(val);
+                if (val === "all") {
+                  setMinPrice("");
+                  setMaxPrice("");
+                } else if (val === "under-150") {
+                  setMinPrice("");
+                  setMaxPrice("150");
+                } else if (val === "150-300") {
+                  setMinPrice("150");
+                  setMaxPrice("300");
+                } else if (val === "300-500") {
+                  setMinPrice("300");
+                  setMaxPrice("500");
+                } else if (val === "above-500") {
+                  setMinPrice("500");
+                  setMaxPrice("");
+                }
+                setPage(1);
+              }}
+            >
+              <option value="all">All Prices</option>
+              <option value="under-150">Under ₹150</option>
+              <option value="150-300">₹150 – ₹300</option>
+              <option value="300-500">₹300 – ₹500</option>
+              <option value="above-500">Above ₹500</option>
+              </select>
+          </label>
+        </>
+      )}
       {route === "bar-tables" && <><label className="bar-select-label"><span>Occupancy</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">Any status</option>{[...new Set(tables.map((table) => table.status))].map((status) => <option key={status}>{status}</option>)}</select></label><label className="bar-select-label"><span>Minimum Capacity</span><select value={capacityFilter} onChange={(event) => { setCapacityFilter(event.target.value); setPage(1); }}><option value="all">Any capacity</option>{[2, 4, 6].map((size) => <option key={size} value={size}>{size}+ guests</option>)}</select></label></>}
       {route === "bar-staff" && <label className="bar-select-label"><span>Shift</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All shifts</option>{BAR_SHIFTS.map((shift) => <option key={shift}>{shift}</option>)}</select></label>}
       {route === "bar-staff" && <label className="bar-select-label"><span>Table Assignment</span><select value={assignmentFilter} onChange={(event) => { setAssignmentFilter(event.target.value); setPage(1); }}><option value="all">All assignments</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label>}
@@ -694,7 +1006,7 @@ export function BarWorkspace({
 
   return (
     <main className="bar-workspace">
-      <div className="bar-page-title"><div><span className="bar-kicker">TELUGU TASTE · BAR OPERATIONS</span><h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1><p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records · same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets · live statuses from the KOT service." : "Independent Bar workspace · drink and order records are demo data."}</p></div><span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : "DEMO DATA · SESSION ONLY"}</span></div>
+      <div className="bar-page-title"><div><span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span><h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1><p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : "Independent Bar workspace • drink and order records are demo data."}</p></div><span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : "DEMO DATA • SESSION ONLY"}</span></div>
 
       {route === "bar-overview" && <>
         <section className="bar-dashboard-grid" aria-label="Bar summary">{dashboard.map(([label, value, Icon, tone]) => <article className="bar-stat-card" key={label}><span className={`bar-stat-icon tone-${tone}`}><Icon size={19} /></span><div><span>{label}</span><strong>{value}</strong></div></article>)}</section><div className="bar-overview-grid"><section className="bar-page-card"><div className="bar-section-head"><div><h2>Recent Bar Orders</h2><p>Recent beverage items from shared restaurant orders.</p></div><button className="bar-button secondary" onClick={() => go("bar-orders")}>All Orders</button></div>{ordersLoading ? <div className="bar-empty" role="status">Loading shared orders…</div> : ordersError ? <div className="bar-error" role="alert">{ordersError}</div> : renderStaticTable(["Order Number", "Table", "Drink Items", "Quantity", "Amount", "Time", "Status"], barOrders.slice(0, 5), (column, order) => ({ "Order Number": <strong>{order.id}</strong>, Table: order.table, "Drink Items": order.itemLabel, Quantity: order.quantity, Amount: formatCurrency(order.total), Time: order.time, Status: <Status>{order.status}</Status> })[column])}</section><section className="bar-page-card"><div className="bar-section-head"><div><h2>Quick Actions</h2><p>Common Bar tasks</p></div></div><div className="bar-quick-actions"><button className="bar-button primary" onClick={() => { go("bar-drinks"); openForm("drink"); }}><Plus size={16} /> Add Drink</button><button className="bar-button secondary" onClick={() => { go("bar-orders"); setOrderComposerOpen(true); }}><FileText size={16} /> New Bar Order</button><button className="bar-button secondary" onClick={() => go("bar-inventory")}><Package size={16} /> View Inventory</button><button className="bar-button secondary" onClick={() => go("bar-reports")}><BarChart3 size={16} /> View Reports</button></div></section></div>
@@ -719,7 +1031,7 @@ export function BarWorkspace({
       {route === "bar-settings" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Settings</h2><p>Settings must be stored by the restaurant configuration service to persist across sessions.</p></div></div><div className="bar-empty">No Bar-specific settings API is configured. No local demo values are being presented as saved settings.</div></section>}
 
       {orderComposerOpen && <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !orderSubmitting && setOrderComposerOpen(false)}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-order-title"><header className="bar-modal-head"><div><span className="bar-kicker">SHARED RESTAURANT ORDER</span><h2 id="bar-order-title">New Bar Order</h2></div><button className="bar-icon-button" type="button" aria-label="Close" disabled={orderSubmitting} onClick={() => setOrderComposerOpen(false)}><X size={18} /></button></header><form className="bar-form" onSubmit={submitBarOrder}><div className="bar-form-grid"><label className="bar-field"><span>Table *</span><select required value={orderTableId} onChange={(event) => setOrderTableId(event.target.value)}><option value="">Select a shared table</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label><label className="bar-field"><span>Category</span><select value={orderMenuCategory} onChange={(event) => { setOrderMenuCategory(event.target.value); setOrderDrinkId(""); }}><option value="all">All categories</option>{[...new Set(menuItems.map((item) => item.category).filter(Boolean))].map((category) => <option key={category}>{category}</option>)}</select></label><label className="bar-field"><span>Food or Drink *</span><select required value={orderDrinkId} onChange={(event) => setOrderDrinkId(event.target.value)}><option value="">Select food or drink</option>{menuItems.filter((item) => item.isAvailable !== false && (orderMenuCategory === "all" || item.category === orderMenuCategory)).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.category} · {formatCurrency(item.price)}</option>)}</select></label><label className="bar-field"><span>Quantity</span><input type="number" min="1" step="1" value={orderQuantity} onChange={(event) => setOrderQuantity(event.target.value)} /></label><label className="bar-field"><span>Serving Type</span><input value={orderServing} onChange={(event) => setOrderServing(event.target.value)} placeholder="Regular / large / peg" /></label><label className="bar-field"><span>Ice Preference</span><select value={orderIce} onChange={(event) => setOrderIce(event.target.value)}><option value="">No preference</option><option>With ice</option><option>No ice</option><option>Extra ice</option></select></label><label className="bar-field"><span>Mixer</span><input value={orderMixer} onChange={(event) => setOrderMixer(event.target.value)} placeholder="Soda, tonic, juice…" /></label><label className="bar-field wide"><span>Special Notes</span><textarea rows="2" value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} /></label></div>{orderError && <p className="bar-error" role="alert">{orderError}</p>}<footer className="bar-modal-footer"><button className="bar-button secondary" type="button" disabled={orderSubmitting} onClick={() => setOrderComposerOpen(false)}>Cancel</button><button className="bar-button primary" type="submit" disabled={orderSubmitting || !tables.length || !menuItems.length}>{orderSubmitting ? "Sending…" : "Create & Send KOT"}</button></footer></form></section></div>}
-      {modal && <EntityModal kind={modal.kind} initial={modal.item} tables={tables} staff={staff} onClose={() => setModal(null)} onSave={saveEntity} />}
+      {modal && <EntityModal kind={modal.kind} initial={modal.item} tables={tables} staff={staff} drinks={drinks} onClose={() => setModal(null)} onSave={saveEntity} />}
       <DetailsModal item={details} onClose={() => setDetails(null)} />
       {toast && <div className="bar-toast" role="status">{toast}</div>}
     </main>

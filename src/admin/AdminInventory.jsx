@@ -1355,6 +1355,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const visiblePage = Math.min(currentPage, pageCount);
   const pageStart = (visiblePage - 1) * itemsPerPage;
   const visibleItems = filtered.slice(pageStart, pageStart + itemsPerPage);
+  const paginationPages = Array.from(
+    new Set(
+      [1, visiblePage - 1, visiblePage, visiblePage + 1, pageCount].filter(
+        (page) => page >= 1 && page <= pageCount,
+      ),
+    ),
+  ).sort((a, b) => a - b);
 
   const lowStockCount = inventory.filter(
     (item) => item.stock > 0 && item.stock <= item.minThreshold,
@@ -1416,7 +1423,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   style={{
                     background: "rgba(245, 158, 11, 0.15)",
                     border: "1px solid rgba(245, 158, 11, 0.35)",
-                    color: "#f59e0b",
+                    color: "var(--accent-amber-light)",
                     fontSize: "0.75rem",
                     fontWeight: 700,
                     padding: "2px 10px",
@@ -1676,28 +1683,28 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               label: "Total Items",
               value: inventory.length,
               status: "all",
-              color: "#38bdf8",
+              color: "var(--info)",
               icon: Package,
             },
             {
               label: "In Stock",
               value: inStockCount,
               status: "in-stock",
-              color: "#10b981",
+              color: "var(--success)",
               icon: CheckCircle2,
             },
             {
               label: "Low Stock",
               value: lowStockCount,
               status: "low-stock",
-              color: "#f59e0b",
+              color: "var(--accent-amber-light)",
               icon: AlertTriangle,
             },
             {
               label: "Out of Stock",
               value: outOfStockCount,
               status: "out-of-stock",
-              color: "#ef4444",
+              color: "var(--danger)",
               icon: TrendingDown,
             },
           ].map(({ label, value, status, color, icon: Icon }) => (
@@ -1733,7 +1740,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   display: "grid",
                   placeItems: "center",
                   color,
-                  background: `${color}20`,
+                  background: `color-mix(in srgb, ${color} 12.55%, transparent)`,
                   borderRadius: "9px",
                 }}
               >
@@ -1839,7 +1846,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 height: "36px",
                 padding: "0 0.75rem",
                 background: "rgba(245, 158, 11, 0.14)",
-                color: "#f59e0b",
+                color: "var(--accent-amber-light)",
                 border: "1px solid rgba(245, 158, 11, 0.35)",
                 borderRadius: "7px",
                 fontWeight: 700,
@@ -1899,10 +1906,10 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 const isLowStock =
                   !isOutOfStock && item.stock <= item.minThreshold;
                 const statusColor = isOutOfStock
-                  ? "#ef4444"
+                  ? "var(--danger)"
                   : isLowStock
-                    ? "#f59e0b"
-                    : "#10b981";
+                    ? "var(--status-occupied)"
+                    : "var(--success)";
                 return (
                   <tr
                     key={item.id}
@@ -2069,8 +2076,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     <td style={{ padding: "0.55rem 0.6rem", textAlign: "center", whiteSpace: "nowrap" }}>
                       <span
                         style={{
-                          background: `${statusColor}18`,
-                          border: `1px solid ${statusColor}40`,
+                          background: `${statusColor}1f`,
+                          border: `1px solid ${statusColor}4d`,
                           color: statusColor,
                           borderRadius: "12px",
                           padding: "2px 8px",
@@ -2145,7 +2152,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                           onClick={() => handleAdjustStock(item.id, -5)}
                           style={{
                             background: "var(--surface-tint)",
-                            border: "1px solid rgba(255, 255, 255, 0.12)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
                             color: "var(--text-main)",
                             borderRadius: "6px",
                             padding: "3px 7px",
@@ -2198,8 +2205,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                             );
                           }}
                           style={{
-                            background: "rgba(16, 185, 129, 0.12)",
-                            border: "1px solid rgba(16, 185, 129, 0.35)",
+                            background: "rgba(16, 185, 129, 0.1)",
+                            border: "1px solid rgba(16, 185, 129, 0.3)",
                             color: "#10b981",
                             borderRadius: "6px",
                             padding: "3px 7px",
@@ -2222,7 +2229,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                           onClick={() => handleDeleteItem(item.id)}
                           style={{
                             background: "rgba(239, 68, 68, 0.08)",
-                            border: "1px solid rgba(239, 68, 68, 0.25)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
                             color: "#ef4444",
                             borderRadius: "6px",
                             padding: "4px 6px",
@@ -2264,13 +2271,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "0.5rem 0.85rem",
+              padding: "0.65rem 0.85rem",
               borderTop: "1px solid var(--border-subtle)",
               background: "var(--bg-tertiary)",
-              fontSize: "0.74rem",
+              fontSize: "0.78rem",
               color: "var(--text-muted)",
               flexWrap: "wrap",
-              gap: "0.5rem",
+              gap: "0.75rem 1rem",
             }}
           >
             <span>
@@ -2289,10 +2296,10 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               items
             </span>
             <div
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.65rem", flexWrap: "wrap", marginLeft: "auto" }}
             >
               <div
-                style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
+                style={{ display: "flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}
               >
                 <span
                   style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
@@ -2315,7 +2322,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                     fontSize: "0.72rem",
                     outline: "none",
                     cursor: "pointer",
-                    height: "24px",
+                    height: "30px",
                   }}
                 >
                   {[5, 6, 8, 10, 20].map((pageSize) => (
@@ -2340,7 +2347,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   }
                   disabled={visiblePage === 1}
                   style={{
-                    height: "24px",
+                    height: "30px",
                     padding: "0 6px",
                     borderRadius: "5px",
                     background:
@@ -2363,41 +2370,44 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   <ChevronLeft size={13} />
                   <span>Prev</span>
                 </button>
-                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-                  (page) => {
+                {paginationPages.map((page, index) => {
+                    const previousPage = paginationPages[index - 1];
                     const isActive = page === visiblePage;
                     return (
-                      <button
-                        key={page}
-                        type="button"
-                        aria-label={`Page ${page}`}
-                        aria-current={isActive ? "page" : undefined}
-                        onClick={() => setCurrentPage(page)}
-                        style={{
-                          height: "24px",
-                          minWidth: "24px",
-                          padding: "0 5px",
-                          borderRadius: "5px",
-                          background: isActive
-                            ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                            : "var(--bg-tertiary)",
-                          border: isActive
-                            ? "none"
-                            : "1px solid var(--border-subtle)",
-                          color: isActive ? "#ffffff" : "var(--text-muted)",
-                          cursor: "pointer",
-                          fontSize: "0.72rem",
-                          fontWeight: isActive ? 800 : 500,
-                          boxShadow: isActive
-                            ? "0 2px 8px rgba(245, 158, 11, 0.35)"
-                            : "none",
-                        }}
-                      >
-                        {page}
-                      </button>
+                      <React.Fragment key={page}>
+                        {previousPage && page - previousPage > 1 && (
+                          <span aria-hidden="true" style={{ padding: "0 0.1rem", color: "var(--text-dim)" }}>…</span>
+                        )}
+                        <button
+                          type="button"
+                          aria-label={`Page ${page}`}
+                          aria-current={isActive ? "page" : undefined}
+                          onClick={() => setCurrentPage(page)}
+                          style={{
+                            height: "30px",
+                            minWidth: "30px",
+                            padding: "0 8px",
+                            borderRadius: "6px",
+                            background: isActive
+                              ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                              : "var(--bg-tertiary)",
+                            border: isActive
+                              ? "none"
+                              : "1px solid var(--border-subtle)",
+                            color: isActive ? "#ffffff" : "var(--text-muted)",
+                            cursor: "pointer",
+                            fontSize: "0.76rem",
+                            fontWeight: isActive ? 800 : 500,
+                            boxShadow: isActive
+                              ? "0 2px 8px rgba(245, 158, 11, 0.35)"
+                              : "none",
+                          }}
+                        >
+                          {page}
+                        </button>
+                      </React.Fragment>
                     );
-                  },
-                )}
+                  })}
                 <button
                   type="button"
                   aria-label="Next page"
@@ -2406,7 +2416,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   }
                   disabled={visiblePage === pageCount}
                   style={{
-                    height: "24px",
+                    height: "30px",
                     padding: "0 6px",
                     borderRadius: "5px",
                     background:
@@ -2681,7 +2691,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         height: "32px",
                         border: "1px solid rgba(239,68,68,0.3)",
                         borderRadius: "7px",
-                        color: "#ef4444",
+                        color: "var(--danger)",
                         background: "rgba(239,68,68,0.08)",
                         cursor: "pointer",
                       }}

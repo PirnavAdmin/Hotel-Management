@@ -1,4 +1,4 @@
-const BEVERAGE_CATEGORY = /(beverage|drink|mocktail|cocktail|beer|wine|whisky|whiskey|rum|vodka|gin|soft drink|juice|water|mixer|champagne|brandy|tequila|liqueur)/i;
+const BEVERAGE_CATEGORY = /(beverage|drink|mocktail|cocktail|beer|wine|whisky|whiskey|rum|vodka|gin|soft drink|juice|water|mixer|champagne|brandy|tequila|liqueur|shot|shooter|shake|soda|tea|coffee|energy)/i;
 
 export function isBeverageCategory(category) {
   return BEVERAGE_CATEGORY.test(String(category ?? ""));

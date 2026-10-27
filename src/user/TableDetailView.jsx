@@ -2108,7 +2108,7 @@ export function TableDetailView({
           font-size: 0.54rem;
           font-weight: 700;
           color: #fff;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(var(--surface-rgb),0.1);
         }
 
         .pos-menu-chef {
@@ -3019,6 +3019,7 @@ export function TableDetailView({
                   or click "All Items".
                 </p>
                 <button
+                  className="primary-action-button"
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedCategory("all");
@@ -3164,7 +3165,7 @@ export function TableDetailView({
                             <div
                               style={{
                                 display: "flex",
-                                color: "#ef4444",
+                                color: "var(--danger)",
                                 flexShrink: 0,
                                 opacity: isAvailable ? 1 : 0.4,
                               }}
@@ -3204,7 +3205,7 @@ export function TableDetailView({
                             style={{
                               fontSize: "0.72rem",
                               fontWeight: 700,
-                              color: "#ef4444",
+                              color: "var(--danger)",
                               background: "rgba(239, 68, 68, 0.12)",
                               border: "1px solid rgba(239, 68, 68, 0.35)",
                               borderRadius: "6px",
@@ -3520,7 +3521,7 @@ export function TableDetailView({
                             style={{
                               fontSize: "0.78rem",
                               fontWeight: 900,
-                              color: "#fb923c",
+                              color: "var(--accent-amber-light)",
                               letterSpacing: "0.02em",
                             }}
                           >
@@ -3528,7 +3529,7 @@ export function TableDetailView({
                               ? `CHEF IS COOKING (${readyCount}/${safeItems.length} PREPARED)`
                               : "CHEF IS COOKING ORDER"}
                           </div>
-                          <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--accent-amber-light)', fontWeight: 600 }}>
                             {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
                           </div>
                         </div>
@@ -3943,7 +3944,7 @@ export function TableDetailView({
                           style={{
                             background: "var(--surface-tint)",
                             color: "var(--text-dim)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            border: "1px solid rgba(var(--surface-rgb),0.1)",
                             padding: "0 0.4rem",
                             borderRadius: "4px",
                             fontSize: "0.72rem",
@@ -4040,7 +4041,7 @@ export function TableDetailView({
                     display: "flex",
                     justifyContent: "space-between",
                     fontSize: "0.72rem",
-                    color: "#10b981",
+                    color: "var(--success)",
                   }}
                 >
                   <span>Discount ({currentDiscountPercent}%)</span>
@@ -4375,7 +4376,7 @@ export function TableDetailView({
               <button
                 onClick={() => setIsMobileOrderSlipOpen(false)}
                 style={{
-                  background: "rgba(255, 255, 255, 0.1)",
+                  background: "rgba(var(--surface-rgb),0.1)",
                   color: "var(--text-main)",
                   border: "none",
                   borderRadius: "8px",

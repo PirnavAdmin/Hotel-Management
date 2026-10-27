@@ -1048,6 +1048,49 @@ function globalSyncPlugin() {
         }
 
         // REST API: /api/v1/orders
+        // REST API: /api/Kitchen/active-tickets
+        if (req.url.match(/^\/api\/kitchen\/active-tickets/i) && req.method === "GET") {
+          db = loadDb();
+          const tables = db.gourmet_pos_tables_v2_inr || [];
+          const tickets = [];
+          tables.forEach((t) => {
+            if (Array.isArray(t.items) && t.items.length) {
+              tickets.push({
+                ticketId: t.id,
+                orderId: t.id,
+                tableId: t.id,
+                tableName: t.name || `Table ${t.id}`,
+                section: t.area || "",
+                serverName: t.server || "",
+                kotBatch: 1,
+                orderTime: new Date().toISOString(),
+                ticketStatus: "Queued",
+                items: t.items.map((it, idx) => ({
+                  ...it,
+                  id: it.id ?? idx + 1,
+                  dishName: it.name,
+                  category: it.category || "Beverage",
+                  kotStatus: it.kotStatus || "Queued",
+                })),
+              });
+            }
+          });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify(tickets));
+        }
+
+        // REST API: /api/Kitchen/items/:id/status
+        if (req.url.match(/^\/api\/kitchen\/items\/[^/]+\/status/i) && req.method === "PATCH") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true }));
+        }
+
+        // REST API: /api/Kitchen/tickets/...
+        if (req.url.match(/^\/api\/kitchen\/tickets\//i) && req.method === "POST") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true }));
+        }
+
         if (req.url.startsWith("/api/v1/orders") && req.method === "GET") {
           db = loadDb();
           const orders = db.gourmet_pos_past_orders_v2_inr || [];

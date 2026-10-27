@@ -34,10 +34,6 @@ import {
   FileText,
   BarChart3,
   Settings,
-  Wine,
-  Beer,
-  Martini,
-  GlassWater,
   Sparkles,
   Boxes,
 } from "lucide-react";
@@ -57,9 +53,10 @@ import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
+import { BarWorkspace } from "../bar/BarWorkspace";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
-import { API_BASE_URL } from "../api/apiConfig";
+import { API_BASE_URL, openOptionalEventStream } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -398,7 +395,10 @@ export function AdminPortal({
   onAddTable,
   onUpdateTable,
   onDeleteTable,
+  onBarOrderUpdated,
+  onBarOrderItemStatusUpdated,
   staffList,
+  sharedRecordLoad,
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
@@ -492,7 +492,7 @@ export function AdminPortal({
   // Toggle between Dine (Restaurant) and Bar mode
   const [portalMode, setPortalMode] = useState(() => {
     try {
-      return localStorage.getItem("avsr_portal_mode") || "dine";
+      return localStorage.getItem("avsr_portal_mode") === "bar" ? "bar" : "dine";
     } catch {
       return "dine";
     }
@@ -501,14 +501,27 @@ export function AdminPortal({
   const [activeBarTab, setActiveBarTab] = useState(() => {
     try {
       const saved = localStorage.getItem("avsr_active_bar_tab");
-      return saved || "";
+      return ["bar-overview", "bar-drinks", "bar-tables", "bar-staff", "bar-kot", "bar-inventory", "bar-invoices", "bar-orders", "bar-reports", "bar-access", "bar-settings"].includes(saved) ? saved : "bar-overview";
     } catch {
-      return "";
+      return "bar-overview";
     }
   });
 
+  const handleBarTabChange = (tab) => {
+    if (!["bar-overview", "bar-drinks", "bar-tables", "bar-staff", "bar-kot", "bar-inventory", "bar-invoices", "bar-orders", "bar-reports", "bar-access", "bar-settings"].includes(tab)) return;
+    setActiveBarTab(tab);
+    try { localStorage.setItem("avsr_active_bar_tab", tab); } catch {}
+  };
+
   const handlePortalModeChange = (mode) => {
     setPortalMode(mode);
+    // The work area is shared with other admin sections; start Bar at its
+    // dashboard rather than preserving a previous section's scroll position.
+    if (mode === "bar") {
+      const workArea = document.getElementById("admin-work-area");
+      if (workArea) workArea.scrollTop = 0;
+      if (!activeBarTab?.startsWith("bar-")) handleBarTabChange("bar-overview");
+    }
     try {
       localStorage.setItem("avsr_portal_mode", mode);
     } catch {}
@@ -541,62 +554,6 @@ export function AdminPortal({
     if (!enabled && portalMode === "bar") {
       handlePortalModeChange("dine");
     }
-  };
-
-  const renderBarWorkspace = () => {
-    return (
-      <div
-        style={{
-          minHeight: "420px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          padding: "3.5rem 1.5rem",
-          background: "var(--bg-card)",
-          border: "1.5px dashed var(--border-card)",
-          borderRadius: "16px",
-        }}
-      >
-        <div
-          style={{
-            width: "72px",
-            height: "72px",
-            borderRadius: "50%",
-            background: "rgba(234, 88, 12, 0.12)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: "1.2rem",
-            color: "#ea580c",
-          }}
-        >
-          <Wine size={36} />
-        </div>
-        <h2
-          style={{
-            fontSize: "1.45rem",
-            fontWeight: 800,
-            color: "var(--text-main)",
-            marginBottom: "0.5rem",
-          }}
-        >
-          {activeBarTab ? `Bar - ${activeBarTab}` : "Bar Workspace"}
-        </h2>
-        <p
-          style={{
-            maxWidth: "460px",
-            fontSize: "0.92rem",
-            color: "var(--text-muted)",
-            lineHeight: 1.55,
-            margin: 0,
-          }}
-        >
-          You are currently in Bar mode.
-        </p>
-      </div>
-    );
   };
 
   const [searchFilter, setSearchFilter] = useState("");
@@ -855,9 +812,8 @@ export function AdminPortal({
       )
       .catch(() => {});
 
-    let events;
-    try {
-      events = new EventSource(`${API_BASE_URL}/api/events`);
+    const events = openOptionalEventStream();
+    if (events) {
       events.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
@@ -867,7 +823,7 @@ export function AdminPortal({
           if (settings) applySettings(settings);
         } catch {}
       };
-    } catch {}
+    }
 
     return () => {
       active = false;
@@ -1619,7 +1575,7 @@ export function AdminPortal({
           restaurantTagline={restaurantTagline}
           portalMode={portalMode}
           activeBarTab={activeBarTab}
-          setActiveBarTab={setActiveBarTab}
+          setActiveBarTab={handleBarTabChange}
         />
 
         {/* Right Main Content Pane */}
@@ -1662,7 +1618,31 @@ export function AdminPortal({
             }}
           >
             {portalMode === "bar" ? (
-              renderBarWorkspace()
+              <BarWorkspace
+                activeTab={activeBarTab}
+                onNavigate={handleBarTabChange}
+                menuItems={menuItems}
+                onAddMenuItem={onAddMenuItem}
+                onUpdateMenuItem={onUpdateMenuItem}
+                onDeleteMenuItem={onDeleteMenuItem}
+                onSetMenuAvailability={onSetMenuAvailability}
+                inventory={inventory}
+                pastOrders={pastOrders}
+                restaurantName={restaurantName}
+                restaurantSettings={restaurantSettings}
+                onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
+                tables={tables}
+                staffList={staffList}
+                sharedRecordLoad={sharedRecordLoad}
+                onAddTable={onAddTable}
+                onUpdateTable={onUpdateTable}
+                onDeleteTable={onDeleteTable}
+                onOrderUpdated={onBarOrderUpdated}
+                onBarOrderItemStatusUpdated={onBarOrderItemStatusUpdated}
+                onAddStaff={onAddStaff}
+                onUpdateStaff={onUpdateStaff}
+                onDeleteStaff={onDeleteStaff}
+              />
             ) : (
               <>
                 {/* OVERVIEW TAB */}
@@ -3215,6 +3195,54 @@ export function AdminPortal({
                 {/* ================= TAB 3: STAFF & PERSONS ================= */}
                 {activeTab === "staff" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <style>{`
+                      .staff-filter-toolbar {
+                        display: grid;
+                        grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+                        align-items: end;
+                        gap: 10px;
+                        padding: 0.65rem;
+                        margin-bottom: 0.5rem;
+                        background: var(--bg-secondary);
+                        border-radius: 8px;
+                      }
+                      .staff-filter-toolbar .menu-filter-field { min-width: 0; }
+                      .staff-filter-toolbar .staff-filter-search { flex: initial; }
+                      .staff-filter-toolbar .staff-filter-count {
+                        min-width: max-content;
+                        padding: 0 0.25rem 0.6rem;
+                        color: var(--text-dim);
+                        font-size: 0.74rem;
+                        font-weight: 600;
+                        white-space: nowrap;
+                        text-align: right;
+                      }
+                      @media (max-width: 1100px) {
+                        .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+                        .staff-filter-toolbar .staff-filter-search { grid-column: span 2; }
+                        .staff-filter-toolbar .staff-filter-count { grid-column: 1 / -1; padding: 0; }
+                      }
+                      @media (max-width: 600px) {
+                        .staff-filter-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                        .staff-filter-toolbar .staff-filter-search { grid-column: 1 / -1; }
+                        .staff-filter-toolbar .staff-filter-count { grid-column: 1 / -1; }
+                      }
+                      .staff-table-grid {
+                        display: grid;
+                        grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+                        gap: 0.5rem;
+                      }
+                      .staff-table-grid > * { min-width: 0; }
+                      @media (max-width: 900px) {
+                        .staff-table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+                      }
+                      @media (max-width: 600px) {
+                        .staff-table-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                      }
+                      @media (max-width: 380px) {
+                        .staff-table-grid { grid-template-columns: minmax(0, 1fr); }
+                      }
+                    `}</style>
                     {/* Header: Title + Add New Person Button */}
                     <div
                       style={{
@@ -3311,75 +3339,65 @@ export function AdminPortal({
                         overflow: "hidden",
                       }}
                     >
-                      <div style={{ overflowX: "auto" }}>
-                        <div style={{ width: "100%", minWidth: "720px", padding: "0.6rem", boxSizing: "border-box" }}>
+                      <div>
+                        <div style={{ width: "100%", minWidth: 0, padding: "0.6rem", boxSizing: "border-box" }}>
                           {/* Column Filters Bar (Matching Image 2 header) */}
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
-                              alignItems: "center",
-                              padding: "0.55rem 0.85rem",
-                              background: "var(--bg-secondary)",
-                              borderRadius: "8px",
-                              marginBottom: "0.5rem",
-                              color: "var(--text-dim)",
-                              fontSize: "0.78rem",
-                              gap: "0.5rem",
-                            }}
-                          >
+                          <div className="staff-filter-toolbar" role="search" aria-label="Staff filters">
                             {/* Col 1: Search Filter */}
-                            <div>
-                              <div style={{ position: "relative" }}>
+                            <label className="menu-filter-field menu-filter-search staff-filter-search" htmlFor="staff-filter-search">
+                              <span>Search Staff</span>
+                              <div style={{ position: "relative", width: "100%", height: "36px", display: "flex", alignItems: "center" }}>
                                 <Search
-                                  size={12}
+                                  size={15}
                                   color="var(--text-dim)"
                                   style={{
                                     position: "absolute",
-                                    left: "8px",
-                                    top: "50%",
-                                    transform: "translateY(-50%)",
+                                    left: "12px",
                                     pointerEvents: "none",
                                   }}
                                 />
                                 <input
+                                  id="staff-filter-search"
                                   type="text"
                                   placeholder="Search Staff..."
                                   value={staffFilters.search}
                                   onChange={(e) => updateStaffFilter("search", e.target.value)}
                                   style={{
                                     width: "100%",
-                                    padding: "0.42rem 0.5rem 0.42rem 1.6rem",
-                                    background: "var(--input-bg)",
+                                    height: "100%",
+                                    padding: "0 10px 0 34px",
+                                    background: "var(--bg-tertiary)",
                                     border: staffFilters.search
                                       ? "1px solid #f59e0b"
-                                      : "1px solid rgba(var(--surface-rgb),0.12)",
-                                    borderRadius: "6px",
+                                      : "1px solid var(--border-card)",
+                                    borderRadius: "8px",
                                     color: "var(--text-main)",
-                                    fontSize: "0.78rem",
+                                    fontSize: "0.82rem",
                                     outline: "none",
                                     boxSizing: "border-box",
                                   }}
                                 />
                               </div>
-                            </div>
+                            </label>
 
                             {/* Col 2: Role Filter */}
-                            <div>
+                            <label className="menu-filter-field" htmlFor="staff-filter-role">
+                              <span>Role</span>
                               <select
+                                id="staff-filter-role"
                                 value={staffFilters.role}
                                 onChange={(e) => updateStaffFilter("role", e.target.value)}
                                 style={{
                                   width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "var(--input-bg)",
+                                  padding: "0 10px",
+                                  background: "var(--bg-tertiary)",
                                   border: staffFilters.role
                                     ? "1px solid #f59e0b"
-                                    : "1px solid rgba(var(--surface-rgb),0.12)",
-                                  borderRadius: "6px",
+                                    : "1px solid var(--border-card)",
+                                  borderRadius: "8px",
                                   color: staffFilters.role ? "var(--accent-amber-light)" : "var(--text-main)",
-                                  fontSize: "0.78rem",
+                                  fontSize: "0.82rem",
+                                  height: "36px",
                                   outline: "none",
                                   cursor: "pointer",
                                   boxSizing: "border-box",
@@ -3394,30 +3412,32 @@ export function AdminPortal({
                                   </option>
                                 ))}
                               </select>
-                            </div>
+                            </label>
 
-                            {/* Col 3: Phone Header */}
-                            <div>
-                              <span style={{ color: "var(--text-dim)", fontWeight: 600, fontSize: "0.78rem", paddingLeft: "4px" }}>
-                                Phone / Contact
-                              </span>
-                            </div>
+                            {/* Col 3: Phone / Contact (display-only column; filtering behavior unchanged) */}
+                            <label className="menu-filter-field" htmlFor="staff-filter-contact">
+                              <span>Phone / Contact</span>
+                              <input id="staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
+                            </label>
 
                             {/* Col 4: Shift Filter */}
-                            <div>
+                            <label className="menu-filter-field" htmlFor="staff-filter-shift">
+                              <span>Shift</span>
                               <select
+                                id="staff-filter-shift"
                                 value={staffFilters.shift}
                                 onChange={(e) => updateStaffFilter("shift", e.target.value)}
                                 style={{
                                   width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "var(--input-bg)",
+                                  padding: "0 10px",
+                                  background: "var(--bg-tertiary)",
                                   border: staffFilters.shift
                                     ? "1px solid #f59e0b"
-                                    : "1px solid rgba(var(--surface-rgb),0.12)",
-                                  borderRadius: "6px",
+                                    : "1px solid var(--border-card)",
+                                  borderRadius: "8px",
                                   color: staffFilters.shift ? "var(--accent-amber-light)" : "var(--text-main)",
-                                  fontSize: "0.78rem",
+                                  fontSize: "0.82rem",
+                                  height: "36px",
                                   outline: "none",
                                   cursor: "pointer",
                                   boxSizing: "border-box",
@@ -3432,23 +3452,26 @@ export function AdminPortal({
                                   </option>
                                 ))}
                               </select>
-                            </div>
+                            </label>
 
                             {/* Col 5: Assigned Tables Filter */}
-                            <div>
+                            <label className="menu-filter-field" htmlFor="staff-filter-assigned">
+                              <span>Table Assignment</span>
                               <select
+                                id="staff-filter-assigned"
                                 value={staffFilters.assigned}
                                 onChange={(e) => updateStaffFilter("assigned", e.target.value)}
                                 style={{
                                   width: "100%",
-                                  padding: "0.42rem 0.5rem",
-                                  background: "var(--input-bg)",
+                                  padding: "0 10px",
+                                  background: "var(--bg-tertiary)",
                                   border: staffFilters.assigned
                                     ? "1px solid #f59e0b"
-                                    : "1px solid rgba(var(--surface-rgb),0.12)",
-                                  borderRadius: "6px",
+                                    : "1px solid var(--border-card)",
+                                  borderRadius: "8px",
                                   color: staffFilters.assigned ? "var(--accent-amber-light)" : "var(--text-main)",
-                                  fontSize: "0.78rem",
+                                  fontSize: "0.82rem",
+                                  height: "36px",
                                   outline: "none",
                                   cursor: "pointer",
                                   boxSizing: "border-box",
@@ -3464,10 +3487,10 @@ export function AdminPortal({
                                   No Tables
                                 </option>
                               </select>
-                            </div>
+                            </label>
 
                             {/* Col 6: Reset / Count */}
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                            <div className="staff-filter-count">
                               {hasActiveStaffFilters ? (
                                 <button
                                   type="button"
@@ -3499,11 +3522,33 @@ export function AdminPortal({
                                   <span>Reset</span>
                                 </button>
                               ) : (
-                                <span style={{ fontSize: "0.74rem", color: "var(--text-dim)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                                <span>
                                   {staffList.length} Staff
                                 </span>
                               )}
                             </div>
+                          </div>
+
+                          {/* Staff table headings, separate from the filters */}
+                          <div
+                            className="staff-table-grid"
+                            style={{
+                              alignItems: "center",
+                              padding: "0.65rem 0.85rem",
+                              marginBottom: "0.45rem",
+                              background: "var(--bg-secondary)",
+                              borderRadius: "8px",
+                              color: "var(--text-dim)",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                            }}
+                          >
+                            <div>Staff Name</div>
+                            <div>Role / Designation</div>
+                            <div>Phone / Contact</div>
+                            <div>Shift</div>
+                            <div>Table Assignment</div>
+                            <div style={{ textAlign: "right" }}>Actions</div>
                           </div>
 
                           {/* Empty State */}
@@ -3564,17 +3609,15 @@ export function AdminPortal({
                                 key={personId ?? personName}
                                 style={{
                                   display: "grid",
-                                  gridTemplateColumns:
-                                    "minmax(120px, 1.4fr) minmax(95px, 1.1fr) minmax(100px, 1.1fr) minmax(135px, 1.5fr) minmax(85px, 0.9fr) minmax(130px, 1.2fr)",
                                   alignItems: "center",
                                   padding: "0.55rem 0.85rem",
                                   background: "var(--bg-secondary)",
                                   border: "1px solid var(--neutral-border)",
                                   borderRadius: "8px",
                                   marginBottom: "0.45rem",
-                                  gap: "0.5rem",
                                   transition: "background 0.15s ease, border-color 0.15s ease",
                                 }}
+                                className="staff-table-grid"
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.background = "var(--bg-tertiary)";
                                   e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";

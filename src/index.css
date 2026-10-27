@@ -212,6 +212,93 @@ button {
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Shared foreground treatment for orange primary actions. The inline
+   background selectors cover existing gradient buttons without changing
+   their backgrounds or the styling of outlined/secondary variants. */
+:is(
+  .primary-action-button,
+  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
+  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
+  button[style*="linear-gradient"][style*="#ff7b00"],
+  button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
+  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
+) {
+  color: #ffffff !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+}
+
+:is(
+  .primary-action-button,
+  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
+  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
+  button[style*="linear-gradient"][style*="#ff7b00"],
+  button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
+  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
+):is(:hover, :focus, :focus-visible, :active, :disabled) {
+  color: #ffffff !important;
+}
+
+:is(
+  .primary-action-button,
+  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
+  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
+  button[style*="linear-gradient"][style*="#ff7b00"],
+  button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
+  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
+) > *,
+:is(
+  .primary-action-button,
+  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
+  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
+  button[style*="linear-gradient"][style*="#ff7b00"],
+  button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
+  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
+) svg {
+  color: inherit !important;
+}
+
+:is(
+  .primary-action-button,
+  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
+  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
+  button[style*="linear-gradient"][style*="#ff7b00"],
+  button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
+  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
+) span {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+
+:is(
+  .primary-action-button,
+  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
+  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
+  button[style*="linear-gradient"][style*="#ff7b00"],
+  button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
+  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
+) svg {
+  stroke: currentColor !important;
+}
+
 input,
 select,
 textarea {

@@ -61,7 +61,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
             <stop offset="0%" stopColor="#965a39" />
             <stop offset="100%" stopColor="#6e3c21" />
           </linearGradient>
-          <linearGradient id={gradSelId} x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={gradSelId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f59e0b" />
             <stop offset="100%" stopColor="#ea580c" />
           </linearGradient>
@@ -243,7 +243,7 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
             <stop offset="0%" stopColor="#965a39" />
             <stop offset="100%" stopColor="#67391f" />
           </linearGradient>
-          <linearGradient id={gradSelId} x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={gradSelId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f59e0b" />
             <stop offset="100%" stopColor="#ea580c" />
           </linearGradient>
