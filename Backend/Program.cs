@@ -97,7 +97,8 @@ builder.Services.AddCors(options =>
                 .WithOrigins("http://localhost:5173")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
-                .AllowCredentials();
+                .AllowCredentials()
+                .WithExposedHeaders("Content-Disposition", "Content-Length", "X-Suggested-Filename");
         });
 });
 
@@ -114,6 +115,7 @@ builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
+builder.Services.AddScoped<BarService>();
 builder.Services.AddSignalR();
 
 // ============================================================
