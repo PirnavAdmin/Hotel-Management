@@ -466,7 +466,7 @@ export function App() {
   const isAdminRoute = location.pathname === "/admin";
   const isUserRoute = !isKotRoute && !isAdminRoute;
 
-  // â”€â”€ Live Backend Integration Hook (Ngrok API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
     apiGetTables().then((response) => {
@@ -571,7 +571,7 @@ export function App() {
     });
   }, []);
 
-  // â”€â”€ Authentication sessions per route â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
   // open simultaneously on different browser tabs/screens.
   const SESSION_KEY_POS = "avsr_pos_session";
@@ -673,7 +673,7 @@ export function App() {
     }, 2800);
   };
 
-  // â”€â”€ Kitchen Real-Time Notifications System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Kitchen Real-Time Notifications System ───────────────────
   const STORAGE_KEY_KITCHEN_NOTIFICATIONS = "avsr_kitchen_notifications";
   const STORAGE_KEY_LATEST_ALERT = "avsr_latest_kitchen_alert";
 
@@ -1587,8 +1587,8 @@ export function App() {
       apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch((error) => console.error("Table KOT state sync failed after server dispatch:", error));
 
       setIsKOTOpen(true);
-      triggerKitchenNotification({ tableId, tableName, type: "order_received", title: "ðŸ“¥ KOT Sent", message: `Order for ${tableName} was saved to the KOT service.` });
-      showToast(`ðŸ“¥ KOT sent and saved for ${tableName}.`);
+      triggerKitchenNotification({ tableId, tableName, type: "order_received", title: "📥 KOT Sent", message: `Order for ${tableName} was saved to the KOT service.` });
+      showToast(`📥 KOT sent and saved for ${tableName}.`);
     } catch (error) {
       showToast(`KOT dispatch failed for ${tableName}: ${error?.message || "Could not reach the KOT service."}`);
     } finally {
@@ -1701,28 +1701,28 @@ export function App() {
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_started",
-        title: "ðŸ”¥ Cooking Started",
+        title: "🔥 Cooking Started",
         message: itemName
           ? `Chef started cooking "${itemName}" for ${tbl?.name || `Table ${tableId}`}!`
           : `Chef started cooking order for ${tbl?.name || `Table ${tableId}`}!`,
       });
-      showToast(`ðŸ”¥ ${tbl?.name || `Table ${tableId}`}: Chef started cooking!`);
+      showToast(`🔥 ${tbl?.name || `Table ${tableId}`}: Chef started cooking!`);
     } else if (status === "received") {
       showToast(
-        `ðŸ“¥ ${tbl?.name || `Table ${tableId}`}: Reverted to Order Received.`,
+        `📥 ${tbl?.name || `Table ${tableId}`}: Reverted to Order Received.`,
       );
     } else if (status === "ready") {
       triggerKitchenNotification({
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_completed",
-        title: itemName ? `ðŸ”” "${itemName}" Ready!` : "ðŸ”” Food Ready to Serve!",
+        title: itemName ? `🔔 "${itemName}" Ready!` : "🔔 Food Ready to Serve!",
         message: itemName
           ? `"${itemName}" is prepared and ready to serve for ${tbl?.name || `Table ${tableId}`}!`
           : `Order preparation completed for ${tbl?.name || `Table ${tableId}`}! Food is ready to serve.`,
       });
       showToast(
-        `âœ… ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
+        `✅ ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
       );
     }
   };
@@ -1809,16 +1809,16 @@ export function App() {
       tableName: tbl?.name || `Table ${tableId}`,
       type: "cooking_completed",
       title: isSingleItem
-        ? `ðŸ”” Prepared: ${itemObj.name}`
-        : "ðŸ”” Food Ready to Serve!",
+        ? `🔔 Prepared: ${itemObj.name}`
+        : "🔔 Food Ready to Serve!",
       message: isSingleItem
         ? `"${itemObj.name}" is prepared! Ready to serve.`
-        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! ðŸ½ï¸`,
+        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! 🍽️`,
     });
     showToast(
       isSingleItem
-        ? `âœ… ${tbl?.name || `Table ${tableId}`}: "${itemObj.name}" marked prepared!`
-        : `âœ… ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to serve.`,
+        ? `✅ ${tbl?.name || `Table ${tableId}`}: "${itemObj.name}" marked prepared!`
+        : `✅ ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to serve.`,
     );
   };
 
@@ -2113,7 +2113,7 @@ export function App() {
           }
 
           if (lowStockAlerts.length > 0) {
-            showToast(`âš ï¸ Low stock alert: ${lowStockAlerts.join(", ")}`);
+            showToast(`⚠️  Low stock alert: ${lowStockAlerts.join(", ")}`);
           }
         }
       }
@@ -2255,7 +2255,7 @@ export function App() {
     setSelectedTableId(null);
     setActiveView("tables");
     showToast(
-      `âœ… ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
+      `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
     );
 
     setReprintReceiptData({
@@ -2464,7 +2464,7 @@ export function App() {
       } catch {}
       return updated;
     });
-    showToast(`âœ… Created ${normalizedTable.name} with ${normalizedTable.capacity} chairs!`);
+    showToast(`✅ Created ${normalizedTable.name} with ${normalizedTable.capacity} chairs!`);
   };
 
   const handleUpdateTable = (updatedTable) => {
@@ -2549,7 +2549,7 @@ export function App() {
       setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
     }
 
-    showToast(`ðŸ—‘ï¸  Permanently Deleted ${tbl?.name || "Table"}`);
+    showToast(`🗑️   Permanently Deleted ${tbl?.name || "Table"}`);
   };
 
   // 3. Staff & Persons Admin
@@ -2557,7 +2557,7 @@ export function App() {
     const result = await apiCreateStaff(newPerson);
     if (!result?.success) {
       showToast(
-        `âš ï¸Â Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
@@ -2575,7 +2575,7 @@ export function App() {
       return false;
     }
     setStaffList((prev) => dedupeStaff([...prev, savedPerson]));
-    showToast(`âœ… Staff member "${newPerson.name}" saved to the backend!`);
+    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
     return savedPerson;
   };
 
@@ -2613,7 +2613,7 @@ export function App() {
       }
     }
 
-    showToast(`âœ… Updated staff details for "${updatedPerson.name}"`);
+    showToast(`✅ Updated staff details for "${updatedPerson.name}"`);
     return { ...oldPerson, ...updatedPerson };
   };
 
@@ -2635,7 +2635,7 @@ export function App() {
     setStaffList((prev) =>
       prev.filter((p) => (p.id ?? p.staffId) !== personId),
     );
-    showToast(`ðŸ—‘ï¸Â Removed "${person?.name || person?.fullName || "Staff"}"`);
+    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
@@ -2821,13 +2821,13 @@ export function App() {
 
                     const hasUnsent = items.some((i) => i && i.status !== "cancelled" && !isItemSent(i));
                     if (hasUnsent) {
-                      showToast("âš ï¸ Send KOT to kitchen first before settling.");
+                      showToast("⚠️  Send KOT to kitchen first before settling.");
                       return;
                     }
 
                     const allDoneCooking = items.length > 0 && items.every((i) => i && (i.status === "cancelled" || isItemDone(i)));
                     if (!allDoneCooking) {
-                      showToast("ðŸ‘¨â€ðŸ³ Cooking is in progress. Settle & checkout will enable once kitchen marks food ready.");
+                      showToast("👨‍🍳 Cooking is in progress. Settle & checkout will enable once kitchen marks food ready.");
                       return;
                     }
 
@@ -2906,7 +2906,7 @@ export function App() {
                   fontSize: "1.25rem",
                 }}
               >
-                {activeKitchenAlert.type === "cooking_completed" ? "ðŸ””" : "ðŸ”¥"}
+                {activeKitchenAlert.type === "cooking_completed" ? "🔔" : "🔥"}
               </div>
               <div>
                 <div
@@ -2922,8 +2922,8 @@ export function App() {
                   }}
                 >
                   {activeKitchenAlert.type === "cooking_completed"
-                    ? "âœ… Food Ready To Serve"
-                    : "ðŸ”¥ Cooking in Progress"}
+                    ? "✅ Food Ready To Serve"
+                    : "🔥 Cooking in Progress"}
                 </div>
                 <div
                   style={{
@@ -2954,7 +2954,7 @@ export function App() {
               }}
               title="Dismiss"
             >
-              âœ•
+              ✕
             </button>
           </div>
 
@@ -2981,7 +2981,7 @@ export function App() {
             <span
               style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700 }}
             >
-              â° {activeKitchenAlert.timestamp}
+              ⏰ {activeKitchenAlert.timestamp}
             </span>
             {activeKitchenAlert.tableId && (
               <button
@@ -3015,7 +3015,7 @@ export function App() {
                 View{" "}
                 {activeKitchenAlert.tableName ||
                   `Table ${activeKitchenAlert.tableId}`}{" "}
-                â†’
+                →
               </button>
             )}
           </div>
