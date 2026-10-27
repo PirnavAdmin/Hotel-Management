@@ -116,8 +116,34 @@ export async function apiClient(endpoint, options = {}) {
       return { success: true, data: null };
     }
 
-    const data = JSON.parse(text);
-    return { success: true, data };
+    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html')) {
+      const isNgrok = text.includes('ngrok') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
+      const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
+      let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;
+      if (isNgrok) {
+        msg = 'The ngrok backend tunnel is offline or expired. Make sure ngrok and your backend server are running.';
+      } else if (isViteFallback) {
+        msg = `The backend API server is offline or route ${endpoint} is unhandled.`;
+      }
+      return {
+        success: false,
+        error: msg,
+        rawError: text,
+        status: res.status,
+      };
+    }
+
+    try {
+      const data = JSON.parse(text);
+      return { success: true, data };
+    } catch {
+      return {
+        success: false,
+        error: 'Invalid response format: server returned unparseable response.',
+        rawError: text,
+        status: res.status,
+      };
+    }
   } catch (err) {
     return { success: false, error: err.message || "Network error occurred" };
   }
