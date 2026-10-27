@@ -111,14 +111,20 @@ export function Header({
 
   const safeTables = Array.isArray(tables) ? tables : [];
 
-  const occupiedCount = safeTables.filter((t) => t?.status === "occupied").length;
-  const billedCount = safeTables.filter((t) => t?.status === "billed").length;
-  const vacantCount = safeTables.filter((t) => t?.status === "vacant").length;
+  const isTableActiveDining = (t) => {
+    const hasItems = Array.isArray(t?.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+    return hasItems && t?.status !== "vacant";
+  };
+
+  const occupiedCount = safeTables.filter((t) => isTableActiveDining(t) && t?.status !== "billed").length;
+  const billedCount = safeTables.filter((t) => isTableActiveDining(t) && t?.status === "billed").length;
+  const vacantCount = safeTables.length - occupiedCount - billedCount;
 
   const totalGuests = safeTables
     .reduce((acc, t) => {
+      if (!isTableActiveDining(t)) return acc;
       const g = Math.max(0, Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0) || Number(t?.occupiedChairs) || 0);
-      return acc + (t?.status !== "vacant" || g > 0 ? g : 0);
+      return acc + g;
     }, 0);
 
   const totalRunningRevenue = safeTables
