@@ -1482,6 +1482,14 @@ export function AdminInvoices({
                 <X size={18} />
               </button>
             </div>
+            <div style={{ maxHeight: "150px", overflowY: "auto", marginBottom: "0.9rem", padding: "0.65rem", border: "1px solid var(--border-card)", borderRadius: "8px", background: "var(--bg-secondary)" }}>
+              {(Array.isArray(editingInvoice.items) ? editingInvoice.items : []).map((item, index) => {
+                const quantity = Number(item.quantity ?? item.qty) || 1;
+                const unitPrice = Number(item.price ?? item.unitPrice) || 0;
+                return <div key={item.id ?? `${item.name || item.dishName}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", padding: "0.32rem 0", color: "var(--text-main)", fontSize: "0.75rem" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{item.name || item.dishName || "Item"} × {quantity} · {formatCurrency(unitPrice)}</span><strong style={{ whiteSpace: "nowrap" }}>{formatCurrency(quantity * unitPrice)}</strong></div>;
+              })}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border-card)", marginTop: "0.35rem", paddingTop: "0.45rem", fontSize: "0.75rem", fontWeight: 800 }}><span>Items subtotal</span><span>{formatCurrency((Array.isArray(editingInvoice.items) ? editingInvoice.items : []).reduce((sum, item) => sum + (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity ?? item.qty) || 1), 0))}</span></div>
+            </div>
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.4rem" }}>
               Discount percentage
             </label>
