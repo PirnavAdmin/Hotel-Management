@@ -891,7 +891,7 @@ export function BarWorkspace({
     if (!listConfig) return [];
     return listConfig.rows.filter((row) => {
       const matchesQuery = !query.trim() || JSON.stringify(row).toLowerCase().includes(query.trim().toLowerCase());
-      const matchesFilter = route === "bar-drinks" ? (filter === "all" || String(row.category || "").toLowerCase() === filter.toLowerCase()) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice)) && (stockFilter === "all" || (stockFilter === "low" ? Number(row.currentStock) <= Number(row.minimumStock) : Number(row.currentStock) > Number(row.minimumStock)))
+      const matchesFilter = route === "bar-drinks" ? (filter === "all" || String(row.category || "").toLowerCase() === filter.toLowerCase()) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice))
         : route === "bar-tables" ? (filter === "all" || row.area === filter) && (extraFilter === "all" || row.status === extraFilter) && (capacityFilter === "all" || Number(row.capacity) >= Number(capacityFilter))
         : route === "bar-staff" ? (filter === "all" || row.role === filter) && (extraFilter === "all" || row.shift === extraFilter) && (assignmentFilter === "all" || (Array.isArray(row.tables) && row.tables.includes(assignmentFilter)))
         : true;
@@ -956,14 +956,6 @@ export function BarWorkspace({
               <option value="all">All</option>
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
-            </select>
-          </label>
-          <label className="bar-select-label">
-            <span>Stock</span>
-            <select value={stockFilter} onChange={(event) => { setStockFilter(event.target.value); setPage(1); }}>
-              <option value="all">All stock</option>
-              <option value="low">Low stock</option>
-              <option value="healthy">In stock</option>
             </select>
           </label>
           <label className="bar-select-label">
