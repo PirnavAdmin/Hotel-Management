@@ -45,6 +45,7 @@ import {
   ConfirmDeleteModal,
   useConfirmDelete,
 } from "../common/ConfirmDeleteModal";
+import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { AdminOverview } from "./AdminOverview";
@@ -1155,6 +1156,7 @@ export function AdminPortal({
   // --- TABLE MODAL STATE ---
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
+  const [seatingStructureTable, setSeatingStructureTable] = useState(null);
   const [isNewServerMode, setIsNewServerMode] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const [newServerRole, setNewServerRole] = useState("");
@@ -3001,7 +3003,26 @@ export function AdminPortal({
                                     fontWeight: 500,
                                   }}
                                 >
-                                  {tbl.capacity} Chairs / {tbl.capacity} Persons
+                                  <button
+                                    type="button"
+                                    onClick={() => setSeatingStructureTable(tbl)}
+                                    style={{
+                                      background: "transparent",
+                                      border: "none",
+                                      padding: 0,
+                                      color: "inherit",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "0.35rem",
+                                      fontSize: "inherit",
+                                      fontWeight: "inherit",
+                                    }}
+                                    title="Click to view & configure seating structure"
+                                  >
+                                    <Armchair size={13} color="var(--accent-amber)" />
+                                    <span>{tbl.capacity} Chairs / {tbl.capacity} Persons</span>
+                                  </button>
                                 </div>
 
                                 {/* Col 4: Assigned Server */}
@@ -3048,6 +3069,37 @@ export function AdminPortal({
 
                                 {/* Col 6: Actions */}
                                 <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
+                                  {/* Set / View Seating Structure Modal Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setSeatingStructureTable(tbl)}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      padding: "0.32rem 0.5rem",
+                                      background: "rgba(16, 185, 129, 0.08)",
+                                      color: "#10b981",
+                                      border: "1px solid rgba(16, 185, 129, 0.45)",
+                                      borderRadius: "6px",
+                                      fontSize: "0.74rem",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s ease",
+                                      flexShrink: 0,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = "rgba(16, 185, 129, 0.2)";
+                                      e.currentTarget.style.borderColor = "#10b981";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "rgba(16, 185, 129, 0.08)";
+                                      e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.45)";
+                                    }}
+                                    title="Set Seating Structure & View Layout"
+                                    aria-label="Set Seating Structure & View Layout"
+                                  >
+                                    <Armchair size={13} color="#10b981" />
+                                  </button>
                                   {/* Edit Chairs / Area */}
                                   <button
                                     type="button"
@@ -4439,12 +4491,13 @@ export function AdminPortal({
                             gridTemplateColumns:
                               adminKotTableFilter !== "all"
                                 ? "minmax(320px, 620px)"
-                                : "repeat(auto-fill, minmax(320px, 1fr))",
+                                : "repeat(auto-fill, minmax(360px, 1fr))",
                             gap: "1.25rem",
                             justifyContent:
                               adminKotTableFilter !== "all"
                                 ? "center"
                                 : "stretch",
+                            alignItems: "stretch",
                           }}
                         >
                           {kotDisplayTables.map((tbl) => {
@@ -4460,7 +4513,7 @@ export function AdminPortal({
                               tbl.items &&
                               tbl.items.some((i) => i.kotStatus === "cooking");
 
-                            let statusBadge = "ORDER RECEIVED FROM TABLE";
+                            let statusBadge = "ORDER RECEIVED";
                             let statusColor = "var(--status-occupied)";
                             let statusBg = "rgba(245, 158, 11, 0.15)";
 
@@ -4469,7 +4522,7 @@ export function AdminPortal({
                               statusColor = "var(--success)";
                               statusBg = "rgba(16, 185, 129, 0.15)";
                             } else if (isCooking) {
-                              statusBadge = "PREPARING / COOKING";
+                              statusBadge = "IN PREPARATION";
                               statusColor = "var(--accent-saffron)";
                               statusBg = "rgba(234, 88, 12, 0.15)";
                             }
@@ -4486,24 +4539,30 @@ export function AdminPortal({
                                   overflow: "hidden",
                                   display: "flex",
                                   flexDirection: "column",
+                                  height: "100%",
+                                  boxShadow: allCompleted
+                                    ? "0 4px 18px rgba(16, 185, 129, 0.08)"
+                                    : "0 4px 18px rgba(245, 158, 11, 0.08)",
                                 }}
                               >
-                                {/* Table Number Header */}
+                                {/* Table Number Header - 2 Clean Rows for Zero Crowding */}
                                 <div
                                   style={{
-                                    padding: "0.85rem 1.1rem",
+                                    padding: "0.8rem 1rem",
                                     background: "var(--bg-primary)",
                                     borderBottom: "1px solid var(--border-subtle)",
                                     display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
+                                    flexDirection: "column",
+                                    gap: "0.5rem",
                                   }}
                                 >
+                                  {/* Row 1: Table Badge + Status Pill */}
                                   <div
                                     style={{
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: "0.65rem",
+                                      justifyContent: "space-between",
+                                      gap: "0.6rem",
                                     }}
                                   >
                                     <div
@@ -4512,49 +4571,89 @@ export function AdminPortal({
                                           ? "var(--status-vacant)"
                                           : "linear-gradient(135deg, #f59e0b, #ea580c)",
                                         color: "#ffffff",
-                                        padding: "0.35rem 0.75rem",
-                                        borderRadius: "8px",
-                                        fontWeight: 900,
-                                        fontSize: "1.15rem",
+                                        padding: "0.28rem 0.65rem",
+                                        borderRadius: "7px",
+                                        fontWeight: 800,
+                                        fontSize: "0.95rem",
+                                        letterSpacing: "0.02em",
+                                        whiteSpace: "nowrap",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.25)",
                                       }}
                                     >
                                       {tbl.name}
                                     </div>
-                                    <div>
-                                      <div
-                                        style={{
-                                          fontSize: "0.8rem",
-                                          fontWeight: 700,
-                                          color: "var(--text-main)",
-                                        }}
-                                      >
-                                        {tbl.section} • Server: {tbl.server}
-                                      </div>
-                                      <div
-                                        style={{
-                                          fontSize: "0.72rem",
-                                          color: "var(--accent-amber-light)",
-                                        }}
-                                      >
-                                        Order Received:{" "}
-                                        {tbl.orderTime || "Just Now"}
-                                      </div>
-                                    </div>
+
+                                    <span
+                                      style={{
+                                        padding: "3.5px 9px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.68rem",
+                                        fontWeight: 800,
+                                        letterSpacing: "0.04em",
+                                        textTransform: "uppercase",
+                                        background: statusBg,
+                                        color: statusColor,
+                                        border: `1px solid color-mix(in srgb, ${statusColor} 30%, transparent)`,
+                                        whiteSpace: "nowrap",
+                                        flexShrink: 0,
+                                        textAlign: "center",
+                                      }}
+                                    >
+                                      {statusBadge}
+                                    </span>
                                   </div>
 
-                                  <span
+                                  {/* Row 2: Section, Server & Order Received Time */}
+                                  <div
                                     style={{
-                                      padding: "3px 8px",
-                                      borderRadius: "10px",
-                                      fontSize: "0.68rem",
-                                      fontWeight: 800,
-                                      background: statusBg,
-                                      color: statusColor,
-                                      border: `1px solid color-mix(in srgb, ${statusColor} 25.10%, transparent)`,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      gap: "0.5rem",
+                                      fontSize: "0.75rem",
+                                      lineHeight: 1.3,
                                     }}
                                   >
-                                    {statusBadge}
-                                  </span>
+                                    <div
+                                      style={{
+                                        color: "var(--text-main)",
+                                        fontWeight: 600,
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        minWidth: 0,
+                                        flex: 1,
+                                      }}
+                                      title={`${tbl.section || "Main Hall"} • Server: ${tbl.server || "Staff"}`}
+                                    >
+                                      <span style={{ color: "var(--text-dim)" }}>
+                                        {tbl.section || "Main Hall"}
+                                      </span>
+                                      <span style={{ margin: "0 5px", color: "var(--border-card)" }}>
+                                        •
+                                      </span>
+                                      <span>Server: {tbl.server || "Staff"}</span>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        color: "var(--accent-amber-light)",
+                                        fontWeight: 700,
+                                        fontSize: "0.72rem",
+                                        whiteSpace: "nowrap",
+                                        flexShrink: 0,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <Clock size={11} strokeWidth={2.4} />
+                                      <span>{tbl.orderTime || "Just Now"}</span>
+                                    </div>
+                                  </div>
                                 </div>
 
                                 {/* Ordered Items List */}
@@ -4563,8 +4662,10 @@ export function AdminPortal({
                                     padding: "0.9rem 1.1rem",
                                     display: "flex",
                                     flexDirection: "column",
-                                    gap: "0.5rem",
-                                    maxHeight: "280px",
+                                    gap: "0.55rem",
+                                    flex: 1,
+                                    minHeight: "140px",
+                                    maxHeight: "320px",
                                     overflowY: "auto",
                                   }}
                                 >
@@ -4576,38 +4677,52 @@ export function AdminPortal({
                                           display: "flex",
                                           justifyContent: "space-between",
                                           alignItems: "center",
-                                          padding: "0.5rem 0.65rem",
+                                          padding: "0.55rem 0.75rem",
                                           borderRadius: "var(--radius-sm)",
                                           background: "var(--bg-primary)",
                                           border: "1px solid var(--border-subtle)",
+                                          gap: "0.75rem",
                                         }}
                                       >
                                         <div
                                           style={{
                                             display: "flex",
                                             alignItems: "center",
-                                            gap: "0.6rem",
+                                            gap: "0.65rem",
+                                            minWidth: 0,
+                                            flex: 1,
                                           }}
                                         >
                                           <span
+                                            className="font-mono"
                                             style={{
-                                              background: "var(--accent-amber)",
-                                              color: "#000000",
-                                              padding: "1px 6px",
-                                              borderRadius: "4px",
-                                              fontWeight: 900,
-                                              fontSize: "0.82rem",
+                                              background: "rgba(245, 158, 11, 0.16)",
+                                              border: "1px solid rgba(245, 158, 11, 0.4)",
+                                              color: "var(--accent-amber-light, #f59e0b)",
+                                              padding: "2px 7px",
+                                              borderRadius: "5px",
+                                              fontWeight: 800,
+                                              fontSize: "0.78rem",
+                                              flexShrink: 0,
+                                              minWidth: "26px",
+                                              textAlign: "center",
                                             }}
                                           >
                                             {item.quantity}x
                                           </span>
-                                          <div>
+                                          <div style={{ minWidth: 0, flex: 1 }}>
                                             <div
                                               style={{
                                                 fontSize: "0.88rem",
                                                 fontWeight: 700,
                                                 color: "var(--text-main)",
+                                                textTransform: "capitalize",
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                letterSpacing: "-0.01em",
                                               }}
+                                              title={item.name}
                                             >
                                               {item.name}
                                             </div>
@@ -4617,6 +4732,7 @@ export function AdminPortal({
                                                   fontSize: "0.72rem",
                                                   color: "var(--danger)",
                                                   fontWeight: 600,
+                                                  marginTop: "2px",
                                                 }}
                                               >
                                                 Note: {item.notes}
@@ -4628,8 +4744,23 @@ export function AdminPortal({
                                         <span
                                           style={{
                                             fontSize: "0.68rem",
-                                            fontWeight: 700,
+                                            fontWeight: 800,
+                                            letterSpacing: "0.04em",
                                             textTransform: "uppercase",
+                                            padding: "3px 8px",
+                                            borderRadius: "6px",
+                                            flexShrink: 0,
+                                            whiteSpace: "nowrap",
+                                            background:
+                                              item.kotStatus === "served" ||
+                                              item.kotStatus === "ready"
+                                                ? "rgba(16, 185, 129, 0.12)"
+                                                : "rgba(245, 158, 11, 0.12)",
+                                            border:
+                                              item.kotStatus === "served" ||
+                                              item.kotStatus === "ready"
+                                                ? "1px solid rgba(16, 185, 129, 0.3)"
+                                                : "1px solid rgba(245, 158, 11, 0.3)",
                                             color:
                                               item.kotStatus === "served" ||
                                               item.kotStatus === "ready"
@@ -4639,8 +4770,8 @@ export function AdminPortal({
                                         >
                                           {item.kotStatus === "served" ||
                                           item.kotStatus === "ready"
-                                            ? "Ready"
-                                            : "In Prep"}
+                                            ? "READY"
+                                            : "IN PREP"}
                                         </span>
                                       </div>
                                     ))
@@ -4649,6 +4780,8 @@ export function AdminPortal({
                                       style={{
                                         fontSize: "0.8rem",
                                         color: "var(--text-muted)",
+                                        margin: "auto",
+                                        textAlign: "center",
                                       }}
                                     >
                                       No items currently ordered for this table.
@@ -4660,6 +4793,7 @@ export function AdminPortal({
                                 {tbl.items && tbl.items.length > 0 && (
                                   <div
                                     style={{
+                                      marginTop: "auto",
                                       padding: "0.75rem 1.1rem",
                                       borderTop: "1px solid var(--border-subtle)",
                                       background: "var(--bg-primary)",
@@ -4675,9 +4809,11 @@ export function AdminPortal({
                                         }
                                         style={{
                                           width: "100%",
+                                          minHeight: "42px",
                                           padding: "0.65rem",
                                           borderRadius: "var(--radius-sm)",
-                                          background: "linear-gradient(135deg, #10b981, #059669)",
+                                          background:
+                                            "linear-gradient(135deg, #10b981, #059669)",
                                           color: "#ffffff",
                                           fontWeight: 800,
                                           fontSize: "0.84rem",
@@ -4689,6 +4825,7 @@ export function AdminPortal({
                                           gap: "0.4rem",
                                           boxShadow:
                                             "0 3px 10px rgba(16, 185, 129, 0.3)",
+                                          transition: "all 0.2s ease",
                                         }}
                                       >
                                         <CheckCircle2 size={16} />
@@ -4698,9 +4835,11 @@ export function AdminPortal({
                                       <div
                                         style={{
                                           width: "100%",
+                                          minHeight: "42px",
                                           padding: "0.6rem",
                                           borderRadius: "var(--radius-sm)",
                                           background: "rgba(16, 185, 129, 0.15)",
+                                          border: "1px solid rgba(16, 185, 129, 0.3)",
                                           color: "var(--success)",
                                           fontWeight: 800,
                                           fontSize: "0.82rem",
@@ -4769,6 +4908,7 @@ export function AdminPortal({
                     onSaveSettings={handleSaveRestaurantSettings}
                     showBarHeaderToggle={showBarHeaderToggle}
                     onToggleShowBarHeader={handleToggleShowBarHeader}
+                    currentAdminSession={currentSession}
                   />
                 )}
               </>
@@ -6120,6 +6260,16 @@ export function AdminPortal({
       )}
       {/* Global Custom Delete Confirmation Modal */}
       <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
+
+      {/* Select Seats & Seating Structure Popup Modal (Matching Image 1) */}
+      <SelectSeatsModal
+        table={seatingStructureTable}
+        isOpen={Boolean(seatingStructureTable)}
+        onClose={() => setSeatingStructureTable(null)}
+        onUpdateTable={onUpdateTable}
+        isLight={currentTheme === "light-bistro"}
+        role="admin"
+      />
     </div>
   );
 }
