@@ -1627,7 +1627,7 @@ import { ThemeToggle } from '../common/ThemeToggle';
 //                             <button
 //                               onClick={(e) => {
 //                                 e.stopPropagation();
-//                                 handleStartCooking(tbl.id);
+//                                 handleStartCooking(tbl.uniqueKey);
 //                               }}
 //                               style={{
 //                                 flex: 1,
@@ -1652,7 +1652,7 @@ import { ThemeToggle } from '../common/ThemeToggle';
 //                             <button
 //                               onClick={(e) => {
 //                                 e.stopPropagation();
-//                                 handleResetToReceived(tbl.id);
+//                                 handleResetToReceived(tbl.uniqueKey);
 //                               }}
 //                               style={{
 //                                 flex: 1,
@@ -2215,7 +2215,7 @@ import { ThemeToggle } from '../common/ThemeToggle';
 //   );
 // }
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   ChefHat,
   Clock,
@@ -2240,7 +2240,14 @@ import {
   Moon,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
+import {
+  apiCompleteKitchenTicket,
+  apiGetActiveKitchenTickets,
+  apiStartKitchenTicket,
+  apiUpdateKitchenItemStatus,
+} from "../api/kitchenApi";
 import { KOTModal } from "./KOTModal";
+import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "./orderRouting";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import {
   parseTimeToSeconds,
@@ -2273,7 +2280,11 @@ export function KitchenKOTView({
   onLogout = null,
   restaurantName = "Restaurant",
   restaurantLogo = "",
+  station = "kitchen",
+  menuItems = [],
 }) {
+  const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
+  const isBarStation = station === "bar";
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
   const [isTableFilterOpen, setIsTableFilterOpen] = useState(false);
@@ -2284,6 +2295,52 @@ export function KitchenKOTView({
   const [activePrintTable, setActivePrintTable] = useState(null);
   const [selectedDetailTicket, setSelectedDetailTicket] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [persistedKitchenTickets, setPersistedKitchenTickets] = useState([]);
+  const [isKitchenLoading, setIsKitchenLoading] = useState(true);
+  const [kitchenApiError, setKitchenApiError] = useState("");
+  const kitchenFetchInProgress = useRef(false);
+  const refreshKitchenTicketsRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      if (kitchenFetchInProgress.current) return;
+      kitchenFetchInProgress.current = true;
+      try {
+        if (import.meta.env.DEV) console.debug("[Kitchen] GET /api/Kitchen/active-tickets");
+        const result = await apiGetActiveKitchenTickets();
+        if (!result?.success || !Array.isArray(result.data)) {
+          const message = result?.error || "The Kitchen API returned an unexpected response.";
+          if (import.meta.env.DEV) console.error("[Kitchen] Ticket load failed", { status: result?.status, error: message });
+          if (!cancelled) setKitchenApiError(message);
+          return;
+        }
+        if (import.meta.env.DEV) console.debug("[Kitchen] Tickets loaded", {
+          endpoint: "/api/Kitchen/active-tickets",
+          status: result.status,
+          count: result.data.length,
+        });
+        if (!cancelled) {
+          setPersistedKitchenTickets(result.data);
+          setKitchenApiError("");
+          setIsKitchenLoading(false);
+        }
+      } catch (error) {
+        if (!cancelled) setKitchenApiError(error?.message || "Could not load Kitchen tickets.");
+      } finally {
+        kitchenFetchInProgress.current = false;
+        if (!cancelled) setIsKitchenLoading(false);
+      }
+    };
+    refreshKitchenTicketsRef.current = refresh;
+    refresh();
+    const intervalId = window.setInterval(refresh, 7000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      refreshKitchenTicketsRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isTableFilterOpen) return;
@@ -2380,37 +2437,15 @@ export function KitchenKOTView({
       ? syncedPastOrders
       : pastOrders;
 
-  // KOT Status Helpers
-  // The .NET backend incorrectly sets everything to 'cooking' immediately on send-kot.
-  // We use local state to track which tickets the chef actually clicked "Start Cooking" on,
-  // and treat the rest as "received" so they show up in the correct tab.
-  const [localCookingIds, setLocalCookingIds] = useState(new Set());
-
-  const getItemCookingKey = (item) => item?.id ?? item?.orderId;
-
+  // The Kitchen board uses persisted order-backed tickets as its source of truth.
   const isItemReceived = (item) => {
-    if (
-      !item.kotStatus ||
-      item.kotStatus === "received" ||
-      item.kotStatus === "new" ||
-      item.kotStatus === "queued" ||
-      item.kotStatus === "pending"
-    )
-      return true;
-    if (
-      item.kotStatus === "cooking" &&
-      !localCookingIds.has(getItemCookingKey(item))
-    )
-      return true;
-    return false;
-  };
-
-  const isItemCooking = (item) => {
-    return (
-      item.kotStatus === "cooking" &&
-      localCookingIds.has(getItemCookingKey(item))
+    return ["", "received", "new", "queued", "pending"].includes(
+      String(item?.kotStatus || "").toLowerCase(),
     );
   };
+
+  const isItemCooking = (item) =>
+    String(item?.kotStatus || "").toLowerCase() === "cooking";
 
   const isItemCompleted = (item) =>
     item.kotStatus === "ready" ||
@@ -2477,7 +2512,7 @@ export function KitchenKOTView({
         value: "urgent",
         label: "URGENT",
         emoji: "🔴",
-        color: "#ef4444",
+        color: "var(--danger)",
         bg: "rgba(239, 68, 68, 0.14)",
         border: "rgba(239, 68, 68, 0.45)",
       },
@@ -2551,6 +2586,8 @@ export function KitchenKOTView({
     };
   };
 
+  // One visual card per persisted order batch. Table ID remains the floor-filter key;
+  // the server order ID and batch are retained for Kitchen mutations.
   const getTicketTimeValue = (ticket) => {
     if (Number(ticket?.orderTimestamp) > 0) return Number(ticket.orderTimestamp);
     const value = ticket?.orderTime || ticket?.createdAt || ticket?.orderReceivedAt;
@@ -2559,34 +2596,40 @@ export function KitchenKOTView({
     return Number.isFinite(parsed) ? parsed : parseTimeToSeconds(value);
   };
 
-  // 1. Active Floor Tables with Orders in Preparation (Only from POS)
-  const activeTickets = tables
-    .filter((t) => Array.isArray(t.items) && t.items.length > 0)
-    .filter((t) => {
-      // Must have been sent to KOT from POS
-      const isSent = Boolean(
-        t.kotSent ||
-        (Array.isArray(t.items) && t.items.some((i) => i.kotSent || (i.kotStatus && i.kotStatus !== "new")))
-      );
-      if (!isSent) return false;
-
-      // If table has incomplete items (received or cooking), ALWAYS show it!
-      const allCompleted = t.items.length > 0 && t.items.every(isItemCompleted);
-      if (!allCompleted) return true;
-      // If all completed, hide if explicitly dismissed by chef
-      return (
-        !dismissedPaidTicketIds.includes(String(t.id)) &&
-        !dismissedPaidTicketIds.includes(Number(t.id)) &&
-        !dismissedPaidTicketIds.includes(`active-${t.id}`)
-      );
-    })
-    .map((t) => ({
-      ...t,
-      priority: t.priority ?? t.orderPriority ?? "normal",
-      uniqueKey: `active-${t.id}`,
+  const activeTickets = persistedKitchenTickets.map((ticket) => {
+    const orderId = ticket.orderId ?? ticket.ticketId;
+    const backendTableId = ticket.tableId ?? orderId;
+    const localTable = tables.find((table) =>
+      String(table.backendTableId ?? table.id) === String(backendTableId),
+    );
+    const tableId = localTable?.id ?? backendTableId;
+    const batch = Number(ticket.kotBatch) || 1;
+    return {
+      id: tableId,
+      backendTableId,
+      backendOrderId: orderId,
+      kotBatch: batch,
+      name: ticket.tableName || `Table ${tableId}`,
+      section: ticket.section || ticket.sectionArea || "Main Hall",
+      server: ticket.serverName || "Server",
+      orderTime: ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt,
+      priority: ticket.priority || "normal",
+      uniqueKey: `active-${orderId}-${batch}`,
       isPaid: false,
       ticketType: "active",
-    }));
+      items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
+        const category = findMenuItem(menuLookup, item)?.category;
+        return isBarStation ? isBeverageCategory(category) : !isBeverageCategory(category);
+      }).map((item) => ({
+        ...item,
+        id: item.id ?? item.orderItemId,
+        menuItemId: item.menuItemId,
+        name: item.name || item.dishName || "Order Item",
+        kotStatus: String(item.kotStatus || item.itemStatus || "queued").toLowerCase(),
+        kotBatch: Number(item.kotBatch) || batch,
+      })),
+    };
+  }).filter((ticket) => ticket.items.length > 0);
 
   // Combined List: Only Active Orders from POS
   const allKitchenTickets = activeTickets.sort((a, b) => {
@@ -2705,38 +2748,40 @@ export function KitchenKOTView({
       ) || selectedDetailTicket
     : null;
 
-  const handleStartCooking = (tableId, itemId = null) => {
-    sounds.playAddItem();
+  const findKitchenTicket = (ticketKey) => allKitchenTickets.find(
+    (ticket) => ticket.uniqueKey === ticketKey || String(ticket.id) === String(ticketKey),
+  );
 
-    // Add to our frontend bypass state so it visually transitions from "Received" to "Cooking"
-    const activeTicket = allKitchenTickets.find(
-      (t) => String(t.id) === String(tableId),
-    );
-    if (activeTicket) {
-      const itemsToStart = itemId
-        ? activeTicket.items.filter(
-            (item) => String(getItemCookingKey(item)) === String(itemId),
-          )
-        : activeTicket.items.filter((item) => !isItemCompleted(item));
-
-      setLocalCookingIds((prev) => {
-        const newSet = new Set(prev);
-        itemsToStart.forEach((item) => {
-          const cookingKey = getItemCookingKey(item);
-          if (cookingKey != null) newSet.add(cookingKey);
-        });
-        return newSet;
-      });
-    }
-
-    onUpdateItemKotStatus(tableId, "cooking", itemId);
+  const reportKitchenActionError = (result, action) => {
+    const message = result?.error || `${action} failed. Please retry.`;
+    setKitchenApiError(message);
+    if (import.meta.env.DEV) console.error(`[Kitchen] ${action} failed`, { status: result?.status, error: message });
   };
 
-  const handleCompletePreparation = (tableId, itemId = null) => {
+  const handleStartCooking = async (ticketKey, itemId = null) => {
+    sounds.playAddItem();
+    const ticket = findKitchenTicket(ticketKey);
+    if (!ticket) return;
+
+    const result = itemId
+      ? await apiUpdateKitchenItemStatus(itemId, "cooking")
+      : await apiStartKitchenTicket(ticket.backendOrderId, ticket.kotBatch);
+    if (!result?.success) {
+      reportKitchenActionError(result, "Start cooking");
+      return;
+    }
+    const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId));
+    const localTableId = tables.find((table) =>
+      String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
+    )?.id ?? ticket.id;
+    onUpdateItemKotStatus?.(localTableId, "cooking", targetItem?.menuItemId ?? null);
+    await refreshKitchenTicketsRef.current?.();
+  };
+
+  const handleCompletePreparation = async (ticketKey, itemId = null) => {
     sounds.playBell();
-    const currentTable = allKitchenTickets.find(
-      (t) => String(t.id) === String(tableId),
-    );
+    const currentTable = findKitchenTicket(ticketKey);
+    if (!currentTable) return;
     const nowTimeStr = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -2756,29 +2801,57 @@ export function KitchenKOTView({
     const willAllBeReady =
       !itemId ||
       (currentTable?.items &&
-        currentTable.items.every((i) => i.id === itemId || isItemCompleted(i)));
+        currentTable.items.every((i) => String(i.id) === String(itemId) || isItemCompleted(i)));
     if (willAllBeReady && durationStr) {
       setCompletedTimers((prev) => ({
         ...prev,
-        [tableId]: durationStr,
-        [`table-${tableId}`]: durationStr,
+        [ticketKey]: durationStr,
+        [`table-${currentTable.id}`]: durationStr,
         ...(currentTable?.uniqueKey
           ? { [currentTable.uniqueKey]: durationStr }
           : {}),
       }));
     }
-    onCompleteTableKot(tableId, itemId, durationStr, nowTimeStr);
+    const result = itemId
+      ? await apiUpdateKitchenItemStatus(itemId, "ready")
+      : await apiCompleteKitchenTicket(currentTable.backendOrderId, currentTable.kotBatch);
+    if (!result?.success) {
+      reportKitchenActionError(result, "Complete preparation");
+      return;
+    }
+    const targetItem = itemId && currentTable.items.find((item) => String(item.id) === String(itemId));
+    const localTableId = tables.find((table) =>
+      String(table.backendTableId ?? table.id) === String(currentTable.backendTableId),
+    )?.id ?? currentTable.id;
+    onCompleteTableKot?.(localTableId, targetItem?.menuItemId ?? null, durationStr, nowTimeStr);
+    await refreshKitchenTicketsRef.current?.();
   };
 
-  const handleResetToReceived = (tableId, itemId = null) => {
+  const handleResetToReceived = async (ticketKey, itemId = null) => {
     sounds.playAddItem();
+    const ticket = findKitchenTicket(ticketKey);
+    if (!ticket) return;
     setCompletedTimers((prev) => {
       const copy = { ...prev };
-      delete copy[tableId];
-      delete copy[`table-${tableId}`];
+      delete copy[ticketKey];
+      delete copy[`table-${ticket.id}`];
       return copy;
     });
-    onUpdateItemKotStatus(tableId, "received", itemId);
+    const targetItems = itemId
+      ? ticket.items.filter((item) => String(item.id) === String(itemId))
+      : ticket.items.filter((item) => !isItemCompleted(item));
+    const results = await Promise.all(targetItems.map((item) => apiUpdateKitchenItemStatus(item.id, "queued")));
+    const failed = results.find((result) => !result?.success);
+    if (failed) {
+      reportKitchenActionError(failed, "Reset item to received");
+      return;
+    }
+    const targetItem = itemId && targetItems[0];
+    const localTableId = tables.find((table) =>
+      String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
+    )?.id ?? ticket.id;
+    onUpdateItemKotStatus?.(localTableId, "received", targetItem?.menuItemId ?? null);
+    await refreshKitchenTicketsRef.current?.();
   };
 
   // Toggle single dish status: Received -> Cooking -> Prepared
@@ -2814,6 +2887,47 @@ export function KitchenKOTView({
   return (
     <>
       <style>{`
+        .kot-start-cooking-button {
+          background: #f97316;
+          color: #ffffff;
+          font-weight: 600;
+          font-size: 0.78rem;
+          line-height: 1.2;
+          box-shadow: 0 1px 4px rgba(194, 65, 12, 0.22);
+          transition: background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .kot-start-cooking-button:hover {
+          background: #ea580c;
+          color: #ffffff;
+          box-shadow: 0 2px 6px rgba(194, 65, 12, 0.28);
+        }
+
+        .kot-start-cooking-button:active {
+          background: #c2410c;
+        }
+
+        .kot-start-cooking-button:focus-visible {
+          outline: 2px solid #ffffff;
+          outline-offset: 2px;
+        }
+
+        .kot-start-cooking-button:disabled {
+          background: #c2410c;
+          color: #ffffff;
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+
+        .kot-start-cooking-button > *,
+        .kot-start-cooking-button svg {
+          color: #ffffff !important;
+        }
+
+        .kot-start-cooking-button svg {
+          stroke: currentColor !important;
+        }
+
         .kot-cards-grid {
           width: 100%;
         }
@@ -3132,7 +3246,7 @@ export function KitchenKOTView({
                   label: "All Orders",
                   count: totalOrdersCount,
                   dot: "#fbbf24",
-                  badgeColor: "#fbbf24",
+                  badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(245, 158, 11, 0.25)",
                   badgeBorder: "rgba(245, 158, 11, 0.5)",
                 },
@@ -3141,7 +3255,7 @@ export function KitchenKOTView({
                   label: "Received",
                   count: pendingOrdersCount,
                   dot: "#f59e0b",
-                  badgeColor: "#fbbf24",
+                  badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(245, 158, 11, 0.25)",
                   badgeBorder: "rgba(245, 158, 11, 0.5)",
                 },
@@ -3150,7 +3264,7 @@ export function KitchenKOTView({
                   label: "Cooking",
                   count: cookingOrdersCount,
                   dot: "#ea580c",
-                  badgeColor: "#fb923c",
+                  badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(234, 88, 12, 0.25)",
                   badgeBorder: "rgba(234, 88, 12, 0.5)",
                 },
@@ -3159,7 +3273,7 @@ export function KitchenKOTView({
                   label: "Completed",
                   count: completedOrdersCount,
                   dot: "#10b981",
-                  badgeColor: "#34d399",
+                  badgeColor: "var(--success)",
                   badgeBg: "rgba(16, 185, 129, 0.25)",
                   badgeBorder: "rgba(16, 185, 129, 0.5)",
                 },
@@ -3486,6 +3600,41 @@ export function KitchenKOTView({
             minHeight: 0,
           }}
         >
+          {kitchenApiError && (
+            <div
+              role="alert"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "0.75rem",
+                padding: "0.7rem 0.9rem",
+                marginBottom: "0.75rem",
+                border: "1px solid rgba(239, 68, 68, 0.35)",
+                borderRadius: "8px",
+                background: "rgba(239, 68, 68, 0.1)",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+              }}
+            >
+              <span>Kitchen data could not be refreshed: {kitchenApiError}</span>
+              <button
+                type="button"
+                onClick={() => refreshKitchenTicketsRef.current?.()}
+                style={{
+                  flexShrink: 0,
+                  padding: "0.35rem 0.65rem",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "6px",
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
           {filteredTables.length === 0 ? (
             /* Empty State */
             <div
@@ -3522,7 +3671,11 @@ export function KitchenKOTView({
                     color: "var(--text-main)",
                   }}
                 >
-                  {selectedTableFilter !== "all"
+                  {isKitchenLoading
+                    ? "Loading Kitchen tickets…"
+                    : kitchenApiError
+                      ? "Kitchen tickets are unavailable"
+                      : selectedTableFilter !== "all"
                     ? `No Orders Received for ${singleSelectedTable?.name || `Table ${selectedTableFilter}`} Yet!`
                     : "No Pending KOT Orders in Kitchen!"}
                 </h3>
@@ -3534,7 +3687,11 @@ export function KitchenKOTView({
                     marginTop: "0.35rem",
                   }}
                 >
-                  {selectedTableFilter !== "all"
+                  {isKitchenLoading
+                    ? "Checking persisted Kitchen orders from the server."
+                    : kitchenApiError
+                      ? "Reconnect to the Kitchen API and retry to load server-saved tickets."
+                      : selectedTableFilter !== "all"
                     ? `Open ${singleSelectedTable?.name || `Table ${selectedTableFilter}`} on the dining floor to add biryanis and dishes, then click "Send KOT".`
                     : "All kitchen tickets are currently prepared or no tables have placed orders. Click any table button above to inspect."}
                 </p>
@@ -3625,20 +3782,20 @@ export function KitchenKOTView({
 
                 let headerBg = isLightTheme
                   ? "#f8fafc"
-                  : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)";
+                  : "linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)";
                 let badgeText = "📥 ORDER RECEIVED";
-                let badgeColor = "#f59e0b";
+                let badgeColor = "var(--status-occupied)";
                 let badgeBg = "rgba(245, 158, 11, 0.18)";
                 let tableBadgeBg = "linear-gradient(135deg, #f59e0b, #d97706)";
 
                 if (tbl.isPaid) {
                   badgeText = "💰 COMPLETED (PAID)";
-                  badgeColor = "#34d399";
+                  badgeColor = "var(--success)";
                   badgeBg = "rgba(16, 185, 129, 0.2)";
                   tableBadgeBg = "linear-gradient(135deg, #059669, #047857)";
                 } else if (allServed) {
                   badgeText = "✅ PREPARATION COMPLETED";
-                  badgeColor = "#10b981";
+                  badgeColor = "var(--success)";
                   badgeBg = "rgba(16, 185, 129, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #10b981, #059669)";
                 } else if (isCooking) {
@@ -3646,7 +3803,7 @@ export function KitchenKOTView({
                     preparedCount > 0
                       ? `🔥 COOKING (${preparedCount}/${totalCount} PREPARED)`
                       : "🔥 COOKING IN PROGRESS";
-                  badgeColor = "#ea580c";
+                  badgeColor = "var(--accent-saffron)";
                   badgeBg = "rgba(234, 88, 12, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #ea580c, #c2410c)";
                 } else {
@@ -3658,12 +3815,12 @@ export function KitchenKOTView({
 
                 if (delayMeta.isDelayed) {
                   badgeText = `🔴 DELAYED ${delayMeta.deltaText}`;
-                  badgeColor = "#ef4444";
+                  badgeColor = "var(--danger)";
                   badgeBg = "rgba(239, 68, 68, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #ef4444, #b91c1c)";
                 } else if (delayMeta.isOnTime && tbl.cookingStartedAt) {
                   badgeText = "🟢 ON TIME";
-                  badgeColor = "#22c55e";
+                  badgeColor = "var(--success)";
                   badgeBg = "rgba(34, 197, 94, 0.18)";
                   tableBadgeBg = "linear-gradient(135deg, #22c55e, #16a34a)";
                 }
@@ -3760,7 +3917,7 @@ export function KitchenKOTView({
                         background: headerBg,
                         borderBottom: isLightTheme
                           ? "1px solid #e2e8f0"
-                          : "1px solid rgba(255,255,255,0.08)",
+                          : "1px solid rgba(var(--surface-rgb),0.08)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
@@ -3786,7 +3943,7 @@ export function KitchenKOTView({
                             fontSize: "0.86rem",
                             letterSpacing: "-0.02em",
                             boxShadow:
-                              "0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)",
+                              "0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(var(--surface-rgb),0.3)",
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
@@ -3854,7 +4011,7 @@ export function KitchenKOTView({
                           <span
                             style={{
                               background: "rgba(239, 68, 68, 0.14)",
-                              color: "#ef4444",
+                              color: "var(--danger)",
                               border: "1px solid rgba(239, 68, 68, 0.45)",
                               padding: "2px 6px",
                               borderRadius: "5px",
@@ -3910,10 +4067,10 @@ export function KitchenKOTView({
                           style={{
                             background: isLightTheme
                               ? "#ffffff"
-                              : "rgba(255,255,255,0.08)",
+                              : "rgba(var(--surface-rgb),0.08)",
                             border: isLightTheme
                               ? "1px solid #cbd5e1"
-                              : "1px solid rgba(255,255,255,0.15)",
+                              : "1px solid rgba(var(--surface-rgb),0.15)",
                             color: isLightTheme
                               ? "#1f2937"
                               : "var(--text-muted)",
@@ -3936,7 +4093,7 @@ export function KitchenKOTView({
                       style={{
                         padding: "0.26rem 0.65rem",
                         background: badgeBg,
-                        borderBottom: `1px solid ${badgeColor}35`,
+                        borderBottom: `1px solid color-mix(in srgb, ${badgeColor} 20.78%, transparent)`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -3959,7 +4116,7 @@ export function KitchenKOTView({
                           : "rgba(0, 0, 0, 0.32)",
                         borderBottom: isLightTheme
                           ? "1px solid #e2e8f0"
-                          : "1px solid rgba(255,255,255,0.08)",
+                          : "1px solid rgba(var(--surface-rgb),0.08)",
                         padding: "0.32rem 0.55rem",
                         display: "grid",
                         gridTemplateColumns: "repeat(3, 1fr)",
@@ -3991,7 +4148,7 @@ export function KitchenKOTView({
                             alignItems: "center",
                             justifyContent: "center",
                             gap: "2px",
-                            color: isLightTheme ? "#b45309" : "#fbbf24",
+                            color: isLightTheme ? "#b45309" : "var(--accent-amber-light)",
                             fontSize: "0.54rem",
                             fontWeight: 800,
                             letterSpacing: "0.04em",
@@ -4022,7 +4179,7 @@ export function KitchenKOTView({
                                 : "rgba(255, 123, 0, 0.12)"
                               : isLightTheme
                                 ? "#f8fafc"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                           border:
                             isCooking || allServed || tbl.isPaid
                               ? isLightTheme
@@ -4030,7 +4187,7 @@ export function KitchenKOTView({
                                 : "1.5px solid rgba(255, 123, 0, 0.4)"
                               : isLightTheme
                                 ? "1px solid #cbd5e1"
-                                : "1px solid rgba(255, 255, 255, 0.08)",
+                                : "1px solid rgba(var(--surface-rgb),0.08)",
                           borderRadius: "5px",
                           padding: "0.22rem 0.35rem",
                           display: "flex",
@@ -4090,7 +4247,7 @@ export function KitchenKOTView({
                                 : "rgba(16, 185, 129, 0.14)"
                               : isLightTheme
                                 ? "#f8fafc"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                           border:
                             allServed || tbl.isPaid
                               ? isLightTheme
@@ -4098,7 +4255,7 @@ export function KitchenKOTView({
                                 : "1.5px solid rgba(16, 185, 129, 0.45)"
                               : isLightTheme
                                 ? "1px solid #cbd5e1"
-                                : "1px solid rgba(255, 255, 255, 0.08)",
+                                : "1px solid rgba(var(--surface-rgb),0.08)",
                           borderRadius: "5px",
                           padding: "0.22rem 0.35rem",
                           display: "flex",
@@ -4167,7 +4324,7 @@ export function KitchenKOTView({
                             <span
                               style={{
                                 fontSize: "0.58rem",
-                                color: "#10b981",
+                                color: "var(--success)",
                                 fontWeight: 800,
                                 fontFamily: "monospace",
                               }}
@@ -4209,14 +4366,14 @@ export function KitchenKOTView({
                         style={{
                           fontSize: "0.64rem",
                           fontWeight: 800,
-                          color: isLightTheme ? "#475569" : "var(--text-muted)",
+                          color: isLightTheme ? "var(--text-dim)" : "var(--text-muted)",
                           textTransform: "uppercase",
                           letterSpacing: "0.05em",
                           display: "flex",
                           justifyContent: "space-between",
                           borderBottom: isLightTheme
                             ? "1px solid #e2e8f0"
-                            : "1px solid rgba(255,255,255,0.08)",
+                            : "1px solid rgba(var(--surface-rgb),0.08)",
                           paddingBottom: "0.28rem",
                         }}
                       >
@@ -4249,7 +4406,7 @@ export function KitchenKOTView({
                                       ? "rgba(255, 123, 0, 0.1)"
                                       : isLightTheme
                                         ? "#f8fafc"
-                                        : "rgba(255, 255, 255, 0.04)",
+                                        : "rgba(var(--surface-rgb),0.04)",
                                   borderRadius: "var(--radius-sm)",
                                   padding: "0.42rem 0.55rem",
                                   border: itemReady
@@ -4258,7 +4415,7 @@ export function KitchenKOTView({
                                       ? "1.5px solid rgba(255, 123, 0, 0.4)"
                                       : isLightTheme
                                         ? "1px solid #cbd5e1"
-                                        : "1px solid rgba(255,255,255,0.08)",
+                                        : "1px solid rgba(var(--surface-rgb),0.08)",
                                   display: "flex",
                                   alignItems: "flex-start",
                                   justifyContent: "space-between",
@@ -4342,7 +4499,7 @@ export function KitchenKOTView({
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleToggleItemStatus(tbl.id, item);
+                                      handleToggleItemStatus(tbl.uniqueKey, item);
                                     }}
                                     style={{
                                       fontSize: "0.64rem",
@@ -4425,7 +4582,7 @@ export function KitchenKOTView({
                           border: isLightTheme
                             ? "1px solid rgba(180, 83, 9, 0.45)"
                             : "1px solid rgba(245, 158, 11, 0.4)",
-                          color: isLightTheme ? "#b45309" : "#fbbf24",
+                          color: isLightTheme ? "#b45309" : "var(--accent-amber-light)",
                           fontWeight: 800,
                           fontSize: "0.72rem",
                           display: "flex",
@@ -4450,7 +4607,7 @@ export function KitchenKOTView({
                           : "rgba(0,0,0,0.35)",
                         borderTop: isLightTheme
                           ? "1px solid #e2e8f0"
-                          : "1px solid rgba(255,255,255,0.08)",
+                          : "1px solid rgba(var(--surface-rgb),0.08)",
                         display: "flex",
                         flexDirection: "column",
                         gap: "0.42rem",
@@ -4460,39 +4617,35 @@ export function KitchenKOTView({
                       {isReceived && (
                         <div style={{ display: "flex", gap: "0.45rem" }}>
                           <button
+                            className="kot-start-cooking-button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleStartCooking(tbl.id);
+                              handleStartCooking(tbl.uniqueKey);
                             }}
                             style={{
                               flex: 2,
                               padding: "0.52rem 0.65rem",
                               borderRadius: "var(--radius-sm)",
-                              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                              color: "#ffffff",
-                              fontWeight: 800,
-                              fontSize: "0.78rem",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               gap: "0.35rem",
                               border: "none",
                               cursor: "pointer",
-                              boxShadow: "0 3px 10px rgba(245, 158, 11, 0.35)",
                             }}
                           >
                             <Flame size={14} />
                             <span>
                               {preparedCount > 0
-                                ? `🔥 COOK REMAINING (${totalCount - preparedCount})`
-                                : "🔥 START COOKING"}
+                                ? `COOK REMAINING (${totalCount - preparedCount})`
+                                : "START COOKING"}
                             </span>
                           </button>
 
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCompletePreparation(tbl.id);
+                              handleCompletePreparation(tbl.uniqueKey);
                             }}
                             style={{
                               flex: 1,
@@ -4500,7 +4653,7 @@ export function KitchenKOTView({
                               borderRadius: "var(--radius-sm)",
                               background: "rgba(16, 185, 129, 0.15)",
                               border: "1px solid rgba(16, 185, 129, 0.4)",
-                              color: "#10b981",
+                              color: "var(--success)",
                               fontWeight: 700,
                               fontSize: "0.72rem",
                               display: "flex",
@@ -4522,7 +4675,7 @@ export function KitchenKOTView({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCompletePreparation(tbl.id);
+                              handleCompletePreparation(tbl.uniqueKey);
                             }}
                             style={{
                               flex: 2,
@@ -4552,7 +4705,7 @@ export function KitchenKOTView({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleResetToReceived(tbl.id);
+                              handleResetToReceived(tbl.uniqueKey);
                             }}
                             style={{
                               flex: 1,
@@ -4560,10 +4713,10 @@ export function KitchenKOTView({
                               borderRadius: "var(--radius-sm)",
                               background: isLightTheme
                                 ? "#ffffff"
-                                : "rgba(255, 255, 255, 0.06)",
+                                : "rgba(var(--surface-rgb),0.06)",
                               border: isLightTheme
                                 ? "1px solid #cbd5e1"
-                                : "1px solid rgba(255,255,255,0.12)",
+                                : "1px solid rgba(var(--surface-rgb),0.12)",
                               color: isLightTheme
                                 ? "#475569"
                                 : "var(--text-muted)",
@@ -4615,7 +4768,7 @@ export function KitchenKOTView({
                           >
                             <div
                               style={{
-                                color: isLightTheme ? "#047857" : "#34d399",
+                                color: isLightTheme ? "#047857" : "var(--success)",
                                 fontWeight: 900,
                                 fontSize: "0.8rem",
                                 display: "flex",
@@ -4660,10 +4813,10 @@ export function KitchenKOTView({
                                   borderRadius: "var(--radius-sm)",
                                   background: isLightTheme
                                     ? "#ffffff"
-                                    : "rgba(255, 255, 255, 0.08)",
+                                    : "rgba(var(--surface-rgb),0.08)",
                                   border: isLightTheme
                                     ? "1px solid #cbd5e1"
-                                    : "1px solid rgba(255,255,255,0.15)",
+                                    : "1px solid rgba(var(--surface-rgb),0.15)",
                                   color: isLightTheme ? "#1f2937" : "#ffffff",
                                   fontWeight: 700,
                                   fontSize: "0.72rem",
@@ -4710,7 +4863,7 @@ export function KitchenKOTView({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleStartCooking(tbl.id);
+                                  handleStartCooking(tbl.uniqueKey);
                                 }}
                                 style={{
                                   flex: 1,
@@ -4718,7 +4871,7 @@ export function KitchenKOTView({
                                   borderRadius: "var(--radius-sm)",
                                   background: "rgba(234, 88, 12, 0.12)",
                                   border: "1px solid rgba(234, 88, 12, 0.35)",
-                                  color: "#fb923c",
+                                  color: "var(--accent-amber-light)",
                                   fontWeight: 700,
                                   fontSize: "0.72rem",
                                   display: "flex",
@@ -4735,7 +4888,7 @@ export function KitchenKOTView({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleResetToReceived(tbl.id);
+                                  handleResetToReceived(tbl.uniqueKey);
                                 }}
                                 style={{
                                   flex: 1,
@@ -4856,12 +5009,12 @@ export function KitchenKOTView({
 
             if (modalTicket.isPaid) {
               statusBadgeText = "💰 COMPLETED (PAID)";
-              statusBadgeColor = "#34d399";
+              statusBadgeColor = "var(--success)";
               statusBadgeBg = "rgba(16, 185, 129, 0.22)";
               statusBadgeBorder = "rgba(16, 185, 129, 0.55)";
             } else if (allServed) {
               statusBadgeText = "✅ PREPARATION COMPLETED";
-              statusBadgeColor = "#10b981";
+              statusBadgeColor = "var(--success)";
               statusBadgeBg = "rgba(16, 185, 129, 0.22)";
               statusBadgeBorder = "rgba(16, 185, 129, 0.55)";
             } else if (isCooking) {
@@ -4918,11 +5071,11 @@ export function KitchenKOTView({
                     style={{
                       background: isLightTheme
                         ? "#f8fafc"
-                        : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                        : "linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)",
                       padding: "1rem 1.25rem",
                       borderBottom: isLightTheme
                         ? "1.5px solid #e2e8f0"
-                        : "1.5px solid rgba(255,255,255,0.1)",
+                        : "1.5px solid rgba(var(--surface-rgb),0.1)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
@@ -5028,11 +5181,11 @@ export function KitchenKOTView({
                       style={{
                         background: isLightTheme
                           ? "#ffffff"
-                          : "rgba(255,255,255,0.08)",
+                          : "rgba(var(--surface-rgb),0.08)",
                         border: isLightTheme
                           ? "1px solid #cbd5e1"
-                          : "1px solid rgba(255,255,255,0.15)",
-                        color: isLightTheme ? "#475569" : "#cbd5e1",
+                          : "1px solid rgba(var(--surface-rgb),0.15)",
+                        color: isLightTheme ? "var(--text-dim)" : "var(--text-muted)",
                         width: "32px",
                         height: "32px",
                         borderRadius: "8px",
@@ -5096,7 +5249,7 @@ export function KitchenKOTView({
                               alignItems: "center",
                               justifyContent: "center",
                               gap: "4px",
-                              color: isLightTheme ? "#92400e" : "#fbbf24",
+                              color: isLightTheme ? "#92400e" : "var(--accent-amber-light)",
                               fontSize: "0.68rem",
                               fontWeight: 800,
                             }}
@@ -5118,7 +5271,7 @@ export function KitchenKOTView({
                           <div
                             style={{
                               fontSize: "0.65rem",
-                              color: isLightTheme ? "#92400e" : "#fbbf24",
+                              color: isLightTheme ? "#92400e" : "var(--accent-amber-light)",
                               marginTop: "2px",
                               fontWeight: 700,
                             }}
@@ -5133,11 +5286,11 @@ export function KitchenKOTView({
                             background:
                               isCooking || allServed || modalTicket.isPaid
                                 ? "rgba(255, 123, 0, 0.12)"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                             border:
                               isCooking || allServed || modalTicket.isPaid
                                 ? "1.5px solid rgba(255, 123, 0, 0.45)"
-                                : "1px solid rgba(255, 255, 255, 0.1)",
+                                : "1px solid rgba(var(--surface-rgb),0.1)",
                             borderRadius: "8px",
                             padding: "0.65rem 0.5rem",
                             textAlign: "center",
@@ -5209,11 +5362,11 @@ export function KitchenKOTView({
                             background:
                               allServed || modalTicket.isPaid
                                 ? "rgba(16, 185, 129, 0.14)"
-                                : "rgba(255, 255, 255, 0.04)",
+                                : "rgba(var(--surface-rgb),0.04)",
                             border:
                               allServed || modalTicket.isPaid
                                 ? "1.5px solid rgba(16, 185, 129, 0.5)"
-                                : "1px solid rgba(255, 255, 255, 0.1)",
+                                : "1px solid rgba(var(--surface-rgb),0.1)",
                             borderRadius: "8px",
                             padding: "0.65rem 0.5rem",
                             textAlign: "center",
@@ -5267,7 +5420,7 @@ export function KitchenKOTView({
                           <div
                             style={{
                               fontSize: "0.65rem",
-                              color: isLightTheme ? "#047857" : "#10b981",
+                              color: isLightTheme ? "#047857" : "var(--success)",
                               marginTop: "2px",
                               fontWeight: 800,
                               fontFamily: "monospace",
@@ -5327,14 +5480,14 @@ export function KitchenKOTView({
                                     ? "rgba(16, 185, 129, 0.12)"
                                     : itemCooking
                                       ? "rgba(255, 123, 0, 0.12)"
-                                      : "rgba(255, 255, 255, 0.04)",
+                                      : "rgba(var(--surface-rgb),0.04)",
                                   borderRadius: "8px",
                                   padding: "0.65rem 0.85rem",
                                   border: itemReady
                                     ? "1.5px solid rgba(16, 185, 129, 0.45)"
                                     : itemCooking
                                       ? "1.5px solid rgba(255, 123, 0, 0.45)"
-                                      : "1px solid rgba(255,255,255,0.1)",
+                                      : "1px solid rgba(var(--surface-rgb),0.1)",
                                   animation: itemCooking
                                     ? "kot-cooking-pulse 1.8s ease-in-out infinite"
                                     : "none",
@@ -5416,7 +5569,7 @@ export function KitchenKOTView({
                                   <button
                                     onClick={() =>
                                       handleToggleItemStatus(
-                                        modalTicket.id,
+                                        modalTicket.uniqueKey,
                                         item,
                                       )
                                     }
@@ -5481,7 +5634,7 @@ export function KitchenKOTView({
                           <div
                             style={{
                               fontWeight: 800,
-                              color: isLightTheme ? "#047857" : "#34d399",
+                              color: isLightTheme ? "#047857" : "var(--success)",
                             }}
                           >
                             💰 Bill Paid & Settled
@@ -5492,7 +5645,7 @@ export function KitchenKOTView({
                               color:
                                 currentTheme === "light-bistro"
                                   ? "#64748b"
-                                  : "#94a3b8",
+                                  : "var(--text-dim)",
                               marginTop: "2px",
                             }}
                           >
@@ -5527,7 +5680,7 @@ export function KitchenKOTView({
                       background: isLightTheme ? "#f1f5f9" : "rgba(0,0,0,0.4)",
                       borderTop: isLightTheme
                         ? "1px solid #cbd5e1"
-                        : "1px solid rgba(255,255,255,0.1)",
+                        : "1px solid rgba(var(--surface-rgb),0.1)",
                       padding: "0.85rem 1.25rem",
                       display: "flex",
                       alignItems: "center",
@@ -5545,10 +5698,10 @@ export function KitchenKOTView({
                         borderRadius: "var(--radius-sm)",
                         background: isLightTheme
                           ? "#ffffff"
-                          : "rgba(255, 255, 255, 0.08)",
+                          : "rgba(var(--surface-rgb),0.08)",
                         border: isLightTheme
                           ? "1px solid #cbd5e1"
-                          : "1px solid rgba(255, 255, 255, 0.18)",
+                          : "1px solid rgba(var(--surface-rgb),0.18)",
                         color: isLightTheme ? "#1f2937" : "#ffffff",
                         fontWeight: 700,
                         fontSize: "0.8rem",
@@ -5571,7 +5724,7 @@ export function KitchenKOTView({
                     >
                       {!modalTicket.isPaid && isReceived && (
                         <button
-                          onClick={() => handleStartCooking(modalTicket.id)}
+                          onClick={() => handleStartCooking(modalTicket.uniqueKey)}
                           style={{
                             padding: "0.55rem 1.1rem",
                             borderRadius: "var(--radius-sm)",
@@ -5599,7 +5752,7 @@ export function KitchenKOTView({
                       {!modalTicket.isPaid && isCooking && (
                         <button
                           onClick={() =>
-                            handleCompletePreparation(modalTicket.id)
+                            handleCompletePreparation(modalTicket.uniqueKey)
                           }
                           style={{
                             padding: "0.55rem 1.1rem",

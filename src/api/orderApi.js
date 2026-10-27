@@ -23,6 +23,12 @@ export async function apiCreateOrder(orderData) {
   });
 }
 
+export async function apiSendOrderKot(orderId) {
+  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}/send-kot`, {
+    method: "POST",
+  });
+}
+
 export async function apiAddOrderItems(orderId, items) {
   return await apiClient(`/api/v1/orders/${orderId}/items`, {
     method: "POST",

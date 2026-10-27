@@ -779,13 +779,13 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+              e.currentTarget.style.background = 'rgba(var(--surface-rgb),0.12)';
               e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.4)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
+              e.currentTarget.style.background = 'rgba(var(--surface-rgb),0.06)';
+              e.currentTarget.style.borderColor = 'rgba(var(--surface-rgb),0.14)';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
             title='Print or export PDF of the report'
@@ -1013,7 +1013,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 border: "1px solid rgba(16, 185, 129, 0.35)",
                 borderRadius: "10px",
                 padding: "0.45rem 0.85rem",
-                color: "#10b981",
+                color: "var(--success)",
                 fontSize: "0.78rem",
                 fontWeight: 700,
                 cursor: "pointer",
@@ -1124,7 +1124,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 gap: '5px',
                 background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
                 border: '1.5px solid #10b981',
-                color: '#10b981',
+                color: 'var(--success)',
                 borderRadius: '8px',
                 padding: '0.35rem 0.85rem',
                 fontSize: '0.76rem',
@@ -1219,7 +1219,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               style={{
                 fontSize: '1.45rem',
                 fontWeight: 800,
-                color: '#10b981',
+                color: 'var(--success)',
                 marginTop: '4px',
               }}
             >
@@ -1246,7 +1246,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               style={{
                 fontSize: '1.45rem',
                 fontWeight: 800,
-                color: '#38bdf8',
+                color: 'var(--info)',
                 marginTop: '4px',
               }}
             >
@@ -1289,7 +1289,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
               Discounts Given
             </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#c084fc", marginTop: "4px" }}>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--accent-purple)", marginTop: "4px" }}>
               {formatCurrency(totalDiscount)}
             </div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
@@ -1341,7 +1341,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               >
                 <span
                   style={{
-                    color: '#38bdf8',
+                    color: 'var(--info)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
@@ -1385,7 +1385,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               >
                 <span
                   style={{
-                    color: '#10b981',
+                    color: 'var(--success)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
@@ -1429,7 +1429,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               >
                 <span
                   style={{
-                    color: '#c084fc',
+                    color: 'var(--accent-purple)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
@@ -1688,7 +1688,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               style={{
                 fontSize: '0.82rem',
                 fontWeight: 800,
-                color: isProfit ? '#10b981' : '#ef4444',
+                color: isProfit ? 'var(--success)' : 'var(--danger)',
                 letterSpacing: '0.03em',
                 textTransform: 'uppercase',
               }}
@@ -1715,7 +1715,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           </div>
           <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
             <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Average Bill (AOV)</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#38bdf8", marginTop: "2px" }}>
+            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "var(--info)", marginTop: "2px" }}>
               {formatCurrency(averageBill)}
             </div>
           </div>
@@ -1727,7 +1727,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
           </div>
           <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
             <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Promotions &amp; Discounts</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: totalDiscount > 0 ? "#ef4444" : "#10b981", marginTop: "2px" }}>
+            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: totalDiscount > 0 ? "var(--danger)" : "var(--success)", marginTop: "2px" }}>
               {formatCurrency(totalDiscount)} <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-dim)" }}>({totalRevenue > 0 ? ((totalDiscount / totalRevenue) * 100).toFixed(1) : "0.0"}%)</span>
             </div>
           </div>
@@ -1754,7 +1754,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Total Income (Sales)
               </div>
               <div
@@ -1766,7 +1766,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#10b981',
+                  color: 'var(--success)',
                 }}
               >
                 <TrendingUp size={18} />
@@ -1776,7 +1776,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               style={{
                 fontSize: '1.75rem',
                 fontWeight: 900,
-                color: '#10b981',
+                color: 'var(--success)',
                 marginTop: '0.6rem',
                 letterSpacing: '-0.02em',
               }}
@@ -1800,7 +1800,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Total Expenditure (Costs)
               </div>
               <div
@@ -1812,7 +1812,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#ef4444',
+                  color: 'var(--danger)',
                 }}
               >
                 <TrendingDown size={18} />
@@ -1822,7 +1822,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               style={{
                 fontSize: '1.75rem',
                 fontWeight: 900,
-                color: '#ef4444',
+                color: 'var(--danger)',
                 marginTop: '0.6rem',
                 letterSpacing: '-0.02em',
               }}
@@ -1852,7 +1852,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 style={{
                   fontSize: '0.78rem',
                   fontWeight: 700,
-                  color: isProfit ? '#10b981' : '#ef4444',
+                  color: isProfit ? 'var(--success)' : 'var(--danger)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}
@@ -1868,7 +1868,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: isProfit ? '#10b981' : '#ef4444',
+                  color: isProfit ? 'var(--success)' : 'var(--danger)',
                 }}
               >
                 <Award size={18} />
@@ -1878,7 +1878,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               style={{
                 fontSize: '1.75rem',
                 fontWeight: 900,
-                color: isProfit ? '#10b981' : '#ef4444',
+                color: isProfit ? 'var(--success)' : 'var(--danger)',
                 marginTop: '0.6rem',
                 letterSpacing: '-0.02em',
               }}
@@ -1886,7 +1886,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-              Operating Margin: <strong style={{ color: isProfit ? '#10b981' : '#ef4444' }}>{profitMarginPercent}%</strong> (Income − Expenditure)
+              Operating Margin: <strong style={{ color: isProfit ? 'var(--success)' : 'var(--danger)' }}>{profitMarginPercent}%</strong> (Income − Expenditure)
             </div>
           </div>
         </div>
@@ -2001,7 +2001,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 display: "flex",
                 alignItems: "center",
                 gap: "0.35rem",
-                background: "rgba(255, 255, 255, 0.05)",
+                background: "rgba(var(--surface-rgb),0.05)",
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "8px",
                 padding: "0.32rem 0.6rem",
@@ -2129,7 +2129,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 style={{
                   fontSize: "0.72rem",
                   color: "var(--text-dim)",
-                  background: "rgba(255, 255, 255, 0.03)",
+                  background: "rgba(var(--surface-rgb),0.03)",
                   padding: "0.28rem 0.55rem",
                   borderRadius: "6px",
                   border: "1px solid var(--border-subtle)",
@@ -2151,7 +2151,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                   gap: "4px",
                   background: "rgba(239, 68, 68, 0.12)",
                   border: "1px solid rgba(239, 68, 68, 0.3)",
-                  color: "#ef4444",
+                  color: "var(--danger)",
                   borderRadius: "6px",
                   padding: "0.28rem 0.55rem",
                   fontSize: "0.7rem",
@@ -2185,7 +2185,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)' }}>
                   Operating Balance Ratio (Revenue vs Expenditure)
                 </span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isProfit ? '#10b981' : '#ef4444' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isProfit ? 'var(--success)' : 'var(--danger)' }}>
                   {isProfit ? 'Operating in Profit' : 'Operating at Loss'}
                 </span>
               </div>
@@ -2217,10 +2217,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginTop: '6px' }}>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>
+                <span style={{ color: 'var(--success)', fontWeight: 700 }}>
                   ● Income: {formatCurrency(plIncome)} ({plIncome + plExpenditure > 0 ? Math.round((plIncome / (plIncome + plExpenditure)) * 100) : 0}%)
                 </span>
-                <span style={{ color: '#ef4444', fontWeight: 700 }}>
+                <span style={{ color: 'var(--danger)', fontWeight: 700 }}>
                   ● Expenditure: {formatCurrency(plExpenditure)} ({plIncome + plExpenditure > 0 ? Math.round((plExpenditure / (plIncome + plExpenditure)) * 100) : 0}%)
                 </span>
               </div>
@@ -2246,7 +2246,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                 <tbody>
                   {/* SECTION 1: REVENUE */}
                   <tr style={{ background: 'rgba(16, 185, 129, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td colSpan={3} style={{ padding: '8px 14px', fontWeight: 800, color: '#10b981', fontSize: '0.85rem' }}>
+                    <td colSpan={3} style={{ padding: '8px 14px', fontWeight: 800, color: 'var(--success)', fontSize: '0.85rem' }}>
                       1. OPERATING REVENUE (INCOME)
                     </td>
                   </tr>
@@ -2257,7 +2257,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
                       Revenue from {filteredOrders.length} customer orders
                     </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: '#10b981' }}>
+                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>
                       +{formatCurrency(totalRevenue)}
                     </td>
                   </tr>
@@ -2279,7 +2279,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td style={{ padding: '8px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
                       Tax liability collected from invoices
                     </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', color: '#38bdf8' }}>
+                    <td style={{ padding: '8px 14px', textAlign: 'right', color: 'var(--info)' }}>
                       {formatCurrency(totalTax)}
                     </td>
                   </tr>
@@ -2290,7 +2290,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td style={{ padding: '8px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
                       Customer dining service fees
                     </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', color: '#38bdf8' }}>
+                    <td style={{ padding: '8px 14px', textAlign: 'right', color: 'var(--info)' }}>
                       {formatCurrency(totalService)}
                     </td>
                   </tr>
@@ -2312,14 +2312,14 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td style={{ padding: '9px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
                       Total revenue adjusted for discounts
                     </td>
-                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: '#10b981', fontSize: '0.92rem' }}>
+                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--success)', fontSize: '0.92rem' }}>
                       {formatCurrency(netRevenueAfterDiscount)}
                     </td>
                   </tr>
 
                   {/* SECTION 2: EXPENDITURE */}
                   <tr style={{ background: 'rgba(239, 68, 68, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td colSpan={3} style={{ padding: '8px 14px', fontWeight: 800, color: '#ef4444', fontSize: '0.85rem' }}>
+                    <td colSpan={3} style={{ padding: '8px 14px', fontWeight: 800, color: 'var(--danger)', fontSize: '0.85rem' }}>
                       2. OPERATING EXPENDITURE &amp; INVENTORY
                     </td>
                   </tr>
@@ -2330,7 +2330,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
                       {inventoryItems.length} inventory items evaluated at current stock and unit cost
                     </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: '#ef4444' }}>
+                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
                       -{formatCurrency(totalInventoryCost)}
                     </td>
                   </tr>
@@ -2368,7 +2368,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td style={{ padding: '9px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
                       Lifetime tracked restock purchases + customer discounts
                     </td>
-                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: '#ef4444', fontSize: '0.92rem' }}>
+                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--danger)', fontSize: '0.92rem' }}>
                       -{formatCurrency(plExpenditure)}
                     </td>
                   </tr>
@@ -2380,7 +2380,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                       borderTop: `2px solid ${isProfit ? '#10b981' : '#ef4444'}`,
                     }}
                   >
-                    <td style={{ padding: '12px 14px', fontWeight: 900, fontSize: '0.98rem', color: isProfit ? '#10b981' : '#ef4444' }}>
+                    <td style={{ padding: '12px 14px', fontWeight: 900, fontSize: '0.98rem', color: isProfit ? 'var(--success)' : 'var(--danger)' }}>
                       {isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING LOSS'}
                     </td>
                     <td style={{ padding: '12px 14px', color: 'var(--text-main)', fontSize: '0.8rem', fontWeight: 600 }}>
@@ -2392,7 +2392,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                         textAlign: 'right',
                         fontWeight: 900,
                         fontSize: '1.25rem',
-                        color: isProfit ? '#10b981' : '#ef4444',
+                        color: isProfit ? 'var(--success)' : 'var(--danger)',
                       }}
                     >
                       {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
@@ -2505,7 +2505,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                           key={ord.id || idx}
                           style={{
                             borderBottom: '1px solid var(--border-subtle)',
-                            background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.02)',
+                            background: idx % 2 === 0 ? 'transparent' : 'rgba(var(--surface-rgb),0.02)',
                           }}
                         >
                           <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.75rem' }}>{idx + 1}</td>
@@ -2564,10 +2564,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                               {pm || 'OTHER'}
                             </span>
                           </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', color: '#10b981', fontWeight: 600 }}>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>
                             {formatCurrency(ord.taxAmount || 0)}
                           </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', color: '#c084fc', fontWeight: 600 }}>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--accent-purple)', fontWeight: 600 }}>
                             {formatCurrency(ord.discountAmount || 0)}
                           </td>
                           <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>
@@ -2583,10 +2583,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td colSpan={6} style={{ padding: '10px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
                       TOTAL SUMMARY ({searchedOrders.length} TICKETS)
                     </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#10b981' }}>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--success)' }}>
                       {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.taxAmount) || 0), 0))}
                     </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#c084fc' }}>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--accent-purple)' }}>
                       {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.discountAmount) || 0), 0))}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#f59e0b', fontSize: '0.95rem' }}>
@@ -2614,7 +2614,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
               </div>
               <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 1rem' }}>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Stock Valuation</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ef4444', marginTop: '2px' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
                   {formatCurrency(totalInventoryCost)}
                 </div>
               </div>
@@ -2747,7 +2747,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                           key={item.id || idx}
                           style={{
                             borderBottom: '1px solid var(--border-subtle)',
-                            background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.02)',
+                            background: idx % 2 === 0 ? 'transparent' : 'rgba(var(--surface-rgb),0.02)',
                           }}
                         >
                           <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.75rem' }}>{idx + 1}</td>
@@ -2760,7 +2760,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                           <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
                             {item.supplier || 'Local Supplier'}
                           </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: isOut ? '#ef4444' : isLow ? '#f59e0b' : 'var(--text-main)' }}>
+                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--text-main)' }}>
                             {stock} {item.unit || ''}
                           </td>
                           <td style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.75rem' }}>
@@ -2769,7 +2769,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                           <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>
                             {formatCurrency(mrp)}
                           </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: totalCost > 0 ? '#ef4444' : 'var(--text-dim)' }}>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: totalCost > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>
                             {formatCurrency(totalCost)}
                           </td>
                           <td style={{ padding: '8px 14px', textAlign: 'center', minWidth: '130px', whiteSpace: 'nowrap' }}>
@@ -2794,7 +2794,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                                   : isLow
                                   ? 'rgba(245, 158, 11, 0.14)'
                                   : 'rgba(16, 185, 129, 0.14)',
-                                color: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
+                                color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--success)',
                                 border: `1px solid ${
                                   isOut
                                     ? 'rgba(239, 68, 68, 0.35)'
@@ -2873,7 +2873,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
                     <td colSpan={7} style={{ padding: '10px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
                       TOTAL EXPENDITURE VALUATION (INVENTORY + DISCOUNTS)
                     </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#ef4444', fontSize: '0.95rem' }}>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: 'var(--danger)', fontSize: '0.95rem' }}>
                       {formatCurrency(plExpenditure)}
                     </td>
                     <td style={{ padding: '10px 12px' }} />

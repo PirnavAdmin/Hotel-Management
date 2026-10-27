@@ -479,7 +479,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
         {/* View Mode & Filter Navigation Bar */}
         <div style={{
           padding: '0.45rem 1.25rem',
-          background: 'rgba(0, 0, 0, 0.25)',
+          background: 'var(--surface-tint)',
           borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           flexDirection: 'column',
@@ -1150,7 +1150,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                   <div
                     key={group.date}
                     style={{
-                      background: 'rgba(0,0,0,0.2)',
+                      background: 'var(--surface-tint)',
                       border: '1px solid var(--border-subtle)',
                       borderRadius: 'var(--radius-md)',
                       overflow: 'hidden'
@@ -1273,7 +1273,7 @@ function OrderCard({ order, onReprintReceipt }) {
       }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+        e.currentTarget.style.background = 'rgba(var(--surface-rgb),0.04)';
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = 'var(--border-subtle)';

@@ -281,7 +281,7 @@ export function AdminInvoices({
                   style={{
                     background: "rgba(245, 158, 11, 0.15)",
                     border: "1px solid rgba(245, 158, 11, 0.35)",
-                    color: "#f59e0b",
+                    color: "var(--accent-amber-light)",
                     fontSize: "0.75rem",
                     fontWeight: 700,
                     padding: "2px 10px",
@@ -387,7 +387,7 @@ export function AdminInvoices({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "#818cf8";
+              e.currentTarget.style.borderColor = "var(--accent-indigo)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
@@ -455,7 +455,7 @@ export function AdminInvoices({
                 flexShrink: 0,
               }}
             >
-              <FileText size={18} color="#818cf8" />
+              <FileText size={18} color="var(--accent-indigo)" />
             </div>
           </div>
 
@@ -515,7 +515,7 @@ export function AdminInvoices({
                 style={{
                   fontSize: "1.35rem",
                   fontWeight: 800,
-                  color: "#f59e0b",
+                  color: "var(--accent-amber-light)",
                   marginTop: "2px",
                   lineHeight: 1.2,
                 }}
@@ -578,7 +578,7 @@ export function AdminInvoices({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "#10b981";
+              e.currentTarget.style.borderColor = "var(--success)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
@@ -603,7 +603,7 @@ export function AdminInvoices({
                 style={{
                   fontSize: "1.35rem",
                   fontWeight: 800,
-                  color: "#10b981",
+                  color: "var(--success)",
                   marginTop: "2px",
                   lineHeight: 1.2,
                 }}
@@ -634,7 +634,7 @@ export function AdminInvoices({
                 flexShrink: 0,
               }}
             >
-              <Banknote size={18} color="#10b981" />
+              <Banknote size={18} color="var(--success)" />
             </div>
           </div>
 
@@ -667,7 +667,7 @@ export function AdminInvoices({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "#38bdf8";
+              e.currentTarget.style.borderColor = "var(--info)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
@@ -692,7 +692,7 @@ export function AdminInvoices({
                 style={{
                   fontSize: "1.35rem",
                   fontWeight: 800,
-                  color: "#38bdf8",
+                  color: "var(--info)",
                   marginTop: "2px",
                   lineHeight: 1.2,
                 }}
@@ -723,7 +723,7 @@ export function AdminInvoices({
                 flexShrink: 0,
               }}
             >
-              <Smartphone size={18} color="#38bdf8" />
+              <Smartphone size={18} color="var(--info)" />
             </div>
           </div>
 
@@ -757,7 +757,7 @@ export function AdminInvoices({
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.borderColor = "#c084fc";
+                e.currentTarget.style.borderColor = "var(--accent-purple)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
@@ -782,7 +782,7 @@ export function AdminInvoices({
                   style={{
                     fontSize: "1.35rem",
                     fontWeight: 800,
-                    color: "#c084fc",
+                    color: "var(--accent-purple)",
                     marginTop: "2px",
                     lineHeight: 1.2,
                   }}
@@ -813,7 +813,7 @@ export function AdminInvoices({
                   flexShrink: 0,
                 }}
               >
-                <CreditCard size={18} color="#c084fc" />
+                <CreditCard size={18} color="var(--accent-purple)" />
               </div>
             </div>
           )}
@@ -976,26 +976,26 @@ export function AdminInvoices({
           >
             <span>
               Total:{" "}
-              <strong style={{ color: "#f59e0b" }}>
+              <strong style={{ color: "var(--accent-amber-light)" }}>
                 {formatCurrency(totalCollected)}
               </strong>
             </span>
             <span>
               UPI:{" "}
-              <strong style={{ color: "#38bdf8" }}>
+              <strong style={{ color: "var(--info)" }}>
                 {formatCurrency(upiTotal)}
               </strong>
             </span>
             <span>
               Cash:{" "}
-              <strong style={{ color: "#10b981" }}>
+              <strong style={{ color: "var(--success)" }}>
                 {formatCurrency(cashTotal)}
               </strong>
             </span>
             {cardTotal > 0 && (
               <span>
                 Card:{" "}
-                <strong style={{ color: "#c084fc" }}>
+                <strong style={{ color: "var(--accent-purple)" }}>
                   {formatCurrency(cardTotal)}
                 </strong>
               </span>
@@ -1134,7 +1134,7 @@ export function AdminInvoices({
                           style={{
                             background: "rgba(56, 189, 248, 0.12)",
                             border: "1px solid rgba(56, 189, 248, 0.3)",
-                            color: "#38bdf8",
+                            color: "var(--info)",
                             borderRadius: "20px",
                             padding: "3px 10px",
                             fontSize: "0.72rem",
@@ -1152,7 +1152,7 @@ export function AdminInvoices({
                           style={{
                             background: "rgba(168, 85, 247, 0.12)",
                             border: "1px solid rgba(168, 85, 247, 0.3)",
-                            color: "#c084fc",
+                            color: "var(--accent-purple)",
                             borderRadius: "20px",
                             padding: "3px 10px",
                             fontSize: "0.72rem",
@@ -1170,7 +1170,7 @@ export function AdminInvoices({
                           style={{
                             background: "rgba(16, 185, 129, 0.12)",
                             border: "1px solid rgba(16, 185, 129, 0.3)",
-                            color: "#10b981",
+                            color: "var(--success)",
                             borderRadius: "20px",
                             padding: "3px 10px",
                             fontSize: "0.72rem",
@@ -1191,7 +1191,7 @@ export function AdminInvoices({
                       style={{
                         padding: "1rem",
                         fontWeight: 800,
-                        color: "#f59e0b",
+                        color: "var(--accent-amber-light)",
                         fontSize: "0.95rem",
                       }}
                     >
@@ -1206,7 +1206,7 @@ export function AdminInvoices({
                           style={{
                           background: "rgba(245, 158, 11, 0.08)",
                           border: "1px solid rgba(245, 158, 11, 0.35)",
-                          color: "#f59e0b",
+                          color: "var(--accent-amber-light)",
                           borderRadius: "7px",
                           padding: "5px 12px",
                           fontSize: "0.75rem",
@@ -1227,7 +1227,7 @@ export function AdminInvoices({
                           style={{
                             background: "rgba(59, 130, 246, 0.08)",
                             border: "1px solid rgba(59, 130, 246, 0.35)",
-                            color: "#60a5fa",
+                            color: "var(--info)",
                             borderRadius: "7px",
                             padding: "5px 9px",
                             fontSize: "0.75rem",
@@ -1347,10 +1347,10 @@ export function AdminInvoices({
                     borderRadius: "5px",
                     background:
                       visiblePage === 1
-                        ? "rgba(255, 255, 255, 0.02)"
-                        : "rgba(255, 255, 255, 0.06)",
+                        ? "rgba(var(--surface-rgb),0.02)"
+                        : "rgba(var(--surface-rgb),0.06)",
                     border: "1px solid var(--neutral-border)",
-                    color: visiblePage === 1 ? "#475569" : "#cbd5e1",
+                    color: visiblePage === 1 ? "var(--text-dim)" : "var(--text-muted)",
                     cursor: visiblePage === 1 ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -1382,8 +1382,8 @@ export function AdminInvoices({
                             : "transparent",
                           border: isActive
                             ? "none"
-                            : "1px solid rgba(255, 255, 255, 0.08)",
-                          color: isActive ? "#ffffff" : "#94a3b8",
+                            : "1px solid rgba(var(--surface-rgb),0.08)",
+                          color: isActive ? "#ffffff" : "var(--text-dim)",
                           cursor: "pointer",
                           fontSize: "0.72rem",
                           fontWeight: isActive ? 800 : 500,
@@ -1410,10 +1410,10 @@ export function AdminInvoices({
                     borderRadius: "5px",
                     background:
                       visiblePage === pageCount
-                        ? "rgba(255, 255, 255, 0.02)"
-                        : "rgba(255, 255, 255, 0.06)",
+                        ? "rgba(var(--surface-rgb),0.02)"
+                        : "rgba(var(--surface-rgb),0.06)",
                     border: "1px solid var(--neutral-border)",
-                    color: visiblePage === pageCount ? "#475569" : "#cbd5e1",
+                    color: visiblePage === pageCount ? "var(--text-dim)" : "var(--text-muted)",
                     cursor:
                       visiblePage === pageCount ? "not-allowed" : "pointer",
                     display: "flex",
@@ -1481,6 +1481,14 @@ export function AdminInvoices({
               <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
                 <X size={18} />
               </button>
+            </div>
+            <div style={{ maxHeight: "150px", overflowY: "auto", marginBottom: "0.9rem", padding: "0.65rem", border: "1px solid var(--border-card)", borderRadius: "8px", background: "var(--bg-secondary)" }}>
+              {(Array.isArray(editingInvoice.items) ? editingInvoice.items : []).map((item, index) => {
+                const quantity = Number(item.quantity ?? item.qty) || 1;
+                const unitPrice = Number(item.price ?? item.unitPrice) || 0;
+                return <div key={item.id ?? `${item.name || item.dishName}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", padding: "0.32rem 0", color: "var(--text-main)", fontSize: "0.75rem" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{item.name || item.dishName || "Item"} × {quantity} · {formatCurrency(unitPrice)}</span><strong style={{ whiteSpace: "nowrap" }}>{formatCurrency(quantity * unitPrice)}</strong></div>;
+              })}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border-card)", marginTop: "0.35rem", paddingTop: "0.45rem", fontSize: "0.75rem", fontWeight: 800 }}><span>Items subtotal</span><span>{formatCurrency((Array.isArray(editingInvoice.items) ? editingInvoice.items : []).reduce((sum, item) => sum + (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity ?? item.qty) || 1), 0))}</span></div>
             </div>
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.4rem" }}>
               Discount percentage

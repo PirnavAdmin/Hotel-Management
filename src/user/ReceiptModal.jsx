@@ -623,7 +623,6 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               padding: '0.48rem',
               borderRadius: '6px',
               background: '#f59e0b',
-              background: '#ffffff',
               color: '#000000',
               fontWeight: 800,
               fontSize: '0.82rem',
