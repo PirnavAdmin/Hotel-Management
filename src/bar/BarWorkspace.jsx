@@ -60,10 +60,15 @@ export const BAR_SERVING_MEASURES = [
 ];
 const FIELD_SETS = {
   drink: [
-    ["name", "Drink Name", "text", true], ["category", "Category", "text", true],
-    ["description", "Description", "textarea"], ["image", "Choose Image", "image"],
-    ["price", "Selling Price", "number", true],
+    ["name", "Drink Name", "text", true],
+    ["category", "Category", "category_selector", true],
+    ["drinkType", "Drink Type", "select", false, ["Alcoholic", "Non-Alcoholic"]],
+    ["abv", "Alcohol Content (ABV %)", "number", false],
+    ["measure", "Serving Measure / Volume", "measure_selector", false],
+    ["price", "Selling Price (₹)", "number", true],
     ["isAvailable", "Availability", "select", false, ["Available", "Unavailable"]],
+    ["description", "Description", "textarea"],
+    ["image", "Choose Image", "image"],
   ],
   table: [
     ["number", "Table Number", "text", true], ["area", "Area / Section", "select", true, BAR_AREAS],
@@ -992,55 +997,9 @@ export function BarWorkspace({
               <option value="150-300">₹150 – ₹300</option>
               <option value="300-500">₹300 – ₹500</option>
               <option value="above-500">Above ₹500</option>
-              <option value="custom">Custom Range</option>
-            </select>
+              </select>
           </label>
-          <div className="bar-price-custom-wrap">
-            <span className="bar-price-custom-title">Custom (₹)</span>
-            <div className="bar-price-inputs-row">
-              <input
-                aria-label="Minimum drink price in rupees"
-                type="number"
-                min="0"
-                placeholder="Min ₹"
-                value={minPrice}
-                onChange={(event) => {
-                  setMinPrice(event.target.value);
-                  setPricePreset("custom");
-                  setPage(1);
-                }}
-              />
-              <span className="bar-price-dash">–</span>
-              <input
-                aria-label="Maximum drink price in rupees"
-                type="number"
-                min="0"
-                placeholder="Max ₹"
-                value={maxPrice}
-                onChange={(event) => {
-                  setMaxPrice(event.target.value);
-                  setPricePreset("custom");
-                  setPage(1);
-                }}
-              />
-              {(minPrice !== "" || maxPrice !== "" || pricePreset !== "all") && (
-                <button
-                  type="button"
-                  className="bar-price-clear-btn"
-                  title="Clear price filter"
-                  aria-label="Clear price filter"
-                  onClick={() => {
-                    setMinPrice("");
-                    setMaxPrice("");
-                    setPricePreset("all");
-                    setPage(1);
-                  }}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          </div>
+          
         </>
       )}
       {route === "bar-tables" && <><label className="bar-select-label"><span>Occupancy</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">Any status</option>{[...new Set(tables.map((table) => table.status))].map((status) => <option key={status}>{status}</option>)}</select></label><label className="bar-select-label"><span>Minimum Capacity</span><select value={capacityFilter} onChange={(event) => { setCapacityFilter(event.target.value); setPage(1); }}><option value="all">Any capacity</option>{[2, 4, 6].map((size) => <option key={size} value={size}>{size}+ guests</option>)}</select></label></>}
