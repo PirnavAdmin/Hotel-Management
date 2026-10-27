@@ -73,7 +73,19 @@
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
-      "order": null
+      "order": null,
+      "occupiedChairs": 0,
+      "selectedSeats": [],
+      "activeOrderId": null,
+      "orderTimestamp": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
+      "discountAmount": 0,
+      "subtotal": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "grandTotal": 0
     },
     {
       "id": 2,
@@ -153,16 +165,30 @@
       "name": "Table-5",
       "tableNumber": "Table-5",
       "section": "Main Hall",
-      "capacity": 4,
-      "status": "vacant",
-      "server": null,
-      "guests": 0,
+      "capacity": 3,
+      "status": "occupied",
+      "server": "Staff",
+      "guests": 2,
       "items": [],
       "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
-      "order": null
+      "order": null,
+      "tableName": "Table-5",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 3,
+      "occupiedChairs": 2,
+      "selectedSeats": [
+        "S1",
+        "S3"
+      ],
+      "orderTimestamp": null,
+      "assignedServerId": null,
+      "assignedServerName": "Staff",
+      "qrCodeUrl": "https://qr.hms.hotel/hyd01"
     },
     {
       "id": 6,
@@ -327,8 +353,157 @@
   ],
   "gourmet_pos_menu_items_v2": [],
   "gourmet_pos_staff_v1": [],
-  "gourmet_pos_past_orders_v2_inr": [],
+  "gourmet_pos_past_orders_v2_inr": [
+    {
+      "tableId": 1,
+      "tableName": "Table-1",
+      "tableNumber": "Table-1",
+      "serverName": "Rajesh K.",
+      "guests": 5,
+      "status": "Active",
+      "items": [
+        {
+          "menuItemId": 41,
+          "id": 41,
+          "name": "bagara with mutton",
+          "price": 280,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "tableId": 5,
+      "tableName": "Table-5",
+      "tableNumber": "Table-5",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Active",
+      "items": [
+        {
+          "menuItemId": 35,
+          "id": 35,
+          "name": "Paneer Butter Masala",
+          "price": 250,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "menuItemId": 34,
+          "id": 34,
+          "name": "Brownie with ice cream",
+          "price": 115,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "tableId": 5,
+      "tableName": "Table-5",
+      "tableNumber": "Table-5",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Active",
+      "items": [
+        {
+          "menuItemId": 35,
+          "id": 35,
+          "name": "Paneer Butter Masala",
+          "price": 250,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "menuItemId": 34,
+          "id": 34,
+          "name": "Brownie with ice cream",
+          "price": 115,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "tableId": 5,
+      "tableName": "Table-5",
+      "tableNumber": "Table-5",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Active",
+      "items": [
+        {
+          "menuItemId": 35,
+          "id": 35,
+          "name": "Paneer Butter Masala",
+          "price": 250,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "menuItemId": 34,
+          "id": 34,
+          "name": "Brownie with ice cream",
+          "price": 115,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "tableId": 5,
+      "tableName": "Table-5",
+      "tableNumber": "Table-5",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Active",
+      "items": [
+        {
+          "menuItemId": 35,
+          "id": 35,
+          "name": "Paneer Butter Masala",
+          "price": 250,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "menuItemId": 34,
+          "id": 34,
+          "name": "Brownie with ice cream",
+          "price": 115,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "tableId": 5,
+      "tableName": "Table-5",
+      "tableNumber": "Table-5",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Active",
+      "items": [
+        {
+          "menuItemId": 35,
+          "id": 35,
+          "name": "Paneer Butter Masala",
+          "price": 250,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "menuItemId": 34,
+          "id": 34,
+          "name": "Brownie with ice cream",
+          "price": 115,
+          "quantity": 1,
+          "notes": ""
+        }
+      ]
+    }
+  ],
   "avsr_last_invoice_date_v2": "27 Oct 2026",
   "avsr_daily_inv_cnt_23_Oct_2026": "12",
-  "avsr_daily_inv_cnt_27_Oct_2026": "34"
+  "avsr_daily_inv_cnt_27_Oct_2026": "1"
 }
