@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Armchair, ArrowRight, BarChart3, Beer, Check, ChevronLeft, ChevronRight, Clock3, Coffee, Eye,
-  FileText, GlassWater, Martini, Package, Pencil, Plus, Printer, Search, RefreshCw,
-  Trash2, Wine, X,
+  Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
+  Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
+  Pencil, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
 } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiGetInventory } from "../api/inventoryApi";
@@ -893,9 +893,21 @@ export function BarWorkspace({
     return barOrders.filter((order) => !["Served", "Cancelled"].includes(String(order.status))).length;
   }, [barOrders]);
 
+  const activePreparingCount = useMemo(() => {
+    return barOrders.filter((order) => String(order.status).toLowerCase().includes("prepar")).length;
+  }, [barOrders]);
+
   const occupiedBarTables = useMemo(() => {
     return tables.filter((t) => t.status === "Occupied" || (t.status !== "Available" && t.status !== "vacant"));
   }, [tables]);
+
+  const totalChairs = useMemo(() => {
+    return tables.reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
+  }, [tables]);
+
+  const occupiedChairs = useMemo(() => {
+    return occupiedBarTables.reduce((sum, t) => sum + (Number(t.guests) || 2), 0);
+  }, [occupiedBarTables]);
 
   const displayBarTables = useMemo(() => {
     return tables
@@ -906,22 +918,45 @@ export function BarWorkspace({
         if (bOcc !== aOcc) return bOcc - aOcc;
         return Number(a.id || 0) - Number(b.id || 0);
       })
-      .slice(0, 12);
+      .slice(0, 10);
   }, [tables]);
+
+  const lowStockBeverages = useMemo(() => {
+    return inventoryRows.filter((item) => {
+      const stock = Number(item.stock ?? item.currentStock ?? 0);
+      const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 5);
+      return stock <= threshold;
+    });
+  }, [inventoryRows]);
+
+  const alcoholicDrinksCount = useMemo(() => {
+    return drinks.filter((d) => d.drinkType === "Alcoholic" || ["cocktails", "beers", "whiskey", "vodka & gin", "rum & brandy", "wine & champagne", "shots & shooters"].some((c) => c === String(d.category || "").toLowerCase())).length;
+  }, [drinks]);
+
+  const nonAlcoholicDrinksCount = useMemo(() => {
+    return drinks.length - alcoholicDrinksCount;
+  }, [drinks.length, alcoholicDrinksCount]);
 
   const activeQueueItems = useMemo(() => {
     const queue = [];
     for (const order of barOrders) {
       if (["served", "cancelled"].includes(String(order.status).toLowerCase())) continue;
-      const items = Array.isArray(order.beverageItems) && order.beverageItems.length > 0
+      // Strictly beverage items only - NEVER food!
+      const rawItems = Array.isArray(order.beverageItems) && order.beverageItems.length > 0
         ? order.beverageItems
         : Array.isArray(order.items) ? order.items : [];
-      for (const it of items) {
+      const drinkItems = rawItems.filter((it) => {
+        const menuItem = findMenuItem(menuLookup, it);
+        const cat = menuItem?.category ?? menuItem?.categoryName ?? it.category ?? it.subcategory ?? "";
+        return isBeverageCategory(cat) || isBeverageCategory(it.name ?? it.dishName ?? "");
+      });
+
+      for (const it of drinkItems) {
         queue.push({
           id: order.id + "-" + (it.id || it.name),
           name: it.dishName || it.name || "Drink",
           table: order.table || "Bar Tab",
-          category: it.category || "Cocktails",
+          category: it.category || "Beverage",
           price: Number(it.unitPrice ?? it.price ?? 0),
           time: order.time || "Just now",
           status: order.status || "Preparing",
@@ -929,6 +964,7 @@ export function BarWorkspace({
         });
       }
     }
+    // If fewer than 5 active orders, supplement with popular signature beverages
     if (queue.length < 5) {
       const existingNames = new Set(queue.map((q) => q.name.toLowerCase()));
       for (const drink of drinks) {
@@ -947,7 +983,7 @@ export function BarWorkspace({
       }
     }
     return queue.slice(0, 6);
-  }, [barOrders, drinks]);
+  }, [barOrders, drinks, menuLookup]);
 
   const dashboard = [
     ["Total Drinks", drinks.length, Martini, "orange"],
@@ -1085,176 +1121,813 @@ export function BarWorkspace({
 
   return (
     <main className="bar-workspace">
-      <div className="bar-page-title">
-        <div>
-          <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
-          <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
-          <p>{route === "bar-overview" ? "Live overview of beverage orders, bar counter occupancy, KOTs, and drink sales." : ["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : "Independent Bar workspace • drink and order records are demo data."}</p>
-        </div>
-        {route === "bar-overview" ? (
-          <div className="bar-header-shortcuts">
-            <button className="bar-head-btn primary" type="button" onClick={() => { go("bar-drinks"); openForm("drink"); }}>
+      {route === "bar-overview" ? (
+        /* 1. Unified Header Banner Card (Matching Dine Dashboard) */
+        <div
+          style={{
+            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)",
+            border: "1px solid rgba(245, 158, 11, 0.25)",
+            borderRadius: "12px",
+            padding: "0.85rem 1.15rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+            marginBottom: "0.25rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                flexShrink: 0,
+              }}
+            >
+              <Martini size={20} color="#ffffff" />
+            </div>
+            <div>
+              <h2
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                Bar Operations Dashboard
+              </h2>
+              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                Live overview of drinks, bar counter tabs, KOT tickets, and beverage sales
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Action Navigation Buttons - Single Clean Row */}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => { go("bar-drinks"); openForm("drink"); }}
+              style={{
+                background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+                height: "32px",
+              }}
+            >
               <Plus size={14} />
-              <span>+ Add Drink</span>
+              <span>Add Drink</span>
             </button>
-            <button className="bar-head-btn" type="button" onClick={() => go("bar-drinks")}>
-              <Martini size={14} color="#f59e0b" />
-              <span>Drinks Menu</span>
-            </button>
-            <button className="bar-head-btn" type="button" onClick={() => go("bar-tables")}>
-              <Armchair size={14} color="#f59e0b" />
+
+            <button
+              type="button"
+              onClick={() => go("bar-tables")}
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-card)",
+                color: "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              <Armchair size={14} color="var(--accent-amber)" />
               <span>Bar Tables</span>
             </button>
+
             <button
-              className={`bar-head-btn ${pendingBarKotCount > 0 ? "highlight" : ""}`}
               type="button"
               onClick={() => go("bar-kot")}
+              style={{
+                background: pendingBarKotCount > 0 ? "rgba(239, 68, 68, 0.15)" : "var(--bg-card)",
+                border: pendingBarKotCount > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
+                color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+              }}
             >
-              <Clock3 size={14} color={pendingBarKotCount > 0 ? "#ef4444" : undefined} />
-              <span>Live Bar KOT ({pendingBarKotCount})</span>
+              <Clock3 size={14} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-main)"} />
+              <span>Live KOT ({pendingBarKotCount})</span>
             </button>
-            <button className="bar-head-btn" type="button" onClick={() => { go("bar-orders"); setOrderComposerOpen(true); }}>
+
+            <button
+              type="button"
+              onClick={() => { go("bar-orders"); setOrderComposerOpen(true); }}
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-card)",
+                color: "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
               <FileText size={14} color="#3b82f6" />
-              <span>+ New Order</span>
+              <span>New Order</span>
             </button>
-            <button className="bar-head-btn" type="button" onClick={() => go("bar-invoices")}>
-              <FileText size={14} color="#10b981" />
+
+            <button
+              type="button"
+              onClick={() => go("bar-invoices")}
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-card)",
+                color: "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              <Receipt size={14} color="#10b981" />
               <span>Invoices</span>
             </button>
           </div>
-        ) : (
+        </div>
+      ) : (
+        <div className="bar-page-title">
+          <div>
+            <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
+            <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
+            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : "Independent Bar workspace • drink and order records are demo data."}</p>
+          </div>
           <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : "DEMO DATA • SESSION ONLY"}</span>
-        )}
-      </div>
+        </div>
+      )}
 
       {route === "bar-overview" && <>
-        {/* 1. Six Operational Metric Cards */}
-        <section className="bar-dashboard-grid" aria-label="Bar summary">
-          {dashboard.map(([label, value, Icon, tone]) => (
-            <article className="bar-stat-card" key={label}>
-              <span className={`bar-stat-icon tone-${tone}`}><Icon size={19} /></span>
-              <div><span>{label}</span><strong>{value}</strong></div>
-            </article>
-          ))}
-        </section>
+        {/* 2. Five Operational Metric Cards - Exactly 1 Sleek Row (Matching Dine) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+            gap: "0.55rem",
+            width: "100%",
+          }}
+        >
+          {/* Card 1: Today's Bar Sales */}
+          <div
+            onClick={() => go("bar-reports")}
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "10px",
+              padding: "0.65rem 0.75rem",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--accent-amber)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--border-card)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            title="Click to view Bar sales & revenue reports"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Bar Sales Today
+              </span>
+              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(245, 158, 11, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <IndianRupee size={12} color="#f59e0b" />
+              </div>
+            </div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {formatCurrency(completedDrinkSales)}
+            </div>
+            <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span>{barOrders.length} Orders</span>
+              <span style={{ margin: "0 3px" }}>•</span>
+              <span style={{ color: "var(--success)" }}>Active</span>
+            </div>
+          </div>
 
-        {/* 2. Middle Row: Live Bar Counter / Stools Grid & Live Drinks Queue Preview */}
-        <div className="bar-overview-middle-grid">
-          {/* Card 1: Live Bar Counter / Stools Grid */}
-          <section className="bar-page-card bar-floor-card">
-            <div className="bar-card-header">
-              <h3>
+          {/* Card 2: Bar KOT Live */}
+          <div
+            onClick={() => go("bar-kot")}
+            style={{
+              background: "var(--bg-card)",
+              border: pendingBarKotCount > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
+              borderRadius: "10px",
+              padding: "0.65rem 0.75rem",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--danger)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = pendingBarKotCount > 0 ? "rgba(239, 68, 68, 0.4)" : "var(--border-card)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            title="Click to view Live Bar KOT screen"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Bar KOT Live
+              </span>
+              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: pendingBarKotCount > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(100, 116, 139, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Clock3 size={12} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-dim)"} />
+              </div>
+            </div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {pendingBarKotCount} Active KOT
+            </div>
+            <div style={{ fontSize: "0.66rem", color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span>{activePreparingCount} drinks in prep</span>
+            </div>
+          </div>
+
+          {/* Card 3: Counter Occupancy */}
+          <div
+            onClick={() => go("bar-tables")}
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "10px",
+              padding: "0.65rem 0.75rem",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--accent-amber)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--border-card)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            title="Click to view Bar Counter & Tables"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Counter Occupancy
+              </span>
+              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(16, 185, 129, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Armchair size={12} color="var(--success)" />
+              </div>
+            </div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {occupiedBarTables.length} / {tables.length} Tables
+            </div>
+            <div style={{ fontSize: "0.66rem", color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {occupiedChairs} seated ({totalChairs} seats)
+            </div>
+          </div>
+
+          {/* Card 4: Inventory Health */}
+          <div
+            onClick={() => go("bar-inventory")}
+            style={{
+              background: "var(--bg-card)",
+              border: lowStockBeverages.length > 0 ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid var(--border-card)",
+              borderRadius: "10px",
+              padding: "0.65rem 0.75rem",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = lowStockBeverages.length > 0 ? "#ef4444" : "var(--accent-amber)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = lowStockBeverages.length > 0 ? "rgba(239, 68, 68, 0.4)" : "var(--border-card)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            title="Click to view Beverage Inventory"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Beverage Health
+              </span>
+              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: lowStockBeverages.length > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(16, 185, 129, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Package size={12} color={lowStockBeverages.length > 0 ? "#ef4444" : "#10b981"} />
+              </div>
+            </div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {inventoryRows.length} Items
+            </div>
+            <div style={{ fontSize: "0.66rem", color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-muted)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {lowStockBeverages.length > 0 ? "⚠️ " + lowStockBeverages.length + " Low Stock" : "All stock healthy"}
+            </div>
+          </div>
+
+          {/* Card 5: Drinks Catalog */}
+          <div
+            onClick={() => go("bar-drinks")}
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "10px",
+              padding: "0.65rem 0.75rem",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              minWidth: 0,
+              overflow: "hidden",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--accent-amber)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--border-card)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            title="Click to view Drinks Catalog"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Drinks Catalog
+              </span>
+              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(245, 158, 11, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Martini size={12} color="#f59e0b" />
+              </div>
+            </div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {drinks.length} Drinks
+            </div>
+            <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {alcoholicDrinksCount} Alc • {nonAlcoholicDrinksCount} Non-Alc
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Middle 2-Column Grid: Live Bar Stools & Drinks Queue */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+            gap: "0.75rem",
+            marginTop: "0.75rem",
+          }}
+        >
+          {/* Left Column: Live Bar Counter & Stools Grid */}
+          <div
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "12px",
+              padding: "0.9rem 1rem",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
                 <Armchair size={16} color="#f59e0b" />
-                <span>Live Bar Counter & Stools</span>
-                <span className={`bar-count-badge ${occupiedBarTables.length > 0 ? "amber" : "green"}`}>
+                <h3
+                  style={{
+                    fontSize: "0.92rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    margin: 0,
+                  }}
+                >
+                  Live Bar Counter & Stools
+                </h3>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    background: occupiedBarTables.length > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                    color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--success)",
+                    padding: "1px 6px",
+                    borderRadius: "10px",
+                  }}
+                >
                   {occupiedBarTables.length} Occupied
                 </span>
-              </h3>
-              <button className="bar-card-link" type="button" onClick={() => go("bar-tables")}>
+              </div>
+              <button
+                type="button"
+                onClick={() => go("bar-tables")}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--accent-amber)",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
                 <span>View All Floor</span>
                 <ArrowRight size={12} />
               </button>
             </div>
-            <div className="bar-stools-grid">
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(95px, 1fr))",
+                gap: "0.5rem",
+                maxHeight: "260px",
+                overflowY: "auto",
+                paddingRight: "2px",
+              }}
+            >
               {displayBarTables.map((tbl) => {
                 const isOccupied = tbl.status === "Occupied";
                 const serverName = staff.find((m) => String(m.id) === String(tbl.staffId))?.name || tbl.server || "Unassigned";
                 return (
                   <div
                     key={tbl.id}
-                    className={`bar-stool-box ${isOccupied ? "is-occupied" : ""}`}
                     onClick={() => go("bar-tables")}
+                    style={{
+                      background: isOccupied ? "rgba(245, 158, 11, 0.12)" : "var(--bg-tertiary)",
+                      border: isOccupied ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      padding: "0.5rem 0.4rem",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--accent-amber)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = isOccupied ? "rgba(245, 158, 11, 0.4)" : "var(--border-subtle)";
+                    }}
                     title={tbl.number + " • " + tbl.area + " • " + (isOccupied ? ((tbl.guests || 2) + " Guests") : "Vacant")}
                   >
-                    <div className="stool-name">{tbl.number}</div>
-                    <div className="stool-status">
-                      <span
-                        className="stool-dot"
-                        style={{ background: isOccupied ? "#f59e0b" : "#10b981" }}
-                      />
-                      <span style={{ color: isOccupied ? "var(--accent-amber-light)" : "var(--status-vacant)" }}>
-                        {isOccupied ? (tbl.guests || 2) + " Guests" : "Vacant"}
-                      </span>
+                    <div
+                      style={{
+                        fontSize: "0.82rem",
+                        fontWeight: 800,
+                        color: isOccupied ? "var(--accent-amber)" : "var(--text-main)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {tbl.number}
                     </div>
-                    <div className="stool-server">{serverName}</div>
+                    <div
+                      style={{
+                        fontSize: "0.64rem",
+                        color: isOccupied ? "var(--accent-amber-light)" : "var(--status-vacant)",
+                        marginTop: "2px",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "3px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "5px",
+                          height: "5px",
+                          borderRadius: "50%",
+                          background: isOccupied ? "#f59e0b" : "#10b981",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{isOccupied ? (tbl.guests || 2) + " Guests" : "Vacant"}</span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.62rem",
+                        color: "var(--text-muted)",
+                        marginTop: "2px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {serverName}
+                    </div>
                   </div>
                 );
               })}
             </div>
-          </section>
+          </div>
 
-          {/* Card 2: Live Cocktail & Drinks Queue Preview */}
-          <section className="bar-page-card bar-floor-card">
-            <div className="bar-card-header">
-              <h3>
+          {/* Right Column: Live Drinks Queue Preview (Beverages Only) */}
+          <div
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "12px",
+              padding: "0.9rem 1rem",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
                 <Martini size={16} color="#ea580c" />
-                <span>Live Cocktail & Drinks Queue</span>
-                <span className="bar-count-badge amber">
+                <h3
+                  style={{
+                    fontSize: "0.92rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    margin: 0,
+                  }}
+                >
+                  Drinks Queue Preview
+                </h3>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    background: "rgba(245, 158, 11, 0.15)",
+                    color: "var(--accent-amber-light)",
+                    padding: "1px 6px",
+                    borderRadius: "10px",
+                  }}
+                >
                   {activeQueueItems.length} Active
                 </span>
-              </h3>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                 <button
-                  className="bar-head-btn primary"
                   type="button"
-                  style={{ padding: "3px 8px", fontSize: "0.7rem", height: "26px" }}
                   onClick={() => { go("bar-drinks"); openForm("drink"); }}
+                  style={{
+                    background: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    color: "var(--accent-amber-light)",
+                    borderRadius: "6px",
+                    padding: "0.25rem 0.55rem",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                  }}
                 >
                   <Plus size={11} />
                   <span>Add Drink</span>
                 </button>
-                <button className="bar-card-link" type="button" onClick={() => go("bar-drinks")}>
+                <button
+                  type="button"
+                  onClick={() => go("bar-drinks")}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#ea580c",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2px",
+                  }}
+                >
                   <span>Manage Menu</span>
                   <ArrowRight size={12} />
                 </button>
               </div>
             </div>
-            <div className="bar-drinks-queue">
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
+                maxHeight: "260px",
+                overflowY: "auto",
+                paddingRight: "2px",
+              }}
+            >
               {activeQueueItems.map((item) => {
                 const { Icon, tone } = getDrinkIcon(item.name, item.category);
                 return (
                   <div
                     key={item.id}
-                    className={`bar-queue-item ${tone}`}
                     onClick={() => go("bar-orders")}
-                    title={"Click to view in orders: " + item.name + " (" + item.table + ")"}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.65rem",
+                      padding: "0.45rem 0.65rem",
+                      borderRadius: "8px",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-subtle)",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--accent-amber)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border-subtle)";
+                    }}
+                    title={"Click to view order details: " + item.name + " (" + item.table + ")"}
                   >
-                    <div className="bar-queue-icon">
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "7px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        background:
+                          tone === "tone-orange"
+                            ? "rgba(234, 88, 12, 0.14)"
+                            : tone === "tone-purple"
+                            ? "rgba(124, 58, 237, 0.14)"
+                            : tone === "tone-green"
+                            ? "rgba(16, 185, 129, 0.14)"
+                            : "rgba(59, 130, 246, 0.14)",
+                        color:
+                          tone === "tone-orange"
+                            ? "#ea580c"
+                            : tone === "tone-purple"
+                            ? "#8b5cf6"
+                            : tone === "tone-green"
+                            ? "#10b981"
+                            : "#3b82f6",
+                      }}
+                    >
                       <Icon size={18} />
                     </div>
-                    <div className="bar-queue-info">
-                      <div className="bar-queue-title">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 750,
+                          color: "var(--text-main)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {item.quantity > 1 ? (item.quantity + " × ") : ""}{item.name}
                       </div>
-                      <div className="bar-queue-sub">
+                      <div
+                        style={{
+                          fontSize: "0.68rem",
+                          color: "var(--text-dim)",
+                          marginTop: "1px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {item.table} • {item.category} • {item.time}
                       </div>
                     </div>
-                    <div className="bar-queue-meta">
-                      <div className="bar-queue-price">{formatCurrency(item.price)}</div>
+                    <div style={{ textAlign: "right", flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
+                      <div
+                        style={{
+                          fontSize: "0.84rem",
+                          fontWeight: 800,
+                          color: "var(--accent-amber)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatCurrency(item.price)}
+                      </div>
                       <Status>{item.status}</Status>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </section>
+          </div>
         </div>
 
-        {/* 3. Bottom Card: Recent Customer Bar Orders & Bills (matching Dine Recent Invoices) */}
-        <section className="bar-page-card bar-invoices-section">
-          <div className="bar-section-head">
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <h2>Recent Customer Bar Orders & Bills</h2>
-              <span className="bar-count-badge blue">
+        {/* 4. Bottom Card: Recent Customer Bar Orders & Bills */}
+        <section
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "12px",
+            padding: "0.9rem 1.1rem",
+            marginTop: "0.75rem",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.75rem",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Receipt size={17} color="#3b82f6" />
+              <h3
+                style={{
+                  fontSize: "0.94rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                Recent Customer Bar Orders & Bills
+              </h3>
+              <span
+                style={{
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  background: "rgba(59, 130, 246, 0.15)",
+                  color: "#3b82f6",
+                  padding: "2px 7px",
+                  borderRadius: "10px",
+                }}
+              >
                 {barOrders.length} Total Orders
               </span>
             </div>
-            <button className="bar-card-link" type="button" onClick={() => go("bar-orders")}>
+
+            <button
+              type="button"
+              onClick={() => go("bar-orders")}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#3b82f6",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "3px",
+              }}
+            >
               <span>View All Orders in Detail</span>
               <ArrowRight size={13} />
             </button>
           </div>
+
           {ordersLoading ? (
             <div className="bar-empty" role="status">Loading shared orders…</div>
           ) : ordersError ? (
