@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  BarChart3, Check, ChevronLeft, ChevronRight, Clock3, Eye,
+  Armchair, ArrowRight, BarChart3, Beer, Check, ChevronLeft, ChevronRight, Clock3, Coffee, Eye,
   FileText, GlassWater, Martini, Package, Pencil, Plus, Printer, Search, RefreshCw,
   Trash2, Wine, X,
 } from "lucide-react";
@@ -464,6 +464,24 @@ function OrderItemsModal({ order, onClose }) {
   </div>;
 }
 
+
+function getDrinkIcon(name = "", category = "") {
+  const text = (name + " " + category).toLowerCase();
+  if (text.includes("beer") || text.includes("ale") || text.includes("cider") || text.includes("lager") || text.includes("pint")) {
+    return { Icon: Beer, tone: "tone-blue" };
+  }
+  if (text.includes("wine") || text.includes("champagne") || text.includes("sangria")) {
+    return { Icon: Wine, tone: "tone-purple" };
+  }
+  if (text.includes("coffee") || text.includes("tea") || text.includes("latte") || text.includes("espresso")) {
+    return { Icon: Coffee, tone: "tone-green" };
+  }
+  if (text.includes("cocktail") || text.includes("martini") || text.includes("whiskey") || text.includes("vodka") || text.includes("gin") || text.includes("rum") || text.includes("shot")) {
+    return { Icon: Martini, tone: "tone-orange" };
+  }
+  return { Icon: GlassWater, tone: "tone-blue" };
+}
+
 export function BarWorkspace({
   activeTab = "bar-overview",
   onNavigate,
@@ -871,6 +889,66 @@ export function BarWorkspace({
     });
     return sum + items.reduce((itemSum, item) => itemSum + Number(item.price ?? item.unitPrice ?? 0) * Number(item.quantity ?? 0), 0);
   }, 0);
+  const pendingBarKotCount = useMemo(() => {
+    return barOrders.filter((order) => !["Served", "Cancelled"].includes(String(order.status))).length;
+  }, [barOrders]);
+
+  const occupiedBarTables = useMemo(() => {
+    return tables.filter((t) => t.status === "Occupied" || (t.status !== "Available" && t.status !== "vacant"));
+  }, [tables]);
+
+  const displayBarTables = useMemo(() => {
+    return tables
+      .slice()
+      .sort((a, b) => {
+        const aOcc = a.status === "Occupied" ? 1 : 0;
+        const bOcc = b.status === "Occupied" ? 1 : 0;
+        if (bOcc !== aOcc) return bOcc - aOcc;
+        return Number(a.id || 0) - Number(b.id || 0);
+      })
+      .slice(0, 12);
+  }, [tables]);
+
+  const activeQueueItems = useMemo(() => {
+    const queue = [];
+    for (const order of barOrders) {
+      if (["served", "cancelled"].includes(String(order.status).toLowerCase())) continue;
+      const items = Array.isArray(order.beverageItems) && order.beverageItems.length > 0
+        ? order.beverageItems
+        : Array.isArray(order.items) ? order.items : [];
+      for (const it of items) {
+        queue.push({
+          id: order.id + "-" + (it.id || it.name),
+          name: it.dishName || it.name || "Drink",
+          table: order.table || "Bar Tab",
+          category: it.category || "Cocktails",
+          price: Number(it.unitPrice ?? it.price ?? 0),
+          time: order.time || "Just now",
+          status: order.status || "Preparing",
+          quantity: Number(it.quantity ?? 1),
+        });
+      }
+    }
+    if (queue.length < 5) {
+      const existingNames = new Set(queue.map((q) => q.name.toLowerCase()));
+      for (const drink of drinks) {
+        if (existingNames.has(drink.name.toLowerCase())) continue;
+        queue.push({
+          id: "sig-" + drink.id,
+          name: drink.name,
+          table: drink.measure || "Counter Tab",
+          category: drink.category || "Signature",
+          price: Number(drink.price || 0),
+          time: "5 min prep",
+          status: drink.isAvailable === false || drink.isAvailable === "Unavailable" ? "Unavailable" : "Ready to Serve",
+          quantity: 1,
+        });
+        if (queue.length >= 6) break;
+      }
+    }
+    return queue.slice(0, 6);
+  }, [barOrders, drinks]);
+
   const dashboard = [
     ["Total Drinks", drinks.length, Martini, "orange"],
     ["Active Bar Orders", barOrders.filter((order) => !["Served", "Cancelled"].includes(String(order.status))).length, FileText, "blue"],
@@ -1007,10 +1085,214 @@ export function BarWorkspace({
 
   return (
     <main className="bar-workspace">
-      <div className="bar-page-title"><div><span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span><h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1><p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : "Independent Bar workspace • drink and order records are demo data."}</p></div><span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : "DEMO DATA • SESSION ONLY"}</span></div>
+      <div className="bar-page-title">
+        <div>
+          <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
+          <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
+          <p>{route === "bar-overview" ? "Live overview of beverage orders, bar counter occupancy, KOTs, and drink sales." : ["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : "Independent Bar workspace • drink and order records are demo data."}</p>
+        </div>
+        {route === "bar-overview" ? (
+          <div className="bar-header-shortcuts">
+            <button className="bar-head-btn primary" type="button" onClick={() => { go("bar-drinks"); openForm("drink"); }}>
+              <Plus size={14} />
+              <span>+ Add Drink</span>
+            </button>
+            <button className="bar-head-btn" type="button" onClick={() => go("bar-drinks")}>
+              <Martini size={14} color="#f59e0b" />
+              <span>Drinks Menu</span>
+            </button>
+            <button className="bar-head-btn" type="button" onClick={() => go("bar-tables")}>
+              <Armchair size={14} color="#f59e0b" />
+              <span>Bar Tables</span>
+            </button>
+            <button
+              className={`bar-head-btn ${pendingBarKotCount > 0 ? "highlight" : ""}`}
+              type="button"
+              onClick={() => go("bar-kot")}
+            >
+              <Clock3 size={14} color={pendingBarKotCount > 0 ? "#ef4444" : undefined} />
+              <span>Live Bar KOT ({pendingBarKotCount})</span>
+            </button>
+            <button className="bar-head-btn" type="button" onClick={() => { go("bar-orders"); setOrderComposerOpen(true); }}>
+              <FileText size={14} color="#3b82f6" />
+              <span>+ New Order</span>
+            </button>
+            <button className="bar-head-btn" type="button" onClick={() => go("bar-invoices")}>
+              <FileText size={14} color="#10b981" />
+              <span>Invoices</span>
+            </button>
+          </div>
+        ) : (
+          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : "DEMO DATA • SESSION ONLY"}</span>
+        )}
+      </div>
 
       {route === "bar-overview" && <>
-        <section className="bar-dashboard-grid" aria-label="Bar summary">{dashboard.map(([label, value, Icon, tone]) => <article className="bar-stat-card" key={label}><span className={`bar-stat-icon tone-${tone}`}><Icon size={19} /></span><div><span>{label}</span><strong>{value}</strong></div></article>)}</section><div className="bar-overview-grid"><section className="bar-page-card"><div className="bar-section-head"><div><h2>Recent Bar Orders</h2><p>Recent beverage items from shared restaurant orders.</p></div><button className="bar-button secondary" onClick={() => go("bar-orders")}>All Orders</button></div>{ordersLoading ? <div className="bar-empty" role="status">Loading shared orders…</div> : ordersError ? <div className="bar-error" role="alert">{ordersError}</div> : renderStaticTable(["Order Number", "Table", "Drink Items", "Quantity", "Amount", "Time", "Status"], barOrders.slice(0, 5), (column, order) => ({ "Order Number": <strong>{order.id}</strong>, Table: order.table, "Drink Items": order.itemLabel, Quantity: order.quantity, Amount: formatCurrency(order.total), Time: order.time, Status: <Status>{order.status}</Status> })[column])}</section><section className="bar-page-card"><div className="bar-section-head"><div><h2>Quick Actions</h2><p>Common Bar tasks</p></div></div><div className="bar-quick-actions"><button className="bar-button primary" onClick={() => { go("bar-drinks"); openForm("drink"); }}><Plus size={16} /> Add Drink</button><button className="bar-button secondary" onClick={() => { go("bar-orders"); setOrderComposerOpen(true); }}><FileText size={16} /> New Bar Order</button><button className="bar-button secondary" onClick={() => go("bar-inventory")}><Package size={16} /> View Inventory</button><button className="bar-button secondary" onClick={() => go("bar-reports")}><BarChart3 size={16} /> View Reports</button></div></section></div>
+        {/* 1. Six Operational Metric Cards */}
+        <section className="bar-dashboard-grid" aria-label="Bar summary">
+          {dashboard.map(([label, value, Icon, tone]) => (
+            <article className="bar-stat-card" key={label}>
+              <span className={`bar-stat-icon tone-${tone}`}><Icon size={19} /></span>
+              <div><span>{label}</span><strong>{value}</strong></div>
+            </article>
+          ))}
+        </section>
+
+        {/* 2. Middle Row: Live Bar Counter / Stools Grid & Live Drinks Queue Preview */}
+        <div className="bar-overview-middle-grid">
+          {/* Card 1: Live Bar Counter / Stools Grid */}
+          <section className="bar-page-card bar-floor-card">
+            <div className="bar-card-header">
+              <h3>
+                <Armchair size={16} color="#f59e0b" />
+                <span>Live Bar Counter & Stools</span>
+                <span className={`bar-count-badge ${occupiedBarTables.length > 0 ? "amber" : "green"}`}>
+                  {occupiedBarTables.length} Occupied
+                </span>
+              </h3>
+              <button className="bar-card-link" type="button" onClick={() => go("bar-tables")}>
+                <span>View All Floor</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+            <div className="bar-stools-grid">
+              {displayBarTables.map((tbl) => {
+                const isOccupied = tbl.status === "Occupied";
+                const serverName = staff.find((m) => String(m.id) === String(tbl.staffId))?.name || tbl.server || "Unassigned";
+                return (
+                  <div
+                    key={tbl.id}
+                    className={`bar-stool-box ${isOccupied ? "is-occupied" : ""}`}
+                    onClick={() => go("bar-tables")}
+                    title={tbl.number + " • " + tbl.area + " • " + (isOccupied ? ((tbl.guests || 2) + " Guests") : "Vacant")}
+                  >
+                    <div className="stool-name">{tbl.number}</div>
+                    <div className="stool-status">
+                      <span
+                        className="stool-dot"
+                        style={{ background: isOccupied ? "#f59e0b" : "#10b981" }}
+                      />
+                      <span style={{ color: isOccupied ? "var(--accent-amber-light)" : "var(--status-vacant)" }}>
+                        {isOccupied ? (tbl.guests || 2) + " Guests" : "Vacant"}
+                      </span>
+                    </div>
+                    <div className="stool-server">{serverName}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Card 2: Live Cocktail & Drinks Queue Preview */}
+          <section className="bar-page-card bar-floor-card">
+            <div className="bar-card-header">
+              <h3>
+                <Martini size={16} color="#ea580c" />
+                <span>Live Cocktail & Drinks Queue</span>
+                <span className="bar-count-badge amber">
+                  {activeQueueItems.length} Active
+                </span>
+              </h3>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                  className="bar-head-btn primary"
+                  type="button"
+                  style={{ padding: "3px 8px", fontSize: "0.7rem", height: "26px" }}
+                  onClick={() => { go("bar-drinks"); openForm("drink"); }}
+                >
+                  <Plus size={11} />
+                  <span>Add Drink</span>
+                </button>
+                <button className="bar-card-link" type="button" onClick={() => go("bar-drinks")}>
+                  <span>Manage Menu</span>
+                  <ArrowRight size={12} />
+                </button>
+              </div>
+            </div>
+            <div className="bar-drinks-queue">
+              {activeQueueItems.map((item) => {
+                const { Icon, tone } = getDrinkIcon(item.name, item.category);
+                return (
+                  <div
+                    key={item.id}
+                    className={`bar-queue-item ${tone}`}
+                    onClick={() => go("bar-orders")}
+                    title={"Click to view in orders: " + item.name + " (" + item.table + ")"}
+                  >
+                    <div className="bar-queue-icon">
+                      <Icon size={18} />
+                    </div>
+                    <div className="bar-queue-info">
+                      <div className="bar-queue-title">
+                        {item.quantity > 1 ? (item.quantity + " × ") : ""}{item.name}
+                      </div>
+                      <div className="bar-queue-sub">
+                        {item.table} • {item.category} • {item.time}
+                      </div>
+                    </div>
+                    <div className="bar-queue-meta">
+                      <div className="bar-queue-price">{formatCurrency(item.price)}</div>
+                      <Status>{item.status}</Status>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+
+        {/* 3. Bottom Card: Recent Customer Bar Orders & Bills (matching Dine Recent Invoices) */}
+        <section className="bar-page-card bar-invoices-section">
+          <div className="bar-section-head">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <h2>Recent Customer Bar Orders & Bills</h2>
+              <span className="bar-count-badge blue">
+                {barOrders.length} Total Orders
+              </span>
+            </div>
+            <button className="bar-card-link" type="button" onClick={() => go("bar-orders")}>
+              <span>View All Orders in Detail</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+          {ordersLoading ? (
+            <div className="bar-empty" role="status">Loading shared orders…</div>
+          ) : ordersError ? (
+            <div className="bar-error" role="alert">{ordersError}</div>
+          ) : (
+            renderStaticTable(
+              ["Order Number", "Table", "Drink Items", "Quantity", "Amount", "Time", "Status", "Actions"],
+              barOrders.slice(0, 5),
+              (column, order) => ({
+                "Order Number": <strong>{order.id}</strong>,
+                Table: order.table,
+                "Drink Items": order.itemLabel,
+                Quantity: order.quantity,
+                Amount: formatCurrency(order.total),
+                Time: order.time,
+                Status: <Status>{order.status}</Status>,
+                Actions: (
+                  <div className="bar-actions bar-order-actions">
+                    <button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>
+                      View Items
+                    </button>
+                    <button
+                      className="bar-icon-button"
+                      aria-label={"Print order " + order.id}
+                      title="Print order details"
+                      onClick={() =>
+                        printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) ||
+                        setToast("Allow pop-ups to print the order details.")
+                      }
+                    >
+                      <Printer size={15} />
+                    </button>
+                  </div>
+                ),
+              })[column]
+            )
+          )}
+        </section>
       </>}
 
       {listPage}
