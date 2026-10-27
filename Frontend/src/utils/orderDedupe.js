@@ -85,6 +85,20 @@ const itemsKey = (order) =>
     .sort()
     .join("|");
 
+const getBillingSessionId = (order) => {
+  const explicitId = order?.billingSessionId ?? order?.BillingSessionId ??
+    order?.backendOrderId ?? order?.BackendOrderId ?? order?.orderId ?? order?.OrderId;
+  if (explicitId !== undefined && explicitId !== null && String(explicitId).trim()) {
+    return normalize(explicitId);
+  }
+  // API history rows use the backend order primary key as their id. Local POS
+  // invoices use generated `ord_…` ids and receive their backend key on settle.
+  const id = order?.id ?? order?.Id;
+  return id !== undefined && id !== null && /^\d+$/.test(String(id).trim())
+    ? normalize(id)
+    : "";
+};
+
 const saleFingerprint = (order) => {
   const time = timeKey(order);
   const items = itemsKey(order);
@@ -231,14 +245,16 @@ export function dedupeOrders(orders = []) {
   for (const order of Array.isArray(orders) ? orders : []) {
     if (!order || typeof order !== "object") continue;
     const fingerprint = saleFingerprint(order);
-    const invoice = normalize(order.invoiceNo);
+    const invoice = normalize(order.invoiceNo ?? order.InvoiceNo);
     const date = dateKey(order);
+    const sessionId = getBillingSessionId(order);
     const identities = [
-      invoice && date && itemsKey(order)
-        ? `invoice:${invoice}:${date}:${amountKey(order)}:${itemsKey(order)}`
+      sessionId ? `session:${sessionId}` : "",
+      !sessionId && invoice && date && itemsKey(order)
+        ? `invoice:${normalize(order.tableId ?? order.tableName)}:${invoice}:${date}:${amountKey(order)}:${itemsKey(order)}`
         : "",
-      fingerprint ? `sale:${fingerprint}` : "",
-      order.id ? `id:${normalize(order.id)}` : "",
+      !sessionId && fingerprint ? `sale:${fingerprint}` : "",
+      (order.id ?? order.Id) ? `id:${normalize(order.id ?? order.Id)}` : "",
     ].filter(Boolean);
     const existingIndex = identities
       .map((identity) => indexByIdentity.get(identity))
@@ -261,6 +277,8 @@ export function dedupeOrders(orders = []) {
     const fieldsToPreserve = [
       "paymentMethod", "paymentMode", "PaymentMethod", "payment_mode",
       "invoiceNo", "InvoiceNo",
+      "billingSessionId", "backendOrderId", "orderId",
+      "BillingSessionId", "BackendOrderId", "OrderId",
       "settledAt", "SettledAt",
       "date", "settledDate",
       "tableName", "TableName",

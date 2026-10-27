@@ -99,6 +99,7 @@ export function AdminHeader({
         >
           <button
             onClick={() => onModeChange?.("dine")}
+            aria-pressed={activeMode === "dine"}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -128,6 +129,7 @@ export function AdminHeader({
 
           <button
             onClick={() => onModeChange?.("bar")}
+            aria-pressed={activeMode === "bar"}
             style={{
               display: "inline-flex",
               alignItems: "center",

@@ -2215,7 +2215,7 @@ import { ThemeToggle } from '../common/ThemeToggle';
 //   );
 // }
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   ChefHat,
   Clock,
@@ -2247,6 +2247,7 @@ import {
   apiUpdateKitchenItemStatus,
 } from "../api/kitchenApi";
 import { KOTModal } from "./KOTModal";
+import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "./orderRouting";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import {
   parseTimeToSeconds,
@@ -2279,7 +2280,11 @@ export function KitchenKOTView({
   onLogout = null,
   restaurantName = "Restaurant",
   restaurantLogo = "",
+  station = "kitchen",
+  menuItems = [],
 }) {
+  const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
+  const isBarStation = station === "bar";
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
   const [isTableFilterOpen, setIsTableFilterOpen] = useState(false);
@@ -2612,7 +2617,10 @@ export function KitchenKOTView({
       uniqueKey: `active-${orderId}-${batch}`,
       isPaid: false,
       ticketType: "active",
-      items: (Array.isArray(ticket.items) ? ticket.items : []).map((item) => ({
+      items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
+        const category = findMenuItem(menuLookup, item)?.category;
+        return isBarStation ? isBeverageCategory(category) : !isBeverageCategory(category);
+      }).map((item) => ({
         ...item,
         id: item.id ?? item.orderItemId,
         menuItemId: item.menuItemId,

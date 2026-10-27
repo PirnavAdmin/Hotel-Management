@@ -34,10 +34,6 @@ import {
   FileText,
   BarChart3,
   Settings,
-  Wine,
-  Beer,
-  Martini,
-  GlassWater,
   Sparkles,
   Boxes,
 } from "lucide-react";
@@ -57,6 +53,7 @@ import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
+import { BarWorkspace } from "../bar/BarWorkspace";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { API_BASE_URL, openOptionalEventStream } from "../api/apiConfig";
@@ -398,7 +395,10 @@ export function AdminPortal({
   onAddTable,
   onUpdateTable,
   onDeleteTable,
+  onBarOrderUpdated,
+  onBarOrderItemStatusUpdated,
   staffList,
+  sharedRecordLoad,
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
@@ -492,7 +492,7 @@ export function AdminPortal({
   // Toggle between Dine (Restaurant) and Bar mode
   const [portalMode, setPortalMode] = useState(() => {
     try {
-      return localStorage.getItem("avsr_portal_mode") || "dine";
+      return localStorage.getItem("avsr_portal_mode") === "bar" ? "bar" : "dine";
     } catch {
       return "dine";
     }
@@ -501,14 +501,27 @@ export function AdminPortal({
   const [activeBarTab, setActiveBarTab] = useState(() => {
     try {
       const saved = localStorage.getItem("avsr_active_bar_tab");
-      return saved || "";
+      return ["bar-overview", "bar-drinks", "bar-tables", "bar-staff", "bar-kot", "bar-inventory", "bar-invoices", "bar-orders", "bar-reports", "bar-access", "bar-settings"].includes(saved) ? saved : "bar-overview";
     } catch {
-      return "";
+      return "bar-overview";
     }
   });
 
+  const handleBarTabChange = (tab) => {
+    if (!["bar-overview", "bar-drinks", "bar-tables", "bar-staff", "bar-kot", "bar-inventory", "bar-invoices", "bar-orders", "bar-reports", "bar-access", "bar-settings"].includes(tab)) return;
+    setActiveBarTab(tab);
+    try { localStorage.setItem("avsr_active_bar_tab", tab); } catch {}
+  };
+
   const handlePortalModeChange = (mode) => {
     setPortalMode(mode);
+    // The work area is shared with other admin sections; start Bar at its
+    // dashboard rather than preserving a previous section's scroll position.
+    if (mode === "bar") {
+      const workArea = document.getElementById("admin-work-area");
+      if (workArea) workArea.scrollTop = 0;
+      if (!activeBarTab?.startsWith("bar-")) handleBarTabChange("bar-overview");
+    }
     try {
       localStorage.setItem("avsr_portal_mode", mode);
     } catch {}
@@ -541,62 +554,6 @@ export function AdminPortal({
     if (!enabled && portalMode === "bar") {
       handlePortalModeChange("dine");
     }
-  };
-
-  const renderBarWorkspace = () => {
-    return (
-      <div
-        style={{
-          minHeight: "420px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          padding: "3.5rem 1.5rem",
-          background: "var(--bg-card)",
-          border: "1.5px dashed var(--border-card)",
-          borderRadius: "16px",
-        }}
-      >
-        <div
-          style={{
-            width: "72px",
-            height: "72px",
-            borderRadius: "50%",
-            background: "rgba(234, 88, 12, 0.12)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: "1.2rem",
-            color: "#ea580c",
-          }}
-        >
-          <Wine size={36} />
-        </div>
-        <h2
-          style={{
-            fontSize: "1.45rem",
-            fontWeight: 800,
-            color: "var(--text-main)",
-            marginBottom: "0.5rem",
-          }}
-        >
-          {activeBarTab ? `Bar - ${activeBarTab}` : "Bar Workspace"}
-        </h2>
-        <p
-          style={{
-            maxWidth: "460px",
-            fontSize: "0.92rem",
-            color: "var(--text-muted)",
-            lineHeight: 1.55,
-            margin: 0,
-          }}
-        >
-          You are currently in Bar mode.
-        </p>
-      </div>
-    );
   };
 
   const [searchFilter, setSearchFilter] = useState("");
@@ -1618,7 +1575,7 @@ export function AdminPortal({
           restaurantTagline={restaurantTagline}
           portalMode={portalMode}
           activeBarTab={activeBarTab}
-          setActiveBarTab={setActiveBarTab}
+          setActiveBarTab={handleBarTabChange}
         />
 
         {/* Right Main Content Pane */}
@@ -1661,7 +1618,31 @@ export function AdminPortal({
             }}
           >
             {portalMode === "bar" ? (
-              renderBarWorkspace()
+              <BarWorkspace
+                activeTab={activeBarTab}
+                onNavigate={handleBarTabChange}
+                menuItems={menuItems}
+                onAddMenuItem={onAddMenuItem}
+                onUpdateMenuItem={onUpdateMenuItem}
+                onDeleteMenuItem={onDeleteMenuItem}
+                onSetMenuAvailability={onSetMenuAvailability}
+                inventory={inventory}
+                pastOrders={pastOrders}
+                restaurantName={restaurantName}
+                restaurantSettings={restaurantSettings}
+                onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
+                tables={tables}
+                staffList={staffList}
+                sharedRecordLoad={sharedRecordLoad}
+                onAddTable={onAddTable}
+                onUpdateTable={onUpdateTable}
+                onDeleteTable={onDeleteTable}
+                onOrderUpdated={onBarOrderUpdated}
+                onBarOrderItemStatusUpdated={onBarOrderItemStatusUpdated}
+                onAddStaff={onAddStaff}
+                onUpdateStaff={onUpdateStaff}
+                onDeleteStaff={onDeleteStaff}
+              />
             ) : (
               <>
                 {/* OVERVIEW TAB */}

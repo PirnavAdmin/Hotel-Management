@@ -14,9 +14,8 @@ import {
   Beer,
   Martini,
   GlassWater,
-  Plus,
-  Trash2,
   Sparkles,
+  ReceiptText,
 } from "lucide-react";
 
 export const BAR_ICON_MAP = {
@@ -95,7 +94,7 @@ export function AdminSidebar({
         {
           id: "invoices",
           label: "Invoices",
-          icon: FileText,
+          icon: ReceiptText,
         },
         {
           id: "reports",
@@ -122,17 +121,19 @@ export function AdminSidebar({
   ];
 
   // ================= BAR SIDEBAR NAVIGATION =================
-  // Define and add your Bar sidebar sections and navigation items directly here in code:
   const barNavSections = [
-    // Example:
-    // {
-    //   title: "BAR MENU",
-    //   items: [
-    //     { id: "bar-drinks", label: "Drinks & Cocktails", icon: Wine },
-    //     { id: "bar-orders", label: "Bar Orders", icon: FileText },
-    //     { id: "bar-inventory", label: "Liquor Stock", icon: Package },
-    //   ],
-    // },
+    { title: "MAIN MENU", items: [
+      { id: "bar-overview", label: "Bar Overview", icon: LayoutDashboard },
+      { id: "bar-drinks", label: "Drinks Menu", icon: Wine },
+      { id: "bar-tables", label: "Bar Tables", icon: Armchair },
+      { id: "bar-staff", label: "Bar Staff & Persons", icon: Users },
+      { id: "bar-kot", label: "Bar KOT", icon: ChefHat },
+    ] },
+    { title: "OPERATIONS", items: [
+      { id: "bar-inventory", label: "Bar Inventory", icon: Package },
+      { id: "bar-invoices", label: "Invoices", icon: ReceiptText },
+      { id: "bar-reports", label: "Bar Reports", icon: BarChart3 },
+    ] },
   ];
 
   return (
@@ -221,134 +222,16 @@ export function AdminSidebar({
             }}
           >
             {portalMode === "bar"
-              ? restaurantTagline
-                ? `${restaurantTagline} • Bar`
-                : "Bar & Lounge"
-              : restaurantTagline}
+              ? `${restaurantTagline || "Heaven Food"} \u2022 Bar`
+              : restaurantTagline || "Heaven Food"}
           </div>
         </div>
       </div>
 
       {/* Navigation Sections */}
-      <div
-        className="no-scrollbar"
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          marginTop: "0.85rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.1rem",
-        }}
-      >
-        {portalMode === "bar" ? (
-          <div>
-            <div
-              style={{
-                fontSize: "0.68rem",
-                fontWeight: 800,
-                color: "var(--text-dim)",
-                letterSpacing: "1px",
-                padding: "0 0.65rem 0.55rem 0.65rem",
-                textTransform: "uppercase",
-              }}
-            >
-              BAR SIDEBAR
-            </div>
-
-            {barNavSections.map((section) => (
-              <div key={section.title} style={{ marginBottom: "1rem" }}>
-                <div
-                  style={{
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    color: "var(--text-dim)",
-                    letterSpacing: "1px",
-                    padding: "0 0.65rem 0.45rem 0.65rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {section.title}
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.25rem",
-                  }}
-                >
-                  {section.items.map((item) => {
-                    const IconComponent = item.icon || Wine;
-                    const isActive = activeBarTab === item.id;
-
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => setActiveBarTab?.(item.id)}
-                        style={{
-                          width: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.75rem",
-                          padding: "0.65rem 0.85rem",
-                          borderRadius: "10px",
-                          border: "none",
-                          outline: "none",
-                          cursor: "pointer",
-                          fontSize: "0.85rem",
-                          fontWeight: isActive ? 700 : 500,
-                          textAlign: "left",
-                          transition: "all 0.15s ease",
-                          background: isActive
-                            ? "linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)"
-                            : "transparent",
-                          color: isActive ? "#ffffff" : "var(--text-muted)",
-                          boxShadow: isActive
-                            ? "0 4px 14px rgba(245, 158, 11, 0.38)"
-                            : "none",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.background = "var(--bg-tertiary)";
-                            e.currentTarget.style.color = "var(--text-main)";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.background = "transparent";
-                            e.currentTarget.style.color = "var(--text-muted)";
-                          }
-                        }}
-                      >
-                        <IconComponent
-                          size={18}
-                          color={isActive ? "#ffffff" : "currentColor"}
-                          strokeWidth={isActive ? 2.3 : 1.9}
-                          style={{ flexShrink: 0 }}
-                        />
-                        <span
-                          style={{
-                            flex: 1,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          navSections.map((section) => (
-          <div key={section.title}>
+      <div className="no-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none", marginTop: "0.85rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+        {(portalMode === "bar" ? barNavSections : navSections).map((section) => (
+          <div key={section.title} style={{ marginBottom: "0.15rem" }}>
             <div
               style={{
                 fontSize: "0.68rem",
@@ -370,13 +253,14 @@ export function AdminSidebar({
               }}
             >
               {section.items.map((item) => {
-                const IconComponent = item.icon;
-                const isActive = activeTab === item.id;
+                const IconComponent = item.icon || Wine;
+                const isActive = portalMode === "bar" ? activeBarTab === item.id : activeTab === item.id;
 
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => portalMode === "bar" ? setActiveBarTab?.(item.id) : setActiveTab(item.id)}
+                    aria-current={isActive ? "page" : undefined}
                     style={{
                       width: "100%",
                       display: "flex",
@@ -385,7 +269,6 @@ export function AdminSidebar({
                       padding: "0.65rem 0.85rem",
                       borderRadius: "10px",
                       border: "none",
-                      outline: "none",
                       cursor: "pointer",
                       fontSize: "0.85rem",
                       fontWeight: isActive ? 700 : 500,
@@ -421,9 +304,10 @@ export function AdminSidebar({
                     <span
                       style={{
                         flex: 1,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        minWidth: 0,
+                        whiteSpace: "normal",
+                        lineHeight: 1.25,
+                        overflowWrap: "anywhere",
                       }}
                     >
                       {item.label}
@@ -449,8 +333,7 @@ export function AdminSidebar({
               })}
             </div>
           </div>
-        ))
-      )}
+        ))}
       </div>
     </aside>
   );
