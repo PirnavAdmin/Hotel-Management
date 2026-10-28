@@ -2239,6 +2239,7 @@ export function App() {
           serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
           tipAmount: settlementData.tipAmount,
           paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: enrichedSettlement.invoiceNo,
         });
         if (!settleResult?.success) throw new Error(settleResult?.error || "The server did not confirm settlement.");
         // Link the local receipt to the backend order session so a later
