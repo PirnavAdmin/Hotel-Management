@@ -6,7 +6,6 @@ import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { formatCurrency } from "../utils/formatCurrency";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
 import { BarKOTView } from "./BarKOTView";
