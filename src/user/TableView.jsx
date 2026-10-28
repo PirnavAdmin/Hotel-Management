@@ -831,7 +831,10 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         ? Number(selectedSeatTable.guests)
         : Number(selectedSeatTable.capacity) || 2;
 
-    const finalStatus = count > 0 ? "occupied" : selectedSeatTable.status;
+    const hasActiveItems = Array.isArray(selectedSeatTable.items) && selectedSeatTable.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const finalStatus = hasActiveItems ? "occupied" : "vacant";
     const finalSeats =
       selectedSeatIds.length > 0
         ? [...selectedSeatIds]
@@ -1160,8 +1163,10 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         sectionFilter === "all" || t.section === sectionFilter;
 
       // 2. Status Filter
+      const hasActive = Array.isArray(t.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+      const effectiveStatus = hasActive ? (t.status || "occupied") : "vacant";
       const matchesStatus =
-        statusFilter === "all" || t.status === statusFilter;
+        statusFilter === "all" || effectiveStatus === statusFilter;
 
       // 3. Server Dropdown Filter
       const tServer = (t.server || t.waiter || t.assignedServer || "Staff").trim();
@@ -1684,6 +1689,9 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         >
           {filteredTables.map((table) => {
             const items = Array.isArray(table?.items) ? table.items : [];
+            const hasActiveItems = items.some(
+              (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
+            );
             const subtotal = items.reduce(
               (sum, item) =>
                 sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
@@ -1698,17 +1706,19 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
             let statusText = "Vacant";
             let statusBg = "var(--status-vacant-bg)";
 
-            if (table.status === "occupied") {
-              statusColor = "var(--status-occupied)";
-              statusText = "Dining";
-              statusBg = "var(--status-occupied-bg)";
-            } else if (table.status === "billed") {
-              statusColor = "var(--status-billed)";
-              statusText = "Billed";
-              statusBg = "var(--status-billed-bg)";
-            }
+            const isOccupied = hasActiveItems && table.status !== "vacant";
 
-            const isOccupied = table.status !== "vacant";
+            if (isOccupied) {
+              if (table.status === "billed") {
+                statusColor = "var(--status-billed)";
+                statusText = "Billed";
+                statusBg = "var(--status-billed-bg)";
+              } else {
+                statusColor = "var(--status-occupied)";
+                statusText = "Dining";
+                statusBg = "var(--status-occupied-bg)";
+              }
+            }
             const hasCooking =
               isOccupied && items.some((i) => i.kotStatus === "cooking");
             const allReady =
@@ -1915,7 +1925,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       <Armchair size={11} color="#f59e0b" />
                       <span>
                         {table.capacity} Seats ·{" "}
-                        {Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0)
+                        {isOccupied && (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0))
                           ? `${Number(table.guests) || table.selectedSeats.length} Seated`
                           : "0 Seated"}
                       </span>
@@ -2115,7 +2125,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
 
                 {/* Order Status & Financial Snapshot */}
                 <div>
-                  {table.status !== "vacant" && (
+                  {isOccupied && hasActiveItems && (
                     <div style={{ marginTop: "0.25rem" }}>
                       <div
                         style={{
@@ -2235,7 +2245,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                   >
                     <Utensils size={12} />
                     <span>
-                      {table.status === "vacant" ? "Take Order" : "Manage Bill"}
+                      {(!isOccupied || !hasActiveItems) ? "Take Order" : "Manage Bill"}
                     </span>
                     <ChevronRight size={12} />
                   </button>

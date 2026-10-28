@@ -27,11 +27,15 @@ import { apiGetOrderHistory } from "../api/orderApi";
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetInventory } from "../api/inventoryApi";
 import {
+  extractInvoiceRecords,
+  extractSettledOrderRecords,
+  mergeLiveInvoiceRecords,
+} from "../utils/liveInvoiceData";
+import {
   dedupeOrders,
   sortOrdersBySettlementTime,
   normalizePaymentMethod,
   parseOrderToYMD,
-  mergeSettledOrders,
 } from '../utils/orderDedupe';
 import { deduplicateAndNormalizeInventory } from './AdminInventory';
 
@@ -80,7 +84,43 @@ const normalizeInventoryList = (items) => {
   return Array.from(map.values());
 };
 
-export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
+async function requestLiveReportData() {
+  const [invoiceResponse, orderResponse, inventoryResponse] = await Promise.all([
+    apiGetInvoices(),
+    apiGetOrderHistory(),
+    apiGetInventory(),
+  ]);
+  const invoiceRows = extractInvoiceRecords(invoiceResponse);
+  const orderRows = extractSettledOrderRecords(orderResponse);
+  if (invoiceRows === null && orderRows === null) {
+    throw new Error(
+      invoiceResponse?.error ||
+        orderResponse?.error ||
+        "Live invoice and settled-order records could not be loaded.",
+    );
+  }
+
+  const inventoryPayload = inventoryResponse?.data ?? inventoryResponse;
+  const inventoryRows = Array.isArray(inventoryPayload)
+    ? inventoryPayload
+    : Array.isArray(inventoryPayload?.data)
+      ? inventoryPayload.data
+      : Array.isArray(inventoryPayload?.ingredients)
+        ? inventoryPayload.ingredients
+        : [];
+
+  return {
+    records: mergeLiveInvoiceRecords(invoiceRows || [], orderRows || []),
+    invoiceError: invoiceRows === null
+      ? `Invoice records could not be loaded (${invoiceResponse?.error || "server unavailable"}). Showing live settled POS orders instead.`
+      : orderRows === null
+        ? `Settled order details could not be loaded (${orderResponse?.error || "server unavailable"}). Some invoice details may be incomplete.`
+        : "",
+    inventory: normalizeInventoryList(inventoryRows),
+  };
+}
+
+export function AdminReports({ menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
@@ -143,19 +183,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [isFetching, setIsFetching] = useState(false);
-  const [fetchedOrders, setFetchedOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return null;
-  });
-  const [invoicesData, setInvoicesData] = useState(null);
-  const ordersLoaded = true;
+  const [isFetching, setIsFetching] = useState(true);
+  const [invoicesData, setInvoicesData] = useState([]);
+  const [invoiceLoadError, setInvoiceLoadError] = useState("");
+  const ordersLoaded = !isFetching;
   const startInputRef = useRef(null);
 
   // Financial Sub-Tabs
@@ -238,12 +269,10 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     };
   }, []);
 
-  const ordersData = useMemo(() => {
-    const rawList = fetchedOrders || pastOrders;
-    return sortOrdersBySettlementTime(
-      dedupeOrders(Array.isArray(rawList) ? rawList : []),
-    );
-  }, [pastOrders, fetchedOrders]);
+  const ordersData = useMemo(
+    () => sortOrdersBySettlementTime(dedupeOrders(invoicesData)),
+    [invoicesData],
+  );
 
   const handleSelectPeriod = (periodId) => {
     setFilterPeriod(periodId);
@@ -352,7 +381,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
   const totalRevenue = filteredOrders.reduce((sum, order) => {
     const grandTotal = Number(
-      order.grandTotal ?? order.totalAmount ?? order.finalTotal ?? order.amount ?? order.total ?? 0,
+      order.paidAmount ?? order.grandTotal ?? order.totalAmount ?? order.finalTotal ?? order.amount ?? order.total ?? 0,
     ) || 0;
     return sum + Math.max(0, grandTotal);
   }, 0);
@@ -386,7 +415,7 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
       );
     }
     return normalizePaymentMethod(order) === channel
-      ? Number(order.grandTotal ?? order.total ?? 0) || 0
+      ? Number(order.paidAmount ?? order.grandTotal ?? order.totalAmount ?? order.total ?? 0) || 0
       : 0;
   };
 
@@ -528,67 +557,48 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
     });
   }, [inventoryItems, invSearch, invCategoryFilter]);
 
+  const applyFetchedData = (data) => {
+    setInvoicesData(data.records);
+    setInvoiceLoadError(data.invoiceError);
+    if (data.inventory.length > 0) {
+      setLiveInventory(data.inventory);
+      try {
+        localStorage.setItem('gourmet_pos_inventory_v1', JSON.stringify(data.inventory));
+      } catch {}
+    }
+  };
+
   const handleFetchData = async () => {
     setIsFetching(true);
+    setInvoiceLoadError("");
     try {
-      const [response, invoiceResponse, inventoryResponse] = await Promise.all([
-        apiGetOrderHistory().catch(() => null),
-        apiGetInvoices().catch(() => null),
-        apiGetInventory().catch(() => null),
-      ]);
-      const invoiceList =
-        invoiceResponse?.data?.data ??
-        invoiceResponse?.data?.invoices ??
-        invoiceResponse?.data;
-      if (invoiceResponse?.success && Array.isArray(invoiceList)) {
-        setInvoicesData(invoiceList);
-      }
-      const result = response?.data ?? response;
-      const serverOrders = Array.isArray(result)
-        ? result
-        : Array.isArray(result?.orders)
-          ? result.orders
-          : Array.isArray(result?.data)
-            ? result.data
-            : null;
-      if (Array.isArray(serverOrders) && serverOrders.length > 0) {
-        setFetchedOrders((current) =>
-          mergeSettledOrders(current || pastOrders, serverOrders),
-        );
-        return;
-      }
-      const saved = localStorage.getItem('gourmet_pos_past_orders_v2_inr');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setFetchedOrders((current) =>
-            mergeSettledOrders(current || pastOrders, parsed),
-          );
-        }
-      }
-
-      if (inventoryResponse) {
-        const payload = inventoryResponse?.data ?? inventoryResponse;
-        const rows = Array.isArray(payload)
-          ? payload
-          : Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload?.ingredients)
-              ? payload.ingredients
-              : [];
-        if (rows.length > 0) {
-          const normalized = normalizeInventoryList(rows);
-          setLiveInventory(normalized);
-          try {
-            localStorage.setItem('gourmet_pos_inventory_v1', JSON.stringify(normalized));
-          } catch {}
-        }
-      }
-    } catch {
+      applyFetchedData(await requestLiveReportData());
+    } catch (error) {
+      setInvoicesData([]);
+      setInvoiceLoadError(error?.message || "Live invoice and report data could not be loaded.");
     } finally {
       setIsFetching(false);
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    requestLiveReportData()
+      .then((data) => {
+        if (active) applyFetchedData(data);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setInvoicesData([]);
+        setInvoiceLoadError(error?.message || "Live invoice and report data could not be loaded.");
+      })
+      .finally(() => {
+        if (active) setIsFetching(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const getFilterPeriodLabel = () => {
     if (filterPeriod === "today") return `Today (${todayYMD})`;
@@ -1030,7 +1040,8 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
 
             {/* Fetch Data Button */}
             <button
-              onClick={handleFetchData}
+              onClick={() => { setIsFetching(true); setInvoiceLoadError(""); handleFetchData(); }}
+              disabled={isFetching}
               style={{
                 background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                 border: "none",
@@ -1066,6 +1077,12 @@ export function AdminReports({ pastOrders = [], menuItems = [], restaurantSettin
             </button>
 
           </div>
+
+          {invoiceLoadError && (
+            <div role="alert" style={{ marginBottom: "1rem", padding: "0.7rem 0.9rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", background: "rgba(239, 68, 68, 0.08)", color: "var(--danger)", fontSize: "0.8rem" }}>
+              {invoiceLoadError}
+            </div>
+          )}
 
           {/* Quick Section Navigation Bar */}
           <div

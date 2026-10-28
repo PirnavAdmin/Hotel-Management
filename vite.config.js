@@ -1091,6 +1091,50 @@ function globalSyncPlugin() {
           return res.end(JSON.stringify({ success: true }));
         }
 
+        if (req.url === "/api/v1/orders/active" && req.method === "GET") {
+          db = loadDb();
+          const orders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+            (order) => ["active", "billed"].includes(String(order.status || "").toLowerCase()),
+          );
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify(orders));
+        }
+
+        const orderByTableMatch = req.url.match(/^\/api\/v1\/orders\/table\/([^/?]+)/i);
+        if (orderByTableMatch && req.method === "GET") {
+          const tableId = decodeURIComponent(orderByTableMatch[1]);
+          db = loadDb();
+          const order = (db.gourmet_pos_past_orders_v2_inr || []).find(
+            (candidate) =>
+              String(candidate.tableId ?? candidate.id) === tableId &&
+              ["active", "billed"].includes(String(candidate.status || "").toLowerCase()),
+          );
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify(order || null));
+        }
+
+        const sendOrderKotMatch = req.url.match(/^\/api\/v1\/orders\/([^/?]+)\/send-kot$/i);
+        if (sendOrderKotMatch && req.method === "POST") {
+          const orderId = decodeURIComponent(sendOrderKotMatch[1]);
+          db = loadDb();
+          const orders = db.gourmet_pos_past_orders_v2_inr || [];
+          const order = orders.find((candidate) => String(candidate.id ?? candidate.orderId) === orderId);
+          if (!order) {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+          }
+          order.items = (order.items || []).map((item) => ({
+            ...item,
+            kotStatus: item.kotStatus || "received",
+            kotSent: true,
+          }));
+          db.gourmet_pos_past_orders_v2_inr = orders;
+          saveDb(db);
+          broadcast({ gourmet_pos_past_orders_v2_inr: orders });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, data: order }));
+        }
+
         if (req.url.startsWith("/api/v1/orders") && req.method === "GET") {
           db = loadDb();
           const orders = db.gourmet_pos_past_orders_v2_inr || [];
@@ -1109,13 +1153,39 @@ function globalSyncPlugin() {
               const orderData = JSON.parse(body);
               db = loadDb();
               const existingOrders = db.gourmet_pos_past_orders_v2_inr || [];
-              const updatedOrders = [orderData, ...existingOrders];
+              const tableId = String(orderData.tableId ?? "");
+              const existingOrder = existingOrders.find(
+                (order) =>
+                  tableId &&
+                  String(order.tableId ?? "") === tableId &&
+                  String(order.status || "").toLowerCase() === "active",
+              );
+              const generatedOrderId = Number(orderData.id) || Date.now();
+              const savedOrder = existingOrder
+                ? {
+                    ...existingOrder,
+                    ...orderData,
+                  id: Number(existingOrder.id ?? existingOrder.orderId) || generatedOrderId,
+                  orderId: Number(existingOrder.orderId ?? existingOrder.id) || generatedOrderId,
+                    status: "Active",
+                    items: [...(existingOrder.items || []), ...(orderData.items || [])],
+                  }
+                : {
+                    ...orderData,
+                  id: generatedOrderId,
+                  orderId: generatedOrderId,
+                    status: "Active",
+                    createdAt: orderData.createdAt || new Date().toISOString(),
+                  };
+              const updatedOrders = existingOrder
+                ? existingOrders.map((order) => String(order.id) === String(existingOrder.id) ? savedOrder : order)
+                : [savedOrder, ...existingOrders];
               db.gourmet_pos_past_orders_v2_inr = updatedOrders;
               saveDb(db);
               broadcast({ gourmet_pos_past_orders_v2_inr: updatedOrders });
               res.writeHead(200, { "Content-Type": "application/json" });
               return res.end(
-                JSON.stringify({ success: true, order: orderData }),
+                JSON.stringify({ success: true, data: savedOrder, order: savedOrder }),
               );
             } catch (err) {
               res.writeHead(400, { "Content-Type": "application/json" });

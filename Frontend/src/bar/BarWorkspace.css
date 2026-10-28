@@ -265,6 +265,7 @@
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.3);
 }
+<<<<<<< HEAD
 
 /* Header Shortcuts (replacing static banner) */
 .bar-header-shortcuts {
@@ -525,3 +526,8 @@
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
+
+
+
+=======
+>>>>>>> db3dbc40d14b0983d98f0891e4bca70c394416e6
