@@ -4,6 +4,7 @@ import {
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
   Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
 } from "lucide-react";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
@@ -1504,6 +1505,9 @@ function BarDrinksMenu({
     category: "Cocktails",
     customCategory: "",
     price: "",
+    drinkType: "Alcoholic",    measure: "Glass (250 ml)",
+    customMeasure: "",
+    abv: "",
     isVeg: false,
     isChefSpecial: false,
     prepTime: "15 min",
@@ -1545,17 +1549,20 @@ function BarDrinksMenu({
       const query = searchFilter.trim().toLowerCase();
       const matchesSearch =
         !query ||
-        [item.name, item.description, item.category].some((val) =>
+        [item.name, item.dishName, item.drinkName, item.description, item.category].some((val) =>
           String(val ?? "").toLowerCase().includes(query)
         );
       const matchesCategory =
         !menuFilters.category ||
-        String(item.category ?? "").toLowerCase() ===
-          menuFilters.category.toLowerCase();
-      const drinkType = item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic");
+        String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase();
+      
+      const isItemAlcoholic = item.drinkType
+        ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
+        : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+
       const matchesDrinkType =
         !menuFilters.drinkType ||
-        drinkType.toLowerCase() === menuFilters.drinkType;
+        (menuFilters.drinkType === "alcoholic" ? isItemAlcoholic : !isItemAlcoholic);
       const matchesAvailability =
         !menuFilters.availability ||
         (item.isAvailable !== false && item.isAvailable !== "Unavailable") ===
@@ -1630,6 +1637,8 @@ function BarDrinksMenu({
         customMeasure: "",
         drinkType: "Alcoholic",
         abv: "40",
+        isVeg: false,
+        isChefSpecial: false,
         description: "",
         image: "",
         isAvailable: "Available",
@@ -1679,6 +1688,8 @@ function BarDrinksMenu({
       ...(editingItem || {}),
       id: editingItem?.id || `DR-${Date.now()}`,
       name: itemForm.name.trim(),
+      dishName: itemForm.name.trim(),
+      drinkName: itemForm.name.trim(),
       category: finalCategory,
       price: parseFloat(itemForm.price || 0),
       isVeg: Boolean(itemForm.isVeg),
@@ -1694,6 +1705,7 @@ function BarDrinksMenu({
       drinkType: itemForm.drinkType || (itemForm.abv ? "Alcoholic" : itemForm.isVeg ? "Non-Alcoholic" : "Alcoholic"),
       abv: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
       description: itemForm.description || "",
+      shortDescription: itemForm.description || "",
       image: itemForm.image || "",
       imageUrl: itemForm.image || "",
       isAvailable: itemForm.isAvailable !== false && itemForm.isAvailable !== "Unavailable",
@@ -1728,7 +1740,7 @@ function BarDrinksMenu({
   };
 
   const handleDeleteItem = (item) => {
-    if (!window.confirm(`Are you sure you want to delete "${item.name}" from the drinks menu?`)) return;
+    if (!window.confirm('Are you sure you want to delete "' + item.name + '" from the drinks menu?')) return;
     console.info("[Bar Drinks] Deleting drink item:", item.id);
     if (onDeleteDrink) {
       onDeleteDrink(item.id);
@@ -1746,7 +1758,7 @@ function BarDrinksMenu({
         padding: "0.75rem 0.85rem",
       }}
     >
-      {/* Header inside Card - Matching Dine Menu Items */}
+      {/* Header inside Card */}
       <div
         style={{
           display: "flex",
@@ -1833,16 +1845,16 @@ function BarDrinksMenu({
             }}
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>Add New Drink / Beverage</span>
+            <span>Add New Drink</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Toolbar - Exact Dine Class & Grid */}
+      {/* Filter Toolbar */}
       <div
         className="menu-filter-toolbar menu-items-filter-toolbar"
         role="search"
-        aria-label="Menu item filters"
+        aria-label="Drink item filters"
       >
         <label className="menu-filter-field menu-filter-search">
           <span>Search</span>
@@ -1968,7 +1980,7 @@ function BarDrinksMenu({
             <tr style={{ borderBottom: "1.5px solid var(--border-subtle)" }}>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "40%" }}>Drink Name</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Category</th>
-              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Drink Type</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Drink Type</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Price (₹)</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%", textAlign: "center" }}>Actions</th>
             </tr>
@@ -1983,6 +1995,11 @@ function BarDrinksMenu({
             ) : (
               paginatedDrinks.map((item) => {
                 const isAvail = item.isAvailable !== false && item.isAvailable !== "Unavailable";
+                const isSpecial = Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial);
+                const isAlcoholic = item.drinkType
+                  ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
+                  : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+
                 return (
                   <tr
                     key={item.id}
@@ -1993,7 +2010,7 @@ function BarDrinksMenu({
                     onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    {/* Dish Name + Thumbnail */}
+                    {/* Drink Name + Thumbnail */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                         <img
@@ -2095,13 +2112,39 @@ function BarDrinksMenu({
 
                     {/* Drink Type */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
-                      {(item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic")) === "Alcoholic" ? (
-                        <span style={{ background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.28)", color: "var(--danger)", borderRadius: "14px", padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>
-                          ALCOHOLIC
+                      {isAlcoholic ? (
+                        <span
+                          style={{
+                            background: "rgba(239, 68, 68, 0.12)",
+                            border: "1px solid rgba(239, 68, 68, 0.28)",
+                            color: "var(--danger)",
+                            borderRadius: "14px",
+                            padding: "3px 10px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ALCOHOLIC 🍸
                         </span>
                       ) : (
-                        <span style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.28)", color: "var(--success)", borderRadius: "14px", padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>
-                          NON-ALCOHOLIC
+                        <span
+                          style={{
+                            background: "rgba(16, 185, 129, 0.12)",
+                            border: "1px solid rgba(16, 185, 129, 0.28)",
+                            color: "var(--success)",
+                            borderRadius: "14px",
+                            padding: "3px 10px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          NON-ALCOHOLIC 🍹
                         </span>
                       )}
                     </td>
@@ -2116,7 +2159,7 @@ function BarDrinksMenu({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      ₹{Number(item.price || 0).toFixed(2)}
+                      ₹{Number(item.price || item.sellingPrice || 0).toFixed(2)}
                     </td>
 
                     {/* Actions */}
@@ -2175,7 +2218,7 @@ function BarDrinksMenu({
                             cursor: "pointer",
                             transition: "all 0.15s ease",
                           }}
-                          title="Edit item"
+                          title="Edit drink"
                         >
                           <SquarePen size={13} />
                           <span>Edit</span>
@@ -2198,7 +2241,7 @@ function BarDrinksMenu({
                             cursor: "pointer",
                             transition: "all 0.15s ease",
                           }}
-                          title="Delete item"
+                          title="Delete drink"
                         >
                           <Trash2 size={13} />
                           <span>Delete</span>
@@ -2213,7 +2256,7 @@ function BarDrinksMenu({
         </table>
       </div>
 
-      {/* Small Compact Pagination at Bottom */}
+      {/* Pagination */}
       {filteredDrinks.length > 0 && (
         <div
           style={{
@@ -2232,19 +2275,19 @@ function BarDrinksMenu({
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
             <span>
-              Showing{" "}
+              {"Showing "}
               <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {startIdx + 1}
               </strong>
-              –
+              {"–"}
               <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {Math.min(startIdx + menuPageSize, filteredDrinks.length)}
-              </strong>{" "}
-              of{" "}
+              </strong>
+              {" of "}
               <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filteredDrinks.length}
-              </strong>{" "}
-              items
+              </strong>
+              {" items"}
             </span>
           </div>
 
@@ -2344,6 +2387,7 @@ function BarDrinksMenu({
               overflowY: "auto",
             }}
           >
+            {/* Header */}
             <div
               style={{
                 display: "flex",

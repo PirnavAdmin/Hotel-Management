@@ -1,9 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+<<<<<<< HEAD
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
   Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
+=======
+  Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight, Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package, Pencil, Plus, Printer, Receipt, RefreshCw, Search, SquarePen, Star, Trash2, Wine, X,
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
 } from "lucide-react";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
@@ -465,8 +470,12 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
       window.alert(requestError?.message || "Stock adjustment failed.");
     } finally {
       setBusy(false);
+<<<<<<< HEAD
     }
   };
+=======
+    }  };
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
 
   const deleteItem = async (item) => {
     const confirmed = window.confirm(`Are you sure you want to permanently delete "${item.name}" from Bar Inventory?`);
@@ -1504,13 +1513,20 @@ function BarDrinksMenu({
     category: "Cocktails",
     customCategory: "",
     price: "",
+    drinkType: "Alcoholic",
+    measure: "Glass (250 ml)",
+    customMeasure: "",
+    abv: "",
     isVeg: false,
     isChefSpecial: false,
+<<<<<<< HEAD
     prepTime: "15 min",
     measure: "30 ml (Single Peg)",
     customMeasure: "",
     drinkType: "Alcoholic",
     abv: "40",
+=======
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
     description: "",
     image: "",
     isAvailable: "Available",
@@ -1545,21 +1561,34 @@ function BarDrinksMenu({
       const query = searchFilter.trim().toLowerCase();
       const matchesSearch =
         !query ||
-        [item.name, item.description, item.category].some((val) =>
+        [item.name, item.dishName, item.drinkName, item.description, item.category].some((val) =>
           String(val ?? "").toLowerCase().includes(query)
         );
       const matchesCategory =
         !menuFilters.category ||
-        String(item.category ?? "").toLowerCase() ===
-          menuFilters.category.toLowerCase();
-      const drinkType = item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic");
+        String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase();
+      
+      const isItemAlcoholic = item.drinkType
+        ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
+        : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+
       const matchesDrinkType =
         !menuFilters.drinkType ||
-        drinkType.toLowerCase() === menuFilters.drinkType;
+        (menuFilters.drinkType === "alcoholic" ? isItemAlcoholic : !isItemAlcoholic);
+
       const matchesAvailability =
         !menuFilters.availability ||
         (item.isAvailable !== false && item.isAvailable !== "Unavailable") ===
           (menuFilters.availability === "available");
+<<<<<<< HEAD
+=======
+
+      const matchesSpecial =
+        !menuFilters.special ||
+        Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) ===
+          (menuFilters.special === "special");
+
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
       return (
         matchesSearch &&
         matchesCategory &&
@@ -1577,6 +1606,7 @@ function BarDrinksMenu({
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
+<<<<<<< HEAD
       const cat = String(item.category || "").trim();
       const isKnownCat = BAR_CATEGORIES.some(
         (c) => c.toLowerCase() === cat.toLowerCase()
@@ -1611,6 +1641,35 @@ function BarDrinksMenu({
         drinkType: item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic"),
         abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : "",
         description: item.description || "",
+=======
+      const isKnownCategory = categoryOptions.some(
+        (opt) => opt.value.toLowerCase() === String(item.category || "").toLowerCase()
+      );
+      setIsCustomCategory(!isKnownCategory && Boolean(item.category));
+
+      const isKnownMeasure = BAR_SERVING_MEASURES.some(
+        (m) => m.toLowerCase() === String(item.measure || item.servingMeasure || "").toLowerCase()
+      );
+      const initialMeasure = item.measure || item.servingMeasure || "Glass (250 ml)";
+      setIsCustomMeasure(!isKnownMeasure && Boolean(item.measure || item.servingMeasure));
+
+      const isAlcoholic = item.drinkType
+        ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
+        : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+
+      setItemForm({
+        name: item.name || item.dishName || item.drinkName || "",
+        category: isKnownCategory ? (item.category || "Cocktails") : "__custom__",
+        customCategory: isKnownCategory ? "" : (item.category || ""),
+        price: item.price !== undefined && item.price !== null ? String(item.price) : (item.sellingPrice ? String(item.sellingPrice) : ""),
+        drinkType: isAlcoholic ? "Alcoholic" : "Non-Alcoholic",
+        measure: isKnownMeasure ? initialMeasure : "__custom__",
+        customMeasure: isKnownMeasure ? "" : initialMeasure,
+        abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : (item.alcoholPct !== undefined && item.alcoholPct !== null ? String(item.alcoholPct) : ""),
+        isVeg: !isAlcoholic,
+        isChefSpecial: Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial),
+        description: item.description || item.shortDescription || "",
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
         image: item.image || item.imageUrl || "",
         isAvailable: item.isAvailable === false || item.isAvailable === "Unavailable" ? "Unavailable" : "Available",
       });
@@ -1623,13 +1682,20 @@ function BarDrinksMenu({
         category: "Cocktails",
         customCategory: "",
         price: "",
+        drinkType: "Alcoholic",
+        measure: "Glass (250 ml)",
+        customMeasure: "",
+        abv: "",
         isVeg: false,
         isChefSpecial: false,
+<<<<<<< HEAD
         prepTime: "15 min",
         measure: "30 ml (Single Peg)",
         customMeasure: "",
         drinkType: "Alcoholic",
         abv: "40",
+=======
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
         description: "",
         image: "",
         isAvailable: "Available",
@@ -1675,12 +1741,26 @@ function BarDrinksMenu({
 
     const isSpecial = Boolean(itemForm.isChefSpecial);
 
+    const finalMeasure =
+      itemForm.measure === "__custom__"
+        ? (itemForm.customMeasure.trim() || "Glass (250 ml)")
+        : (itemForm.measure || "Glass (250 ml)");
+
+    const isAlcoholic = itemForm.drinkType === "Alcoholic";
+
     const payload = {
       ...(editingItem || {}),
+<<<<<<< HEAD
       id: editingItem?.id || `DR-${Date.now()}`,
+=======
+      id: editingItem?.id || ("m-" + Date.now()),
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
       name: itemForm.name.trim(),
+      dishName: itemForm.name.trim(),
+      drinkName: itemForm.name.trim(),
       category: finalCategory,
       price: parseFloat(itemForm.price || 0),
+<<<<<<< HEAD
       isVeg: Boolean(itemForm.isVeg),
       dietaryType: itemForm.drinkType === "Non-Alcoholic" ? "VEG" : "NON-VEG",
       isChefSpecial: isSpecial,
@@ -1693,7 +1773,23 @@ function BarDrinksMenu({
       servingMeasure: finalMeasure,
       drinkType: itemForm.drinkType || (itemForm.abv ? "Alcoholic" : itemForm.isVeg ? "Non-Alcoholic" : "Alcoholic"),
       abv: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
+=======
+      sellingPrice: parseFloat(itemForm.price || 0),
+      drinkType: isAlcoholic ? "Alcoholic" : "Non-Alcoholic",
+      measure: finalMeasure,
+      servingMeasure: finalMeasure,
+      prepTime: finalMeasure,
+      isVeg: !isAlcoholic,
+      dietaryType: isAlcoholic ? "NON-VEG" : "VEG",
+      abv: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
+      alcoholPct: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
+      alcoholContent: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
+      isChefSpecial: Boolean(itemForm.isChefSpecial),
+      isChefsSpecial: Boolean(itemForm.isChefSpecial),
+      isSpecial: Boolean(itemForm.isChefSpecial),
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
       description: itemForm.description || "",
+      shortDescription: itemForm.description || "",
       image: itemForm.image || "",
       imageUrl: itemForm.image || "",
       isAvailable: itemForm.isAvailable !== false && itemForm.isAvailable !== "Unavailable",
@@ -1711,6 +1807,10 @@ function BarDrinksMenu({
         if (onAddDrink) onAddDrink(payload);
         else if (onAddMenuItem) await onAddMenuItem(payload);
       }
+<<<<<<< HEAD
+=======
+      setToast?.('Drink "' + payload.name + '" ' + (editingItem ? "updated" : "added") + " successfully.");
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
       setIsItemModalOpen(false);
     } catch (err) {
       setToast?.(err?.message || "Could not save drink item.");
@@ -1728,13 +1828,18 @@ function BarDrinksMenu({
   };
 
   const handleDeleteItem = (item) => {
-    if (!window.confirm(`Are you sure you want to delete "${item.name}" from the drinks menu?`)) return;
+    if (!window.confirm('Are you sure you want to delete "' + item.name + '" from the drinks menu?')) return;
     console.info("[Bar Drinks] Deleting drink item:", item.id);
+<<<<<<< HEAD
     if (onDeleteDrink) {
       onDeleteDrink(item.id);
     } else if (onDeleteMenuItem) {
       onDeleteMenuItem(item.id);
     }
+=======
+    onDeleteMenuItem?.(item.id);
+    setToast?.('Drink "' + item.name + '" deleted.');
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
   };
 
   return (
@@ -1746,7 +1851,7 @@ function BarDrinksMenu({
         padding: "0.75rem 0.85rem",
       }}
     >
-      {/* Header inside Card - Matching Dine Menu Items */}
+      {/* Header inside Card */}
       <div
         style={{
           display: "flex",
@@ -1806,7 +1911,11 @@ function BarDrinksMenu({
                 margin: "2px 0 0 0",
               }}
             >
+<<<<<<< HEAD
               Manage your bar drinks, categories and pricing
+=======
+              Manage bar beverages, cocktails, spirits, beers and drink pricing
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
             </p>
           </div>
         </div>
@@ -1833,16 +1942,16 @@ function BarDrinksMenu({
             }}
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>Add New Drink / Beverage</span>
+            <span>Add New Drink</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Toolbar - Exact Dine Class & Grid */}
+      {/* Filter Toolbar */}
       <div
         className="menu-filter-toolbar menu-items-filter-toolbar"
         role="search"
-        aria-label="Menu item filters"
+        aria-label="Drink item filters"
       >
         <label className="menu-filter-field menu-filter-search">
           <span>Search</span>
@@ -1936,6 +2045,21 @@ function BarDrinksMenu({
           </select>
         </label>
 
+        <label className="menu-filter-field">
+          <span>Special</span>
+          <select
+            value={menuFilters.special}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, special: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            <option value="special">Special</option>
+            <option value="regular">Regular</option>
+          </select>
+        </label>
+
         <button
           type="button"
           className="menu-filter-clear"
@@ -1966,9 +2090,13 @@ function BarDrinksMenu({
         <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
           <thead>
             <tr style={{ borderBottom: "1.5px solid var(--border-subtle)" }}>
+<<<<<<< HEAD
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "40%" }}>Drink Name</th>
+=======
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "38%" }}>Drink Name</th>
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Category</th>
-              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Drink Type</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Drink Type</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Price (₹)</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%", textAlign: "center" }}>Actions</th>
             </tr>
@@ -1983,6 +2111,11 @@ function BarDrinksMenu({
             ) : (
               paginatedDrinks.map((item) => {
                 const isAvail = item.isAvailable !== false && item.isAvailable !== "Unavailable";
+                const isSpecial = Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial);
+                const isAlcoholic = item.drinkType
+                  ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
+                  : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+
                 return (
                   <tr
                     key={item.id}
@@ -1993,7 +2126,7 @@ function BarDrinksMenu({
                     onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    {/* Dish Name + Thumbnail */}
+                    {/* Drink Name + Thumbnail */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                         <img
@@ -2021,6 +2154,7 @@ function BarDrinksMenu({
                               gap: "6px",
                             }}
                           >
+<<<<<<< HEAD
                             <span>{item.name}</span>
                             {Boolean(
                               item.isChefSpecial ||
@@ -2054,6 +2188,20 @@ function BarDrinksMenu({
                                 />
                                 <span>Special</span>
                               </span>
+=======
+                            <span>{item.name || item.dishName || item.drinkName}</span>
+                            {isSpecial && (
+                              <Star
+                                size={14}
+                                fill="#f59e0b"
+                                color="#f59e0b"
+                                title="Special Drink"
+                                style={{
+                                  flexShrink: 0,
+                                  filter: "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                }}
+                              />
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
                             )}
                           </div>
                           <div
@@ -2068,12 +2216,16 @@ function BarDrinksMenu({
                               overflow: "hidden",
                             }}
                           >
+<<<<<<< HEAD
                             {(item.measure || item.servingMeasure) && (
                               <span style={{ color: "var(--accent-amber-light)", fontWeight: 700 }}>
                                 {item.measure || item.servingMeasure} •{" "}
                               </span>
                             )}
                             {item.prepTime || "15 min"} • {item.description || item.drinkType || ""}
+=======
+                            {(item.measure || item.servingMeasure || item.prepTime || "Glass (250 ml)") + " • " + (item.description || item.shortDescription || (item.abv ? (item.abv + "% ABV") : (isAlcoholic ? "Alcoholic" : "Non-Alcoholic")))}
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
                           </div>
                         </div>
                       </div>
@@ -2095,13 +2247,39 @@ function BarDrinksMenu({
 
                     {/* Drink Type */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
-                      {(item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic")) === "Alcoholic" ? (
-                        <span style={{ background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.28)", color: "var(--danger)", borderRadius: "14px", padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>
-                          ALCOHOLIC
+                      {isAlcoholic ? (
+                        <span
+                          style={{
+                            background: "rgba(239, 68, 68, 0.12)",
+                            border: "1px solid rgba(239, 68, 68, 0.28)",
+                            color: "var(--danger)",
+                            borderRadius: "14px",
+                            padding: "3px 10px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ALCOHOLIC 🍸
                         </span>
                       ) : (
-                        <span style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.28)", color: "var(--success)", borderRadius: "14px", padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>
-                          NON-ALCOHOLIC
+                        <span
+                          style={{
+                            background: "rgba(16, 185, 129, 0.12)",
+                            border: "1px solid rgba(16, 185, 129, 0.28)",
+                            color: "var(--success)",
+                            borderRadius: "14px",
+                            padding: "3px 10px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          NON-ALCOHOLIC 🍹
                         </span>
                       )}
                     </td>
@@ -2116,7 +2294,7 @@ function BarDrinksMenu({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      ₹{Number(item.price || 0).toFixed(2)}
+                      ₹{Number(item.price || item.sellingPrice || 0).toFixed(2)}
                     </td>
 
                     {/* Actions */}
@@ -2175,7 +2353,7 @@ function BarDrinksMenu({
                             cursor: "pointer",
                             transition: "all 0.15s ease",
                           }}
-                          title="Edit item"
+                          title="Edit drink"
                         >
                           <SquarePen size={13} />
                           <span>Edit</span>
@@ -2198,7 +2376,7 @@ function BarDrinksMenu({
                             cursor: "pointer",
                             transition: "all 0.15s ease",
                           }}
-                          title="Delete item"
+                          title="Delete drink"
                         >
                           <Trash2 size={13} />
                           <span>Delete</span>
@@ -2213,7 +2391,7 @@ function BarDrinksMenu({
         </table>
       </div>
 
-      {/* Small Compact Pagination at Bottom */}
+      {/* Pagination */}
       {filteredDrinks.length > 0 && (
         <div
           style={{
@@ -2232,19 +2410,19 @@ function BarDrinksMenu({
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
             <span>
-              Showing{" "}
+              {"Showing "}
               <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {startIdx + 1}
               </strong>
-              –
+              {"–"}
               <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {Math.min(startIdx + menuPageSize, filteredDrinks.length)}
-              </strong>{" "}
-              of{" "}
+              </strong>
+              {" of "}
               <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
                 {filteredDrinks.length}
-              </strong>{" "}
-              items
+              </strong>
+              {" items"}
             </span>
           </div>
 
@@ -2313,7 +2491,11 @@ function BarDrinksMenu({
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Modal: Add / Edit Drink - Exactly Matching Requested Layout */}
+=======
+      {/* Modal: Add / Edit Drink - Drink Specialized Features */}
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
       {isItemModalOpen && (
         <div
           style={{
@@ -2344,6 +2526,7 @@ function BarDrinksMenu({
               overflowY: "auto",
             }}
           >
+            {/* Header */}
             <div
               style={{
                 display: "flex",
@@ -2353,6 +2536,7 @@ function BarDrinksMenu({
                 paddingBottom: "0.85rem",
               }}
             >
+<<<<<<< HEAD
               <div>
                 <h3
                   style={{
@@ -2365,6 +2549,18 @@ function BarDrinksMenu({
                   {editingItem ? "Edit Drink" : "Add Drink"}
                 </h3>
               </div>
+=======
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                {editingItem ? "Edit Drink" : "Add New Drink"}
+              </h3>
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
               <button
                 type="button"
                 onClick={() => setIsItemModalOpen(false)}
@@ -2385,6 +2581,44 @@ function BarDrinksMenu({
               </button>
             </div>
 
+<<<<<<< HEAD
+=======
+            {/* Drink Name */}
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Drink Name <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Mojito / Whiskey Sour / Kingfisher Draught"
+                value={itemForm.name}
+                onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Category & Price */}
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
             <div
               style={{
                 display: "grid",
@@ -2769,7 +3003,19 @@ function BarDrinksMenu({
                 />
               </div>
 
+<<<<<<< HEAD
               {/* Row 4, Col 1: Availability */}
+=======
+            {/* Drink Type & Serving Measure */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0.85rem",
+                alignItems: "start",
+              }}
+            >
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
               <div>
                 <label
                   style={{
@@ -2783,12 +3029,18 @@ function BarDrinksMenu({
                   Availability
                 </label>
                 <select
+<<<<<<< HEAD
                   value={itemForm.isAvailable}
                   onChange={(e) => setItemForm({ ...itemForm, isAvailable: e.target.value })}
+=======
+                  value={itemForm.drinkType}
+                  onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value, isVeg: e.target.value === "Non-Alcoholic" })}
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
                   style={{
                     width: "100%",
                     height: "38px",
                     boxSizing: "border-box",
+                    height: "38px",
                     background: "var(--bg-tertiary)",
                     border: "1.5px solid var(--border-subtle)",
                     borderRadius: "8px",
@@ -2800,8 +3052,13 @@ function BarDrinksMenu({
                     cursor: "pointer",
                   }}
                 >
+<<<<<<< HEAD
                   <option value="Available">Available</option>
                   <option value="Unavailable">Unavailable</option>
+=======
+                  <option value="Alcoholic">Alcoholic 🍸</option>
+                  <option value="Non-Alcoholic">Non-Alcoholic 🍹</option>
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
                 </select>
               </div>
 
@@ -2829,6 +3086,7 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
+<<<<<<< HEAD
                   Description
                 </label>
                 <textarea
@@ -2836,28 +3094,125 @@ function BarDrinksMenu({
                   placeholder="Short description of the drink..."
                   value={itemForm.description}
                   onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+=======
+                  Serving Measure / Volume
+                </label>
+                <select
+                  value={itemForm.measure}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__custom__") {
+                      setIsCustomMeasure(true);
+                    } else {
+                      setIsCustomMeasure(false);
+                    }
+                    setItemForm({ ...itemForm, measure: val });
+                  }}
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
                   style={{
                     width: "100%",
                     boxSizing: "border-box",
+                    height: "38px",
                     background: "var(--bg-tertiary)",
                     border: "1.5px solid var(--border-subtle)",
                     borderRadius: "8px",
-                    padding: "0.65rem 0.85rem",
+                    padding: "0 0.85rem",
                     color: "var(--text-main)",
-                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
                     outline: "none",
-                    resize: "vertical",
+                    cursor: "pointer",
                   }}
-                />
+                >
+                  {BAR_SERVING_MEASURES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                  <option value="__custom__">+ Custom Measure...</option>
+                </select>
+                {isCustomMeasure && (
+                  <input
+                    type="text"
+                    placeholder="e.g. 500 ml Stein / 100 ml Shot"
+                    value={itemForm.customMeasure}
+                    onChange={(e) => setItemForm({ ...itemForm, customMeasure: e.target.value })}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      marginTop: "6px",
+                      background: "var(--bg-tertiary)",
+                      border: "1.5px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      padding: "0.5rem 0.85rem",
+                      color: "var(--text-main)",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                    }}
+                  />
+                )}
               </div>
+            </div>
 
-              {/* Row 6: Choose Image (Full Width) */}
-              <div style={{ gridColumn: "1 / -1" }}>
+            {/* Alcohol By Volume (ABV %) - shown when Alcoholic */}
+            {itemForm.drinkType === "Alcoholic" && (
+              <div>
                 <label
                   style={{
                     fontSize: "0.82rem",
                     fontWeight: 700,
                     color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Alcohol By Volume (ABV %)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="e.g. 5.0% for Beer, 42.8% for Whiskey"
+                  value={itemForm.abv}
+                  onChange={(e) => setItemForm({ ...itemForm, abv: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+<<<<<<< HEAD
+                    fontSize: "0.85rem",
+=======
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+<<<<<<< HEAD
+
+              {/* Row 6: Choose Image (Full Width) */}
+              <div style={{ gridColumn: "1 / -1" }}>
+=======
+            )}
+
+            {/* Choose Drink Image */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+<<<<<<< HEAD
                     display: "block",
                     marginBottom: "5px",
                   }}
@@ -2927,6 +3282,139 @@ function BarDrinksMenu({
                   )}
                 </div>
               </div>
+=======
+                    margin: 0,
+                  }}
+                >
+                  Choose Drink Image (URL, Preset, or Upload)
+                </label>
+                <label
+                  style={{
+                    fontSize: "0.74rem",
+                    color: "var(--accent-amber-light)",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Browse File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setItemForm((current) => ({ ...current, image: String(reader.result || "") }));
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+              </div>
+              <input
+                type="text"
+                placeholder="https://... or select a drink preset below"
+                value={itemForm.image}
+                onChange={(e) => setItemForm({ ...itemForm, image: e.target.value })}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.6rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.85rem",
+                  outline: "none",
+                  marginBottom: "6px",
+                }}
+              />
+              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                {[
+                  { label: "🍸 Mojito", url: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=400&q=80" },
+                  { label: "🍺 Beer", url: "https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=400&q=80" },
+                  { label: "🍷 Wine", url: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=400&q=80" },
+                  { label: "🥃 Whiskey", url: "https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=400&q=80" },
+                  { label: "🍹 Mocktail", url: "https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=400&q=80" },
+                  { label: "🥤 Lime Soda", url: "/assets/beverages/fresh-lime-soda.jpg" },
+                  { label: "🍉 Watermelon", url: "/assets/beverages/watermelon-juice.jpg" },
+                  { label: "☕ Coffee", url: "/assets/beverages/coffee.jpg" },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setItemForm({ ...itemForm, image: preset.url })}
+                    style={{
+                      border: "1px solid var(--border-card)",
+                      background: itemForm.image === preset.url ? "rgba(245, 158, 11, 0.2)" : "var(--bg-tertiary)",
+                      color: itemForm.image === preset.url ? "var(--accent-amber-light)" : "var(--text-dim)",
+                      borderRadius: "6px",
+                      padding: "3px 8px",
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Description
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Short description of the drink, ingredients, garnish, or aroma..."
+                value={itemForm.description}
+                onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.85rem",
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
+            </div>
+
+            {/* Special & Availability Checkboxes */}
+            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.82rem", color: "var(--text-main)", fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={itemForm.isChefSpecial}
+                  onChange={(e) => setItemForm({ ...itemForm, isChefSpecial: e.target.checked })}
+                />
+                <span>Bar Special Drink ⭐</span>
+              </label>
+
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.82rem", color: "var(--text-main)", fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={itemForm.isAvailable}
+                  onChange={(e) => setItemForm({ ...itemForm, isAvailable: e.target.checked })}
+                />
+                <span>Available for Ordering</span>
+              </label>
             </div>
 
             {/* Modal Footer Buttons */}
@@ -2961,7 +3449,11 @@ function BarDrinksMenu({
                   boxShadow: "0 4px 12px rgba(245, 158, 11, 0.35)",
                 }}
               >
+<<<<<<< HEAD
                 {editingItem ? "Save Drink Changes" : "Add Drink"}
+=======
+                {editingItem ? "Update Drink" : "Add Drink"}
+>>>>>>> 573a6271397c3240943fa835fb0dce3acda3a8e4
               </button>
             </div>
           </form>
