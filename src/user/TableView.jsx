@@ -23,7 +23,6 @@ import {
   formatElapsedTimer,
   getTimerUrgencyColor,
 } from "../utils/timer";
-import { DiningRoomScenery } from "../common/SelectSeatsModal";
 // Dynamic Dining Scene Components matching Image 1
 function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
   const gradId = `topChairGrad_${seat.id}`;
@@ -98,10 +97,10 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
         <polygon points="17,54 14,75 18,75 20,54" fill="#5a3118" />
         <polygon points="40,54 42,75 46,75 43,54" fill="#4d2812" />
 
-        {/* Seat Cushion Top */}
+        {/* Seat Cushion Top: Green for Available, Orange for Selected, Slate for Occupied */}
         <path
           d="M 12 44 Q 30 41 48 44 L 51 56 Q 30 59 9 56 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#008272"}
+          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
         />
         <ellipse
           cx="30"
@@ -113,35 +112,35 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
               ? "rgba(255,255,255,0.4)"
               : isOccupied
               ? "transparent"
-              : "rgba(255,255,255,0.25)"
+              : "rgba(255,255,255,0.3)"
           }
         />
 
-        {/* Backrest Outer Teal Frame matching Image 1 */}
+        {/* Backrest: Warm Chocolate Brown with Green Border (Available) / Full Orange (Selected) */}
         <rect
           x="11"
           y="4"
           width="38"
           height="45"
           rx="8"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : "#008272"}
-          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#006b5e"}
-          strokeWidth={isSelected ? "2.4" : "1.2"}
+          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : `url(#${gradId})`}
+          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#10b981"}
+          strokeWidth={isSelected ? "2.4" : isOccupied ? "1.2" : "2"}
         />
-        {/* Inner Cushion matching Image 1 */}
+        {/* Subtle contour */}
         <rect
-          x="15"
-          y="8"
-          width="30"
-          height="37"
-          rx="5"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#475569" : `url(#${gradId})`}
+          x="14"
+          y="7"
+          width="32"
+          height="39"
+          rx="6"
+          fill="none"
           stroke={
             isSelected
               ? "rgba(255,255,255,0.45)"
               : isOccupied
               ? "rgba(255,255,255,0.06)"
-              : "rgba(0, 130, 114, 0.4)"
+              : "rgba(16, 185, 129, 0.4)"
           }
           strokeWidth="1"
         />
@@ -283,37 +282,37 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
         <polygon points="13,60 8,93 13,93 17,60" fill="#754124" />
         <polygon points="49,60 53,93 58,93 53,60" fill="#67391f" />
 
-        {/* Seat cushion underside */}
+        {/* Seat cushion underside: Green for Available, Orange for Selected, Slate for Occupied */}
         <path
           d="M 10 50 Q 33 46 56 50 L 54 62 Q 33 65 12 62 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#008272"}
+          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
         />
 
-        {/* Backrest viewed from rear with outer teal frame matching Image 1 */}
+        {/* Backrest viewed from rear: Green Border for Available, Full Orange for Selected */}
         <rect
           x="12"
           y="4"
           width="42"
           height="50"
           rx="9"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : "#008272"}
-          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#006b5e"}
-          strokeWidth={isSelected ? "2.4" : "1.2"}
+          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : `url(#${gradId})`}
+          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#10b981"}
+          strokeWidth={isSelected ? "2.4" : isOccupied ? "1.2" : "2"}
         />
-        {/* Inner Cushion matching Image 1 */}
+        {/* Inner stitch contour */}
         <rect
-          x="16"
-          y="8"
-          width="34"
-          height="42"
-          rx="6"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#475569" : `url(#${gradId})`}
+          x="15"
+          y="7"
+          width="36"
+          height="44"
+          rx="7"
+          fill="none"
           stroke={
             isSelected
               ? "rgba(255,255,255,0.45)"
               : isOccupied
               ? "rgba(255,255,255,0.06)"
-              : "rgba(0, 130, 114, 0.4)"
+              : "rgba(16, 185, 129, 0.4)"
           }
           strokeWidth="1"
         />
@@ -573,15 +572,15 @@ function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isL
       >
         <defs>
           <linearGradient id="tableTopGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#faf7f2" />
+            <stop offset="0%" stopColor="#f7efe2" />
+            <stop offset="100%" stopColor="#ebdcc7" />
           </linearGradient>
           <linearGradient id="tableBevelGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f0eae0" />
-            <stop offset="100%" stopColor="#e2dad0" />
+            <stop offset="0%" stopColor="#dfceb6" />
+            <stop offset="100%" stopColor="#cfbba0" />
           </linearGradient>
           <linearGradient id="tableLegGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#784224" />
+            <stop offset="0%" stopColor="#824c2d" />
             <stop offset="100%" stopColor="#552c15" />
           </linearGradient>
           <linearGradient id="soupBowlGrad" x1="0" y1="0" x2="0" y2="1">
@@ -615,11 +614,11 @@ function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isL
           fill="url(#tableBevelGrad)"
         />
 
-        {/* Table Top Surface matching Image 1 */}
+        {/* Table Top Surface (Isometric Warm Cream Wood with rounded corners) */}
         <path
           d={`M 26,12 L ${width - 26},12 Q ${width - 12},12 ${width - 14},24 L ${width - 20},80 Q ${width - 24},90 ${width - 38},90 L 38,90 Q 24,90 20,80 L 14,24 Q 12,12 26,12 Z`}
           fill="url(#tableTopGrad)"
-          stroke="#dfd8cb"
+          stroke="#ddcaa9"
           strokeWidth="1.2"
         />
 
@@ -2646,23 +2645,68 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                 <div
                   style={{
                     flex: 1.5,
+                    background: isLight
+                      ? "radial-gradient(circle at 50% 50%, #fbf8f2 0%, #f1eae0 100%)"
+                      : "radial-gradient(circle at 50% 50%, #151e2f 0%, #090e18 100%)",
                     borderRadius: "16px",
-                    border: isLight ? "1.5px solid #dcd3c4" : "1.5px solid rgba(var(--surface-rgb),0.12)",
+                    border: isLight ? "1px solid #e5dccf" : "1px solid rgba(var(--surface-rgb),0.08)",
                     boxShadow: isLight
-                      ? "0 8px 30px rgba(0, 0, 0, 0.08)"
-                      : "0 12px 35px rgba(0, 0, 0, 0.4)",
-                    padding: "4.2rem 1rem 5.2rem",
+                      ? "inset 0 0 35px rgba(220, 205, 185, 0.45)"
+                      : "inset 0 0 45px rgba(0, 0, 0, 0.65)",
+                    padding: "1.75rem 1rem",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
                     position: "relative",
-                    minHeight: "490px",
-                    overflow: "hidden",
+                    minHeight: "410px",
+                    overflow: "auto",
                   }}
                 >
-                  {/* Atmospheric Full Dining Room Scenery matching Image 1 */}
-                  <DiningRoomScenery isLight={isLight} />
+                  {/* Atmospheric Background Accents from Image 1 */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "22px",
+                      left: "20%",
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      background: "#d96b34",
+                      opacity: isLight ? 0.75 : 0.35,
+                      filter: "blur(1px)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "28px",
+                      right: "20%",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      background: "#dc7f48",
+                      opacity: isLight ? 0.75 : 0.35,
+                      filter: "blur(1px)",
+                      pointerEvents: "none",
+                    }}
+                  />
+
+                  {/* Ground Oval Glow / Rug from Image 1 */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      width: `${dynamicTableWidth + 160}px`,
+                      height: "320px",
+                      borderRadius: "50%",
+                      background: isLight
+                        ? "radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(243, 230, 212, 0.65) 60%, transparent 75%)"
+                        : "radial-gradient(ellipse at 50% 50%, rgba(246, 239, 227, 0.08) 0%, rgba(246, 239, 227, 0.02) 60%, transparent 75%)",
+                      pointerEvents: "none",
+                      transition: "width 0.35s ease",
+                    }}
+                  />
 
                   {/* Interactive Dynamic Dining Cluster: Top Chairs + Table (+ Side Chairs) + Bottom Chairs */}
                   <div

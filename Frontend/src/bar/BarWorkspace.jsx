@@ -2,18 +2,15 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
-  Pencil, Plus, Printer, Receipt, RefreshCw, Search, SquarePen, Trash2, Wine, X, 
+  Pencil, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
 } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { formatCurrency } from "../utils/formatCurrency";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
 import { BarKOTView } from "./BarKOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
-import { LoginManagement } from "../admin/LoginManagement";
-import { AdminSettings } from "../admin/AdminSettings";
 import "./BarWorkspace.css";
 
 const PAGE_SIZE = 8;
@@ -102,34 +99,24 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     event.preventDefault();
     setAddBusy(true);
     setAddError("");
-    console.info("[Bar Inventory] Adding inventory item:", newItem);
     try {
       const result = await apiCreateInventoryItem(newItem);
       if (!result?.success) throw new Error(result?.error || "Could not add the inventory item.");
-      console.info("[Bar Inventory] Added inventory item successfully:", result);
       setAddOpen(false);
       setNewItem({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
       await onRefresh();
-    } catch (requestError) {
-      console.error("[Bar Inventory] Failed to add inventory item:", requestError);
-      setAddError(requestError?.message || "Could not add the inventory item.");
-    }
+    } catch (requestError) { setAddError(requestError?.message || "Could not add the inventory item."); }
     finally { setAddBusy(false); }
   };
   const adjust = async (item, direction) => {
     const amount = Number(window.prompt(direction > 0 ? "Quantity received" : "Adjustment quantity", "1"));
     if (!Number.isFinite(amount) || amount <= 0) return;
     setBusy(true);
-    console.info("[Bar Inventory] Adjusting stock:", { item: item.name, quantityChange: amount * direction });
     try {
       const response = await apiAdjustStock({ ingredientId: item.id ?? item.ingredientId, quantityChange: amount * direction, reason: "Bar stock adjustment" });
       if (!response?.success) throw new Error(response?.error || "Stock adjustment failed.");
-      console.info("[Bar Inventory] Stock adjusted successfully:", response);
       await onRefresh();
-    } catch (requestError) {
-      console.error("[Bar Inventory] Stock adjustment failed:", requestError);
-      window.alert(requestError?.message || "Stock adjustment failed.");
-    }
+    } catch (requestError) { window.alert(requestError?.message || "Stock adjustment failed."); }
     finally { setBusy(false); }
   };
   return <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Inventory</h2><p>Beverage inventory from the shared restaurant inventory ledger.</p></div><div className="bar-actions"><button className="bar-button primary" type="button" onClick={() => { setAddError(""); setAddOpen(true); }}><Plus size={15} /> Add Inventory</button><button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading}><RefreshCw size={15} /> Refresh</button></div></div>
@@ -1655,10 +1642,6 @@ export function BarWorkspace({
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
-  currentAdminSession = null,
-  onSaveRestaurantSettings = null,
-  showBarHeaderToggle = true,
-  onToggleShowBarHeader = null,
 }) {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -1707,17 +1690,14 @@ export function BarWorkspace({
   const drinks = useMemo(() => (Array.isArray(menuItems) ? menuItems : []).filter((item) => isBeverageCategory(item.category ?? item.categoryName) || item.isBeverage || item.isBarDrink || item.category === "bar"), [menuItems]);
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
-    console.info("[Bar Orders] Fetching active orders via apiGetActiveOrders()...");
     try {
       const response = await apiGetActiveOrders();
       const raw = response?.data;
       const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.orders) ? raw.orders : null;
       if (!response?.success || !rows) throw new Error(response?.error || "Active orders response was invalid.");
-      console.info("[Bar Orders] Active orders loaded successfully:", { count: rows.length, orders: rows });
       setOrders(rows);
       setOrdersError("");
     } catch (error) {
-      console.error("[Bar Orders] Failed to load active orders:", error);
       setOrdersError(error?.message || "Could not load shared restaurant orders.");
     } finally { setOrdersLoading(false); }
   }, []);
@@ -1729,20 +1709,15 @@ export function BarWorkspace({
   useEffect(() => { setInventory(Array.isArray(sharedInventory) ? sharedInventory : []); }, [sharedInventory]);
   const loadInventory = useCallback(async () => {
     setInventoryLoading(true);
-    console.info("[Bar Inventory] Fetching inventory via apiGetInventory()...");
     try {
       const response = await apiGetInventory();
       const raw = response?.data;
       const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : Array.isArray(raw?.ingredients) ? raw.ingredients : null;
       if (!response?.success || !rows) throw new Error(response?.error || "Inventory response was invalid.");
-      console.info("[Bar Inventory] Inventory loaded successfully:", { count: rows.length, items: rows });
       setInventory(rows);
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: rows }));
       setInventoryError("");
-    } catch (error) {
-      console.error("[Bar Inventory] Failed to load inventory:", error);
-      setInventoryError(error?.message || "Could not load shared inventory.");
-    }
+    } catch (error) { setInventoryError(error?.message || "Could not load shared inventory."); }
     finally { setInventoryLoading(false); }
   }, []);
   useEffect(() => { if (route === "bar-inventory") loadInventory(); }, [route, loadInventory]);
@@ -1756,11 +1731,8 @@ export function BarWorkspace({
     return { ...order, id: order.orderId ?? order.id, table: order.tableName || order.tableNumber || (order.tableId ? `Table ${order.tableId}` : "Takeaway"), customer: order.customerName || order.serverName || "—", items: Array.isArray(order.items) ? order.items : [], beverageItems: items, quantity: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), itemLabel: items.map((item) => `${item.quantity} × ${item.dishName || item.name || "Drink"}`).join(", "), total: Number(order.totalAmount ?? order.total ?? amount), status: order.status || order.orderStatus || "Pending", time: order.createdAt || order.orderTime || "—" };
   }).filter(Boolean), [orders, menuLookup]);
   const barOrders = useMemo(() => {
-    if (apiBarOrders && apiBarOrders.length > 0) {
-      return apiBarOrders;
-    }
     const demoOrders = BAR_BILL_DEMO_ORDERS.map((order) => ({ ...order, total: order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0), quantity: order.items.reduce((sum, item) => sum + item.quantity, 0), itemLabel: order.items.map((item) => `${item.quantity} × ${item.name}`).join(", ") }));
-    return demoOrders;
+    return [...apiBarOrders, ...demoOrders];
   }, [apiBarOrders]);
   const inventoryRows = useMemo(() => inventory.filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name)), [inventory]);
   const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter((order) => {
@@ -1829,17 +1801,6 @@ export function BarWorkspace({
     };
   });
 
-  useEffect(() => {
-    console.info(`[Bar Section] Active tab: "${route}"`, {
-      activeTab: route,
-      totalDrinks: drinks.length,
-      totalTables: tables.length,
-      totalStaff: staff.length,
-      beverageInventoryCount: inventoryRows.length,
-      activeBarOrdersCount: barOrders.length,
-    });
-  }, [route, drinks.length, tables.length, staff.length, inventoryRows.length, barOrders.length]);
-
   const submitBarOrder = async (event) => {
     event.preventDefault();
     if (orderSubmitting) return;
@@ -1853,7 +1814,6 @@ export function BarWorkspace({
     }
     setOrderSubmitting(true);
     setOrderError("");
-    console.info("[Bar Order] Submitting bar order...", { table: table.number, drink: selectedItem.name, quantity: orderQuantity });
     try {
       const notes = [orderServing && `Serving: ${orderServing}`, orderIce && `Ice: ${orderIce}`, orderMixer && `Mixer: ${orderMixer}`, orderNotes.trim()].filter(Boolean).join("; ");
       const itemPayload = [{ menuItemId, id: menuItemId, name: selectedItem.name, price: Number(selectedItem.price) || 0, quantity: Math.max(1, Math.floor(Number(orderQuantity) || 1)), notes }];
@@ -1883,17 +1843,13 @@ export function BarWorkspace({
       }
       const sent = await apiSendOrderKot(orderId);
       if (!sent?.success) throw new Error(sent?.error || `Order ${orderId} was created but its KOT was not confirmed. Retry from POS before creating another order.`);
-      console.info("[Bar Order] Order placed & KOT dispatched successfully:", { orderId });
       onOrderUpdated?.({ tableId: activeTableId, orderId, item: itemToSync });
       setPendingBarKot(null);
       setOrderComposerOpen(false);
       setOrderTableId(""); setOrderDrinkId(""); setOrderMenuCategory("all"); setOrderQuantity(1); setOrderNotes(""); setOrderServing(""); setOrderIce(""); setOrderMixer("");
       setToast(`Item added to shared order ${orderId}; KOT dispatch confirmed.`);
       await loadOrders();
-    } catch (error) {
-      console.error("[Bar Order] Failed to submit bar order:", error);
-      setOrderError(error?.message || "Could not submit the Bar order.");
-    }
+    } catch (error) { setOrderError(error?.message || "Could not submit the Bar order."); }
     finally { setOrderSubmitting(false); }
   };
 
@@ -1940,20 +1896,16 @@ export function BarWorkspace({
       assignedServerName: staffPerson ? staffNameOf(staffPerson) : (values.staffId ? original?.assignedServerName || original?.server || "" : ""),
       assignedServerId: staffPerson ? staffIdOf(staffPerson) : (values.staffId ? original?.assignedServerId ?? original?.serverId ?? null : null),
     };
-    console.info("[Bar Tables] Saving table...", common);
     try {
       const result = item
         ? await onUpdateTable?.({ ...common, id: original?.id ?? item.id, backendTableId: original?.backendTableId })
         : await onAddTable?.({ ...common, id: Math.max(0, ...tables.map((table) => Number(table.id) || 0)) + 1, items: [], status: "vacant", guests: 0, occupiedChairs: 0 });
       if (result === false || result?.success === false) {
-        console.error("[Bar Tables] Error saving table:", result?.error);
         setToast(result?.error || "The shared table record could not be saved.");
         return false;
       }
-      console.info("[Bar Tables] Table saved successfully:", result);
       return true;
     } catch (error) {
-      console.error("[Bar Tables] Error saving table:", error);
       setToast(error?.message || "The shared table record could not be saved.");
       return false;
     }
@@ -1992,15 +1944,12 @@ export function BarWorkspace({
     const normalizedPhone = String(payload.phone || "").replace(/\D/g, "");
     const duplicate = !item && staff.some((person) => person.name.trim().toLowerCase() === normalizedName && (!normalizedPhone || !String(person.phone || "").replace(/\D/g, "") || String(person.phone || "").replace(/\D/g, "") === normalizedPhone));
     if (duplicate) { setToast("This staff member already exists in the shared hotel staff list."); return false; }
-    console.info("[Bar Staff] Saving staff member...", payload);
     try {
       const result = item ? await onUpdateStaff?.({ ...payload, id: item.id }) : await onAddStaff?.(payload);
       if (result === false || result?.success === false) {
-        console.error("[Bar Staff] Error saving staff member:", result?.error);
         setToast(result?.error || "The shared staff record could not be saved.");
         return false;
       }
-      console.info("[Bar Staff] Staff member saved successfully:", result);
       const savedPerson = result && typeof result === "object" ? result : (item?._source || staff.find((person) => String(person.id) === String(item?.id)));
       const personId = staffIdOf(savedPerson);
       if (personId == null) {
@@ -2011,7 +1960,6 @@ export function BarWorkspace({
       if (!assignmentsSaved) setToast("Staff details were saved, but one or more table assignment changes were not applied.");
       return assignmentsSaved;
     } catch (error) {
-      console.error("[Bar Staff] Error saving staff member:", error);
       setToast(error?.message || "The shared staff record could not be saved.");
       return false;
     }
@@ -2040,14 +1988,8 @@ export function BarWorkspace({
         isBeverage: true,
         isBarDrink: true,
       };
-      console.info("[Bar Drinks] Saving drink item...", payload);
       const result = item ? await onUpdateMenuItem?.(payload) : await onAddMenuItem?.(payload);
-      if (result === false || result?.success === false) {
-        console.error("[Bar Drinks] Error saving drink item:", result?.error);
-        setToast(result?.error || "The shared menu item could not be be saved.");
-        return false;
-      }
-      console.info("[Bar Drinks] Drink saved successfully:", result);
+      if (result === false || result?.success === false) { setToast(result?.error || "The shared menu item could not be be saved."); return false; }
     }
     if (kind === "table" && !(await saveSharedTable(values, item))) return false;
     if (kind === "staff" && !(await saveSharedStaff(values, item))) return false;
@@ -2059,37 +2001,17 @@ export function BarWorkspace({
   };
   const deleteItem = async (kind, item) => {
     if (!window.confirm(`Delete ${item.name || item.number || item.id} from the shared hotel records?`)) return;
-    console.info(`[Bar Section] Deleting ${kind}:`, item);
     if (kind === "table") {
       const result = await onDeleteTable?.(item._source?.id ?? item.id);
-      if (result === false || result?.success === false) {
-        console.error("[Bar Section] Error deleting table:", result?.error);
-        setToast(result?.error || "The shared table could not be deleted.");
-        return;
-      }
-      console.info("[Bar Section] Deleted table successfully.");
+      if (result === false || result?.success === false) { setToast(result?.error || "The shared table could not be deleted."); return; }
       setAssignmentFilter((current) => current === item.id ? "all" : current);
     } else if (kind === "staff") {
-      if (!(await syncStaffAssignments(item._source || item, []))) {
-        console.error("[Bar Section] Could not clear staff table assignments.");
-        setToast("Could not clear this staff member's table assignments.");
-        return;
-      }
+      if (!(await syncStaffAssignments(item._source || item, []))) { setToast("Could not clear this staff member's table assignments."); return; }
       const result = await onDeleteStaff?.(item._source?.id ?? item.id);
-      if (result === false || result?.success === false) {
-        console.error("[Bar Section] Error deleting staff:", result?.error);
-        setToast(result?.error || "The shared staff record could not be deleted.");
-        return;
-      }
-      console.info("[Bar Section] Deleted staff successfully.");
+      if (result === false || result?.success === false) { setToast(result?.error || "The shared staff record could not be deleted."); return; }
     } else if (kind === "drink") {
       const result = await onDeleteMenuItem?.(item.id);
-      if (result === false || result?.success === false) {
-        console.error("[Bar Section] Error deleting drink:", result?.error);
-        setToast(result?.error || "The shared menu item could not be deleted.");
-        return;
-      }
-      console.info("[Bar Section] Deleted drink successfully.");
+      if (result === false || result?.success === false) { setToast(result?.error || "The shared menu item could not be deleted."); return; }
     }
     setPage(1);
     if (kind === "drink") setToast("Menu item deleted.");
@@ -2191,6 +2113,7 @@ export function BarWorkspace({
   ];
 
   const listConfig = {
+    "bar-drinks": { title: "Drinks Menu", description: "Beverage items from the shared restaurant menu.", rows: drinks, kind: "drink", columns: ["Drink Name", "Category", "Serving / Measure", "Price", "Availability", "Actions"] },
     "bar-tables": { title: "Bar Tables", description: "The shared hotel table records and complete food-and-drink orders.", rows: tables, kind: "table", columns: ["Table #", "Area", "Chairs / Capacity", "Assigned Server", "Status", "Guests", "Current Order", "Order Amount", "Actions"] },
     "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Phone / Contact", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
@@ -2481,7 +2404,7 @@ export function BarWorkspace({
             </button>
           </div>
         </div>
-      ) : route === "bar-drinks" ? null : (
+      ) : (
         <div className="bar-page-title">
           <div>
             <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
@@ -3100,17 +3023,6 @@ export function BarWorkspace({
         </section>
       </>}
 
-      {route === "bar-drinks" && (
-        <BarDrinksMenu
-          drinks={drinks}
-          onAddMenuItem={onAddMenuItem}
-          onUpdateMenuItem={onUpdateMenuItem}
-          onDeleteMenuItem={onDeleteMenuItem}
-          onSetMenuAvailability={onSetMenuAvailability}
-          setToast={setToast}
-        />
-      )}
-
       {listPage}
 
       {route === "bar-kot" && <BarKOTView menuItems={menuItems} tables={tables} staffList={dineStaff} onItemsUpdated={onBarOrderItemStatusUpdated} />}
@@ -3125,23 +3037,9 @@ export function BarWorkspace({
 
       {route === "bar-reports" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Reports</h2><p>Summary calculated from the shared menu, active orders, inventory, and loaded order history.</p></div><button className="bar-button secondary" onClick={() => csvDownload("bar-report.csv", [["Report", "Value", "Source"], ...reportData])}>Export CSV</button></div><div className="bar-report-summary">{reportData.map(([label,value,note])=><article key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</div>{renderStaticTable(["Report","Value","Source"],reportData.map((row,index)=>({id:index,name:row[0],value:row[1],source:row[2]})),(column,row)=>({Report:row.name,Value:row.value,Source:row.source})[column])}</section>}
 
-      {route === "bar-access" && (
-        <section className="bar-page-card" style={{ padding: "0.5rem", background: "transparent", border: "none" }}>
-          <LoginManagement currentAdminSession={currentAdminSession} />
-        </section>
-      )}
+      {route === "bar-access" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Access Management</h2><p>Access changes use the application authorization system.</p></div></div><div className="bar-empty">No Bar-specific access management API is configured. Existing application roles and permissions remain authoritative.</div></section>}
 
-      {route === "bar-settings" && (
-        <section className="bar-page-card" style={{ padding: "0.5rem", background: "transparent", border: "none" }}>
-          <AdminSettings
-            initialSettings={restaurantSettings}
-            onSaveSettings={onSaveRestaurantSettings}
-            showBarHeaderToggle={showBarHeaderToggle}
-            onToggleShowBarHeader={onToggleShowBarHeader}
-            currentAdminSession={currentAdminSession}
-          />
-        </section>
-      )}
+      {route === "bar-settings" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Settings</h2><p>Settings must be stored by the restaurant configuration service to persist across sessions.</p></div></div><div className="bar-empty">No Bar-specific settings API is configured. No local demo values are being presented as saved settings.</div></section>}
 
       {orderComposerOpen && <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !orderSubmitting && setOrderComposerOpen(false)}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-order-title"><header className="bar-modal-head"><div><span className="bar-kicker">SHARED RESTAURANT ORDER</span><h2 id="bar-order-title">New Bar Order</h2></div><button className="bar-icon-button" type="button" aria-label="Close" disabled={orderSubmitting} onClick={() => setOrderComposerOpen(false)}><X size={18} /></button></header><form className="bar-form" onSubmit={submitBarOrder}><div className="bar-form-grid"><label className="bar-field"><span>Table *</span><select required value={orderTableId} onChange={(event) => setOrderTableId(event.target.value)}><option value="">Select a shared table</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label><label className="bar-field"><span>Category</span><select value={orderMenuCategory} onChange={(event) => { setOrderMenuCategory(event.target.value); setOrderDrinkId(""); }}><option value="all">All categories</option>{[...new Set(menuItems.map((item) => item.category).filter(Boolean))].map((category) => <option key={category}>{category}</option>)}</select></label><label className="bar-field"><span>Food or Drink *</span><select required value={orderDrinkId} onChange={(event) => setOrderDrinkId(event.target.value)}><option value="">Select food or drink</option>{menuItems.filter((item) => item.isAvailable !== false && (orderMenuCategory === "all" || item.category === orderMenuCategory)).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.category} · {formatCurrency(item.price)}</option>)}</select></label><label className="bar-field"><span>Quantity</span><input type="number" min="1" step="1" value={orderQuantity} onChange={(event) => setOrderQuantity(event.target.value)} /></label><label className="bar-field"><span>Serving Type</span><input value={orderServing} onChange={(event) => setOrderServing(event.target.value)} placeholder="Regular / large / peg" /></label><label className="bar-field"><span>Ice Preference</span><select value={orderIce} onChange={(event) => setOrderIce(event.target.value)}><option value="">No preference</option><option>With ice</option><option>No ice</option><option>Extra ice</option></select></label><label className="bar-field"><span>Mixer</span><input value={orderMixer} onChange={(event) => setOrderMixer(event.target.value)} placeholder="Soda, tonic, juice…" /></label><label className="bar-field wide"><span>Special Notes</span><textarea rows="2" value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} /></label></div>{orderError && <p className="bar-error" role="alert">{orderError}</p>}<footer className="bar-modal-footer"><button className="bar-button secondary" type="button" disabled={orderSubmitting} onClick={() => setOrderComposerOpen(false)}>Cancel</button><button className="bar-button primary" type="submit" disabled={orderSubmitting || !tables.length || !menuItems.length}>{orderSubmitting ? "Sending…" : "Create & Send KOT"}</button></footer></form></section></div>}
       {modal && <EntityModal kind={modal.kind} initial={modal.item} tables={tables} staff={staff} drinks={drinks} onClose={() => setModal(null)} onSave={saveEntity} />}
