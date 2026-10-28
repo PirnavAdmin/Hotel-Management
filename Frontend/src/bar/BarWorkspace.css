@@ -266,7 +266,6 @@
   border-color: rgba(239, 68, 68, 0.3);
 }
 
-<<<<<<< HEAD
 /* Header Shortcuts (replacing static banner) */
 .bar-header-shortcuts {
   display: flex;
@@ -677,5 +676,3 @@
 .bar-inventory-table td {
   padding: 12px 14px;
 }
-=======
->>>>>>> 9486c15e6e25acd3952e99fc1d4e2ac971f8c334

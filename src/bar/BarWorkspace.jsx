@@ -7,6 +7,7 @@ import {
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { formatCurrency } from "../utils/formatCurrency";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
 import { BarKOTView } from "./BarKOTView";
@@ -210,7 +211,6 @@ export const BAR_SUPPLIERS = [
 
 function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const [busy, setBusy] = useState(false);
-<<<<<<< HEAD
   const [modalOpen, setModalOpen] = useState(false);
   const [modalBusy, setModalBusy] = useState(false);
   const [modalError, setModalError] = useState("");
@@ -465,37 +465,6 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     } finally {
       setBusy(false);
     }
-=======
-  const [addOpen, setAddOpen] = useState(false);
-  const [addBusy, setAddBusy] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [newItem, setNewItem] = useState({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
-  const rows = (Array.isArray(inventory) ? inventory : []).filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name));
-  const setNewItemField = (field, value) => setNewItem((previous) => ({ ...previous, [field]: value }));
-  const addInventoryItem = async (event) => {
-    event.preventDefault();
-    setAddBusy(true);
-    setAddError("");
-    try {
-      const result = await apiCreateInventoryItem(newItem);
-      if (!result?.success) throw new Error(result?.error || "Could not add the inventory item.");
-      setAddOpen(false);
-      setNewItem({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
-      await onRefresh();
-    } catch (requestError) { setAddError(requestError?.message || "Could not add the inventory item."); }
-    finally { setAddBusy(false); }
-  };
-  const adjust = async (item, direction) => {
-    const amount = Number(window.prompt(direction > 0 ? "Quantity received" : "Adjustment quantity", "1"));
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    setBusy(true);
-    try {
-      const response = await apiAdjustStock({ ingredientId: item.id ?? item.ingredientId, quantityChange: amount * direction, reason: "Bar stock adjustment" });
-      if (!response?.success) throw new Error(response?.error || "Stock adjustment failed.");
-      await onRefresh();
-    } catch (requestError) { window.alert(requestError?.message || "Stock adjustment failed."); }
-    finally { setBusy(false); }
->>>>>>> 9486c15e6e25acd3952e99fc1d4e2ac971f8c334
   };
 
   const deleteItem = async (item) => {
@@ -1905,6 +1874,21 @@ function BarDrinksMenu({
             <option value="">All</option>
             <option value="available">Available</option>
             <option value="unavailable">Unavailable</option>
+          </select>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Special Dish</span>
+          <select
+            value={menuFilters.special}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, special: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            <option value="special">Special</option>
+            <option value="regular">Regular</option>
           </select>
         </label>
 
