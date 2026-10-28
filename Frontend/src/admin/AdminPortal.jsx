@@ -585,13 +585,10 @@ export function AdminPortal({
     const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
     );
-    const hasActiveGuests = Number(tbl?.guests || tbl?.occupiedChairs || 0) > 0;
-
-    // Once bill is settled, a table has no active items and no guests, so it is strictly vacant!
-    if (!hasActiveItems && !hasActiveGuests) {
+    // A table without active items is strictly vacant!
+    if (!hasActiveItems) {
       return false;
     }
-
     if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
       return true;
     }

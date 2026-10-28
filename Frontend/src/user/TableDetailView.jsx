@@ -1715,6 +1715,7 @@ import {
   Star,
   ChevronDown,
   Filter,
+  LogOut,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
 import { formatCurrency } from "../utils/formatCurrency";
@@ -2278,19 +2279,17 @@ export function TableDetailView({
                     fontSize: "0.72rem",
                     fontWeight: 700,
                     textTransform: "uppercase",
-                    color:
-                      (activeTable.status === "vacant" && activeGuests <= 0)
-                        ? "var(--status-vacant)"
-                        : "var(--status-occupied)",
-                    background:
-                      (activeTable.status === "vacant" && activeGuests <= 0)
-                        ? "var(--status-vacant-bg)"
-                        : "var(--status-occupied-bg)",
+                    color: (safeItems.length > 0 && activeTable.status !== "vacant")
+                      ? "var(--status-occupied)"
+                      : "var(--status-vacant)",
+                    background: (safeItems.length > 0 && activeTable.status !== "vacant")
+                      ? "var(--status-occupied-bg)"
+                      : "var(--status-vacant-bg)",
                     padding: "1px 6px",
                     borderRadius: "4px",
                   }}
                 >
-                  {(activeTable.status === "vacant" && activeGuests > 0) ? "occupied" : (activeTable.status || "vacant")}
+                  {(safeItems.length > 0 && activeTable.status !== "vacant") ? (activeTable.status || "occupied") : "vacant"}
                 </span>
               </div>
             </div>
@@ -2364,8 +2363,40 @@ export function TableDetailView({
             </button>
           </div>
 
+          {/* Quick Vacate Table Button */}
+          {(activeTable.status !== "vacant" || activeGuests > 0 || safeItems.length > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onClearOrder) {
+                  onClearOrder(activeTable.id);
+                } else if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, 0);
+                }
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                padding: "0.24rem 0.55rem",
+                borderRadius: "var(--radius-sm)",
+                background: "rgba(239, 68, 68, 0.12)",
+                color: "#ef4444",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Clear order and vacate table"
+            >
+              <LogOut size={12} />
+              <span>Vacate</span>
+            </button>
+          )}
+
           {/* Live Table Dining Timer Widget */}
-          {table.orderTime &&
+          {safeItems.length > 0 && table.orderTime &&
             (() => {
               const elapsedSec = parseTimeToSeconds(table.orderTime);
               const elapsedFormatted = formatElapsedTimer(elapsedSec);

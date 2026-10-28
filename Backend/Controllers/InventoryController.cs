@@ -412,6 +412,7 @@ public class InventoryController : ControllerBase
 public class CreateIngredientRequest
 {
     public string Name { get; set; } = string.Empty;
+    public string? ItemName { set => Name = value ?? string.Empty; }
     public string? Category { get; set; } = "General";
     public string? Subcategory { get; set; }
     public string? Supplier { get; set; } = "Local Supplier";
@@ -424,11 +425,14 @@ public class CreateIngredientRequest
     // Aliases for compatibility
     public decimal CurrentStock { set => Stock = value; }
     public decimal MinimumThreshold { set => MinThreshold = value; }
+    public decimal Threshold { set => MinThreshold = value; }
+    public decimal CostPerUnit { set => UnitCost = value; }
 }
 
 public class UpdateIngredientRequest
 {
     public string Name { get; set; } = string.Empty;
+    public string? ItemName { set => Name = value ?? string.Empty; }
     public string? Category { get; set; } = "General";
     public string? Subcategory { get; set; }
     public string? Supplier { get; set; } = "Local Supplier";
@@ -441,6 +445,8 @@ public class UpdateIngredientRequest
     // Aliases for compatibility
     public decimal CurrentStock { set => Stock = value; }
     public decimal MinimumThreshold { set => MinThreshold = value; }
+    public decimal Threshold { set => MinThreshold = value; }
+    public decimal CostPerUnit { set => UnitCost = value; }
 }
 
 public class StockAdjustmentRequest

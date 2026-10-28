@@ -72,6 +72,20 @@ const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
+const sanitizeKitchenAlert = (alert) => {
+  if (!alert || typeof alert !== "object") return alert;
+  const cleanText = (value) =>
+    String(value || "")
+      .replace(/(?:ðŸ[^\s]*|âœ…|â°|âœ•|ï¸|Â)+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  return {
+    ...alert,
+    title: cleanText(alert.title) || "Kitchen Update",
+    message: cleanText(alert.message),
+  };
+};
+
 const readRestaurantSettings = () => {
   try {
     return JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
@@ -188,8 +202,6 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         : rawName || `Table ${targetId}`;
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
-      const isExplicitlyVacant = rawStatus === "vacant";
-
       const hasActiveItems =
         (Array.isArray(table.items) && table.items.length > 0)
           ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
@@ -197,26 +209,22 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
               ? existing.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
               : false);
 
-      const incomingGuests =
-        (Number(table.guests) > 0 ? Number(table.guests) : null) ??
-        (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
-        (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
-        (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
-        (Array.isArray(existing.selectedSeats) && existing.selectedSeats.length > 0 ? existing.selectedSeats.length : null) ??
-        (Number(existing.occupiedChairs) > 0 ? Number(existing.occupiedChairs) : null) ??
-        0;
-      const hasActiveGuests = incomingGuests > 0;
-
       let finalStatus = "vacant";
-      if (!hasActiveItems && !hasActiveGuests) {
+      if (!hasActiveItems) {
         finalStatus = ["reserved", "cleaning", "inactive"].includes(rawStatus) ? rawStatus : "vacant";
-      } else if (hasActiveItems || hasActiveGuests) {
-        finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
       } else {
-        finalStatus = "vacant";
+        finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
       }
 
       const isFinalVacant = finalStatus === "vacant";
+
+      const incomingGuests = isFinalVacant
+        ? 0
+        : (Number(table.guests) > 0 ? Number(table.guests) : null) ??
+          (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
+          (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+          (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
+          0;
 
       const resolvedItems =
         (Array.isArray(table.items) && table.items.length > 0)
@@ -268,6 +276,33 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
 
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
+    .map((table) => {
+      const hasActive = Array.isArray(table.items) && table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+      if (!hasActive && table.status !== "reserved" && table.status !== "cleaning" && table.status !== "inactive") {
+        return {
+          ...table,
+          status: "vacant",
+          guests: 0,
+          occupiedChairs: 0,
+          selectedSeats: [],
+          items: [],
+          orderTime: null,
+          orderTimestamp: null,
+          occupiedSince: null,
+          activeOrderId: null,
+          cookingStartedAt: null,
+          completedAt: null,
+          completedDuration: null,
+          discountPercent: 0,
+          discountAmount: 0,
+          subtotal: 0,
+          taxAmount: 0,
+          serviceChargeAmount: 0,
+          grandTotal: 0,
+        };
+      }
+      return table;
+    })
     .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
@@ -466,7 +501,7 @@ export function App() {
   const isAdminRoute = location.pathname === "/admin";
   const isUserRoute = !isKotRoute && !isAdminRoute;
 
-  // â”€â”€ Live Backend Integration Hook (Ngrok API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
     apiGetTables().then((response) => {
@@ -571,7 +606,7 @@ export function App() {
     });
   }, []);
 
-  // â”€â”€ Authentication sessions per route â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
   // open simultaneously on different browser tabs/screens.
   const SESSION_KEY_POS = "avsr_pos_session";
@@ -673,7 +708,7 @@ export function App() {
     }, 2800);
   };
 
-  // â”€â”€ Kitchen Real-Time Notifications System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Kitchen Real-Time Notifications System ───────────────────
   const STORAGE_KEY_KITCHEN_NOTIFICATIONS = "avsr_kitchen_notifications";
   const STORAGE_KEY_LATEST_ALERT = "avsr_latest_kitchen_alert";
 
@@ -709,6 +744,7 @@ export function App() {
   };
 
   const triggerKitchenNotification = (alertData) => {
+    const cleanAlertData = sanitizeKitchenAlert(alertData);
     const notif = {
       id: Date.now() + Math.random(),
       timestamp: new Date().toLocaleTimeString([], {
@@ -717,7 +753,7 @@ export function App() {
         hour12: true,
       }),
       read: false,
-      ...alertData,
+      ...cleanAlertData,
     };
     setKitchenNotifications((prev) => {
       const updated = [
@@ -1021,7 +1057,7 @@ export function App() {
             } catch {}
           }
           if (payload[STORAGE_KEY_LATEST_ALERT]) {
-            const alert = payload[STORAGE_KEY_LATEST_ALERT];
+            const alert = sanitizeKitchenAlert(payload[STORAGE_KEY_LATEST_ALERT]);
             setActiveKitchenAlert(alert);
             setKitchenNotifications((prev) => [
               alert,
@@ -1096,7 +1132,7 @@ export function App() {
         setTheme(normalizeTheme(e.newValue));
       } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
-          const alert = JSON.parse(e.newValue);
+          const alert = sanitizeKitchenAlert(JSON.parse(e.newValue));
           if (alert && alert.id) {
             setActiveKitchenAlert(alert);
             setKitchenNotifications((prev) => [
@@ -1328,10 +1364,20 @@ export function App() {
           );
         }
 
+        const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
           items: newItems,
-          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
+          status: !hasActive ? "vacant" : t.status,
+          guests: !hasActive ? 0 : t.guests,
+          occupiedChairs: !hasActive ? 0 : t.occupiedChairs,
+          selectedSeats: !hasActive ? [] : t.selectedSeats,
+          orderTime: !hasActive ? null : t.orderTime,
+          orderTimestamp: !hasActive ? null : t.orderTimestamp,
+          occupiedSince: !hasActive ? null : t.occupiedSince,
+          cookingStartedAt: !hasActive ? null : t.cookingStartedAt,
+          completedAt: !hasActive ? null : t.completedAt,
+          completedDuration: !hasActive ? null : t.completedDuration,
         };
         targetUpdatedTable = updated;
         return updated;
@@ -1360,10 +1406,20 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
           items: newItems,
-          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
+          status: !hasActive ? "vacant" : t.status,
+          guests: !hasActive ? 0 : t.guests,
+          occupiedChairs: !hasActive ? 0 : t.occupiedChairs,
+          selectedSeats: !hasActive ? [] : t.selectedSeats,
+          orderTime: !hasActive ? null : t.orderTime,
+          orderTimestamp: !hasActive ? null : t.orderTimestamp,
+          occupiedSince: !hasActive ? null : t.occupiedSince,
+          cookingStartedAt: !hasActive ? null : t.cookingStartedAt,
+          completedAt: !hasActive ? null : t.completedAt,
+          completedDuration: !hasActive ? null : t.completedDuration,
         };
         targetUpdatedTable = updated;
         return updated;
@@ -1587,8 +1643,8 @@ export function App() {
       apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch((error) => console.error("Table KOT state sync failed after server dispatch:", error));
 
       setIsKOTOpen(true);
-      triggerKitchenNotification({ tableId, tableName, type: "order_received", title: "ðŸ“¥ KOT Sent", message: `Order for ${tableName} was saved to the KOT service.` });
-      showToast(`ðŸ“¥ KOT sent and saved for ${tableName}.`);
+      triggerKitchenNotification({ tableId, tableName, type: "order_received", title: "📥 KOT Sent", message: `Order for ${tableName} was saved to the KOT service.` });
+      showToast(`📥 KOT sent and saved for ${tableName}.`);
     } catch (error) {
       showToast(`KOT dispatch failed for ${tableName}: ${error?.message || "Could not reach the KOT service."}`);
     } finally {
@@ -1701,28 +1757,28 @@ export function App() {
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_started",
-        title: "ðŸ”¥ Cooking Started",
+        title: "🔥 Cooking Started",
         message: itemName
           ? `Chef started cooking "${itemName}" for ${tbl?.name || `Table ${tableId}`}!`
           : `Chef started cooking order for ${tbl?.name || `Table ${tableId}`}!`,
       });
-      showToast(`ðŸ”¥ ${tbl?.name || `Table ${tableId}`}: Chef started cooking!`);
+      showToast(`🔥 ${tbl?.name || `Table ${tableId}`}: Chef started cooking!`);
     } else if (status === "received") {
       showToast(
-        `ðŸ“¥ ${tbl?.name || `Table ${tableId}`}: Reverted to Order Received.`,
+        `📥 ${tbl?.name || `Table ${tableId}`}: Reverted to Order Received.`,
       );
     } else if (status === "ready") {
       triggerKitchenNotification({
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_completed",
-        title: itemName ? `ðŸ”” "${itemName}" Ready!` : "ðŸ”” Food Ready to Serve!",
+        title: itemName ? `🔔 "${itemName}" Ready!` : "🔔 Food Ready to Serve!",
         message: itemName
           ? `"${itemName}" is prepared and ready to serve for ${tbl?.name || `Table ${tableId}`}!`
           : `Order preparation completed for ${tbl?.name || `Table ${tableId}`}! Food is ready to serve.`,
       });
       showToast(
-        `âœ… ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
+        `✅ ${tbl?.name || `Table ${tableId}`}: Marked Prepared & Ready!`,
       );
     }
   };
@@ -1809,16 +1865,16 @@ export function App() {
       tableName: tbl?.name || `Table ${tableId}`,
       type: "cooking_completed",
       title: isSingleItem
-        ? `ðŸ”” Prepared: ${itemObj.name}`
-        : "ðŸ”” Food Ready to Serve!",
+        ? `🔔 Prepared: ${itemObj.name}`
+        : "🔔 Food Ready to Serve!",
       message: isSingleItem
         ? `"${itemObj.name}" is prepared! Ready to serve.`
-        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! ðŸ½ï¸`,
+        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! 🍽️`,
     });
     showToast(
       isSingleItem
-        ? `âœ… ${tbl?.name || `Table ${tableId}`}: "${itemObj.name}" marked prepared!`
-        : `âœ… ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to serve.`,
+        ? `✅ ${tbl?.name || `Table ${tableId}`}: "${itemObj.name}" marked prepared!`
+        : `✅ ${tbl?.name || `Table ${tableId}`}: Order preparation completed! Ready to serve.`,
     );
   };
 
@@ -2113,7 +2169,7 @@ export function App() {
           }
 
           if (lowStockAlerts.length > 0) {
-            showToast(`âš ï¸ Low stock alert: ${lowStockAlerts.join(", ")}`);
+            showToast(`⚠️  Low stock alert: ${lowStockAlerts.join(", ")}`);
           }
         }
       }
@@ -2255,7 +2311,7 @@ export function App() {
     setSelectedTableId(null);
     setActiveView("tables");
     showToast(
-      `âœ… ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
+      `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
     );
 
     setReprintReceiptData({
@@ -2464,7 +2520,7 @@ export function App() {
       } catch {}
       return updated;
     });
-    showToast(`âœ… Created ${normalizedTable.name} with ${normalizedTable.capacity} chairs!`);
+    showToast(`✅ Created ${normalizedTable.name} with ${normalizedTable.capacity} chairs!`);
   };
 
   const handleUpdateTable = (updatedTable) => {
@@ -2549,7 +2605,7 @@ export function App() {
       setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
     }
 
-    showToast(`ðŸ—‘ï¸  Permanently Deleted ${tbl?.name || "Table"}`);
+    showToast(`🗑️   Permanently Deleted ${tbl?.name || "Table"}`);
   };
 
   // 3. Staff & Persons Admin
@@ -2557,7 +2613,7 @@ export function App() {
     const result = await apiCreateStaff(newPerson);
     if (!result?.success) {
       showToast(
-        `âš ï¸Â Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
+        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
       );
       return false;
     }
@@ -2575,7 +2631,7 @@ export function App() {
       return false;
     }
     setStaffList((prev) => dedupeStaff([...prev, savedPerson]));
-    showToast(`âœ… Staff member "${newPerson.name}" saved to the backend!`);
+    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
     return savedPerson;
   };
 
@@ -2613,7 +2669,7 @@ export function App() {
       }
     }
 
-    showToast(`âœ… Updated staff details for "${updatedPerson.name}"`);
+    showToast(`✅ Updated staff details for "${updatedPerson.name}"`);
     return { ...oldPerson, ...updatedPerson };
   };
 
@@ -2635,7 +2691,7 @@ export function App() {
     setStaffList((prev) =>
       prev.filter((p) => (p.id ?? p.staffId) !== personId),
     );
-    showToast(`ðŸ—‘ï¸Â Removed "${person?.name || person?.fullName || "Staff"}"`);
+    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
   };
 
   // Reset to default initial state
@@ -2821,13 +2877,13 @@ export function App() {
 
                     const hasUnsent = items.some((i) => i && i.status !== "cancelled" && !isItemSent(i));
                     if (hasUnsent) {
-                      showToast("âš ï¸ Send KOT to kitchen first before settling.");
+                      showToast("⚠️  Send KOT to kitchen first before settling.");
                       return;
                     }
 
                     const allDoneCooking = items.length > 0 && items.every((i) => i && (i.status === "cancelled" || isItemDone(i)));
                     if (!allDoneCooking) {
-                      showToast("ðŸ‘¨â€ðŸ³ Cooking is in progress. Settle & checkout will enable once kitchen marks food ready.");
+                      showToast("👨‍🍳 Cooking is in progress. Settle & checkout will enable once kitchen marks food ready.");
                       return;
                     }
 
@@ -2906,7 +2962,7 @@ export function App() {
                   fontSize: "1.25rem",
                 }}
               >
-                {activeKitchenAlert.type === "cooking_completed" ? "ðŸ””" : "ðŸ”¥"}
+                {activeKitchenAlert.type === "cooking_completed" ? "🔔" : "🔥"}
               </div>
               <div>
                 <div
@@ -2922,8 +2978,8 @@ export function App() {
                   }}
                 >
                   {activeKitchenAlert.type === "cooking_completed"
-                    ? "âœ… Food Ready To Serve"
-                    : "ðŸ”¥ Cooking in Progress"}
+                    ? "✅ Food Ready To Serve"
+                    : "🔥 Cooking in Progress"}
                 </div>
                 <div
                   style={{
@@ -2933,7 +2989,9 @@ export function App() {
                     lineHeight: 1.1,
                   }}
                 >
-                  {activeKitchenAlert.title}
+                  {String(activeKitchenAlert.title || "Kitchen Update")
+                    .replace(/^ðŸ[^\s]*\s*/u, "")
+                    .replace(/^âœ…\s*/u, "")}
                 </div>
               </div>
             </div>
@@ -2954,7 +3012,7 @@ export function App() {
               }}
               title="Dismiss"
             >
-              âœ•
+              ✕
             </button>
           </div>
 
@@ -2966,7 +3024,13 @@ export function App() {
               fontWeight: 600,
             }}
           >
-            {activeKitchenAlert.message}
+            {String(activeKitchenAlert.message || "")
+              .replaceAll("ðŸ“¥", "")
+              .replaceAll("ðŸ”¥", "")
+              .replaceAll("ðŸ””", "")
+              .replaceAll("âœ…", "")
+              .replaceAll("â°", "")
+              .trim()}
           </div>
 
           <div
@@ -2981,7 +3045,7 @@ export function App() {
             <span
               style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700 }}
             >
-              â° {activeKitchenAlert.timestamp}
+              ⏰ {activeKitchenAlert.timestamp}
             </span>
             {activeKitchenAlert.tableId && (
               <button
@@ -3015,7 +3079,7 @@ export function App() {
                 View{" "}
                 {activeKitchenAlert.tableName ||
                   `Table ${activeKitchenAlert.tableId}`}{" "}
-                â†’
+                →
               </button>
             )}
           </div>
