@@ -2,15 +2,18 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
-  Pencil, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
+  Pencil, Plus, Printer, Receipt, RefreshCw, Search, SquarePen, Trash2, Wine, X, 
 } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { formatCurrency } from "../utils/formatCurrency";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
 import { BarKOTView } from "./BarKOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
+import { LoginManagement } from "../admin/LoginManagement";
+import { AdminSettings } from "../admin/AdminSettings";
 import "./BarWorkspace.css";
 
 const PAGE_SIZE = 8;
@@ -99,24 +102,34 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     event.preventDefault();
     setAddBusy(true);
     setAddError("");
+    console.info("[Bar Inventory] Adding inventory item:", newItem);
     try {
       const result = await apiCreateInventoryItem(newItem);
       if (!result?.success) throw new Error(result?.error || "Could not add the inventory item.");
+      console.info("[Bar Inventory] Added inventory item successfully:", result);
       setAddOpen(false);
       setNewItem({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
       await onRefresh();
-    } catch (requestError) { setAddError(requestError?.message || "Could not add the inventory item."); }
+    } catch (requestError) {
+      console.error("[Bar Inventory] Failed to add inventory item:", requestError);
+      setAddError(requestError?.message || "Could not add the inventory item.");
+    }
     finally { setAddBusy(false); }
   };
   const adjust = async (item, direction) => {
     const amount = Number(window.prompt(direction > 0 ? "Quantity received" : "Adjustment quantity", "1"));
     if (!Number.isFinite(amount) || amount <= 0) return;
     setBusy(true);
+    console.info("[Bar Inventory] Adjusting stock:", { item: item.name, quantityChange: amount * direction });
     try {
       const response = await apiAdjustStock({ ingredientId: item.id ?? item.ingredientId, quantityChange: amount * direction, reason: "Bar stock adjustment" });
       if (!response?.success) throw new Error(response?.error || "Stock adjustment failed.");
+      console.info("[Bar Inventory] Stock adjusted successfully:", response);
       await onRefresh();
-    } catch (requestError) { window.alert(requestError?.message || "Stock adjustment failed."); }
+    } catch (requestError) {
+      console.error("[Bar Inventory] Stock adjustment failed:", requestError);
+      window.alert(requestError?.message || "Stock adjustment failed.");
+    }
     finally { setBusy(false); }
   };
   return <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Inventory</h2><p>Beverage inventory from the shared restaurant inventory ledger.</p></div><div className="bar-actions"><button className="bar-button primary" type="button" onClick={() => { setAddError(""); setAddOpen(true); }}><Plus size={15} /> Add Inventory</button><button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading}><RefreshCw size={15} /> Refresh</button></div></div>
@@ -482,6 +495,1192 @@ function getDrinkIcon(name = "", category = "") {
   return { Icon: GlassWater, tone: "tone-blue" };
 }
 
+
+function BarDrinksMenu({
+  drinks = [],
+  onAddMenuItem,
+  onUpdateMenuItem,
+  onDeleteMenuItem,
+  onSetMenuAvailability,
+  setToast,
+}) {
+  const [searchFilter, setSearchFilter] = useState("");
+  const [menuFilters, setMenuFilters] = useState({
+    category: "",
+    drinkType: "",
+    availability: "",
+    special: "",
+  });
+  const [menuPage, setMenuPage] = useState(1);
+  const [menuPageSize, setMenuPageSize] = useState(6);
+
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [itemForm, setItemForm] = useState({
+    name: "",
+    category: "Cocktails",
+    customCategory: "",
+    price: "",
+    drinkType: "Alcoholic",
+    isBartenderSpecial: false,
+    measure: "Glass (250 ml)",
+    drinkType: "Alcoholic",
+    abv: "",
+    description: "",
+    image: "",
+    isAvailable: true,
+  });
+
+  const categoryOptions = useMemo(() => {
+    const map = new Map();
+    BAR_CATEGORIES.forEach((cat) => {
+      map.set(cat.toLowerCase(), { value: cat, label: cat });
+    });
+    drinks.forEach((d) => {
+      if (d.category && !map.has(d.category.toLowerCase())) {
+        map.set(d.category.toLowerCase(), { value: d.category, label: d.category });
+      }
+    });
+    return Array.from(map.values());
+  }, [drinks]);
+
+  const filteredDrinks = useMemo(() => {
+    return drinks.filter((item) => {
+      const query = searchFilter.trim().toLowerCase();
+      const matchesSearch =
+        !query ||
+        [item.name, item.description, item.category].some((val) =>
+          String(val ?? "").toLowerCase().includes(query)
+        );
+      const matchesCategory =
+        !menuFilters.category ||
+        String(item.category ?? "").toLowerCase() ===
+          menuFilters.category.toLowerCase();
+      const matchesDrinkType =
+        !menuFilters.drinkType ||
+        (menuFilters.drinkType === "alcoholic" ? (item.drinkType === "Alcoholic" || !item.drinkType) : item.drinkType === "Non-Alcoholic");
+      const matchesAvailability =
+        !menuFilters.availability ||
+        (item.isAvailable !== false && item.isAvailable !== "Unavailable") ===
+          (menuFilters.availability === "available");
+      const matchesSpecial =
+        !menuFilters.special ||
+        Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) ===
+          (menuFilters.special === "special");
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesDrinkType &&
+        matchesAvailability &&
+        matchesSpecial
+      );
+    });
+  }, [drinks, searchFilter, menuFilters]);
+
+  const totalMenuPages = Math.ceil(filteredDrinks.length / menuPageSize) || 1;
+  const safeMenuPage = Math.min(Math.max(menuPage, 1), totalMenuPages);
+  const startIdx = (safeMenuPage - 1) * menuPageSize;
+  const paginatedDrinks = filteredDrinks.slice(startIdx, startIdx + menuPageSize);
+
+  const handleOpenItemModal = (item = null) => {
+    if (item) {
+      setEditingItem(item);
+      const isKnown = categoryOptions.some(
+        (opt) => opt.value.toLowerCase() === String(item.category || "").toLowerCase()
+      );
+      setIsCustomCategory(!isKnown && Boolean(item.category));
+      setItemForm({
+        name: item.name || "",
+        category: isKnown ? item.category || "Cocktails" : "__custom__",
+        customCategory: isKnown ? "" : item.category || "",
+        price: item.price !== undefined && item.price !== null ? String(item.price) : "",
+        isVeg: Boolean(item.isVeg),
+        isChefSpecial: Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial),
+        prepTime: item.prepTime || "15 min",
+        measure: item.measure || item.servingMeasure || "Glass (250 ml)",
+        drinkType: item.drinkType || (item.abv ? "Alcoholic" : item.isVeg ? "Non-Alcoholic" : "Alcoholic"),
+        abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : "",
+        description: item.description || "",
+        image: item.image || item.imageUrl || "",
+        isAvailable: item.isAvailable !== false && item.isAvailable !== "Unavailable",
+      });
+    } else {
+      setEditingItem(null);
+      setIsCustomCategory(false);
+      setItemForm({
+        name: "",
+        category: "Cocktails",
+        customCategory: "",
+        price: "",
+        isVeg: false,
+        isChefSpecial: false,
+        prepTime: "15 min",
+        measure: "Glass (250 ml)",
+        drinkType: "Alcoholic",
+        abv: "",
+        description: "",
+        image: "",
+        isAvailable: true,
+      });
+    }
+    setIsItemModalOpen(true);
+  };
+
+  const handleSaveItem = async (e) => {
+    e.preventDefault();
+    if (!itemForm.name.trim()) {
+      setToast?.("Drink name is required.");
+      return;
+    }
+    if (!itemForm.price || Number(itemForm.price) < 0) {
+      setToast?.("Please enter a valid price in Rupees.");
+      return;
+    }
+
+    const finalCategory =
+      itemForm.category === "__custom__"
+        ? (itemForm.customCategory.trim() || "Cocktails")
+        : (itemForm.category || "Cocktails");
+
+    const payload = {
+      ...(editingItem || {}),
+      id: editingItem?.id || `m-${Date.now()}`,
+      name: itemForm.name.trim(),
+      category: finalCategory,
+      price: parseFloat(itemForm.price || 0),
+      isVeg: Boolean(itemForm.isVeg),
+      dietaryType: itemForm.drinkType === "Non-Alcoholic" ? "VEG" : "NON-VEG",
+      isChefSpecial: Boolean(itemForm.isChefSpecial),
+      isChefsSpecial: Boolean(itemForm.isChefSpecial),
+      isSpecial: Boolean(itemForm.isChefSpecial),
+      prepTime: itemForm.prepTime || "15 min",
+      prepTimeMinutes: parseInt(itemForm.prepTime, 10) || 15,
+      measure: itemForm.measure || "",
+      servingMeasure: itemForm.measure || "",
+      drinkType: itemForm.drinkType || (itemForm.abv ? "Alcoholic" : itemForm.isVeg ? "Non-Alcoholic" : "Alcoholic"),
+      abv: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
+      description: itemForm.description || "",
+      image: itemForm.image || "",
+      imageUrl: itemForm.image || "",
+      isAvailable: itemForm.isAvailable !== false,
+      isBarItem: true,
+      isBarDrink: true,
+      isBeverage: true,
+    };
+
+    console.info("[Bar Drinks] Saving drink item...", payload);
+    try {
+      const result = editingItem
+        ? await onUpdateMenuItem?.(payload)
+        : await onAddMenuItem?.(payload);
+      if (result === false || result?.success === false) {
+        setToast?.(result?.error || "Could not save drink to menu.");
+        return;
+      }
+      setToast?.(`Drink "${payload.name}" ${editingItem ? "updated" : "added"} in Drinks Menu.`);
+      setIsItemModalOpen(false);
+    } catch (err) {
+      setToast?.(err?.message || "Could not save drink item.");
+    }
+  };
+
+  const handleToggleAvailability = (item) => {
+    const isAvail = item.isAvailable !== false && item.isAvailable !== "Unavailable";
+    console.info("[Bar Drinks] Toggling availability for:", item.name, !isAvail);
+    onSetMenuAvailability?.(item.id, !isAvail);
+  };
+
+  const handleDeleteItem = (item) => {
+    if (!window.confirm(`Are you sure you want to delete "${item.name}" from the drinks menu?`)) return;
+    console.info("[Bar Drinks] Deleting drink item:", item.id);
+    onDeleteMenuItem?.(item.id);
+    setToast?.(`Drink "${item.name}" deleted.`);
+  };
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--border-card)",
+        borderRadius: "12px",
+        padding: "0.75rem 0.85rem",
+      }}
+    >
+      {/* Header inside Card - Matching Dine Menu Items */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.65rem",
+          marginBottom: "0.75rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <div
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "10px",
+              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+              flexShrink: 0,
+            }}
+          >
+            <Wine size={18} color="#ffffff" strokeWidth={2.3} />
+          </div>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <h2
+                style={{
+                  fontSize: "1.2rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                Menu Items
+              </h2>
+              <span
+                style={{
+                  background: "rgba(245, 158, 11, 0.15)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  color: "var(--accent-amber-light)",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: "16px",
+                }}
+              >
+                {filteredDrinks.length} items
+              </span>
+            </div>
+            <p
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--text-dim)",
+                margin: "2px 0 0 0",
+              }}
+            >
+              Manage your restaurant menu items, categories and pricing
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Add Drink Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => handleOpenItemModal()}
+            style={{
+              height: "36px",
+              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0 1.1rem",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              cursor: "pointer",
+              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+            }}
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>Add New Dish / Biryani</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Toolbar - Exact Dine Class & Grid */}
+      <div
+        className="menu-filter-toolbar menu-items-filter-toolbar"
+        role="search"
+        aria-label="Menu item filters"
+      >
+        <label className="menu-filter-field menu-filter-search">
+          <span>Search</span>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "36px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <Search
+              size={15}
+              color="var(--text-dim)"
+              style={{
+                position: "absolute",
+                left: "12px",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search dishes to edit, delete..."
+              value={searchFilter}
+              onChange={(e) => {
+                setSearchFilter(e.target.value);
+                setMenuPage(1);
+              }}
+              aria-label="Search dishes"
+              style={{
+                width: "100%",
+                height: "100%",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-card)",
+                borderRadius: "8px",
+                padding: "0 10px 0 34px",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                outline: "none",
+              }}
+            />
+          </div>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Category</span>
+          <select
+            value={menuFilters.category}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, category: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            {categoryOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Drink Type</span>
+          <select
+            value={menuFilters.drinkType}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, drinkType: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            <option value="alcoholic">Alcoholic</option>
+            <option value="non-alcoholic">Non-Alcoholic</option>
+          </select>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Availability</span>
+          <select
+            value={menuFilters.availability}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, availability: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            <option value="available">Available</option>
+            <option value="unavailable">Unavailable</option>
+          </select>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Signature Drink</span>
+          <select
+            value={menuFilters.special}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, special: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            <option value="special">Special</option>
+            <option value="regular">Regular</option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          className="menu-filter-clear"
+          onClick={() => {
+            setSearchFilter("");
+            setMenuFilters({ category: "", drinkType: "", availability: "", special: "" });
+            setMenuPage(1);
+          }}
+          style={{
+            height: "36px",
+            padding: "0 14px",
+            background: "var(--bg-tertiary)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "8px",
+            color: "var(--text-muted)",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Clear Filters
+        </button>
+      </div>
+
+      {/* Table matching Dine Table Structure & Styling */}
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+          <thead>
+            <tr style={{ borderBottom: "1.5px solid var(--border-subtle)" }}>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "40%" }}>Dish Name</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Category</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Drink Type</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Price (₹)</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%", textAlign: "center" }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedDrinks.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.85rem" }}>
+                  No dishes found matching your filters.
+                </td>
+              </tr>
+            ) : (
+              paginatedDrinks.map((item) => {
+                const isAvail = item.isAvailable !== false && item.isAvailable !== "Unavailable";
+                return (
+                  <tr
+                    key={item.id}
+                    style={{
+                      borderBottom: "1px solid var(--border-subtle)",
+                      transition: "background 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    {/* Dish Name + Thumbnail */}
+                    <td style={{ padding: "0.6rem 0.85rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <img
+                          src={getMenuItemImage(item)}
+                          alt={item.name}
+                          onError={handleDishImageError}
+                          style={{
+                            width: "42px",
+                            height: "42px",
+                            borderRadius: "8px",
+                            objectFit: "cover",
+                            border: "1px solid var(--border-subtle)",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              color: "var(--text-main)",
+                              fontSize: "0.88rem",
+                              lineHeight: 1.3,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <span>{item.name}</span>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.72rem",
+                              color: "var(--text-muted)",
+                              lineHeight: 1.35,
+                              marginTop: "2px",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {item.prepTime || "15 min"} • {item.description || item.drinkType || ""}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Category */}
+                    <td
+                      style={{
+                        padding: "0.6rem 0.85rem",
+                        textTransform: "capitalize",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.category?.replace("-", " ") || "Cocktails"}
+                    </td>
+
+                    {/* Drink Type */}
+                    <td style={{ padding: "0.6rem 0.85rem" }}>
+                      {(item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic")) === "Alcoholic" ? (
+                        <span style={{ background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.28)", color: "var(--danger)", borderRadius: "14px", padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>
+                          ALCOHOLIC
+                        </span>
+                      ) : (
+                        <span style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.28)", color: "var(--success)", borderRadius: "14px", padding: "3px 10px", fontSize: "0.68rem", fontWeight: 700, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>
+                          NON-ALCOHOLIC
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Price */}
+                    <td
+                      style={{
+                        padding: "0.6rem 0.85rem",
+                        fontWeight: 800,
+                        color: "var(--accent-amber-light)",
+                        fontSize: "0.92rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      ₹{Number(item.price || 0).toFixed(2)}
+                    </td>
+
+                    {/* Actions */}
+                    <td
+                      style={{
+                        padding: "0.6rem 0.85rem",
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.45rem",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAvailability(item)}
+                          title={isAvail ? "Make available" : "Mark unavailable"}
+                          style={{
+                            border: isAvail
+                              ? "1px solid rgba(16, 185, 129, 0.45)"
+                              : "1px solid rgba(239, 68, 68, 0.45)",
+                            background: isAvail
+                              ? "rgba(16, 185, 129, 0.12)"
+                              : "rgba(239, 68, 68, 0.12)",
+                            color: isAvail ? "#10b981" : "#ef4444",
+                            borderRadius: "6px",
+                            padding: "4px 9px",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isAvail ? "Available" : "Unavailable"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenItemModal(item)}
+                          style={{
+                            border: "1px solid rgba(245, 158, 11, 0.45)",
+                            background: "rgba(245, 158, 11, 0.06)",
+                            color: "var(--accent-amber-light)",
+                            borderRadius: "6px",
+                            padding: "4px 12px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          title="Edit item"
+                        >
+                          <SquarePen size={13} />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteItem(item)}
+                          style={{
+                            border: "1px solid rgba(239, 68, 68, 0.45)",
+                            background: "rgba(239, 68, 68, 0.06)",
+                            color: "var(--danger)",
+                            borderRadius: "6px",
+                            padding: "4px 12px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          title="Delete item"
+                        >
+                          <Trash2 size={13} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Small Compact Pagination at Bottom */}
+      {filteredDrinks.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.5rem 0.85rem",
+            borderTop: "1px solid var(--border-subtle)",
+            background: "var(--bg-tertiary)",
+            fontSize: "0.74rem",
+            color: "var(--text-muted)",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+            marginTop: "0.4rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <span>
+              Showing{" "}
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                {startIdx + 1}
+              </strong>
+              –
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                {Math.min(startIdx + menuPageSize, filteredDrinks.length)}
+              </strong>{" "}
+              of{" "}
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                {filteredDrinks.length}
+              </strong>{" "}
+              items
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <button
+              type="button"
+              disabled={safeMenuPage <= 1}
+              onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+              style={{
+                width: "26px",
+                height: "26px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-secondary)",
+                color: "var(--text-main)",
+                borderRadius: "4px",
+                cursor: safeMenuPage <= 1 ? "not-allowed" : "pointer",
+                opacity: safeMenuPage <= 1 ? 0.4 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            {Array.from({ length: totalMenuPages }, (_, i) => i + 1).map((pg) => (
+              <button
+                key={pg}
+                type="button"
+                onClick={() => setMenuPage(pg)}
+                style={{
+                  width: "26px",
+                  height: "26px",
+                  border: pg === safeMenuPage ? "1px solid rgba(245, 158, 11, 0.45)" : "1px solid var(--border-card)",
+                  background: pg === safeMenuPage ? "rgba(245, 158, 11, 0.15)" : "var(--bg-secondary)",
+                  color: pg === safeMenuPage ? "var(--accent-amber-light)" : "var(--text-main)",
+                  borderRadius: "4px",
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                }}
+              >
+                {pg}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={safeMenuPage >= totalMenuPages}
+              onClick={() => setMenuPage((p) => Math.min(totalMenuPages, p + 1))}
+              style={{
+                width: "26px",
+                height: "26px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-secondary)",
+                color: "var(--text-main)",
+                borderRadius: "4px",
+                cursor: safeMenuPage >= totalMenuPages ? "not-allowed" : "pointer",
+                opacity: safeMenuPage >= totalMenuPages ? 0.4 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add / Edit Drink - Exactly Matching Dine Modal Structure */}
+      {isItemModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--modal-overlay)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 960,
+            padding: "1rem",
+          }}
+        >
+          <form
+            onSubmit={handleSaveItem}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1.5px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: "580px",
+              maxHeight: "calc(100dvh - 2rem)",
+              padding: "1.6rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.1rem",
+              overflowY: "auto",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.85rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                {editingItem ? "Edit Drink" : "Add New Drink"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsItemModalOpen(false)}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Dish Name */}
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Drink Name <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Mojito / Whiskey Sour / Fresh Lime Soda"
+                value={itemForm.name}
+                onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Category & Price */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: "0.85rem",
+                alignItems: "start",
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Category <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                <select
+                  value={itemForm.category}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__custom__") {
+                      setIsCustomCategory(true);
+                    } else {
+                      setIsCustomCategory(false);
+                    }
+                    setItemForm({ ...itemForm, category: val });
+                  }}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    height: "38px",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {categoryOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                  <option value="__custom__">+ Custom Category</option>
+                </select>
+                {isCustomCategory && (
+                  <input
+                    type="text"
+                    placeholder="Type new category..."
+                    value={itemForm.customCategory}
+                    onChange={(e) => setItemForm({ ...itemForm, customCategory: e.target.value })}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      marginTop: "6px",
+                      background: "var(--bg-tertiary)",
+                      border: "1.5px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      padding: "0.5rem 0.85rem",
+                      color: "var(--text-main)",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                    }}
+                  />
+                )}
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Price in Rupees (₹) <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="5"
+                  value={itemForm.price}
+                  onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    fontFamily: "var(--font-mono)",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Dietary Type & Serving Measure / Prep Time */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0.85rem",
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Drink Type <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                <select
+                  value={itemForm.drinkType || "Alcoholic"}
+                  onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value })}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.65rem 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="Alcoholic">Alcoholic</option>
+                  <option value="Non-Alcoholic">Non-Alcoholic</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Prep Time / Serving
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 15 min or 60 ml"
+                  value={itemForm.prepTime}
+                  onChange={(e) => setItemForm({ ...itemForm, prepTime: e.target.value })}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.65rem 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.92rem",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Drink Image */}
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Choose Image (URL or Preset)
+              </label>
+              <input
+                type="text"
+                placeholder="https://... or select a preset below"
+                value={itemForm.image}
+                onChange={(e) => setItemForm({ ...itemForm, image: e.target.value })}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.6rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.85rem",
+                  outline: "none",
+                  marginBottom: "6px",
+                }}
+              />
+              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                {[
+                  { label: "🍸 Mojito", url: "/assets/beverages/watermelon-juice.jpg" },
+                  { label: "🥤 Mango Lassi", url: "/assets/beverages/mango-lassi.jpg" },
+                  { label: "🥛 Sweet Lassi", url: "/assets/beverages/sweet-lassi.jpg" },
+                  { label: "☕ Coffee", url: "/assets/beverages/coffee.jpg" },
+                  { label: "🥤 Milkshake", url: "/assets/beverages/chocolate-milkshake.jpg" },
+                  { label: "🥛 Buttermilk", url: "/assets/beverages/buttermilk.jpg" },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setItemForm({ ...itemForm, image: preset.url })}
+                    style={{
+                      border: "1px solid var(--border-card)",
+                      background: itemForm.image === preset.url ? "rgba(245, 158, 11, 0.2)" : "var(--bg-tertiary)",
+                      color: itemForm.image === preset.url ? "var(--accent-amber-light)" : "var(--text-dim)",
+                      borderRadius: "6px",
+                      padding: "3px 8px",
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Description
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Short description of the drink..."
+                value={itemForm.description}
+                onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.85rem",
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            {/* Modal Footer Buttons */}
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => setIsItemModalOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: "0.7rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{
+                  flex: 1,
+                  padding: "0.7rem",
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  border: "none",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(245, 158, 11, 0.35)",
+                }}
+              >
+                {editingItem ? "Update Dish / Item" : "Add Menu Item"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BarWorkspace({
   activeTab = "bar-overview",
   onNavigate,
@@ -506,6 +1705,10 @@ export function BarWorkspace({
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
+  currentAdminSession = null,
+  onSaveRestaurantSettings = null,
+  showBarHeaderToggle = true,
+  onToggleShowBarHeader = null,
 }) {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -554,14 +1757,17 @@ export function BarWorkspace({
   const drinks = useMemo(() => (Array.isArray(menuItems) ? menuItems : []).filter((item) => isBeverageCategory(item.category ?? item.categoryName) || item.isBeverage || item.isBarDrink || item.category === "bar"), [menuItems]);
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
+    console.info("[Bar Orders] Fetching active orders via apiGetActiveOrders()...");
     try {
       const response = await apiGetActiveOrders();
       const raw = response?.data;
       const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.orders) ? raw.orders : null;
       if (!response?.success || !rows) throw new Error(response?.error || "Active orders response was invalid.");
+      console.info("[Bar Orders] Active orders loaded successfully:", { count: rows.length, orders: rows });
       setOrders(rows);
       setOrdersError("");
     } catch (error) {
+      console.error("[Bar Orders] Failed to load active orders:", error);
       setOrdersError(error?.message || "Could not load shared restaurant orders.");
     } finally { setOrdersLoading(false); }
   }, []);
@@ -573,15 +1779,20 @@ export function BarWorkspace({
   useEffect(() => { setInventory(Array.isArray(sharedInventory) ? sharedInventory : []); }, [sharedInventory]);
   const loadInventory = useCallback(async () => {
     setInventoryLoading(true);
+    console.info("[Bar Inventory] Fetching inventory via apiGetInventory()...");
     try {
       const response = await apiGetInventory();
       const raw = response?.data;
       const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : Array.isArray(raw?.ingredients) ? raw.ingredients : null;
       if (!response?.success || !rows) throw new Error(response?.error || "Inventory response was invalid.");
+      console.info("[Bar Inventory] Inventory loaded successfully:", { count: rows.length, items: rows });
       setInventory(rows);
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: rows }));
       setInventoryError("");
-    } catch (error) { setInventoryError(error?.message || "Could not load shared inventory."); }
+    } catch (error) {
+      console.error("[Bar Inventory] Failed to load inventory:", error);
+      setInventoryError(error?.message || "Could not load shared inventory.");
+    }
     finally { setInventoryLoading(false); }
   }, []);
   useEffect(() => { if (route === "bar-inventory") loadInventory(); }, [route, loadInventory]);
@@ -595,8 +1806,11 @@ export function BarWorkspace({
     return { ...order, id: order.orderId ?? order.id, table: order.tableName || order.tableNumber || (order.tableId ? `Table ${order.tableId}` : "Takeaway"), customer: order.customerName || order.serverName || "—", items: Array.isArray(order.items) ? order.items : [], beverageItems: items, quantity: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), itemLabel: items.map((item) => `${item.quantity} × ${item.dishName || item.name || "Drink"}`).join(", "), total: Number(order.totalAmount ?? order.total ?? amount), status: order.status || order.orderStatus || "Pending", time: order.createdAt || order.orderTime || "—" };
   }).filter(Boolean), [orders, menuLookup]);
   const barOrders = useMemo(() => {
+    if (apiBarOrders && apiBarOrders.length > 0) {
+      return apiBarOrders;
+    }
     const demoOrders = BAR_BILL_DEMO_ORDERS.map((order) => ({ ...order, total: order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0), quantity: order.items.reduce((sum, item) => sum + item.quantity, 0), itemLabel: order.items.map((item) => `${item.quantity} × ${item.name}`).join(", ") }));
-    return [...apiBarOrders, ...demoOrders];
+    return demoOrders;
   }, [apiBarOrders]);
   const inventoryRows = useMemo(() => inventory.filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name)), [inventory]);
   const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter((order) => {
@@ -665,6 +1879,17 @@ export function BarWorkspace({
     };
   });
 
+  useEffect(() => {
+    console.info(`[Bar Section] Active tab: "${route}"`, {
+      activeTab: route,
+      totalDrinks: drinks.length,
+      totalTables: tables.length,
+      totalStaff: staff.length,
+      beverageInventoryCount: inventoryRows.length,
+      activeBarOrdersCount: barOrders.length,
+    });
+  }, [route, drinks.length, tables.length, staff.length, inventoryRows.length, barOrders.length]);
+
   const submitBarOrder = async (event) => {
     event.preventDefault();
     if (orderSubmitting) return;
@@ -678,6 +1903,7 @@ export function BarWorkspace({
     }
     setOrderSubmitting(true);
     setOrderError("");
+    console.info("[Bar Order] Submitting bar order...", { table: table.number, drink: selectedItem.name, quantity: orderQuantity });
     try {
       const notes = [orderServing && `Serving: ${orderServing}`, orderIce && `Ice: ${orderIce}`, orderMixer && `Mixer: ${orderMixer}`, orderNotes.trim()].filter(Boolean).join("; ");
       const itemPayload = [{ menuItemId, id: menuItemId, name: selectedItem.name, price: Number(selectedItem.price) || 0, quantity: Math.max(1, Math.floor(Number(orderQuantity) || 1)), notes }];
@@ -707,13 +1933,17 @@ export function BarWorkspace({
       }
       const sent = await apiSendOrderKot(orderId);
       if (!sent?.success) throw new Error(sent?.error || `Order ${orderId} was created but its KOT was not confirmed. Retry from POS before creating another order.`);
+      console.info("[Bar Order] Order placed & KOT dispatched successfully:", { orderId });
       onOrderUpdated?.({ tableId: activeTableId, orderId, item: itemToSync });
       setPendingBarKot(null);
       setOrderComposerOpen(false);
       setOrderTableId(""); setOrderDrinkId(""); setOrderMenuCategory("all"); setOrderQuantity(1); setOrderNotes(""); setOrderServing(""); setOrderIce(""); setOrderMixer("");
       setToast(`Item added to shared order ${orderId}; KOT dispatch confirmed.`);
       await loadOrders();
-    } catch (error) { setOrderError(error?.message || "Could not submit the Bar order."); }
+    } catch (error) {
+      console.error("[Bar Order] Failed to submit bar order:", error);
+      setOrderError(error?.message || "Could not submit the Bar order.");
+    }
     finally { setOrderSubmitting(false); }
   };
 
@@ -760,16 +1990,20 @@ export function BarWorkspace({
       assignedServerName: staffPerson ? staffNameOf(staffPerson) : (values.staffId ? original?.assignedServerName || original?.server || "" : ""),
       assignedServerId: staffPerson ? staffIdOf(staffPerson) : (values.staffId ? original?.assignedServerId ?? original?.serverId ?? null : null),
     };
+    console.info("[Bar Tables] Saving table...", common);
     try {
       const result = item
         ? await onUpdateTable?.({ ...common, id: original?.id ?? item.id, backendTableId: original?.backendTableId })
         : await onAddTable?.({ ...common, id: Math.max(0, ...tables.map((table) => Number(table.id) || 0)) + 1, items: [], status: "vacant", guests: 0, occupiedChairs: 0 });
       if (result === false || result?.success === false) {
+        console.error("[Bar Tables] Error saving table:", result?.error);
         setToast(result?.error || "The shared table record could not be saved.");
         return false;
       }
+      console.info("[Bar Tables] Table saved successfully:", result);
       return true;
     } catch (error) {
+      console.error("[Bar Tables] Error saving table:", error);
       setToast(error?.message || "The shared table record could not be saved.");
       return false;
     }
@@ -808,12 +2042,15 @@ export function BarWorkspace({
     const normalizedPhone = String(payload.phone || "").replace(/\D/g, "");
     const duplicate = !item && staff.some((person) => person.name.trim().toLowerCase() === normalizedName && (!normalizedPhone || !String(person.phone || "").replace(/\D/g, "") || String(person.phone || "").replace(/\D/g, "") === normalizedPhone));
     if (duplicate) { setToast("This staff member already exists in the shared hotel staff list."); return false; }
+    console.info("[Bar Staff] Saving staff member...", payload);
     try {
       const result = item ? await onUpdateStaff?.({ ...payload, id: item.id }) : await onAddStaff?.(payload);
       if (result === false || result?.success === false) {
+        console.error("[Bar Staff] Error saving staff member:", result?.error);
         setToast(result?.error || "The shared staff record could not be saved.");
         return false;
       }
+      console.info("[Bar Staff] Staff member saved successfully:", result);
       const savedPerson = result && typeof result === "object" ? result : (item?._source || staff.find((person) => String(person.id) === String(item?.id)));
       const personId = staffIdOf(savedPerson);
       if (personId == null) {
@@ -824,6 +2061,7 @@ export function BarWorkspace({
       if (!assignmentsSaved) setToast("Staff details were saved, but one or more table assignment changes were not applied.");
       return assignmentsSaved;
     } catch (error) {
+      console.error("[Bar Staff] Error saving staff member:", error);
       setToast(error?.message || "The shared staff record could not be saved.");
       return false;
     }
@@ -852,8 +2090,14 @@ export function BarWorkspace({
         isBeverage: true,
         isBarDrink: true,
       };
+      console.info("[Bar Drinks] Saving drink item...", payload);
       const result = item ? await onUpdateMenuItem?.(payload) : await onAddMenuItem?.(payload);
-      if (result === false || result?.success === false) { setToast(result?.error || "The shared menu item could not be be saved."); return false; }
+      if (result === false || result?.success === false) {
+        console.error("[Bar Drinks] Error saving drink item:", result?.error);
+        setToast(result?.error || "The shared menu item could not be be saved.");
+        return false;
+      }
+      console.info("[Bar Drinks] Drink saved successfully:", result);
     }
     if (kind === "table" && !(await saveSharedTable(values, item))) return false;
     if (kind === "staff" && !(await saveSharedStaff(values, item))) return false;
@@ -865,17 +2109,37 @@ export function BarWorkspace({
   };
   const deleteItem = async (kind, item) => {
     if (!window.confirm(`Delete ${item.name || item.number || item.id} from the shared hotel records?`)) return;
+    console.info(`[Bar Section] Deleting ${kind}:`, item);
     if (kind === "table") {
       const result = await onDeleteTable?.(item._source?.id ?? item.id);
-      if (result === false || result?.success === false) { setToast(result?.error || "The shared table could not be deleted."); return; }
+      if (result === false || result?.success === false) {
+        console.error("[Bar Section] Error deleting table:", result?.error);
+        setToast(result?.error || "The shared table could not be deleted.");
+        return;
+      }
+      console.info("[Bar Section] Deleted table successfully.");
       setAssignmentFilter((current) => current === item.id ? "all" : current);
     } else if (kind === "staff") {
-      if (!(await syncStaffAssignments(item._source || item, []))) { setToast("Could not clear this staff member's table assignments."); return; }
+      if (!(await syncStaffAssignments(item._source || item, []))) {
+        console.error("[Bar Section] Could not clear staff table assignments.");
+        setToast("Could not clear this staff member's table assignments.");
+        return;
+      }
       const result = await onDeleteStaff?.(item._source?.id ?? item.id);
-      if (result === false || result?.success === false) { setToast(result?.error || "The shared staff record could not be deleted."); return; }
+      if (result === false || result?.success === false) {
+        console.error("[Bar Section] Error deleting staff:", result?.error);
+        setToast(result?.error || "The shared staff record could not be deleted.");
+        return;
+      }
+      console.info("[Bar Section] Deleted staff successfully.");
     } else if (kind === "drink") {
       const result = await onDeleteMenuItem?.(item.id);
-      if (result === false || result?.success === false) { setToast(result?.error || "The shared menu item could not be deleted."); return; }
+      if (result === false || result?.success === false) {
+        console.error("[Bar Section] Error deleting drink:", result?.error);
+        setToast(result?.error || "The shared menu item could not be deleted.");
+        return;
+      }
+      console.info("[Bar Section] Deleted drink successfully.");
     }
     setPage(1);
     if (kind === "drink") setToast("Menu item deleted.");
@@ -995,7 +2259,6 @@ export function BarWorkspace({
   ];
 
   const listConfig = {
-    "bar-drinks": { title: "Drinks Menu", description: "Beverage items from the shared restaurant menu.", rows: drinks, kind: "drink", columns: ["Drink Name", "Category", "Serving / Measure", "Price", "Availability", "Actions"] },
     "bar-tables": { title: "Bar Tables", description: "The shared hotel table records and complete food-and-drink orders.", rows: tables, kind: "table", columns: ["Table #", "Area", "Chairs / Capacity", "Assigned Server", "Status", "Guests", "Current Order", "Order Amount", "Actions"] },
     "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Phone / Contact", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
@@ -1286,7 +2549,7 @@ export function BarWorkspace({
             </button>
           </div>
         </div>
-      ) : (
+      ) : route === "bar-drinks" ? null : (
         <div className="bar-page-title">
           <div>
             <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
@@ -1967,6 +3230,17 @@ export function BarWorkspace({
         </section>
       </>}
 
+      {route === "bar-drinks" && (
+        <BarDrinksMenu
+          drinks={drinks}
+          onAddMenuItem={onAddMenuItem}
+          onUpdateMenuItem={onUpdateMenuItem}
+          onDeleteMenuItem={onDeleteMenuItem}
+          onSetMenuAvailability={onSetMenuAvailability}
+          setToast={setToast}
+        />
+      )}
+
       {listPage}
 
       {route === "bar-kot" && <BarKOTView menuItems={menuItems} tables={tables} staffList={dineStaff} onItemsUpdated={onBarOrderItemStatusUpdated} />}
@@ -1981,9 +3255,23 @@ export function BarWorkspace({
 
       {route === "bar-reports" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Reports</h2><p>Summary calculated from the shared menu, active orders, inventory, and loaded order history.</p></div><button className="bar-button secondary" onClick={() => csvDownload("bar-report.csv", [["Report", "Value", "Source"], ...reportData])}>Export CSV</button></div><div className="bar-report-summary">{reportData.map(([label,value,note])=><article key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</div>{renderStaticTable(["Report","Value","Source"],reportData.map((row,index)=>({id:index,name:row[0],value:row[1],source:row[2]})),(column,row)=>({Report:row.name,Value:row.value,Source:row.source})[column])}</section>}
 
-      {route === "bar-access" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Access Management</h2><p>Access changes use the application authorization system.</p></div></div><div className="bar-empty">No Bar-specific access management API is configured. Existing application roles and permissions remain authoritative.</div></section>}
+      {route === "bar-access" && (
+        <section className="bar-page-card" style={{ padding: "0.5rem", background: "transparent", border: "none" }}>
+          <LoginManagement currentAdminSession={currentAdminSession} />
+        </section>
+      )}
 
-      {route === "bar-settings" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Settings</h2><p>Settings must be stored by the restaurant configuration service to persist across sessions.</p></div></div><div className="bar-empty">No Bar-specific settings API is configured. No local demo values are being presented as saved settings.</div></section>}
+      {route === "bar-settings" && (
+        <section className="bar-page-card" style={{ padding: "0.5rem", background: "transparent", border: "none" }}>
+          <AdminSettings
+            initialSettings={restaurantSettings}
+            onSaveSettings={onSaveRestaurantSettings}
+            showBarHeaderToggle={showBarHeaderToggle}
+            onToggleShowBarHeader={onToggleShowBarHeader}
+            currentAdminSession={currentAdminSession}
+          />
+        </section>
+      )}
 
       {orderComposerOpen && <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !orderSubmitting && setOrderComposerOpen(false)}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-order-title"><header className="bar-modal-head"><div><span className="bar-kicker">SHARED RESTAURANT ORDER</span><h2 id="bar-order-title">New Bar Order</h2></div><button className="bar-icon-button" type="button" aria-label="Close" disabled={orderSubmitting} onClick={() => setOrderComposerOpen(false)}><X size={18} /></button></header><form className="bar-form" onSubmit={submitBarOrder}><div className="bar-form-grid"><label className="bar-field"><span>Table *</span><select required value={orderTableId} onChange={(event) => setOrderTableId(event.target.value)}><option value="">Select a shared table</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label><label className="bar-field"><span>Category</span><select value={orderMenuCategory} onChange={(event) => { setOrderMenuCategory(event.target.value); setOrderDrinkId(""); }}><option value="all">All categories</option>{[...new Set(menuItems.map((item) => item.category).filter(Boolean))].map((category) => <option key={category}>{category}</option>)}</select></label><label className="bar-field"><span>Food or Drink *</span><select required value={orderDrinkId} onChange={(event) => setOrderDrinkId(event.target.value)}><option value="">Select food or drink</option>{menuItems.filter((item) => item.isAvailable !== false && (orderMenuCategory === "all" || item.category === orderMenuCategory)).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.category} · {formatCurrency(item.price)}</option>)}</select></label><label className="bar-field"><span>Quantity</span><input type="number" min="1" step="1" value={orderQuantity} onChange={(event) => setOrderQuantity(event.target.value)} /></label><label className="bar-field"><span>Serving Type</span><input value={orderServing} onChange={(event) => setOrderServing(event.target.value)} placeholder="Regular / large / peg" /></label><label className="bar-field"><span>Ice Preference</span><select value={orderIce} onChange={(event) => setOrderIce(event.target.value)}><option value="">No preference</option><option>With ice</option><option>No ice</option><option>Extra ice</option></select></label><label className="bar-field"><span>Mixer</span><input value={orderMixer} onChange={(event) => setOrderMixer(event.target.value)} placeholder="Soda, tonic, juice…" /></label><label className="bar-field wide"><span>Special Notes</span><textarea rows="2" value={orderNotes} onChange={(event) => setOrderNotes(event.target.value)} /></label></div>{orderError && <p className="bar-error" role="alert">{orderError}</p>}<footer className="bar-modal-footer"><button className="bar-button secondary" type="button" disabled={orderSubmitting} onClick={() => setOrderComposerOpen(false)}>Cancel</button><button className="bar-button primary" type="submit" disabled={orderSubmitting || !tables.length || !menuItems.length}>{orderSubmitting ? "Sending…" : "Create & Send KOT"}</button></footer></form></section></div>}
       {modal && <EntityModal kind={modal.kind} initial={modal.item} tables={tables} staff={staff} drinks={drinks} onClose={() => setModal(null)} onSave={saveEntity} />}

@@ -1,4 +1,4 @@
-﻿import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
+import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
@@ -52,6 +52,7 @@ import {
   apiSettleOrder,
 } from "./api/orderApi";
 import { apiAdjustStock } from "./api/inventoryApi";
+import { apiGetRestaurantSettings, apiUpdateRestaurantSettings } from "./api/settingsApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
@@ -311,6 +312,7 @@ export function App() {
         window.dispatchEvent(new Event("restaurant-settings-updated"));
       }
     };
+    apiGetRestaurantSettings().then((res) => { if (res?.success && res.data) applySharedSettings(res.data); }).catch(() => {});
     fetch(`${API_BASE_URL}/api/state`, { headers: { "ngrok-skip-browser-warning": "true" } })
       .then((response) => response.ok ? response.json() : null)
       .then((data) => applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))

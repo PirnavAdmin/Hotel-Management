@@ -38,6 +38,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { isBeverageCategory } from "../kot/orderRouting";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
@@ -57,6 +58,7 @@ import { BarWorkspace } from "../bar/BarWorkspace";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { API_BASE_URL, openOptionalEventStream } from "../api/apiConfig";
+import { apiGetRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -509,11 +511,13 @@ export function AdminPortal({
 
   const handleBarTabChange = (tab) => {
     if (!["bar-overview", "bar-drinks", "bar-tables", "bar-staff", "bar-kot", "bar-inventory", "bar-invoices", "bar-orders", "bar-reports", "bar-access", "bar-settings"].includes(tab)) return;
+    console.info("[Admin Portal] Bar tab changed to:", tab);
     setActiveBarTab(tab);
     try { localStorage.setItem("avsr_active_bar_tab", tab); } catch {}
   };
 
   const handlePortalModeChange = (mode) => {
+    console.info("[Admin Portal] Portal mode changed to:", mode);
     setPortalMode(mode);
     // The work area is shared with other admin sections; start Bar at its
     // dashboard rather than preserving a previous section's scroll position.
@@ -800,6 +804,7 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
+    apiGetRestaurantSettings().then((res) => { if (res?.success && res.data) applySettings(res.data); }).catch(() => {});
     fetch(`${API_BASE_URL}/api/state`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
@@ -832,6 +837,11 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
+    try {
+      await apiUpdateRestaurantSettings(settings);
+    } catch (apiErr) {
+      console.warn("REST settings update error:", apiErr);
+    }
     const response = await fetch(`${API_BASE_URL}/api/sync`, {
       method: "POST",
       headers: {
@@ -1060,7 +1070,13 @@ export function AdminPortal({
       }
     });
     (menuItems || []).forEach((item) => {
-      if (item.category) {
+      if (
+        item.category &&
+        !item.isBarItem &&
+        !item.isBarDrink &&
+        !item.isBarOnly &&
+        !isBeverageCategory(item.category)
+      ) {
         const name = item.category;
         if (!map.has(name.toLowerCase())) {
           map.set(name.toLowerCase(), { value: name, label: name });
@@ -1462,8 +1478,16 @@ export function AdminPortal({
     setIsStaffModalOpen(false);
   };
 
-  // Filtered menu items
+  // Filtered menu items (strictly exclude bar drinks so bar additions never leak into Dine)
   const filteredItems = menuItems.filter((item) => {
+    if (
+      item.isBarItem ||
+      item.isBarDrink ||
+      item.isBarOnly ||
+      isBeverageCategory(item.category ?? item.categoryName)
+    ) {
+      return false;
+    }
     const query = searchFilter.trim().toLowerCase();
     return (
       [item.name, item.description, item.category].some((value) =>
@@ -1642,6 +1666,10 @@ export function AdminPortal({
                 onAddStaff={onAddStaff}
                 onUpdateStaff={onUpdateStaff}
                 onDeleteStaff={onDeleteStaff}
+                currentAdminSession={currentSession}
+                onSaveRestaurantSettings={handleSaveRestaurantSettings}
+                showBarHeaderToggle={showBarHeaderToggle}
+                onToggleShowBarHeader={handleToggleShowBarHeader}
               />
             ) : (
               <>

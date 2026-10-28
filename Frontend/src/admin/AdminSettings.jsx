@@ -20,6 +20,7 @@ import {
 import defaultPaymentQr from "../assets/payment-qr.png";
 import { UpiOtpVerificationModal } from "../common/UpiOtpVerificationModal";
 import { getUsers } from "../utils/auth";
+import { apiGetRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 
 const DEFAULT_PAYMENT_QRS = [
   {
@@ -503,6 +504,12 @@ export function AdminSettings({
           await onSaveSettings(settings);
         } catch (syncErr) {
           console.warn("Server sync error (local settings saved successfully):", syncErr);
+        }
+      } else {
+        try {
+          await apiUpdateRestaurantSettings(settings);
+        } catch (syncErr) {
+          console.warn("Direct REST settings update error:", syncErr);
         }
       }
 

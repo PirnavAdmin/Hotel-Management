@@ -47,16 +47,20 @@ export function BarKOTView({ menuItems = [], tables = [], staffList = [], onItem
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
+    console.info("[Bar KOT] Refreshing active kitchen tickets via apiGetActiveKitchenTickets()...");
     try {
       const result = await apiGetActiveKitchenTickets();
       const rows = result?.success && Array.isArray(result.data) ? result.data : null;
       if (!rows) {
+        console.error("[Bar KOT] Error loading tickets:", result?.error);
         setError(result?.error || "The KOT API returned an unexpected response.");
         return;
       }
+      console.info("[Bar KOT] Active tickets loaded successfully:", { count: rows.length, rawTickets: rows });
       setOrders(rows);
       setError("");
     } catch (requestError) {
+      console.error("[Bar KOT] Error loading tickets:", requestError);
       setError(requestError?.message || "Could not load persisted Bar KOTs.");
     } finally {
       inFlight.current = false;
@@ -108,16 +112,21 @@ export function BarKOTView({ menuItems = [], tables = [], staffList = [], onItem
     if (!itemRows.length || busyOrdersRef.current.has(ticket.id)) return;
     busyOrdersRef.current.add(ticket.id);
     setBusyOrders((previous) => new Set(previous).add(ticket.id));
+    console.info("[Bar KOT] Updating items status...", { ticketId: ticket.id, nextStatus, items: itemRows });
     try {
-    const results = await Promise.all(itemRows.map((item) => apiUpdateKitchenItemStatus(item.id ?? item.orderItemId, nextStatus)));
+      const results = await Promise.all(itemRows.map((item) => apiUpdateKitchenItemStatus(item.id ?? item.orderItemId, nextStatus)));
       const failed = results.find((result) => !result?.success);
-      if (failed) setError(failed.error || `Could not update order ${ticket.orderId}.`);
-      else {
+      if (failed) {
+        console.error("[Bar KOT] Failed to update some items:", failed?.error);
+        setError(failed.error || `Could not update order ${ticket.orderId}.`);
+      } else {
+        console.info("[Bar KOT] Status updated successfully:", { ticketId: ticket.id, nextStatus });
         setError("");
         onItemsUpdated?.({ tableId: ticket.tableId, orderId: ticket.orderId, items: itemRows, status: nextStatus });
       }
       await refreshRef.current?.();
     } catch (requestError) {
+      console.error("[Bar KOT] Error updating items status:", requestError);
       setError(requestError?.message || `Could not update order ${ticket.orderId}.`);
     } finally {
       busyOrdersRef.current.delete(ticket.id);
@@ -126,6 +135,7 @@ export function BarKOTView({ menuItems = [], tables = [], staffList = [], onItem
   };
 
   const printTicket = (ticket) => {
+    console.info("[Bar KOT] Printing Bar KOT ticket slip:", ticket);
     const popup = window.open("", "_blank", "width=460,height=650");
     if (!popup) { setError("Allow pop-ups to print the Bar KOT slip."); return; }
     const rows = ticket.items.map((item) => {
