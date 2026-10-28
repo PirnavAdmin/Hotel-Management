@@ -4,7 +4,6 @@ import {
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
   Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
 } from "lucide-react";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
@@ -2127,7 +2126,7 @@ function BarDrinksMenu({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          ALCOHOLIC 🍸
+                          ALCOHOLIC
                         </span>
                       ) : (
                         <span
@@ -2144,7 +2143,7 @@ function BarDrinksMenu({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          NON-ALCOHOLIC 🍹
+                          NON-ALCOHOLIC
                         </span>
                       )}
                     </td>
