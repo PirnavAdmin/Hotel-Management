@@ -11,7 +11,6 @@ import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper
 import { formatCurrency } from "../utils/formatCurrency";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
 import { BAR_DRINKS } from "../data/barDrinksMockData";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { BarKOTView } from "./BarKOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
 import "./BarWorkspace.css";

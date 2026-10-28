@@ -49,6 +49,43 @@
   "gourmet_pos_tables_v2_inr": [],
   "gourmet_pos_past_orders_v2_inr": [
     {
+      "tableId": 4,
+      "tableName": "Table-4",
+      "tableNumber": "4",
+      "serverName": "Karan D.",
+      "guests": 1,
+      "discountPercent": 0,
+      "serviceChargeEnabled": false,
+      "tipAmount": 0,
+      "status": "Active",
+      "items": [
+        {
+          "name": "Chicken 65 Biryani",
+          "dishName": "Chicken 65 Biryani",
+          "price": 360,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "name": "Hyderabadi Veg Dum Biryani",
+          "dishName": "Hyderabadi Veg Dum Biryani",
+          "price": 240,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "name": "Crispy Chicken 65",
+          "dishName": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1,
+          "notes": ""
+        }
+      ],
+      "id": 1793190080113,
+      "orderId": 1793190080113,
+      "createdAt": "2026-10-28T12:21:20.113Z"
+    },
+    {
       "tableId": 3,
       "tableName": "Table-3",
       "tableNumber": "Table-3",
@@ -71,5 +108,16 @@
       "orderId": 1793186082539,
       "createdAt": "2026-10-28T11:14:42.539Z"
     }
-  ]
+  ],
+  "avsr_pending_otps": {
+    "pasupuleti.bhanu7@gmail.com": {
+      "otp": "621150",
+      "expiresAt": 1793190078351,
+      "fullName": "pirnav",
+      "phone": "",
+      "createdAt": 1793189478351
+    }
+  },
+  "avsr_last_invoice_date_v2": "28 Oct 2026",
+  "avsr_daily_inv_cnt_28_Oct_2026": "1"
 }

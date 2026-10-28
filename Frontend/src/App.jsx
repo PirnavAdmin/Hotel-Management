@@ -36,6 +36,7 @@ import {
   normalizeMenuItem,
 } from "./api/menuApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
+import { MENU_ITEMS } from "./data/menuData";
 import {
   apiGetStaff,
   apiCreateStaff,
@@ -394,7 +395,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return [];
+    return MENU_ITEMS;
   });
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
@@ -417,6 +418,7 @@ export function App() {
               !item.isBarItem &&
               String(item.name || "").trim().toLowerCase() !== "mojito"
           );
+          if (dineItems.length === 0) return MENU_ITEMS;
           if (dineItems.length !== parsed.length) {
             try {
               localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(dineItems));
