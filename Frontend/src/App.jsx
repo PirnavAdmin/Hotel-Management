@@ -72,6 +72,20 @@ const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
+const sanitizeKitchenAlert = (alert) => {
+  if (!alert || typeof alert !== "object") return alert;
+  const cleanText = (value) =>
+    String(value || "")
+      .replace(/(?:ðŸ[^\s]*|âœ…|â°|âœ•|ï¸|Â)+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  return {
+    ...alert,
+    title: cleanText(alert.title) || "Kitchen Update",
+    message: cleanText(alert.message),
+  };
+};
+
 const readRestaurantSettings = () => {
   try {
     return JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
@@ -188,8 +202,6 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         : rawName || `Table ${targetId}`;
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
-      const isExplicitlyVacant = rawStatus === "vacant";
-
       const hasActiveItems =
         (Array.isArray(table.items) && table.items.length > 0)
           ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
@@ -197,26 +209,22 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
               ? existing.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
               : false);
 
-      const incomingGuests =
-        (Number(table.guests) > 0 ? Number(table.guests) : null) ??
-        (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
-        (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
-        (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
-        (Array.isArray(existing.selectedSeats) && existing.selectedSeats.length > 0 ? existing.selectedSeats.length : null) ??
-        (Number(existing.occupiedChairs) > 0 ? Number(existing.occupiedChairs) : null) ??
-        0;
-      const hasActiveGuests = incomingGuests > 0;
-
       let finalStatus = "vacant";
-      if (!hasActiveItems && !hasActiveGuests) {
+      if (!hasActiveItems) {
         finalStatus = ["reserved", "cleaning", "inactive"].includes(rawStatus) ? rawStatus : "vacant";
-      } else if (hasActiveItems || hasActiveGuests) {
-        finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
       } else {
-        finalStatus = "vacant";
+        finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
       }
 
       const isFinalVacant = finalStatus === "vacant";
+
+      const incomingGuests = isFinalVacant
+        ? 0
+        : (Number(table.guests) > 0 ? Number(table.guests) : null) ??
+          (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
+          (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+          (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
+          0;
 
       const resolvedItems =
         (Array.isArray(table.items) && table.items.length > 0)
@@ -268,6 +276,33 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
 
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
+    .map((table) => {
+      const hasActive = Array.isArray(table.items) && table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+      if (!hasActive && table.status !== "reserved" && table.status !== "cleaning" && table.status !== "inactive") {
+        return {
+          ...table,
+          status: "vacant",
+          guests: 0,
+          occupiedChairs: 0,
+          selectedSeats: [],
+          items: [],
+          orderTime: null,
+          orderTimestamp: null,
+          occupiedSince: null,
+          activeOrderId: null,
+          cookingStartedAt: null,
+          completedAt: null,
+          completedDuration: null,
+          discountPercent: 0,
+          discountAmount: 0,
+          subtotal: 0,
+          taxAmount: 0,
+          serviceChargeAmount: 0,
+          grandTotal: 0,
+        };
+      }
+      return table;
+    })
     .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
@@ -709,6 +744,7 @@ export function App() {
   };
 
   const triggerKitchenNotification = (alertData) => {
+    const cleanAlertData = sanitizeKitchenAlert(alertData);
     const notif = {
       id: Date.now() + Math.random(),
       timestamp: new Date().toLocaleTimeString([], {
@@ -717,7 +753,7 @@ export function App() {
         hour12: true,
       }),
       read: false,
-      ...alertData,
+      ...cleanAlertData,
     };
     setKitchenNotifications((prev) => {
       const updated = [
@@ -1021,7 +1057,7 @@ export function App() {
             } catch {}
           }
           if (payload[STORAGE_KEY_LATEST_ALERT]) {
-            const alert = payload[STORAGE_KEY_LATEST_ALERT];
+            const alert = sanitizeKitchenAlert(payload[STORAGE_KEY_LATEST_ALERT]);
             setActiveKitchenAlert(alert);
             setKitchenNotifications((prev) => [
               alert,
@@ -1096,7 +1132,7 @@ export function App() {
         setTheme(normalizeTheme(e.newValue));
       } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
-          const alert = JSON.parse(e.newValue);
+          const alert = sanitizeKitchenAlert(JSON.parse(e.newValue));
           if (alert && alert.id) {
             setActiveKitchenAlert(alert);
             setKitchenNotifications((prev) => [
@@ -1328,10 +1364,20 @@ export function App() {
           );
         }
 
+        const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
           items: newItems,
-          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
+          status: !hasActive ? "vacant" : t.status,
+          guests: !hasActive ? 0 : t.guests,
+          occupiedChairs: !hasActive ? 0 : t.occupiedChairs,
+          selectedSeats: !hasActive ? [] : t.selectedSeats,
+          orderTime: !hasActive ? null : t.orderTime,
+          orderTimestamp: !hasActive ? null : t.orderTimestamp,
+          occupiedSince: !hasActive ? null : t.occupiedSince,
+          cookingStartedAt: !hasActive ? null : t.cookingStartedAt,
+          completedAt: !hasActive ? null : t.completedAt,
+          completedDuration: !hasActive ? null : t.completedDuration,
         };
         targetUpdatedTable = updated;
         return updated;
@@ -1360,10 +1406,20 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
           items: newItems,
-          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
+          status: !hasActive ? "vacant" : t.status,
+          guests: !hasActive ? 0 : t.guests,
+          occupiedChairs: !hasActive ? 0 : t.occupiedChairs,
+          selectedSeats: !hasActive ? [] : t.selectedSeats,
+          orderTime: !hasActive ? null : t.orderTime,
+          orderTimestamp: !hasActive ? null : t.orderTimestamp,
+          occupiedSince: !hasActive ? null : t.occupiedSince,
+          cookingStartedAt: !hasActive ? null : t.cookingStartedAt,
+          completedAt: !hasActive ? null : t.completedAt,
+          completedDuration: !hasActive ? null : t.completedDuration,
         };
         targetUpdatedTable = updated;
         return updated;
@@ -2183,6 +2239,7 @@ export function App() {
           serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
           tipAmount: settlementData.tipAmount,
           paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: enrichedSettlement.invoiceNo,
         });
         if (!settleResult?.success) throw new Error(settleResult?.error || "The server did not confirm settlement.");
         // Link the local receipt to the backend order session so a later
@@ -2933,7 +2990,9 @@ export function App() {
                     lineHeight: 1.1,
                   }}
                 >
-                  {activeKitchenAlert.title}
+                  {String(activeKitchenAlert.title || "Kitchen Update")
+                    .replace(/^ðŸ[^\s]*\s*/u, "")
+                    .replace(/^âœ…\s*/u, "")}
                 </div>
               </div>
             </div>
@@ -2966,7 +3025,13 @@ export function App() {
               fontWeight: 600,
             }}
           >
-            {activeKitchenAlert.message}
+            {String(activeKitchenAlert.message || "")
+              .replaceAll("ðŸ“¥", "")
+              .replaceAll("ðŸ”¥", "")
+              .replaceAll("ðŸ””", "")
+              .replaceAll("âœ…", "")
+              .replaceAll("â°", "")
+              .trim()}
           </div>
 
           <div

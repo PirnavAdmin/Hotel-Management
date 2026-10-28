@@ -585,13 +585,10 @@ export function AdminPortal({
     const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
     );
-    const hasActiveGuests = Number(tbl?.guests || tbl?.occupiedChairs || 0) > 0;
-
-    // Once bill is settled, a table has no active items and no guests, so it is strictly vacant!
-    if (!hasActiveItems && !hasActiveGuests) {
+    // A table without active items is strictly vacant!
+    if (!hasActiveItems) {
       return false;
     }
-
     if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
       return true;
     }
@@ -859,8 +856,8 @@ export function AdminPortal({
   };
 
   const themes = [
-    { id: "royal-saffron", name: "Dark Theme", icon: "ðŸŒ™", label: "Dark" },
-    { id: "light-bistro", name: "Light Theme", icon: "â˜€ï¸Â", label: "Light" },
+    { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
+    { id: "light-bistro", name: "Light Theme", icon: "☀️", label: "Light" },
   ];
 
   const handleThemeChange = (newTheme) => {
@@ -4880,6 +4877,7 @@ export function AdminPortal({
                   <AdminInvoices
                     pastOrders={pastOrders}
                     restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
                     onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                   />
                 )}
@@ -5414,7 +5412,7 @@ export function AdminPortal({
                     cursor: "pointer",
                   }}
                 />
-                <span>Mark as Chef's Special â­</span>
+                <span>Mark as Chef's Special ⭐</span>
               </label>
             </div>
 

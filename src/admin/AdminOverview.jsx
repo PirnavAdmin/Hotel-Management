@@ -118,7 +118,7 @@ export function AdminOverview({
     .filter((o) => String(o.paymentMethod || o.paymentMode || "").toLowerCase() === "upi")
     .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total) || 0), 0);
 
-  const occupiedTables = tables.filter((t) => t.status !== "vacant");
+  const occupiedTables = tables.filter((t) => t.status !== "vacant" && Array.isArray(t.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"));
   const totalChairs = tables.reduce(
     (sum, t) => sum + (Number(t.capacity) || 0),
     0
@@ -724,7 +724,7 @@ export function AdminOverview({
               .slice()
               .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
               .map((tbl) => {
-                const isOccupied = tbl.status !== "vacant";
+                const isOccupied = tbl.status !== "vacant" && Array.isArray(tbl.items) && tbl.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
                 return (
                   <div
                     key={tbl.id}

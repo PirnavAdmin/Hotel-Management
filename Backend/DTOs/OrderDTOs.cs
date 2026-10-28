@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace HMS.DTOs;
@@ -93,6 +94,9 @@ public class SettleOrderRequest
     public decimal TipAmount { get; set; }
 
     public string? PaymentMethod { get; set; }
+
+    [MaxLength(50)]
+    public string? InvoiceNumber { get; set; }
 }
 
 public class OrderDto
