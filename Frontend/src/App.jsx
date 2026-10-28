@@ -410,7 +410,19 @@ export function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((item) => ({
+          // Strictly exclude bar-specific drinks (e.g. mojito or isBarDrink) from Dine menu items
+          const dineItems = parsed.filter(
+            (item) =>
+              !item.isBarDrink &&
+              !item.isBarItem &&
+              String(item.name || "").trim().toLowerCase() !== "mojito"
+          );
+          if (dineItems.length !== parsed.length) {
+            try {
+              localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(dineItems));
+            } catch {}
+          }
+          return dineItems.map((item) => ({
             ...item,
             image: item.image || getRelevantLocalFallback(item),
           }));
@@ -545,7 +557,14 @@ export function App() {
         try {
           localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
         } catch {}
-        const normalizedMenu = backendMenu.map((item) => {
+        const normalizedMenu = backendMenu
+          .filter(
+            (item) =>
+              !item.isBarDrink &&
+              !item.isBarItem &&
+              String(item.dishName || item.name || "").trim().toLowerCase() !== "mojito"
+          )
+          .map((item) => {
           const previous = localMenu.find((saved) =>
             String(saved.id) === String(item.menuItemId ?? item.id) ||
             saved.name?.trim().toLowerCase() === String(item.dishName || item.name || "").trim().toLowerCase()

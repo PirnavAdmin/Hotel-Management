@@ -2,6 +2,28 @@
   "gourmet_pos_menu_items_v2": [],
   "gourmet_pos_inventory_v1": [
     {
+      "id": "inv-1793182886959-2z7j",
+      "name": "Old monk Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "28 Oct 2026",
+      "brand": "",
+      "abv": null,
+      "volumeMl": null,
+      "storageLocation": "",
+      "sellingPrice": 100,
+      "currentStock": 50,
+      "minimumThreshold": 10
+    },
+    {
       "name": "corona extra",
       "category": "Beers & Ciders",
       "subcategory": "Draught Beer Keg",
