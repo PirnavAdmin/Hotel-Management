@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
-import { apiAdjustStock, apiCreateInventoryItem, apiGetInventory } from "../api/inventoryApi";
+import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 import { formatCurrency } from "../utils/formatCurrency";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
@@ -86,43 +86,1033 @@ const FIELD_SETS = {
   ],
 };
 
+export const BAR_INVENTORY_CATEGORIES = [
+  {
+    category: "Whiskey & Scotch",
+    subcategories: ["Single Malt Scotch", "Blended Scotch", "Bourbon & American", "Irish Whiskey", "Premium Indian Whisky"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 42.8,
+  },
+  {
+    category: "Vodka & Gin",
+    subcategories: ["Premium Vodka", "Flavored Vodka", "London Dry Gin", "Craft Botanical Gin", "Pink Gin"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 40,
+  },
+  {
+    category: "Rum & Brandy",
+    subcategories: ["White Rum", "Dark / Spiced Rum", "Aged Rum", "Cognac & VSOP", "Premium Brandy"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 42.8,
+  },
+  {
+    category: "Tequila & Mezcal",
+    subcategories: ["Silver / Blanco", "Reposado Tequila", "Añejo Tequila", "Artisanal Mezcal"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 38,
+  },
+  {
+    category: "Beers & Ciders",
+    subcategories: ["Draught Beer Keg", "Premium Lager (Pint 330ml)", "Strong Beer (650ml)", "Craft Wheat Beer", "Apple / Fruit Cider"],
+    defaultUnit: "Bottle (330 ml)",
+    defaultAbv: 5,
+  },
+  {
+    category: "Wine & Champagne",
+    subcategories: ["Red Wine", "White Wine", "Sparkling Wine / Prosecco", "Brut Champagne", "Rosé Wine", "Port Wine"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 12.5,
+  },
+  {
+    category: "Liqueurs & Bitters",
+    subcategories: ["Coffee Liqueur (Kahlúa)", "Irish Cream (Baileys)", "Triple Sec / Orange", "Herbal / Aperitif (Campari)", "Angostura Bitters"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 25,
+  },
+  {
+    category: "Cocktails & Premixes",
+    subcategories: ["Margarita Mix", "Bloody Mary Base", "Sour Mix", "Piña Colada Mix", "Cocktail Concentrates"],
+    defaultUnit: "Bottle (1 L)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Mocktails & Syrups",
+    subcategories: ["Blue Curacao Syrup", "Grenadine Syrup", "Mojito Mint Syrup", "Passion Fruit Puree", "Simple Sugar Syrup"],
+    defaultUnit: "Bottle (1 L)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Soft Drinks, Tonics & Soda",
+    subcategories: ["Club Soda", "Tonic Water", "Ginger Ale", "Cola / Diet Cola", "Lemon Soda (Sprite/Limca)", "Energy Drink (Red Bull)"],
+    defaultUnit: "Can (330 ml)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Juices & Purees",
+    subcategories: ["Cranberry Juice", "Fresh Orange Juice", "Pineapple Juice", "Fresh Lime Juice", "Apple Juice", "Tomato Juice"],
+    defaultUnit: "Tetra Pack (1 L)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Bar Garnishes & Supplies",
+    subcategories: ["Maraschino Cherries", "Cocktail Stuffed Olives", "Margarita Rim Salt", "Cocktail Sugar", "Fresh Lemons & Limes", "Fresh Mint"],
+    defaultUnit: "Jar / Canister",
+    defaultAbv: 0,
+  },
+  {
+    category: "Bar Consumables & Ice",
+    subcategories: ["Clear Ice Blocks / Cubes", "Cocktail Paper Straws", "Stirrers & Cocktail Picks", "Bar Coasters", "Bar Napkins"],
+    defaultUnit: "Pack / Box",
+    defaultAbv: 0,
+  },
+];
+
+export const BAR_INVENTORY_UNITS = [
+  "Bottle (750 ml)",
+  "Bottle (1000 ml / 1 L)",
+  "Bottle (330 ml)",
+  "Bottle (650 ml)",
+  "Can (330 ml)",
+  "Can (500 ml)",
+  "Keg (30 L)",
+  "Keg (50 L)",
+  "Tetra Pack (1 L)",
+  "Litre (L)",
+  "Millilitre (ml)",
+  "Peg (30 ml)",
+  "Peg (60 ml)",
+  "Jar / Canister",
+  "Pack / Case",
+  "Pcs / Units",
+];
+
+export const BAR_STORAGE_LOCATIONS = [
+  "Front Bar Display Shelf",
+  "Under-Counter Bar Chiller",
+  "Wine Cellar & Display Rack",
+  "Back Bar Main Storage",
+  "Beer Tap Cold Room",
+  "Dry Store / Bar Pantry",
+];
+
+export const BAR_SUPPLIERS = [
+  "State Beverages Corporation (TSBCL/Govt Depot)",
+  "United Spirits / Diageo India",
+  "Pernod Ricard India",
+  "AB InBev / SABMiller Brewery",
+  "Carlsberg India",
+  "Sula Vineyards & Winery Depot",
+  "Monin Gourmet Syrups Distributor",
+  "Coca-Cola / Schweppes Beverages Depot",
+  "Local Wholesale Bar Supplier",
+];
+
 function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const [busy, setBusy] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [addBusy, setAddBusy] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [newItem, setNewItem] = useState({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
-  const rows = (Array.isArray(inventory) ? inventory : []).filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name));
-  const setNewItemField = (field, value) => setNewItem((previous) => ({ ...previous, [field]: value }));
-  const addInventoryItem = async (event) => {
-    event.preventDefault();
-    setAddBusy(true);
-    setAddError("");
-    try {
-      const result = await apiCreateInventoryItem(newItem);
-      if (!result?.success) throw new Error(result?.error || "Could not add the inventory item.");
-      setAddOpen(false);
-      setNewItem({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
-      await onRefresh();
-    } catch (requestError) { setAddError(requestError?.message || "Could not add the inventory item."); }
-    finally { setAddBusy(false); }
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalBusy, setModalBusy] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [editingItem, setEditingItem] = useState(null);
+
+  // Filter & Search states
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
+
+  const defaultForm = {
+    name: "",
+    category: "Whiskey & Scotch",
+    subcategory: "Single Malt Scotch",
+    brand: "",
+    unit: "Bottle (750 ml)",
+    volumeMl: 750,
+    abv: 42.8,
+    stock: 12,
+    minThreshold: 5,
+    unitCost: 2500,
+    sellingPrice: 3500,
+    storageLocation: "Front Bar Display Shelf",
+    supplier: "State Beverages Corporation (TSBCL/Govt Depot)",
   };
-  const adjust = async (item, direction) => {
-    const amount = Number(window.prompt(direction > 0 ? "Quantity received" : "Adjustment quantity", "1"));
-    if (!Number.isFinite(amount) || amount <= 0) return;
+
+  const [formData, setFormData] = useState(defaultForm);
+  const [customCategory, setCustomCategory] = useState(false);
+  const [customUnit, setCustomUnit] = useState(false);
+  const [customLocation, setCustomLocation] = useState(false);
+  const [customSupplier, setCustomSupplier] = useState(false);
+
+  // 1. Strict filter: Purge mock kitchen packaging, food, and non-beverage items
+  const validBeverages = useMemo(() => {
+    const list = Array.isArray(inventory) ? inventory : [];
+    return list.filter((item) => {
+      if (!item) return false;
+      const name = String(item.name || "").trim().toLowerCase();
+      const cat = String(item.category || item.subcategory || "").trim().toLowerCase();
+      if (
+        name.includes("handi") ||
+        name.includes("foil") ||
+        name.includes("container") ||
+        name.includes("tray") ||
+        name.includes("takeaway") ||
+        name.includes("chicken") ||
+        name.includes("mutton") ||
+        name.includes("biryani") ||
+        name.includes("paneer") ||
+        name.includes("naan") ||
+        name.includes("roti") ||
+        name.includes("kebab") ||
+        name.includes("shawarma") ||
+        cat.includes("packaging") ||
+        cat.includes("disposable") ||
+        cat.includes("produce") ||
+        cat.includes("meat") ||
+        cat.includes("grain") ||
+        cat.includes("spice") ||
+        cat.includes("hygiene") ||
+        cat.includes("cleaning")
+      ) {
+        return false;
+      }
+      return isBeverageCategory(item.category ?? item.subcategory ?? item.name);
+    });
+  }, [inventory]);
+
+  // Available categories for dropdown filter
+  const availableCategories = useMemo(() => {
+    const set = new Set();
+    BAR_INVENTORY_CATEGORIES.forEach((c) => set.add(c.category));
+    validBeverages.forEach((item) => {
+      if (item.category) set.add(item.category);
+    });
+    return Array.from(set);
+  }, [validBeverages]);
+
+  // Filtered rows matching search & filter
+  const filteredRows = useMemo(() => {
+    return validBeverages.filter((item) => {
+      const q = query.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        String(item.name || "").toLowerCase().includes(q) ||
+        String(item.brand || item.subcategory || "").toLowerCase().includes(q) ||
+        String(item.category || "").toLowerCase().includes(q) ||
+        String(item.storageLocation || "").toLowerCase().includes(q);
+
+      const matchesCat =
+        categoryFilter === "all" ||
+        String(item.category || "").toLowerCase() === categoryFilter.toLowerCase();
+
+      const stock = Number(item.stock ?? item.currentStock ?? 0);
+      const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+      const matchesStock =
+        stockFilter === "all" ||
+        (stockFilter === "out_of_stock" && stock <= 0) ||
+        (stockFilter === "low_stock" && stock > 0 && stock <= threshold) ||
+        (stockFilter === "in_stock" && stock > threshold);
+
+      return matchesSearch && matchesCat && matchesStock;
+    });
+  }, [validBeverages, query, categoryFilter, stockFilter]);
+
+  // Operational KPI metrics
+  const totalItems = validBeverages.length;
+  const totalUnits = validBeverages.reduce((sum, item) => sum + Number(item.stock ?? item.currentStock ?? 0), 0);
+  const lowStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > 0 && s <= th;
+  }).length;
+  const outOfStockCount = validBeverages.filter((item) => Number(item.stock ?? item.currentStock ?? 0) <= 0).length;
+  const inStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > th;
+  }).length;
+  const totalValuation = validBeverages.reduce((sum, item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const c = Number(item.unitCost ?? item.cost ?? 0);
+    return sum + (s * c);
+  }, 0);
+
+  // Form field updater
+  const setField = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCategorySelect = (selectedCat) => {
+    if (selectedCat === "__custom__") {
+      setCustomCategory(true);
+      setFormData((prev) => ({ ...prev, category: "" }));
+      return;
+    }
+    setCustomCategory(false);
+    const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selectedCat);
+    setFormData((prev) => ({
+      ...prev,
+      category: selectedCat,
+      subcategory: matched?.subcategories?.[0] || prev.subcategory || "",
+      unit: matched?.defaultUnit || prev.unit || "Bottle (750 ml)",
+      abv: matched?.defaultAbv !== undefined ? matched.defaultAbv : prev.abv,
+      volumeMl: matched?.defaultUnit?.includes("750") ? 750 : matched?.defaultUnit?.includes("1 L") ? 1000 : matched?.defaultUnit?.includes("330") ? 330 : prev.volumeMl,
+    }));
+  };
+
+  const openAddModal = () => {
+    setEditingItem(null);
+    setFormData(defaultForm);
+    setCustomCategory(false);
+    setCustomUnit(false);
+    setCustomLocation(false);
+    setCustomSupplier(false);
+    setModalError("");
+    setModalOpen(true);
+  };
+
+  const openEditModal = (item) => {
+    setEditingItem(item);
+    const catExists = BAR_INVENTORY_CATEGORIES.some((c) => c.category.toLowerCase() === String(item.category || "").toLowerCase());
+    const unitExists = BAR_INVENTORY_UNITS.some((u) => u.toLowerCase() === String(item.unit || "").toLowerCase());
+    const locExists = BAR_STORAGE_LOCATIONS.some((l) => l.toLowerCase() === String(item.storageLocation || "").toLowerCase());
+    const supExists = BAR_SUPPLIERS.some((s) => s.toLowerCase() === String(item.supplier || "").toLowerCase());
+
+    setCustomCategory(!catExists && Boolean(item.category));
+    setCustomUnit(!unitExists && Boolean(item.unit));
+    setCustomLocation(!locExists && Boolean(item.storageLocation));
+    setCustomSupplier(!supExists && Boolean(item.supplier));
+
+    setFormData({
+      name: item.name || "",
+      category: item.category || "Whiskey & Scotch",
+      subcategory: item.subcategory || item.brand || "",
+      brand: item.brand || item.subcategory || "",
+      unit: item.unit || "Bottle (750 ml)",
+      volumeMl: item.volumeMl ?? (String(item.unit || "").includes("750") ? 750 : String(item.unit || "").includes("1 L") ? 1000 : 750),
+      abv: item.abv ?? 42.8,
+      stock: Number(item.stock ?? item.currentStock ?? 0),
+      minThreshold: Number(item.minThreshold ?? item.minimumThreshold ?? 5),
+      unitCost: Number(item.unitCost ?? item.cost ?? 0),
+      sellingPrice: Number(item.sellingPrice ?? item.mrp ?? 0),
+      storageLocation: item.storageLocation || "Front Bar Display Shelf",
+      supplier: item.supplier || "State Beverages Corporation (TSBCL/Govt Depot)",
+    });
+    setModalError("");
+    setModalOpen(true);
+  };
+
+  const saveInventoryItem = async (event) => {
+    event.preventDefault();
+    setModalBusy(true);
+    setModalError("");
+
+    if (!formData.name.trim()) {
+      setModalError("Beverage item name is required.");
+      setModalBusy(false);
+      return;
+    }
+    if (!formData.category.trim()) {
+      setModalError("Category is required.");
+      setModalBusy(false);
+      return;
+    }
+
+    try {
+      if (editingItem) {
+        const targetId = editingItem.id ?? editingItem.ingredientId;
+        const res = await apiUpdateInventoryItem(targetId, formData);
+        if (!res?.success) throw new Error(res?.error || "Could not update the inventory item.");
+      } else {
+        const res = await apiCreateInventoryItem(formData);
+        if (!res?.success) throw new Error(res?.error || "Could not create the inventory item.");
+      }
+      setModalOpen(false);
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+    } catch (requestError) {
+      console.error("[Bar Inventory] Save failed:", requestError);
+      setModalError(requestError?.message || "Could not save inventory item.");
+    } finally {
+      setModalBusy(false);
+    }
+  };
+
+  const adjustStock = async (item, direction) => {
+    const isReceive = direction > 0;
+    const promptMsg = isReceive
+      ? `Enter quantity received for ${item.name} (${item.unit || "units"}):`
+      : `Enter quantity to adjust/deduct for ${item.name} (${item.unit || "units"}):`;
+    const input = window.prompt(promptMsg, "1");
+    if (input === null) return;
+    const amount = Number(input);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      window.alert("Please enter a valid positive number.");
+      return;
+    }
     setBusy(true);
     try {
-      const response = await apiAdjustStock({ ingredientId: item.id ?? item.ingredientId, quantityChange: amount * direction, reason: "Bar stock adjustment" });
+      const response = await apiAdjustStock({
+        ingredientId: item.id ?? item.ingredientId,
+        quantityChange: amount * direction,
+        reason: isReceive ? "Bar stock received" : "Bar stock adjustment / wastage",
+      });
       if (!response?.success) throw new Error(response?.error || "Stock adjustment failed.");
       await onRefresh();
-    } catch (requestError) { window.alert(requestError?.message || "Stock adjustment failed."); }
-    finally { setBusy(false); }
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+    } catch (requestError) {
+      console.error("[Bar Inventory] Stock adjustment failed:", requestError);
+      window.alert(requestError?.message || "Stock adjustment failed.");
+    } finally {
+      setBusy(false);
+    }
   };
-  return <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Inventory</h2><p>Beverage inventory from the shared restaurant inventory ledger.</p></div><div className="bar-actions"><button className="bar-button primary" type="button" onClick={() => { setAddError(""); setAddOpen(true); }}><Plus size={15} /> Add Inventory</button><button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading}><RefreshCw size={15} /> Refresh</button></div></div>
-    {error && <div className="bar-error" role="alert">{error}</div>}
-    {loading ? <div className="bar-empty" role="status">Loading shared inventory…</div> : <div className="bar-table-wrap"><table className="bar-table"><thead><tr><th>Item Name</th><th>Category</th><th>Unit</th><th>Stock</th><th>Threshold</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => { const stock = Number(item.stock ?? item.currentStock ?? 0); const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0); return <tr key={item.id ?? item.ingredientId}><td><strong>{item.name}</strong></td><td>{item.category || item.subcategory || "—"}</td><td>{item.unit || "—"}</td><td>{stock}</td><td>{threshold}</td><td>{formatCurrency(item.unitCost ?? item.cost ?? 0)}</td><td><Status>{stock <= threshold ? "Low Stock" : "In Stock"}</Status></td><td><div className="bar-actions"><button className="bar-button secondary small" disabled={busy} onClick={() => adjust(item, -1)}>Adjust</button><button className="bar-button secondary small" disabled={busy} onClick={() => adjust(item, 1)}>Receive</button></div></td></tr>; })}</tbody></table>{!rows.length && !error && <div className="bar-empty">No beverage inventory records are configured in the shared inventory.</div>}</div>}
-    {addOpen && <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !addBusy && setAddOpen(false)}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-inventory-add-title"><header className="bar-modal-head"><div><span className="bar-kicker">SHARED INVENTORY</span><h2 id="bar-inventory-add-title">Add Inventory</h2></div><button className="bar-icon-button" type="button" aria-label="Close" disabled={addBusy} onClick={() => setAddOpen(false)}><X size={18} /></button></header><form className="bar-form" onSubmit={addInventoryItem}><div className="bar-form-grid"><label className="bar-field"><span>Item Name *</span><input required value={newItem.name} onChange={(event) => setNewItemField("name", event.target.value)} /></label><label className="bar-field"><span>Category *</span><input required value={newItem.category} onChange={(event) => setNewItemField("category", event.target.value)} placeholder="Wine, Beer, Soft Drinks…" /></label><label className="bar-field"><span>Unit *</span><input required value={newItem.unit} onChange={(event) => setNewItemField("unit", event.target.value)} placeholder="Bottle, Can, Litre…" /></label><label className="bar-field"><span>Stock *</span><input required type="number" min="0" step="any" value={newItem.stock} onChange={(event) => setNewItemField("stock", event.target.value)} /></label><label className="bar-field"><span>Threshold *</span><input required type="number" min="0" step="any" value={newItem.minThreshold} onChange={(event) => setNewItemField("minThreshold", event.target.value)} /></label><label className="bar-field"><span>Unit Cost *</span><input required type="number" min="0" step="any" value={newItem.unitCost} onChange={(event) => setNewItemField("unitCost", event.target.value)} /></label></div>{addError && <p className="bar-error" role="alert">{addError}</p>}<footer className="bar-modal-footer"><button className="bar-button secondary" type="button" disabled={addBusy} onClick={() => setAddOpen(false)}>Cancel</button><button className="bar-button primary" type="submit" disabled={addBusy}>{addBusy ? "Adding…" : "Add Inventory"}</button></footer></form></section></div>}
-  </section>;
+
+  const deleteItem = async (item) => {
+    const confirmed = window.confirm(`Are you sure you want to permanently delete "${item.name}" from Bar Inventory?`);
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      const targetId = item.id ?? item.ingredientId;
+      const res = await apiDeleteInventoryItem(targetId);
+      if (!res?.success) throw new Error(res?.error || "Delete failed.");
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+    } catch (requestError) {
+      console.error("[Bar Inventory] Delete failed:", requestError);
+      window.alert(requestError?.message || "Could not delete inventory item.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const purgeMockPackagingData = async () => {
+    const nonBarItems = (Array.isArray(inventory) ? inventory : []).filter((item) => {
+      const name = String(item.name || "").toLowerCase();
+      const cat = String(item.category || "").toLowerCase();
+      return (
+        name.includes("handi") ||
+        name.includes("foil") ||
+        name.includes("container") ||
+        name.includes("takeaway") ||
+        cat.includes("packaging") ||
+        cat.includes("disposable")
+      );
+    });
+
+    if (nonBarItems.length === 0) {
+      window.alert("No packaging or mock items found in inventory.");
+      return;
+    }
+
+    const confirmPurge = window.confirm(
+      `Found ${nonBarItems.length} kitchen packaging / mock item(s) (e.g. Foil Meal Trays, Takeaway Handis). Purge them now to keep Bar Inventory completely clean?`
+    );
+    if (!confirmPurge) return;
+
+    setBusy(true);
+    try {
+      for (const item of nonBarItems) {
+        await apiDeleteInventoryItem(item.id ?? item.ingredientId).catch(() => {});
+      }
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      window.alert("Successfully purged mock packaging items from inventory!");
+    } catch (err) {
+      window.alert("Some items could not be purged: " + err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Find subcategories for current category
+  const currentCategoryObj = BAR_INVENTORY_CATEGORIES.find((c) => c.category === formData.category);
+  const currentSubcategories = currentCategoryObj?.subcategories || [];
+
+  return (
+    <section className="bar-page-card" style={{ padding: 0, overflow: "hidden" }}>
+      {/* 1. Header with Actions */}
+      <div className="bar-section-head" style={{ padding: "16px 18px", borderBottom: "1px solid var(--bar-line)" }}>
+        <div>
+          <h2 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, fontSize: "1.2rem" }}>
+            <Wine size={20} color="var(--accent-amber)" /> Bar Inventory & Liquor Ledger
+          </h2>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: "0.75rem" }}>
+            Track bottles, barrels, kegs, spirits, wines, mixers, and bar consumables in real time.
+          </p>
+        </div>
+        <div className="bar-actions">
+          <button className="bar-button primary" type="button" onClick={openAddModal}>
+            <Plus size={15} /> Add Inventory
+          </button>
+          <button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading || busy}>
+            <RefreshCw size={15} className={loading ? "spin" : ""} /> Refresh
+          </button>
+          <button
+            className="bar-button secondary"
+            type="button"
+            title="Purge any leftover mock packaging items (Takeaway Handis, Foil Trays)"
+            onClick={purgeMockPackagingData}
+            disabled={loading || busy}
+            style={{ fontSize: "0.7rem" }}
+          >
+            <Trash2 size={13} /> Clean Mock Items
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Top Operational KPI Summary Cards */}
+      <div className="bar-inv-kpis">
+        <div className="bar-inv-kpi">
+          <span>Total Bar Items</span>
+          <strong>{totalItems}</strong>
+          <small>Active beverage lines</small>
+        </div>
+        <div className="bar-inv-kpi">
+          <span>In-Stock Bottles / Units</span>
+          <strong>{totalUnits.toLocaleString("en-IN")}</strong>
+          <small>Total physical inventory</small>
+        </div>
+        <div className="bar-inv-kpi alert">
+          <span>Low Stock Alerts</span>
+          <strong style={{ color: lowStockCount > 0 ? "#f59e0b" : "inherit" }}>{lowStockCount}</strong>
+          <small>At or below threshold</small>
+        </div>
+        <div className="bar-inv-kpi danger">
+          <span>Out of Stock</span>
+          <strong style={{ color: outOfStockCount > 0 ? "#ef4444" : "inherit" }}>{outOfStockCount}</strong>
+          <small>Urgent re-order needed</small>
+        </div>
+        <div className="bar-inv-kpi highlight">
+          <span>Bar Stock Valuation</span>
+          <strong style={{ color: "var(--accent-amber, #f59e0b)" }}>{formatCurrency(totalValuation)}</strong>
+          <small>Total purchase value</small>
+        </div>
+      </div>
+
+      {/* 3. Search & Filter Bar */}
+      <div className="bar-list-tools">
+        <label className="bar-search">
+          <Search size={16} />
+          <input
+            placeholder="Search drink name, brand, category, rack location…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button className="bar-icon-button small" type="button" onClick={() => setQuery("")}>
+              <X size={14} />
+            </button>
+          )}
+        </label>
+        <label className="bar-select-label">
+          <span>Category Filter</span>
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="all">All Categories ({validBeverages.length})</option>
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </label>
+        <label className="bar-select-label">
+          <span>Stock Status</span>
+          <select value={stockFilter} onChange={(e) => setStockFilter(e.target.value)}>
+            <option value="all">All Statuses ({validBeverages.length})</option>
+            <option value="in_stock">In Stock ({inStockCount})</option>
+            <option value="low_stock">Low Stock ({lowStockCount})</option>
+            <option value="out_of_stock">Out of Stock ({outOfStockCount})</option>
+          </select>
+        </label>
+      </div>
+
+      {error && <div className="bar-error" role="alert" style={{ margin: "14px 18px" }}>{error}</div>}
+
+      {/* 4. Inventory Records Table */}
+      {loading ? (
+        <div className="bar-empty" role="status">Loading live bar inventory ledger…</div>
+      ) : (
+        <div className="bar-table-wrap">
+          <table className="bar-table bar-inventory-table">
+            <thead>
+              <tr>
+                <th style={{ minWidth: "180px", textAlign: "left" }}>Item / Drink Name</th>
+                <th style={{ minWidth: "130px", textAlign: "left" }}>Category</th>
+                <th style={{ minWidth: "120px", textAlign: "left" }}>Unit & Size</th>
+                <th style={{ minWidth: "85px", textAlign: "center" }}>ABV %</th>
+                <th style={{ minWidth: "100px", textAlign: "center" }}>Current Stock</th>
+                <th style={{ minWidth: "80px", textAlign: "center" }}>Threshold</th>
+                <th style={{ minWidth: "105px", textAlign: "right" }}>Unit Cost</th>
+                <th style={{ minWidth: "105px", textAlign: "right" }}>Selling / MRP</th>
+                <th style={{ minWidth: "140px", textAlign: "left" }}>Storage Location</th>
+                <th style={{ minWidth: "95px", textAlign: "center" }}>Status</th>
+                <th style={{ minWidth: "240px", textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.map((item) => {
+                const stock = Number(item.stock ?? item.currentStock ?? 0);
+                const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+                const abvVal = item.abv != null && item.abv !== "" ? Number(item.abv) : null;
+                const cost = Number(item.unitCost ?? item.cost ?? 0);
+                const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+
+                let statusLabel = "In Stock";
+                if (stock <= 0) {
+                  statusLabel = "Out of Stock";
+                } else if (stock <= threshold) {
+                  statusLabel = "Low Stock";
+                }
+
+                const brandText = String(item.brand || "").trim();
+                const subcatText = String(item.subcategory || "").trim();
+                const displaySubtitle =
+                  brandText && subcatText && brandText.toLowerCase() !== subcatText.toLowerCase()
+                    ? `${brandText} • ${subcatText}`
+                    : brandText || subcatText || "";
+
+                return (
+                  <tr key={item.id ?? item.ingredientId}>
+                    <td style={{ textAlign: "left" }}>
+                      <strong>{item.name}</strong>
+                      {displaySubtitle && (
+                        <small style={{ color: "var(--text-dim)", display: "block" }}>
+                          {displaySubtitle}
+                        </small>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "left" }}>
+                      <span className="bar-category-chip">{item.category || "Beverage"}</span>
+                    </td>
+                    <td style={{ textAlign: "left" }}>
+                      <span>{item.unit || "Bottle"}</span>
+                      {item.volumeMl && <small style={{ display: "block", color: "var(--text-dim)" }}>{item.volumeMl} ml</small>}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      {abvVal != null && abvVal > 0 ? (
+                        <span style={{ fontWeight: 700, color: "var(--accent-amber)" }}>{abvVal}%</span>
+                      ) : (
+                        <span style={{ color: "var(--text-dim)", fontSize: "0.68rem" }}>0% Non-Alc</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className={`bar-stock-chip ${stock <= threshold ? "low" : ""}`}>
+                        {stock}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "center", color: "var(--text-muted)" }}>{threshold}</td>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(cost)}</td>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{selling > 0 ? formatCurrency(selling) : <span style={{ color: "var(--text-dim)" }}>—</span>}</td>
+                    <td style={{ textAlign: "left" }}>
+                      <small style={{ display: "block", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                        {item.storageLocation || "Front Bar Display Shelf"}
+                      </small>
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <Status>{statusLabel}</Status>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <div className="bar-inv-actions">
+                        <div className="bar-stock-btn-group">
+                          <button
+                            className="bar-stock-btn deduct"
+                            type="button"
+                            title={`Deduct / Adjust stock for ${item.name}`}
+                            disabled={busy}
+                            onClick={() => adjustStock(item, -1)}
+                          >
+                            <span className="bar-stock-icon">−</span> Adjust
+                          </button>
+                          <button
+                            className="bar-stock-btn receive"
+                            type="button"
+                            title={`Receive stock shipment for ${item.name}`}
+                            disabled={busy}
+                            onClick={() => adjustStock(item, 1)}
+                          >
+                            <span className="bar-stock-icon">+</span> Receive
+                          </button>
+                        </div>
+                        <button
+                          className="bar-icon-button small"
+                          type="button"
+                          title="Edit bar inventory item"
+                          disabled={busy}
+                          onClick={() => openEditModal(item)}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          className="bar-icon-button small danger"
+                          type="button"
+                          title="Delete from bar inventory"
+                          disabled={busy}
+                          onClick={() => deleteItem(item)}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {filteredRows.length === 0 && !error && (
+            <div className="bar-empty">
+              {validBeverages.length === 0 ? (
+                <div>
+                  <p style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: 700 }}>
+                    No bar inventory items found.
+                  </p>
+                  <p style={{ margin: "0 0 16px", color: "var(--text-dim)" }}>
+                    All kitchen packaging mock data has been cleared. Add your first liquor or beverage item to get started.
+                  </p>
+                  <button className="bar-button primary" type="button" onClick={openAddModal}>
+                    <Plus size={15} /> Add First Bar Inventory Item
+                  </button>
+                </div>
+              ) : (
+                <p>No beverage items match your current search or filters. Try adjusting your search query.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. Add / Edit Bar Inventory Modal */}
+      {modalOpen && (
+        <div
+          className="bar-overlay"
+          role="presentation"
+          onMouseDown={(event) => event.target === event.currentTarget && !modalBusy && setModalOpen(false)}
+        >
+          <section className="bar-modal" role="dialog" aria-modal="true" style={{ width: "min(840px, 100%)" }}>
+            <header className="bar-modal-head">
+              <div>
+                <span className="bar-kicker">BAR & LIQUOR LEDGER</span>
+                <h2>{editingItem ? `Edit "${editingItem.name}"` : "Add Bar Inventory"}</h2>
+              </div>
+              <button
+                className="bar-icon-button"
+                type="button"
+                aria-label="Close"
+                disabled={modalBusy}
+                onClick={() => setModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <form className="bar-form" onSubmit={saveInventoryItem} style={{ padding: "18px 20px" }}>
+              <div className="bar-form-grid">
+                {/* Item Name */}
+                <label className="bar-field wide">
+                  <span>Beverage / Item Name *</span>
+                  <input
+                    required
+                    placeholder="e.g. Johnnie Walker Black Label 12Y, Corona Extra Beer, Monin Blue Curacao"
+                    value={formData.name}
+                    onChange={(e) => setField("name", e.target.value)}
+                  />
+                </label>
+
+                {/* Category */}
+                <label className="bar-field">
+                  <span>Bar Category *</span>
+                  {!customCategory ? (
+                    <select
+                      value={formData.category}
+                      onChange={(e) => handleCategorySelect(e.target.value)}
+                    >
+                      {BAR_INVENTORY_CATEGORIES.map((c) => (
+                        <option key={c.category} value={c.category}>{c.category}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Category…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        required
+                        placeholder="Type custom category name…"
+                        value={formData.category}
+                        onChange={(e) => setField("category", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomCategory(false);
+                          setField("category", BAR_INVENTORY_CATEGORIES[0].category);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+
+                {/* Subcategory / Variety */}
+                <label className="bar-field">
+                  <span>Subcategory / Variety</span>
+                  {currentSubcategories.length > 0 && !customCategory ? (
+                    <select
+                      value={formData.subcategory}
+                      onChange={(e) => setField("subcategory", e.target.value)}
+                    >
+                      {currentSubcategories.map((sub) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      placeholder="e.g. Single Malt, Craft IPA, Blanco, Puree"
+                      value={formData.subcategory}
+                      onChange={(e) => setField("subcategory", e.target.value)}
+                    />
+                  )}
+                </label>
+
+                {/* Brand */}
+                <label className="bar-field">
+                  <span>Brand / Label</span>
+                  <input
+                    placeholder="e.g. Diageo, Bacardi, Sula, Monin, Schweppes"
+                    value={formData.brand}
+                    onChange={(e) => setField("brand", e.target.value)}
+                  />
+                </label>
+
+                {/* Unit / Packaging */}
+                <label className="bar-field">
+                  <span>Packaging Unit *</span>
+                  {!customUnit ? (
+                    <select
+                      value={formData.unit}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomUnit(true);
+                          setField("unit", "");
+                        } else {
+                          setField("unit", e.target.value);
+                          if (e.target.value.includes("750")) setField("volumeMl", 750);
+                          else if (e.target.value.includes("1 L") || e.target.value.includes("1000")) setField("volumeMl", 1000);
+                          else if (e.target.value.includes("330")) setField("volumeMl", 330);
+                          else if (e.target.value.includes("650")) setField("volumeMl", 650);
+                        }
+                      }}
+                    >
+                      {BAR_INVENTORY_UNITS.map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Unit…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        required
+                        placeholder="e.g. Case of 12, Barrel 20L"
+                        value={formData.unit}
+                        onChange={(e) => setField("unit", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomUnit(false);
+                          setField("unit", BAR_INVENTORY_UNITS[0]);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+
+                {/* Bottle Volume (ml) */}
+                <label className="bar-field">
+                  <span>Volume / Bottle Size (ml)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="750"
+                    value={formData.volumeMl}
+                    onChange={(e) => setField("volumeMl", e.target.value)}
+                  />
+                </label>
+
+                {/* ABV % */}
+                <label className="bar-field">
+                  <span>Alcohol Content (ABV %)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="e.g. 42.8 or 0 for non-alcoholic"
+                    value={formData.abv}
+                    onChange={(e) => setField("abv", e.target.value)}
+                  />
+                </label>
+
+                {/* Current Stock */}
+                <label className="bar-field">
+                  <span>Current In-Stock Quantity *</span>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.stock}
+                    onChange={(e) => setField("stock", e.target.value)}
+                  />
+                </label>
+
+                {/* Reorder Threshold */}
+                <label className="bar-field">
+                  <span>Re-order Alert Threshold *</span>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.minThreshold}
+                    onChange={(e) => setField("minThreshold", e.target.value)}
+                  />
+                </label>
+
+                {/* Unit Purchase Cost */}
+                <label className="bar-field">
+                  <span>Unit Purchase Cost (₹) *</span>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.unitCost}
+                    onChange={(e) => setField("unitCost", e.target.value)}
+                  />
+                </label>
+
+                {/* Selling Price / MRP */}
+                <label className="bar-field">
+                  <span>Selling Price / MRP (₹)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="Optional selling price / peg rate"
+                    value={formData.sellingPrice}
+                    onChange={(e) => setField("sellingPrice", e.target.value)}
+                  />
+                </label>
+
+                {/* Storage Location */}
+                <label className="bar-field">
+                  <span>Storage / Rack Location</span>
+                  {!customLocation ? (
+                    <select
+                      value={formData.storageLocation}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomLocation(true);
+                          setField("storageLocation", "");
+                        } else {
+                          setField("storageLocation", e.target.value);
+                        }
+                      }}
+                    >
+                      {BAR_STORAGE_LOCATIONS.map((loc) => (
+                        <option key={loc} value={loc}>{loc}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Location…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        placeholder="e.g. Cellar Rack B3"
+                        value={formData.storageLocation}
+                        onChange={(e) => setField("storageLocation", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomLocation(false);
+                          setField("storageLocation", BAR_STORAGE_LOCATIONS[0]);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+
+                {/* Supplier / Distributor */}
+                <label className="bar-field">
+                  <span>Supplier / Distributor</span>
+                  {!customSupplier ? (
+                    <select
+                      value={formData.supplier}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomSupplier(true);
+                          setField("supplier", "");
+                        } else {
+                          setField("supplier", e.target.value);
+                        }
+                      }}
+                    >
+                      {BAR_SUPPLIERS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Supplier…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        placeholder="e.g. Local Wine Wholesaler"
+                        value={formData.supplier}
+                        onChange={(e) => setField("supplier", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomSupplier(false);
+                          setField("supplier", BAR_SUPPLIERS[0]);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {modalError && (
+                <p className="bar-error" role="alert" style={{ marginTop: "12px" }}>
+                  {modalError}
+                </p>
+              )}
+
+              <footer className="bar-modal-footer" style={{ marginTop: "18px", padding: "14px 0 0" }}>
+                <button
+                  className="bar-button secondary"
+                  type="button"
+                  disabled={modalBusy}
+                  onClick={() => setModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button className="bar-button primary" type="submit" disabled={modalBusy}>
+                  {modalBusy ? "Saving…" : editingItem ? "Update Inventory Item" : "Add Inventory Item"}
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
+    </section>
+  );
 }
 function Status({ children }) {
   const cls = String(children || "").toLowerCase().replace(/\s+/g, "-");
@@ -509,8 +1499,7 @@ function BarDrinksMenu({
     category: "Cocktails",
     customCategory: "",
     price: "",
-    drinkType: "Alcoholic",
-    measure: "Glass (250 ml)",
+    drinkType: "Alcoholic",    measure: "Glass (250 ml)",
     customMeasure: "",
     abv: "",
     isVeg: false,
@@ -552,7 +1541,6 @@ function BarDrinksMenu({
       const matchesDrinkType =
         !menuFilters.drinkType ||
         (menuFilters.drinkType === "alcoholic" ? isItemAlcoholic : !isItemAlcoholic);
-
       const matchesAvailability =
         !menuFilters.availability ||
         (item.isAvailable !== false && item.isAvailable !== "Unavailable") ===
@@ -917,8 +1905,7 @@ function BarDrinksMenu({
         </label>
 
         <label className="menu-filter-field">
-          <span>Special</span>
-          <select
+          <span>Special</span>          <select
             value={menuFilters.special}
             onChange={(e) => {
               setMenuFilters((prev) => ({ ...prev, special: e.target.value }));
@@ -1362,7 +2349,7 @@ function BarDrinksMenu({
                   margin: 0,
                 }}
               >
-                {editingItem ? "Edit Drink" : "Add New Drink"}
+                {editingItem ? "Edit Dish / Item" : "Add New Menu Item"}
               </h3>
               <button
                 type="button"
@@ -1395,13 +2382,12 @@ function BarDrinksMenu({
                   marginBottom: "5px",
                 }}
               >
-                Drink Name <span style={{ color: "#ea580c" }}>*</span>
+                Dish Name <span style={{ color: "#ea580c" }}>*</span>
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Mojito / Whiskey Sour / Kingfisher Draught"
-                value={itemForm.name}
+                placeholder="e.g. Mojito / Whiskey Sour / Kingfisher Draught"                value={itemForm.name}
                 onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
                 style={{
                   width: "100%",
@@ -2658,9 +3644,9 @@ export function BarWorkspace({
           <div>
             <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
             <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
-            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : "Independent Bar workspace • drink and order records are demo data."}</p>
+            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : route === "bar-inventory" ? "Live beverage and liquor inventory ledger • tracked in real time." : "Independent Bar workspace • drink and order records are demo data."}</p>
           </div>
-          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : "DEMO DATA • SESSION ONLY"}</span>
+          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : route === "bar-inventory" ? "BAR INVENTORY • LIVE LEDGER" : "DEMO DATA • SESSION ONLY"}</span>
         </div>
       )}
 
