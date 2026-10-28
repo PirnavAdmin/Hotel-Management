@@ -794,7 +794,7 @@ function BarDrinksMenu({
             }}
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>Add New Dish / Biryani</span>
+            <span>Add New Drink / Beverage</span>
           </button>
         </div>
       </div>
@@ -894,21 +894,6 @@ function BarDrinksMenu({
             <option value="">All</option>
             <option value="available">Available</option>
             <option value="unavailable">Unavailable</option>
-          </select>
-        </label>
-
-        <label className="menu-filter-field">
-          <span>Signature Drink</span>
-          <select
-            value={menuFilters.special}
-            onChange={(e) => {
-              setMenuFilters((prev) => ({ ...prev, special: e.target.value }));
-              setMenuPage(1);
-            }}
-          >
-            <option value="">All</option>
-            <option value="special">Special</option>
-            <option value="regular">Regular</option>
           </select>
         </label>
 
@@ -1554,57 +1539,22 @@ function BarDrinksMenu({
                   marginBottom: "5px",
                 }}
               >
-                Choose Image (URL or Preset)
+                Dish Image (Upload)
               </label>
               <input
-                type="text"
-                placeholder="https://... or select a preset below"
-                value={itemForm.image}
-                onChange={(e) => setItemForm({ ...itemForm, image: e.target.value })}
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.6rem 0.85rem",
-                  color: "var(--text-main)",
-                  fontSize: "0.85rem",
-                  outline: "none",
-                  marginBottom: "6px",
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setItemForm((current) => ({ ...current, image: String(reader.result || "") }));
+                  reader.readAsDataURL(file);
                 }}
               />
-              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                {[
-                  { label: "🍸 Mojito", url: "/assets/beverages/watermelon-juice.jpg" },
-                  { label: "🥤 Mango Lassi", url: "/assets/beverages/mango-lassi.jpg" },
-                  { label: "🥛 Sweet Lassi", url: "/assets/beverages/sweet-lassi.jpg" },
-                  { label: "☕ Coffee", url: "/assets/beverages/coffee.jpg" },
-                  { label: "🥤 Milkshake", url: "/assets/beverages/chocolate-milkshake.jpg" },
-                  { label: "🥛 Buttermilk", url: "/assets/beverages/buttermilk.jpg" },
-                ].map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => setItemForm({ ...itemForm, image: preset.url })}
-                    style={{
-                      border: "1px solid var(--border-card)",
-                      background: itemForm.image === preset.url ? "rgba(245, 158, 11, 0.2)" : "var(--bg-tertiary)",
-                      color: itemForm.image === preset.url ? "var(--accent-amber-light)" : "var(--text-dim)",
-                      borderRadius: "6px",
-                      padding: "3px 8px",
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
             </div>
 
-            {/* Description */}
+                        {/* Description */}
             <div>
               <label
                 style={{
@@ -2226,24 +2176,6 @@ export function BarWorkspace({
           status: order.status || "Preparing",
           quantity: Number(it.quantity ?? 1),
         });
-      }
-    }
-    // If fewer than 5 active orders, supplement with popular signature beverages
-    if (queue.length < 5) {
-      const existingNames = new Set(queue.map((q) => q.name.toLowerCase()));
-      for (const drink of drinks) {
-        if (existingNames.has(drink.name.toLowerCase())) continue;
-        queue.push({
-          id: "sig-" + drink.id,
-          name: drink.name,
-          table: drink.measure || "Counter Tab",
-          category: drink.category || "Signature",
-          price: Number(drink.price || 0),
-          time: "5 min prep",
-          status: drink.isAvailable === false || drink.isAvailable === "Unavailable" ? "Unavailable" : "Ready to Serve",
-          quantity: 1,
-        });
-        if (queue.length >= 6) break;
       }
     }
     return queue.slice(0, 6);
@@ -2928,7 +2860,7 @@ export function BarWorkspace({
             </div>
           </div>
 
-          {/* Right Column: Live Drinks Queue Preview (Beverages Only) */}
+          {/* Right Column: Live Signature Drinks (Beverages Only) */}
           <div
             style={{
               background: "var(--bg-card)",
@@ -2957,20 +2889,8 @@ export function BarWorkspace({
                     margin: 0,
                   }}
                 >
-                  Drinks Queue Preview
+                  Signature Drinks
                 </h3>
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    background: "rgba(245, 158, 11, 0.15)",
-                    color: "var(--accent-amber-light)",
-                    padding: "1px 6px",
-                    borderRadius: "10px",
-                  }}
-                >
-                  {activeQueueItems.length} Active
-                </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                 <button
@@ -3024,102 +2944,52 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {activeQueueItems.map((item) => {
-                const { Icon, tone } = getDrinkIcon(item.name, item.category);
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => go("bar-orders")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.65rem",
-                      padding: "0.45rem 0.65rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-subtle)",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "var(--accent-amber)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "var(--border-subtle)";
-                    }}
-                    title={"Click to view order details: " + item.name + " (" + item.table + ")"}
-                  >
+              {drinks.slice(0, 5).map((drink) => (
+                <div
+                  key={drink.id}
+                  onClick={() => go("bar-drinks")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.65rem",
+                    padding: "0.45rem 0.65rem",
+                    borderRadius: "8px",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(event) => { event.currentTarget.style.borderColor = "var(--accent-amber)"; }}
+                  onMouseLeave={(event) => { event.currentTarget.style.borderColor = "var(--border-subtle)"; }}
+                >
+                  <img
+                    src={getMenuItemImage(drink)}
+                    alt={drink.name}
+                    style={{ width: "36px", height: "36px", borderRadius: "7px", objectFit: "cover", flexShrink: 0 }}
+                    onError={(event) => handleDishImageError(event, drink)}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "7px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        background:
-                          tone === "tone-orange"
-                            ? "rgba(234, 88, 12, 0.14)"
-                            : tone === "tone-purple"
-                            ? "rgba(124, 58, 237, 0.14)"
-                            : tone === "tone-green"
-                            ? "rgba(16, 185, 129, 0.14)"
-                            : "rgba(59, 130, 246, 0.14)",
-                        color:
-                          tone === "tone-orange"
-                            ? "#ea580c"
-                            : tone === "tone-purple"
-                            ? "#8b5cf6"
-                            : tone === "tone-green"
-                            ? "#10b981"
-                            : "#3b82f6",
+                        fontSize: "0.82rem",
+                        fontWeight: 750,
+                        color: "var(--text-main)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
-                      <Icon size={18} />
+                      {drink.name}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: "0.82rem",
-                          fontWeight: 750,
-                          color: "var(--text-main)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {item.quantity > 1 ? (item.quantity + " × ") : ""}{item.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.68rem",
-                          color: "var(--text-dim)",
-                          marginTop: "1px",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {item.table} • {item.category} • {item.time}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right", flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
-                      <div
-                        style={{
-                          fontSize: "0.84rem",
-                          fontWeight: 800,
-                          color: "var(--accent-amber)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {formatCurrency(item.price)}
-                      </div>
-                      <Status>{item.status}</Status>
+                    <div style={{ fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "1px" }}>
+                      {drink.prepTime || "15 min"} • {drink.category || "Beverage"}
                     </div>
                   </div>
-                );
-              })}
+                  <div style={{ fontSize: "0.84rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap" }}>
+                    {formatCurrency(drink.price)}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
