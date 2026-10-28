@@ -622,7 +622,7 @@ function globalSyncPlugin() {
           );
         }
 
-        // REST API: /api/v1/inventory (POST)
+                // REST API: /api/v1/inventory (POST)
         if ((req.url === "/api/v1/inventory" || req.url === "/api/v1/inventory/") && req.method === "POST") {
           let body = "";
           req.on("data", (chunk) => { body += chunk; });
@@ -632,16 +632,22 @@ function globalSyncPlugin() {
               db = loadDb();
               const existing = db.gourmet_pos_inventory_v1 || [];
               const newItem = {
-                id: payload.id || inv- + Date.now(),
+                ...payload,
+                id: payload.id || `inv-${Date.now()}`,
                 name: payload.name || "Unnamed Ingredient",
                 category: payload.category || "General",
-                subcategory: payload.subcategory || "",
+                subcategory: payload.subcategory || payload.brand || "",
+                brand: payload.brand || payload.subcategory || "",
                 supplier: payload.supplier || "Local Supplier",
-                unit: payload.unit || "KG",
+                unit: payload.unit || "Bottle",
                 stock: Number(payload.stock ?? payload.currentStock ?? 0),
                 minThreshold: Number(payload.minThreshold ?? payload.minimumThreshold ?? 5),
                 unitCost: Number(payload.unitCost ?? payload.mrp ?? 0),
                 mrp: Number(payload.mrp ?? payload.unitCost ?? 0),
+                abv: payload.abv != null && payload.abv !== "" ? Number(payload.abv) : null,
+                volumeMl: payload.volumeMl != null && payload.volumeMl !== "" ? Number(payload.volumeMl) : null,
+                storageLocation: payload.storageLocation || "",
+                sellingPrice: payload.sellingPrice != null && payload.sellingPrice !== "" ? Number(payload.sellingPrice) : Number(payload.mrp ?? payload.unitCost ?? 0),
                 totalUsed: 0,
                 totalRestocked: Number(payload.stock ?? 0),
                 lastRestocked: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
@@ -651,6 +657,45 @@ function globalSyncPlugin() {
               broadcast({ gourmet_pos_inventory_v1: db.gourmet_pos_inventory_v1 });
               res.writeHead(200, { "Content-Type": "application/json" });
               return res.end(JSON.stringify({ success: true, data: newItem, item: newItem }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/inventory/:id (PUT)
+        const invPutMatch = req.url.match(/^\/api\/v1\/inventory\/([^/?]+)$/i);
+        if (invPutMatch && req.method === "PUT") {
+          const rawId = decodeURIComponent(invPutMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              let updatedItem = null;
+              db.gourmet_pos_inventory_v1 = (db.gourmet_pos_inventory_v1 || []).map((item) => {
+                if (String(item.id) === rawId) {
+                  updatedItem = {
+                    ...item,
+                    ...payload,
+                    id: item.id,
+                    stock: Number(payload.stock ?? payload.currentStock ?? item.stock),
+                    minThreshold: Number(payload.minThreshold ?? payload.minimumThreshold ?? item.minThreshold),
+                    unitCost: Number(payload.unitCost ?? payload.mrp ?? item.unitCost),
+                    mrp: Number(payload.mrp ?? payload.unitCost ?? item.mrp),
+                    sellingPrice: payload.sellingPrice != null && payload.sellingPrice !== "" ? Number(payload.sellingPrice) : (payload.mrp != null ? Number(payload.mrp) : item.sellingPrice),
+                  };
+                  return updatedItem;
+                }
+                return item;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_inventory_v1: db.gourmet_pos_inventory_v1 });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: updatedItem, item: updatedItem }));
             } catch (err) {
               res.writeHead(400, { "Content-Type": "application/json" });
               return res.end(JSON.stringify({ success: false, error: err.message }));
