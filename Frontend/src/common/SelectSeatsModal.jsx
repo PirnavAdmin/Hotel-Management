@@ -77,7 +77,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
         {/* Seat Cushion Top */}
         <path
           d="M 12 44 Q 30 41 48 44 L 51 56 Q 30 59 9 56 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#008272"}
+          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
         />
         <ellipse
           cx="30"
@@ -89,35 +89,34 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
               ? "rgba(255,255,255,0.4)"
               : isOccupied
               ? "transparent"
-              : "rgba(255,255,255,0.25)"
+              : "rgba(255,255,255,0.3)"
           }
         />
 
-        {/* Backrest Outer Teal Frame matching Image 1 */}
+        {/* Backrest */}
         <rect
           x="11"
           y="4"
           width="38"
           height="45"
           rx="8"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : "#008272"}
-          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#006b5e"}
-          strokeWidth={isSelected ? "2.4" : "1.2"}
+          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : `url(#${gradId})`}
+          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#10b981"}
+          strokeWidth={isSelected ? "2.4" : isOccupied ? "1.2" : "2"}
         />
-        {/* Inner Cushion matching Image 1 */}
         <rect
-          x="15"
-          y="8"
-          width="30"
-          height="37"
-          rx="5"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#475569" : `url(#${gradId})`}
+          x="14"
+          y="7"
+          width="32"
+          height="39"
+          rx="6"
+          fill="none"
           stroke={
             isSelected
               ? "rgba(255,255,255,0.45)"
               : isOccupied
               ? "rgba(255,255,255,0.06)"
-              : "rgba(0, 130, 114, 0.4)"
+              : "rgba(16, 185, 129, 0.4)"
           }
           strokeWidth="1"
         />
@@ -262,34 +261,33 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
         {/* Seat cushion underside */}
         <path
           d="M 10 50 Q 33 46 56 50 L 54 62 Q 33 65 12 62 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#008272"}
+          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
         />
 
-        {/* Backrest viewed from rear with outer teal frame matching Image 1 */}
+        {/* Backrest viewed from rear */}
         <rect
           x="12"
           y="4"
           width="42"
           height="50"
           rx="9"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : "#008272"}
-          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#006b5e"}
-          strokeWidth={isSelected ? "2.4" : "1.2"}
+          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#334155" : `url(#${gradId})`}
+          stroke={isSelected ? "#ffffff" : isOccupied ? "#64748b" : "#10b981"}
+          strokeWidth={isSelected ? "2.4" : isOccupied ? "1.2" : "2"}
         />
-        {/* Inner Cushion matching Image 1 */}
         <rect
-          x="16"
-          y="8"
-          width="34"
-          height="42"
-          rx="6"
-          fill={isSelected ? `url(#${gradSelId})` : isOccupied ? "#475569" : `url(#${gradId})`}
+          x="15"
+          y="7"
+          width="36"
+          height="44"
+          rx="7"
+          fill="none"
           stroke={
             isSelected
               ? "rgba(255,255,255,0.45)"
               : isOccupied
               ? "rgba(255,255,255,0.06)"
-              : "rgba(0, 130, 114, 0.4)"
+              : "rgba(16, 185, 129, 0.4)"
           }
           strokeWidth="1"
         />
@@ -518,205 +516,6 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
   );
 }
 
-export function DiningRoomScenery({ isLight = false }) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        overflow: "hidden",
-        zIndex: 0,
-        borderRadius: "16px",
-      }}
-    >
-      {/* 1. Upper Wall matching Image 1 */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "36%",
-          background: isLight ? "#faf4e8" : "#17202d",
-        }}
-      />
-
-      {/* 2. Middle Wainscoting / Dado Stripe (Mint / Pale Sage Green) matching Image 1 */}
-      <div
-        style={{
-          position: "absolute",
-          top: "36%",
-          left: 0,
-          right: 0,
-          height: "17%",
-          background: isLight ? "#c7ded5" : "#28443e",
-          borderTop: isLight ? "1px solid #b9d6cd" : "1px solid #203631",
-          borderBottom: isLight ? "1px solid #b9d6cd" : "1px solid #203631",
-        }}
-      />
-
-      {/* 3. Wooden Floor matching Image 1 */}
-      <div
-        style={{
-          position: "absolute",
-          top: "53%",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: isLight ? "#deb887" : "#3d2b1e",
-        }}
-      >
-        {/* Horizontal Floor Plank Dividing Seam matching Image 1 */}
-        <div
-          style={{
-            position: "absolute",
-            top: "40%",
-            left: 0,
-            right: 0,
-            height: "2px",
-            background: isLight ? "rgba(180, 130, 80, 0.35)" : "rgba(220, 160, 100, 0.15)",
-          }}
-        />
-      </div>
-
-      {/* 4. Left Window (4-pane with white frame & sky blue glass) matching Image 1 */}
-      <div
-        style={{
-          position: "absolute",
-          top: "22px",
-          left: "24px",
-          width: "66px",
-          height: "66px",
-          background: "#ffffff",
-          borderRadius: "4px",
-          boxShadow: isLight
-            ? "0 3px 10px rgba(0, 0, 0, 0.08)"
-            : "0 3px 12px rgba(0, 0, 0, 0.35)",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gridTemplateRows: "1fr 1fr",
-          gap: "4px",
-          padding: "4px",
-          border: "4px solid #ffffff",
-        }}
-      >
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-      </div>
-
-      {/* 5. Right Window (4-pane with white frame & sky blue glass) matching Image 1 */}
-      <div
-        style={{
-          position: "absolute",
-          top: "22px",
-          right: "24px",
-          width: "66px",
-          height: "66px",
-          background: "#ffffff",
-          borderRadius: "4px",
-          boxShadow: isLight
-            ? "0 3px 10px rgba(0, 0, 0, 0.08)"
-            : "0 3px 12px rgba(0, 0, 0, 0.35)",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gridTemplateRows: "1fr 1fr",
-          gap: "4px",
-          padding: "4px",
-          border: "4px solid #ffffff",
-        }}
-      >
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-        <div style={{ background: isLight ? "#c9e7f8" : "#45617a", borderRadius: "1px" }} />
-      </div>
-
-      {/* 6. Three Ceiling Pendant Lamps with Ambient Light Glow matching Image 1 */}
-      {[
-        { left: "28%" },
-        { left: "50%" },
-        { left: "72%" },
-      ].map((pos, idx) => (
-        <div
-          key={`lamp-${idx}`}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: pos.left,
-            transform: "translateX(-50%)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            pointerEvents: "none",
-          }}
-        >
-          {/* Suspension Cord */}
-          <div
-            style={{
-              width: "2px",
-              height: "26px",
-              background: "#4f2b14",
-            }}
-          />
-          {/* Amber Trapezoid Lampshade */}
-          <svg width="40" height="18" viewBox="0 0 40 18" fill="none">
-            <polygon points="12,0 28,0 40,18 0,18" fill="#f59e0b" />
-            <polygon points="12,0 28,0 36,18 4,18" fill="#fbbf24" opacity="0.4" />
-            <ellipse cx="20" cy="18" rx="20" ry="2.5" fill="#d97706" />
-          </svg>
-          {/* Radiant Light Cone */}
-          <div
-            style={{
-              width: "110px",
-              height: "150px",
-              background: isLight
-                ? "radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.38) 0%, rgba(251, 191, 36, 0.1) 50%, transparent 80%)"
-                : "radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.28) 0%, rgba(251, 191, 36, 0.05) 50%, transparent 80%)",
-            }}
-          />
-        </div>
-      ))}
-
-      {/* 7. Potted Indoor Plant on Lower Left Floor matching Image 1 */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "24px",
-          left: "24px",
-          zIndex: 4,
-          pointerEvents: "none",
-        }}
-      >
-        <svg
-          width="48"
-          height="62"
-          viewBox="0 0 48 62"
-          fill="none"
-          style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.2))" }}
-        >
-          {/* Floor drop shadow */}
-          <ellipse cx="24" cy="58" rx="18" ry="3.5" fill="rgba(0,0,0,0.22)" />
-          {/* Terracotta Planter Pot */}
-          <polygon points="12,38 15,56 33,56 36,38" fill="#c4744d" />
-          <rect x="10" y="35" width="28" height="5" rx="1.5" fill="#d9855d" />
-          {/* Soil line */}
-          <ellipse cx="24" cy="37" rx="13" ry="2" fill="#5c321a" />
-          {/* Green Succulent Foliage matching Image 1 */}
-          <circle cx="16" cy="32" r="8" fill="#2d6a4f" />
-          <circle cx="32" cy="32" r="8" fill="#2d6a4f" />
-          <circle cx="24" cy="28" r="9" fill="#40916c" />
-          <circle cx="17" cy="20" r="8" fill="#52b788" />
-          <circle cx="31" cy="20" r="8" fill="#52b788" />
-          <circle cx="24" cy="12" r="8.5" fill="#74c69d" />
-        </svg>
-      </div>
-    </div>
-  );
-}
-
 export function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isLight }) {
   const cx = width / 2;
   const basketX = cx - 12;
@@ -748,15 +547,15 @@ export function DynamicDiningTableComponent({ width, height, topCount, bottomCou
       >
         <defs>
           <linearGradient id="tableTopGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#faf7f2" />
+            <stop offset="0%" stopColor="#f7efe2" />
+            <stop offset="100%" stopColor="#ebdcc7" />
           </linearGradient>
           <linearGradient id="tableBevelGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f0eae0" />
-            <stop offset="100%" stopColor="#e2dad0" />
+            <stop offset="0%" stopColor="#dfceb6" />
+            <stop offset="100%" stopColor="#cfbba0" />
           </linearGradient>
           <linearGradient id="tableLegGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#784224" />
+            <stop offset="0%" stopColor="#824c2d" />
             <stop offset="100%" stopColor="#552c15" />
           </linearGradient>
           <linearGradient id="soupBowlGrad" x1="0" y1="0" x2="0" y2="1">
@@ -794,7 +593,7 @@ export function DynamicDiningTableComponent({ width, height, topCount, bottomCou
         <path
           d={`M 26,12 L ${width - 26},12 Q ${width - 12},12 ${width - 14},24 L ${width - 20},80 Q ${width - 24},90 ${width - 38},90 L 38,90 Q 24,90 20,80 L 14,24 Q 12,12 26,12 Z`}
           fill="url(#tableTopGrad)"
-          stroke="#dfd8cb"
+          stroke="#ddcaa9"
           strokeWidth="1.2"
         />
 
@@ -1373,23 +1172,68 @@ export function SelectSeatsModal({
           <div
             style={{
               flex: 1.5,
+              background: isLight
+                ? "radial-gradient(circle at 50% 50%, #fbf8f2 0%, #f1eae0 100%)"
+                : "radial-gradient(circle at 50% 50%, #151e2f 0%, #090e18 100%)",
               borderRadius: "16px",
-              border: isLight ? "1.5px solid #dcd3c4" : "1.5px solid rgba(var(--surface-rgb),0.12)",
+              border: isLight ? "1px solid #e5dccf" : "1px solid rgba(var(--surface-rgb),0.08)",
               boxShadow: isLight
-                ? "0 8px 30px rgba(0, 0, 0, 0.08)"
-                : "0 12px 35px rgba(0, 0, 0, 0.4)",
-              padding: "4.2rem 1rem 5.2rem",
+                ? "inset 0 0 35px rgba(220, 205, 185, 0.45)"
+                : "inset 0 0 45px rgba(0, 0, 0, 0.65)",
+              padding: "1.75rem 1rem",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
               position: "relative",
-              minHeight: "490px",
-              overflow: "hidden",
+              minHeight: "410px",
+              overflow: "auto",
             }}
           >
-            {/* Atmospheric Full Dining Room Scenery matching Image 1 */}
-            <DiningRoomScenery isLight={isLight} />
+            {/* Atmospheric Background Accents from Image 1 */}
+            <div
+              style={{
+                position: "absolute",
+                top: "22px",
+                left: "20%",
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                background: "#d96b34",
+                opacity: isLight ? 0.75 : 0.35,
+                filter: "blur(1px)",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "28px",
+                right: "20%",
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "#dc7f48",
+                opacity: isLight ? 0.75 : 0.35,
+                filter: "blur(1px)",
+                pointerEvents: "none",
+              }}
+            />
+
+            {/* Ground Oval Glow / Rug from Image 1 */}
+            <div
+              style={{
+                position: "absolute",
+                width: `${dynamicTableWidth + 160}px`,
+                height: "320px",
+                borderRadius: "50%",
+                background: isLight
+                  ? "radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(243, 230, 212, 0.65) 60%, transparent 75%)"
+                  : "radial-gradient(ellipse at 50% 50%, rgba(246, 239, 227, 0.08) 0%, rgba(246, 239, 227, 0.02) 60%, transparent 75%)",
+                pointerEvents: "none",
+                transition: "width 0.35s ease",
+              }}
+            />
 
             {/* Interactive Dynamic Dining Cluster */}
             <div

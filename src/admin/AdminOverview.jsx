@@ -28,6 +28,17 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
 
+const BAR_MENU_CATEGORIES = new Set([
+  "cocktails", "mocktails", "beers", "whiskey", "vodka & gin", "rum & brandy",
+  "wine & champagne", "shots & shooters", "juices & shakes", "soft drinks & soda", "tea & coffee",
+]);
+
+const isBarMenuItem = (item) => {
+  const category = String(item?.category ?? item?.categoryName ?? "").trim().toLowerCase();
+  const section = String(item?.section ?? item?.menuSection ?? item?.itemType ?? "").trim().toLowerCase();
+  return Boolean(item?.drinkType) || section.includes("bar") || section === "beverage" || BAR_MENU_CATEGORIES.has(category);
+};
+
 export function AdminOverview({
   menuItems = [],
   tables = [],
@@ -136,8 +147,9 @@ export function AdminOverview({
       )
   ).length;
 
-  const vegCount = menuItems.filter((i) => i.isVeg).length;
-  const nonVegCount = menuItems.filter((i) => !i.isVeg).length;
+  const dineInMenuItems = menuItems.filter((item) => !isBarMenuItem(item));
+  const vegCount = dineInMenuItems.filter((i) => i.isVeg).length;
+  const nonVegCount = dineInMenuItems.filter((i) => !i.isVeg).length;
 
   const lowStockItems = inventoryList.filter(
     (item) => Number(item.stock ?? item.currentStock ?? 0) <= Number(item.minThreshold ?? item.minimumThreshold ?? 5)
@@ -621,7 +633,7 @@ export function AdminOverview({
             </div>
           </div>
           <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {menuItems.length} Dishes
+            {dineInMenuItems.length} Dishes
           </div>
           <div
             style={{
@@ -884,7 +896,7 @@ export function AdminOverview({
               paddingRight: "2px",
             }}
           >
-            {menuItems.slice(0, 5).map((dish) => (
+            {dineInMenuItems.slice(0, 5).map((dish) => (
               <div
                 key={dish.id}
                 onClick={() => onNavigateTab("menu")}

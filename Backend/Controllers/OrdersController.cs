@@ -1560,7 +1560,7 @@ public class OrdersController : ControllerBase
     private async Task<long> EnsureInvoiceCreatedAsync(
         Order order,
         string paymentMethod,
-        string? invoiceNumber)
+        string? invoiceNumber = null)
     {
         if (order.Subtotal <= 0 || order.GrandTotal <= 0)
         {
