@@ -46,7 +46,7 @@ public class BarService
                     m.DishName.ToLower().Contains("mojito")))
                 .ToListAsync();
 
-            overview.TotalDrinks = barDrinks.Count > 0 ? barDrinks.Count : 12;
+            overview.TotalDrinks = barDrinks.Count;
             overview.AlcoholicDrinksCount = barDrinks.Count(d => d.DrinkType == "Alcoholic" || d.AlcoholPct > 0 || (d.DietaryType != null && d.DietaryType.ToLower().Contains("non-veg")));
             if (overview.AlcoholicDrinksCount == 0 && barDrinks.Count > 0)
             {
@@ -137,9 +137,9 @@ public class BarService
         {
             _logger.LogError(ex, "Error getting Bar Overview");
             // Graceful fallback with realistic initial values
-            overview.TotalDrinks = 12;
-            overview.AlcoholicDrinksCount = 7;
-            overview.NonAlcoholicDrinksCount = 5;
+            overview.TotalDrinks = 0;
+            overview.AlcoholicDrinksCount = 0;
+            overview.NonAlcoholicDrinksCount = 0;
             overview.ActiveBarOrders = 3;
             overview.PendingOrders = 1;
             overview.PreparingDrinks = 1;

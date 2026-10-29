@@ -12,7 +12,6 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonTable } from "../common/Skeletons";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
-import { BAR_DRINKS } from "../data/barDrinksMockData";
 import { BarKOTView } from "./BarKOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
 import "./BarWorkspace.css";
@@ -2049,8 +2048,18 @@ function BarDrinksMenu({
           <tbody>
             {paginatedDrinks.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                  No drinks found matching your filters.
+                <td colSpan={5} style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--text-muted)" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem" }}>
+                    <Wine size={32} color="var(--text-dim)" style={{ opacity: 0.6 }} />
+                    <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-main)" }}>
+                      {drinks.length === 0 ? "No drinks in Bar Drinks Menu yet" : "No drinks found matching your filters"}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", maxWidth: "340px", textAlign: "center" }}>
+                      {drinks.length === 0
+                        ? 'Click "+ Add New Drink" above to add your first beverage, cocktail, or liquor item.'
+                        : "Try clearing your search query or changing category and availability filters."}
+                    </div>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -4474,38 +4483,19 @@ export function BarWorkspace({
   const route = activeTab || "bar-overview";
 
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v1";
+  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v2";
 
-  // Dedicated bar drinks state - independent from Dine menu items
+  // Dedicated bar drinks state - loaded live from Backend API (no mock data)
   const [barDrinks, setBarDrinks] = useState(() => {
     try {
+      localStorage.removeItem("avsr_bar_drinks_menu_v1");
       const saved = localStorage.getItem(STORAGE_KEY_BAR_DRINKS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    // Initial default bar drinks: includes standard bar drinks
-    return [
-      {
-        id: "DR-MOJITO",
-        name: "mojito",
-        category: "Cocktails",
-        price: 130,
-        isVeg: false,
-        drinkType: "Alcoholic",
-        prepTime: "15 min",
-        description: "Fresh mint, lime, white rum, and sparkling soda.",
-        isAvailable: true,
-        isBarDrink: true,
-      },
-      ...BAR_DRINKS.map((d) => ({
-        ...d,
-        isVeg: d.category === "Mocktails" || d.category === "Juices" || d.category === "Water" || d.category === "Soft Drinks",
-        drinkType: d.abv ? "Alcoholic" : "Non-Alcoholic",
-        isBarDrink: true,
-      })),
-    ];
+    return [];
   });
 
   // Live Bar Overview dashboard state & loader
@@ -4540,7 +4530,7 @@ export function BarWorkspace({
     try {
       const res = await apiGetBarDrinks();
       const raw = res?.data?.data || res?.data;
-      if (res?.success && Array.isArray(raw) && raw.length > 0) {
+      if (res?.success && Array.isArray(raw)) {
         const formatted = raw.map((d) => ({
           ...d,
           id: d.menuItemId || d.id,
@@ -5952,7 +5942,12 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {overviewSignatureDrinks.map((drink) => (
+              {overviewSignatureDrinks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.82rem" }}>
+                  No drinks added to menu yet.
+                </div>
+              ) : (
+                overviewSignatureDrinks.map((drink) => (
                 <div
                   key={drink.id}
                   onClick={() => go("bar-drinks")}
@@ -5997,7 +5992,8 @@ export function BarWorkspace({
                     {formatCurrency(drink.price)}
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
         </div>
