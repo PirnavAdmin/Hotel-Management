@@ -7,8 +7,7 @@ import {
   Pencil,
   Save,
   X,
-  CreditCard,
-  Smartphone,
+Smartphone,
   Banknote,
   ChevronLeft,
   ChevronRight,
@@ -19,6 +18,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetOrderHistory } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
+import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
@@ -428,9 +428,10 @@ export function AdminInvoices({
             {invoiceLoadError}
           </div>
         )}
-        {isLoadingInvoices && (
-          <div role="status" style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-            Loading live invoices…
+        {isLoadingInvoices && invoiceRecords.length === 0 && (
+          <div style={{ marginBottom: "1rem" }}>
+            <SkeletonDashboard cards={3} />
+            <SkeletonTable rows={5} columns={6} />
           </div>
         )}
 
@@ -438,10 +439,7 @@ export function AdminInvoices({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              cardTotal > 0
-                ? "repeat(auto-fit, minmax(200px, 1fr))"
-                : "repeat(auto-fit, minmax(215px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             gap: "0.75rem",
             marginBottom: "1.1rem",
           }}
@@ -814,97 +812,6 @@ export function AdminInvoices({
               <Smartphone size={18} color="var(--info)" />
             </div>
           </div>
-
-          {/* Card 5: Card Revenue (if any) */}
-          {cardTotal > 0 && (
-            <div
-              onClick={() => {
-                setPaymentFilter(paymentFilter === "card" ? "all" : "card");
-                setCurrentPage(1);
-              }}
-              style={{
-                background:
-                  paymentFilter === "card"
-                    ? "rgba(192, 132, 252, 0.12)"
-                    : "var(--bg-tertiary)",
-                border:
-                  paymentFilter === "card"
-                    ? "1px solid #c084fc"
-                    : "1px solid var(--border-subtle)",
-                borderRadius: "12px",
-                padding: "0.85rem 1rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                boxShadow:
-                  paymentFilter === "card"
-                    ? "0 2px 10px rgba(192, 132, 252, 0.22)"
-                    : "none",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.borderColor = "var(--accent-purple)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.borderColor =
-                  paymentFilter === "card" ? "#c084fc" : "var(--border-subtle)";
-              }}
-              title="Click to filter by Card payments"
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.68rem",
-                    color: "var(--text-muted)",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Card Collected
-                </div>
-                <div
-                  style={{
-                    fontSize: "1.35rem",
-                    fontWeight: 800,
-                    color: "var(--accent-purple)",
-                    marginTop: "2px",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {formatCurrency(cardTotal)}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.68rem",
-                    color: "var(--text-dim)",
-                    marginTop: "3px",
-                  }}
-                >
-                  {cardOrdersCount}{" "}
-                  {cardOrdersCount === 1 ? "card invoice" : "card invoices"}
-                </div>
-              </div>
-              <div
-                style={{
-                  width: "38px",
-                  height: "38px",
-                  borderRadius: "10px",
-                  background: "rgba(192, 132, 252, 0.15)",
-                  border: "1px solid rgba(192, 132, 252, 0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <CreditCard size={18} color="var(--accent-purple)" />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Invoice date filters */}
@@ -1024,7 +931,7 @@ export function AdminInvoices({
         >
           {/* Payment Method Filter Pills */}
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            {["all", "upi", "cash", "card"].map((mode) => (
+            {["all", "upi", "cash"].map((mode) => (
               <button
                 key={mode}
                 onClick={() => {
@@ -1080,14 +987,7 @@ export function AdminInvoices({
                 {formatCurrency(cashTotal)}
               </strong>
             </span>
-            {cardTotal > 0 && (
-              <span>
-                Card:{" "}
-                <strong style={{ color: "var(--accent-purple)" }}>
-                  {formatCurrency(cardTotal)}
-                </strong>
-              </span>
-            )}
+
           </div>
         </div>
 
@@ -1235,25 +1135,7 @@ export function AdminInvoices({
                           <Smartphone size={11} />
                           UPI
                         </span>
-                      ) : pMode === "card" ? (
-                        <span
-                          style={{
-                            background: "rgba(168, 85, 247, 0.12)",
-                            border: "1px solid rgba(168, 85, 247, 0.3)",
-                            color: "var(--accent-purple)",
-                            borderRadius: "20px",
-                            padding: "3px 10px",
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                          }}
-                        >
-                          <CreditCard size={11} />
-                          Card
-                        </span>
-                      ) : (
+                      )  : (
                         <span
                           style={{
                             background: "rgba(16, 185, 129, 0.12)",
