@@ -3506,7 +3506,7 @@ export function TableDetailView({
                               style={{
                                 fontSize: "0.78rem",
                                 fontWeight: 900,
-                                color: "var(--success)",
+                                color: "#065F46",
                                 letterSpacing: "0.02em",
                               }}
                             >
@@ -3515,7 +3515,7 @@ export function TableDetailView({
                             <div
                               style={{
                                 fontSize: "0.68rem",
-                                color: "#a7f3d0",
+                                color: "#047857",
                                 fontWeight: 600,
                               }}
                             >
@@ -3526,7 +3526,7 @@ export function TableDetailView({
                         <span
                           style={{
                             background: "#10b981",
-                            color: "#000",
+                            color: "#064E3B",
                             fontSize: "0.65rem",
                             fontWeight: 900,
                             padding: "2px 8px",
