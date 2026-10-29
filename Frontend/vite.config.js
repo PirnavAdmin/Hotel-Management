@@ -1811,12 +1811,20 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
-        "/uploads": {
-          target:
-            env.VITE_API_BASE_URL ||
-            "https://cultivate-suitable-manmade.ngrok-free.dev",
+        "/api": {
+          target: env.VITE_API_BASE_URL || "http://localhost:5018",
           changeOrigin: true,
-          headers: { "ngrok-skip-browser-warning": "true" },
+          secure: false,
+        },
+        "/uploads": {
+          target: env.VITE_API_BASE_URL || "http://localhost:5018",
+          changeOrigin: true,
+          secure: false,
+        },
+        "/hubs": {
+          target: env.VITE_API_BASE_URL || "http://localhost:5018",
+          changeOrigin: true,
+          ws: true,
         },
       },
     },

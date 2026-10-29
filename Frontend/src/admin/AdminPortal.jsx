@@ -1367,9 +1367,7 @@ export function AdminPortal({
       const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
-      const formattedName = tableForm.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i)
-        ? `Table ${parsedNum}`
-        : (/^\d+$/.test(tableForm.name.trim()) ? `Table ${tableForm.name.trim()}` : tableForm.name.trim());
+      const formattedName = `Table-${parsedNum || chosenId}`;
       onAddTable({
         id: chosenId,
         name: formattedName,

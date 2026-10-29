@@ -781,9 +781,24 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     normalized.forEach((item) => {
       const backendId = Number(item.id);
       if (!Number.isFinite(backendId) || backendId <= 0) {
-        apiCreateInventoryItem(item).catch(() => {});
+        apiCreateInventoryItem(item)
+          .then((res) => {
+            const newId = res?.data?.ingredientId || res?.data?.id || res?.data?.data?.ingredientId;
+            if (newId) {
+              setInventory((prev) => {
+                const next = prev.map((it) => (it.id === item.id ? { ...it, id: newId } : it));
+                try {
+                  localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(next));
+                } catch {}
+                return next;
+              });
+            }
+          })
+          .catch((err) => console.error("[Inventory] Failed to create ingredient:", err));
       } else {
-        apiUpdateInventoryItem(backendId, item).catch(() => {});
+        apiUpdateInventoryItem(backendId, item).catch((err) =>
+          console.error("[Inventory] Failed to update ingredient:", err),
+        );
       }
     });
     try {

@@ -15,6 +15,10 @@ public class Ingredient
     [Column("name")]
     public string Name { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    [Column("ingredient_name")]
+    public string? IngredientName { get; set; }
+
     [Required]
     [MaxLength(20)]
     [Column("unit")]
@@ -26,8 +30,14 @@ public class Ingredient
     [Column("minimum_threshold", TypeName = "decimal(18,2)")]
     public decimal MinimumThreshold { get; set; } = 5.00m;
 
+    [Column("reorder_level", TypeName = "decimal(12,3)")]
+    public decimal? ReorderLevel { get; set; }
+
     [Column("unit_cost", TypeName = "decimal(18,2)")]
     public decimal UnitCost { get; set; }
+
+    [Column("cost_per_unit", TypeName = "decimal(10,2)")]
+    public decimal? CostPerUnit { get; set; }
 
     [Column("category")]
     public string Category { get; set; } = "General";
