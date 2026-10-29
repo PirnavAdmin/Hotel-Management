@@ -1162,7 +1162,7 @@ export function AdminInvoices({
                           fontSize: "0.88rem",
                         }}
                       >
-                        {order.invoiceNo || `INV-${1000 + orderIndex}`}
+                        {order.invoiceNo || `INV-${String(orderIndex + 1).padStart(3, "0")}`}
                       </span>
                     </td>
 

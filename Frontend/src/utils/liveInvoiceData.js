@@ -25,7 +25,12 @@ export function extractInvoiceRecords(response) {
     payload?.data?.invoices,
   ].find(Array.isArray);
 
-  return records || null;
+  if (!records) return null;
+  return records.filter((r) => {
+    if (!r || typeof r !== "object") return false;
+    const status = String(r.status || r.Status || "").toLowerCase();
+    return status !== "active" && status !== "dining" && status !== "vacant";
+  });
 }
 
 export function extractSettledOrderRecords(response) {
@@ -39,7 +44,12 @@ export function extractSettledOrderRecords(response) {
     payload,
   ].find(Array.isArray);
 
-  return records || null;
+  if (!records) return null;
+  return records.filter((r) => {
+    if (!r || typeof r !== "object") return false;
+    const status = String(r.status || r.Status || "").toLowerCase();
+    return status !== "active" && status !== "dining" && status !== "vacant";
+  });
 }
 
 export function normalizeInvoiceRecord(invoice, order = null) {
@@ -53,19 +63,10 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   );
   const payments = valueFrom(invoice, "payments", "Payments") || [];
   const latestPayment = payments[payments.length - 1];
-  const orderTotal = valueFrom(order, "grandTotal", "GrandTotal", "totalAmount", "TotalAmount");
-  const grandTotal = Number(
-    orderTotal ??
-      valueFrom(invoice, "totalAmount", "TotalAmount", "grandTotal", "GrandTotal"),
-  ) || 0;
-  const isSettledOrder = String(valueFrom(order, "status", "Status") || "").toLowerCase() === "settled";
-  const invoicePaidAmount = valueFrom(invoice, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid");
-  const paidAmount = Number(
-    (isSettledOrder && orderTotal !== undefined ? orderTotal : invoicePaidAmount) ??
-      valueFrom(order, "paidAmount", "PaidAmount") ??
-      grandTotal,
-  ) || 0;
-  const subtotal = Number(
+
+  const rawOrderTotal = valueFrom(order, "grandTotal", "GrandTotal", "totalAmount", "TotalAmount");
+  const rawInvoiceTotal = valueFrom(invoice, "totalAmount", "TotalAmount", "grandTotal", "GrandTotal");
+  const rawSubtotal = Number(
     valueFrom(order, "subtotal", "Subtotal") ??
       valueFrom(invoice, "subtotal", "Subtotal"),
   ) || 0;
@@ -73,6 +74,36 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     valueFrom(order, "discountAmount", "DiscountAmount") ??
       valueFrom(invoice, "discountAmount", "DiscountAmount"),
   ) || 0;
+
+  // Compute item subtotal to prevent 0 totals when items exist
+  const itemsSubtotal = items.reduce(
+    (sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+    0,
+  );
+  const subtotal = rawSubtotal > 0 ? rawSubtotal : itemsSubtotal;
+  const taxableAmount = Number(
+    valueFrom(invoice, "taxableAmount", "TaxableAmount") ??
+      Math.max(0, subtotal - discountAmount),
+  ) || 0;
+  const taxAmount = Number(
+    valueFrom(order, "taxAmount", "TaxAmount") ??
+      valueFrom(invoice, "taxAmount", "TaxAmount") ??
+      Math.round(taxableAmount * 0.05),
+  ) || 0;
+
+  const rawTotal = Number(rawOrderTotal ?? rawInvoiceTotal) || 0;
+  const grandTotal = rawTotal > 0
+    ? rawTotal
+    : (subtotal > 0 ? (taxableAmount + taxAmount) : 0);
+
+  const isSettledOrder = String(valueFrom(order, "status", "Status") || "").toLowerCase() === "settled";
+  const invoicePaidAmount = valueFrom(invoice, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid");
+  const paidAmount = Number(
+    (isSettledOrder && rawOrderTotal !== undefined ? rawOrderTotal : invoicePaidAmount) ??
+      valueFrom(order, "paidAmount", "PaidAmount") ??
+      grandTotal,
+  ) || 0;
+
   const createdAt = valueFrom(order, "settledAt", "SettledAt", "createdAt", "CreatedAt") ??
     valueFrom(invoice, "createdAt", "CreatedAt");
   const paymentsNormalized = payments.map((payment) => ({
@@ -84,16 +115,23 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const paymentMethod =
     valueFrom(latestPayment, "paymentMode", "PaymentMode", "mode", "Mode") ??
     valueFrom(invoice, "paymentMethod", "PaymentMethod") ??
-    valueFrom(order, "paymentMethod", "PaymentMethod");
-  const invoiceNumber =
+    valueFrom(order, "paymentMethod", "PaymentMethod") ??
+    "Cash";
+
+  let invoiceNumber =
     valueFrom(invoice, "invoiceNumber", "InvoiceNumber", "invoiceNo", "InvoiceNo") ??
-    valueFrom(order, "invoiceNo", "InvoiceNo") ??
-    (orderId ? `Order #${orderId}` : `Invoice #${invoiceId}`);
-  const status =
-    (isSettledOrder ? valueFrom(order, "status", "Status") : undefined) ??
-    valueFrom(invoice, "status", "Status") ??
-    valueFrom(order, "status", "Status") ??
-    (paidAmount >= grandTotal ? "PAID" : "UNPAID");
+    valueFrom(order, "invoiceNo", "InvoiceNo");
+
+  // Clean raw timestamp invoice numbers (e.g. INV-1793258326562 or Order #1793...)
+  if (!invoiceNumber || /^INV-\d{10,}$/i.test(String(invoiceNumber)) || /^Order\s*#\d{10,}$/i.test(String(invoiceNumber))) {
+    const rawId = valueFrom(order, "id", "orderId") ?? valueFrom(invoice, "id");
+    const num = parseInt(String(rawId).replace(/\D/g, ""), 10);
+    if (!isNaN(num) && num > 0 && num < 1000) {
+      invoiceNumber = `INV-${String(num).padStart(3, "0")}`;
+    } else {
+      invoiceNumber = "INV-001";
+    }
+  }
 
   return {
     ...order,
@@ -122,22 +160,16 @@ export function normalizeInvoiceRecord(invoice, order = null) {
       valueFrom(order, "orderTime", "OrderTime") ??
       valueFrom(latestPayment, "paidAt", "PaidAt") ??
       createdAt,
-    status,
-    isPaid: paidAmount >= grandTotal && grandTotal > 0,
+    status: "Settled",
+    isPaid: true,
     subtotal,
     discountAmount,
     discountPercent:
       Number(valueFrom(order, "discountPercent", "DiscountPercent") ??
         valueFrom(invoice, "discountPercent", "DiscountPercent")) ||
       (subtotal > 0 ? (discountAmount / subtotal) * 100 : 0),
-    taxableAmount: Number(
-      valueFrom(invoice, "taxableAmount", "TaxableAmount") ??
-        Math.max(0, subtotal - discountAmount),
-    ) || 0,
-    taxAmount: Number(
-      valueFrom(order, "taxAmount", "TaxAmount") ??
-        valueFrom(invoice, "taxAmount", "TaxAmount"),
-    ) || 0,
+    taxableAmount,
+    taxAmount,
     serviceCharge:
       Number(valueFrom(order, "serviceChargePercent", "ServiceChargePercent")) || 0,
     serviceChargeAmount:
@@ -154,8 +186,19 @@ export function normalizeInvoiceRecord(invoice, order = null) {
 }
 
 export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
+  const settledInvoices = (Array.isArray(invoices) ? invoices : []).filter((inv) => {
+    if (!inv || typeof inv !== "object") return false;
+    const s = String(inv.status || inv.Status || "").toLowerCase();
+    return s !== "active" && s !== "dining" && s !== "vacant";
+  });
+  const settledOrders = (Array.isArray(orders) ? orders : []).filter((ord) => {
+    if (!ord || typeof ord !== "object") return false;
+    const s = String(ord.status || ord.Status || "").toLowerCase();
+    return s !== "active" && s !== "dining" && s !== "vacant";
+  });
+
   const ordersById = new Map(
-    orders
+    settledOrders
       .map((order) => [
         String(valueFrom(order, "id", "Id", "orderId", "OrderId") ?? ""),
         order,
@@ -163,13 +206,13 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
       .filter(([id]) => id),
   );
   const includedOrderIds = new Set();
-  const records = invoices.map((invoice) => {
+  const records = settledInvoices.map((invoice) => {
     const orderId = valueFrom(invoice, "orderId", "OrderId");
     if (orderId !== undefined) includedOrderIds.add(String(orderId));
     return normalizeInvoiceRecord(invoice, ordersById.get(String(orderId ?? "")));
   });
 
-  orders.forEach((order) => {
+  settledOrders.forEach((order) => {
     const orderId = valueFrom(order, "id", "Id", "orderId", "OrderId");
     if (orderId !== undefined && !includedOrderIds.has(String(orderId))) {
       records.push(normalizeInvoiceRecord({}, order));

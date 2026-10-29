@@ -67,7 +67,14 @@ const compareDatesNewestFirst = (a, b) =>
   (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
-  const uniquePastOrders = useMemo(() => dedupeOrders(pastOrders), [pastOrders]);
+  const uniquePastOrders = useMemo(() => {
+    const settledOnly = (Array.isArray(pastOrders) ? pastOrders : []).filter((o) => {
+      if (!o || typeof o !== "object") return false;
+      const status = String(o.status || o.Status || "").toLowerCase();
+      return status !== "active" && status !== "dining" && status !== "vacant";
+    });
+    return dedupeOrders(settledOnly);
+  }, [pastOrders]);
 
 
   // Helper to parse date from order safely
