@@ -48,6 +48,7 @@ import {
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
+import { INITIAL_STAFF } from "../data/initialStaff";
 import { AdminOverview } from "./AdminOverview";
 import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
@@ -1458,6 +1459,49 @@ export function AdminPortal({
       shift: "",
     });
     setIsStaffModalOpen(false);
+  };
+
+  const handleRestoreDefaultStaff = async () => {
+    for (const defPerson of INITIAL_STAFF) {
+      const exists = (staffList || []).some(
+        (s) =>
+          String(s.name || s.fullName || "").trim().toLowerCase() ===
+          defPerson.name.toLowerCase(),
+      );
+      if (!exists && onAddStaff) {
+        await onAddStaff(defPerson);
+      }
+    }
+  };
+
+  const handleSyncPosUsers = async () => {
+    try {
+      let users = [];
+      const saved = localStorage.getItem("avsr_auth_users_v1");
+      if (saved) {
+        users = JSON.parse(saved);
+      }
+      const posUsers = (Array.isArray(users) ? users : []).filter(
+        (u) => String(u.role || "").toLowerCase() === "pos",
+      );
+      for (const u of posUsers) {
+        const uName = String(u.name || u.fullName || u.username || "").trim();
+        if (!uName) continue;
+        const exists = (staffList || []).some(
+          (s) =>
+            String(s.name || s.fullName || "").trim().toLowerCase() ===
+            uName.toLowerCase(),
+        );
+        if (!exists && onAddStaff) {
+          await onAddStaff({
+            name: uName,
+            role: "Floor Staff / POS",
+            phone: u.mobile || u.phone || "+91 98450 00000",
+            shift: "Morning Shift (10 AM - 4 PM)",
+          });
+        }
+      }
+    } catch {}
   };
 
   // Filtered menu items
@@ -3296,36 +3340,82 @@ export function AdminPortal({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenStaffModal()}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.45rem",
-                          padding: "0.55rem 1.3rem",
-                          background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-                          color: "#ffffff",
-                          borderRadius: "8px",
-                          fontWeight: 700,
-                          fontSize: "0.85rem",
-                          boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
-                          border: "none",
-                          cursor: "pointer",
-                          transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = "translateY(-1px)";
-                          e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
-                        }}
-                      >
-                        <Plus size={16} strokeWidth={2.5} />
-                        <span>Add New Person (Staff)</span>
-                      </button>
+                      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={handleRestoreDefaultStaff}
+                          title="Restore standard restaurant staff team"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            padding: "0.5rem 0.9rem",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-card)",
+                            color: "var(--text-dim)",
+                            borderRadius: "8px",
+                            fontWeight: 600,
+                            fontSize: "0.8rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <RotateCcw size={14} />
+                          <span>Restore Defaults</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleSyncPosUsers}
+                          title="Import POS users from Login Management as serving staff"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            padding: "0.5rem 0.9rem",
+                            background: "rgba(59, 130, 246, 0.12)",
+                            border: "1px solid rgba(59, 130, 246, 0.35)",
+                            color: "#60a5fa",
+                            borderRadius: "8px",
+                            fontWeight: 600,
+                            fontSize: "0.8rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Users size={14} />
+                          <span>Sync POS Users</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenStaffModal()}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                            padding: "0.55rem 1.3rem",
+                            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                            color: "#ffffff",
+                            borderRadius: "8px",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-1px)";
+                            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+                          }}
+                        >
+                          <Plus size={16} strokeWidth={2.5} />
+                          <span>Add New Person (Staff)</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Staff Rows Container (Matching Image 2) */}
@@ -3561,9 +3651,9 @@ export function AdminPortal({
                               <p style={{ margin: 0, fontSize: "0.95rem" }}>
                                 {hasActiveStaffFilters
                                   ? "No staff members match the selected filters."
-                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one."}
+                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one, or restore standard restaurant staff."}
                               </p>
-                              {hasActiveStaffFilters && (
+                              {hasActiveStaffFilters ? (
                                 <button
                                   type="button"
                                   onClick={clearStaffFilters}
@@ -3581,6 +3671,49 @@ export function AdminPortal({
                                 >
                                   Clear Filters
                                 </button>
+                              ) : (
+                                <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+                                  <button
+                                    type="button"
+                                    onClick={handleRestoreDefaultStaff}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "0.4rem",
+                                      background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                                      color: "#fff",
+                                      border: "none",
+                                      padding: "0.45rem 1rem",
+                                      borderRadius: "6px",
+                                      fontSize: "0.85rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <RotateCcw size={14} />
+                                    <span>Restore Standard Staff (6 Members)</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleSyncPosUsers}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "0.4rem",
+                                      background: "rgba(59, 130, 246, 0.15)",
+                                      border: "1px solid rgba(59, 130, 246, 0.4)",
+                                      color: "#60a5fa",
+                                      padding: "0.45rem 1rem",
+                                      borderRadius: "6px",
+                                      fontSize: "0.85rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <Users size={14} />
+                                    <span>Import from POS User Accounts</span>
+                                  </button>
+                                </div>
                               )}
                             </div>
                           )}
