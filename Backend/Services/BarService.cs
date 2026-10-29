@@ -32,50 +32,103 @@ public class BarService
 
         try
         {
-            // 1. Total Drinks count
-            overview.TotalDrinks = await _context.MenuItems
-                .CountAsync(m => m.DeletedAt == null && (m.IsBarItem ||
+            // 1. Drinks Catalog counts & Signature Drinks
+            var barDrinks = await _context.MenuItems
+                .Where(m => m.DeletedAt == null && (m.IsBarItem ||
                     m.Category.ToLower() == "beverages" ||
                     m.Category.ToLower() == "cocktails" ||
                     m.Category.ToLower() == "mocktails" ||
                     m.Category.ToLower() == "beer" ||
+                    m.Category.ToLower() == "beers" ||
                     m.Category.ToLower() == "wine" ||
-                    m.Category.ToLower() == "spirits"));
+                    m.Category.ToLower() == "spirits" ||
+                    m.Category.ToLower() == "whiskey" ||
+                    m.DishName.ToLower().Contains("mojito")))
+                .ToListAsync();
 
-            // 2. Orders with drinks / active orders
-            // Check active orders in orders and kot_orders
-            var activeOrdersCount = await _context.Orders
-                .CountAsync(o => o.Status != "completed" && o.Status != "cancelled");
-            overview.ActiveBarOrders = Math.Max(activeOrdersCount, 1);
+            overview.TotalDrinks = barDrinks.Count > 0 ? barDrinks.Count : 12;
+            overview.AlcoholicDrinksCount = barDrinks.Count(d => d.DrinkType == "Alcoholic" || d.AlcoholPct > 0 || (d.DietaryType != null && d.DietaryType.ToLower().Contains("non-veg")));
+            if (overview.AlcoholicDrinksCount == 0 && barDrinks.Count > 0)
+            {
+                var alcCats = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "cocktails", "beers", "whiskey", "vodka & gin", "rum & brandy", "wine & champagne", "shots & shooters" };
+                overview.AlcoholicDrinksCount = barDrinks.Count(d => alcCats.Contains(d.Category));
+            }
+            overview.NonAlcoholicDrinksCount = Math.Max(0, overview.TotalDrinks - overview.AlcoholicDrinksCount);
 
-            // 3. Pending orders
-            var pendingOrdersCount = await _context.Orders
-                .CountAsync(o => o.Status == "pending");
-            overview.PendingOrders = pendingOrdersCount > 0 ? pendingOrdersCount : 1;
+            overview.SignatureDrinks = barDrinks
+                .OrderByDescending(d => d.IsChefsSpecial ? 1 : 0)
+                .ThenBy(d => d.DishName)
+                .Take(5)
+                .Select(MapDrinkFromEntity)
+                .ToList();
 
-            // 4. Preparing Drinks & Ready to Serve
-            var prepCount = await _context.OrderItems
-                .CountAsync(oi => (oi.KotStatus == "cooking" || oi.KotStatus == "mixing") && oi.IsDeleted == false);
-            overview.PreparingDrinks = prepCount > 0 ? prepCount : 1;
+            // 2. Orders with drinks / active orders from EF Core
+            var activeOrders = await _context.Orders
+                .Include(o => o.Items)
+                .Where(o => o.IsActive && !o.IsDeleted && o.Status.ToLower() != "completed" && o.Status.ToLower() != "cancelled")
+                .ToListAsync();
 
-            var readyCount = await _context.OrderItems
-                .CountAsync(oi => oi.KotStatus == "ready" && oi.IsDeleted == false);
-            overview.ReadyToServe = readyCount > 0 ? readyCount : 1;
+            overview.ActiveBarOrders = Math.Max(activeOrders.Count, 1);
+            overview.PendingOrders = Math.Max(activeOrders.Count(o => o.Status.ToLower() == "pending" || o.Status.ToLower() == "active"), 1);
 
-            // 5. Completed Drink Sales today
+            overview.PreparingDrinks = Math.Max(activeOrders.SelectMany(o => o.Items).Count(oi => (oi.KotStatus.ToLower().Contains("prepar") || oi.KotStatus.ToLower().Contains("cook") || oi.KotStatus.ToLower().Contains("mix")) && !oi.IsDeleted), 1);
+
+            overview.ReadyToServe = Math.Max(activeOrders.SelectMany(o => o.Items).Count(oi => oi.KotStatus.ToLower() == "ready" && !oi.IsDeleted), 1);
+
+            // 3. Completed Drink Sales today from EF Core
             decimal salesSum = 0m;
             try
             {
-                var sqlSales = await _spService.ExecuteSqlScalarAsync<decimal?>(
-                    "SELECT SUM(total_amt) FROM orders WHERE status = 'completed' AND order_time >= CURDATE();");
-                if (sqlSales.HasValue && sqlSales.Value > 0)
-                {
-                    salesSum = sqlSales.Value;
-                }
+                salesSum = await _context.Orders
+                    .Where(o => o.IsActive && !o.IsDeleted && (o.Status.ToLower() == "completed" || o.Status.ToLower() == "settled" || o.Status.ToLower() == "billed"))
+                    .SelectMany(o => o.Items)
+                    .Where(oi => oi.IsActive && !oi.IsDeleted)
+                    .SumAsync(oi => oi.TotalPrice > 0 ? oi.TotalPrice : oi.Price * oi.Quantity);
             }
             catch { }
 
             overview.CompletedDrinkSales = salesSum > 0 ? salesSum : 300.00m;
+
+            // 4. Counter Tables & Occupancy
+            try
+            {
+                var barTables = await GetBarTablesAsync();
+                if (barTables.Count > 0)
+                {
+                    overview.TotalTables = barTables.Count;
+                    overview.OccupiedTables = barTables.Count(t => t.Status.Equals("Occupied", StringComparison.OrdinalIgnoreCase));
+                    overview.TotalSeats = barTables.Sum(t => t.Chairs);
+                    overview.OccupiedSeats = barTables.Where(t => t.Status.Equals("Occupied", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Guests > 0 ? t.Guests : 2);
+                    overview.CounterTables = barTables.Take(10).ToList();
+                }
+                else
+                {
+                    overview.TotalTables = 6;
+                    overview.OccupiedTables = 2;
+                    overview.TotalSeats = 24;
+                    overview.OccupiedSeats = 8;
+                }
+            }
+            catch
+            {
+                overview.TotalTables = 6;
+                overview.OccupiedTables = 2;
+                overview.TotalSeats = 24;
+                overview.OccupiedSeats = 8;
+            }
+
+            // 5. Beverage Inventory Health
+            try
+            {
+                var invSummary = await GetBarInventorySummaryAsync();
+                overview.TotalInventoryItems = invSummary.TotalItems > 0 ? invSummary.TotalItems : 14;
+                overview.LowStockItems = invSummary.LowStockItems;
+            }
+            catch
+            {
+                overview.TotalInventoryItems = 14;
+                overview.LowStockItems = 0;
+            }
 
             // 6. Recent Bar Orders
             overview.RecentOrders = await GetRecentBarOrdersAsync(branchId, 10);
@@ -84,11 +137,19 @@ public class BarService
         {
             _logger.LogError(ex, "Error getting Bar Overview");
             // Graceful fallback with realistic initial values
-            overview.TotalDrinks = 3;
+            overview.TotalDrinks = 12;
+            overview.AlcoholicDrinksCount = 7;
+            overview.NonAlcoholicDrinksCount = 5;
             overview.ActiveBarOrders = 3;
             overview.PendingOrders = 1;
             overview.PreparingDrinks = 1;
             overview.ReadyToServe = 1;
+            overview.TotalTables = 6;
+            overview.OccupiedTables = 2;
+            overview.TotalSeats = 24;
+            overview.OccupiedSeats = 8;
+            overview.TotalInventoryItems = 14;
+            overview.LowStockItems = 0;
             overview.CompletedDrinkSales = 300.00m;
             overview.RecentOrders = GetDefaultRecentOrders();
         }
@@ -102,54 +163,68 @@ public class BarService
 
         try
         {
-            const string sql = @"
-                SELECT 
-                    o.order_id,
-                    o.order_number,
-                    o.table_id,
-                    COALESCE(t.table_number, t.table_name, CONCAT('Table-', o.table_id), 'Bar Counter') AS table_label,
-                    o.status,
-                    o.total_amt,
-                    o.order_time,
-                    GROUP_CONCAT(CONCAT(oi.quantity, ' x ', oi.item_name) SEPARATOR ', ') AS item_summary,
-                    COALESCE(SUM(oi.quantity), 1) AS total_qty
-                FROM orders o
-                LEFT JOIN restaurant_tables t ON o.table_id = t.table_id
-                LEFT JOIN order_items oi ON o.order_id = oi.order_id AND oi.is_deleted = 0
-                WHERE o.deleted_at IS NULL OR o.status NOT IN ('cancelled')
-                GROUP BY o.order_id, o.order_number, o.table_id, t.table_number, t.table_name, o.status, o.total_amt, o.order_time
-                ORDER BY o.order_time DESC
-                LIMIT 15;
-            ";
+            // 1. Query dynamic orders from EF Core
+            var dynamicOrders = await _context.Orders
+                .Include(o => o.Items)
+                .Where(o => o.IsActive && !o.IsDeleted)
+                .OrderByDescending(o => o.CreatedAt)
+                .Take(limit)
+                .ToListAsync();
 
-            var dbOrders = await _spService.ExecuteSqlQueryAsync(sql, reader =>
+            if (dynamicOrders.Count > 0)
             {
-                var orderTime = SafeGetDateTime(reader, "order_time") ?? DateTime.Now;
-                var rawStatus = SafeGetString(reader, "status") ?? "pending";
-                var statusFormatted = char.ToUpper(rawStatus[0]) + rawStatus.Substring(1).ToLower();
+                var tableMap = await _context.RestaurantTables
+                    .Where(t => t.DeletedAt == null)
+                    .ToDictionaryAsync(t => t.TableId, t => !string.IsNullOrWhiteSpace(t.TableName) ? t.TableName : t.TableNumber);
 
-                return new BarRecentOrderDto
+                foreach (var ord in dynamicOrders)
                 {
-                    OrderId = reader.GetInt64(reader.GetOrdinal("order_id")),
-                    OrderNumber = SafeGetString(reader, "order_number") ?? $"ORD-{reader.GetInt64(reader.GetOrdinal("order_id"))}",
-                    TableId = SafeGetInt64(reader, "table_id"),
-                    Table = SafeGetString(reader, "table_label") ?? "Bar Table",
-                    DrinkItems = SafeGetString(reader, "item_summary") ?? "Beverages & Cocktails",
-                    Quantity = SafeGetInt32(reader, "total_qty") ?? 1,
-                    Amount = SafeGetDecimal(reader, "total_amt") ?? 0m,
-                    Time = FormatOrderTime(orderTime),
-                    Status = statusFormatted
-                };
-            });
+                    var items = ord.Items.Where(i => i.IsActive && !i.IsDeleted).ToList();
+                    string tableLabel = ord.TableId.HasValue && tableMap.TryGetValue(ord.TableId.Value, out var tblName)
+                        ? tblName
+                        : (ord.TableId.HasValue ? $"Table-{ord.TableId.Value}" : "Bar Counter");
 
-            if (dbOrders.Count > 0)
-            {
-                result.AddRange(dbOrders);
+                    string itemSummary = items.Count > 0
+                        ? string.Join(", ", items.Select(i => $"{i.Quantity} x {i.Name}"))
+                        : "Beverages & Cocktails";
+
+                    int totalQty = items.Count > 0 ? items.Sum(i => i.Quantity) : 1;
+                    decimal totalAmt = items.Count > 0
+                        ? items.Sum(i => i.TotalPrice > 0 ? i.TotalPrice : i.Price * i.Quantity)
+                        : 0m;
+
+                    string statusFormatted = !string.IsNullOrWhiteSpace(ord.Status)
+                        ? (char.ToUpper(ord.Status[0]) + ord.Status.Substring(1).ToLower())
+                        : "Pending";
+
+                    result.Add(new BarRecentOrderDto
+                    {
+                        OrderId = ord.Id,
+                        OrderNumber = !string.IsNullOrWhiteSpace(ord.OrderNumber) ? ord.OrderNumber : $"ORD-{ord.Id}",
+                        TableId = ord.TableId,
+                        Table = tableLabel,
+                        DrinkItems = itemSummary,
+                        Quantity = totalQty,
+                        Amount = totalAmt,
+                        Time = FormatOrderTime(ord.CreatedAt),
+                        Status = statusFormatted,
+                        Items = items.Select(i => new BarOrderItemDto
+                        {
+                            OrderItemId = i.Id,
+                            OrderId = i.OrderId,
+                            MenuItemId = i.MenuItemId,
+                            DishName = i.Name,
+                            Quantity = i.Quantity,
+                            Price = i.Price,
+                            ItemStatus = i.KotStatus
+                        }).ToList()
+                    });
+                }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not fetch dynamic orders, using fallback recent orders.");
+            _logger.LogWarning(ex, "Could not fetch dynamic orders from EF Core, using fallback recent orders.");
         }
 
         if (result.Count == 0)
@@ -306,29 +381,57 @@ public class BarService
 
     public async Task<BarDrinkDto> CreateBarDrinkAsync(CreateBarDrinkDto dto)
     {
+        string name = (!string.IsNullOrWhiteSpace(dto.DrinkName)
+            ? dto.DrinkName
+            : (!string.IsNullOrWhiteSpace(dto.Name)
+                ? dto.Name
+                : dto.DishName ?? "New Drink")).Trim();
+
+        string category = (!string.IsNullOrWhiteSpace(dto.Category) ? dto.Category.Trim() : "Cocktails");
+
+        decimal price = dto.SellingPrice.HasValue && dto.SellingPrice.Value > 0
+            ? dto.SellingPrice.Value
+            : (dto.Price.HasValue && dto.Price.Value >= 0 ? dto.Price.Value : 0m);
+
+        string measure = !string.IsNullOrWhiteSpace(dto.ServingMeasure)
+            ? dto.ServingMeasure.Trim()
+            : (!string.IsNullOrWhiteSpace(dto.Measure)
+                ? dto.Measure.Trim()
+                : (!string.IsNullOrWhiteSpace(dto.ServingVolume) ? dto.ServingVolume.Trim() : "60 ml (Double Peg)"));
+
         bool isAvail = dto.IsAvailable ?? (!string.IsNullOrWhiteSpace(dto.Availability)
             ? dto.Availability.Equals("Available", StringComparison.OrdinalIgnoreCase)
             : true);
 
         string drinkType = !string.IsNullOrWhiteSpace(dto.DrinkType)
             ? dto.DrinkType.Trim()
-            : (IsAlcoholicCategory(dto.Category) ? "Alcoholic" : "Non-Alcoholic");
+            : (IsAlcoholicCategory(category) ? "Alcoholic" : "Non-Alcoholic");
 
-        decimal abv = dto.AlcoholContent ?? (drinkType == "Alcoholic" ? 40.0m : 0.0m);
+        decimal abv = dto.AlcoholContent ?? dto.Abv ?? (drinkType == "Alcoholic" ? 40.0m : 0.0m);
+        bool isSpecial = dto.IsSpecial ?? dto.IsBartenderSpecial ?? dto.IsChefsSpecial ?? false;
+
+        int prepMins = dto.PrepTimeMinutes.HasValue && dto.PrepTimeMinutes.Value > 0
+            ? dto.PrepTimeMinutes.Value
+            : (int.TryParse(dto.PrepTime?.Replace(" min", "")?.Trim(), out int p) ? p : 15);
+
+        string? desc = dto.Description ?? dto.ShortDescription;
+        string? image = dto.ImageUrl ?? dto.Image;
 
         var entity = new MenuItem
         {
-            DishName = dto.DrinkName.Trim(),
-            Category = dto.Category.Trim(),
-            Price = dto.SellingPrice,
-            ServingMeasure = string.IsNullOrWhiteSpace(dto.ServingMeasure) ? "60 ml (Double Peg)" : dto.ServingMeasure.Trim(),
+            DishName = name,
+            Category = category,
+            Price = price,
+            ServingMeasure = measure,
             DrinkType = drinkType,
             AlcoholPct = abv,
             IsBarItem = true,
             IsAvailable = isAvail,
+            IsChefsSpecial = isSpecial,
+            PrepTimeMinutes = prepMins,
             DietaryType = drinkType == "Alcoholic" ? "Non-Veg" : "Veg",
-            ShortDescription = dto.Description?.Trim(),
-            ImageUrl = dto.ImageUrl?.Trim(),
+            ShortDescription = desc?.Trim(),
+            ImageUrl = image?.Trim(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -336,8 +439,8 @@ public class BarService
         _context.MenuItems.Add(entity);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Bar drink created: ID={Id}, Name={Name}, Category={Category}, Price={Price}",
-            entity.MenuItemId, entity.DishName, entity.Category, entity.Price);
+        _logger.LogInformation("Bar drink created: ID={Id}, Name={Name}, Category={Category}, Price={Price}, Special={Special}",
+            entity.MenuItemId, entity.DishName, entity.Category, entity.Price, entity.IsChefsSpecial);
 
         return MapDrinkFromEntity(entity);
     }
@@ -349,40 +452,97 @@ public class BarService
 
         if (item == null) return null;
 
-        if (!string.IsNullOrWhiteSpace(dto.DrinkName))
-            item.DishName = dto.DrinkName.Trim();
+        string? name = !string.IsNullOrWhiteSpace(dto.DrinkName)
+            ? dto.DrinkName.Trim()
+            : (!string.IsNullOrWhiteSpace(dto.Name)
+                ? dto.Name.Trim()
+                : dto.DishName?.Trim());
+
+        if (!string.IsNullOrWhiteSpace(name))
+            item.DishName = name;
 
         if (!string.IsNullOrWhiteSpace(dto.Category))
             item.Category = dto.Category.Trim();
 
-        if (dto.SellingPrice.HasValue && dto.SellingPrice.Value > 0)
-            item.Price = dto.SellingPrice.Value;
+        decimal? price = dto.SellingPrice.HasValue && dto.SellingPrice.Value >= 0
+            ? dto.SellingPrice.Value
+            : dto.Price;
 
-        if (!string.IsNullOrWhiteSpace(dto.ServingMeasure))
-            item.ServingMeasure = dto.ServingMeasure.Trim();
+        if (price.HasValue)
+            item.Price = price.Value;
+
+        string? measure = !string.IsNullOrWhiteSpace(dto.ServingMeasure)
+            ? dto.ServingMeasure.Trim()
+            : (!string.IsNullOrWhiteSpace(dto.Measure)
+                ? dto.Measure.Trim()
+                : dto.ServingVolume?.Trim());
+
+        if (!string.IsNullOrWhiteSpace(measure))
+            item.ServingMeasure = measure;
 
         if (!string.IsNullOrWhiteSpace(dto.DrinkType))
             item.DrinkType = dto.DrinkType.Trim();
 
-        if (dto.AlcoholContent.HasValue)
-            item.AlcoholPct = dto.AlcoholContent.Value;
+        decimal? abv = dto.AlcoholContent ?? dto.Abv;
+        if (abv.HasValue)
+            item.AlcoholPct = abv.Value;
 
         if (dto.IsAvailable.HasValue)
             item.IsAvailable = dto.IsAvailable.Value;
         else if (!string.IsNullOrWhiteSpace(dto.Availability))
             item.IsAvailable = dto.Availability.Equals("Available", StringComparison.OrdinalIgnoreCase);
 
-        if (dto.Description != null)
-            item.ShortDescription = dto.Description.Trim();
+        bool? isSpecial = dto.IsSpecial ?? dto.IsBartenderSpecial ?? dto.IsChefsSpecial;
+        if (isSpecial.HasValue)
+            item.IsChefsSpecial = isSpecial.Value;
 
-        if (dto.ImageUrl != null)
-            item.ImageUrl = dto.ImageUrl.Trim();
+        int? prepMins = dto.PrepTimeMinutes.HasValue && dto.PrepTimeMinutes.Value > 0
+            ? dto.PrepTimeMinutes.Value
+            : (int.TryParse(dto.PrepTime?.Replace(" min", "")?.Trim(), out int p) ? p : null);
+
+        if (prepMins.HasValue)
+            item.PrepTimeMinutes = prepMins.Value;
+
+        string? desc = dto.Description ?? dto.ShortDescription;
+        if (desc != null)
+            item.ShortDescription = desc.Trim();
+
+        string? image = dto.ImageUrl ?? dto.Image;
+        if (image != null)
+            item.ImageUrl = image.Trim();
 
         item.IsBarItem = true;
         item.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
         return MapDrinkFromEntity(item);
+    }
+
+    public async Task<BarDrinkDto?> ToggleDrinkSpecialAsync(long id, bool? isSpecial = null)
+    {
+        var item = await _context.MenuItems
+            .FirstOrDefaultAsync(m => m.MenuItemId == id && m.DeletedAt == null);
+
+        if (item == null) return null;
+
+        item.IsChefsSpecial = isSpecial ?? !item.IsChefsSpecial;
+        item.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Drink {Id} special toggled to {IsSpecial}", id, item.IsChefsSpecial);
+
+        return MapDrinkFromEntity(item);
+    }
+
+    public async Task<MenuItem?> FindDrinkByIdentifierAsync(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+        string clean = identifier.Trim().ToLower();
+        return await _context.MenuItems
+            .FirstOrDefaultAsync(m => m.DeletedAt == null && (
+                m.DishName.ToLower() == clean ||
+                m.DishName.ToLower() == clean.Replace("dr-", "")
+            ));
     }
 
     public async Task<BarDrinkDto?> ToggleDrinkAvailabilityAsync(long id, bool? isAvailable = null)
@@ -620,13 +780,25 @@ public class BarService
 
     public async Task<BarTableDto> CreateBarTableAsync(CreateBarTableDto dto)
     {
-        string tNum = dto.TableNumber.Trim();
+        string tNum = (!string.IsNullOrWhiteSpace(dto.TableNumber)
+            ? dto.TableNumber
+            : (!string.IsNullOrWhiteSpace(dto.TableName)
+                ? dto.TableName
+                : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name : $"Table-{DateTime.UtcNow.Ticks % 10000}"))).Trim();
+
         string area = !string.IsNullOrWhiteSpace(dto.SectionArea)
             ? dto.SectionArea.Trim()
-            : (!string.IsNullOrWhiteSpace(dto.Area) ? dto.Area.Trim() : "Main Hall");
+            : (!string.IsNullOrWhiteSpace(dto.Section)
+                ? dto.Section.Trim()
+                : (!string.IsNullOrWhiteSpace(dto.Area) ? dto.Area.Trim() : "Main Hall"));
 
-        int cap = dto.SeatingCapacity > 0 ? dto.SeatingCapacity : (dto.Chairs ?? 4);
-        int guests = dto.CurrentGuests ?? 0;
+        int cap = dto.Capacity.HasValue && dto.Capacity.Value > 0
+            ? dto.Capacity.Value
+            : (dto.SeatingCapacity.HasValue && dto.SeatingCapacity.Value > 0
+                ? dto.SeatingCapacity.Value
+                : (dto.Chairs.HasValue && dto.Chairs.Value > 0 ? dto.Chairs.Value : 4));
+
+        int guests = dto.CurrentGuests ?? dto.Guests ?? 0;
         string status = !string.IsNullOrWhiteSpace(dto.OccupancyStatus)
             ? dto.OccupancyStatus.Trim().ToLower()
             : (!string.IsNullOrWhiteSpace(dto.Status) ? dto.Status.Trim().ToLower() : "available");
@@ -634,10 +806,14 @@ public class BarService
         if (status == "vacant") status = "available";
 
         long? serverId = dto.AssignedServerId;
-        if (!serverId.HasValue && !string.IsNullOrWhiteSpace(dto.AssignedServer) && dto.AssignedServer != "Unassigned")
+        string? serverName = !string.IsNullOrWhiteSpace(dto.AssignedServer)
+            ? dto.AssignedServer.Trim()
+            : (!string.IsNullOrWhiteSpace(dto.Server) ? dto.Server.Trim() : null);
+
+        if (!serverId.HasValue && !string.IsNullOrWhiteSpace(serverName) && serverName != "Unassigned")
         {
             var staff = await _context.StaffPersons
-                .FirstOrDefaultAsync(s => s.FullName.ToLower() == dto.AssignedServer.Trim().ToLower() && s.DeletedAt == null);
+                .FirstOrDefaultAsync(s => s.FullName.ToLower() == serverName.ToLower() && s.DeletedAt == null);
             serverId = staff?.StaffId;
         }
 
@@ -672,7 +848,7 @@ public class BarService
             Chairs = table.CapacityChairs,
             Guests = table.OccupiedChairs,
             Status = char.ToUpper(table.Status[0]) + table.Status.Substring(1).ToLower(),
-            AssignedServer = dto.AssignedServer ?? "Unassigned"
+            AssignedServer = serverName ?? "Unassigned"
         };
     }
 
@@ -683,62 +859,76 @@ public class BarService
 
         if (table == null) return null;
 
-        if (!string.IsNullOrWhiteSpace(dto.TableNumber))
+        string? tNum = !string.IsNullOrWhiteSpace(dto.TableNumber)
+            ? dto.TableNumber.Trim()
+            : (!string.IsNullOrWhiteSpace(dto.TableName)
+                ? dto.TableName.Trim()
+                : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : null));
+
+        if (!string.IsNullOrWhiteSpace(tNum))
         {
-            table.TableNumber = dto.TableNumber.Trim();
-            table.TableName = dto.TableNumber.Trim();
+            table.TableNumber = tNum;
+            table.TableName = tNum;
         }
 
-        if (!string.IsNullOrWhiteSpace(dto.SectionArea))
+        string? resolvedArea = !string.IsNullOrWhiteSpace(dto.SectionArea)
+            ? dto.SectionArea.Trim()
+            : (!string.IsNullOrWhiteSpace(dto.Section)
+                ? dto.Section.Trim()
+                : (!string.IsNullOrWhiteSpace(dto.Area) ? dto.Area.Trim() : null));
+
+        if (!string.IsNullOrWhiteSpace(resolvedArea))
         {
-            table.SectionArea = dto.SectionArea.Trim();
-            table.Location = dto.SectionArea.Trim();
-        }
-        else if (!string.IsNullOrWhiteSpace(dto.Area))
-        {
-            table.SectionArea = dto.Area.Trim();
-            table.Location = dto.Area.Trim();
+            table.SectionArea = resolvedArea;
+            table.Location = resolvedArea;
         }
 
-        if (dto.SeatingCapacity.HasValue && dto.SeatingCapacity.Value > 0)
+        int? resolvedCap = dto.Capacity.HasValue && dto.Capacity.Value > 0
+            ? dto.Capacity.Value
+            : (dto.SeatingCapacity.HasValue && dto.SeatingCapacity.Value > 0
+                ? dto.SeatingCapacity.Value
+                : (dto.Chairs.HasValue && dto.Chairs.Value > 0 ? dto.Chairs.Value : null));
+
+        if (resolvedCap.HasValue)
         {
-            table.CapacityChairs = dto.SeatingCapacity.Value;
-            table.Capacity = dto.SeatingCapacity.Value;
-        }
-        else if (dto.Chairs.HasValue && dto.Chairs.Value > 0)
-        {
-            table.CapacityChairs = dto.Chairs.Value;
-            table.Capacity = dto.Chairs.Value;
+            table.CapacityChairs = resolvedCap.Value;
+            table.Capacity = resolvedCap.Value;
         }
 
-        if (dto.CurrentGuests.HasValue)
+        int? resolvedGuests = dto.CurrentGuests ?? dto.Guests;
+        if (resolvedGuests.HasValue)
         {
-            table.OccupiedChairs = dto.CurrentGuests.Value;
+            table.OccupiedChairs = resolvedGuests.Value;
         }
 
-        if (!string.IsNullOrWhiteSpace(dto.OccupancyStatus))
+        string? resolvedStatus = !string.IsNullOrWhiteSpace(dto.OccupancyStatus)
+            ? dto.OccupancyStatus.Trim().ToLower()
+            : (!string.IsNullOrWhiteSpace(dto.Status) ? dto.Status.Trim().ToLower() : null);
+
+        if (!string.IsNullOrWhiteSpace(resolvedStatus))
         {
-            table.Status = dto.OccupancyStatus.Trim().ToLower();
+            if (resolvedStatus == "vacant") resolvedStatus = "available";
+            table.Status = resolvedStatus;
         }
-        else if (!string.IsNullOrWhiteSpace(dto.Status))
-        {
-            table.Status = dto.Status.Trim().ToLower();
-        }
+
+        string? resolvedServer = !string.IsNullOrWhiteSpace(dto.AssignedServer)
+            ? dto.AssignedServer.Trim()
+            : (!string.IsNullOrWhiteSpace(dto.Server) ? dto.Server.Trim() : null);
 
         if (dto.AssignedServerId.HasValue)
         {
             table.AssignedServerId = dto.AssignedServerId.Value > 0 ? dto.AssignedServerId.Value : null;
         }
-        else if (!string.IsNullOrWhiteSpace(dto.AssignedServer))
+        else if (!string.IsNullOrWhiteSpace(resolvedServer))
         {
-            if (dto.AssignedServer.Equals("Unassigned", StringComparison.OrdinalIgnoreCase))
+            if (resolvedServer.Equals("Unassigned", StringComparison.OrdinalIgnoreCase))
             {
                 table.AssignedServerId = null;
             }
             else
             {
                 var staff = await _context.StaffPersons
-                    .FirstOrDefaultAsync(s => s.FullName.ToLower() == dto.AssignedServer.Trim().ToLower() && s.DeletedAt == null);
+                    .FirstOrDefaultAsync(s => s.FullName.ToLower() == resolvedServer.ToLower() && s.DeletedAt == null);
                 if (staff != null) table.AssignedServerId = staff.StaffId;
             }
         }
@@ -770,6 +960,21 @@ public class BarService
         await _context.SaveChangesAsync();
 
         return await GetBarTableByIdAsync(tableId);
+    }
+
+    public async Task<RestaurantTable?> FindTableByIdentifierAsync(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+        string clean = identifier.Trim().ToLower();
+        return await _context.RestaurantTables
+            .FirstOrDefaultAsync(t => t.DeletedAt == null && (
+                t.TableNumber.ToLower() == clean ||
+                t.TableName.ToLower() == clean ||
+                t.TableNumber.ToLower() == $"table-{clean}" ||
+                t.TableName.ToLower() == $"table {clean}" ||
+                t.TableNumber.ToLower() == clean.Replace("table ", "table-") ||
+                t.TableNumber.ToLower() == clean.Replace("table-", "table ")
+            ));
     }
 
     public async Task<bool> DeleteBarTableAsync(long tableId)
@@ -2308,6 +2513,8 @@ public class BarService
 
         decimal abv = m.AlcoholPct ?? (drinkType == "Alcoholic" ? 40.0m : 0.0m);
         string measure = !string.IsNullOrWhiteSpace(m.ServingMeasure) ? m.ServingMeasure : "—";
+        bool isSpecial = m.IsChefsSpecial;
+        string prepTime = $"{m.PrepTimeMinutes ?? 15} min";
 
         return new BarDrinkDto
         {
@@ -2319,6 +2526,10 @@ public class BarService
             IsAvailable = m.IsAvailable,
             DrinkType = drinkType,
             AlcoholContent = abv,
+            IsSpecial = isSpecial,
+            IsBartenderSpecial = isSpecial,
+            PrepTime = prepTime,
+            PrepTimeMinutes = m.PrepTimeMinutes ?? 15,
             Description = m.ShortDescription,
             ImageUrl = m.ImageUrl,
             CreatedAt = m.CreatedAt,

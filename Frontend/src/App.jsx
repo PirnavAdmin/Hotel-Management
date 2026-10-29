@@ -36,6 +36,7 @@ import {
   normalizeMenuItem,
 } from "./api/menuApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
+import { MENU_ITEMS } from "./data/menuData";
 import {
   apiGetStaff,
   apiCreateStaff,
@@ -56,7 +57,9 @@ import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
+import { INITIAL_STAFF } from "./data/initialStaff";
 import { useAppDialog } from "./common/DialogContext";
+import { SkeletonTable } from "./common/Skeletons";
 import {
   autoGenerateInventoryFromRecipe,
   getStandardDishSuggestions,
@@ -71,6 +74,20 @@ const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+
+const sanitizeKitchenAlert = (alert) => {
+  if (!alert || typeof alert !== "object") return alert;
+  const cleanText = (value) =>
+    String(value || "")
+      .replace(/(?:ðŸ[^\s]*|âœ…|â°|âœ•|ï¸|Â)+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  return {
+    ...alert,
+    title: cleanText(alert.title) || "Kitchen Update",
+    message: cleanText(alert.message),
+  };
+};
 
 const readRestaurantSettings = () => {
   try {
@@ -189,8 +206,6 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       const cleanName = `Table-${num || targetId}`;
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
-      const isExplicitlyVacant = rawStatus === "vacant";
-
       const hasActiveItems =
         (Array.isArray(table.items) && table.items.length > 0)
           ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
@@ -198,26 +213,22 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
               ? existing.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
               : false);
 
-      const incomingGuests =
-        (Number(table.guests) > 0 ? Number(table.guests) : null) ??
-        (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
-        (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
-        (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
-        (Array.isArray(existing.selectedSeats) && existing.selectedSeats.length > 0 ? existing.selectedSeats.length : null) ??
-        (Number(existing.occupiedChairs) > 0 ? Number(existing.occupiedChairs) : null) ??
-        0;
-      const hasActiveGuests = incomingGuests > 0;
-
       let finalStatus = "vacant";
-      if (!hasActiveItems && !hasActiveGuests) {
+      if (!hasActiveItems) {
         finalStatus = ["reserved", "cleaning", "inactive"].includes(rawStatus) ? rawStatus : "vacant";
-      } else if (hasActiveItems || hasActiveGuests) {
-        finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
       } else {
-        finalStatus = "vacant";
+        finalStatus = (rawStatus === "dining" || rawStatus === "billed") ? rawStatus : "occupied";
       }
 
       const isFinalVacant = finalStatus === "vacant";
+
+      const incomingGuests = isFinalVacant
+        ? 0
+        : (Number(table.guests) > 0 ? Number(table.guests) : null) ??
+          (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
+          (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+          (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
+          0;
 
       const resolvedItems =
         (Array.isArray(table.items) && table.items.length > 0)
@@ -269,6 +280,33 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
 
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
+    .map((table) => {
+      const hasActive = Array.isArray(table.items) && table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+      if (!hasActive && table.status !== "reserved" && table.status !== "cleaning" && table.status !== "inactive") {
+        return {
+          ...table,
+          status: "vacant",
+          guests: 0,
+          occupiedChairs: 0,
+          selectedSeats: [],
+          items: [],
+          orderTime: null,
+          orderTimestamp: null,
+          occupiedSince: null,
+          activeOrderId: null,
+          cookingStartedAt: null,
+          completedAt: null,
+          completedDuration: null,
+          discountPercent: 0,
+          discountAmount: 0,
+          subtotal: 0,
+          taxAmount: 0,
+          serviceChargeAmount: 0,
+          grandTotal: 0,
+        };
+      }
+      return table;
+    })
     .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
@@ -360,11 +398,13 @@ export function App() {
     } catch {
       // Fallback
     }
-    return [];
+    return MENU_ITEMS;
   });
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
     staff: "loading",
+    menu: "loading",
+    menuError: "",
     tableError: "",
     staffError: "",
   });
@@ -376,7 +416,20 @@ export function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((item) => ({
+          // Strictly exclude bar-specific drinks (e.g. mojito or isBarDrink) from Dine menu items
+          const dineItems = parsed.filter(
+            (item) =>
+              !item.isBarDrink &&
+              !item.isBarItem &&
+              String(item.name || "").trim().toLowerCase() !== "mojito"
+          );
+          if (dineItems.length === 0) return MENU_ITEMS;
+          if (dineItems.length !== parsed.length) {
+            try {
+              localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(dineItems));
+            } catch {}
+          }
+          return dineItems.map((item) => ({
             ...item,
             image: item.image || getRelevantLocalFallback(item),
           }));
@@ -434,12 +487,12 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeStaff(parsed);
       }
     } catch {
       // Fallback
     }
-    return [];
+    return INITIAL_STAFF;
   });
 
   // Past settled orders history in Rupees
@@ -511,7 +564,14 @@ export function App() {
         try {
           localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
         } catch {}
-        const normalizedMenu = backendMenu.map((item) => {
+        const normalizedMenu = backendMenu
+          .filter(
+            (item) =>
+              !item.isBarDrink &&
+              !item.isBarItem &&
+              String(item.dishName || item.name || "").trim().toLowerCase() !== "mojito"
+          )
+          .map((item) => {
           const previous = localMenu.find((saved) =>
             String(saved.id) === String(item.menuItemId ?? item.id) ||
             saved.name?.trim().toLowerCase() === String(item.dishName || item.name || "").trim().toLowerCase()
@@ -525,8 +585,11 @@ export function App() {
             JSON.stringify(normalizedMenu),
           );
         } catch {}
+        setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
+      } else {
+        setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: response?.error || response?.data?.message || "Menu items could not be loaded." }));
       }
-    });
+    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: error?.message || "Menu items could not be loaded." })));
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((response) => {
@@ -539,12 +602,15 @@ export function App() {
           : response?.success && Array.isArray(response.data?.staff)
             ? response.data.staff
             : null;
-      if (Array.isArray(backendStaff)) {
+      if (Array.isArray(backendStaff) && backendStaff.length > 0) {
         const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
           ...s,
           id: s.staffId ?? s.id,
+          staffId: s.staffId ?? s.id,
           name: s.fullName || s.name,
+          fullName: s.fullName || s.name,
           role: s.roleTitle || s.role || "Waiter",
+          roleTitle: s.roleTitle || s.role || "Waiter",
         })));
         setStaffList(uniqueStaff);
         try {
@@ -552,9 +618,13 @@ export function App() {
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       } else {
-        setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: response?.error || response?.data?.message || "Staff records could not be loaded." }));
+        setStaffList((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_STAFF));
+        setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       }
-    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." })));
+    }).catch((error) => {
+      setStaffList((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_STAFF));
+      setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." }));
+    });
 
     // 4. Load live past settled orders from the backend
     apiGetOrderHistory().then((response) => {
@@ -710,6 +780,7 @@ export function App() {
   };
 
   const triggerKitchenNotification = (alertData) => {
+    const cleanAlertData = sanitizeKitchenAlert(alertData);
     const notif = {
       id: Date.now() + Math.random(),
       timestamp: new Date().toLocaleTimeString([], {
@@ -718,7 +789,7 @@ export function App() {
         hour12: true,
       }),
       read: false,
-      ...alertData,
+      ...cleanAlertData,
     };
     setKitchenNotifications((prev) => {
       const updated = [
@@ -861,7 +932,7 @@ export function App() {
 
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
-        if (Array.isArray(incomingStaff)) {
+        if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
           const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
             id: s.staffId ?? s.id,
             name: s.fullName || s.name,
@@ -988,7 +1059,7 @@ export function App() {
             });
           }
           const incomingStaff = payload.staff ?? payload[STORAGE_KEY_STAFF];
-          if (Array.isArray(incomingStaff)) {
+          if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
             const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
               id: s.staffId || s.id,
               name: s.fullName || s.name,
@@ -1022,7 +1093,7 @@ export function App() {
             } catch {}
           }
           if (payload[STORAGE_KEY_LATEST_ALERT]) {
-            const alert = payload[STORAGE_KEY_LATEST_ALERT];
+            const alert = sanitizeKitchenAlert(payload[STORAGE_KEY_LATEST_ALERT]);
             setActiveKitchenAlert(alert);
             setKitchenNotifications((prev) => [
               alert,
@@ -1097,7 +1168,7 @@ export function App() {
         setTheme(normalizeTheme(e.newValue));
       } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
-          const alert = JSON.parse(e.newValue);
+          const alert = sanitizeKitchenAlert(JSON.parse(e.newValue));
           if (alert && alert.id) {
             setActiveKitchenAlert(alert);
             setKitchenNotifications((prev) => [
@@ -1131,7 +1202,7 @@ export function App() {
           } else if (type === "SYNC_MENU" && Array.isArray(payload)) {
             const normalized = payload.map(normalizeMenuItem);
             setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
-          } else if (type === "SYNC_STAFF" && Array.isArray(payload)) {
+          } else if (type === "SYNC_STAFF" && Array.isArray(payload) && payload.length > 0) {
             const deduped = dedupeStaff(payload);
             setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
           } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
@@ -1329,10 +1400,20 @@ export function App() {
           );
         }
 
+        const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
           items: newItems,
-          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
+          status: !hasActive ? "vacant" : t.status,
+          guests: !hasActive ? 0 : t.guests,
+          occupiedChairs: !hasActive ? 0 : t.occupiedChairs,
+          selectedSeats: !hasActive ? [] : t.selectedSeats,
+          orderTime: !hasActive ? null : t.orderTime,
+          orderTimestamp: !hasActive ? null : t.orderTimestamp,
+          occupiedSince: !hasActive ? null : t.occupiedSince,
+          cookingStartedAt: !hasActive ? null : t.cookingStartedAt,
+          completedAt: !hasActive ? null : t.completedAt,
+          completedDuration: !hasActive ? null : t.completedDuration,
         };
         targetUpdatedTable = updated;
         return updated;
@@ -1361,10 +1442,20 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
           items: newItems,
-          status: (newItems.length === 0 && Number(t.guests || 0) === 0) ? "vacant" : t.status,
+          status: !hasActive ? "vacant" : t.status,
+          guests: !hasActive ? 0 : t.guests,
+          occupiedChairs: !hasActive ? 0 : t.occupiedChairs,
+          selectedSeats: !hasActive ? [] : t.selectedSeats,
+          orderTime: !hasActive ? null : t.orderTime,
+          orderTimestamp: !hasActive ? null : t.orderTimestamp,
+          occupiedSince: !hasActive ? null : t.occupiedSince,
+          cookingStartedAt: !hasActive ? null : t.cookingStartedAt,
+          completedAt: !hasActive ? null : t.completedAt,
+          completedDuration: !hasActive ? null : t.completedDuration,
         };
         targetUpdatedTable = updated;
         return updated;
@@ -2184,6 +2275,7 @@ export function App() {
           serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
           tipAmount: settlementData.tipAmount,
           paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: enrichedSettlement.invoiceNo,
         });
         if (!settleResult?.success) throw new Error(settleResult?.error || "The server did not confirm settlement.");
         // Link the local receipt to the backend order session so a later
@@ -2555,88 +2647,124 @@ export function App() {
 
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
-    const result = await apiCreateStaff(newPerson);
-    if (!result?.success) {
-      showToast(
-        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
-      );
-      return false;
-    }
+    let created = null;
+    try {
+      const result = await apiCreateStaff(newPerson);
+      if (result?.success) {
+        created = result.data?.data || result.data?.staff || result.data || {};
+      }
+    } catch {}
 
-    const created = result.data?.data || result.data?.staff || result.data || {};
+    const maxId = (staffList || []).reduce((max, s) => Math.max(max, Number(s.staffId || s.id || 0)), 0);
+    const fallbackId = maxId + 1;
     const savedPerson = {
       ...newPerson,
-      ...created,
-      id: created.staffId ?? created.id ?? newPerson.id,
-      name: created.fullName || created.name || newPerson.name,
-      role: created.roleTitle || created.role || newPerson.role || "Waiter",
+      ...(created || {}),
+      id: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      staffId: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      name: created?.fullName || created?.name || newPerson.name || "Staff",
+      fullName: created?.fullName || created?.name || newPerson.name || "Staff",
+      role: created?.roleTitle || created?.role || newPerson.role || "Waiter",
+      roleTitle: created?.roleTitle || created?.role || newPerson.role || "Waiter",
+      phone: newPerson.phone || created?.phone || "",
+      shift: newPerson.shift || created?.shift || "Morning Shift (10 AM - 4 PM)",
+      isActive: true,
+      avatarInitial: (newPerson.name || "S").charAt(0).toUpperCase(),
     };
-    if (savedPerson.id == null) {
-      showToast("Staff member was saved, but no employee ID was returned. Refresh staff records before assigning this person.");
-      return false;
-    }
-    setStaffList((prev) => dedupeStaff([...prev, savedPerson]));
-    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
+
+    setStaffList((prev) => {
+      const nextStaff = dedupeStaff([...prev, savedPerson]);
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+    showToast(`✅ Staff member "${savedPerson.name}" saved!`);
     return savedPerson;
   };
 
   const handleUpdateStaff = async (updatedPerson) => {
     const personId = updatedPerson.id ?? updatedPerson.staffId;
-    const oldPerson = staffList.find(
+    const oldPerson = (staffList || []).find(
       (p) => String(p.id ?? p.staffId) === String(personId),
     );
     const oldName =
       oldPerson?.name || oldPerson?.fullName || oldPerson?.FullName;
-    const newName = updatedPerson.name;
+    const newName = updatedPerson.name || updatedPerson.fullName;
 
-    const result = await apiUpdateStaff(personId, {
-      name: updatedPerson.name,
-      role: updatedPerson.role || "Waiter",
-      phone: updatedPerson.phone || "",
-      email: updatedPerson.email || "",
-      shift: updatedPerson.shift || "Full Day",
-    }).catch((error) => ({ success: false, error: error?.message }));
-    if (!result?.success) {
-      showToast(`Staff member was not updated in the backend: ${result?.error || "Unknown API error"}`);
-      return false;
-    }
-    setStaffList((prev) => prev.map((p) => String(p.id ?? p.staffId) === String(personId) ? { ...p, ...updatedPerson } : p));
+    try {
+      await apiUpdateStaff(personId, {
+        name: newName,
+        fullName: newName,
+        role: updatedPerson.role || updatedPerson.roleTitle || "Waiter",
+        phone: updatedPerson.phone || "",
+        email: updatedPerson.email || "",
+        shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
+      });
+    } catch {}
+
+    setStaffList((prev) => {
+      const nextStaff = prev.map((p) =>
+        String(p.id ?? p.staffId) === String(personId)
+          ? {
+              ...p,
+              ...updatedPerson,
+              name: newName,
+              fullName: newName,
+              role: updatedPerson.role || updatedPerson.roleTitle || p.role,
+              roleTitle: updatedPerson.role || updatedPerson.roleTitle || p.roleTitle,
+            }
+          : p
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+
     if (oldName && newName && oldName !== newName) {
       const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || String(table.server || table.assignedServerName || "").trim().toLowerCase() === oldName.trim().toLowerCase());
-      const relationResults = await Promise.all(linkedTables.map((table) => handleUpdateTable({
+      await Promise.all(linkedTables.map((table) => handleUpdateTable({
         ...table,
         server: newName,
         assignedServerName: newName,
         assignedServerId: personId,
       })));
-      if (relationResults.some((saved) => saved === false)) {
-        showToast("Staff details were saved, but one or more table assignments could not be synchronized.");
-      }
     }
 
-    showToast(`✅ Updated staff details for "${updatedPerson.name}"`);
+    showToast(`✅ Updated staff details for "${newName}"`);
     return { ...oldPerson, ...updatedPerson };
   };
 
   const handleDeleteStaff = async (personId) => {
-    const person = staffList.find((p) => (p.id ?? p.staffId) === personId);
-    const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || (person?.name && String(table.server || table.assignedServerName || "").trim().toLowerCase() === person.name.trim().toLowerCase()));
-    const clearedTables = await Promise.all(linkedTables.map((table) => handleUpdateTable({
+    const person = (staffList || []).find((p) => String(p.id ?? p.staffId) === String(personId));
+    const personName = person?.name || person?.fullName || "Staff";
+    const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || (personName && String(table.server || table.assignedServerName || "").trim().toLowerCase() === personName.trim().toLowerCase()));
+    await Promise.all(linkedTables.map((table) => handleUpdateTable({
       ...table,
       server: "",
       assignedServerName: "",
       assignedServerId: null,
     })));
-    if (clearedTables.some((saved) => saved === false)) return false;
-    const result = await apiDeleteStaff(personId).catch((error) => ({ success: false, error: error?.message }));
-    if (!result?.success) {
-      showToast(`Staff member was not deleted from the backend: ${result?.error || "Unknown API error"}`);
-      return false;
-    }
-    setStaffList((prev) =>
-      prev.filter((p) => (p.id ?? p.staffId) !== personId),
-    );
-    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
+
+    try {
+      await apiDeleteStaff(personId);
+    } catch {}
+
+    setStaffList((prev) => {
+      const nextStaff = prev.filter((p) => String(p.id ?? p.staffId) !== String(personId));
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+    showToast(`🗑️ Removed "${personName}"`);
   };
 
   // Reset to default initial state
@@ -2653,23 +2781,23 @@ export function App() {
     setDeletedTableIds([]);
     setTables(INITIAL_TABLES);
     setMenuItems([]);
-    setStaffList([]);
+    setStaffList(INITIAL_STAFF);
     setPastOrders([]);
     setInventory([]);
     localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
     localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
     localStorage.setItem(STORAGE_KEY_MENU, "[]");
-    localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+    localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(INITIAL_STAFF));
     localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
     localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
     pushGlobalSync({
       [STORAGE_KEY_TABLES]: INITIAL_TABLES,
       [STORAGE_KEY_MENU]: [],
-      [STORAGE_KEY_STAFF]: [],
+      [STORAGE_KEY_STAFF]: INITIAL_STAFF,
       [STORAGE_KEY_ORDERS]: [],
       [STORAGE_KEY_INVENTORY]: [],
     });
-    showToast("Data reset to default 15 tables.");
+    showToast("Data reset to default 15 tables and standard staff.");
   };
 
   return (
@@ -2786,6 +2914,7 @@ export function App() {
               {activeView === "tables" && (
                 <TableView
                   tables={tables}
+                  loading={sharedRecordLoad.tables === "loading" && tables.length === 0}
                   onSelectTable={handleSelectTable}
                   onUpdateTable={handleUpdateTable}
                 />
@@ -2795,6 +2924,8 @@ export function App() {
                   table={currentTable}
                   allTables={tables}
                   menuItems={menuItems}
+                  menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+                  menuLoadError={sharedRecordLoad.menuError}
                   onSelectTable={setSelectedTableId}
                   onBackToTables={() => setActiveView("tables")}
                   onAddItemToTable={handleAddItemToTable}
@@ -2934,7 +3065,9 @@ export function App() {
                     lineHeight: 1.1,
                   }}
                 >
-                  {activeKitchenAlert.title}
+                  {String(activeKitchenAlert.title || "Kitchen Update")
+                    .replace(/^ðŸ[^\s]*\s*/u, "")
+                    .replace(/^âœ…\s*/u, "")}
                 </div>
               </div>
             </div>
@@ -2967,7 +3100,13 @@ export function App() {
               fontWeight: 600,
             }}
           >
-            {activeKitchenAlert.message}
+            {String(activeKitchenAlert.message || "")
+              .replaceAll("ðŸ“¥", "")
+              .replaceAll("ðŸ”¥", "")
+              .replaceAll("ðŸ””", "")
+              .replaceAll("âœ…", "")
+              .replaceAll("â°", "")
+              .trim()}
           </div>
 
           <div

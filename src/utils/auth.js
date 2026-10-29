@@ -209,12 +209,20 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
     return { success: false, error: `Unauthorized. Required role: ${expectedRole}` };
   }
 
+  const trimmedInput = String(usernameOrEmail || '').trim();
+  const isInputEmail = trimmedInput.includes('@');
+  const resolvedEmail = isInputEmail
+    ? trimmedInput.toLowerCase()
+    : String(user?.email || user?.Email || jwt?.email || '').trim().toLowerCase();
+
   const session = {
     userId: user?.id || user?.userId || user?.Id || user?.UserId || jwt?.nameid || jwt?.sub || '1',
-    username: user?.username || user?.Username || jwt?.unique_name || jwt?.name || usernameOrEmail,
-    name: user?.name || user?.FullName || user?.fullName || jwt?.name || usernameOrEmail,
+    username: user?.username || user?.Username || jwt?.unique_name || jwt?.name || trimmedInput,
+    name: user?.name || user?.FullName || user?.fullName || jwt?.name || trimmedInput,
     role: actualRole,
-    email: user?.email || user?.Email || jwt?.email || '',
+    email: resolvedEmail,
+    loginEmail: resolvedEmail,
+    loginIdentifier: trimmedInput,
     mobile: user?.mobile || user?.Phone || user?.PhoneNumber || '',
     loginAt: new Date().toISOString()
   };

@@ -1715,6 +1715,7 @@ import {
   Star,
   ChevronDown,
   Filter,
+  LogOut,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
 import { formatCurrency } from "../utils/formatCurrency";
@@ -1725,6 +1726,7 @@ import {
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { SkeletonMenuCard } from "../common/Skeletons";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1740,6 +1742,8 @@ export function TableDetailView({
   table,
   allTables,
   menuItems = [],
+  menuLoading = false,
+  menuLoadError = "",
   onSelectTable,
   onBackToTables,
   onAddItemToTable,
@@ -2278,19 +2282,17 @@ export function TableDetailView({
                     fontSize: "0.72rem",
                     fontWeight: 700,
                     textTransform: "uppercase",
-                    color:
-                      (activeTable.status === "vacant" && activeGuests <= 0)
-                        ? "var(--status-vacant)"
-                        : "var(--status-occupied)",
-                    background:
-                      (activeTable.status === "vacant" && activeGuests <= 0)
-                        ? "var(--status-vacant-bg)"
-                        : "var(--status-occupied-bg)",
+                    color: (safeItems.length > 0 && activeTable.status !== "vacant")
+                      ? "var(--status-occupied)"
+                      : "var(--status-vacant)",
+                    background: (safeItems.length > 0 && activeTable.status !== "vacant")
+                      ? "var(--status-occupied-bg)"
+                      : "var(--status-vacant-bg)",
                     padding: "1px 6px",
                     borderRadius: "4px",
                   }}
                 >
-                  {(activeTable.status === "vacant" && activeGuests > 0) ? "occupied" : (activeTable.status || "vacant")}
+                  {(safeItems.length > 0 && activeTable.status !== "vacant") ? (activeTable.status || "occupied") : "vacant"}
                 </span>
               </div>
             </div>
@@ -2364,8 +2366,40 @@ export function TableDetailView({
             </button>
           </div>
 
+          {/* Quick Vacate Table Button */}
+          {(activeTable.status !== "vacant" || activeGuests > 0 || safeItems.length > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onClearOrder) {
+                  onClearOrder(activeTable.id);
+                } else if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, 0);
+                }
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                padding: "0.24rem 0.55rem",
+                borderRadius: "var(--radius-sm)",
+                background: "rgba(239, 68, 68, 0.12)",
+                color: "#ef4444",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Clear order and vacate table"
+            >
+              <LogOut size={12} />
+              <span>Vacate</span>
+            </button>
+          )}
+
           {/* Live Table Dining Timer Widget */}
-          {table.orderTime &&
+          {safeItems.length > 0 && table.orderTime &&
             (() => {
               const elapsedSec = parseTimeToSeconds(table.orderTime);
               const elapsedFormatted = formatElapsedTimer(elapsedSec);
@@ -2985,7 +3019,9 @@ export function TableDetailView({
 
           {/* Menu Items Grid - 4 dishes per row */}
           <div className="pos-menu-grid">
-            {filteredMenuItems.length === 0 ? (
+            {menuLoading ? (
+              Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
+            ) : filteredMenuItems.length === 0 ? (
               <div
                 style={{
                   gridColumn: "1 / -1",
@@ -3006,7 +3042,7 @@ export function TableDetailView({
                     fontWeight: 700,
                   }}
                 >
-                  No dishes match "{searchQuery}"
+                  {menuLoadError ? "Menu items could not be loaded" : `No dishes match "${searchQuery}"`}
                 </h4>
                 <p
                   style={{
@@ -3015,8 +3051,7 @@ export function TableDetailView({
                     color: "var(--text-muted)",
                   }}
                 >
-                  Try searching for "Biryani", "Chicken", "Paneer", "Tandoori"
-                  or click "All Items".
+                  {menuLoadError || 'Try searching for "Biryani", "Chicken", "Paneer", "Tandoori" or click "All Items".'}
                 </p>
                 <button
                   className="primary-action-button"
@@ -3471,7 +3506,7 @@ export function TableDetailView({
                               style={{
                                 fontSize: "0.78rem",
                                 fontWeight: 900,
-                                color: "var(--success)",
+                                color: "#065F46",
                                 letterSpacing: "0.02em",
                               }}
                             >
@@ -3480,7 +3515,7 @@ export function TableDetailView({
                             <div
                               style={{
                                 fontSize: "0.68rem",
-                                color: "#a7f3d0",
+                                color: "#047857",
                                 fontWeight: 600,
                               }}
                             >
@@ -3491,7 +3526,7 @@ export function TableDetailView({
                         <span
                           style={{
                             background: "#10b981",
-                            color: "#000",
+                            color: "#064E3B",
                             fontSize: "0.65rem",
                             fontWeight: 900,
                             padding: "2px 8px",

@@ -1,31 +1,36 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FileText,
   Search,
   Calendar,
-  CheckCircle2,
   Eye,
   Pencil,
   Save,
   X,
-  Printer,
   CreditCard,
   Smartphone,
   Banknote,
-  Receipt,
   ChevronLeft,
   ChevronRight,
   IndianRupee,
-  TrendingUp,
+  RefreshCw,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { apiGetInvoices } from "../api/invoiceApi";
+import { apiGetOrderHistory } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
+import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
   normalizePaymentMethod,
   parseOrderToYMD,
 } from "../utils/orderDedupe";
+import {
+  extractInvoiceRecords,
+  extractSettledOrderRecords,
+  mergeLiveInvoiceRecords,
+} from "../utils/liveInvoiceData";
 
 const localDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
@@ -88,15 +93,44 @@ const formatInvoiceTime = (value) => {
     : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 
+async function requestLiveInvoiceRecords() {
+  const [invoiceResponse, orderResponse] = await Promise.all([
+    apiGetInvoices(),
+    apiGetOrderHistory(),
+  ]);
+  const invoices = extractInvoiceRecords(invoiceResponse);
+  const orders = extractSettledOrderRecords(orderResponse);
+  if (invoices === null && orders === null) {
+    throw new Error(
+      invoiceResponse?.error ||
+        orderResponse?.error ||
+        "The live invoice and settled-order records could not be loaded.",
+    );
+  }
+
+  return {
+    records: sortOrdersBySettlementTime(
+      dedupeOrders(mergeLiveInvoiceRecords(invoices || [], orders || [])),
+    ),
+    error: (invoices === null && orders === null)
+      ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
+      : "",
+
+
+
+
+
+  };
+}
+
 export function AdminInvoices({
-  pastOrders = [],
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
 }) {
-  const allOrders = sortOrdersBySettlementTime(
-      dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []),
-  );
+  const [invoiceRecords, setInvoiceRecords] = useState([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
+  const [invoiceLoadError, setInvoiceLoadError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
@@ -121,6 +155,44 @@ export function AdminInvoices({
   const [discountDraft, setDiscountDraft] = useState("0");
   const [editError, setEditError] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const refreshInvoices = async () => {
+    setIsLoadingInvoices(true);
+    setInvoiceLoadError("");
+    try {
+      const { records, error } = await requestLiveInvoiceRecords();
+      setInvoiceRecords(records);
+      setInvoiceLoadError(error);
+    } catch (error) {
+      setInvoiceLoadError(error?.message || "Live invoices could not be loaded.");
+      setInvoiceRecords([]);
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    requestLiveInvoiceRecords()
+      .then(({ records, error }) => {
+        if (!active) return;
+        setInvoiceRecords(records);
+        setInvoiceLoadError(error);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setInvoiceLoadError(error?.message || "Live invoices could not be loaded.");
+        setInvoiceRecords([]);
+      })
+      .finally(() => {
+        if (active) setIsLoadingInvoices(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const allOrders = invoiceRecords;
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);
@@ -194,21 +266,21 @@ export function AdminInvoices({
   );
 
   const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0),
+    (sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
     0,
   );
 
   const upiTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "upi")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cashTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "cash")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cardTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "card")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cashOrdersCount = filteredOrders.filter(
     (o) => normalizePaymentMethod(o) === "cash",
@@ -304,47 +376,65 @@ export function AdminInvoices({
             </div>
           </div>
 
-          {/* Right Controls: Search */}
-          <div
-            style={{
-              position: "relative",
-              width: "280px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <Search
-              size={16}
-              color="var(--text-dim)"
+          {/* Right Controls: Search and live refresh */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div
               style={{
-                position: "absolute",
-                left: "12px",
-                pointerEvents: "none",
+                position: "relative",
+                width: "280px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
               }}
-            />
-            <input
-              type="text"
-              placeholder="Search invoice #, table, waiter..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              style={{
-                width: "100%",
-                height: "100%",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-card)",
-                borderRadius: "9px",
-                padding: "0 12px 0 36px",
-                color: "var(--text-main)",
-                fontSize: "0.82rem",
-                outline: "none",
-              }}
-            />
+            >
+              <Search
+                size={16}
+                color="var(--text-dim)"
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search invoice #, table, waiter..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "9px",
+                  padding: "0 12px 0 36px",
+                  color: "var(--text-main)",
+                  fontSize: "0.82rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+            <button type="button" onClick={refreshInvoices} disabled={isLoadingInvoices} aria-label="Refresh live invoices" title="Refresh live invoices" style={{ height: "40px", display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0 0.75rem", borderRadius: "9px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", cursor: isLoadingInvoices ? "wait" : "pointer" }}>
+              <RefreshCw size={14} style={{ animation: isLoadingInvoices ? "spin 1s linear infinite" : "none" }} />
+              Refresh
+            </button>
           </div>
         </div>
+
+        {invoiceLoadError && (
+          <div role="alert" style={{ padding: "0.7rem 0.9rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", background: "rgba(239, 68, 68, 0.08)", color: "var(--danger)", fontSize: "0.8rem" }}>
+            {invoiceLoadError}
+          </div>
+        )}
+        {isLoadingInvoices && invoiceRecords.length === 0 && (
+          <div style={{ marginBottom: "1rem" }}>
+            <SkeletonDashboard cards={3} />
+            <SkeletonTable rows={5} columns={6} />
+          </div>
+        )}
 
         {/* Invoices Overview Summary Bar (Total Revenue & Total Invoices List) */}
         <div
@@ -1074,7 +1164,7 @@ export function AdminInvoices({
                           fontSize: "0.88rem",
                         }}
                       >
-                        {order.invoiceNo || `INV-${1000 + orderIndex}`}
+                        {order.invoiceNo || `INV-${String(orderIndex + 1).padStart(3, "0")}`}
                       </span>
                     </td>
 

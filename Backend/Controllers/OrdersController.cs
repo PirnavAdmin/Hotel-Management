@@ -3,6 +3,7 @@ namespace HMS.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Hubs;
@@ -16,15 +17,18 @@ public class OrdersController : ControllerBase
     private readonly AppDbContext _context;
     private readonly SpService _spService;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly ILogger<OrdersController> _logger;
 
     public OrdersController(
         AppDbContext context,
         SpService spService,
-        IHubContext<PosHub> hubContext)
+        IHubContext<PosHub> hubContext,
+        ILogger<OrdersController> logger)
     {
         _context = context;
         _spService = spService;
         _hubContext = hubContext;
+        _logger = logger;
     }
 
     // ============================================================
@@ -958,7 +962,10 @@ public class OrdersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        await EnsureInvoiceCreatedAsync(order, request?.PaymentMethod ?? order.PaymentMethod ?? "Cash");
+        await EnsureInvoiceCreatedAsync(
+            order,
+            request?.PaymentMethod ?? order.PaymentMethod ?? "Cash",
+            request?.InvoiceNumber);
 
         if (order.TableId.HasValue)
         {
@@ -1550,22 +1557,34 @@ public class OrdersController : ControllerBase
         });
     }
 
-    private async Task<long> EnsureInvoiceCreatedAsync(Order order, string paymentMethod)
+    private async Task<long> EnsureInvoiceCreatedAsync(
+        Order order,
+        string paymentMethod,
+        string? invoiceNumber = null)
     {
+        if (order.Subtotal <= 0 || order.GrandTotal <= 0)
+        {
+            _logger.LogWarning(
+                "Skipping invoice creation for settled order {OrderId} because its POS total is not positive.",
+                order.Id);
+            return 0;
+        }
+
         try
         {
-            var invoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{order.Id}";
-            var subtotal = order.Subtotal > 0 ? order.Subtotal : 100m;
+            var persistedInvoiceNumber = string.IsNullOrWhiteSpace(invoiceNumber)
+                ? $"INV-{DateTime.UtcNow:yyyyMMdd}-{order.Id}"
+                : invoiceNumber.Trim();
+            var subtotal = order.Subtotal;
             var discount = order.DiscountAmount;
-            var taxable = subtotal - discount;
-            if (taxable < 0) taxable = subtotal;
+            var taxable = Math.Max(0, subtotal - discount);
             var taxAmount = order.TaxAmount;
-            var totalAmount = order.GrandTotal > 0 ? order.GrandTotal : (subtotal + taxAmount - discount);
+            var totalAmount = order.GrandTotal;
 
             var createParams = new Dictionary<string, object?>
             {
                 { "p_order_id", order.Id },
-                { "p_invoice_number", invoiceNumber },
+                { "p_invoice_number", persistedInvoiceNumber },
                 { "p_subtotal", subtotal },
                 { "p_taxable_amount", taxable },
                 { "p_tax_amount", taxAmount },
@@ -1590,8 +1609,9 @@ public class OrdersController : ControllerBase
 
             return invoiceId;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create invoice for settled order {OrderId}", order.Id);
             return 0;
         }
     }

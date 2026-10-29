@@ -2,16 +2,45 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
-  Pencil, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
+  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X, AlertCircle, RotateCcw
 } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
-import { apiAdjustStock, apiCreateInventoryItem, apiGetInventory } from "../api/inventoryApi";
+import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+
 import { formatCurrency } from "../utils/formatCurrency";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { SkeletonTable } from "../common/Skeletons";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
+import { BAR_DRINKS } from "../data/barDrinksMockData";
 import { BarKOTView } from "./BarKOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
 import "./BarWorkspace.css";
+import {
+  apiGetBarTables,
+  apiCreateBarTable,
+  apiUpdateBarTable,
+  apiDeleteBarTable,
+  apiGetBarTableAreas,
+  apiUpdateBarTableStatus,
+  apiGetBarDrinks,
+  apiGetBarDrinkById,
+  apiCreateBarDrink,
+  apiUpdateBarDrink,
+  apiDeleteBarDrink,
+  apiToggleBarDrinkAvailability,
+  apiToggleBarDrinkSpecial,
+  apiGetBarDrinkCategories,
+  apiGetBarServingMeasures,
+  apiGetBarPriceRanges,
+  apiGetBarAvailabilityOptions,
+  apiGetBarOverview,
+  apiGetBarRecentOrders,
+} from "../api/barApi";
+import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
+import { SelectSeatsModal } from "../common/SelectSeatsModal";
+import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+
 
 const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
@@ -87,43 +116,1033 @@ const FIELD_SETS = {
   ],
 };
 
+export const BAR_INVENTORY_CATEGORIES = [
+  {
+    category: "Whiskey & Scotch",
+    subcategories: ["Single Malt Scotch", "Blended Scotch", "Bourbon & American", "Irish Whiskey", "Premium Indian Whisky"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 42.8,
+  },
+  {
+    category: "Vodka & Gin",
+    subcategories: ["Premium Vodka", "Flavored Vodka", "London Dry Gin", "Craft Botanical Gin", "Pink Gin"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 40,
+  },
+  {
+    category: "Rum & Brandy",
+    subcategories: ["White Rum", "Dark / Spiced Rum", "Aged Rum", "Cognac & VSOP", "Premium Brandy"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 42.8,
+  },
+  {
+    category: "Tequila & Mezcal",
+    subcategories: ["Silver / Blanco", "Reposado Tequila", "Añejo Tequila", "Artisanal Mezcal"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 38,
+  },
+  {
+    category: "Beers & Ciders",
+    subcategories: ["Draught Beer Keg", "Premium Lager (Pint 330ml)", "Strong Beer (650ml)", "Craft Wheat Beer", "Apple / Fruit Cider"],
+    defaultUnit: "Bottle (330 ml)",
+    defaultAbv: 5,
+  },
+  {
+    category: "Wine & Champagne",
+    subcategories: ["Red Wine", "White Wine", "Sparkling Wine / Prosecco", "Brut Champagne", "Rosé Wine", "Port Wine"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 12.5,
+  },
+  {
+    category: "Liqueurs & Bitters",
+    subcategories: ["Coffee Liqueur (Kahlúa)", "Irish Cream (Baileys)", "Triple Sec / Orange", "Herbal / Aperitif (Campari)", "Angostura Bitters"],
+    defaultUnit: "Bottle (750 ml)",
+    defaultAbv: 25,
+  },
+  {
+    category: "Cocktails & Premixes",
+    subcategories: ["Margarita Mix", "Bloody Mary Base", "Sour Mix", "Piña Colada Mix", "Cocktail Concentrates"],
+    defaultUnit: "Bottle (1 L)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Mocktails & Syrups",
+    subcategories: ["Blue Curacao Syrup", "Grenadine Syrup", "Mojito Mint Syrup", "Passion Fruit Puree", "Simple Sugar Syrup"],
+    defaultUnit: "Bottle (1 L)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Soft Drinks, Tonics & Soda",
+    subcategories: ["Club Soda", "Tonic Water", "Ginger Ale", "Cola / Diet Cola", "Lemon Soda (Sprite/Limca)", "Energy Drink (Red Bull)"],
+    defaultUnit: "Can (330 ml)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Juices & Purees",
+    subcategories: ["Cranberry Juice", "Fresh Orange Juice", "Pineapple Juice", "Fresh Lime Juice", "Apple Juice", "Tomato Juice"],
+    defaultUnit: "Tetra Pack (1 L)",
+    defaultAbv: 0,
+  },
+  {
+    category: "Bar Garnishes & Supplies",
+    subcategories: ["Maraschino Cherries", "Cocktail Stuffed Olives", "Margarita Rim Salt", "Cocktail Sugar", "Fresh Lemons & Limes", "Fresh Mint"],
+    defaultUnit: "Jar / Canister",
+    defaultAbv: 0,
+  },
+  {
+    category: "Bar Consumables & Ice",
+    subcategories: ["Clear Ice Blocks / Cubes", "Cocktail Paper Straws", "Stirrers & Cocktail Picks", "Bar Coasters", "Bar Napkins"],
+    defaultUnit: "Pack / Box",
+    defaultAbv: 0,
+  },
+];
+
+export const BAR_INVENTORY_UNITS = [
+  "Bottle (750 ml)",
+  "Bottle (1000 ml / 1 L)",
+  "Bottle (330 ml)",
+  "Bottle (650 ml)",
+  "Can (330 ml)",
+  "Can (500 ml)",
+  "Keg (30 L)",
+  "Keg (50 L)",
+  "Tetra Pack (1 L)",
+  "Litre (L)",
+  "Millilitre (ml)",
+  "Peg (30 ml)",
+  "Peg (60 ml)",
+  "Jar / Canister",
+  "Pack / Case",
+  "Pcs / Units",
+];
+
+export const BAR_STORAGE_LOCATIONS = [
+  "Front Bar Display Shelf",
+  "Under-Counter Bar Chiller",
+  "Wine Cellar & Display Rack",
+  "Back Bar Main Storage",
+  "Beer Tap Cold Room",
+  "Dry Store / Bar Pantry",
+];
+
+export const BAR_SUPPLIERS = [
+  "State Beverages Corporation (TSBCL/Govt Depot)",
+  "United Spirits / Diageo India",
+  "Pernod Ricard India",
+  "AB InBev / SABMiller Brewery",
+  "Carlsberg India",
+  "Sula Vineyards & Winery Depot",
+  "Monin Gourmet Syrups Distributor",
+  "Coca-Cola / Schweppes Beverages Depot",
+  "Local Wholesale Bar Supplier",
+];
+
 function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const [busy, setBusy] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [addBusy, setAddBusy] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [newItem, setNewItem] = useState({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
-  const rows = (Array.isArray(inventory) ? inventory : []).filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name));
-  const setNewItemField = (field, value) => setNewItem((previous) => ({ ...previous, [field]: value }));
-  const addInventoryItem = async (event) => {
-    event.preventDefault();
-    setAddBusy(true);
-    setAddError("");
-    try {
-      const result = await apiCreateInventoryItem(newItem);
-      if (!result?.success) throw new Error(result?.error || "Could not add the inventory item.");
-      setAddOpen(false);
-      setNewItem({ name: "", category: "Wine", unit: "Bottle", stock: "0", minThreshold: "5", unitCost: "0" });
-      await onRefresh();
-    } catch (requestError) { setAddError(requestError?.message || "Could not add the inventory item."); }
-    finally { setAddBusy(false); }
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalBusy, setModalBusy] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [editingItem, setEditingItem] = useState(null);
+
+  // Filter & Search states
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
+
+  const defaultForm = {
+    name: "",
+    category: "Whiskey & Scotch",
+    subcategory: "Single Malt Scotch",
+    brand: "",
+    unit: "Bottle (750 ml)",
+    volumeMl: 750,
+    abv: 42.8,
+    stock: 12,
+    minThreshold: 5,
+    unitCost: 2500,
+    sellingPrice: 3500,
+    storageLocation: "Front Bar Display Shelf",
+    supplier: "State Beverages Corporation (TSBCL/Govt Depot)",
   };
-  const adjust = async (item, direction) => {
-    const amount = Number(window.prompt(direction > 0 ? "Quantity received" : "Adjustment quantity", "1"));
-    if (!Number.isFinite(amount) || amount <= 0) return;
+
+  const [formData, setFormData] = useState(defaultForm);
+  const [customCategory, setCustomCategory] = useState(false);
+  const [customUnit, setCustomUnit] = useState(false);
+  const [customLocation, setCustomLocation] = useState(false);
+  const [customSupplier, setCustomSupplier] = useState(false);
+
+  // 1. Strict filter: Purge mock kitchen packaging, food, and non-beverage items
+  const validBeverages = useMemo(() => {
+    const list = Array.isArray(inventory) ? inventory : [];
+    return list.filter((item) => {
+      if (!item) return false;
+      const name = String(item.name || "").trim().toLowerCase();
+      const cat = String(item.category || item.subcategory || "").trim().toLowerCase();
+      if (
+        name.includes("handi") ||
+        name.includes("foil") ||
+        name.includes("container") ||
+        name.includes("tray") ||
+        name.includes("takeaway") ||
+        name.includes("chicken") ||
+        name.includes("mutton") ||
+        name.includes("biryani") ||
+        name.includes("paneer") ||
+        name.includes("naan") ||
+        name.includes("roti") ||
+        name.includes("kebab") ||
+        name.includes("shawarma") ||
+        cat.includes("packaging") ||
+        cat.includes("disposable") ||
+        cat.includes("produce") ||
+        cat.includes("meat") ||
+        cat.includes("grain") ||
+        cat.includes("spice") ||
+        cat.includes("hygiene") ||
+        cat.includes("cleaning")
+      ) {
+        return false;
+      }
+      return isBeverageCategory(item.category ?? item.subcategory ?? item.name);
+    });
+  }, [inventory]);
+
+  // Available categories for dropdown filter
+  const availableCategories = useMemo(() => {
+    const set = new Set();
+    BAR_INVENTORY_CATEGORIES.forEach((c) => set.add(c.category));
+    validBeverages.forEach((item) => {
+      if (item.category) set.add(item.category);
+    });
+    return Array.from(set);
+  }, [validBeverages]);
+
+  // Filtered rows matching search & filter
+  const filteredRows = useMemo(() => {
+    return validBeverages.filter((item) => {
+      const q = query.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        String(item.name || "").toLowerCase().includes(q) ||
+        String(item.brand || item.subcategory || "").toLowerCase().includes(q) ||
+        String(item.category || "").toLowerCase().includes(q) ||
+        String(item.storageLocation || "").toLowerCase().includes(q);
+
+      const matchesCat =
+        categoryFilter === "all" ||
+        String(item.category || "").toLowerCase() === categoryFilter.toLowerCase();
+
+      const stock = Number(item.stock ?? item.currentStock ?? 0);
+      const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+      const matchesStock =
+        stockFilter === "all" ||
+        (stockFilter === "out_of_stock" && stock <= 0) ||
+        (stockFilter === "low_stock" && stock > 0 && stock <= threshold) ||
+        (stockFilter === "in_stock" && stock > threshold);
+
+      return matchesSearch && matchesCat && matchesStock;
+    });
+  }, [validBeverages, query, categoryFilter, stockFilter]);
+
+  // Operational KPI metrics
+  const totalItems = validBeverages.length;
+  const totalUnits = validBeverages.reduce((sum, item) => sum + Number(item.stock ?? item.currentStock ?? 0), 0);
+  const lowStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > 0 && s <= th;
+  }).length;
+  const outOfStockCount = validBeverages.filter((item) => Number(item.stock ?? item.currentStock ?? 0) <= 0).length;
+  const inStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > th;
+  }).length;
+  const totalValuation = validBeverages.reduce((sum, item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const c = Number(item.unitCost ?? item.cost ?? 0);
+    return sum + (s * c);
+  }, 0);
+
+  // Form field updater
+  const setField = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCategorySelect = (selectedCat) => {
+    if (selectedCat === "__custom__") {
+      setCustomCategory(true);
+      setFormData((prev) => ({ ...prev, category: "" }));
+      return;
+    }
+    setCustomCategory(false);
+    const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selectedCat);
+    setFormData((prev) => ({
+      ...prev,
+      category: selectedCat,
+      subcategory: matched?.subcategories?.[0] || prev.subcategory || "",
+      unit: matched?.defaultUnit || prev.unit || "Bottle (750 ml)",
+      abv: matched?.defaultAbv !== undefined ? matched.defaultAbv : prev.abv,
+      volumeMl: matched?.defaultUnit?.includes("750") ? 750 : matched?.defaultUnit?.includes("1 L") ? 1000 : matched?.defaultUnit?.includes("330") ? 330 : prev.volumeMl,
+    }));
+  };
+
+  const openAddModal = () => {
+    setEditingItem(null);
+    setFormData(defaultForm);
+    setCustomCategory(false);
+    setCustomUnit(false);
+    setCustomLocation(false);
+    setCustomSupplier(false);
+    setModalError("");
+    setModalOpen(true);
+  };
+
+  const openEditModal = (item) => {
+    setEditingItem(item);
+    const catExists = BAR_INVENTORY_CATEGORIES.some((c) => c.category.toLowerCase() === String(item.category || "").toLowerCase());
+    const unitExists = BAR_INVENTORY_UNITS.some((u) => u.toLowerCase() === String(item.unit || "").toLowerCase());
+    const locExists = BAR_STORAGE_LOCATIONS.some((l) => l.toLowerCase() === String(item.storageLocation || "").toLowerCase());
+    const supExists = BAR_SUPPLIERS.some((s) => s.toLowerCase() === String(item.supplier || "").toLowerCase());
+
+    setCustomCategory(!catExists && Boolean(item.category));
+    setCustomUnit(!unitExists && Boolean(item.unit));
+    setCustomLocation(!locExists && Boolean(item.storageLocation));
+    setCustomSupplier(!supExists && Boolean(item.supplier));
+
+    setFormData({
+      name: item.name || "",
+      category: item.category || "Whiskey & Scotch",
+      subcategory: item.subcategory || item.brand || "",
+      brand: item.brand || item.subcategory || "",
+      unit: item.unit || "Bottle (750 ml)",
+      volumeMl: item.volumeMl ?? (String(item.unit || "").includes("750") ? 750 : String(item.unit || "").includes("1 L") ? 1000 : 750),
+      abv: item.abv ?? 42.8,
+      stock: Number(item.stock ?? item.currentStock ?? 0),
+      minThreshold: Number(item.minThreshold ?? item.minimumThreshold ?? 5),
+      unitCost: Number(item.unitCost ?? item.cost ?? 0),
+      sellingPrice: Number(item.sellingPrice ?? item.mrp ?? 0),
+      storageLocation: item.storageLocation || "Front Bar Display Shelf",
+      supplier: item.supplier || "State Beverages Corporation (TSBCL/Govt Depot)",
+    });
+    setModalError("");
+    setModalOpen(true);
+  };
+
+  const saveInventoryItem = async (event) => {
+    event.preventDefault();
+    setModalBusy(true);
+    setModalError("");
+
+    if (!formData.name.trim()) {
+      setModalError("Beverage item name is required.");
+      setModalBusy(false);
+      return;
+    }
+    if (!formData.category.trim()) {
+      setModalError("Category is required.");
+      setModalBusy(false);
+      return;
+    }
+
+    try {
+      if (editingItem) {
+        const targetId = editingItem.id ?? editingItem.ingredientId;
+        const res = await apiUpdateInventoryItem(targetId, formData);
+        if (!res?.success) throw new Error(res?.error || "Could not update the inventory item.");
+      } else {
+        const res = await apiCreateInventoryItem(formData);
+        if (!res?.success) throw new Error(res?.error || "Could not create the inventory item.");
+      }
+      setModalOpen(false);
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+    } catch (requestError) {
+      console.error("[Bar Inventory] Save failed:", requestError);
+      setModalError(requestError?.message || "Could not save inventory item.");
+    } finally {
+      setModalBusy(false);
+    }
+  };
+
+  const adjustStock = async (item, direction) => {
+    const isReceive = direction > 0;
+    const promptMsg = isReceive
+      ? `Enter quantity received for ${item.name} (${item.unit || "units"}):`
+      : `Enter quantity to adjust/deduct for ${item.name} (${item.unit || "units"}):`;
+    const input = window.prompt(promptMsg, "1");
+    if (input === null) return;
+    const amount = Number(input);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      window.alert("Please enter a valid positive number.");
+      return;
+    }
     setBusy(true);
     try {
-      const response = await apiAdjustStock({ ingredientId: item.id ?? item.ingredientId, quantityChange: amount * direction, reason: "Bar stock adjustment" });
+      const response = await apiAdjustStock({
+        ingredientId: item.id ?? item.ingredientId,
+        quantityChange: amount * direction,
+        reason: isReceive ? "Bar stock received" : "Bar stock adjustment / wastage",
+      });
       if (!response?.success) throw new Error(response?.error || "Stock adjustment failed.");
       await onRefresh();
-    } catch (requestError) { window.alert(requestError?.message || "Stock adjustment failed."); }
-    finally { setBusy(false); }
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+    } catch (requestError) {
+      console.error("[Bar Inventory] Stock adjustment failed:", requestError);
+      window.alert(requestError?.message || "Stock adjustment failed.");
+    } finally {
+      setBusy(false);
+    }
   };
-  return <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Inventory</h2><p>Beverage inventory from the shared restaurant inventory ledger.</p></div><div className="bar-actions"><button className="bar-button primary" type="button" onClick={() => { setAddError(""); setAddOpen(true); }}><Plus size={15} /> Add Inventory</button><button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading}><RefreshCw size={15} /> Refresh</button></div></div>
-    {error && <div className="bar-error" role="alert">{error}</div>}
-    {loading ? <div className="bar-empty" role="status">Loading shared inventory…</div> : <div className="bar-table-wrap"><table className="bar-table"><thead><tr><th>Item Name</th><th>Category</th><th>Unit</th><th>Stock</th><th>Threshold</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => { const stock = Number(item.stock ?? item.currentStock ?? 0); const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0); return <tr key={item.id ?? item.ingredientId}><td><strong>{item.name}</strong></td><td>{item.category || item.subcategory || "—"}</td><td>{item.unit || "—"}</td><td>{stock}</td><td>{threshold}</td><td>{formatCurrency(item.unitCost ?? item.cost ?? 0)}</td><td><Status>{stock <= threshold ? "Low Stock" : "In Stock"}</Status></td><td><div className="bar-actions"><button className="bar-button secondary small" disabled={busy} onClick={() => adjust(item, -1)}>Adjust</button><button className="bar-button secondary small" disabled={busy} onClick={() => adjust(item, 1)}>Receive</button></div></td></tr>; })}</tbody></table>{!rows.length && !error && <div className="bar-empty">No beverage inventory records are configured in the shared inventory.</div>}</div>}
-    {addOpen && <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !addBusy && setAddOpen(false)}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-inventory-add-title"><header className="bar-modal-head"><div><span className="bar-kicker">SHARED INVENTORY</span><h2 id="bar-inventory-add-title">Add Inventory</h2></div><button className="bar-icon-button" type="button" aria-label="Close" disabled={addBusy} onClick={() => setAddOpen(false)}><X size={18} /></button></header><form className="bar-form" onSubmit={addInventoryItem}><div className="bar-form-grid"><label className="bar-field"><span>Item Name *</span><input required value={newItem.name} onChange={(event) => setNewItemField("name", event.target.value)} /></label><label className="bar-field"><span>Category *</span><input required value={newItem.category} onChange={(event) => setNewItemField("category", event.target.value)} placeholder="Wine, Beer, Soft Drinks…" /></label><label className="bar-field"><span>Unit *</span><input required value={newItem.unit} onChange={(event) => setNewItemField("unit", event.target.value)} placeholder="Bottle, Can, Litre…" /></label><label className="bar-field"><span>Stock *</span><input required type="number" min="0" step="any" value={newItem.stock} onChange={(event) => setNewItemField("stock", event.target.value)} /></label><label className="bar-field"><span>Threshold *</span><input required type="number" min="0" step="any" value={newItem.minThreshold} onChange={(event) => setNewItemField("minThreshold", event.target.value)} /></label><label className="bar-field"><span>Unit Cost *</span><input required type="number" min="0" step="any" value={newItem.unitCost} onChange={(event) => setNewItemField("unitCost", event.target.value)} /></label></div>{addError && <p className="bar-error" role="alert">{addError}</p>}<footer className="bar-modal-footer"><button className="bar-button secondary" type="button" disabled={addBusy} onClick={() => setAddOpen(false)}>Cancel</button><button className="bar-button primary" type="submit" disabled={addBusy}>{addBusy ? "Adding…" : "Add Inventory"}</button></footer></form></section></div>}
-  </section>;
+
+  const deleteItem = async (item) => {
+    const confirmed = window.confirm(`Are you sure you want to permanently delete "${item.name}" from Bar Inventory?`);
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      const targetId = item.id ?? item.ingredientId;
+      const res = await apiDeleteInventoryItem(targetId);
+      if (!res?.success) throw new Error(res?.error || "Delete failed.");
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+    } catch (requestError) {
+      console.error("[Bar Inventory] Delete failed:", requestError);
+      window.alert(requestError?.message || "Could not delete inventory item.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const purgeMockPackagingData = async () => {
+    const nonBarItems = (Array.isArray(inventory) ? inventory : []).filter((item) => {
+      const name = String(item.name || "").toLowerCase();
+      const cat = String(item.category || "").toLowerCase();
+      return (
+        name.includes("handi") ||
+        name.includes("foil") ||
+        name.includes("container") ||
+        name.includes("takeaway") ||
+        cat.includes("packaging") ||
+        cat.includes("disposable")
+      );
+    });
+
+    if (nonBarItems.length === 0) {
+      window.alert("No packaging or mock items found in inventory.");
+      return;
+    }
+
+    const confirmPurge = window.confirm(
+      `Found ${nonBarItems.length} kitchen packaging / mock item(s) (e.g. Foil Meal Trays, Takeaway Handis). Purge them now to keep Bar Inventory completely clean?`
+    );
+    if (!confirmPurge) return;
+
+    setBusy(true);
+    try {
+      for (const item of nonBarItems) {
+        await apiDeleteInventoryItem(item.id ?? item.ingredientId).catch(() => {});
+      }
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      window.alert("Successfully purged mock packaging items from inventory!");
+    } catch (err) {
+      window.alert("Some items could not be purged: " + err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Find subcategories for current category
+  const currentCategoryObj = BAR_INVENTORY_CATEGORIES.find((c) => c.category === formData.category);
+  const currentSubcategories = currentCategoryObj?.subcategories || [];
+
+  return (
+    <section className="bar-page-card" style={{ padding: 0, overflow: "hidden" }}>
+      {/* 1. Header with Actions */}
+      <div className="bar-section-head" style={{ padding: "16px 18px", borderBottom: "1px solid var(--bar-line)" }}>
+        <div>
+          <h2 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, fontSize: "1.2rem" }}>
+            <Wine size={20} color="var(--accent-amber)" /> Bar Inventory & Liquor Ledger
+          </h2>
+          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: "0.75rem" }}>
+            Track bottles, barrels, kegs, spirits, wines, mixers, and bar consumables in real time.
+          </p>
+        </div>
+        <div className="bar-actions">
+          <button className="bar-button primary" type="button" onClick={openAddModal}>
+            <Plus size={15} /> Add Inventory
+          </button>
+          <button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading || busy}>
+            <RefreshCw size={15} className={loading ? "spin" : ""} /> Refresh
+          </button>
+          <button
+            className="bar-button secondary"
+            type="button"
+            title="Purge any leftover mock packaging items (Takeaway Handis, Foil Trays)"
+            onClick={purgeMockPackagingData}
+            disabled={loading || busy}
+            style={{ fontSize: "0.7rem" }}
+          >
+            <Trash2 size={13} /> Clean Mock Items
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Top Operational KPI Summary Cards */}
+      <div className="bar-inv-kpis">
+        <div className="bar-inv-kpi">
+          <span>Total Bar Items</span>
+          <strong>{totalItems}</strong>
+          <small>Active beverage lines</small>
+        </div>
+        <div className="bar-inv-kpi">
+          <span>In-Stock Bottles / Units</span>
+          <strong>{totalUnits.toLocaleString("en-IN")}</strong>
+          <small>Total physical inventory</small>
+        </div>
+        <div className="bar-inv-kpi alert">
+          <span>Low Stock Alerts</span>
+          <strong style={{ color: lowStockCount > 0 ? "#f59e0b" : "inherit" }}>{lowStockCount}</strong>
+          <small>At or below threshold</small>
+        </div>
+        <div className="bar-inv-kpi danger">
+          <span>Out of Stock</span>
+          <strong style={{ color: outOfStockCount > 0 ? "#ef4444" : "inherit" }}>{outOfStockCount}</strong>
+          <small>Urgent re-order needed</small>
+        </div>
+        <div className="bar-inv-kpi highlight">
+          <span>Bar Stock Valuation</span>
+          <strong style={{ color: "var(--accent-amber, #f59e0b)" }}>{formatCurrency(totalValuation)}</strong>
+          <small>Total purchase value</small>
+        </div>
+      </div>
+
+      {/* 3. Search & Filter Bar */}
+      <div className="bar-list-tools">
+        <label className="bar-search">
+          <Search size={16} />
+          <input
+            placeholder="Search drink name, brand, category, rack location…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button className="bar-icon-button small" type="button" onClick={() => setQuery("")}>
+              <X size={14} />
+            </button>
+          )}
+        </label>
+        <label className="bar-select-label">
+          <span>Category Filter</span>
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="all">All Categories ({validBeverages.length})</option>
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </label>
+        <label className="bar-select-label">
+          <span>Stock Status</span>
+          <select value={stockFilter} onChange={(e) => setStockFilter(e.target.value)}>
+            <option value="all">All Statuses ({validBeverages.length})</option>
+            <option value="in_stock">In Stock ({inStockCount})</option>
+            <option value="low_stock">Low Stock ({lowStockCount})</option>
+            <option value="out_of_stock">Out of Stock ({outOfStockCount})</option>
+          </select>
+        </label>
+      </div>
+
+      {error && <div className="bar-error" role="alert" style={{ margin: "14px 18px" }}>{error}</div>}
+
+      {/* 4. Inventory Records Table */}
+      {loading ? (
+        <SkeletonTable rows={6} columns={7} className="bar-table-wrap" />
+      ) : (
+        <div className="bar-table-wrap">
+          <table className="bar-table bar-inventory-table">
+            <thead>
+              <tr>
+                <th style={{ minWidth: "180px", textAlign: "left" }}>Item / Drink Name</th>
+                <th style={{ minWidth: "130px", textAlign: "left" }}>Category</th>
+                <th style={{ minWidth: "120px", textAlign: "left" }}>Unit & Size</th>
+                <th style={{ minWidth: "85px", textAlign: "center" }}>ABV %</th>
+                <th style={{ minWidth: "100px", textAlign: "center" }}>Current Stock</th>
+                <th style={{ minWidth: "80px", textAlign: "center" }}>Threshold</th>
+                <th style={{ minWidth: "105px", textAlign: "right" }}>Unit Cost</th>
+                <th style={{ minWidth: "105px", textAlign: "right" }}>Selling / MRP</th>
+                <th style={{ minWidth: "140px", textAlign: "left" }}>Storage Location</th>
+                <th style={{ minWidth: "95px", textAlign: "center" }}>Status</th>
+                <th style={{ minWidth: "240px", textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.map((item) => {
+                const stock = Number(item.stock ?? item.currentStock ?? 0);
+                const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+                const abvVal = item.abv != null && item.abv !== "" ? Number(item.abv) : null;
+                const cost = Number(item.unitCost ?? item.cost ?? 0);
+                const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+
+                let statusLabel = "In Stock";
+                if (stock <= 0) {
+                  statusLabel = "Out of Stock";
+                } else if (stock <= threshold) {
+                  statusLabel = "Low Stock";
+                }
+
+                const brandText = String(item.brand || "").trim();
+                const subcatText = String(item.subcategory || "").trim();
+                const displaySubtitle =
+                  brandText && subcatText && brandText.toLowerCase() !== subcatText.toLowerCase()
+                    ? `${brandText} • ${subcatText}`
+                    : brandText || subcatText || "";
+
+                return (
+                  <tr key={item.id ?? item.ingredientId}>
+                    <td style={{ textAlign: "left" }}>
+                      <strong>{item.name}</strong>
+                      {displaySubtitle && (
+                        <small style={{ color: "var(--text-dim)", display: "block" }}>
+                          {displaySubtitle}
+                        </small>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "left" }}>
+                      <span className="bar-category-chip">{item.category || "Beverage"}</span>
+                    </td>
+                    <td style={{ textAlign: "left" }}>
+                      <span>{item.unit || "Bottle"}</span>
+                      {item.volumeMl && <small style={{ display: "block", color: "var(--text-dim)" }}>{item.volumeMl} ml</small>}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      {abvVal != null && abvVal > 0 ? (
+                        <span style={{ fontWeight: 700, color: "var(--accent-amber)" }}>{abvVal}%</span>
+                      ) : (
+                        <span style={{ color: "var(--text-dim)", fontSize: "0.68rem" }}>0% Non-Alc</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className={`bar-stock-chip ${stock <= threshold ? "low" : ""}`}>
+                        {stock}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "center", color: "var(--text-muted)" }}>{threshold}</td>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(cost)}</td>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{selling > 0 ? formatCurrency(selling) : <span style={{ color: "var(--text-dim)" }}>—</span>}</td>
+                    <td style={{ textAlign: "left" }}>
+                      <small style={{ display: "block", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                        {item.storageLocation || "Front Bar Display Shelf"}
+                      </small>
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <Status>{statusLabel}</Status>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <div className="bar-inv-actions">
+                        <div className="bar-stock-btn-group">
+                          <button
+                            className="bar-stock-btn deduct"
+                            type="button"
+                            title={`Deduct / Adjust stock for ${item.name}`}
+                            disabled={busy}
+                            onClick={() => adjustStock(item, -1)}
+                          >
+                            <span className="bar-stock-icon">−</span> Adjust
+                          </button>
+                          <button
+                            className="bar-stock-btn receive"
+                            type="button"
+                            title={`Receive stock shipment for ${item.name}`}
+                            disabled={busy}
+                            onClick={() => adjustStock(item, 1)}
+                          >
+                            <span className="bar-stock-icon">+</span> Receive
+                          </button>
+                        </div>
+                        <button
+                          className="bar-icon-button small"
+                          type="button"
+                          title="Edit bar inventory item"
+                          disabled={busy}
+                          onClick={() => openEditModal(item)}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          className="bar-icon-button small danger"
+                          type="button"
+                          title="Delete from bar inventory"
+                          disabled={busy}
+                          onClick={() => deleteItem(item)}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {filteredRows.length === 0 && !error && (
+            <div className="bar-empty">
+              {validBeverages.length === 0 ? (
+                <div>
+                  <p style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: 700 }}>
+                    No bar inventory items found.
+                  </p>
+                  <p style={{ margin: "0 0 16px", color: "var(--text-dim)" }}>
+                    All kitchen packaging mock data has been cleared. Add your first liquor or beverage item to get started.
+                  </p>
+                  <button className="bar-button primary" type="button" onClick={openAddModal}>
+                    <Plus size={15} /> Add First Bar Inventory Item
+                  </button>
+                </div>
+              ) : (
+                <p>No beverage items match your current search or filters. Try adjusting your search query.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. Add / Edit Bar Inventory Modal */}
+      {modalOpen && (
+        <div
+          className="bar-overlay"
+          role="presentation"
+          onMouseDown={(event) => event.target === event.currentTarget && !modalBusy && setModalOpen(false)}
+        >
+          <section className="bar-modal" role="dialog" aria-modal="true" style={{ width: "min(840px, 100%)" }}>
+            <header className="bar-modal-head">
+              <div>
+                <span className="bar-kicker">BAR & LIQUOR LEDGER</span>
+                <h2>{editingItem ? `Edit "${editingItem.name}"` : "Add Bar Inventory"}</h2>
+              </div>
+              <button
+                className="bar-icon-button"
+                type="button"
+                aria-label="Close"
+                disabled={modalBusy}
+                onClick={() => setModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <form className="bar-form" onSubmit={saveInventoryItem} style={{ padding: "18px 20px" }}>
+              <div className="bar-form-grid">
+                {/* Item Name */}
+                <label className="bar-field wide">
+                  <span>Beverage / Item Name *</span>
+                  <input
+                    required
+                    placeholder="e.g. Johnnie Walker Black Label 12Y, Corona Extra Beer, Monin Blue Curacao"
+                    value={formData.name}
+                    onChange={(e) => setField("name", e.target.value)}
+                  />
+                </label>
+
+                {/* Category */}
+                <label className="bar-field">
+                  <span>Bar Category *</span>
+                  {!customCategory ? (
+                    <select
+                      value={formData.category}
+                      onChange={(e) => handleCategorySelect(e.target.value)}
+                    >
+                      {BAR_INVENTORY_CATEGORIES.map((c) => (
+                        <option key={c.category} value={c.category}>{c.category}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Category…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        required
+                        placeholder="Type custom category name…"
+                        value={formData.category}
+                        onChange={(e) => setField("category", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomCategory(false);
+                          setField("category", BAR_INVENTORY_CATEGORIES[0].category);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+
+                {/* Subcategory / Variety */}
+                <label className="bar-field">
+                  <span>Subcategory / Variety</span>
+                  {currentSubcategories.length > 0 && !customCategory ? (
+                    <select
+                      value={formData.subcategory}
+                      onChange={(e) => setField("subcategory", e.target.value)}
+                    >
+                      {currentSubcategories.map((sub) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      placeholder="e.g. Single Malt, Craft IPA, Blanco, Puree"
+                      value={formData.subcategory}
+                      onChange={(e) => setField("subcategory", e.target.value)}
+                    />
+                  )}
+                </label>
+
+                {/* Brand */}
+                <label className="bar-field">
+                  <span>Brand / Label</span>
+                  <input
+                    placeholder="e.g. Diageo, Bacardi, Sula, Monin, Schweppes"
+                    value={formData.brand}
+                    onChange={(e) => setField("brand", e.target.value)}
+                  />
+                </label>
+
+                {/* Unit / Packaging */}
+                <label className="bar-field">
+                  <span>Packaging Unit *</span>
+                  {!customUnit ? (
+                    <select
+                      value={formData.unit}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomUnit(true);
+                          setField("unit", "");
+                        } else {
+                          setField("unit", e.target.value);
+                          if (e.target.value.includes("750")) setField("volumeMl", 750);
+                          else if (e.target.value.includes("1 L") || e.target.value.includes("1000")) setField("volumeMl", 1000);
+                          else if (e.target.value.includes("330")) setField("volumeMl", 330);
+                          else if (e.target.value.includes("650")) setField("volumeMl", 650);
+                        }
+                      }}
+                    >
+                      {BAR_INVENTORY_UNITS.map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Unit…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        required
+                        placeholder="e.g. Case of 12, Barrel 20L"
+                        value={formData.unit}
+                        onChange={(e) => setField("unit", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomUnit(false);
+                          setField("unit", BAR_INVENTORY_UNITS[0]);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+
+                {/* Bottle Volume (ml) */}
+                <label className="bar-field">
+                  <span>Volume / Bottle Size (ml)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="750"
+                    value={formData.volumeMl}
+                    onChange={(e) => setField("volumeMl", e.target.value)}
+                  />
+                </label>
+
+                {/* ABV % */}
+                <label className="bar-field">
+                  <span>Alcohol Content (ABV %)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="e.g. 42.8 or 0 for non-alcoholic"
+                    value={formData.abv}
+                    onChange={(e) => setField("abv", e.target.value)}
+                  />
+                </label>
+
+                {/* Current Stock */}
+                <label className="bar-field">
+                  <span>Current In-Stock Quantity *</span>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.stock}
+                    onChange={(e) => setField("stock", e.target.value)}
+                  />
+                </label>
+
+                {/* Reorder Threshold */}
+                <label className="bar-field">
+                  <span>Re-order Alert Threshold *</span>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.minThreshold}
+                    onChange={(e) => setField("minThreshold", e.target.value)}
+                  />
+                </label>
+
+                {/* Unit Purchase Cost */}
+                <label className="bar-field">
+                  <span>Unit Purchase Cost (₹) *</span>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.unitCost}
+                    onChange={(e) => setField("unitCost", e.target.value)}
+                  />
+                </label>
+
+                {/* Selling Price / MRP */}
+                <label className="bar-field">
+                  <span>Selling Price / MRP (₹)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="Optional selling price / peg rate"
+                    value={formData.sellingPrice}
+                    onChange={(e) => setField("sellingPrice", e.target.value)}
+                  />
+                </label>
+
+                {/* Storage Location */}
+                <label className="bar-field">
+                  <span>Storage / Rack Location</span>
+                  {!customLocation ? (
+                    <select
+                      value={formData.storageLocation}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomLocation(true);
+                          setField("storageLocation", "");
+                        } else {
+                          setField("storageLocation", e.target.value);
+                        }
+                      }}
+                    >
+                      {BAR_STORAGE_LOCATIONS.map((loc) => (
+                        <option key={loc} value={loc}>{loc}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Location…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        placeholder="e.g. Cellar Rack B3"
+                        value={formData.storageLocation}
+                        onChange={(e) => setField("storageLocation", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomLocation(false);
+                          setField("storageLocation", BAR_STORAGE_LOCATIONS[0]);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+
+                {/* Supplier / Distributor */}
+                <label className="bar-field">
+                  <span>Supplier / Distributor</span>
+                  {!customSupplier ? (
+                    <select
+                      value={formData.supplier}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomSupplier(true);
+                          setField("supplier", "");
+                        } else {
+                          setField("supplier", e.target.value);
+                        }
+                      }}
+                    >
+                      {BAR_SUPPLIERS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Supplier…</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        placeholder="e.g. Local Wine Wholesaler"
+                        value={formData.supplier}
+                        onChange={(e) => setField("supplier", e.target.value)}
+                      />
+                      <button
+                        className="bar-button secondary small"
+                        type="button"
+                        onClick={() => {
+                          setCustomSupplier(false);
+                          setField("supplier", BAR_SUPPLIERS[0]);
+                        }}
+                      >
+                        Select
+                      </button>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {modalError && (
+                <p className="bar-error" role="alert" style={{ marginTop: "12px" }}>
+                  {modalError}
+                </p>
+              )}
+
+              <footer className="bar-modal-footer" style={{ marginTop: "18px", padding: "14px 0 0" }}>
+                <button
+                  className="bar-button secondary"
+                  type="button"
+                  disabled={modalBusy}
+                  onClick={() => setModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button className="bar-button primary" type="submit" disabled={modalBusy}>
+                  {modalBusy ? "Saving…" : editingItem ? "Update Inventory Item" : "Add Inventory Item"}
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
+    </section>
+  );
 }
 function Status({ children }) {
   const cls = String(children || "").toLowerCase().replace(/\s+/g, "-");
@@ -245,7 +1264,6 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
       <section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-form-title">
         <header className="bar-modal-head">
           <div>
-            <span className="bar-kicker">DEMO DATA • NOT SAVED TO SERVER</span>
             <h2 id="bar-form-title">{initial ? "Edit" : "Add"} {kind === "drink" ? "Drink" : kind === "table" ? "Bar Table" : kind === "staff" ? "Bar Staff Member" : "Bar Order"}</h2>
           </div>
           <button className="bar-icon-button" aria-label="Close" onClick={onClose} type="button"><X size={18} /></button>
@@ -482,6 +1500,2911 @@ function getDrinkIcon(name = "", category = "") {
   return { Icon: GlassWater, tone: "tone-blue" };
 }
 
+
+function BarDrinksMenu({
+  drinks = [],
+  onAddDrink,
+  onUpdateDrink,
+  onDeleteDrink,
+  onToggleDrinkAvailability,
+  onToggleDrinkSpecial,
+  onAddMenuItem,
+  onUpdateMenuItem,
+  onDeleteMenuItem,
+  onSetMenuAvailability,
+  setToast,
+}) {
+  const [extraCategories, setExtraCategories] = useState([]);
+  const [extraMeasures, setExtraMeasures] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarDrinkCategories()
+      .then((res) => {
+        if (!isMounted) return;
+        const cats = res?.data?.data || res?.data;
+        if (Array.isArray(cats) && cats.length > 0) {
+          setExtraCategories(cats);
+        }
+      })
+      .catch(() => {});
+
+    apiGetBarServingMeasures()
+      .then((res) => {
+        if (!isMounted) return;
+        const measures = res?.data?.data || res?.data;
+        if (Array.isArray(measures) && measures.length > 0) {
+          setExtraMeasures(measures);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [menuFilters, setMenuFilters] = useState({
+    category: "",
+    drinkType: "",
+    availability: "",
+  });
+  const [menuPage, setMenuPage] = useState(1);
+  const [menuPageSize, setMenuPageSize] = useState(6);
+
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [isCustomMeasure, setIsCustomMeasure] = useState(false);
+  const [itemForm, setItemForm] = useState({
+    name: "",
+    category: "Cocktails",
+    customCategory: "",
+    price: "",
+    drinkType: "Alcoholic",    measure: "Glass (250 ml)",
+    customMeasure: "",
+    abv: "",
+    isVeg: false,
+    isChefSpecial: false,
+    prepTime: "15 min",
+    measure: "30 ml (Single Peg)",
+    customMeasure: "",
+    drinkType: "Alcoholic",
+    abv: "40",
+    description: "",
+    image: "",
+    isAvailable: "Available",
+  });
+
+  const categoryOptions = useMemo(() => {
+    const map = new Map();
+    [...BAR_CATEGORIES, ...extraCategories].forEach((cat) => {
+      if (cat) map.set(cat.toLowerCase(), { value: cat, label: cat });
+    });
+    drinks.forEach((d) => {
+      if (d.category && !map.has(d.category.toLowerCase())) {
+        map.set(d.category.toLowerCase(), { value: d.category, label: d.category });
+      }
+    });
+    return Array.from(map.values());
+  }, [drinks, extraCategories]);
+
+  const measureOptions = useMemo(() => {
+    const list = [...BAR_SERVING_MEASURES];
+    extraMeasures.forEach((m) => {
+      if (m && !list.some((existing) => existing.toLowerCase() === m.toLowerCase())) {
+        list.push(m);
+      }
+    });
+    drinks.forEach((d) => {
+      const msr = String(d.measure || d.servingMeasure || "").trim();
+      if (msr && !list.some((m) => m.toLowerCase() === msr.toLowerCase())) {
+        list.push(msr);
+      }
+    });
+    return list;
+  }, [drinks, extraMeasures]);
+
+  const filteredDrinks = useMemo(() => {
+    return drinks.filter((item) => {
+      const query = searchFilter.trim().toLowerCase();
+      const matchesSearch =
+        !query ||
+        [item.name, item.dishName, item.drinkName, item.description, item.category].some((val) =>
+          String(val ?? "").toLowerCase().includes(query)
+        );
+      const matchesCategory =
+        !menuFilters.category ||
+        String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase();
+      
+      const isItemAlcoholic = item.drinkType
+        ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
+        : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+
+      const matchesDrinkType =
+        !menuFilters.drinkType ||
+        (menuFilters.drinkType === "alcoholic" ? isItemAlcoholic : !isItemAlcoholic);
+      const matchesAvailability =
+        !menuFilters.availability ||
+        (item.isAvailable !== false && item.isAvailable !== "Unavailable") ===
+          (menuFilters.availability === "available");
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesDrinkType &&
+        matchesAvailability
+      );
+    });
+  }, [drinks, searchFilter, menuFilters]);
+
+  const totalMenuPages = Math.ceil(filteredDrinks.length / menuPageSize) || 1;
+  const safeMenuPage = Math.min(Math.max(menuPage, 1), totalMenuPages);
+  const startIdx = (safeMenuPage - 1) * menuPageSize;
+  const paginatedDrinks = filteredDrinks.slice(startIdx, startIdx + menuPageSize);
+
+  const handleOpenItemModal = (item = null) => {
+    if (item) {
+      setEditingItem(item);
+      const cat = String(item.category || "").trim();
+      const isKnownCat = BAR_CATEGORIES.some(
+        (c) => c.toLowerCase() === cat.toLowerCase()
+      );
+      const isCustomCat = !isKnownCat && Boolean(cat);
+      setIsCustomCategory(isCustomCat);
+
+      const msr = String(item.measure || item.servingMeasure || "").trim();
+      const isKnownMeasure = BAR_SERVING_MEASURES.some(
+        (m) => m.toLowerCase() === msr.toLowerCase()
+      );
+      const isCustomMsr = !isKnownMeasure && Boolean(msr);
+      setIsCustomMeasure(isCustomMsr);
+
+      const isSpecial = Boolean(
+        item.isChefSpecial ||
+        item.isChefsSpecial ||
+        item.isSpecial ||
+        item.isBartenderSpecial
+      );
+
+      setItemForm({
+        name: item.name || "",
+        category: isCustomCat ? "__custom__" : (cat || "Cocktails"),
+        customCategory: isCustomCat ? cat : "",
+        price: item.price !== undefined && item.price !== null ? String(item.price) : "",
+        isVeg: Boolean(item.isVeg),
+        isChefSpecial: isSpecial,
+        prepTime: item.prepTime || "15 min",
+        measure: isCustomMsr ? "__custom__" : (msr || "30 ml (Single Peg)"),
+        customMeasure: isCustomMsr ? msr : "",
+        drinkType: item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic"),
+        abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : "",
+        description: item.description || "",
+        image: item.image || item.imageUrl || "",
+        isAvailable: item.isAvailable === false || item.isAvailable === "Unavailable" ? "Unavailable" : "Available",
+      });
+    } else {
+      setEditingItem(null);
+      setIsCustomCategory(false);
+      setIsCustomMeasure(false);
+      setItemForm({
+        name: "",
+        category: "Cocktails",
+        customCategory: "",
+        price: "",
+        isVeg: false,
+        isChefSpecial: false,
+        prepTime: "15 min",
+        measure: "30 ml (Single Peg)",
+        customMeasure: "",
+        drinkType: "Alcoholic",
+        abv: "40",
+        isVeg: false,
+        isChefSpecial: false,
+        description: "",
+        image: "",
+        isAvailable: "Available",
+      });
+    }
+    setIsItemModalOpen(true);
+  };
+
+  const handleSaveItem = async (e) => {
+    e.preventDefault();
+    if (!itemForm.name.trim()) {
+      setToast?.("Drink name is required.");
+      return;
+    }
+    if (!itemForm.price || Number(itemForm.price) < 0) {
+      setToast?.("Please enter a valid price in Rupees.");
+      return;
+    }
+
+    // Resolve Category: custom input or dropdown selection
+    let finalCategory = "Cocktails";
+    if (isCustomCategory || itemForm.category === "__custom__") {
+      finalCategory = String(itemForm.customCategory || "").trim();
+      if (!finalCategory) {
+        setToast?.("Please enter a custom category name.");
+        return;
+      }
+    } else {
+      finalCategory = String(itemForm.category || "").trim() || "Cocktails";
+    }
+
+    // Resolve Serving Measure: custom input or dropdown selection
+    let finalMeasure = "30 ml (Single Peg)";
+    if (isCustomMeasure || itemForm.measure === "__custom__") {
+      finalMeasure = String(itemForm.customMeasure || "").trim();
+      if (!finalMeasure) {
+        setToast?.("Please enter a custom serving measure / volume.");
+        return;
+      }
+    } else {
+      finalMeasure = String(itemForm.measure || "").trim() || "30 ml (Single Peg)";
+    }
+
+    const isSpecial = Boolean(itemForm.isChefSpecial);
+
+    const payload = {
+      ...(editingItem || {}),
+      id: editingItem?.id || `DR-${Date.now()}`,
+      name: itemForm.name.trim(),
+      dishName: itemForm.name.trim(),
+      drinkName: itemForm.name.trim(),
+      category: finalCategory,
+      price: parseFloat(itemForm.price || 0),
+      isVeg: Boolean(itemForm.isVeg),
+      dietaryType: itemForm.drinkType === "Non-Alcoholic" ? "VEG" : "NON-VEG",
+      isChefSpecial: isSpecial,
+      isChefsSpecial: isSpecial,
+      isSpecial: isSpecial,
+      isBartenderSpecial: isSpecial,
+      prepTime: itemForm.prepTime || "15 min",
+      prepTimeMinutes: parseInt(itemForm.prepTime, 10) || 15,
+      measure: finalMeasure,
+      servingMeasure: finalMeasure,
+      drinkType: itemForm.drinkType || (itemForm.abv ? "Alcoholic" : itemForm.isVeg ? "Non-Alcoholic" : "Alcoholic"),
+      abv: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
+      description: itemForm.description || "",
+      shortDescription: itemForm.description || "",
+      image: itemForm.image || "",
+      imageUrl: itemForm.image || "",
+      isAvailable: itemForm.isAvailable !== false && itemForm.isAvailable !== "Unavailable",
+      isBarItem: true,
+      isBarDrink: true,
+      isBeverage: true,
+    };
+
+    console.info("[Bar Drinks] Saving drink item...", payload);
+    try {
+      if (editingItem) {
+        if (onUpdateDrink) onUpdateDrink(payload);
+        else if (onUpdateMenuItem) await onUpdateMenuItem(payload);
+      } else {
+        if (onAddDrink) onAddDrink(payload);
+        else if (onAddMenuItem) await onAddMenuItem(payload);
+      }
+      setIsItemModalOpen(false);
+    } catch (err) {
+      setToast?.(err?.message || "Could not save drink item.");
+    }
+  };
+
+    const handleToggleAvailability = (item) => {
+    const isAvail = item.isAvailable !== false && item.isAvailable !== "Unavailable";
+    console.info("[Bar Drinks] Toggling availability for:", item.name, !isAvail);
+    if (onToggleDrinkAvailability) {
+      onToggleDrinkAvailability(item.id, !isAvail);
+    } else if (onSetMenuAvailability) {
+      onSetMenuAvailability(item.id, !isAvail);
+    }
+  };
+
+  const handleDeleteItem = (item) => {
+    if (!window.confirm('Are you sure you want to delete "' + item.name + '" from the drinks menu?')) return;
+    console.info("[Bar Drinks] Deleting drink item:", item.id);
+    if (onDeleteDrink) {
+      onDeleteDrink(item.id);
+    } else if (onDeleteMenuItem) {
+      onDeleteMenuItem(item.id);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--border-card)",
+        borderRadius: "12px",
+        padding: "0.75rem 0.85rem",
+      }}
+    >
+      {/* Header inside Card */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.65rem",
+          marginBottom: "0.75rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <div
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "10px",
+              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+              flexShrink: 0,
+            }}
+          >
+            <Wine size={18} color="#ffffff" strokeWidth={2.3} />
+          </div>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <h2
+                style={{
+                  fontSize: "1.2rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  margin: 0,
+                }}
+              >
+                Drinks Menu
+              </h2>
+              <span
+                style={{
+                  background: "rgba(245, 158, 11, 0.15)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  color: "var(--accent-amber-light)",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: "16px",
+                }}
+              >
+                {filteredDrinks.length} items
+              </span>
+            </div>
+            <p
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--text-dim)",
+                margin: "2px 0 0 0",
+              }}
+            >
+              Manage your bar drinks, categories and pricing
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Add Drink Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => handleOpenItemModal()}
+            style={{
+              height: "36px",
+              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0 1.1rem",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              cursor: "pointer",
+              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+            }}
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>Add New Drink</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div
+        className="menu-filter-toolbar menu-items-filter-toolbar"
+        role="search"
+        aria-label="Drink item filters"
+      >
+        <label className="menu-filter-field menu-filter-search">
+          <span>Search</span>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "36px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <Search
+              size={15}
+              color="var(--text-dim)"
+              style={{
+                position: "absolute",
+                left: "12px",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search drinks to edit, delete..."
+              value={searchFilter}
+              onChange={(e) => {
+                setSearchFilter(e.target.value);
+                setMenuPage(1);
+              }}
+              aria-label="Search drinks"
+              style={{
+                width: "100%",
+                height: "100%",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-card)",
+                borderRadius: "8px",
+                padding: "0 10px 0 34px",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                outline: "none",
+              }}
+            />
+          </div>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Category</span>
+          <select
+            value={menuFilters.category}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, category: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            {categoryOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Drink Type</span>
+          <select
+            value={menuFilters.drinkType}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, drinkType: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            <option value="alcoholic">Alcoholic</option>
+            <option value="non-alcoholic">Non-Alcoholic</option>
+          </select>
+        </label>
+
+        <label className="menu-filter-field">
+          <span>Availability</span>
+          <select
+            value={menuFilters.availability}
+            onChange={(e) => {
+              setMenuFilters((prev) => ({ ...prev, availability: e.target.value }));
+              setMenuPage(1);
+            }}
+          >
+            <option value="">All</option>
+            <option value="available">Available</option>
+            <option value="unavailable">Unavailable</option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          className="menu-filter-clear"
+          onClick={() => {
+            setSearchFilter("");
+            setMenuFilters({ category: "", drinkType: "", availability: "" });
+            setMenuPage(1);
+          }}
+          style={{
+            height: "36px",
+            padding: "0 14px",
+            background: "var(--bg-tertiary)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "8px",
+            color: "var(--text-muted)",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Clear Filters
+        </button>
+      </div>
+
+      {/* Table matching Dine Table Structure & Styling */}
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+          <thead>
+            <tr style={{ borderBottom: "1.5px solid var(--border-subtle)" }}>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "40%" }}>Drink Name</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Category</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Drink Type</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Price (₹)</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%", textAlign: "center" }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedDrinks.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.85rem" }}>
+                  No drinks found matching your filters.
+                </td>
+              </tr>
+            ) : (
+              paginatedDrinks.map((item) => {
+                const isAvail = item.isAvailable !== false && item.isAvailable !== "Unavailable";
+                const isSpecial = Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial);
+                const isAlcoholic = item.drinkType
+                  ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
+                  : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+
+                return (
+                  <tr
+                    key={item.id}
+                    style={{
+                      borderBottom: "1px solid var(--border-subtle)",
+                      transition: "background 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    {/* Drink Name + Thumbnail */}
+                    <td style={{ padding: "0.6rem 0.85rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <img
+                          src={getMenuItemImage(item)}
+                          alt={item.name}
+                          onError={handleDishImageError}
+                          style={{
+                            width: "42px",
+                            height: "42px",
+                            borderRadius: "8px",
+                            objectFit: "cover",
+                            border: "1px solid var(--border-subtle)",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              color: "var(--text-main)",
+                              fontSize: "0.88rem",
+                              lineHeight: 1.3,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <span>{item.name}</span>
+                            {Boolean(
+                              item.isChefSpecial ||
+                              item.isChefsSpecial ||
+                              item.isSpecial ||
+                              item.isBartenderSpecial
+                            ) && (
+                              <span
+                                title="Bartender's Special"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "3px",
+                                  background: "rgba(245, 158, 11, 0.15)",
+                                  border: "1px solid rgba(245, 158, 11, 0.35)",
+                                  color: "#f59e0b",
+                                  borderRadius: "12px",
+                                  padding: "1px 7px",
+                                  fontSize: "0.68rem",
+                                  fontWeight: 800,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Star
+                                  size={11}
+                                  fill="#f59e0b"
+                                  color="#f59e0b"
+                                  style={{
+                                    filter: "drop-shadow(0 0 2px rgba(245, 158, 11, 0.5))",
+                                  }}
+                                />
+                                <span>Special</span>
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.72rem",
+                              color: "var(--text-muted)",
+                              lineHeight: 1.35,
+                              marginTop: "2px",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {(item.measure || item.servingMeasure) && (
+                              <span style={{ color: "var(--accent-amber-light)", fontWeight: 700 }}>
+                                {item.measure || item.servingMeasure} •{" "}
+                              </span>
+                            )}
+                            {item.prepTime || "15 min"} • {item.description || item.drinkType || ""}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Category */}
+                    <td
+                      style={{
+                        padding: "0.6rem 0.85rem",
+                        textTransform: "capitalize",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.category?.replace("-", " ") || "Cocktails"}
+                    </td>
+
+                    {/* Drink Type */}
+                    <td style={{ padding: "0.6rem 0.85rem" }}>
+                      {isAlcoholic ? (
+                        <span
+                          style={{
+                            background: "rgba(239, 68, 68, 0.12)",
+                            border: "1px solid rgba(239, 68, 68, 0.28)",
+                            color: "var(--danger)",
+                            borderRadius: "14px",
+                            padding: "3px 10px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ALCOHOLIC
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            background: "rgba(16, 185, 129, 0.12)",
+                            border: "1px solid rgba(16, 185, 129, 0.28)",
+                            color: "var(--success)",
+                            borderRadius: "14px",
+                            padding: "3px 10px",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          NON-ALCOHOLIC
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Price */}
+                    <td
+                      style={{
+                        padding: "0.6rem 0.85rem",
+                        fontWeight: 800,
+                        color: "var(--accent-amber-light)",
+                        fontSize: "0.92rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      ₹{Number(item.price || item.sellingPrice || 0).toFixed(2)}
+                    </td>
+
+                    {/* Actions */}
+                    <td
+                      style={{
+                        padding: "0.6rem 0.85rem",
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.45rem",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAvailability(item)}
+                          title={isAvail ? "Make available" : "Mark unavailable"}
+                          style={{
+                            border: isAvail
+                              ? "1px solid rgba(16, 185, 129, 0.45)"
+                              : "1px solid rgba(239, 68, 68, 0.45)",
+                            background: isAvail
+                              ? "rgba(16, 185, 129, 0.12)"
+                              : "rgba(239, 68, 68, 0.12)",
+                            color: isAvail ? "#10b981" : "#ef4444",
+                            borderRadius: "6px",
+                            padding: "4px 9px",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {isAvail ? "Available" : "Unavailable"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenItemModal(item)}
+                          style={{
+                            border: "1px solid rgba(245, 158, 11, 0.45)",
+                            background: "rgba(245, 158, 11, 0.06)",
+                            color: "var(--accent-amber-light)",
+                            borderRadius: "6px",
+                            padding: "4px 12px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          title="Edit drink"
+                        >
+                          <SquarePen size={13} />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteItem(item)}
+                          style={{
+                            border: "1px solid rgba(239, 68, 68, 0.45)",
+                            background: "rgba(239, 68, 68, 0.06)",
+                            color: "var(--danger)",
+                            borderRadius: "6px",
+                            padding: "4px 12px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          title="Delete drink"
+                        >
+                          <Trash2 size={13} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {filteredDrinks.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.5rem 0.85rem",
+            borderTop: "1px solid var(--border-subtle)",
+            background: "var(--bg-tertiary)",
+            fontSize: "0.74rem",
+            color: "var(--text-muted)",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+            marginTop: "0.4rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <span>
+              {"Showing "}
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                {startIdx + 1}
+              </strong>
+              {"–"}
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                {Math.min(startIdx + menuPageSize, filteredDrinks.length)}
+              </strong>
+              {" of "}
+              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
+                {filteredDrinks.length}
+              </strong>
+              {" items"}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <button
+              type="button"
+              disabled={safeMenuPage <= 1}
+              onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+              style={{
+                width: "26px",
+                height: "26px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-secondary)",
+                color: "var(--text-main)",
+                borderRadius: "4px",
+                cursor: safeMenuPage <= 1 ? "not-allowed" : "pointer",
+                opacity: safeMenuPage <= 1 ? 0.4 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            {Array.from({ length: totalMenuPages }, (_, i) => i + 1).map((pg) => (
+              <button
+                key={pg}
+                type="button"
+                onClick={() => setMenuPage(pg)}
+                style={{
+                  width: "26px",
+                  height: "26px",
+                  border: pg === safeMenuPage ? "1px solid rgba(245, 158, 11, 0.45)" : "1px solid var(--border-card)",
+                  background: pg === safeMenuPage ? "rgba(245, 158, 11, 0.15)" : "var(--bg-secondary)",
+                  color: pg === safeMenuPage ? "var(--accent-amber-light)" : "var(--text-main)",
+                  borderRadius: "4px",
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                }}
+              >
+                {pg}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={safeMenuPage >= totalMenuPages}
+              onClick={() => setMenuPage((p) => Math.min(totalMenuPages, p + 1))}
+              style={{
+                width: "26px",
+                height: "26px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-secondary)",
+                color: "var(--text-main)",
+                borderRadius: "4px",
+                cursor: safeMenuPage >= totalMenuPages ? "not-allowed" : "pointer",
+                opacity: safeMenuPage >= totalMenuPages ? 0.4 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add / Edit Drink - Exactly Matching Requested Layout */}
+      {isItemModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--modal-overlay)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 960,
+            padding: "1rem",
+          }}
+        >
+          <form
+            onSubmit={handleSaveItem}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1.5px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: "680px",
+              maxHeight: "calc(100dvh - 2rem)",
+              padding: "1.6rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.1rem",
+              overflowY: "auto",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.85rem",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    fontSize: "1.15rem",
+                    fontWeight: 800,
+                    color: "var(--text-main)",
+                    margin: "2px 0 0 0",
+                  }}
+                >
+                  {editingItem ? "Edit Drink" : "Add Drink"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsItemModalOpen(false)}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: "0.85rem",
+                alignItems: "start",
+              }}
+            >
+              {/* Row 1, Col 1: Drink Name */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Drink Name <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Special Mojito / Blue Lagoon"
+                  value={itemForm.name}
+                  onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    height: "38px",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Row 1, Col 2: Category * with + Custom button */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Category <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                {isCustomCategory ? (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Type custom category..."
+                      value={itemForm.customCategory}
+                      onChange={(e) => setItemForm({ ...itemForm, customCategory: e.target.value })}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        outline: "none",
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCategory(false);
+                        setItemForm((prev) => ({ ...prev, category: BAR_CATEGORIES[0] }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 10px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      List
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <select
+                      value={itemForm.category}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "__custom__") {
+                          setIsCustomCategory(true);
+                          setItemForm((prev) => ({ ...prev, customCategory: "" }));
+                        } else {
+                          setItemForm((prev) => ({ ...prev, category: val }));
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {categoryOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Category...</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCategory(true);
+                        setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "" }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 12px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      + Custom
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 2, Col 1: Drink Type */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Drink Type
+                </label>
+                <select
+                  value={itemForm.drinkType}
+                  onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="Alcoholic">Alcoholic</option>
+                  <option value="Non-Alcoholic">Non-Alcoholic</option>
+                </select>
+              </div>
+
+              {/* Row 2, Col 2: Alcohol Content (ABV %) */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Alcohol Content (ABV %)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="e.g. 40"
+                  disabled={itemForm.drinkType === "Non-Alcoholic"}
+                  value={itemForm.drinkType === "Non-Alcoholic" ? "" : itemForm.abv}
+                  onChange={(e) => setItemForm({ ...itemForm, abv: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    opacity: itemForm.drinkType === "Non-Alcoholic" ? 0.45 : 1,
+                  }}
+                />
+              </div>
+
+              {/* Row 3, Col 1: Serving Measure / Volume with + Custom button */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Serving Measure / Volume
+                </label>
+                {isCustomMeasure ? (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      placeholder="e.g. 45 ml, 500 ml Pitcher..."
+                      value={itemForm.customMeasure}
+                      onChange={(e) => setItemForm({ ...itemForm, customMeasure: e.target.value })}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        outline: "none",
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomMeasure(false);
+                        setItemForm((prev) => ({ ...prev, measure: BAR_SERVING_MEASURES[0] }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 10px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      List
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <select
+                      value={itemForm.measure}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "__custom__") {
+                          setIsCustomMeasure(true);
+                          setItemForm((prev) => ({ ...prev, customMeasure: "" }));
+                        } else {
+                          setItemForm((prev) => ({ ...prev, measure: val }));
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <option value="">Select serving measure</option>
+                      {measureOptions.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Measure...</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomMeasure(true);
+                        setItemForm((prev) => ({ ...prev, measure: "__custom__", customMeasure: "" }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 12px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      + Custom
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 3, Col 2: Selling Price (₹) * */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Selling Price (₹) <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="5"
+                  value={itemForm.price}
+                  onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    fontFamily: "var(--font-mono)",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Row 4, Col 1: Availability */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Availability
+                </label>
+                <select
+                  value={itemForm.isAvailable}
+                  onChange={(e) => setItemForm({ ...itemForm, isAvailable: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="Available">Available</option>
+                  <option value="Unavailable">Unavailable</option>
+                </select>
+              </div>
+
+              {/* Row 4, Col 2: Bartender's Special */}
+              <div style={{ display: "flex", alignItems: "center", height: "100%", paddingTop: "20px" }}>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.84rem", fontWeight: 700, color: "var(--text-main)" }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(itemForm.isChefSpecial)}
+                    onChange={(e) => setItemForm({ ...itemForm, isChefSpecial: e.target.checked })}
+                    style={{ width: "16px", height: "16px", accentColor: "#f59e0b", cursor: "pointer" }}
+                  />
+                  <span>Mark as Bartender's Special ⭐</span>
+                </label>
+              </div>
+
+              {/* Row 5: Description (Full Width) */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Description
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Short description of the drink..."
+                  value={itemForm.description}
+                  onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.65rem 0.85rem",
+                    color: "var(--text-main)",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              {/* Row 6: Choose Image (Full Width) */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Choose Image
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  {itemForm.image && (
+                    <img
+                      src={itemForm.image}
+                      alt="Drink preview"
+                      style={{
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "8px",
+                        objectFit: "cover",
+                        border: "1px solid var(--border-card)",
+                      }}
+                    />
+                  )}
+                  <label
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      height: "36px",
+                      padding: "0 14px",
+                      background: "var(--bg-tertiary)",
+                      border: "1.5px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      color: "var(--text-main)",
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Plus size={15} />
+                    <span>{itemForm.image ? "Change Image" : "+ Choose Image"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setItemForm((curr) => ({ ...curr, image: String(reader.result || "") }));
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  {itemForm.image && (
+                    <button
+                      type="button"
+                      onClick={() => setItemForm((curr) => ({ ...curr, image: "" }))}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--danger)",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✕ Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Buttons */}
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => setIsItemModalOpen(false)}
+                style={{
+                  padding: "0.65rem 1.4rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{
+                  padding: "0.65rem 1.6rem",
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  border: "none",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(245, 158, 11, 0.35)",
+                }}
+              >
+                {editingItem ? "Save Drink Changes" : "Add Drink"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+const DEFAULT_BAR_TABLE_SECTIONS = [
+  "Main Hall",
+  "AC Hall",
+  "Family Section",
+  "Balcony / Outdoor",
+  "Lounge",
+  "Bar Counter",
+  "Garden Area",
+  "VIP Lounge",
+];
+
+function BarTablesView({
+  tables = [],
+  staffList = [],
+  orders = [],
+  onAddTable,
+  onUpdateTable,
+  onDeleteTable,
+  onAddStaff,
+  setToast,
+}) {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
+  const [seatingStructureTable, setSeatingStructureTable] = useState(null);
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState(null);
+  const [liveBarTables, setLiveBarTables] = useState(null);
+  const [tableForm, setTableForm] = useState({
+    name: "",
+    section: "Main Hall",
+    capacity: 4,
+    server: staffList[0]?.name || "",
+  });
+
+  // Fetch live bar tables from backend API
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarTables()
+      .then((res) => {
+        if (!isMounted) return;
+        const fetched = res?.data || res?.tables;
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setLiveBarTables(fetched);
+        }
+      })
+      .catch((err) => {
+        console.warn("[BarTablesView] apiGetBarTables offline/fallback:", err?.message);
+      });
+
+    apiGetBarTableAreas()
+      .then((res) => {
+        const areas = res?.data || res?.areas;
+        if (Array.isArray(areas) && areas.length > 0) {
+          areas.forEach((a) => {
+            if (a) saveCustomSection(a);
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const effectiveTables = useMemo(() => {
+    if (!liveBarTables || liveBarTables.length === 0) return tables;
+    const map = new Map(tables.map((t) => [String(t.id ?? t.tableId), t]));
+    liveBarTables.forEach((st) => {
+      const key = String(st.id ?? st.tableId);
+      const existing = map.get(key) || {};
+      map.set(key, { ...existing, ...st });
+    });
+    return Array.from(map.values());
+  }, [tables, liveBarTables]);
+
+  const STORAGE_KEY_CUSTOM_SECTIONS = "avsr_custom_sections";
+  const [customSections, setCustomSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_SECTIONS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveCustomSection = (newSec) => {
+    if (!newSec || !newSec.trim()) return;
+    const trimmed = newSec.trim();
+    setCustomSections((prev) => {
+      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_SECTIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const allSectionOptions = useMemo(() => {
+    const map = new Map();
+    DEFAULT_BAR_TABLE_SECTIONS.forEach((s) => {
+      if (s) map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    customSections.forEach((s) => {
+      if (s) map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    (tables || []).forEach((tbl) => {
+      const sec = tbl.section || tbl.area;
+      if (sec && !map.has(sec.toLowerCase())) {
+        map.set(sec.toLowerCase(), { value: sec, label: sec });
+      }
+    });
+    return Array.from(map.values());
+  }, [customSections, tables]);
+
+  const isTableOccupied = (tbl) => {
+    if (!tbl) return false;
+    const rawStatus = String(tbl?.status || "").trim().toLowerCase();
+    if (rawStatus === "vacant") return false;
+    const hasActiveItemsInTable = Array.isArray(tbl?.items) && tbl.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const activeOrder = Array.isArray(orders) && orders.find((o) => {
+      const orderTblId = String(o.tableId ?? o.TableId ?? "");
+      return orderTblId === String(tbl.id) || orderTblId === String(tbl.backendTableId);
+    });
+    const hasActiveItemsInOrder = activeOrder && Array.isArray(activeOrder.items) && activeOrder.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const hasActiveItems = hasActiveItemsInTable || Boolean(hasActiveItemsInOrder);
+    if (!hasActiveItems) return false;
+    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") return true;
+    return Boolean(hasActiveItems || rawStatus === "occupied");
+  };
+
+  const [tableFilters, setTableFilters] = useState({
+    search: "",
+    status: "all",
+  });
+  const updateTableFilter = (key, value) => {
+    setTableFilters((prev) => ({ ...prev, [key]: value }));
+  };
+  const clearTableFilters = () => {
+    setTableFilters({ search: "", status: "all" });
+  };
+  const hasActiveTableFilters = Boolean(
+    tableFilters.search || (tableFilters.status && tableFilters.status !== "all")
+  );
+
+  const normalizeTableFilterText = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+  const vacantTablesCount = effectiveTables.filter((t) => !isTableOccupied(t)).length;
+  const occupiedTablesCount = effectiveTables.filter((t) => isTableOccupied(t)).length;
+
+  const filteredTables = effectiveTables.filter((table) => {
+    const query = normalizeTableFilterText(tableFilters.search);
+    const isOccupied = isTableOccupied(table);
+    const tableStatus = isOccupied ? "occupied" : "vacant";
+
+    const matchesSearch =
+      !query ||
+      [
+        table.name,
+        table.tableNumber,
+        table.number,
+        table.id,
+        `table ${table.id}`,
+        `t${table.id}`,
+        table.section,
+        table.area,
+        table.server,
+      ].some((val) => normalizeTableFilterText(val).includes(query));
+
+    const matchesStatus =
+      !tableFilters.status ||
+      tableFilters.status === "all" ||
+      tableStatus === normalizeTableFilterText(tableFilters.status);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const [tableSortField, setTableSortField] = useState("id");
+  const [tableSortDirection, setTableSortDirection] = useState("asc");
+
+  const handleTableSort = (field) => {
+    if (tableSortField === field) {
+      setTableSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setTableSortField(field);
+      setTableSortDirection("asc");
+    }
+  };
+
+  const sortedTables = useMemo(() => {
+    return [...filteredTables].sort((a, b) => {
+      let aVal = a[tableSortField];
+      let bVal = b[tableSortField];
+      if (tableSortField === "id") {
+        aVal = Number(a.id || 0);
+        bVal = Number(b.id || 0);
+      } else if (tableSortField === "capacity") {
+        aVal = Number(a.capacity || 0);
+        bVal = Number(b.capacity || 0);
+      } else if (tableSortField === "name") {
+        aVal = String(a.name || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || `Table ${b.id || ""}`).toLowerCase();
+      } else if (tableSortField === "area") {
+        aVal = String(a.section || a.area || "").toLowerCase();
+        bVal = String(b.section || b.area || "").toLowerCase();
+      } else if (tableSortField === "server") {
+        aVal = String(a.server || "").toLowerCase();
+        bVal = String(b.server || "").toLowerCase();
+      } else if (tableSortField === "status") {
+        aVal = isTableOccupied(a) ? "occupied" : "vacant";
+        bVal = isTableOccupied(b) ? "occupied" : "vacant";
+      } else {
+        aVal = String(aVal || "").toLowerCase();
+        bVal = String(bVal || "").toLowerCase();
+      }
+      if (aVal < bVal) return tableSortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return tableSortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredTables, tableSortField, tableSortDirection]);
+
+  const handleOpenTableModal = (tbl = null) => {
+    if (tbl) {
+      setEditingTable(tbl);
+      setTableForm({
+        name: tbl.name || `Table ${tbl.id}`,
+        section: tbl.section || tbl.area || "Main Hall",
+        capacity: Number(tbl.capacity) || 4,
+        server: tbl.server || staffList[0]?.name || "",
+      });
+    } else {
+      setEditingTable(null);
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      setTableForm({
+        name: `Table-${maxId + 1}`,
+        section: "Main Hall",
+        capacity: 4,
+        server: staffList[0]?.name || "",
+      });
+    }
+    setIsTableModalOpen(true);
+  };
+
+  const handleSaveTable = (e) => {
+    e.preventDefault();
+    if (!tableForm.name.trim()) return;
+
+    if (tableForm.section) {
+      saveCustomSection(tableForm.section);
+    }
+
+    const assignedServer = tableForm.server || "";
+
+    if (editingTable) {
+      const updatedPayload = {
+        ...editingTable,
+        name: tableForm.name,
+        tableName: tableForm.name,
+        tableNumber: tableForm.name,
+        section: tableForm.section,
+        sectionArea: tableForm.section,
+        area: tableForm.section,
+        capacity: Number(tableForm.capacity) || 2,
+        capacityChairs: Number(tableForm.capacity) || 2,
+        server: assignedServer,
+        assignedServer: assignedServer,
+      };
+
+      const targetApiId = editingTable.tableId || editingTable.backendTableId || editingTable.id;
+      apiUpdateBarTable(targetApiId, updatedPayload).catch((err) => {
+        console.warn("[BarWorkspace] apiUpdateBarTable warning:", err?.message);
+      });
+
+      onUpdateTable?.(updatedPayload);
+      setToast?.(`Table "${tableForm.name}" updated successfully.`);
+    } else {
+      const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
+      const maxId = effectiveTables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
+      const formattedName = tableForm.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i)
+        ? `Table ${parsedNum}`
+        : (/^\d+$/.test(tableForm.name.trim()) ? `Table ${tableForm.name.trim()}` : tableForm.name.trim());
+
+      const newTablePayload = {
+        id: chosenId,
+        name: formattedName,
+        tableName: formattedName,
+        tableNumber: formattedName,
+        section: tableForm.section,
+        sectionArea: tableForm.section,
+        area: tableForm.section,
+        capacity: Number(tableForm.capacity) || 4,
+        capacityChairs: Number(tableForm.capacity) || 4,
+        status: "available",
+        guests: Number(tableForm.capacity) || 4,
+        items: [],
+        discountPercent: 0,
+        serviceCharge: 5,
+        orderTime: null,
+        server: assignedServer,
+        assignedServer: assignedServer,
+      };
+
+      apiCreateBarTable(newTablePayload).then((res) => {
+        const createdId = res?.data?.tableId || res?.data?.id;
+        if (createdId) {
+          newTablePayload.backendTableId = createdId;
+        }
+      }).catch((err) => {
+        console.warn("[BarWorkspace] apiCreateBarTable warning:", err?.message);
+      });
+
+      onAddTable?.(newTablePayload);
+      setToast?.(`Table "${formattedName}" added successfully.`);
+    }
+    setIsTableModalOpen(false);
+  };
+
+  const handleDeleteTableClick = (tbl) => {
+    if (isTableOccupied(tbl)) {
+      requestDelete({
+        title: "Cannot Delete Table",
+        message: `Cannot delete ${tbl.name || `Table ${tbl.id}`} because it is currently occupied with diners. Clear or settle bill first.`,
+        confirmLabel: "Understood",
+        cancelLabel: "Close",
+        icon: <AlertCircle size={22} color="#f59e0b" />,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    requestDelete({
+      title: "Delete Table?",
+      message: `Are you sure you want to delete ${tbl.name || `Table ${tbl.id}`} permanently? This action cannot be undone.`,
+      confirmLabel: "Yes, Delete",
+      onConfirm: async () => {
+        const targetApiId = tbl.tableId || tbl.backendTableId || tbl.id;
+        apiDeleteBarTable(targetApiId).catch((err) => {
+          console.warn("[BarWorkspace] apiDeleteBarTable warning:", err?.message);
+        });
+        await onDeleteTable?.(tbl.id);
+        setToast?.(`Table "${tbl.name || tbl.id}" deleted.`);
+      },
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.25rem",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: "rgba(245, 158, 11, 0.15)",
+              border: "1.5px solid rgba(245, 158, 11, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent-amber-light)",
+            }}
+          >
+            <Armchair size={22} color="#f59e0b" />
+          </div>
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 800,
+              color: "var(--text-main)",
+              letterSpacing: "-0.01em",
+              margin: 0,
+            }}
+          >
+            Floor Tables & Chair Configuration
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleOpenTableModal()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.45rem",
+            padding: "0.55rem 1.3rem",
+            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+            color: "#ffffff",
+            borderRadius: "8px",
+            fontWeight: 700,
+            fontSize: "0.85rem",
+            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+            border: "none",
+            cursor: "pointer",
+            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+          }}
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          <span>Add New Table</span>
+        </button>
+      </div>
+
+      {/* Table Rows Container */}
+      <div
+        style={{
+          background: "var(--bg-tertiary)",
+          borderRadius: "10px",
+          border: "1px solid var(--neutral-border)",
+          overflow: "hidden",
+        }}
+      >
+        <div className="floor-table-scroll" style={{ overflowX: "auto" }}>
+          <div className="floor-table-layout">
+            {/* Filter Toolbar: Vacant / Occupied Only + Search */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.75rem",
+                padding: "0.55rem 0.85rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                marginBottom: "0.5rem",
+                border: "1px solid rgba(var(--surface-rgb),0.05)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+                {/* Table # Search Filter */}
+                <div style={{ position: "relative", minWidth: "170px" }}>
+                  <Search
+                    size={13}
+                    color="var(--text-dim)"
+                    style={{
+                      position: "absolute",
+                      left: "9px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search Table #..."
+                    value={tableFilters.search}
+                    onChange={(e) => updateTableFilter("search", e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "0.42rem 0.5rem 0.42rem 1.6rem",
+                      background: "var(--input-bg)",
+                      border: tableFilters.search
+                        ? "1px solid #f59e0b"
+                        : "1px solid rgba(var(--surface-rgb),0.12)",
+                      borderRadius: "6px",
+                      color: "var(--text-main)",
+                      fontSize: "0.78rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                {/* Vacant & Occupied Status Filter Pills */}
+                <div
+                  style={{
+                    display: "inline-flex",
+                    gap: "0.3rem",
+                    background: "var(--input-bg)",
+                    padding: "3px",
+                    borderRadius: "7px",
+                    border: "1px solid rgba(var(--surface-rgb),0.08)",
+                  }}
+                >
+                  {/* All Tables */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "all")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: (!tableFilters.status || tableFilters.status === "all") ? 700 : 500,
+                      background: (!tableFilters.status || tableFilters.status === "all")
+                        ? "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                      color: (!tableFilters.status || tableFilters.status === "all")
+                        ? "#f59e0b"
+                        : "var(--text-dim)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span>All Tables</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: (!tableFilters.status || tableFilters.status === "all")
+                          ? "#f59e0b"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: (!tableFilters.status || tableFilters.status === "all")
+                          ? "#081628"
+                          : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {effectiveTables.length}
+                    </span>
+                  </button>
+
+                  {/* Vacant Filter */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "vacant")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: tableFilters.status === "vacant" ? 700 : 500,
+                      background: tableFilters.status === "vacant"
+                        ? "rgba(16, 185, 129, 0.2)"
+                        : "transparent",
+                      color: tableFilters.status === "vacant" ? "var(--success)" : "var(--text-dim)",
+                      boxShadow: tableFilters.status === "vacant"
+                        ? "0 0 10px rgba(16, 185, 129, 0.15)"
+                        : "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: "var(--success)",
+                        boxShadow: "0 0 6px #10b981",
+                      }}
+                    />
+                    <span>Vacant</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: tableFilters.status === "vacant"
+                          ? "#10b981"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: tableFilters.status === "vacant" ? "#081628" : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {vacantTablesCount}
+                    </span>
+                  </button>
+
+                  {/* Occupied Filter */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "occupied")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: tableFilters.status === "occupied" ? 700 : 500,
+                      background: tableFilters.status === "occupied"
+                        ? "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                      color: tableFilters.status === "occupied" ? "var(--accent-amber-light)" : "var(--text-dim)",
+                      boxShadow: tableFilters.status === "occupied"
+                        ? "0 0 10px rgba(245, 158, 11, 0.15)"
+                        : "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: "#f59e0b",
+                        boxShadow: "0 0 6px #f59e0b",
+                      }}
+                    />
+                    <span>Occupied</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: tableFilters.status === "occupied"
+                          ? "#f59e0b"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: tableFilters.status === "occupied" ? "#081628" : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {occupiedTablesCount}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Reset or Count Info */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {hasActiveTableFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearTableFilters}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "var(--danger)",
+                      padding: "0.38rem 0.75rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    title="Clear all active table filters"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset Filters</span>
+                  </button>
+                ) : (
+                  <span style={{ fontSize: "0.76rem", color: "var(--text-dim)", fontWeight: 500 }}>
+                    Showing all {effectiveTables.length} tables
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Column Headers */}
+            <div
+              className="floor-table-grid floor-table-heading"
+              style={{
+                display: "grid",
+                alignItems: "center",
+                paddingBlock: "0.55rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                marginBottom: "0.5rem",
+                color: "var(--text-dim)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              <div
+                onClick={() => handleTableSort("name")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Table #</span>
+                {tableSortField === "name" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("area")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Area</span>
+                {tableSortField === "area" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("capacity")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Chairs / Capacity</span>
+                {tableSortField === "capacity" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("server")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Assigned Server</span>
+                {tableSortField === "server" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("status")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Status</span>
+                {tableSortField === "status" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div className="floor-table-actions-heading" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                Actions
+              </div>
+            </div>
+
+            {/* Empty State */}
+            {sortedTables.length === 0 && (
+              <div
+                style={{
+                  padding: "3rem 1.5rem",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.95rem" }}>
+                  {hasActiveTableFilters
+                    ? "No tables match the selected filters."
+                    : "No tables configured yet. Click \"+ Add New Table\" to create one."}
+                </p>
+                {hasActiveTableFilters && (
+                  <button
+                    type="button"
+                    onClick={clearTableFilters}
+                    style={{
+                      marginTop: "0.75rem",
+                      background: "transparent",
+                      border: "1px solid #f59e0b",
+                      color: "var(--accent-amber-light)",
+                      padding: "0.35rem 0.9rem",
+                      borderRadius: "6px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Rows List */}
+            {sortedTables.map((tbl) => {
+              const isOccupied = isTableOccupied(tbl);
+              const dotColor = isOccupied ? "#f59e0b" : "#10b981";
+              const textColor = isOccupied ? "var(--status-occupied)" : "var(--status-vacant)";
+              const bgColor = isOccupied ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)";
+              const borderColor = isOccupied ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)";
+              const label = isOccupied ? "OCCUPIED" : "VACANT";
+
+              return (
+                <div
+                  key={tbl.id}
+                  className="floor-table-grid floor-table-row"
+                  style={{
+                    display: "grid",
+                    alignItems: "center",
+                    paddingBlock: "0.58rem",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--neutral-border)",
+                    borderRadius: "8px",
+                    marginBottom: "0.45rem",
+                    transition: "background 0.15s ease, border-color 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--bg-tertiary)";
+                    e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "var(--bg-secondary)";
+                    e.currentTarget.style.borderColor = "var(--neutral-border)";
+                  }}
+                >
+                  {/* Col 1: Table # */}
+                  <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "6px",
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "var(--accent-amber-light)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        whiteSpace: "normal",
+                      }}
+                    >
+                      {tbl.name || `Table ${tbl.id}`}
+                    </span>
+                  </div>
+
+                  {/* Col 2: Area */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {tbl.section || tbl.area || "Main Hall"}
+                  </div>
+
+                  {/* Col 3: Chairs / Capacity */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSeatingStructureTable(tbl)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        color: "inherit",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "inherit",
+                        fontWeight: "inherit",
+                      }}
+                      title="Click to view & configure seating structure"
+                    >
+                      <Armchair size={13} color="var(--accent-amber)" />
+                      <span>{tbl.capacity} Chairs / {tbl.capacity} Persons</span>
+                    </button>
+                  </div>
+
+                  {/* Col 4: Assigned Server */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {tbl.server || "Unassigned"}
+                  </div>
+
+                  {/* Col 5: Status Pill */}
+                  <div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.26rem 0.75rem",
+                        borderRadius: "20px",
+                        background: bgColor,
+                        border: `1px solid ${borderColor}`,
+                        color: textColor,
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        width: "fit-content",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          backgroundColor: dotColor,
+                          boxShadow: `0 0 6px ${dotColor}`,
+                        }}
+                      />
+                      <span>{label}</span>
+                    </div>
+                  </div>
+
+                  {/* Col 6: Actions */}
+                  <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
+                    {/* Set / View Seating Structure Modal Button */}
+                    <button
+                      type="button"
+                      onClick={() => setSeatingStructureTable(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(16, 185, 129, 0.08)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16, 185, 129, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(16, 185, 129, 0.2)";
+                        e.currentTarget.style.borderColor = "#10b981";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(16, 185, 129, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.45)";
+                      }}
+                      title="Set Seating Structure & View Layout"
+                      aria-label="Set Seating Structure & View Layout"
+                    >
+                      <Armchair size={13} color="#10b981" />
+                    </button>
+                    {/* Edit Chairs / Area */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenTableModal(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(245, 158, 11, 0.08)",
+                        color: "#f59e0b",
+                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
+                        e.currentTarget.style.borderColor = "#f59e0b";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                      }}
+                      title="Edit Chairs / Area"
+                      aria-label="Edit Chairs / Area"
+                    >
+                      <SquarePen size={13} color="#f59e0b" />
+                    </button>
+
+                    {/* Delete Table */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTableClick(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(239, 68, 68, 0.08)",
+                        color: "#ef4444",
+                        border: "1px solid rgba(239, 68, 68, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
+                        e.currentTarget.style.borderColor = "#ef4444";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.45)";
+                      }}
+                      title="Delete Table"
+                      aria-label="Delete Table"
+                    >
+                      <Trash2 size={13} color="#ef4444" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Add / Edit Table Modal */}
+      {isTableModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 130,
+            padding: "1rem",
+          }}
+        >
+          <form
+            onSubmit={handleSaveTable}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1.5px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: "480px",
+              padding: "1.6rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.85rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {editingTable ? `Edit ${editingTable.name}` : "Add New Restaurant Table"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsTableModalOpen(false)}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Table Name / Identifier <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={tableForm.name}
+                onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Dining Section / Area <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <CustomCreatableDropdown
+                value={tableForm.section}
+                onChange={(val) => setTableForm({ ...tableForm, section: val })}
+                options={allSectionOptions}
+                placeholder="Select dining section"
+                customPlaceholder="Type new section..."
+                required
+                allowCustom
+                onSaveCustomOption={saveCustomSection}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
+                Chairs / Seating Capacity (Persons) <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(5, 1fr)",
+                  gap: "0.5rem",
+                  marginBottom: "0.6rem",
+                }}
+              >
+                {[2, 4, 6, 8, 10].map((chairCount) => {
+                  const isSelected = Number(tableForm.capacity) === chairCount;
+                  return (
+                    <button
+                      key={chairCount}
+                      type="button"
+                      onClick={() => setTableForm({ ...tableForm, capacity: chairCount })}
+                      style={{
+                        padding: "0.55rem 0.3rem",
+                        borderRadius: "8px",
+                        background: isSelected
+                          ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                          : "var(--bg-tertiary)",
+                        color: isSelected ? "#ffffff" : "var(--text-main)",
+                        fontWeight: 800,
+                        fontSize: "0.82rem",
+                        border: isSelected ? "1.5px solid #ea580c" : "1.5px solid var(--border-subtle)",
+                        boxShadow: isSelected ? "0 3px 10px rgba(234, 88, 12, 0.35)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {chairCount} Seats
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={tableForm.capacity}
+                onChange={(e) => setTableForm({ ...tableForm, capacity: Number(e.target.value) })}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 700,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <div style={{ marginBottom: "5px" }}>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                  }}
+                >
+                  Default Server (Person)
+                </label>
+              </div>
+
+              <CustomCreatableDropdown
+                value={tableForm.server}
+                onChange={(val) => {
+                  setTableForm({ ...tableForm, server: val });
+                }}
+                options={staffList.map((staff) => {
+                  const staffName = String(
+                    staff?.name ||
+                    staff?.fullName ||
+                    staff?.FullName ||
+                    staff?.username ||
+                    "Unnamed staff"
+                  );
+                  const staffRole = staff?.role || staff?.roleTitle || "Staff";
+                  return {
+                    value: staffName,
+                    label: `${staffName} (${staffRole})`,
+                  };
+                })}
+                placeholder="Select server"
+                customPlaceholder="Type new server name..."
+                allowCustom
+                onSaveCustomOption={(newServer) => {
+                  if (newServer && newServer !== "__add_new__") {
+                    setTableForm({ ...tableForm, server: newServer });
+                    if (
+                      !staffList.some(
+                        (s) => (s.name || s.fullName || "").toLowerCase() === newServer.toLowerCase()
+                      )
+                    ) {
+                      onAddStaff?.({
+                        id: Date.now(),
+                        name: newServer,
+                        role: "",
+                        phone: "+91 98450 00000",
+                        shift: "",
+                      });
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => setIsTableModalOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: "0.7rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                style={{
+                  flex: 2,
+                  padding: "0.7rem",
+                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "0.88rem",
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                }}
+              >
+                {editingTable ? "Update Table Chairs" : "Add Table"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Select Seats Modal */}
+      <SelectSeatsModal
+        table={seatingStructureTable}
+        isOpen={Boolean(seatingStructureTable)}
+        onClose={() => setSeatingStructureTable(null)}
+        onUpdateTable={onUpdateTable}
+        role="admin"
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        icon={confirmState.icon}
+        onConfirm={confirmState.onConfirm}
+        onCancel={cancelDelete}
+      />
+    </div>
+  );
+}
+
 export function BarWorkspace({
   activeTab = "bar-overview",
   onNavigate,
@@ -551,7 +4474,233 @@ export function BarWorkspace({
   const route = activeTab || "bar-overview";
 
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const drinks = useMemo(() => (Array.isArray(menuItems) ? menuItems : []).filter((item) => isBeverageCategory(item.category ?? item.categoryName) || item.isBeverage || item.isBarDrink || item.category === "bar"), [menuItems]);
+  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v1";
+
+  // Dedicated bar drinks state - independent from Dine menu items
+  const [barDrinks, setBarDrinks] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_BAR_DRINKS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    // Initial default bar drinks: includes standard bar drinks
+    return [
+      {
+        id: "DR-MOJITO",
+        name: "mojito",
+        category: "Cocktails",
+        price: 130,
+        isVeg: false,
+        drinkType: "Alcoholic",
+        prepTime: "15 min",
+        description: "Fresh mint, lime, white rum, and sparkling soda.",
+        isAvailable: true,
+        isBarDrink: true,
+      },
+      ...BAR_DRINKS.map((d) => ({
+        ...d,
+        isVeg: d.category === "Mocktails" || d.category === "Juices" || d.category === "Water" || d.category === "Soft Drinks",
+        drinkType: d.abv ? "Alcoholic" : "Non-Alcoholic",
+        isBarDrink: true,
+      })),
+    ];
+  });
+
+  // Live Bar Overview dashboard state & loader
+  const [overviewData, setOverviewData] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+
+  const loadBarOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    try {
+      const res = await apiGetBarOverview();
+      const data = res?.data?.data || res?.data;
+      if (res?.success && data) {
+        setOverviewData(data);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarOverview offline/fallback:", err?.message);
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (route === "bar-overview") {
+      loadBarOverview();
+      const timer = window.setInterval(loadBarOverview, 15000);
+      return () => window.clearInterval(timer);
+    }
+  }, [route, loadBarOverview]);
+
+  // Fetch live drinks from backend API
+  const loadBarDrinks = useCallback(async () => {
+    try {
+      const res = await apiGetBarDrinks();
+      const raw = res?.data?.data || res?.data;
+      if (res?.success && Array.isArray(raw) && raw.length > 0) {
+        const formatted = raw.map((d) => ({
+          ...d,
+          id: d.menuItemId || d.id,
+          menuItemId: d.menuItemId || d.id,
+          name: d.drinkName || d.name || d.dishName || "",
+          dishName: d.drinkName || d.name || d.dishName || "",
+          drinkName: d.drinkName || d.name || d.dishName || "",
+          category: d.category || "Cocktails",
+          price: Number(d.price ?? d.sellingPrice ?? 0),
+          sellingPrice: Number(d.price ?? d.sellingPrice ?? 0),
+          measure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          servingMeasure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          servingVolume: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          isAvailable: d.isAvailable !== false && d.isAvailable !== "Unavailable",
+          drinkType: d.drinkType || (d.abv || d.alcoholContent ? "Alcoholic" : "Non-Alcoholic"),
+          abv: d.abv !== undefined && d.abv !== null ? d.abv : (d.alcoholContent !== undefined ? d.alcoholContent : ""),
+          alcoholContent: d.alcoholContent !== undefined ? d.alcoholContent : (d.abv !== undefined && d.abv !== null ? d.abv : 0),
+          isChefSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isChefsSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isBartenderSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          prepTime: d.prepTime || `${d.prepTimeMinutes || 15} min`,
+          prepTimeMinutes: d.prepTimeMinutes || 15,
+          description: d.description || d.shortDescription || "",
+          shortDescription: d.description || d.shortDescription || "",
+          image: d.imageUrl || d.image || "",
+          imageUrl: d.imageUrl || d.image || "",
+          isBarDrink: true,
+          isBarItem: true,
+        }));
+        setBarDrinks(formatted);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarDrinks offline/fallback:", err?.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBarDrinks();
+  }, [loadBarDrinks]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
+    } catch {}
+  }, [barDrinks]);
+
+  // If mojito was previously pushed to Dine menuItems, remove it from dine
+  useEffect(() => {
+    const mojitoInDine = (Array.isArray(menuItems) ? menuItems : []).find(
+      (m) => String(m.name || m.dishName || "").trim().toLowerCase() === "mojito" || m.isBarDrink
+    );
+    if (mojitoInDine?.id && onDeleteMenuItem) {
+      onDeleteMenuItem(mojitoInDine.id);
+    }
+  }, [menuItems, onDeleteMenuItem]);
+
+  const handleAddDrink = async (newDrink) => {
+    const item = {
+      ...newDrink,
+      id: newDrink.id || `DR-${Date.now()}`,
+      price: Number(newDrink.price || 0),
+      isBarDrink: true,
+      isAvailable: newDrink.isAvailable !== false,
+    };
+    // Optimistic UI update
+    setBarDrinks((prev) => [item, ...prev]);
+    setToast?.(`Drink "${item.name}" added to Bar Drinks Menu.`);
+
+    // Persist to backend
+    try {
+      const res = await apiCreateBarDrink(item);
+      const created = res?.data?.data || res?.data;
+      if (res?.success && created) {
+        const realId = created.menuItemId || created.id;
+        if (realId) {
+          setBarDrinks((prev) =>
+            prev.map((d) => (d.id === item.id ? { ...d, ...created, id: realId } : d))
+          );
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiCreateBarDrink fallback:", apiErr?.message);
+    }
+    return true;
+  };
+
+  const handleUpdateDrink = async (updatedDrink) => {
+    // Optimistic UI update
+    setBarDrinks((prev) =>
+      prev.map((d) =>
+        String(d.id) === String(updatedDrink.id) ? { ...d, ...updatedDrink, isBarDrink: true } : d
+      )
+    );
+    setToast?.(`Drink "${updatedDrink.name}" updated.`);
+
+    // Persist to backend
+    try {
+      await apiUpdateBarDrink(updatedDrink.id, updatedDrink);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiUpdateBarDrink fallback:", apiErr?.message);
+    }
+    return true;
+  };
+
+  const handleDeleteDrink = async (drinkId) => {
+    // Optimistic UI update
+    setBarDrinks((prev) => prev.filter((d) => String(d.id) !== String(drinkId)));
+    setToast?.("Drink deleted from Bar Drinks Menu.");
+
+    // Persist to backend
+    try {
+      await apiDeleteBarDrink(drinkId);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiDeleteBarDrink fallback:", apiErr?.message);
+    }
+    return true;
+  };
+
+  const handleToggleDrinkAvailability = async (drinkId, newStatus) => {
+    // Optimistic UI update
+    setBarDrinks((prev) =>
+      prev.map((d) => (String(d.id) === String(drinkId) ? { ...d, isAvailable: newStatus } : d))
+    );
+
+    // Persist to backend
+    try {
+      await apiToggleBarDrinkAvailability(drinkId, newStatus);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiToggleBarDrinkAvailability fallback:", apiErr?.message);
+    }
+    return true;
+  };
+
+  const handleToggleDrinkSpecial = async (drinkId, newStatus) => {
+    // Optimistic UI update
+    setBarDrinks((prev) =>
+      prev.map((d) =>
+        String(d.id) === String(drinkId)
+          ? {
+              ...d,
+              isSpecial: newStatus,
+              isBartenderSpecial: newStatus,
+              isChefSpecial: newStatus,
+              isChefsSpecial: newStatus,
+            }
+          : d
+      )
+    );
+
+    // Persist to backend
+    try {
+      await apiToggleBarDrinkSpecial(drinkId, newStatus);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiToggleBarDrinkSpecial fallback:", apiErr?.message);
+    }
+    return true;
+  };
+
+  const drinks = barDrinks;
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
@@ -921,6 +5070,53 @@ export function BarWorkspace({
       .slice(0, 10);
   }, [tables]);
 
+  const overviewTables = useMemo(() => {
+    if (Array.isArray(overviewData?.counterTables) && overviewData.counterTables.length > 0) {
+      return overviewData.counterTables.map((t) => ({
+        id: t.tableId || t.id,
+        number: t.tableName || t.tableNumber || `Table ${t.tableId || t.id}`,
+        area: t.sectionArea || t.area || "Main Hall",
+        status: t.status || "Available",
+        guests: t.currentGuests || t.occupiedChairs || t.guests || 0,
+        server: t.assignedServer || "Unassigned",
+      }));
+    }
+    return displayBarTables;
+  }, [overviewData, displayBarTables]);
+
+  const overviewSignatureDrinks = useMemo(() => {
+    if (Array.isArray(overviewData?.signatureDrinks) && overviewData.signatureDrinks.length > 0) {
+      return overviewData.signatureDrinks.map((d) => ({
+        ...d,
+        id: d.menuItemId || d.id,
+        name: d.drinkName || d.name || d.dishName || "",
+        category: d.category || "Cocktail",
+        price: Number(d.price ?? d.sellingPrice ?? 0),
+        prepTime: d.prepTime || `${d.prepTimeMinutes || 15} min`,
+        image: d.imageUrl || d.image || "",
+      }));
+    }
+    return drinks.slice(0, 5);
+  }, [overviewData, drinks]);
+
+  const overviewRecentOrders = useMemo(() => {
+    if (Array.isArray(overviewData?.recentOrders) && overviewData.recentOrders.length > 0) {
+      return overviewData.recentOrders.map((o) => ({
+        ...o,
+        id: o.orderNumber || (o.orderId ? `ORD-${o.orderId}` : String(o.id || "")),
+        orderId: o.orderId || o.id,
+        table: o.table || o.tableName || (o.tableId ? `Table ${o.tableId}` : "Bar Counter"),
+        itemLabel: o.drinkItems || o.itemLabel || "Beverages & Cocktails",
+        quantity: o.quantity || 1,
+        total: Number(o.amount ?? o.total ?? 0),
+        time: o.time || "—",
+        status: o.status || "Pending",
+        items: o.items || [],
+      }));
+    }
+    return barOrders.slice(0, 5);
+  }, [overviewData, barOrders]);
+
   const lowStockBeverages = useMemo(() => {
     return inventoryRows.filter((item) => {
       const stock = Number(item.stock ?? item.currentStock ?? 0);
@@ -962,24 +5158,6 @@ export function BarWorkspace({
           status: order.status || "Preparing",
           quantity: Number(it.quantity ?? 1),
         });
-      }
-    }
-    // If fewer than 5 active orders, supplement with popular signature beverages
-    if (queue.length < 5) {
-      const existingNames = new Set(queue.map((q) => q.name.toLowerCase()));
-      for (const drink of drinks) {
-        if (existingNames.has(drink.name.toLowerCase())) continue;
-        queue.push({
-          id: "sig-" + drink.id,
-          name: drink.name,
-          table: drink.measure || "Counter Tab",
-          category: drink.category || "Signature",
-          price: Number(drink.price || 0),
-          time: "5 min prep",
-          status: drink.isAvailable === false || drink.isAvailable === "Unavailable" ? "Unavailable" : "Ready to Serve",
-          quantity: 1,
-        });
-        if (queue.length >= 6) break;
       }
     }
     return queue.slice(0, 6);
@@ -1111,7 +5289,7 @@ export function BarWorkspace({
       {route === "bar-staff" && <label className="bar-select-label"><span>Shift</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All shifts</option>{BAR_SHIFTS.map((shift) => <option key={shift}>{shift}</option>)}</select></label>}
       {route === "bar-staff" && <label className="bar-select-label"><span>Table Assignment</span><select value={assignmentFilter} onChange={(event) => { setAssignmentFilter(event.target.value); setPage(1); }}><option value="all">All assignments</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label>}
     </div>
-    {sharedListStatus === "loading" ? <div className="bar-empty" role="status">Loading shared hotel {sharedListKey}...</div> : sharedListStatus === "error" ? <div className="bar-error" role="alert">{sharedListError || `Could not load shared hotel ${sharedListKey}. The Bar page is not showing demo records.`}</div> : <>{renderStaticTable(listConfig.columns, visibleRows, (column, row) => renderListCell(column, row, listConfig.kind), `bar-${listConfig.kind}-table`)}
+    {sharedListStatus === "loading" ? <SkeletonTable rows={6} columns={listConfig.columns.length} /> : sharedListStatus === "error" ? <div className="bar-error" role="alert">{sharedListError || `Could not load shared hotel ${sharedListKey}. The Bar page is not showing demo records.`}</div> : <>{renderStaticTable(listConfig.columns, visibleRows, (column, row) => renderListCell(column, row, listConfig.kind), `bar-${listConfig.kind}-table`)}
     <footer className="bar-pagination"><span>Showing {listRows.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, listRows.length)} of {listRows.length}</span><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Previous page"><ChevronLeft size={16} /></button><span>Page {page} of {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Next page"><ChevronRight size={16} /></button></div></footer>
     </>}
   </section>;
@@ -1164,7 +5342,7 @@ export function BarWorkspace({
                 Bar Operations Dashboard
               </h2>
               <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                Live overview of drinks, bar counter tabs, KOT tickets, and beverage sales
+                Live overview of drinks, bar counter tabs, BOT tickets, and beverage sales
               </div>
             </div>
           </div>
@@ -1236,7 +5414,7 @@ export function BarWorkspace({
               }}
             >
               <Clock3 size={14} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-main)"} />
-              <span>Live KOT ({pendingBarKotCount})</span>
+              <span>Live BOT ({pendingBarKotCount})</span>
             </button>
 
             <button
@@ -1284,16 +5462,41 @@ export function BarWorkspace({
               <Receipt size={14} color="#10b981" />
               <span>Invoices</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => loadBarOverview()}
+              disabled={overviewLoading}
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid rgba(245, 158, 11, 0.35)",
+                color: "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+                boxShadow: "var(--shadow-sm)",
+              }}
+              title="Refresh live bar overview"
+            >
+              <RefreshCw size={13} color="var(--accent-amber)" className={overviewLoading ? "spin" : ""} />
+              <span>{overviewLoading ? "Refreshing..." : "Refresh"}</span>
+            </button>
           </div>
         </div>
-      ) : (
+     ) : ["bar-drinks", "bar-tables", "bar-staff"].includes(route) ? null : (
         <div className="bar-page-title">
           <div>
             <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
-            <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
-            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : "Independent Bar workspace • drink and order records are demo data."}</p>
+            <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar BOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
+            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the BOT service." : route === "bar-inventory" ? "Live beverage and liquor inventory ledger • tracked in real time." : "Independent Bar workspace • drink and order records are demo data."}</p>
           </div>
-          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : "DEMO DATA • SESSION ONLY"}</span>
+          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE BOT DATA" : route === "bar-inventory" ? "BAR INVENTORY • LIVE LEDGER" : "DEMO DATA • SESSION ONLY"}</span>
         </div>
       )}
 
@@ -1339,16 +5542,16 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {formatCurrency(completedDrinkSales)}
+              {formatCurrency(overviewData?.completedDrinkSales ?? completedDrinkSales)}
             </div>
             <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              <span>{barOrders.length} Orders</span>
+              <span>{(overviewData?.activeBarOrders ?? barOrders.length)} Orders</span>
               <span style={{ margin: "0 3px" }}>•</span>
               <span style={{ color: "var(--success)" }}>Active</span>
             </div>
           </div>
 
-          {/* Card 2: Bar KOT Live */}
+          {/* Card 2: Bar BOT Live */}
           <div
             onClick={() => go("bar-kot")}
             style={{
@@ -1369,21 +5572,21 @@ export function BarWorkspace({
               e.currentTarget.style.borderColor = pendingBarKotCount > 0 ? "rgba(239, 68, 68, 0.4)" : "var(--border-card)";
               e.currentTarget.style.transform = "translateY(0)";
             }}
-            title="Click to view Live Bar KOT screen"
+            title="Click to view Live Bar BOT screen"
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Bar KOT Live
+                Bar BOT Live
               </span>
               <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: pendingBarKotCount > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(100, 116, 139, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Clock3 size={12} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-dim)"} />
               </div>
             </div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {pendingBarKotCount} Active KOT
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: (overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount) > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount)} Active BOT
             </div>
-            <div style={{ fontSize: "0.66rem", color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              <span>{activePreparingCount} drinks in prep</span>
+            <div style={{ fontSize: "0.66rem", color: (overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount) > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span>{(overviewData?.preparingDrinks ?? overviewData?.activePreparingCount ?? activePreparingCount)} drinks in prep</span>
             </div>
           </div>
 
@@ -1419,10 +5622,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {occupiedBarTables.length} / {tables.length} Tables
+              {(overviewData?.occupiedTables ?? occupiedBarTables.length)} / {(overviewData?.totalTables ?? tables.length)} Tables
             </div>
-            <div style={{ fontSize: "0.66rem", color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {occupiedChairs} seated ({totalChairs} seats)
+            <div style={{ fontSize: "0.66rem", color: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.occupiedSeats ?? occupiedChairs)} seated ({(overviewData?.totalSeats ?? totalChairs)} seats)
             </div>
           </div>
 
@@ -1457,11 +5660,11 @@ export function BarWorkspace({
                 <Package size={12} color={lowStockBeverages.length > 0 ? "#ef4444" : "#10b981"} />
               </div>
             </div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {inventoryRows.length} Items
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: (overviewData ? overviewData.lowStockItems > 0 : lowStockBeverages.length > 0) ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.totalInventoryItems ?? inventoryRows.length)} Items
             </div>
-            <div style={{ fontSize: "0.66rem", color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-muted)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {lowStockBeverages.length > 0 ? "⚠️ " + lowStockBeverages.length + " Low Stock" : "All stock healthy"}
+            <div style={{ fontSize: "0.66rem", color: (overviewData ? overviewData.lowStockItems > 0 : lowStockBeverages.length > 0) ? "var(--danger)" : "var(--text-muted)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {overviewData ? (overviewData.lowStockItems > 0 ? "⚠️ " + overviewData.lowStockItems + " Low Stock" : "All stock healthy") : (lowStockBeverages.length > 0 ? "⚠️ " + lowStockBeverages.length + " Low Stock" : "All stock healthy")}
             </div>
           </div>
 
@@ -1497,10 +5700,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {drinks.length} Drinks
+              {(overviewData?.totalDrinks ?? drinks.length)} Drinks
             </div>
             <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {alcoholicDrinksCount} Alc • {nonAlcoholicDrinksCount} Non-Alc
+              {overviewData ? `${overviewData.alcoholicDrinksCount} Alc • ${overviewData.nonAlcoholicDrinksCount} Non-Alc` : `${alcoholicDrinksCount} Alc • ${nonAlcoholicDrinksCount} Non-Alc`}
             </div>
           </div>
         </div>
@@ -1549,13 +5752,13 @@ export function BarWorkspace({
                   style={{
                     fontSize: "0.68rem",
                     fontWeight: 700,
-                    background: occupiedBarTables.length > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
-                    color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--success)",
+                    background: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                    color: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "var(--accent-amber-light)" : "var(--success)",
                     padding: "1px 6px",
                     borderRadius: "10px",
                   }}
                 >
-                  {occupiedBarTables.length} Occupied
+                  {(overviewData?.occupiedTables ?? occupiedBarTables.length)} Occupied
                 </span>
               </div>
               <button
@@ -1588,7 +5791,7 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {displayBarTables.map((tbl) => {
+              {overviewTables.map((tbl) => {
                 const isOccupied = tbl.status === "Occupied";
                 const serverName = staff.find((m) => String(m.id) === String(tbl.staffId))?.name || tbl.server || "Unassigned";
                 return (
@@ -1665,7 +5868,7 @@ export function BarWorkspace({
             </div>
           </div>
 
-          {/* Right Column: Live Drinks Queue Preview (Beverages Only) */}
+          {/* Right Column: Live Signature Drinks (Beverages Only) */}
           <div
             style={{
               background: "var(--bg-card)",
@@ -1694,20 +5897,8 @@ export function BarWorkspace({
                     margin: 0,
                   }}
                 >
-                  Drinks Queue Preview
+                  Signature Drinks
                 </h3>
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    background: "rgba(245, 158, 11, 0.15)",
-                    color: "var(--accent-amber-light)",
-                    padding: "1px 6px",
-                    borderRadius: "10px",
-                  }}
-                >
-                  {activeQueueItems.length} Active
-                </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                 <button
@@ -1761,102 +5952,52 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {activeQueueItems.map((item) => {
-                const { Icon, tone } = getDrinkIcon(item.name, item.category);
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => go("bar-orders")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.65rem",
-                      padding: "0.45rem 0.65rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-subtle)",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "var(--accent-amber)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "var(--border-subtle)";
-                    }}
-                    title={"Click to view order details: " + item.name + " (" + item.table + ")"}
-                  >
+              {overviewSignatureDrinks.map((drink) => (
+                <div
+                  key={drink.id}
+                  onClick={() => go("bar-drinks")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.65rem",
+                    padding: "0.45rem 0.65rem",
+                    borderRadius: "8px",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(event) => { event.currentTarget.style.borderColor = "var(--accent-amber)"; }}
+                  onMouseLeave={(event) => { event.currentTarget.style.borderColor = "var(--border-subtle)"; }}
+                >
+                  <img
+                    src={getMenuItemImage(drink)}
+                    alt={drink.name}
+                    style={{ width: "36px", height: "36px", borderRadius: "7px", objectFit: "cover", flexShrink: 0 }}
+                    onError={(event) => handleDishImageError(event, drink)}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "7px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        background:
-                          tone === "tone-orange"
-                            ? "rgba(234, 88, 12, 0.14)"
-                            : tone === "tone-purple"
-                            ? "rgba(124, 58, 237, 0.14)"
-                            : tone === "tone-green"
-                            ? "rgba(16, 185, 129, 0.14)"
-                            : "rgba(59, 130, 246, 0.14)",
-                        color:
-                          tone === "tone-orange"
-                            ? "#ea580c"
-                            : tone === "tone-purple"
-                            ? "#8b5cf6"
-                            : tone === "tone-green"
-                            ? "#10b981"
-                            : "#3b82f6",
+                        fontSize: "0.82rem",
+                        fontWeight: 750,
+                        color: "var(--text-main)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
-                      <Icon size={18} />
+                      {drink.name}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: "0.82rem",
-                          fontWeight: 750,
-                          color: "var(--text-main)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {item.quantity > 1 ? (item.quantity + " × ") : ""}{item.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.68rem",
-                          color: "var(--text-dim)",
-                          marginTop: "1px",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {item.table} • {item.category} • {item.time}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right", flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
-                      <div
-                        style={{
-                          fontSize: "0.84rem",
-                          fontWeight: 800,
-                          color: "var(--accent-amber)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {formatCurrency(item.price)}
-                      </div>
-                      <Status>{item.status}</Status>
+                    <div style={{ fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "1px" }}>
+                      {drink.prepTime || "15 min"} • {drink.category || "Beverage"}
                     </div>
                   </div>
-                );
-              })}
+                  <div style={{ fontSize: "0.84rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap" }}>
+                    {formatCurrency(drink.price)}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1903,7 +6044,7 @@ export function BarWorkspace({
                   borderRadius: "10px",
                 }}
               >
-                {barOrders.length} Total Orders
+                {(overviewData?.activeBarOrders ?? barOrders.length)} Total Orders
               </span>
             </div>
 
@@ -1928,13 +6069,13 @@ export function BarWorkspace({
           </div>
 
           {ordersLoading ? (
-            <div className="bar-empty" role="status">Loading shared orders…</div>
+            <SkeletonTable rows={5} columns={7} />
           ) : ordersError ? (
             <div className="bar-error" role="alert">{ordersError}</div>
           ) : (
             renderStaticTable(
               ["Order Number", "Table", "Drink Items", "Quantity", "Amount", "Time", "Status", "Actions"],
-              barOrders.slice(0, 5),
+              overviewRecentOrders,
               (column, order) => ({
                 "Order Number": <strong>{order.id}</strong>,
                 Table: order.table,
@@ -1967,7 +6108,30 @@ export function BarWorkspace({
         </section>
       </>}
 
-      {listPage}
+      {route === "bar-drinks" ? (
+        <BarDrinksMenu
+          drinks={barDrinks}
+          onAddDrink={handleAddDrink}
+          onUpdateDrink={handleUpdateDrink}
+          onDeleteDrink={handleDeleteDrink}
+          onToggleDrinkAvailability={handleToggleDrinkAvailability}
+          onToggleDrinkSpecial={handleToggleDrinkSpecial}
+          setToast={setToast}
+        />
+      ) : route === "bar-tables" ? (
+        <BarTablesView
+          tables={dineTables}
+          staffList={dineStaff}
+          orders={orders}
+          onAddTable={onAddTable}
+          onUpdateTable={onUpdateTable}
+          onDeleteTable={onDeleteTable}
+          onAddStaff={onAddStaff}
+          setToast={setToast}
+        />
+      ) : (
+        listPage
+      )}
 
       {route === "bar-kot" && <BarKOTView menuItems={menuItems} tables={tables} staffList={dineStaff} onItemsUpdated={onBarOrderItemStatusUpdated} />}
 
@@ -1975,7 +6139,7 @@ export function BarWorkspace({
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 
-      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries, plus static demo examples.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <div className="bar-empty" role="status">Loading shared orders…</div> : <>{ordersError && <div className="bar-error" role="status">{ordersError} Static demo orders are still available below.</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
+      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries, plus static demo examples.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError} Static demo orders are still available below.</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
       <OrderItemsModal order={tableItems} onClose={() => setTableItems(null)} />
 

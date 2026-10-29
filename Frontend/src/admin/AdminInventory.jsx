@@ -16,6 +16,7 @@ import {
   X,
   PackagePlus,
   MinusCircle,
+  IndianRupee,
 } from "lucide-react";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
@@ -1103,6 +1104,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         "Supplier",
         "Available Quantity",
         "Unit",
+        "Total Stock Value (₹)",
         "Quantity Used (tracked)",
         "Quantity Restocked (tracked)",
         "Low Stock Threshold",
@@ -1116,6 +1118,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         item.supplier,
         item.stock,
         item.unit,
+        ((Number(item.stock) || 0) * (Number(item.mrp) || 0)).toFixed(2),
         Number(item.totalUsed || 0),
         Number(item.totalRestocked || 0),
         item.minThreshold,
@@ -1345,6 +1348,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     (item) => item.stock > item.minThreshold,
   ).length;
   const outOfStockCount = inventory.filter((item) => item.stock <= 0).length;
+  const totalStockExpenditure = useMemo(() => {
+    return inventory.reduce((acc, item) => {
+      const stock = Number(item.stock) || 0;
+      const unitCost = Number(item.mrp ?? item.unitCost ?? 0);
+      return acc + (stock > 0 ? stock * unitCost : 0);
+    }, 0);
+  }, [inventory]);
 
   const filtered = inventory.filter((item) => {
     const matchesCategory =
@@ -1356,6 +1366,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       selectedStatus === "all" ||
+      (selectedStatus === "expenditure" && item.stock > 0) ||
       (selectedStatus === "in-stock" && item.stock > item.minThreshold) ||
       (selectedStatus === "low-stock" &&
         item.stock > 0 &&
@@ -1702,6 +1713,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               icon: Package,
             },
             {
+              label: "Stock Expenditure",
+              value: formatCurrency(totalStockExpenditure),
+              status: "expenditure",
+              color: "#f59e0b",
+              icon: IndianRupee,
+            },
+            {
               label: "In Stock",
               value: inStockCount,
               status: "in-stock",
@@ -1907,6 +1925,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 <th style={{ padding: "0.55rem 0.65rem" }}>Category</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>MRP</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>In-Stock</th>
+                <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>Stock Value</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Used</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Threshold</th>
                 <th style={{ padding: "0.55rem 0.6rem", textAlign: "center" }}>Status</th>
@@ -2026,6 +2045,43 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                       >
                         {item.stock} {item.unit}
                       </div>
+                    </td>
+
+                    {/* Stock Value / Expenditure */}
+                    <td
+                      style={{
+                        padding: "0.55rem 0.5rem",
+                        whiteSpace: "nowrap",
+                        textAlign: "right",
+                      }}
+                    >
+                      {(() => {
+                        const stockVal =
+                          (Number(item.stock) || 0) * (Number(item.mrp) || 0);
+                        if (stockVal <= 0) {
+                          return (
+                            <span
+                              style={{
+                                color: "var(--text-dim)",
+                                fontSize: "0.78rem",
+                              }}
+                            >
+                              ₹0.00
+                            </span>
+                          );
+                        }
+                        return (
+                          <span
+                            style={{
+                              color: "#f59e0b",
+                              fontWeight: 800,
+                              fontSize: "0.82rem",
+                            }}
+                          >
+                            {formatCurrency(stockVal)}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Used since recipe tracking started */}
@@ -3303,6 +3359,25 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   }}
                 />
               </div>
+
+              {Number(newItem.mrp) > 0 && Number(newItem.stock) > 0 && (
+                <div
+                  style={{
+                    padding: "0.45rem 0.75rem",
+                    borderRadius: "8px",
+                    background: "rgba(245, 158, 11, 0.1)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    fontSize: "0.76rem",
+                    color: "var(--accent-amber-light)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>Stock Holding Expenditure:</span>
+                  <strong>{formatCurrency(Number(newItem.stock) * Number(newItem.mrp))}</strong>
+                </div>
+              )}
 
               <div>
                 <label

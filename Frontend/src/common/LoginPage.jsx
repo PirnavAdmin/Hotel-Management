@@ -126,6 +126,21 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   const [password, setPassword] = useState('');
   const [showPw, setShowPw]     = useState(false);
 
+  // Guarantee clean initial state & prevent browser autofill on load (RMS_LOGIN_001, RMS_LOGIN_002)
+  useEffect(() => {
+    setUsername('');
+    setPassword('');
+    const timer = setTimeout(() => {
+      setUsername('');
+      setPassword('');
+      const u = document.getElementById('login-username');
+      const p = document.getElementById('login-password');
+      if (u) u.value = '';
+      if (p) p.value = '';
+    }, 60);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Register — step 1: info
   const [regName,    setRegName]    = useState('');
   const [regUser,    setRegUser]    = useState('');
@@ -134,6 +149,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   const [regPass,    setRegPass]    = useState('');
   const [regConfirm, setRegConfirm] = useState('');
   const [showRegPw,  setShowRegPw]  = useState(false);
+  const [showRegConfirm, setShowRegConfirm] = useState(false);
   const [regOtpStep, setRegOtpStep] = useState(false);
   const [regOtp,     setRegOtp]     = useState('');
   const [regResendTimer, setRegResendTimer] = useState(0);
@@ -174,7 +190,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       accent: '#f59e0b', accentLight: '#fbbf24',
       btnBg: 'var(--primary-gradient)',
       btnShadow: '0 4px 18px rgba(255,157,0,.25)',
-      badge: '🍽️ POS TERMINAL',
+      badge: '🍽️ BILLING COUNTER',
       badgeBg: 'rgba(245,158,11,0.15)', badgeBorder: 'rgba(245,158,11,0.4)',
       hint: 'Access: Billing, Table orders, Settlements'
     },
@@ -185,9 +201,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       accent: '#ea580c', accentLight: '#fb923c',
       btnBg: 'var(--primary-gradient)',
       btnShadow: '0 4px 18px rgba(255,157,0,.25)',
-      badge: '🔥 KITCHEN TERMINAL',
+      badge: '🔥 KITCHEN DISPLAY',
       badgeBg: 'rgba(234,88,12,0.15)', badgeBorder: 'rgba(234,88,12,0.4)',
-      hint: 'Access: KOT view, Order preparation status'
+      hint: 'Access: Kitchen orders, Live food status'
     },
     admin: {
       icon: <ShieldCheck size={24} color="#fff" />,
@@ -198,12 +214,12 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       btnShadow: '0 4px 18px rgba(255,157,0,.25)',
       badge: '⚙️ ADMIN PORTAL',
       badgeBg: 'rgba(99,102,241,0.15)', badgeBorder: 'rgba(99,102,241,0.4)',
-      hint: 'Access: Menu, Tables, Staff, User management'
+      hint: 'Access: Menu, Tables, Staff, Reports'
     }
   };
   const cfg = cfgMap[currentRole] || cfgMap.pos;
-  const loginTitle = currentRole === 'admin' ? 'Admin Panel Login'
-    : currentRole === 'kot' ? 'Kitchen KOT Login' : 'User POS Login';
+  const loginTitle = currentRole === 'admin' ? 'Admin Login'
+    : currentRole === 'kot' ? 'Kitchen Login' : 'Billing Login';
 
 
 
@@ -211,7 +227,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
   const clearRegForm = () => {
     setRegName(''); setRegUser(''); setRegMobile(''); setRegEmail('');
-    setRegPass(''); setRegConfirm(''); setRegOtpStep(false); setRegOtp(''); setRegResendTimer(0);
+    setRegPass(''); setRegConfirm(''); setShowRegPw(false); setShowRegConfirm(false); setRegOtpStep(false); setRegOtp(''); setRegResendTimer(0);
     setRegServerOtp(''); setRegIsLiveEmail(false); setRegPreviewUrl('');
   };
   const clearAll = () => { setError(''); setSuccess(''); setUsername(''); setPassword(''); clearRegForm(); };
@@ -227,25 +243,109 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
     else { setError(r.error || 'Login failed.'); triggerShake(); }
   };
 
+  // ── REGISTRATION INPUT VALIDATOR (RMS_REG_003, RMS_REG_004, RMS_REG_005, RMS_REG_006, RMS_REG_007, RMS_REG_008, RMS_REG_010) ──
+  const validateRegistration = () => {
+    const trimmedName = regName.trim();
+    const trimmedUser = regUser.trim();
+    const cleanMobile = regMobile.replace(/\D/g, '');
+    const trimmedEmail = regEmail.trim();
+
+    // Bug 3: Full Name Validation (RMS_REG_003)
+    if (!trimmedName) {
+      return 'Full name is required.';
+    }
+    if (/\d/.test(trimmedName)) {
+      return 'Full name cannot contain numeric digits (e.g. 1234). Please enter a valid name.';
+    }
+    if (!/^[a-zA-Z\s'-.]{2,50}$/.test(trimmedName) || trimmedName.replace(/[^a-zA-Z]/g, '').length < 2) {
+      return 'Full name must contain alphabetic characters only (e.g. Amrutha Reddy).';
+    }
+
+    // Bug 4: Username Validation (RMS_REG_004)
+    if (!trimmedUser) {
+      return 'Username is required.';
+    }
+    if (/\s/.test(trimmedUser)) {
+      return 'Username cannot contain spaces.';
+    }
+    if (trimmedUser.length < 3 || trimmedUser.length > 20) {
+      return 'Username must be between 3 and 20 characters.';
+    }
+    if (!/^[a-zA-Z0-9_.]{3,20}$/.test(trimmedUser) || !/[a-zA-Z]/.test(trimmedUser)) {
+      return 'Username must contain letters and numbers (optional "." or "_"). Special-character-only values like "^&^&" are rejected.';
+    }
+
+    // Bug 5: Indian Mobile Number Validation (RMS_REG_005)
+    if (!cleanMobile) {
+      return 'Mobile number is required.';
+    }
+    if (cleanMobile.length !== 10) {
+      return 'Please enter a valid 10-digit mobile number.';
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      return 'Invalid mobile number. Indian mobile numbers must start with 6, 7, 8, or 9 (numbers starting with 0-5 like 1100000000 are invalid).';
+    }
+
+    // Bug 6: Strict Email Format Validation (RMS_REG_006)
+    if (!trimmedEmail) {
+      return 'Email address is required.';
+    }
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return 'Please enter a valid email address with a valid domain (e.g., amrutha@gmail.com). Incomplete formats like "name@" are rejected.';
+    }
+
+    // Bug 7: Password Complexity Policy Validation (RMS_REG_007)
+    if (!regPass) {
+      return 'Password is required.';
+    }
+    if (/\s/.test(regPass)) {
+      return 'Password cannot contain spaces.';
+    }
+    if (regPass.length < 8) {
+      return 'Password must be at least 8 characters long.';
+    }
+    if (!/[A-Z]/.test(regPass)) {
+      return 'Password must contain at least one uppercase letter (A-Z).';
+    }
+    if (!/[a-z]/.test(regPass)) {
+      return 'Password must contain at least one lowercase letter (a-z).';
+    }
+    if (!/[0-9]/.test(regPass)) {
+      return 'Password must contain at least one numeric digit (0-9).';
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(regPass)) {
+      return 'Password must contain at least one special character (e.g. @, #, $, %, &).';
+    }
+
+    // Bug 8: Confirm Password Match Validation (RMS_REG_008)
+    if (!regConfirm) {
+      return 'Please confirm your password.';
+    }
+    if (regPass !== regConfirm) {
+      return 'Passwords do not match.';
+    }
+
+    return null; // All valid!
+  };
+
   // ── REGISTER STEP 1: VALIDATE & SEND OTP VIA NODEMAILER ──
   const handleStartRegistration = async (e) => {
     if (e) e.preventDefault();
     setError('');
     setSuccess('');
-    if (!regName.trim())   { setError('Full name is required.'); triggerShake(); return; }
-    if (!regUser.trim())   { setError('Username is required.'); triggerShake(); return; }
-    if (!regMobile.trim() || !/^\d{10}$/.test(regMobile.replace(/\s+/g, ''))) {
-      setError('Enter a valid 10-digit mobile number.'); triggerShake(); return;
+
+    // Bug 10: Validate all mandatory fields before initiating OTP or registration (RMS_REG_010)
+    const validationError = validateRegistration();
+    if (validationError) {
+      setError(validationError);
+      triggerShake();
+      return;
     }
-    if (!regEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
-      setError('Enter a valid email address.'); triggerShake(); return;
-    }
-    if (regPass.length < 6) { setError('Password must be at least 6 characters.'); triggerShake(); return; }
-    if (regPass !== regConfirm) { setError('Passwords do not match.'); triggerShake(); return; }
 
     setLoading(true);
     try {
-      const res = await apiSendOtp(regEmail.trim(), regMobile.trim(), regName.trim());
+      const res = await apiSendOtp(regEmail.trim(), regMobile.replace(/\D/g, "").trim(), regName.trim());
       setLoading(false);
       if (res && res.success) {
         setRegOtpStep(true);
@@ -541,11 +641,11 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   // Password strength
   const pwScore = (() => {
     let s = 0;
-    if (regPass.length >= 6) s++;
-    if (regPass.length >= 10) s++;
-    if (/[A-Z]/.test(regPass)) s++;
+    if (regPass.length >= 8) s++;
+    if (/[A-Z]/.test(regPass) && /[a-z]/.test(regPass)) s++;
     if (/[0-9]/.test(regPass)) s++;
-    if (/[^A-Za-z0-9]/.test(regPass)) s++;
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(regPass)) s++;
+    if (regPass.length >= 10) s++;
     return s;
   })();
   const pwColors = ['#ef4444','#f97316','#eab308','#22c55e','#10b981'];
@@ -571,7 +671,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       <div className="auth-theme-toggle"><ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/></div>
       <section className="bhanu-story" aria-label={`Welcome to ${currentRestaurantName}`}><header><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
       <div className="bhanu-welcome"><h1 style={{ color: '#ff9d00' }}>Welcome</h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
-      <div className="bhanu-features">{[{title:'POS Billing',description:'Fast & Easy Billing',icon:<Printer/>},{title:'Kitchen KOT',description:'Real-time Order Management',icon:<ChefHat/>},{title:'Admin Portal',description:'Complete Restaurant Control',icon:<Settings/>}].map(feature => <div key={feature.title}><span className="bhanu-feature-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.description}</p></div>)}</div></div>
+      <div className="bhanu-features">{[{title:'Billing Counter',description:'Fast & Easy Billing',icon:<Printer/>},{title:'Kitchen Display',description:'Real-time Order Management',icon:<ChefHat/>},{title:'Admin Portal',description:'Complete Restaurant Control',icon:<Settings/>}].map(feature => <div key={feature.title}><span className="bhanu-feature-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.description}</p></div>)}</div></div>
       <img className="bhanu-dish" src="/assets/chicken-dum-biryani.jpg" alt="Restaurant biryani"/>
       <div className="bhanu-benefits" aria-label="Restaurant headlines">
         <div className="bhanu-benefits-track">
@@ -605,9 +705,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
         boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)'
       }}>
         {[
-          { id: 'pos', label: 'User POS', icon: <MonitorCheck size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
-          { id: 'kot', label: 'Kitchen KOT', icon: <ChefHat size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
-          { id: 'admin', label: 'Admin Portal', icon: <Settings size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
+          { id: 'pos', label: 'Billing', icon: <MonitorCheck size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
+          { id: 'kot', label: 'Kitchen', icon: <ChefHat size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
+          { id: 'admin', label: 'Admin', icon: <Settings size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
         ].map(t => (
           <button
             aria-pressed={currentRole === t.id}
@@ -616,6 +716,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
             onClick={() => {
               setCurrentRole(t.id);
               if (t.id !== 'admin' && mode === 'register') setMode('login');
+              setUsername('');
+              setPassword('');
               setError('');
               setSuccess('');
             }}
@@ -682,12 +784,28 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
         {/* ── LOGIN FORM ── */}
         {mode === 'login' && (
-          <form className="bhanu-signin-form" onSubmit={handleLogin} style={{ padding: '0.65rem 1rem 0.85rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <form
+            className="bhanu-signin-form"
+            onSubmit={handleLogin}
+            autoComplete="off"
+            style={{ padding: '0.65rem 1rem 0.85rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+          >
+            {/* Decoy inputs to capture and prevent browser auto-injection (RMS_LOGIN_001, RMS_LOGIN_002) */}
+            <input type="text" name="prevent_autofill_user" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+            <input type="password" name="prevent_autofill_pass" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+
             {error && <Err msg={error} />}
             <Fld label="Username or Email" icon={<User size={13} color="#475569" />} mb="0.45rem">
-              <input id="login-username" aria-label="Username or Email" type="text" placeholder="Username or Email address"
-                value={username} onChange={e => { setUsername(e.target.value); setError(''); }}
-                style={inp(username)} autoComplete="username"
+              <input
+                id="login-username"
+                name="pos_user_login_identity"
+                aria-label="Username or Email"
+                type="text"
+                placeholder="Username or Email address"
+                value={username}
+                onChange={e => { setUsername(e.target.value); setError(''); }}
+                style={inp(username)}
+                autoComplete="off"
                 onFocus={e => e.target.style.borderColor = cfg.accent}
                 onBlur={e => e.target.style.borderColor = username ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
               />
@@ -697,13 +815,19 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 <label style={{ fontSize: '0.64rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   PASSWORD
                 </label>
-
               </div>
               <div style={{ position: 'relative' }}>
                 <Lock size={13} color="#475569" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input id="login-password" aria-label="Password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
-                  value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
-                  style={inp(password, { paddingRight: '2.5rem' })} autoComplete="current-password"
+                <input
+                  id="login-password"
+                  name="pos_user_login_credential"
+                  aria-label="Password"
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setError(''); }}
+                  style={inp(password, { paddingRight: '2.5rem' })}
+                  autoComplete="new-password"
                   onFocus={e => e.target.style.borderColor = cfg.accent}
                   onBlur={e => e.target.style.borderColor = password ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
                 />
@@ -717,6 +841,10 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                     setMode('forgot');
                     setError('');
                     setSuccess('');
+                    setShowNewPw(false);
+                    setShowConfirmNewPw(false);
+                    setNewPassword('');
+                    setConfirmNewPassword('');
                     setForgotEmail(username.includes('@') ? username : '');
                   }}
                   style={{
@@ -867,62 +995,30 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 <Fld label="New Password *" icon={<Lock size={13} color="#475569" />} mb="0.35rem">
                   <div style={{ position: 'relative', width: '100%' }}>
                     <input
+                      id="forgot-new-password"
+                      aria-label="New Password"
                       type={showNewPw ? "text" : "password"}
                       placeholder="Minimum 6 characters"
                       value={newPassword}
                       onChange={e => { setNewPassword(e.target.value); setError(''); }}
-                      style={{ ...inp(newPassword), paddingRight: '2rem' }}
+                      style={{ ...inp(newPassword), paddingRight: '2.5rem' }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPw(!showNewPw)}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--text-dim)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                      tabIndex={-1}
-                    >
-                      {showNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
+                    <PwEye show={showNewPw} toggle={() => setShowNewPw(p => !p)} ariaLabel={showNewPw ? "Hide new password" : "Show new password"} />
                   </div>
                 </Fld>
 
                 <Fld label="Confirm New Password *" icon={<Lock size={13} color="#475569" />} mb="0.45rem">
                   <div style={{ position: 'relative', width: '100%' }}>
                     <input
+                      id="forgot-confirm-password"
+                      aria-label="Confirm New Password"
                       type={showConfirmNewPw ? "text" : "password"}
                       placeholder="Re-enter new password"
                       value={confirmNewPassword}
                       onChange={e => { setConfirmNewPassword(e.target.value); setError(''); }}
-                      style={{ ...inp(confirmNewPassword), paddingRight: '2rem' }}
+                      style={{ ...inp(confirmNewPassword), paddingRight: '2.5rem' }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmNewPw(!showConfirmNewPw)}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--text-dim)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                      tabIndex={-1}
-                    >
-                      {showConfirmNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
+                    <PwEye show={showConfirmNewPw} toggle={() => setShowConfirmNewPw(p => !p)} ariaLabel={showConfirmNewPw ? "Hide confirm password" : "Show confirm password"} />
                   </div>
                 </Fld>
 
@@ -942,7 +1038,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
               <div className="bhanu-registration-grid">
                 {/* ─ Row 1 Left: Full Name */}
                 <Fld label="Full Name *" icon={<User size={13} color="#475569" />} mb="0">
-                  <input type="text" placeholder="e.g. SURESH REDDY"
+                  <input type="text" placeholder="e.g. Amrutha Reddy"
                     value={regName} onChange={e => { setRegName(e.target.value); setError(''); }}
                     style={inp(regName)}
                     onFocus={e => e.target.style.borderColor = cfg.accent}
@@ -952,7 +1048,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
                 {/* ─ Row 1 Right: Username */}
                 <Fld label="Username *" icon={<User size={13} color="#475569" />} mb="0">
-                  <input type="text" placeholder="Choose username"
+                  <input type="text" placeholder="e.g. amrutha123"
                     value={regUser} onChange={e => { setRegUser(e.target.value); setError(''); }}
                     style={inp(regUser)} autoComplete="username"
                     onFocus={e => e.target.style.borderColor = cfg.accent}
@@ -962,7 +1058,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
                 {/* ─ Row 2 Left: Mobile Number */}
                 <Fld label="Mobile Number *" icon={<Phone size={13} color="#475569" />} mb="0">
-                  <input type="tel" placeholder="10-digit mobile" maxLength={10}
+                  <input type="tel" placeholder="10-digit mobile (starts with 6-9)" maxLength={10}
                     value={regMobile} onChange={e => { setRegMobile(e.target.value.replace(/\D/g, '')); setError(''); }}
                     style={inp(regMobile)}
                     onFocus={e => e.target.style.borderColor = cfg.accent}
@@ -972,7 +1068,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
                 {/* ─ Row 2 Right: Email */}
                 <Fld label="Email *" icon={<Mail size={13} color="#475569" />} mb="0">
-                  <input type="email" placeholder="your@email.com"
+                  <input type="email" placeholder="e.g. amrutha@gmail.com"
                     value={regEmail} onChange={e => { setRegEmail(e.target.value); setError(''); }}
                     style={inp(regEmail)}
                     onFocus={e => e.target.style.borderColor = cfg.accent}
@@ -982,27 +1078,44 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
                 {/* ─ Row 3 Left: Password */}
                 <Fld label="Password *" icon={<Lock size={13} color="#475569" />} mb="0">
-                  <input type={showRegPw ? 'text' : 'password'} placeholder="Min 6 chars"
-                    value={regPass} onChange={e => { setRegPass(e.target.value); setError(''); }}
-                    style={inp(regPass, { paddingRight: '2.2rem' })} autoComplete="new-password"
-                    onFocus={e => e.target.style.borderColor = cfg.accent}
-                    onBlur={e => e.target.style.borderColor = regPass ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-                  />
-                  <PwEye show={showRegPw} toggle={() => setShowRegPw(p => !p)} />
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input
+                      id="reg-password"
+                      aria-label="Password"
+                      type={showRegPw ? 'text' : 'password'}
+                      placeholder="Min 8 chars (e.g. Amrutha@123)"
+                      value={regPass}
+                      onChange={e => { setRegPass(e.target.value); setError(''); }}
+                      style={inp(regPass, { paddingRight: '2.5rem' })}
+                      autoComplete="new-password"
+                      onFocus={e => e.target.style.borderColor = cfg.accent}
+                      onBlur={e => e.target.style.borderColor = regPass ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                    />
+                    <PwEye show={showRegPw} toggle={() => setShowRegPw(p => !p)} ariaLabel={showRegPw ? "Hide password" : "Show password"} />
+                  </div>
                 </Fld>
 
-                {/* ─ Row 3 Right: Confirm Password */}
+                {/* ─ Row 3 Right: Confirm Password (RMS_REG_009) */}
                 <Fld label="Confirm Password *" icon={<Lock size={13} color="#475569" />} mb="0">
-                  <input type={showRegPw ? 'text' : 'password'} placeholder="Re-enter password"
-                    value={regConfirm} onChange={e => { setRegConfirm(e.target.value); setError(''); }}
-                    style={inp(regConfirm, {
-                      paddingRight: '2.2rem',
-                      borderColor: regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
-                    })}
-                    autoComplete="new-password"
-                  />
-                </Fld>
-              </div>
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input
+                      id="reg-confirm-password"
+                      aria-label="Confirm Password"
+                      type={showRegConfirm ? 'text' : 'password'}
+                      placeholder="Re-enter password"
+                      value={regConfirm}
+                      onChange={e => { setRegConfirm(e.target.value); setError(''); }}
+                      style={inp(regConfirm, {
+                        paddingRight: '2.5rem',
+                        borderColor: regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
+                      })}
+                      autoComplete="new-password"
+                      onFocus={e => e.target.style.borderColor = cfg.accent}
+                      onBlur={e => e.target.style.borderColor = regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'}
+                    />
+                    <PwEye show={showRegConfirm} toggle={() => setShowRegConfirm(p => !p)} ariaLabel={showRegConfirm ? "Hide confirm password" : "Show confirm password"} />
+                  </div>
+                </Fld></div>
 
               <div style={{ marginTop: '0.35rem' }}>
                 <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Verify Email & Create Account" icon={<Mail size={15} />} />
@@ -1017,24 +1130,24 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
               </div>
             </form>
           ) : (
-            <form onSubmit={handleVerifyAndRegister} style={{ padding: '0.85rem 1.2rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem', justifyContent: 'center' }}>
+            <form onSubmit={handleVerifyAndRegister} style={{ padding: '0.2rem 0', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem', justifyContent: 'center' }}>
               {error   && <Err msg={error} />}
               {success && <Suc msg={success} />}
 
-              <div style={{ textAlign: 'center', marginBottom: '0.2rem' }}>
+              <div style={{ textAlign: 'center', marginBottom: '0.1rem' }}>
                 <div style={{
-                  width: '46px', height: '46px', borderRadius: '50%',
+                  width: '36px', height: '36px', borderRadius: '50%',
                   background: 'rgba(255,157,0,0.12)', border: '1.5px solid #ff9d00',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 0.6rem', color: '#ff9d00',
-                  boxShadow: '0 0 16px rgba(255,157,0,0.25)'
+                  margin: '0 auto 0.35rem', color: '#ff9d00',
+                  boxShadow: '0 0 12px rgba(255,157,0,0.2)'
                 }}>
-                  <Mail size={22} />
+                  <Mail size={18} />
                 </div>
-                <h2 style={{ fontSize: '1rem', fontWeight: 900, color: '#ffffff', margin: '0 0 0.35rem' }}>
+                <h2 style={{ fontSize: '0.92rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 0.2rem' }}>
                   Verify Your Email Address
                 </h2>
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.35 }}>
                   We've sent a 6-digit verification code to<br />
                   <strong style={{ color: '#ff9d00' }}>{regEmail}</strong>
                 </p>
@@ -1045,20 +1158,20 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 <div style={{
                   background: regIsLiveEmail ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.12)',
                   border: `1.5px dashed ${regIsLiveEmail ? '#10b981' : '#f59e0b'}`,
-                  borderRadius: '10px',
-                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  padding: '0.45rem 0.65rem',
                   marginBottom: '0.1rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.35rem'
+                  gap: '0.25rem'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: regIsLiveEmail ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: regIsLiveEmail ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <KeyRound size={12} color={regIsLiveEmail ? '#10b981' : '#f59e0b'} />
                       {regIsLiveEmail ? 'LIVE EMAIL DISPATCHED' : 'OTP VERIFICATION CODE'}
                     </span>
                     {regOtp === regServerOtp ? (
-                      <span style={{ fontSize: '0.66rem', color: '#10b981', fontWeight: 800, background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '0.64rem', color: '#10b981', fontWeight: 800, background: 'rgba(16, 185, 129, 0.15)', padding: '2px 5px', borderRadius: '4px' }}>
                         ✓ Applied
                       </span>
                     ) : (
@@ -1069,9 +1182,9 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                           background: 'var(--accent-amber, #f59e0b)',
                           border: 'none',
                           color: '#000000',
-                          fontSize: '0.65rem',
+                          fontSize: '0.64rem',
                           fontWeight: 800,
-                          padding: '3px 8px',
+                          padding: '2px 7px',
                           borderRadius: '4px',
                           cursor: 'pointer'
                         }}
@@ -1082,7 +1195,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '0.25em', color: 'var(--text-main)', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.2em', color: 'var(--text-main)', fontFamily: 'monospace' }}>
                       {regServerOtp}
                     </span>
                     {regPreviewUrl && (
@@ -1091,7 +1204,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                         target="_blank"
                         rel="noreferrer"
                         style={{
-                          fontSize: '0.68rem',
+                          fontSize: '0.66rem',
                           color: '#38bdf8',
                           fontWeight: 700,
                           textDecoration: 'underline'
@@ -1103,14 +1216,14 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                   </div>
 
                   {!regIsLiveEmail && (
-                    <div style={{ fontSize: '0.64rem', color: '#94a3b8', lineHeight: 1.3 }}>
-                      ⚡ SMTP credentials are not yet configured in .env. Click <strong>Auto-Fill</strong> above to verify immediately, or configure your SMTP in .env for real Gmail delivery.
+                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
+                      ⚡ SMTP credentials are not yet configured in .env. Click <strong>Auto-Fill</strong> above to verify immediately.
                     </div>
                   )}
                 </div>
               )}
 
-              <Fld label="ENTER 6-DIGIT EMAIL OTP" icon={<KeyRound size={13} color="#475569" />} mb="0.2rem">
+              <Fld label="ENTER 6-DIGIT EMAIL OTP" icon={<KeyRound size={13} color="#475569" />} mb="0.15rem">
                 <input
                   id="reg-otp"
                   type="text"
@@ -1125,8 +1238,8 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                   style={{
                     ...inp(regOtp),
                     textAlign: 'center',
-                    fontSize: '1.25rem',
-                    letterSpacing: '8px',
+                    fontSize: '1.15rem',
+                    letterSpacing: '6px',
                     fontWeight: 900,
                     color: '#ff9d00',
                     fontFamily: 'monospace'
@@ -1134,16 +1247,16 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 />
               </Fld>
 
-              <div style={{ marginTop: '0.2rem' }}>
+              <div style={{ marginTop: '0.15rem' }}>
                 <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Verify & Complete Registration" icon={<CheckCircle size={15} />} />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
                 <button
                   type="button"
                   onClick={() => { setRegOtpStep(false); setError(''); }}
                   style={{
-                    background: 'none', border: 'none', color: '#94a3b8',
+                    background: 'none', border: 'none', color: 'var(--text-muted)',
                     fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: '0.25rem'
                   }}
@@ -1230,11 +1343,32 @@ function Fld({ label, icon, children, mb='0.65rem' }) {
     </div>
   );
 }
-function PwEye({ show, toggle }) {
+function PwEye({ show, toggle, ariaLabel }) {
   return (
-    <button type="button" aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} onClick={toggle}
-      style={{ position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center' }}>
-      {show ? <EyeOff size={14}/> : <Eye size={14}/>}
+    <button
+      type="button"
+      className="pw-toggle-btn"
+      aria-label={ariaLabel || (show ? "Hide password" : "Show password")}
+      aria-pressed={show}
+      onClick={toggle}
+      tabIndex={0}
+      style={{
+        position: 'absolute',
+        right: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: 'none',
+        border: 'none',
+        color: 'var(--text-dim)',
+        cursor: 'pointer',
+        padding: '2px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2
+      }}
+    >
+      {show ? <EyeOff size={16} /> : <Eye size={16} />}
     </button>
   );
 }

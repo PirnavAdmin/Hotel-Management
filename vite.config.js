@@ -12,6 +12,44 @@ try {
 
 const env = loadEnv("development", process.cwd(), "");
 
+const getBusinessDateStr = (dateObj = new Date()) => {
+  const d = new Date(dateObj);
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+const getBusinessDateKey = (dateObj = new Date()) => {
+  const d = new Date(dateObj);
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const getNextInvoiceNoForServer = (db, dateObj = new Date()) => {
+  const dateStr = getBusinessDateStr(dateObj);
+  const pastOrders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+    (o) => o && String(o.status || "").toLowerCase() === "settled"
+  );
+  let highest = 0;
+  pastOrders.forEach((o) => {
+    const oDate = o.date || getBusinessDateStr(o.settledAt || o.createdAt || new Date());
+    if (oDate === dateStr && o.invoiceNo) {
+      const match = String(o.invoiceNo).match(/INV-(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > highest && num < 100000) {
+          highest = num;
+        }
+      }
+    }
+  });
+  const nextNum = highest + 1;
+  return `INV-${String(nextNum).padStart(3, '0')}`;
+};
+
 let mailTransporter = null;
 const getMailTransporter = async () => {
   if (!nodemailer) return null;
@@ -867,10 +905,22 @@ function globalSyncPlugin() {
           );
         }
 
-        // REST API: /api/v1/staff
+        // REST API: /api/v1/staff (GET)
         if (req.url.startsWith("/api/v1/staff") && req.method === "GET") {
           db = loadDb();
-          const staff = db.gourmet_pos_staff_v1 || [];
+          let staff = db.gourmet_pos_staff_v1;
+          if (!Array.isArray(staff) || staff.length === 0) {
+            staff = [
+              { staffId: 1, id: 1, fullName: "Rajesh K.", name: "Rajesh K.", roleTitle: "Senior Captain", role: "Senior Captain", phone: "+91 98450 11223", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "R", createdAt: "2026-10-09T04:27:02.068846" },
+              { staffId: 2, id: 2, fullName: "Vikram S.", name: "Vikram S.", roleTitle: "Head Waiter", role: "Head Waiter", phone: "+91 98450 44556", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "V", createdAt: "2026-10-09T04:27:02.069079" },
+              { staffId: 3, id: 3, fullName: "Ananya R.", name: "Ananya R.", roleTitle: "Stewardess", role: "Stewardess", phone: "+91 98450 77889", shift: "Full Day (11 AM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "A", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 4, id: 4, fullName: "Pooja M.", name: "Pooja M.", roleTitle: "Captain", role: "Captain", phone: "+91 98450 99001", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "P", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 5, id: 5, fullName: "Suresh N.", name: "Suresh N.", roleTitle: "Server / Waiter", role: "Server / Waiter", phone: "+91 98450 33445", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "S", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 6, id: 6, fullName: "Karan D.", name: "Karan D.", roleTitle: "VIP Lounge Captain", role: "VIP Lounge Captain", phone: "+91 98450 66778", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 4, avatarInitial: "K", createdAt: "2026-10-09T04:27:02.069081" }
+            ];
+            db.gourmet_pos_staff_v1 = staff;
+            saveDb(db);
+          }
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(
             JSON.stringify({
@@ -880,6 +930,102 @@ function globalSyncPlugin() {
               data: staff,
             }),
           );
+        }
+
+        // REST API: /api/v1/staff (POST - create new staff)
+        if ((req.url === "/api/v1/staff" || req.url === "/api/v1/staff/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+              const maxId = existing.reduce((max, s) => Math.max(max, Number(s.staffId || s.id || 0)), 0);
+              const newId = maxId + 1;
+              const newPerson = {
+                staffId: newId,
+                id: newId,
+                fullName: payload.name || payload.fullName || "New Staff",
+                name: payload.name || payload.fullName || "New Staff",
+                roleTitle: payload.role || payload.roleTitle || "Waiter",
+                role: payload.role || payload.roleTitle || "Waiter",
+                phone: payload.phone || "",
+                email: payload.email || "",
+                shift: payload.shift || "Morning Shift (10 AM - 4 PM)",
+                isActive: true,
+                assignedTablesCount: 0,
+                avatarInitial: (payload.name || payload.fullName || "S").charAt(0).toUpperCase(),
+                createdAt: new Date().toISOString()
+              };
+              const updated = [...existing, newPerson];
+              db.gourmet_pos_staff_v1 = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_staff_v1: updated });
+              res.writeHead(201, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Staff created successfully", staff: newPerson, data: newPerson }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/staff/:id (PUT - update staff)
+        const staffPutMatch = req.url.match(/^\/api\/v1\/staff\/([^/?]+)/i);
+        if (staffPutMatch && req.method === "PUT") {
+          const targetId = decodeURIComponent(staffPutMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+              let updatedPerson = null;
+              const updated = existing.map((s) => {
+                if (String(s.staffId || s.id) === String(targetId)) {
+                  updatedPerson = {
+                    ...s,
+                    ...payload,
+                    fullName: payload.name || payload.fullName || s.fullName || s.name,
+                    name: payload.name || payload.fullName || s.name || s.fullName,
+                    roleTitle: payload.role || payload.roleTitle || s.roleTitle || s.role,
+                    role: payload.role || payload.roleTitle || s.role || s.roleTitle,
+                    phone: payload.phone !== undefined ? payload.phone : s.phone,
+                    shift: payload.shift !== undefined ? payload.shift : s.shift,
+                    updatedAt: new Date().toISOString()
+                  };
+                  return updatedPerson;
+                }
+                return s;
+              });
+              db.gourmet_pos_staff_v1 = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_staff_v1: updated });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Staff updated successfully", data: updatedPerson || payload }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/staff/:id (DELETE - delete staff)
+        const staffDeleteMatch = req.url.match(/^\/api\/v1\/staff\/([^/?]+)/i);
+        if (staffDeleteMatch && req.method === "DELETE") {
+          const targetId = decodeURIComponent(staffDeleteMatch[1]);
+          db = loadDb();
+          const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+          const updated = existing.filter((s) => String(s.staffId || s.id) !== String(targetId));
+          db.gourmet_pos_staff_v1 = updated;
+          saveDb(db);
+          broadcast({ gourmet_pos_staff_v1: updated });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, message: "Staff deleted successfully" }));
         }
 
         // REST API: /api/v1/inventory (GET)
@@ -897,7 +1043,7 @@ function globalSyncPlugin() {
           );
         }
 
-        // REST API: /api/v1/inventory (POST)
+                // REST API: /api/v1/inventory (POST)
         if ((req.url === "/api/v1/inventory" || req.url === "/api/v1/inventory/") && req.method === "POST") {
           let body = "";
           req.on("data", (chunk) => { body += chunk; });
@@ -907,16 +1053,22 @@ function globalSyncPlugin() {
               db = loadDb();
               const existing = db.gourmet_pos_inventory_v1 || [];
               const newItem = {
-                id: payload.id || inv- + Date.now(),
+                ...payload,
+                id: payload.id || `inv-${Date.now()}`,
                 name: payload.name || "Unnamed Ingredient",
                 category: payload.category || "General",
-                subcategory: payload.subcategory || "",
+                subcategory: payload.subcategory || payload.brand || "",
+                brand: payload.brand || payload.subcategory || "",
                 supplier: payload.supplier || "Local Supplier",
-                unit: payload.unit || "KG",
+                unit: payload.unit || "Bottle",
                 stock: Number(payload.stock ?? payload.currentStock ?? 0),
                 minThreshold: Number(payload.minThreshold ?? payload.minimumThreshold ?? 5),
                 unitCost: Number(payload.unitCost ?? payload.mrp ?? 0),
                 mrp: Number(payload.mrp ?? payload.unitCost ?? 0),
+                abv: payload.abv != null && payload.abv !== "" ? Number(payload.abv) : null,
+                volumeMl: payload.volumeMl != null && payload.volumeMl !== "" ? Number(payload.volumeMl) : null,
+                storageLocation: payload.storageLocation || "",
+                sellingPrice: payload.sellingPrice != null && payload.sellingPrice !== "" ? Number(payload.sellingPrice) : Number(payload.mrp ?? payload.unitCost ?? 0),
                 totalUsed: 0,
                 totalRestocked: Number(payload.stock ?? 0),
                 lastRestocked: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
@@ -926,6 +1078,45 @@ function globalSyncPlugin() {
               broadcast({ gourmet_pos_inventory_v1: db.gourmet_pos_inventory_v1 });
               res.writeHead(200, { "Content-Type": "application/json" });
               return res.end(JSON.stringify({ success: true, data: newItem, item: newItem }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/inventory/:id (PUT)
+        const invPutMatch = req.url.match(/^\/api\/v1\/inventory\/([^/?]+)$/i);
+        if (invPutMatch && req.method === "PUT") {
+          const rawId = decodeURIComponent(invPutMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              let updatedItem = null;
+              db.gourmet_pos_inventory_v1 = (db.gourmet_pos_inventory_v1 || []).map((item) => {
+                if (String(item.id) === rawId) {
+                  updatedItem = {
+                    ...item,
+                    ...payload,
+                    id: item.id,
+                    stock: Number(payload.stock ?? payload.currentStock ?? item.stock),
+                    minThreshold: Number(payload.minThreshold ?? payload.minimumThreshold ?? item.minThreshold),
+                    unitCost: Number(payload.unitCost ?? payload.mrp ?? item.unitCost),
+                    mrp: Number(payload.mrp ?? payload.unitCost ?? item.mrp),
+                    sellingPrice: payload.sellingPrice != null && payload.sellingPrice !== "" ? Number(payload.sellingPrice) : (payload.mrp != null ? Number(payload.mrp) : item.sellingPrice),
+                  };
+                  return updatedItem;
+                }
+                return item;
+              });
+              saveDb(db);
+              broadcast({ gourmet_pos_inventory_v1: db.gourmet_pos_inventory_v1 });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: updatedItem, item: updatedItem }));
             } catch (err) {
               res.writeHead(400, { "Content-Type": "application/json" });
               return res.end(JSON.stringify({ success: false, error: err.message }));
@@ -951,7 +1142,9 @@ function globalSyncPlugin() {
         // REST API: /api/v1/orders/history
         if (req.url.startsWith("/api/v1/orders/history") && req.method === "GET") {
           db = loadDb();
-          const orders = db.gourmet_pos_past_orders_v2_inr || [];
+          const orders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+            (o) => o && String(o.status || "").toLowerCase() === "settled"
+          );
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(
             JSON.stringify({
@@ -959,6 +1152,240 @@ function globalSyncPlugin() {
               data: { orders, totalPages: 1, totalCount: orders.length },
             }),
           );
+        }
+
+        // REST API: /api/v1/invoices (GET, POST)
+        const invoiceByIdMatch = req.url.match(/^\/api\/v1\/invoices\/([^/?]+)$/i);
+        const invoiceByOrderMatch = req.url.match(/^\/api\/v1\/invoices\/by-order\/([^/?]+)$/i);
+        const invoicePaymentsMatch = req.url.match(/^\/api\/v1\/invoices\/([^/]+)\/payments$/i);
+
+        if (req.url.startsWith("/api/v1/invoices") && !invoiceByIdMatch && !invoiceByOrderMatch && !invoicePaymentsMatch && req.method === "GET") {
+          db = loadDb();
+          const pastOrders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+            (o) => o && String(o.status || o.Status || "").toLowerCase() === "settled"
+          );
+          const customInvoices = (db.invoices || db.gourmet_pos_invoices || []).filter(
+            (i) => i && String(i.status || i.Status || "").toLowerCase() === "settled"
+          );
+
+          const mappedFromOrders = pastOrders.map((ord, idx) => {
+            const items = Array.isArray(ord.items) ? ord.items : [];
+            const itemsSum = items.reduce(
+              (s, it) => s + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
+              0
+            );
+            const rawSubtotal = Number(ord.subtotal ?? ord.totalAmount ?? ord.total ?? 0);
+            const subtotal = rawSubtotal > 0 ? rawSubtotal : itemsSum;
+            const discountAmount = Number(ord.discountAmount ?? 0);
+            const taxableAmount = Number(ord.taxableAmount ?? Math.max(0, subtotal - discountAmount));
+            const taxAmount = Number(ord.taxAmount ?? Math.round(taxableAmount * 0.05));
+            const rawGrandTotal = Number(ord.grandTotal ?? ord.total ?? 0);
+            const grandTotal = rawGrandTotal > 0 ? rawGrandTotal : (subtotal > 0 ? (taxableAmount + taxAmount) : 0);
+
+            let invNum = ord.invoiceNo || ord.invoiceNumber;
+            if (!invNum || /^INV-\d{10,}$/i.test(String(invNum)) || /^Order\s*#\d{10,}$/i.test(String(invNum))) {
+              invNum = `INV-${String(idx + 1).padStart(3, '0')}`;
+            }
+
+            return {
+              id: ord.id || ord.orderId || `ord_${idx + 1}`,
+              invoiceId: ord.id || ord.orderId || `ord_${idx + 1}`,
+              orderId: ord.id || ord.orderId || `ord_${idx + 1}`,
+              invoiceNumber: invNum,
+              invoiceNo: invNum,
+              tableName: ord.tableName || `Table-${ord.tableId || "1"}`,
+              tableId: ord.tableId,
+              serverName: ord.server || ord.serverName || "Staff",
+              server: ord.server || ord.serverName || "Staff",
+              status: "Settled",
+              subtotal,
+              discountAmount,
+              discountPercent: Number(ord.discountPercent ?? ord.discount ?? 0),
+              taxableAmount,
+              taxAmount,
+              serviceChargeAmount: Number(ord.serviceChargeAmount ?? 0),
+              tipAmount: Number(ord.tipAmount ?? 0),
+              grandTotal,
+              totalAmount: grandTotal,
+              paidAmount: grandTotal,
+              paymentMethod: ord.paymentMethod || ord.paymentMode || "Cash",
+              payments: Array.isArray(ord.payments) && ord.payments.length ? ord.payments : [
+                {
+                  amount: grandTotal,
+                  paymentMode: ord.paymentMethod || ord.paymentMode || "Cash",
+                  paidAt: ord.settledAt || ord.createdAt || new Date().toISOString()
+                }
+              ],
+              items,
+              createdAt: ord.settledAt || ord.createdAt || ord.orderTime || new Date().toISOString(),
+              settledAt: ord.settledAt || ord.createdAt || new Date().toISOString(),
+            };
+          });
+
+          const invoiceMap = new Map();
+          customInvoices.forEach((inv) => invoiceMap.set(String(inv.id || inv.invoiceNumber || inv.invoiceNo), inv));
+          mappedFromOrders.forEach((inv) => {
+            const key = String(inv.id || inv.invoiceNumber || inv.invoiceNo);
+            if (!invoiceMap.has(key)) {
+              invoiceMap.set(key, inv);
+            }
+          });
+
+          const invoices = Array.from(invoiceMap.values());
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              data: invoices,
+              invoices,
+              count: invoices.length,
+            })
+          );
+        }
+
+        if (invoiceByOrderMatch && req.method === "GET") {
+          const targetOrderId = decodeURIComponent(invoiceByOrderMatch[1]);
+          db = loadDb();
+          const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const matchedOrder = pastOrders.find((o) => String(o.id ?? o.orderId) === targetOrderId);
+          if (matchedOrder) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: matchedOrder, invoice: matchedOrder }));
+          }
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "Invoice not found for order" }));
+        }
+
+        if (invoiceByIdMatch && req.method === "GET") {
+          const targetId = decodeURIComponent(invoiceByIdMatch[1]);
+          db = loadDb();
+          const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const customInvoices = db.invoices || db.gourmet_pos_invoices || [];
+          const found = customInvoices.find((i) => String(i.id || i.invoiceId || i.invoiceNo) === targetId) ||
+            pastOrders.find((o) => String(o.id ?? o.orderId ?? o.invoiceNo) === targetId);
+          if (found) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: found, invoice: found }));
+          }
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "Invoice not found" }));
+        }
+
+        if ((req.url === "/api/v1/invoices" || req.url === "/api/v1/invoices/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = db.invoices || db.gourmet_pos_invoices || [];
+              const newInvoice = {
+                ...payload,
+                id: payload.id || `inv-${Date.now()}`,
+                invoiceNo: payload.invoiceNo || payload.invoiceNumber || `INV-${Date.now()}`,
+                createdAt: payload.createdAt || new Date().toISOString(),
+                status: payload.status || "PAID",
+              };
+              const updated = [newInvoice, ...existing];
+              db.gourmet_pos_invoices = updated;
+              db.invoices = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_invoices: updated });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: newInvoice, invoice: newInvoice }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: POST /api/v1/orders/:id/settle
+        const orderSettleMatch = req.url.match(/^\/api\/v1\/orders\/([^/]+)\/settle$/i);
+        if (orderSettleMatch && req.method === "POST") {
+          const targetOrderId = decodeURIComponent(orderSettleMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const activeOrders = db.active_orders || [];
+              const pastOrders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+                (o) => o && String(o.status || "").toLowerCase() === "settled"
+              );
+
+              const activeOrder = activeOrders.find(
+                (o) => String(o.id ?? o.orderId ?? "") === targetOrderId ||
+                       String(o.tableId ?? "") === targetOrderId
+              );
+
+              const items = Array.isArray(payload.items) && payload.items.length
+                ? payload.items
+                : (activeOrder?.items || []);
+              const itemsSubtotal = items.reduce(
+                (s, it) => s + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
+                0
+              );
+              const subtotal = Number(payload.subtotal) > 0 ? Number(payload.subtotal) : itemsSubtotal;
+              const discountPercent = Number(payload.discountPercent || activeOrder?.discountPercent || 0);
+              const discountAmount = Math.round((subtotal * discountPercent) / 100);
+              const taxableAmount = Math.max(0, subtotal - discountAmount);
+              const taxAmount = Math.round(taxableAmount * 0.05);
+              const grandTotal = taxableAmount + taxAmount;
+
+              const now = new Date();
+              const businessDate = getBusinessDateStr(now);
+              const nextInvNo = payload.invoiceNumber || getNextInvoiceNoForServer(db, now);
+
+              const settledOrder = {
+                ...(activeOrder || {}),
+                ...payload,
+                id: activeOrder?.id || targetOrderId || `ord_${Date.now()}`,
+                orderId: activeOrder?.orderId || targetOrderId || `ord_${Date.now()}`,
+                invoiceNo: nextInvNo,
+                invoiceNumber: nextInvNo,
+                status: "Settled",
+                Status: "Settled",
+                paymentMethod: payload.paymentMethod || activeOrder?.paymentMethod || "Cash",
+                paymentMode: payload.paymentMethod || activeOrder?.paymentMethod || "Cash",
+                items,
+                subtotal,
+                discountPercent,
+                discountAmount,
+                taxableAmount,
+                taxAmount,
+                grandTotal,
+                total: grandTotal,
+                totalAmount: grandTotal,
+                paidAmount: grandTotal,
+                date: businessDate,
+                settledDate: getBusinessDateKey(now),
+                settledAt: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              };
+
+              const nextPastOrders = [settledOrder, ...pastOrders];
+              db.gourmet_pos_past_orders_v2_inr = nextPastOrders;
+              db.active_orders = activeOrders.filter(
+                (o) => String(o.id ?? o.orderId ?? "") !== targetOrderId &&
+                       String(o.tableId ?? "") !== targetOrderId
+              );
+
+              saveDb(db);
+              broadcast({
+                gourmet_pos_past_orders_v2_inr: nextPastOrders,
+                active_orders: db.active_orders,
+              });
+
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: settledOrder, order: settledOrder }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
         }
 
         // REST API: PATCH /api/v1/orders/:id/discount
@@ -1091,6 +1518,48 @@ function globalSyncPlugin() {
           return res.end(JSON.stringify({ success: true }));
         }
 
+        if (req.url === "/api/v1/orders/active" && req.method === "GET") {
+          db = loadDb();
+          const orders = db.active_orders || [];
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify(orders));
+        }
+
+        const orderByTableMatch = req.url.match(/^\/api\/v1\/orders\/table\/([^/?]+)/i);
+        if (orderByTableMatch && req.method === "GET") {
+          const tableId = decodeURIComponent(orderByTableMatch[1]);
+          db = loadDb();
+          const order = (db.gourmet_pos_past_orders_v2_inr || []).find(
+            (candidate) =>
+              String(candidate.tableId ?? candidate.id) === tableId &&
+              ["active", "billed"].includes(String(candidate.status || "").toLowerCase()),
+          );
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify(order || null));
+        }
+
+        const sendOrderKotMatch = req.url.match(/^\/api\/v1\/orders\/([^/?]+)\/send-kot$/i);
+        if (sendOrderKotMatch && req.method === "POST") {
+          const orderId = decodeURIComponent(sendOrderKotMatch[1]);
+          db = loadDb();
+          const orders = db.gourmet_pos_past_orders_v2_inr || [];
+          const order = orders.find((candidate) => String(candidate.id ?? candidate.orderId) === orderId);
+          if (!order) {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+          }
+          order.items = (order.items || []).map((item) => ({
+            ...item,
+            kotStatus: item.kotStatus || "received",
+            kotSent: true,
+          }));
+          db.gourmet_pos_past_orders_v2_inr = orders;
+          saveDb(db);
+          broadcast({ gourmet_pos_past_orders_v2_inr: orders });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, data: order }));
+        }
+
         if (req.url.startsWith("/api/v1/orders") && req.method === "GET") {
           db = loadDb();
           const orders = db.gourmet_pos_past_orders_v2_inr || [];
@@ -1108,14 +1577,42 @@ function globalSyncPlugin() {
             try {
               const orderData = JSON.parse(body);
               db = loadDb();
-              const existingOrders = db.gourmet_pos_past_orders_v2_inr || [];
-              const updatedOrders = [orderData, ...existingOrders];
-              db.gourmet_pos_past_orders_v2_inr = updatedOrders;
+              const activeOrders = db.active_orders || [];
+              const tableId = String(orderData.tableId ?? "");
+              const generatedOrderId = Number(orderData.id) || Date.now();
+              const existingIndex = activeOrders.findIndex(
+                (order) =>
+                  tableId &&
+                  String(order.tableId ?? "") === tableId &&
+                  String(order.status || "").toLowerCase() === "active"
+              );
+              const savedOrder = existingIndex >= 0
+                ? {
+                    ...activeOrders[existingIndex],
+                    ...orderData,
+                    id: Number(activeOrders[existingIndex].id) || generatedOrderId,
+                    orderId: Number(activeOrders[existingIndex].orderId) || generatedOrderId,
+                    status: "Active",
+                    items: [...(activeOrders[existingIndex].items || []), ...(orderData.items || [])],
+                  }
+                : {
+                    ...orderData,
+                    id: generatedOrderId,
+                    orderId: generatedOrderId,
+                    status: "Active",
+                    createdAt: orderData.createdAt || new Date().toISOString(),
+                  };
+              if (existingIndex >= 0) {
+                activeOrders[existingIndex] = savedOrder;
+              } else {
+                activeOrders.unshift(savedOrder);
+              }
+              db.active_orders = activeOrders;
               saveDb(db);
-              broadcast({ gourmet_pos_past_orders_v2_inr: updatedOrders });
+              broadcast({ active_orders: activeOrders });
               res.writeHead(200, { "Content-Type": "application/json" });
               return res.end(
-                JSON.stringify({ success: true, order: orderData }),
+                JSON.stringify({ success: true, data: savedOrder, order: savedOrder }),
               );
             } catch (err) {
               res.writeHead(400, { "Content-Type": "application/json" });
@@ -1145,12 +1642,16 @@ function globalSyncPlugin() {
                   u.password === password,
               );
               if (found) {
+                const userObj = { ...found };
+                if (username && String(username).includes("@")) {
+                  userObj.email = String(username).trim().toLowerCase();
+                }
                 res.writeHead(200, { "Content-Type": "application/json" });
                 return res.end(
                   JSON.stringify({
                     success: true,
                     token: "avsr-local-jwt-token",
-                    user: found,
+                    user: userObj,
                   }),
                 );
               }

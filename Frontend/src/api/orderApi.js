@@ -64,6 +64,7 @@ export async function apiSettleOrder(orderId, settlementData = {}) {
       serviceChargeEnabled: settlementData.serviceChargeEnabled !== false,
       tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
       paymentMethod: settlementData.paymentMethod || "Cash",
+      invoiceNumber: settlementData.invoiceNumber || null,
     }),
   });
 }

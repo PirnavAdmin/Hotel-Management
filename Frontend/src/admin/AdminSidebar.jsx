@@ -58,7 +58,7 @@ export function AdminSidebar({
         },
         {
           id: "menu",
-          label: "Menu Items",
+          label: "Dine Menu",
           icon: Utensils,
           badge: menuCount,
         },
@@ -122,18 +122,24 @@ export function AdminSidebar({
 
   // ================= BAR SIDEBAR NAVIGATION =================
   const barNavSections = [
-    { title: "MAIN MENU", items: [
-      { id: "bar-overview", label: "Bar Overview", icon: LayoutDashboard },
-      { id: "bar-drinks", label: "Drinks Menu", icon: Wine },
-      { id: "bar-tables", label: "Bar Tables", icon: Armchair },
-      { id: "bar-staff", label: "Bar Staff & Persons", icon: Users },
-      { id: "bar-kot", label: "Bar KOT", icon: ChefHat },
-    ] },
-    { title: "OPERATIONS", items: [
-      { id: "bar-inventory", label: "Bar Inventory", icon: Package },
-      { id: "bar-invoices", label: "Invoices", icon: ReceiptText },
-      { id: "bar-reports", label: "Bar Reports", icon: BarChart3 },
-    ] },
+    {
+      title: "MAIN MENU",
+      items: [
+        { id: "bar-overview", label: "Overview", icon: LayoutDashboard },
+        { id: "bar-drinks", label: "Drinks Menu", icon: Wine },
+        { id: "bar-tables", label: "Tables", icon: Armchair },
+        { id: "bar-staff", label: "Staff & Persons", icon: Users },
+        { id: "bar-kot", label: "Bar BOT", icon: ChefHat },
+      ],
+    },
+    {
+      title: "OPERATIONS",
+      items: [
+        { id: "bar-inventory", label: "Inventory", icon: Package },
+        { id: "bar-invoices", label: "Invoices", icon: ReceiptText },
+        { id: "bar-reports", label: "Reports", icon: BarChart3 },
+      ],
+    },
   ];
 
   return (
@@ -229,111 +235,136 @@ export function AdminSidebar({
       </div>
 
       {/* Navigation Sections */}
-      <div className="no-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none", marginTop: "0.85rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-        {(portalMode === "bar" ? barNavSections : navSections).map((section) => (
-          <div key={section.title} style={{ marginBottom: "0.15rem" }}>
-            <div
-              style={{
-                fontSize: "0.68rem",
-                fontWeight: 700,
-                color: "var(--text-dim)",
-                letterSpacing: "1px",
-                padding: "0 0.65rem 0.45rem 0.65rem",
-                textTransform: "uppercase",
-              }}
-            >
-              {section.title}
-            </div>
+      <div
+        className="no-scrollbar"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          marginTop: "0.85rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.1rem",
+        }}
+      >
+        {(portalMode === "bar" ? barNavSections : navSections).map(
+          (section) => (
+            <div key={section.title} style={{ marginBottom: "0.15rem" }}>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  color: "var(--text-dim)",
+                  letterSpacing: "1px",
+                  padding: "0 0.65rem 0.45rem 0.65rem",
+                  textTransform: "uppercase",
+                }}
+              >
+                {section.title}
+              </div>
 
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.25rem",
-              }}
-            >
-              {section.items.map((item) => {
-                const IconComponent = item.icon || Wine;
-                const isActive = portalMode === "bar" ? activeBarTab === item.id : activeTab === item.id;
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.25rem",
+                }}
+              >
+                {section.items.map((item) => {
+                  const IconComponent = item.icon || Wine;
+                  const isActive =
+                    portalMode === "bar"
+                      ? activeBarTab === item.id
+                      : activeTab === item.id;
 
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => portalMode === "bar" ? setActiveBarTab?.(item.id) : setActiveTab(item.id)}
-                    aria-current={isActive ? "page" : undefined}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.75rem",
-                      padding: "0.65rem 0.85rem",
-                      borderRadius: "10px",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "0.85rem",
-                      fontWeight: isActive ? 700 : 500,
-                      textAlign: "left",
-                      transition: "all 0.15s ease",
-                      background: isActive
-                        ? "linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)"
-                        : "transparent",
-                      color: isActive ? "#ffffff" : "var(--text-muted)",
-                      boxShadow: isActive
-                        ? "0 4px 14px rgba(245, 158, 11, 0.38)"
-                        : "none",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = "var(--bg-tertiary)";
-                        e.currentTarget.style.color = "var(--text-main)";
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() =>
+                        portalMode === "bar"
+                          ? setActiveBarTab?.(item.id)
+                          : setActiveTab(item.id)
                       }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "var(--text-muted)";
-                      }
-                    }}
-                  >
-                    <IconComponent
-                      size={18}
-                      color={isActive ? "#ffffff" : "currentColor"}
-                      strokeWidth={isActive ? 2.3 : 1.9}
-                      style={{ flexShrink: 0 }}
-                    />
-                    <span
+                      aria-current={isActive ? "page" : undefined}
                       style={{
-                        flex: 1,
-                        minWidth: 0,
-                        whiteSpace: "normal",
-                        lineHeight: 1.25,
-                        overflowWrap: "anywhere",
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "10px",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
+                        fontWeight: isActive ? 700 : 500,
+                        textAlign: "left",
+                        transition: "all 0.15s ease",
+                        background: isActive
+                          ? "linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)"
+                          : "transparent",
+                        color: isActive ? "#ffffff" : "var(--text-muted)",
+                        boxShadow: isActive
+                          ? "0 4px 14px rgba(245, 158, 11, 0.38)"
+                          : "none",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background =
+                            "var(--bg-tertiary)";
+                          e.currentTarget.style.color = "var(--text-main)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "var(--text-muted)";
+                        }
                       }}
                     >
-                      {item.label}
-                    </span>
-
-                    {/* Optional alert badge for KOT pending orders */}
-                    {item.badgeAlert && (
+                      <IconComponent
+                        size={18}
+                        color={isActive ? "#ffffff" : "currentColor"}
+                        strokeWidth={isActive ? 2.3 : 1.9}
+                        style={{ flexShrink: 0 }}
+                      />
                       <span
                         style={{
-                          background: isActive ? "rgba(0,0,0,0.3)" : "#ea580c",
-                          color: "#ffffff",
-                          fontSize: "0.68rem",
-                          fontWeight: 800,
-                          padding: "1px 6px",
-                          borderRadius: "10px",
+                          flex: 1,
+                          minWidth: 0,
+                          whiteSpace: "normal",
+                          lineHeight: 1.25,
+                          overflowWrap: "anywhere",
                         }}
                       >
-                        {item.badge}
+                        {item.label}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+
+                      {/* Optional alert badge for KOT pending orders */}
+                      {item.badgeAlert && (
+                        <span
+                          style={{
+                            background: isActive
+                              ? "rgba(0,0,0,0.3)"
+                              : "#ea580c",
+                            color: "#ffffff",
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            padding: "1px 6px",
+                            borderRadius: "10px",
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ),
+        )}
       </div>
     </aside>
   );

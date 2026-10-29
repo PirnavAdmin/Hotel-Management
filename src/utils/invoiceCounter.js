@@ -27,6 +27,26 @@ function getDateKey(dateStr) {
   return String(dateStr || getTodayDateString()).trim().replace(/\s+/g, '_');
 }
 
+/** Return canonical YYYY-MM-DD for the restaurant business day (4:00 AM cutoff). */
+export function getBusinessDayKey(dateInput = new Date()) {
+  try {
+    let d;
+    if (typeof dateInput === 'string' || typeof dateInput === 'number') {
+      d = new Date(dateInput);
+      if (isNaN(d.getTime())) d = new Date();
+    } else if (dateInput instanceof Date) {
+      d = dateInput;
+    } else {
+      d = new Date();
+    }
+    const businessDate = new Date(d);
+    if (businessDate.getHours() < 4) businessDate.setDate(businessDate.getDate() - 1);
+    return `${businessDate.getFullYear()}-${String(businessDate.getMonth() + 1).padStart(2, '0')}-${String(businessDate.getDate()).padStart(2, '0')}`;
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Scans past orders from localStorage to find the highest serial invoice number for a given date.
  */
@@ -39,9 +59,16 @@ function getHighestSerialFromExistingOrders(targetDateStr) {
     const orders = JSON.parse(raw);
     if (!Array.isArray(orders)) return 0;
 
+    const targetKey = getBusinessDayKey(targetDateStr);
+
     orders.forEach(o => {
-      const oDate = o.date || o.settledDate;
-      if (oDate === targetDateStr && o.invoiceNo) {
+      const status = String(o.status || o.Status || "").toLowerCase();
+      if (status === "active" || status === "dining" || status === "vacant") return;
+
+      const orderKey = getBusinessDayKey(o.settledDate || o.date || o.settledAt || o.createdAt || o.orderTimestamp);
+      const isDateMatch = (o.date === targetDateStr) || (o.settledDate === targetDateStr) || (orderKey === targetKey);
+
+      if (isDateMatch && o.invoiceNo) {
         const match = String(o.invoiceNo).match(/INV-(\d+)/i);
         if (match && match[1]) {
           const num = parseInt(match[1], 10);
