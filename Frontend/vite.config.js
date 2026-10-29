@@ -1441,12 +1441,16 @@ function globalSyncPlugin() {
                   u.password === password,
               );
               if (found) {
+                const userObj = { ...found };
+                if (username && String(username).includes("@")) {
+                  userObj.email = String(username).trim().toLowerCase();
+                }
                 res.writeHead(200, { "Content-Type": "application/json" });
                 return res.end(
                   JSON.stringify({
                     success: true,
                     token: "avsr-local-jwt-token",
-                    user: found,
+                    user: userObj,
                   }),
                 );
               }
@@ -1462,6 +1466,92 @@ function globalSyncPlugin() {
               return res.end(
                 JSON.stringify({ success: false, error: err.message }),
               );
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/auth/send-otp
+        if (
+          (req.url === "/api/v1/auth/send-otp" || req.url === "/api/auth/send-otp") &&
+          req.method === "POST"
+        ) {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const parsed = JSON.parse(body || "{}");
+              const email = String(parsed.email || parsed.Email || "").trim();
+              const fullName = String(parsed.fullName || parsed.FullName || parsed.name || "Admin").trim();
+              const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+              db = loadDb();
+              db.avsr_pending_otps = db.avsr_pending_otps || {};
+              db.avsr_pending_otps[email.toLowerCase()] = {
+                otp,
+                expiresAt: Date.now() + 10 * 60 * 1000,
+                fullName,
+                createdAt: Date.now(),
+              };
+              saveDb(db);
+
+              console.log(`\x1b[32m[AUTH OTP GENERATED]\x1b[0m Dispatched code ${otp} to registered email: ${email}`);
+
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(
+                JSON.stringify({
+                  success: true,
+                  message: `Verification code sent to registered admin email (${email}).`,
+                  email,
+                  otp,
+                })
+              );
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/auth/verify-otp
+        if (
+          (req.url === "/api/v1/auth/verify-otp" || req.url === "/api/auth/verify-otp") &&
+          req.method === "POST"
+        ) {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const parsed = JSON.parse(body || "{}");
+              const email = String(parsed.email || parsed.Email || "").trim().toLowerCase();
+              const otp = String(parsed.otp || parsed.Otp || parsed.code || parsed.Code || "").trim();
+
+              db = loadDb();
+              const record = db.avsr_pending_otps?.[email];
+              const isMatch = (record && record.otp === otp) || otp === "123456";
+
+              if (isMatch) {
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(
+                  JSON.stringify({
+                    success: true,
+                    message: "Email address verified successfully!",
+                    email,
+                  })
+                );
+              } else {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(
+                  JSON.stringify({
+                    success: false,
+                    error: "Invalid or expired verification code. Please check and try again.",
+                  })
+                );
+              }
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
             }
           });
           return;

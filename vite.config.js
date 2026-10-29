@@ -1441,12 +1441,16 @@ function globalSyncPlugin() {
                   u.password === password,
               );
               if (found) {
+                const userObj = { ...found };
+                if (username && String(username).includes("@")) {
+                  userObj.email = String(username).trim().toLowerCase();
+                }
                 res.writeHead(200, { "Content-Type": "application/json" });
                 return res.end(
                   JSON.stringify({
                     success: true,
                     token: "avsr-local-jwt-token",
-                    user: found,
+                    user: userObj,
                   }),
                 );
               }
