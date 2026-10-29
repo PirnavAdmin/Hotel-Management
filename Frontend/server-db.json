@@ -23,5 +23,151 @@
       "totalRestocked": 12,
       "lastRestocked": "28 Oct 2026"
     }
+  ],
+  "avsr_pending_otps": {
+    "pasupuleti.bhanu7@gmail.com": {
+      "otp": "795571",
+      "expiresAt": 1793187005450,
+      "fullName": "pirnav",
+      "createdAt": 1793186405450
+    }
+  },
+  "avsr_auth_users_v1": [
+    {
+      "id": "local-1793008699594-4u3r17",
+      "username": "admin2",
+      "email": "admin2@gmail.com",
+      "phone": "1234567898",
+      "fullName": "admin2",
+      "password": "123456",
+      "role": "admin",
+      "createdAt": "2026-10-26T09:58:19.594Z"
+    },
+    {
+      "id": "local-1793006151119-vutzzd",
+      "username": "newadmin3",
+      "email": "newadmin3@gmail.com",
+      "phone": "8765432345",
+      "fullName": "newadmin3",
+      "password": "123456",
+      "role": "admin",
+      "createdAt": "2026-10-26T09:15:51.120Z"
+    },
+    {
+      "id": "user-001",
+      "username": "user",
+      "password": "user123",
+      "role": "pos",
+      "name": "Floor Staff User",
+      "email": "user@avsr.com",
+      "createdAt": "2026-10-08T12:04:01.389Z",
+      "createdBy": "system"
+    },
+    {
+      "id": "kot-001",
+      "username": "kot",
+      "password": "kot123",
+      "role": "kot",
+      "name": "Kitchen Chef (KOT)",
+      "email": "kot@avsr.com",
+      "createdAt": "2026-10-08T12:04:01.389Z",
+      "createdBy": "system"
+    },
+    {
+      "id": "pos-001",
+      "username": "pos",
+      "password": "pos123",
+      "role": "pos",
+      "name": "Pasupuleti Bhanu (POS)",
+      "email": "pos@avsr.com",
+      "createdAt": "2026-10-08T12:04:01.389Z",
+      "createdBy": "system"
+    },
+    {
+      "id": "admin-001",
+      "username": "admin",
+      "password": "admin123",
+      "role": "admin",
+      "name": "Administrator",
+      "createdAt": "2026-10-05T11:21:12.371Z",
+      "createdBy": "system"
+    },
+    {
+      "id": "admin-1791199351632",
+      "username": "Pasupuleti",
+      "password": "Bhanu@001",
+      "role": "admin",
+      "name": "Pasupuleti Bhanuprakash",
+      "mobile": "9032037787",
+      "email": "pasupuleti.bhanu7@gmail.com",
+      "createdAt": "2026-10-05T11:22:31.633Z",
+      "createdBy": "self-register"
+    },
+    {
+      "id": "admin-1791459600601",
+      "username": "pirnav",
+      "password": "Admin@123",
+      "role": "admin",
+      "name": "pirnav",
+      "mobile": "8765457860",
+      "email": "csrivarun@gmail.com",
+      "createdAt": "2026-10-08T11:40:00.601Z",
+      "createdBy": "self-register"
+    },
+    {
+      "id": "pos-1791459659121",
+      "username": "sri",
+      "password": "Admin@123",
+      "role": "pos",
+      "name": "sri",
+      "mobile": "9032037787",
+      "email": "",
+      "createdAt": "2026-10-08T11:40:59.121Z",
+      "createdBy": "pirnav"
+    },
+    {
+      "id": "kot-1791463829189",
+      "username": "Bhanu",
+      "password": "Admin@123",
+      "role": "kot",
+      "name": "kot",
+      "mobile": "7654578654",
+      "email": "",
+      "createdAt": "2026-10-08T12:50:29.189Z",
+      "createdBy": "Pasupuleti"
+    },
+    {
+      "id": "admin-1791518176916",
+      "username": "Varun",
+      "password": "pass123",
+      "role": "admin",
+      "name": "Varun",
+      "mobile": "8523075089",
+      "email": "abc@gmail.com",
+      "createdAt": "2026-10-09T03:56:16.916Z",
+      "createdBy": "self-register"
+    },
+    {
+      "id": "pos-1791518277843",
+      "username": "hmspos",
+      "password": "1234",
+      "role": "pos",
+      "name": "varun",
+      "mobile": "8523075089",
+      "email": "",
+      "createdAt": "2026-10-09T03:57:57.843Z",
+      "createdBy": "Varun"
+    },
+    {
+      "id": "kot-1791518310567",
+      "username": "hmskot",
+      "password": "1234",
+      "role": "kot",
+      "name": "varun",
+      "mobile": "8523075089",
+      "email": "",
+      "createdAt": "2026-10-09T03:58:30.567Z",
+      "createdBy": "Varun"
+    }
   ]
 }

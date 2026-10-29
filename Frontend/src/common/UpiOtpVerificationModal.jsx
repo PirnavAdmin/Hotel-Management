@@ -30,8 +30,7 @@ export function UpiOtpVerificationModal({
   const [countdown, setCountdown] = useState(60);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [devOtp, setDevOtp] = useState(null);
-  const [customEmail, setCustomEmail] = useState("");
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  // Email is fixed to the registered admin email only
 
   const inputRefs = [
     useRef(null),
@@ -42,7 +41,39 @@ export function UpiOtpVerificationModal({
     useRef(null),
   ];
 
-  const targetEmail = (customEmail || adminEmail || "").trim();
+  const getRegisteredAdminEmail = () => {
+    if (adminEmail && adminEmail.includes("@")) return adminEmail.trim();
+    try {
+      const sess = JSON.parse(
+        localStorage.getItem("avsr_admin_session") ||
+        localStorage.getItem("avsr_auth_session_v1") ||
+        localStorage.getItem("auth_user") ||
+        "{}"
+      );
+      if (sess?.email && sess.email.includes("@")) return sess.email.trim();
+      if (sess?.loginEmail && sess.loginEmail.includes("@")) return sess.loginEmail.trim();
+      if (sess?.loginIdentifier && sess.loginIdentifier.includes("@")) return sess.loginIdentifier.trim();
+
+      // Find ONLY the active logged-in user in database
+      const rawUsers = localStorage.getItem("avsr_auth_users_v1");
+      if (rawUsers && (sess?.username || sess?.name || sess?.userId || sess?.id)) {
+        const users = JSON.parse(rawUsers);
+        if (Array.isArray(users)) {
+          const match = users.find(
+            (u) =>
+              (sess.userId && String(u.id || u.Id || u.userId) === String(sess.userId)) ||
+              (sess.id && String(u.id || u.Id || u.userId) === String(sess.id)) ||
+              (sess.username && String(u.username || u.Username || "").toLowerCase() === String(sess.username).toLowerCase()) ||
+              (sess.name && String(u.name || u.FullName || u.fullName || "").toLowerCase() === String(sess.name).toLowerCase())
+          );
+          if (match?.email && match.email.includes("@")) return match.email.trim();
+        }
+      }
+    } catch {}
+    return "";
+  };
+
+  const targetEmail = (adminEmail || getRegisteredAdminEmail()).trim();
 
   // Mask email for display: "admin2@gmail.com" -> "ad***2@gmail.com"
   const maskEmail = (mail) => {
@@ -406,7 +437,7 @@ export function UpiOtpVerificationModal({
             </div>
           </div>
 
-          {/* Email Recipient Info Box */}
+          {/* Email Recipient Info Box - Default Admin Registered Mail only */}
           <div
             style={{
               background: isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.1)",
@@ -419,72 +450,62 @@ export function UpiOtpVerificationModal({
               gap: "10px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
-              <Mail size={18} color="#f59e0b" style={{ flexShrink: 0 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  background: "rgba(245, 158, 11, 0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Mail size={18} color="#f59e0b" />
+              </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: "0.72rem", color: "var(--text-dim, #94a3b8)", fontWeight: 600 }}>
                   OTP Dispatched To Admin Registered Mail:
                 </div>
-                {!isEditingEmail ? (
-                  <div
-                    style={{
-                      fontSize: "0.88rem",
-                      fontWeight: 800,
-                      color: "var(--text-main, #ffffff)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      marginTop: "1px",
-                    }}
-                    title={targetEmail}
-                  >
-                    {maskEmail(targetEmail)}
-                  </div>
-                ) : (
-                  <input
-                    type="email"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    placeholder="Enter registered admin email"
-                    style={{
-                      width: "100%",
-                      background: "var(--bg-card, #0f172a)",
-                      border: "1px solid #f59e0b",
-                      borderRadius: "6px",
-                      padding: "4px 8px",
-                      fontSize: "0.82rem",
-                      color: "#ffffff",
-                      outline: "none",
-                      marginTop: "4px",
-                    }}
-                  />
-                )}
+                <div
+                  style={{
+                    fontSize: "0.88rem",
+                    fontWeight: 800,
+                    color: "var(--text-main, #ffffff)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    marginTop: "1px",
+                    fontFamily: "var(--font-mono, monospace)",
+                  }}
+                  title={targetEmail}
+                >
+                  {maskEmail(targetEmail)}
+                </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (isEditingEmail && customEmail) {
-                  setIsEditingEmail(false);
-                  handleSendOtp(customEmail);
-                } else {
-                  setIsEditingEmail(!isEditingEmail);
-                }
-              }}
+            <div
               style={{
-                fontSize: "0.72rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "3px 8px",
+                borderRadius: "6px",
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                color: "#10b981",
+                fontSize: "0.68rem",
                 fontWeight: 700,
-                color: "#f59e0b",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                textDecoration: "underline",
                 flexShrink: 0,
               }}
+              title="Registered admin email verified"
             >
-              {isEditingEmail ? "Save & Send" : "Change"}
-            </button>
+              <CheckCircle2 size={12} />
+              <span>Registered</span>
+            </div>
           </div>
 
           {/* 6-Digit OTP Inputs */}
