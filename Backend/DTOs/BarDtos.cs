@@ -8,14 +8,41 @@ namespace HMS.DTOs;
 
 public class BarOverviewDto
 {
-    public int TotalDrinks { get; set; }
-    public int ActiveBarOrders { get; set; }
-    public int PendingOrders { get; set; }
-    public int PreparingDrinks { get; set; }
-    public int ReadyToServe { get; set; }
+    // 1. Sales & Revenue
     public decimal CompletedDrinkSales { get; set; }
     public string FormattedCompletedSales => $"₹{CompletedDrinkSales:N2}";
+    public decimal TotalSales => CompletedDrinkSales;
+    public string FormattedTotalSales => FormattedCompletedSales;
+
+    // 2. Bar Orders & BOT (KOT)
+    public int ActiveBarOrders { get; set; }
+    public int PendingOrders { get; set; }
+    public int PendingBarKotCount => PendingOrders;
+    public int PreparingDrinks { get; set; }
+    public int ActivePreparingCount => PreparingDrinks;
+    public int ReadyToServe { get; set; }
+
+    // 3. Counter & Floor Occupancy
+    public int TotalTables { get; set; }
+    public int OccupiedTables { get; set; }
+    public int TotalSeats { get; set; }
+    public int OccupiedSeats { get; set; }
+
+    // 4. Beverage Inventory Health
+    public int TotalInventoryItems { get; set; }
+    public int LowStockItems { get; set; }
+    public int LowStockBeveragesCount => LowStockItems;
+
+    // 5. Drinks Catalog
+    public int TotalDrinks { get; set; }
+    public int AlcoholicDrinksCount { get; set; }
+    public int NonAlcoholicDrinksCount { get; set; }
+
+    // 6. Live Dashboard Data
     public List<BarRecentOrderDto> RecentOrders { get; set; } = new();
+    public List<BarDrinkDto> SignatureDrinks { get; set; } = new();
+    public List<BarTableDto> CounterTables { get; set; } = new();
+
     public DateTime ServerTimeUtc { get; set; } = DateTime.UtcNow;
     public string ServerTimeFormatted { get; set; } = DateTime.Now.ToString("hh:mm:ss tt");
 }
@@ -23,12 +50,16 @@ public class BarOverviewDto
 public class BarRecentOrderDto
 {
     public long OrderId { get; set; }
+    public long Id => OrderId;
     public string OrderNumber { get; set; } = string.Empty;
     public long? TableId { get; set; }
     public string Table { get; set; } = string.Empty;
+    public string TableName => Table;
     public string DrinkItems { get; set; } = string.Empty;
+    public string ItemLabel => DrinkItems;
     public int Quantity { get; set; }
     public decimal Amount { get; set; }
+    public decimal Total => Amount;
     public string FormattedAmount => $"₹{Amount:N2}";
     public string Time { get; set; } = string.Empty;
     public string Status { get; set; } = "Pending"; // "Pending", "Preparing", "Ready", "Served", "Completed"
@@ -57,8 +88,11 @@ public class BarDrinkDto
     public long Id => MenuItemId;
     public string DrinkName { get; set; } = string.Empty;
     public string Name => DrinkName;
+    public string DishName => DrinkName;
     public string Category { get; set; } = string.Empty;
     public string ServingMeasure { get; set; } = "—";
+    public string Measure => ServingMeasure;
+    public string ServingVolume => ServingMeasure;
     public decimal Price { get; set; }
     public decimal SellingPrice => Price;
     public string FormattedPrice => $"₹{Price:N2}";
@@ -66,51 +100,98 @@ public class BarDrinkDto
     public string Availability => IsAvailable ? "Available" : "Unavailable";
     public string DrinkType { get; set; } = "Non-Alcoholic"; // "Alcoholic", "Non-Alcoholic"
     public decimal AlcoholContent { get; set; } = 0.00m;
-    public string Abv => $"{AlcoholContent:G}%";
+    public decimal? Abv => AlcoholContent;
+    public string AbvString => $"{AlcoholContent:G}%";
+    public bool IsSpecial { get; set; } = false;
+    public bool IsBartenderSpecial { get; set; } = false;
+    public bool IsChefsSpecial => IsSpecial || IsBartenderSpecial;
+    public string PrepTime { get; set; } = "15 min";
+    public int? PrepTimeMinutes { get; set; } = 15;
     public string? Description { get; set; }
+    public string? ShortDescription => Description;
     public string? ImageUrl { get; set; }
+    public string? Image => ImageUrl;
+    public bool IsBarItem { get; set; } = true;
+    public bool IsBarDrink => true;
+    public bool IsVeg => DrinkType != "Alcoholic";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
 
 public class CreateBarDrinkDto
 {
-    [Required(ErrorMessage = "Drink name is required.")]
     [MaxLength(100)]
-    public string DrinkName { get; set; } = string.Empty;
+    public string? DrinkName { get; set; }
 
-    [Required(ErrorMessage = "Category is required.")]
     [MaxLength(100)]
-    public string Category { get; set; } = "Cocktails";
+    public string? Name { get; set; }
+
+    [MaxLength(100)]
+    public string? DishName { get; set; }
+
+    [MaxLength(100)]
+    public string? Category { get; set; } = "Cocktails";
 
     [MaxLength(30)]
-    public string DrinkType { get; set; } = "Alcoholic"; // "Alcoholic", "Non-Alcoholic"
+    public string? DrinkType { get; set; } = "Alcoholic"; // "Alcoholic", "Non-Alcoholic"
 
     [Range(0, 100)]
     public decimal? AlcoholContent { get; set; } = 0;
 
+    public decimal? Abv { get; set; }
+
     [MaxLength(50)]
     public string? ServingMeasure { get; set; } = "60 ml (Double Peg)";
 
-    [Required(ErrorMessage = "Selling price is required.")]
-    [Range(0.01, 1000000, ErrorMessage = "Price must be greater than zero.")]
-    public decimal SellingPrice { get; set; }
+    [MaxLength(50)]
+    public string? Measure { get; set; }
+
+    [MaxLength(50)]
+    public string? ServingVolume { get; set; }
+
+    [Range(0, 1000000, ErrorMessage = "Price must be non-negative.")]
+    public decimal? SellingPrice { get; set; }
+
+    public decimal? Price { get; set; }
 
     public bool? IsAvailable { get; set; } = true;
 
     public string? Availability { get; set; } // "Available" / "Unavailable"
 
+    public bool? IsSpecial { get; set; }
+
+    public bool? IsBartenderSpecial { get; set; }
+
+    public bool? IsChefsSpecial { get; set; }
+
+    [MaxLength(30)]
+    public string? PrepTime { get; set; } = "15 min";
+
+    public int? PrepTimeMinutes { get; set; } = 15;
+
     [MaxLength(500)]
     public string? Description { get; set; }
 
     [MaxLength(500)]
+    public string? ShortDescription { get; set; }
+
+    [MaxLength(500)]
     public string? ImageUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? Image { get; set; }
 }
 
 public class UpdateBarDrinkDto
 {
     [MaxLength(100)]
     public string? DrinkName { get; set; }
+
+    [MaxLength(100)]
+    public string? Name { get; set; }
+
+    [MaxLength(100)]
+    public string? DishName { get; set; }
 
     [MaxLength(100)]
     public string? Category { get; set; }
@@ -121,26 +202,58 @@ public class UpdateBarDrinkDto
     [Range(0, 100)]
     public decimal? AlcoholContent { get; set; }
 
+    public decimal? Abv { get; set; }
+
     [MaxLength(50)]
     public string? ServingMeasure { get; set; }
 
-    [Range(0.01, 1000000)]
+    [MaxLength(50)]
+    public string? Measure { get; set; }
+
+    [MaxLength(50)]
+    public string? ServingVolume { get; set; }
+
+    [Range(0, 1000000)]
     public decimal? SellingPrice { get; set; }
+
+    public decimal? Price { get; set; }
 
     public bool? IsAvailable { get; set; }
 
     public string? Availability { get; set; }
 
+    public bool? IsSpecial { get; set; }
+
+    public bool? IsBartenderSpecial { get; set; }
+
+    public bool? IsChefsSpecial { get; set; }
+
+    [MaxLength(30)]
+    public string? PrepTime { get; set; }
+
+    public int? PrepTimeMinutes { get; set; }
+
     [MaxLength(500)]
     public string? Description { get; set; }
 
     [MaxLength(500)]
+    public string? ShortDescription { get; set; }
+
+    [MaxLength(500)]
     public string? ImageUrl { get; set; }
+
+    [MaxLength(500)]
+    public string? Image { get; set; }
 }
 
 public class ToggleAvailabilityDto
 {
     public bool? IsAvailable { get; set; }
+}
+
+public class ToggleSpecialDto
+{
+    public bool? IsSpecial { get; set; }
 }
 
 #endregion
@@ -155,10 +268,16 @@ public class BarTableDto
     public string TableName { get; set; } = string.Empty;
     public string Area { get; set; } = "Main Hall";
     public string SectionArea => Area;
+    public string Section => Area;
     public int Chairs { get; set; } = 4;
     public int Capacity => Chairs;
+    public int CapacityChairs => Chairs;
+    public int OccupiedChairs => Guests;
+    public int CurrentGuests => Guests;
     public long? AssignedServerId { get; set; }
     public string AssignedServer { get; set; } = "Unassigned";
+    public string Server => AssignedServer;
+    public string Name => !string.IsNullOrWhiteSpace(TableName) ? TableName : TableNumber;
     public string Status { get; set; } = "Available"; // "Available", "Occupied", "Reserved", "Billed"
     public int Guests { get; set; } = 0;
     public long? CurrentOrderId { get; set; }
@@ -172,48 +291,34 @@ public class BarTableDto
 
 public class CreateBarTableDto
 {
-    [Required(ErrorMessage = "Table number is required.")]
-    [MaxLength(50)]
-    public string TableNumber { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Area / Section is required.")]
-    [MaxLength(50)]
-    public string SectionArea { get; set; } = "Main Hall";
-
-    public string? Area { get; set; }
-
-    [Range(1, 100, ErrorMessage = "Seating capacity must be at least 1.")]
-    public int SeatingCapacity { get; set; } = 4;
-
-    public int? Chairs { get; set; }
-
-    public int? CurrentGuests { get; set; } = 0;
-
-    public string? OccupancyStatus { get; set; } = "Available";
-
-    public string? Status { get; set; }
-
-    public long? AssignedServerId { get; set; }
-
-    public string? AssignedServer { get; set; }
-}
-
-public class UpdateBarTableDto
-{
     [MaxLength(50)]
     public string? TableNumber { get; set; }
 
     [MaxLength(50)]
+    public string? TableName { get; set; }
+
+    [MaxLength(50)]
+    public string? Name { get; set; }
+
+    [MaxLength(50)]
     public string? SectionArea { get; set; }
 
+    [MaxLength(50)]
     public string? Area { get; set; }
 
-    [Range(1, 100)]
+    [MaxLength(50)]
+    public string? Section { get; set; }
+
+    [Range(1, 100, ErrorMessage = "Seating capacity must be at least 1.")]
     public int? SeatingCapacity { get; set; }
 
     public int? Chairs { get; set; }
 
+    public int? Capacity { get; set; }
+
     public int? CurrentGuests { get; set; }
+
+    public int? Guests { get; set; }
 
     public string? OccupancyStatus { get; set; }
 
@@ -222,6 +327,50 @@ public class UpdateBarTableDto
     public long? AssignedServerId { get; set; }
 
     public string? AssignedServer { get; set; }
+
+    public string? Server { get; set; }
+}
+
+public class UpdateBarTableDto
+{
+    [MaxLength(50)]
+    public string? TableNumber { get; set; }
+
+    [MaxLength(50)]
+    public string? TableName { get; set; }
+
+    [MaxLength(50)]
+    public string? Name { get; set; }
+
+    [MaxLength(50)]
+    public string? SectionArea { get; set; }
+
+    [MaxLength(50)]
+    public string? Area { get; set; }
+
+    [MaxLength(50)]
+    public string? Section { get; set; }
+
+    [Range(1, 100)]
+    public int? SeatingCapacity { get; set; }
+
+    public int? Chairs { get; set; }
+
+    public int? Capacity { get; set; }
+
+    public int? CurrentGuests { get; set; }
+
+    public int? Guests { get; set; }
+
+    public string? OccupancyStatus { get; set; }
+
+    public string? Status { get; set; }
+
+    public long? AssignedServerId { get; set; }
+
+    public string? AssignedServer { get; set; }
+
+    public string? Server { get; set; }
 }
 
 public class UpdateBarTableStatusDto

@@ -72,10 +72,12 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Returns all recent bar orders (for the 'All Orders' button).
+    /// Returns all recent bar orders (for the 'All Orders' button and overview recent orders).
     /// </summary>
     [AllowAnonymous]
     [HttpGet("orders")]
+    [HttpGet("overview/recent-orders")]
+    [HttpGet("recent-orders")]
     public async Task<IActionResult> GetBarOrders([FromQuery] long? branchId, [FromQuery] int limit = 50)
     {
         var orders = await _barService.GetRecentBarOrdersAsync(branchId, limit);
@@ -116,16 +118,33 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Gets a single drink by menu_item_id.
+    /// Gets a single drink by menu_item_id or identifier.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("drinks/{id:long}")]
-    public async Task<IActionResult> GetBarDrinkById(long id)
+    [HttpGet("drinks/{id}")]
+    public async Task<IActionResult> GetBarDrinkById(string id)
     {
-        var drink = await _barService.GetBarDrinkByIdAsync(id);
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest(new { success = false, message = "Drink ID is required." });
+        }
+
+        long drinkId = 0;
+        if (!long.TryParse(id, out drinkId))
+        {
+            var match = await _barService.FindDrinkByIdentifierAsync(id);
+            if (match != null) drinkId = match.MenuItemId;
+        }
+
+        if (drinkId <= 0)
+        {
+            return NotFound(new { success = false, message = $"Drink with identifier '{id}' not found." });
+        }
+
+        var drink = await _barService.GetBarDrinkByIdAsync(drinkId);
         if (drink == null)
         {
-            return NotFound(new { success = false, message = $"Drink with ID {id} not found." });
+            return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
         }
         return Ok(new { success = true, data = drink });
     }
@@ -164,16 +183,33 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Updates an existing drink item.
+    /// Updates an existing drink item by ID or identifier.
     /// </summary>
     [AllowAnonymous]
-    [HttpPut("drinks/{id:long}")]
-    public async Task<IActionResult> UpdateBarDrink(long id, [FromBody] UpdateBarDrinkDto dto)
+    [HttpPut("drinks/{id}")]
+    public async Task<IActionResult> UpdateBarDrink(string id, [FromBody] UpdateBarDrinkDto dto)
     {
-        var updated = await _barService.UpdateBarDrinkAsync(id, dto);
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest(new { success = false, message = "Drink ID is required." });
+        }
+
+        long drinkId = 0;
+        if (!long.TryParse(id, out drinkId))
+        {
+            var match = await _barService.FindDrinkByIdentifierAsync(id);
+            if (match != null) drinkId = match.MenuItemId;
+        }
+
+        if (drinkId <= 0)
+        {
+            return NotFound(new { success = false, message = $"Drink with identifier '{id}' not found." });
+        }
+
+        var updated = await _barService.UpdateBarDrinkAsync(drinkId, dto);
         if (updated == null)
         {
-            return NotFound(new { success = false, message = $"Drink with ID {id} not found." });
+            return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
         }
 
         try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated); } catch { }
@@ -190,14 +226,31 @@ public class BarController : ControllerBase
     /// Quick toggle or set availability (Enable / Disable buttons on table).
     /// </summary>
     [AllowAnonymous]
-    [HttpPatch("drinks/{id:long}/availability")]
-    [HttpPatch("drinks/{id:long}/toggle-status")]
-    public async Task<IActionResult> ToggleDrinkAvailability(long id, [FromBody] ToggleAvailabilityDto? dto)
+    [HttpPatch("drinks/{id}/availability")]
+    [HttpPatch("drinks/{id}/toggle-status")]
+    public async Task<IActionResult> ToggleDrinkAvailability(string id, [FromBody] ToggleAvailabilityDto? dto)
     {
-        var updated = await _barService.ToggleDrinkAvailabilityAsync(id, dto?.IsAvailable);
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest(new { success = false, message = "Drink ID is required." });
+        }
+
+        long drinkId = 0;
+        if (!long.TryParse(id, out drinkId))
+        {
+            var match = await _barService.FindDrinkByIdentifierAsync(id);
+            if (match != null) drinkId = match.MenuItemId;
+        }
+
+        if (drinkId <= 0)
+        {
+            return NotFound(new { success = false, message = $"Drink with identifier '{id}' not found." });
+        }
+
+        var updated = await _barService.ToggleDrinkAvailabilityAsync(drinkId, dto?.IsAvailable);
         if (updated == null)
         {
-            return NotFound(new { success = false, message = $"Drink with ID {id} not found." });
+            return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
         }
 
         try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated); } catch { }
@@ -211,24 +264,82 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Soft deletes a drink item.
+    /// Soft deletes a drink item by ID or name identifier.
     /// </summary>
     [AllowAnonymous]
-    [HttpDelete("drinks/{id:long}")]
-    public async Task<IActionResult> DeleteBarDrink(long id)
+    [HttpDelete("drinks/{id}")]
+    public async Task<IActionResult> DeleteBarDrink(string id)
     {
-        var deleted = await _barService.DeleteBarDrinkAsync(id);
-        if (!deleted)
+        if (string.IsNullOrWhiteSpace(id))
         {
-            return NotFound(new { success = false, message = $"Drink with ID {id} not found." });
+            return BadRequest(new { success = false, message = "Drink ID is required." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkDeleted", id); } catch { }
+        long drinkId = 0;
+        if (!long.TryParse(id, out drinkId))
+        {
+            var match = await _barService.FindDrinkByIdentifierAsync(id);
+            if (match != null) drinkId = match.MenuItemId;
+        }
+
+        if (drinkId <= 0)
+        {
+            return NotFound(new { success = false, message = $"Drink with identifier '{id}' not found." });
+        }
+
+        var deleted = await _barService.DeleteBarDrinkAsync(drinkId);
+        if (!deleted)
+        {
+            return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
+        }
+
+        try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkDeleted", drinkId); } catch { }
 
         return Ok(new
         {
             success = true,
-            message = $"Drink {id} deleted successfully."
+            message = $"Drink {drinkId} deleted successfully."
+        });
+    }
+
+    /// <summary>
+    /// Quick toggle or set special status (Bartender's Special).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPatch("drinks/{id}/special")]
+    [HttpPatch("drinks/{id}/toggle-special")]
+    public async Task<IActionResult> ToggleDrinkSpecial(string id, [FromBody] ToggleSpecialDto? dto)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest(new { success = false, message = "Drink ID is required." });
+        }
+
+        long drinkId = 0;
+        if (!long.TryParse(id, out drinkId))
+        {
+            var match = await _barService.FindDrinkByIdentifierAsync(id);
+            if (match != null) drinkId = match.MenuItemId;
+        }
+
+        if (drinkId <= 0)
+        {
+            return NotFound(new { success = false, message = $"Drink with identifier '{id}' not found." });
+        }
+
+        var updated = await _barService.ToggleDrinkSpecialAsync(drinkId, dto?.IsSpecial);
+        if (updated == null)
+        {
+            return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
+        }
+
+        try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated); } catch { }
+
+        return Ok(new
+        {
+            success = true,
+            message = $"Drink special changed to {(updated.IsSpecial ? "Special" : "Regular")}.",
+            data = updated
         });
     }
 
@@ -395,16 +506,33 @@ public class BarController : ControllerBase
     /// Soft deletes a bar table.
     /// </summary>
     [AllowAnonymous]
-    [HttpDelete("tables/{id:long}")]
-    public async Task<IActionResult> DeleteBarTable(long id)
+    [HttpDelete("tables/{id}")]
+    public async Task<IActionResult> DeleteBarTable(string id)
     {
-        var deleted = await _barService.DeleteBarTableAsync(id);
-        if (!deleted)
+        if (string.IsNullOrWhiteSpace(id))
         {
-            return NotFound(new { success = false, message = $"Table with ID {id} not found." });
+            return BadRequest(new { success = false, message = "Table ID or identifier is required." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarTableDeleted", id); } catch { }
+        long tableId = 0;
+        if (!long.TryParse(id, out tableId))
+        {
+            var match = await _barService.FindTableByIdentifierAsync(id);
+            if (match != null) tableId = match.TableId;
+        }
+
+        if (tableId <= 0)
+        {
+            return NotFound(new { success = false, message = $"Table with identifier '{id}' not found." });
+        }
+
+        var deleted = await _barService.DeleteBarTableAsync(tableId);
+        if (!deleted)
+        {
+            return NotFound(new { success = false, message = $"Table with ID {tableId} not found." });
+        }
+
+        try { await _hubContext.Clients.All.SendAsync("ReceiveBarTableDeleted", tableId); } catch { }
 
         return Ok(new
         {
