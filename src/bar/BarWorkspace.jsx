@@ -2,18 +2,45 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
-  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
+  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X, AlertCircle, RotateCcw
 } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { SkeletonTable } from "../common/Skeletons";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
 import { BAR_DRINKS } from "../data/barDrinksMockData";
 import { BarKOTView } from "./BarKOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
 import "./BarWorkspace.css";
+import {
+  apiGetBarTables,
+  apiCreateBarTable,
+  apiUpdateBarTable,
+  apiDeleteBarTable,
+  apiGetBarTableAreas,
+  apiUpdateBarTableStatus,
+  apiGetBarDrinks,
+  apiGetBarDrinkById,
+  apiCreateBarDrink,
+  apiUpdateBarDrink,
+  apiDeleteBarDrink,
+  apiToggleBarDrinkAvailability,
+  apiToggleBarDrinkSpecial,
+  apiGetBarDrinkCategories,
+  apiGetBarServingMeasures,
+  apiGetBarPriceRanges,
+  apiGetBarAvailabilityOptions,
+  apiGetBarOverview,
+  apiGetBarRecentOrders,
+} from "../api/barApi";
+import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
+import { SelectSeatsModal } from "../common/SelectSeatsModal";
+import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+
 
 const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
@@ -629,7 +656,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
 
       {/* 4. Inventory Records Table */}
       {loading ? (
-        <div className="bar-empty" role="status">Loading live bar inventory ledger…</div>
+        <SkeletonTable rows={6} columns={7} className="bar-table-wrap" />
       ) : (
         <div className="bar-table-wrap">
           <table className="bar-table bar-inventory-table">
@@ -1480,12 +1507,42 @@ function BarDrinksMenu({
   onUpdateDrink,
   onDeleteDrink,
   onToggleDrinkAvailability,
+  onToggleDrinkSpecial,
   onAddMenuItem,
   onUpdateMenuItem,
   onDeleteMenuItem,
   onSetMenuAvailability,
   setToast,
 }) {
+  const [extraCategories, setExtraCategories] = useState([]);
+  const [extraMeasures, setExtraMeasures] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarDrinkCategories()
+      .then((res) => {
+        if (!isMounted) return;
+        const cats = res?.data?.data || res?.data;
+        if (Array.isArray(cats) && cats.length > 0) {
+          setExtraCategories(cats);
+        }
+      })
+      .catch(() => {});
+
+    apiGetBarServingMeasures()
+      .then((res) => {
+        if (!isMounted) return;
+        const measures = res?.data?.data || res?.data;
+        if (Array.isArray(measures) && measures.length > 0) {
+          setExtraMeasures(measures);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const [searchFilter, setSearchFilter] = useState("");
   const [menuFilters, setMenuFilters] = useState({
     category: "",
@@ -1521,8 +1578,8 @@ function BarDrinksMenu({
 
   const categoryOptions = useMemo(() => {
     const map = new Map();
-    BAR_CATEGORIES.forEach((cat) => {
-      map.set(cat.toLowerCase(), { value: cat, label: cat });
+    [...BAR_CATEGORIES, ...extraCategories].forEach((cat) => {
+      if (cat) map.set(cat.toLowerCase(), { value: cat, label: cat });
     });
     drinks.forEach((d) => {
       if (d.category && !map.has(d.category.toLowerCase())) {
@@ -1530,10 +1587,15 @@ function BarDrinksMenu({
       }
     });
     return Array.from(map.values());
-  }, [drinks]);
+  }, [drinks, extraCategories]);
 
   const measureOptions = useMemo(() => {
     const list = [...BAR_SERVING_MEASURES];
+    extraMeasures.forEach((m) => {
+      if (m && !list.some((existing) => existing.toLowerCase() === m.toLowerCase())) {
+        list.push(m);
+      }
+    });
     drinks.forEach((d) => {
       const msr = String(d.measure || d.servingMeasure || "").trim();
       if (msr && !list.some((m) => m.toLowerCase() === msr.toLowerCase())) {
@@ -1541,7 +1603,7 @@ function BarDrinksMenu({
       }
     });
     return list;
-  }, [drinks]);
+  }, [drinks, extraMeasures]);
 
   const filteredDrinks = useMemo(() => {
     return drinks.filter((item) => {
@@ -3014,6 +3076,1335 @@ function BarDrinksMenu({
   );
 }
 
+
+const DEFAULT_BAR_TABLE_SECTIONS = [
+  "Main Hall",
+  "AC Hall",
+  "Family Section",
+  "Balcony / Outdoor",
+  "Lounge",
+  "Bar Counter",
+  "Garden Area",
+  "VIP Lounge",
+];
+
+function BarTablesView({
+  tables = [],
+  staffList = [],
+  orders = [],
+  onAddTable,
+  onUpdateTable,
+  onDeleteTable,
+  onAddStaff,
+  setToast,
+}) {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
+  const [seatingStructureTable, setSeatingStructureTable] = useState(null);
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState(null);
+  const [liveBarTables, setLiveBarTables] = useState(null);
+  const [tableForm, setTableForm] = useState({
+    name: "",
+    section: "Main Hall",
+    capacity: 4,
+    server: staffList[0]?.name || "",
+  });
+
+  // Fetch live bar tables from backend API
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarTables()
+      .then((res) => {
+        if (!isMounted) return;
+        const fetched = res?.data || res?.tables;
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setLiveBarTables(fetched);
+        }
+      })
+      .catch((err) => {
+        console.warn("[BarTablesView] apiGetBarTables offline/fallback:", err?.message);
+      });
+
+    apiGetBarTableAreas()
+      .then((res) => {
+        const areas = res?.data || res?.areas;
+        if (Array.isArray(areas) && areas.length > 0) {
+          areas.forEach((a) => {
+            if (a) saveCustomSection(a);
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const effectiveTables = useMemo(() => {
+    if (!liveBarTables || liveBarTables.length === 0) return tables;
+    const map = new Map(tables.map((t) => [String(t.id ?? t.tableId), t]));
+    liveBarTables.forEach((st) => {
+      const key = String(st.id ?? st.tableId);
+      const existing = map.get(key) || {};
+      map.set(key, { ...existing, ...st });
+    });
+    return Array.from(map.values());
+  }, [tables, liveBarTables]);
+
+  const STORAGE_KEY_CUSTOM_SECTIONS = "avsr_custom_sections";
+  const [customSections, setCustomSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_SECTIONS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveCustomSection = (newSec) => {
+    if (!newSec || !newSec.trim()) return;
+    const trimmed = newSec.trim();
+    setCustomSections((prev) => {
+      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_SECTIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const allSectionOptions = useMemo(() => {
+    const map = new Map();
+    DEFAULT_BAR_TABLE_SECTIONS.forEach((s) => {
+      if (s) map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    customSections.forEach((s) => {
+      if (s) map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    (tables || []).forEach((tbl) => {
+      const sec = tbl.section || tbl.area;
+      if (sec && !map.has(sec.toLowerCase())) {
+        map.set(sec.toLowerCase(), { value: sec, label: sec });
+      }
+    });
+    return Array.from(map.values());
+  }, [customSections, tables]);
+
+  const isTableOccupied = (tbl) => {
+    if (!tbl) return false;
+    const rawStatus = String(tbl?.status || "").trim().toLowerCase();
+    if (rawStatus === "vacant") return false;
+    const hasActiveItemsInTable = Array.isArray(tbl?.items) && tbl.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const activeOrder = Array.isArray(orders) && orders.find((o) => {
+      const orderTblId = String(o.tableId ?? o.TableId ?? "");
+      return orderTblId === String(tbl.id) || orderTblId === String(tbl.backendTableId);
+    });
+    const hasActiveItemsInOrder = activeOrder && Array.isArray(activeOrder.items) && activeOrder.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const hasActiveItems = hasActiveItemsInTable || Boolean(hasActiveItemsInOrder);
+    if (!hasActiveItems) return false;
+    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") return true;
+    return Boolean(hasActiveItems || rawStatus === "occupied");
+  };
+
+  const [tableFilters, setTableFilters] = useState({
+    search: "",
+    status: "all",
+  });
+  const updateTableFilter = (key, value) => {
+    setTableFilters((prev) => ({ ...prev, [key]: value }));
+  };
+  const clearTableFilters = () => {
+    setTableFilters({ search: "", status: "all" });
+  };
+  const hasActiveTableFilters = Boolean(
+    tableFilters.search || (tableFilters.status && tableFilters.status !== "all")
+  );
+
+  const normalizeTableFilterText = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+  const vacantTablesCount = effectiveTables.filter((t) => !isTableOccupied(t)).length;
+  const occupiedTablesCount = effectiveTables.filter((t) => isTableOccupied(t)).length;
+
+  const filteredTables = effectiveTables.filter((table) => {
+    const query = normalizeTableFilterText(tableFilters.search);
+    const isOccupied = isTableOccupied(table);
+    const tableStatus = isOccupied ? "occupied" : "vacant";
+
+    const matchesSearch =
+      !query ||
+      [
+        table.name,
+        table.tableNumber,
+        table.number,
+        table.id,
+        `table ${table.id}`,
+        `t${table.id}`,
+        table.section,
+        table.area,
+        table.server,
+      ].some((val) => normalizeTableFilterText(val).includes(query));
+
+    const matchesStatus =
+      !tableFilters.status ||
+      tableFilters.status === "all" ||
+      tableStatus === normalizeTableFilterText(tableFilters.status);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const [tableSortField, setTableSortField] = useState("id");
+  const [tableSortDirection, setTableSortDirection] = useState("asc");
+
+  const handleTableSort = (field) => {
+    if (tableSortField === field) {
+      setTableSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setTableSortField(field);
+      setTableSortDirection("asc");
+    }
+  };
+
+  const sortedTables = useMemo(() => {
+    return [...filteredTables].sort((a, b) => {
+      let aVal = a[tableSortField];
+      let bVal = b[tableSortField];
+      if (tableSortField === "id") {
+        aVal = Number(a.id || 0);
+        bVal = Number(b.id || 0);
+      } else if (tableSortField === "capacity") {
+        aVal = Number(a.capacity || 0);
+        bVal = Number(b.capacity || 0);
+      } else if (tableSortField === "name") {
+        aVal = String(a.name || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || `Table ${b.id || ""}`).toLowerCase();
+      } else if (tableSortField === "area") {
+        aVal = String(a.section || a.area || "").toLowerCase();
+        bVal = String(b.section || b.area || "").toLowerCase();
+      } else if (tableSortField === "server") {
+        aVal = String(a.server || "").toLowerCase();
+        bVal = String(b.server || "").toLowerCase();
+      } else if (tableSortField === "status") {
+        aVal = isTableOccupied(a) ? "occupied" : "vacant";
+        bVal = isTableOccupied(b) ? "occupied" : "vacant";
+      } else {
+        aVal = String(aVal || "").toLowerCase();
+        bVal = String(bVal || "").toLowerCase();
+      }
+      if (aVal < bVal) return tableSortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return tableSortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredTables, tableSortField, tableSortDirection]);
+
+  const handleOpenTableModal = (tbl = null) => {
+    if (tbl) {
+      setEditingTable(tbl);
+      setTableForm({
+        name: tbl.name || `Table ${tbl.id}`,
+        section: tbl.section || tbl.area || "Main Hall",
+        capacity: Number(tbl.capacity) || 4,
+        server: tbl.server || staffList[0]?.name || "",
+      });
+    } else {
+      setEditingTable(null);
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      setTableForm({
+        name: `Table-${maxId + 1}`,
+        section: "Main Hall",
+        capacity: 4,
+        server: staffList[0]?.name || "",
+      });
+    }
+    setIsTableModalOpen(true);
+  };
+
+  const handleSaveTable = (e) => {
+    e.preventDefault();
+    if (!tableForm.name.trim()) return;
+
+    if (tableForm.section) {
+      saveCustomSection(tableForm.section);
+    }
+
+    const assignedServer = tableForm.server || "";
+
+    if (editingTable) {
+      const updatedPayload = {
+        ...editingTable,
+        name: tableForm.name,
+        tableName: tableForm.name,
+        tableNumber: tableForm.name,
+        section: tableForm.section,
+        sectionArea: tableForm.section,
+        area: tableForm.section,
+        capacity: Number(tableForm.capacity) || 2,
+        capacityChairs: Number(tableForm.capacity) || 2,
+        server: assignedServer,
+        assignedServer: assignedServer,
+      };
+
+      const targetApiId = editingTable.tableId || editingTable.backendTableId || editingTable.id;
+      apiUpdateBarTable(targetApiId, updatedPayload).catch((err) => {
+        console.warn("[BarWorkspace] apiUpdateBarTable warning:", err?.message);
+      });
+
+      onUpdateTable?.(updatedPayload);
+      setToast?.(`Table "${tableForm.name}" updated successfully.`);
+    } else {
+      const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
+      const maxId = effectiveTables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
+      const formattedName = tableForm.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i)
+        ? `Table ${parsedNum}`
+        : (/^\d+$/.test(tableForm.name.trim()) ? `Table ${tableForm.name.trim()}` : tableForm.name.trim());
+
+      const newTablePayload = {
+        id: chosenId,
+        name: formattedName,
+        tableName: formattedName,
+        tableNumber: formattedName,
+        section: tableForm.section,
+        sectionArea: tableForm.section,
+        area: tableForm.section,
+        capacity: Number(tableForm.capacity) || 4,
+        capacityChairs: Number(tableForm.capacity) || 4,
+        status: "available",
+        guests: Number(tableForm.capacity) || 4,
+        items: [],
+        discountPercent: 0,
+        serviceCharge: 5,
+        orderTime: null,
+        server: assignedServer,
+        assignedServer: assignedServer,
+      };
+
+      apiCreateBarTable(newTablePayload).then((res) => {
+        const createdId = res?.data?.tableId || res?.data?.id;
+        if (createdId) {
+          newTablePayload.backendTableId = createdId;
+        }
+      }).catch((err) => {
+        console.warn("[BarWorkspace] apiCreateBarTable warning:", err?.message);
+      });
+
+      onAddTable?.(newTablePayload);
+      setToast?.(`Table "${formattedName}" added successfully.`);
+    }
+    setIsTableModalOpen(false);
+  };
+
+  const handleDeleteTableClick = (tbl) => {
+    if (isTableOccupied(tbl)) {
+      requestDelete({
+        title: "Cannot Delete Table",
+        message: `Cannot delete ${tbl.name || `Table ${tbl.id}`} because it is currently occupied with diners. Clear or settle bill first.`,
+        confirmLabel: "Understood",
+        cancelLabel: "Close",
+        icon: <AlertCircle size={22} color="#f59e0b" />,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    requestDelete({
+      title: "Delete Table?",
+      message: `Are you sure you want to delete ${tbl.name || `Table ${tbl.id}`} permanently? This action cannot be undone.`,
+      confirmLabel: "Yes, Delete",
+      onConfirm: async () => {
+        const targetApiId = tbl.tableId || tbl.backendTableId || tbl.id;
+        apiDeleteBarTable(targetApiId).catch((err) => {
+          console.warn("[BarWorkspace] apiDeleteBarTable warning:", err?.message);
+        });
+        await onDeleteTable?.(tbl.id);
+        setToast?.(`Table "${tbl.name || tbl.id}" deleted.`);
+      },
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.25rem",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: "rgba(245, 158, 11, 0.15)",
+              border: "1.5px solid rgba(245, 158, 11, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent-amber-light)",
+            }}
+          >
+            <Armchair size={22} color="#f59e0b" />
+          </div>
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 800,
+              color: "var(--text-main)",
+              letterSpacing: "-0.01em",
+              margin: 0,
+            }}
+          >
+            Floor Tables & Chair Configuration
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleOpenTableModal()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.45rem",
+            padding: "0.55rem 1.3rem",
+            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+            color: "#ffffff",
+            borderRadius: "8px",
+            fontWeight: 700,
+            fontSize: "0.85rem",
+            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+            border: "none",
+            cursor: "pointer",
+            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+          }}
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          <span>Add New Table</span>
+        </button>
+      </div>
+
+      {/* Table Rows Container */}
+      <div
+        style={{
+          background: "var(--bg-tertiary)",
+          borderRadius: "10px",
+          border: "1px solid var(--neutral-border)",
+          overflow: "hidden",
+        }}
+      >
+        <div className="floor-table-scroll" style={{ overflowX: "auto" }}>
+          <div className="floor-table-layout">
+            {/* Filter Toolbar: Vacant / Occupied Only + Search */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.75rem",
+                padding: "0.55rem 0.85rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                marginBottom: "0.5rem",
+                border: "1px solid rgba(var(--surface-rgb),0.05)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+                {/* Table # Search Filter */}
+                <div style={{ position: "relative", minWidth: "170px" }}>
+                  <Search
+                    size={13}
+                    color="var(--text-dim)"
+                    style={{
+                      position: "absolute",
+                      left: "9px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search Table #..."
+                    value={tableFilters.search}
+                    onChange={(e) => updateTableFilter("search", e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "0.42rem 0.5rem 0.42rem 1.6rem",
+                      background: "var(--input-bg)",
+                      border: tableFilters.search
+                        ? "1px solid #f59e0b"
+                        : "1px solid rgba(var(--surface-rgb),0.12)",
+                      borderRadius: "6px",
+                      color: "var(--text-main)",
+                      fontSize: "0.78rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                {/* Vacant & Occupied Status Filter Pills */}
+                <div
+                  style={{
+                    display: "inline-flex",
+                    gap: "0.3rem",
+                    background: "var(--input-bg)",
+                    padding: "3px",
+                    borderRadius: "7px",
+                    border: "1px solid rgba(var(--surface-rgb),0.08)",
+                  }}
+                >
+                  {/* All Tables */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "all")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: (!tableFilters.status || tableFilters.status === "all") ? 700 : 500,
+                      background: (!tableFilters.status || tableFilters.status === "all")
+                        ? "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                      color: (!tableFilters.status || tableFilters.status === "all")
+                        ? "#f59e0b"
+                        : "var(--text-dim)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span>All Tables</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: (!tableFilters.status || tableFilters.status === "all")
+                          ? "#f59e0b"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: (!tableFilters.status || tableFilters.status === "all")
+                          ? "#081628"
+                          : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {effectiveTables.length}
+                    </span>
+                  </button>
+
+                  {/* Vacant Filter */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "vacant")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: tableFilters.status === "vacant" ? 700 : 500,
+                      background: tableFilters.status === "vacant"
+                        ? "rgba(16, 185, 129, 0.2)"
+                        : "transparent",
+                      color: tableFilters.status === "vacant" ? "var(--success)" : "var(--text-dim)",
+                      boxShadow: tableFilters.status === "vacant"
+                        ? "0 0 10px rgba(16, 185, 129, 0.15)"
+                        : "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: "var(--success)",
+                        boxShadow: "0 0 6px #10b981",
+                      }}
+                    />
+                    <span>Vacant</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: tableFilters.status === "vacant"
+                          ? "#10b981"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: tableFilters.status === "vacant" ? "#081628" : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {vacantTablesCount}
+                    </span>
+                  </button>
+
+                  {/* Occupied Filter */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "occupied")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: tableFilters.status === "occupied" ? 700 : 500,
+                      background: tableFilters.status === "occupied"
+                        ? "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                      color: tableFilters.status === "occupied" ? "var(--accent-amber-light)" : "var(--text-dim)",
+                      boxShadow: tableFilters.status === "occupied"
+                        ? "0 0 10px rgba(245, 158, 11, 0.15)"
+                        : "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: "#f59e0b",
+                        boxShadow: "0 0 6px #f59e0b",
+                      }}
+                    />
+                    <span>Occupied</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: tableFilters.status === "occupied"
+                          ? "#f59e0b"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: tableFilters.status === "occupied" ? "#081628" : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {occupiedTablesCount}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Reset or Count Info */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {hasActiveTableFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearTableFilters}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "var(--danger)",
+                      padding: "0.38rem 0.75rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    title="Clear all active table filters"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset Filters</span>
+                  </button>
+                ) : (
+                  <span style={{ fontSize: "0.76rem", color: "var(--text-dim)", fontWeight: 500 }}>
+                    Showing all {effectiveTables.length} tables
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Column Headers */}
+            <div
+              className="floor-table-grid floor-table-heading"
+              style={{
+                display: "grid",
+                alignItems: "center",
+                paddingBlock: "0.55rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                marginBottom: "0.5rem",
+                color: "var(--text-dim)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              <div
+                onClick={() => handleTableSort("name")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Table #</span>
+                {tableSortField === "name" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("area")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Area</span>
+                {tableSortField === "area" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("capacity")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Chairs / Capacity</span>
+                {tableSortField === "capacity" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("server")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Assigned Server</span>
+                {tableSortField === "server" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("status")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Status</span>
+                {tableSortField === "status" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div className="floor-table-actions-heading" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                Actions
+              </div>
+            </div>
+
+            {/* Empty State */}
+            {sortedTables.length === 0 && (
+              <div
+                style={{
+                  padding: "3rem 1.5rem",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.95rem" }}>
+                  {hasActiveTableFilters
+                    ? "No tables match the selected filters."
+                    : "No tables configured yet. Click \"+ Add New Table\" to create one."}
+                </p>
+                {hasActiveTableFilters && (
+                  <button
+                    type="button"
+                    onClick={clearTableFilters}
+                    style={{
+                      marginTop: "0.75rem",
+                      background: "transparent",
+                      border: "1px solid #f59e0b",
+                      color: "var(--accent-amber-light)",
+                      padding: "0.35rem 0.9rem",
+                      borderRadius: "6px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Rows List */}
+            {sortedTables.map((tbl) => {
+              const isOccupied = isTableOccupied(tbl);
+              const dotColor = isOccupied ? "#f59e0b" : "#10b981";
+              const textColor = isOccupied ? "var(--status-occupied)" : "var(--status-vacant)";
+              const bgColor = isOccupied ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)";
+              const borderColor = isOccupied ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)";
+              const label = isOccupied ? "OCCUPIED" : "VACANT";
+
+              return (
+                <div
+                  key={tbl.id}
+                  className="floor-table-grid floor-table-row"
+                  style={{
+                    display: "grid",
+                    alignItems: "center",
+                    paddingBlock: "0.58rem",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--neutral-border)",
+                    borderRadius: "8px",
+                    marginBottom: "0.45rem",
+                    transition: "background 0.15s ease, border-color 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--bg-tertiary)";
+                    e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "var(--bg-secondary)";
+                    e.currentTarget.style.borderColor = "var(--neutral-border)";
+                  }}
+                >
+                  {/* Col 1: Table # */}
+                  <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "6px",
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "var(--accent-amber-light)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        whiteSpace: "normal",
+                      }}
+                    >
+                      {tbl.name || `Table ${tbl.id}`}
+                    </span>
+                  </div>
+
+                  {/* Col 2: Area */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {tbl.section || tbl.area || "Main Hall"}
+                  </div>
+
+                  {/* Col 3: Chairs / Capacity */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSeatingStructureTable(tbl)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        color: "inherit",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "inherit",
+                        fontWeight: "inherit",
+                      }}
+                      title="Click to view & configure seating structure"
+                    >
+                      <Armchair size={13} color="var(--accent-amber)" />
+                      <span>{tbl.capacity} Chairs / {tbl.capacity} Persons</span>
+                    </button>
+                  </div>
+
+                  {/* Col 4: Assigned Server */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {tbl.server || "Unassigned"}
+                  </div>
+
+                  {/* Col 5: Status Pill */}
+                  <div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.26rem 0.75rem",
+                        borderRadius: "20px",
+                        background: bgColor,
+                        border: `1px solid ${borderColor}`,
+                        color: textColor,
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        width: "fit-content",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          backgroundColor: dotColor,
+                          boxShadow: `0 0 6px ${dotColor}`,
+                        }}
+                      />
+                      <span>{label}</span>
+                    </div>
+                  </div>
+
+                  {/* Col 6: Actions */}
+                  <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
+                    {/* Set / View Seating Structure Modal Button */}
+                    <button
+                      type="button"
+                      onClick={() => setSeatingStructureTable(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(16, 185, 129, 0.08)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16, 185, 129, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(16, 185, 129, 0.2)";
+                        e.currentTarget.style.borderColor = "#10b981";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(16, 185, 129, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.45)";
+                      }}
+                      title="Set Seating Structure & View Layout"
+                      aria-label="Set Seating Structure & View Layout"
+                    >
+                      <Armchair size={13} color="#10b981" />
+                    </button>
+                    {/* Edit Chairs / Area */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenTableModal(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(245, 158, 11, 0.08)",
+                        color: "#f59e0b",
+                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
+                        e.currentTarget.style.borderColor = "#f59e0b";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                      }}
+                      title="Edit Chairs / Area"
+                      aria-label="Edit Chairs / Area"
+                    >
+                      <SquarePen size={13} color="#f59e0b" />
+                    </button>
+
+                    {/* Delete Table */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTableClick(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(239, 68, 68, 0.08)",
+                        color: "#ef4444",
+                        border: "1px solid rgba(239, 68, 68, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
+                        e.currentTarget.style.borderColor = "#ef4444";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.45)";
+                      }}
+                      title="Delete Table"
+                      aria-label="Delete Table"
+                    >
+                      <Trash2 size={13} color="#ef4444" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Add / Edit Table Modal */}
+      {isTableModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 130,
+            padding: "1rem",
+          }}
+        >
+          <form
+            onSubmit={handleSaveTable}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1.5px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: "480px",
+              padding: "1.6rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.85rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {editingTable ? `Edit ${editingTable.name}` : "Add New Restaurant Table"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsTableModalOpen(false)}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Table Name / Identifier <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={tableForm.name}
+                onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Dining Section / Area <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <CustomCreatableDropdown
+                value={tableForm.section}
+                onChange={(val) => setTableForm({ ...tableForm, section: val })}
+                options={allSectionOptions}
+                placeholder="Select dining section"
+                customPlaceholder="Type new section..."
+                required
+                allowCustom
+                onSaveCustomOption={saveCustomSection}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
+                Chairs / Seating Capacity (Persons) <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(5, 1fr)",
+                  gap: "0.5rem",
+                  marginBottom: "0.6rem",
+                }}
+              >
+                {[2, 4, 6, 8, 10].map((chairCount) => {
+                  const isSelected = Number(tableForm.capacity) === chairCount;
+                  return (
+                    <button
+                      key={chairCount}
+                      type="button"
+                      onClick={() => setTableForm({ ...tableForm, capacity: chairCount })}
+                      style={{
+                        padding: "0.55rem 0.3rem",
+                        borderRadius: "8px",
+                        background: isSelected
+                          ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                          : "var(--bg-tertiary)",
+                        color: isSelected ? "#ffffff" : "var(--text-main)",
+                        fontWeight: 800,
+                        fontSize: "0.82rem",
+                        border: isSelected ? "1.5px solid #ea580c" : "1.5px solid var(--border-subtle)",
+                        boxShadow: isSelected ? "0 3px 10px rgba(234, 88, 12, 0.35)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {chairCount} Seats
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={tableForm.capacity}
+                onChange={(e) => setTableForm({ ...tableForm, capacity: Number(e.target.value) })}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 700,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <div style={{ marginBottom: "5px" }}>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                  }}
+                >
+                  Default Server (Person)
+                </label>
+              </div>
+
+              <CustomCreatableDropdown
+                value={tableForm.server}
+                onChange={(val) => {
+                  setTableForm({ ...tableForm, server: val });
+                }}
+                options={staffList.map((staff) => {
+                  const staffName = String(
+                    staff?.name ||
+                    staff?.fullName ||
+                    staff?.FullName ||
+                    staff?.username ||
+                    "Unnamed staff"
+                  );
+                  const staffRole = staff?.role || staff?.roleTitle || "Staff";
+                  return {
+                    value: staffName,
+                    label: `${staffName} (${staffRole})`,
+                  };
+                })}
+                placeholder="Select server"
+                customPlaceholder="Type new server name..."
+                allowCustom
+                onSaveCustomOption={(newServer) => {
+                  if (newServer && newServer !== "__add_new__") {
+                    setTableForm({ ...tableForm, server: newServer });
+                    if (
+                      !staffList.some(
+                        (s) => (s.name || s.fullName || "").toLowerCase() === newServer.toLowerCase()
+                      )
+                    ) {
+                      onAddStaff?.({
+                        id: Date.now(),
+                        name: newServer,
+                        role: "",
+                        phone: "+91 98450 00000",
+                        shift: "",
+                      });
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => setIsTableModalOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: "0.7rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                style={{
+                  flex: 2,
+                  padding: "0.7rem",
+                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "0.88rem",
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                }}
+              >
+                {editingTable ? "Update Table Chairs" : "Add Table"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Select Seats Modal */}
+      <SelectSeatsModal
+        table={seatingStructureTable}
+        isOpen={Boolean(seatingStructureTable)}
+        onClose={() => setSeatingStructureTable(null)}
+        onUpdateTable={onUpdateTable}
+        role="admin"
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        icon={confirmState.icon}
+        onConfirm={confirmState.onConfirm}
+        onCancel={cancelDelete}
+      />
+    </div>
+  );
+}
+
 export function BarWorkspace({
   activeTab = "bar-overview",
   onNavigate,
@@ -3094,7 +4485,7 @@ export function BarWorkspace({
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    // Initial default bar drinks: includes the user's added Mojito and standard bar drinks
+    // Initial default bar drinks: includes standard bar drinks
     return [
       {
         id: "DR-MOJITO",
@@ -3117,6 +4508,80 @@ export function BarWorkspace({
     ];
   });
 
+  // Live Bar Overview dashboard state & loader
+  const [overviewData, setOverviewData] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+
+  const loadBarOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    try {
+      const res = await apiGetBarOverview();
+      const data = res?.data?.data || res?.data;
+      if (res?.success && data) {
+        setOverviewData(data);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarOverview offline/fallback:", err?.message);
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (route === "bar-overview") {
+      loadBarOverview();
+      const timer = window.setInterval(loadBarOverview, 15000);
+      return () => window.clearInterval(timer);
+    }
+  }, [route, loadBarOverview]);
+
+  // Fetch live drinks from backend API
+  const loadBarDrinks = useCallback(async () => {
+    try {
+      const res = await apiGetBarDrinks();
+      const raw = res?.data?.data || res?.data;
+      if (res?.success && Array.isArray(raw) && raw.length > 0) {
+        const formatted = raw.map((d) => ({
+          ...d,
+          id: d.menuItemId || d.id,
+          menuItemId: d.menuItemId || d.id,
+          name: d.drinkName || d.name || d.dishName || "",
+          dishName: d.drinkName || d.name || d.dishName || "",
+          drinkName: d.drinkName || d.name || d.dishName || "",
+          category: d.category || "Cocktails",
+          price: Number(d.price ?? d.sellingPrice ?? 0),
+          sellingPrice: Number(d.price ?? d.sellingPrice ?? 0),
+          measure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          servingMeasure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          servingVolume: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          isAvailable: d.isAvailable !== false && d.isAvailable !== "Unavailable",
+          drinkType: d.drinkType || (d.abv || d.alcoholContent ? "Alcoholic" : "Non-Alcoholic"),
+          abv: d.abv !== undefined && d.abv !== null ? d.abv : (d.alcoholContent !== undefined ? d.alcoholContent : ""),
+          alcoholContent: d.alcoholContent !== undefined ? d.alcoholContent : (d.abv !== undefined && d.abv !== null ? d.abv : 0),
+          isChefSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isChefsSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isBartenderSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          prepTime: d.prepTime || `${d.prepTimeMinutes || 15} min`,
+          prepTimeMinutes: d.prepTimeMinutes || 15,
+          description: d.description || d.shortDescription || "",
+          shortDescription: d.description || d.shortDescription || "",
+          image: d.imageUrl || d.image || "",
+          imageUrl: d.imageUrl || d.image || "",
+          isBarDrink: true,
+          isBarItem: true,
+        }));
+        setBarDrinks(formatted);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarDrinks offline/fallback:", err?.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBarDrinks();
+  }, [loadBarDrinks]);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
@@ -3133,7 +4598,7 @@ export function BarWorkspace({
     }
   }, [menuItems, onDeleteMenuItem]);
 
-  const handleAddDrink = (newDrink) => {
+  const handleAddDrink = async (newDrink) => {
     const item = {
       ...newDrink,
       id: newDrink.id || `DR-${Date.now()}`,
@@ -3141,31 +4606,97 @@ export function BarWorkspace({
       isBarDrink: true,
       isAvailable: newDrink.isAvailable !== false,
     };
+    // Optimistic UI update
     setBarDrinks((prev) => [item, ...prev]);
     setToast?.(`Drink "${item.name}" added to Bar Drinks Menu.`);
+
+    // Persist to backend
+    try {
+      const res = await apiCreateBarDrink(item);
+      const created = res?.data?.data || res?.data;
+      if (res?.success && created) {
+        const realId = created.menuItemId || created.id;
+        if (realId) {
+          setBarDrinks((prev) =>
+            prev.map((d) => (d.id === item.id ? { ...d, ...created, id: realId } : d))
+          );
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiCreateBarDrink fallback:", apiErr?.message);
+    }
     return true;
   };
 
-  const handleUpdateDrink = (updatedDrink) => {
+  const handleUpdateDrink = async (updatedDrink) => {
+    // Optimistic UI update
     setBarDrinks((prev) =>
       prev.map((d) =>
         String(d.id) === String(updatedDrink.id) ? { ...d, ...updatedDrink, isBarDrink: true } : d
       )
     );
     setToast?.(`Drink "${updatedDrink.name}" updated.`);
+
+    // Persist to backend
+    try {
+      await apiUpdateBarDrink(updatedDrink.id, updatedDrink);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiUpdateBarDrink fallback:", apiErr?.message);
+    }
     return true;
   };
 
-  const handleDeleteDrink = (drinkId) => {
+  const handleDeleteDrink = async (drinkId) => {
+    // Optimistic UI update
     setBarDrinks((prev) => prev.filter((d) => String(d.id) !== String(drinkId)));
     setToast?.("Drink deleted from Bar Drinks Menu.");
+
+    // Persist to backend
+    try {
+      await apiDeleteBarDrink(drinkId);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiDeleteBarDrink fallback:", apiErr?.message);
+    }
     return true;
   };
 
-  const handleToggleDrinkAvailability = (drinkId, newStatus) => {
+  const handleToggleDrinkAvailability = async (drinkId, newStatus) => {
+    // Optimistic UI update
     setBarDrinks((prev) =>
       prev.map((d) => (String(d.id) === String(drinkId) ? { ...d, isAvailable: newStatus } : d))
     );
+
+    // Persist to backend
+    try {
+      await apiToggleBarDrinkAvailability(drinkId, newStatus);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiToggleBarDrinkAvailability fallback:", apiErr?.message);
+    }
+    return true;
+  };
+
+  const handleToggleDrinkSpecial = async (drinkId, newStatus) => {
+    // Optimistic UI update
+    setBarDrinks((prev) =>
+      prev.map((d) =>
+        String(d.id) === String(drinkId)
+          ? {
+              ...d,
+              isSpecial: newStatus,
+              isBartenderSpecial: newStatus,
+              isChefSpecial: newStatus,
+              isChefsSpecial: newStatus,
+            }
+          : d
+      )
+    );
+
+    // Persist to backend
+    try {
+      await apiToggleBarDrinkSpecial(drinkId, newStatus);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiToggleBarDrinkSpecial fallback:", apiErr?.message);
+    }
     return true;
   };
 
@@ -3539,6 +5070,53 @@ export function BarWorkspace({
       .slice(0, 10);
   }, [tables]);
 
+  const overviewTables = useMemo(() => {
+    if (Array.isArray(overviewData?.counterTables) && overviewData.counterTables.length > 0) {
+      return overviewData.counterTables.map((t) => ({
+        id: t.tableId || t.id,
+        number: t.tableName || t.tableNumber || `Table ${t.tableId || t.id}`,
+        area: t.sectionArea || t.area || "Main Hall",
+        status: t.status || "Available",
+        guests: t.currentGuests || t.occupiedChairs || t.guests || 0,
+        server: t.assignedServer || "Unassigned",
+      }));
+    }
+    return displayBarTables;
+  }, [overviewData, displayBarTables]);
+
+  const overviewSignatureDrinks = useMemo(() => {
+    if (Array.isArray(overviewData?.signatureDrinks) && overviewData.signatureDrinks.length > 0) {
+      return overviewData.signatureDrinks.map((d) => ({
+        ...d,
+        id: d.menuItemId || d.id,
+        name: d.drinkName || d.name || d.dishName || "",
+        category: d.category || "Cocktail",
+        price: Number(d.price ?? d.sellingPrice ?? 0),
+        prepTime: d.prepTime || `${d.prepTimeMinutes || 15} min`,
+        image: d.imageUrl || d.image || "",
+      }));
+    }
+    return drinks.slice(0, 5);
+  }, [overviewData, drinks]);
+
+  const overviewRecentOrders = useMemo(() => {
+    if (Array.isArray(overviewData?.recentOrders) && overviewData.recentOrders.length > 0) {
+      return overviewData.recentOrders.map((o) => ({
+        ...o,
+        id: o.orderNumber || (o.orderId ? `ORD-${o.orderId}` : String(o.id || "")),
+        orderId: o.orderId || o.id,
+        table: o.table || o.tableName || (o.tableId ? `Table ${o.tableId}` : "Bar Counter"),
+        itemLabel: o.drinkItems || o.itemLabel || "Beverages & Cocktails",
+        quantity: o.quantity || 1,
+        total: Number(o.amount ?? o.total ?? 0),
+        time: o.time || "—",
+        status: o.status || "Pending",
+        items: o.items || [],
+      }));
+    }
+    return barOrders.slice(0, 5);
+  }, [overviewData, barOrders]);
+
   const lowStockBeverages = useMemo(() => {
     return inventoryRows.filter((item) => {
       const stock = Number(item.stock ?? item.currentStock ?? 0);
@@ -3711,7 +5289,7 @@ export function BarWorkspace({
       {route === "bar-staff" && <label className="bar-select-label"><span>Shift</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All shifts</option>{BAR_SHIFTS.map((shift) => <option key={shift}>{shift}</option>)}</select></label>}
       {route === "bar-staff" && <label className="bar-select-label"><span>Table Assignment</span><select value={assignmentFilter} onChange={(event) => { setAssignmentFilter(event.target.value); setPage(1); }}><option value="all">All assignments</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label>}
     </div>
-    {sharedListStatus === "loading" ? <div className="bar-empty" role="status">Loading shared hotel {sharedListKey}...</div> : sharedListStatus === "error" ? <div className="bar-error" role="alert">{sharedListError || `Could not load shared hotel ${sharedListKey}. The Bar page is not showing demo records.`}</div> : <>{renderStaticTable(listConfig.columns, visibleRows, (column, row) => renderListCell(column, row, listConfig.kind), `bar-${listConfig.kind}-table`)}
+    {sharedListStatus === "loading" ? <SkeletonTable rows={6} columns={listConfig.columns.length} /> : sharedListStatus === "error" ? <div className="bar-error" role="alert">{sharedListError || `Could not load shared hotel ${sharedListKey}. The Bar page is not showing demo records.`}</div> : <>{renderStaticTable(listConfig.columns, visibleRows, (column, row) => renderListCell(column, row, listConfig.kind), `bar-${listConfig.kind}-table`)}
     <footer className="bar-pagination"><span>Showing {listRows.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, listRows.length)} of {listRows.length}</span><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Previous page"><ChevronLeft size={16} /></button><span>Page {page} of {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Next page"><ChevronRight size={16} /></button></div></footer>
     </>}
   </section>;
@@ -3884,9 +5462,34 @@ export function BarWorkspace({
               <Receipt size={14} color="#10b981" />
               <span>Invoices</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => loadBarOverview()}
+              disabled={overviewLoading}
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid rgba(245, 158, 11, 0.35)",
+                color: "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+                boxShadow: "var(--shadow-sm)",
+              }}
+              title="Refresh live bar overview"
+            >
+              <RefreshCw size={13} color="var(--accent-amber)" className={overviewLoading ? "spin" : ""} />
+              <span>{overviewLoading ? "Refreshing..." : "Refresh"}</span>
+            </button>
           </div>
         </div>
-      ) : ["bar-drinks", "bar-tables"].includes(route) ? null : (
+     ) : ["bar-drinks", "bar-tables", "bar-staff"].includes(route) ? null : (
         <div className="bar-page-title">
           <div>
             <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
@@ -3939,10 +5542,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {formatCurrency(completedDrinkSales)}
+              {formatCurrency(overviewData?.completedDrinkSales ?? completedDrinkSales)}
             </div>
             <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              <span>{barOrders.length} Orders</span>
+              <span>{(overviewData?.activeBarOrders ?? barOrders.length)} Orders</span>
               <span style={{ margin: "0 3px" }}>•</span>
               <span style={{ color: "var(--success)" }}>Active</span>
             </div>
@@ -3979,11 +5582,11 @@ export function BarWorkspace({
                 <Clock3 size={12} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-dim)"} />
               </div>
             </div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {pendingBarKotCount} Active BOT
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: (overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount) > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount)} Active BOT
             </div>
-            <div style={{ fontSize: "0.66rem", color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              <span>{activePreparingCount} drinks in prep</span>
+            <div style={{ fontSize: "0.66rem", color: (overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount) > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span>{(overviewData?.preparingDrinks ?? overviewData?.activePreparingCount ?? activePreparingCount)} drinks in prep</span>
             </div>
           </div>
 
@@ -4019,10 +5622,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {occupiedBarTables.length} / {tables.length} Tables
+              {(overviewData?.occupiedTables ?? occupiedBarTables.length)} / {(overviewData?.totalTables ?? tables.length)} Tables
             </div>
-            <div style={{ fontSize: "0.66rem", color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {occupiedChairs} seated ({totalChairs} seats)
+            <div style={{ fontSize: "0.66rem", color: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.occupiedSeats ?? occupiedChairs)} seated ({(overviewData?.totalSeats ?? totalChairs)} seats)
             </div>
           </div>
 
@@ -4057,11 +5660,11 @@ export function BarWorkspace({
                 <Package size={12} color={lowStockBeverages.length > 0 ? "#ef4444" : "#10b981"} />
               </div>
             </div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {inventoryRows.length} Items
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: (overviewData ? overviewData.lowStockItems > 0 : lowStockBeverages.length > 0) ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.totalInventoryItems ?? inventoryRows.length)} Items
             </div>
-            <div style={{ fontSize: "0.66rem", color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-muted)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {lowStockBeverages.length > 0 ? "⚠️ " + lowStockBeverages.length + " Low Stock" : "All stock healthy"}
+            <div style={{ fontSize: "0.66rem", color: (overviewData ? overviewData.lowStockItems > 0 : lowStockBeverages.length > 0) ? "var(--danger)" : "var(--text-muted)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {overviewData ? (overviewData.lowStockItems > 0 ? "⚠️ " + overviewData.lowStockItems + " Low Stock" : "All stock healthy") : (lowStockBeverages.length > 0 ? "⚠️ " + lowStockBeverages.length + " Low Stock" : "All stock healthy")}
             </div>
           </div>
 
@@ -4097,10 +5700,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {drinks.length} Drinks
+              {(overviewData?.totalDrinks ?? drinks.length)} Drinks
             </div>
             <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {alcoholicDrinksCount} Alc • {nonAlcoholicDrinksCount} Non-Alc
+              {overviewData ? `${overviewData.alcoholicDrinksCount} Alc • ${overviewData.nonAlcoholicDrinksCount} Non-Alc` : `${alcoholicDrinksCount} Alc • ${nonAlcoholicDrinksCount} Non-Alc`}
             </div>
           </div>
         </div>
@@ -4149,13 +5752,13 @@ export function BarWorkspace({
                   style={{
                     fontSize: "0.68rem",
                     fontWeight: 700,
-                    background: occupiedBarTables.length > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
-                    color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--success)",
+                    background: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                    color: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "var(--accent-amber-light)" : "var(--success)",
                     padding: "1px 6px",
                     borderRadius: "10px",
                   }}
                 >
-                  {occupiedBarTables.length} Occupied
+                  {(overviewData?.occupiedTables ?? occupiedBarTables.length)} Occupied
                 </span>
               </div>
               <button
@@ -4188,7 +5791,7 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {displayBarTables.map((tbl) => {
+              {overviewTables.map((tbl) => {
                 const isOccupied = tbl.status === "Occupied";
                 const serverName = staff.find((m) => String(m.id) === String(tbl.staffId))?.name || tbl.server || "Unassigned";
                 return (
@@ -4349,7 +5952,7 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {drinks.slice(0, 5).map((drink) => (
+              {overviewSignatureDrinks.map((drink) => (
                 <div
                   key={drink.id}
                   onClick={() => go("bar-drinks")}
@@ -4441,7 +6044,7 @@ export function BarWorkspace({
                   borderRadius: "10px",
                 }}
               >
-                {barOrders.length} Total Orders
+                {(overviewData?.activeBarOrders ?? barOrders.length)} Total Orders
               </span>
             </div>
 
@@ -4466,13 +6069,13 @@ export function BarWorkspace({
           </div>
 
           {ordersLoading ? (
-            <div className="bar-empty" role="status">Loading shared orders…</div>
+            <SkeletonTable rows={5} columns={7} />
           ) : ordersError ? (
             <div className="bar-error" role="alert">{ordersError}</div>
           ) : (
             renderStaticTable(
               ["Order Number", "Table", "Drink Items", "Quantity", "Amount", "Time", "Status", "Actions"],
-              barOrders.slice(0, 5),
+              overviewRecentOrders,
               (column, order) => ({
                 "Order Number": <strong>{order.id}</strong>,
                 Table: order.table,
@@ -4512,6 +6115,18 @@ export function BarWorkspace({
           onUpdateDrink={handleUpdateDrink}
           onDeleteDrink={handleDeleteDrink}
           onToggleDrinkAvailability={handleToggleDrinkAvailability}
+          onToggleDrinkSpecial={handleToggleDrinkSpecial}
+          setToast={setToast}
+        />
+      ) : route === "bar-tables" ? (
+        <BarTablesView
+          tables={dineTables}
+          staffList={dineStaff}
+          orders={orders}
+          onAddTable={onAddTable}
+          onUpdateTable={onUpdateTable}
+          onDeleteTable={onDeleteTable}
+          onAddStaff={onAddStaff}
           setToast={setToast}
         />
       ) : (
@@ -4524,7 +6139,7 @@ export function BarWorkspace({
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 
-      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries, plus static demo examples.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <div className="bar-empty" role="status">Loading shared orders…</div> : <>{ordersError && <div className="bar-error" role="status">{ordersError} Static demo orders are still available below.</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
+      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries, plus static demo examples.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError} Static demo orders are still available below.</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
       <OrderItemsModal order={tableItems} onClose={() => setTableItems(null)} />
 
