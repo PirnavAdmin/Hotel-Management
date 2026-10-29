@@ -574,8 +574,8 @@ export function LoginManagement({ currentAdminSession }) {
                     borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600, outline: 'none'
                   }}
                 />
-                <button type="button" onClick={() => setShowPass(p => !p)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                <button type="button" aria-label={showPass ? "Hide password" : "Show password"} onClick={() => setShowPass(p => !p)}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -746,8 +746,8 @@ export function LoginManagement({ currentAdminSession }) {
                     borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: 600, outline: 'none'
                   }}
                 />
-                <button type="button" onClick={() => setShowNewPw(p => !p)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                <button type="button" aria-label={showNewPw ? "Hide password" : "Show password"} onClick={() => setShowNewPw(p => !p)}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {showNewPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>

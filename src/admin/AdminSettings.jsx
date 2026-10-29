@@ -136,36 +136,46 @@ export function AdminSettings({
     let resolvedEmail = "";
     let resolvedName = "Admin";
 
-    if (currentAdminSession?.email && currentAdminSession.email.includes("@")) {
-      resolvedEmail = currentAdminSession.email.trim();
-      resolvedName = currentAdminSession.name || currentAdminSession.username || "Admin";
-    } else {
+    const getActiveSession = () => {
+      if (currentAdminSession && typeof currentAdminSession === "object") return currentAdminSession;
       try {
-        const sess = JSON.parse(
+        const raw =
           localStorage.getItem("avsr_admin_session") ||
           localStorage.getItem("avsr_auth_session_v1") ||
-          localStorage.getItem("auth_user") ||
-          "{}"
-        );
-        if (sess?.email && sess.email.includes("@")) {
-          resolvedEmail = sess.email.trim();
-          resolvedName = sess.name || sess.username || "Admin";
-        }
+          localStorage.getItem("auth_user");
+        if (raw) return JSON.parse(raw);
       } catch {}
+      return null;
+    };
+
+    const sess = getActiveSession();
+
+    if (sess?.email && sess.email.includes("@")) {
+      resolvedEmail = sess.email.trim();
+    } else if (sess?.loginEmail && sess.loginEmail.includes("@")) {
+      resolvedEmail = sess.loginEmail.trim();
+    } else if (sess?.loginIdentifier && sess.loginIdentifier.includes("@")) {
+      resolvedEmail = sess.loginIdentifier.trim();
     }
 
-    if (!resolvedEmail) {
+    if (sess?.name || sess?.username) {
+      resolvedName = sess.name || sess.username || "Admin";
+    }
+
+    // Only query database to match the active logged-in user if email wasn't directly in session
+    if (!resolvedEmail && sess && (sess.userId || sess.id || sess.username || sess.name)) {
       getUsers().then(({ users }) => {
         if (Array.isArray(users)) {
-          const admin = users.find(
+          const match = users.find(
             (u) =>
-              (u.role === "admin" || u.role === "0") &&
-              u.email &&
-              u.email.includes("@")
+              (sess.userId && String(u.id || u.Id || u.userId) === String(sess.userId)) ||
+              (sess.id && String(u.id || u.Id || u.userId) === String(sess.id)) ||
+              (sess.username && String(u.username || u.Username || "").toLowerCase() === String(sess.username).toLowerCase()) ||
+              (sess.name && String(u.name || u.FullName || u.fullName || "").toLowerCase() === String(sess.name).toLowerCase())
           );
-          if (admin?.email) {
-            setAdminEmail(admin.email.trim());
-            setAdminName(admin.name || admin.username || "Admin");
+          if (match?.email && match.email.includes("@")) {
+            setAdminEmail(match.email.trim());
+            setAdminName(match.name || match.username || resolvedName);
             return;
           }
         }
