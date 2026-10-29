@@ -583,7 +583,7 @@ export function AdminOverview({
           </div>
         </div>
 
-        {/* Card 5: Menu Catalog & Staff */}
+        {/* Card 5: Menu Catalog */}
         <div
           onClick={() => onNavigateTab("menu")}
           style={{
@@ -615,7 +615,7 @@ export function AdminOverview({
             }}
           >
             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Menu & Staff
+              Menu Items
             </span>
             <div
               style={{
@@ -645,7 +645,7 @@ export function AdminOverview({
               textOverflow: "ellipsis",
             }}
           >
-            {vegCount}V • {nonVegCount}NV • {staffList.length} Staff
+            {vegCount} Veg • {nonVegCount} Non-Veg
           </div>
         </div>
       </div>

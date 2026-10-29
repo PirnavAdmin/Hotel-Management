@@ -9,6 +9,7 @@ import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDele
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 
 import { formatCurrency } from "../utils/formatCurrency";
+import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
 import { BAR_DRINKS } from "../data/barDrinksMockData";
 import { BarKOTView } from "./BarKOTView";

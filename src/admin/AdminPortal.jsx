@@ -576,6 +576,7 @@ export function AdminPortal({
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
+  const [selectedKotModalTable, setSelectedKotModalTable] = useState(null);
   const isTableOccupied = (tbl) => {
     if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
@@ -4443,6 +4444,12 @@ export function AdminPortal({
                         return t.items && t.items.length > 0;
                       });
 
+                      const activeKotModalTable = selectedKotModalTable
+                        ? tables.find(
+                            (t) => String(t.id) === String(selectedKotModalTable.id)
+                          ) || selectedKotModalTable
+                        : null;
+
                       if (kotDisplayTables.length === 0) {
                         return (
                           <div
@@ -4482,383 +4489,620 @@ export function AdminPortal({
                       }
 
                       return (
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              adminKotTableFilter !== "all"
-                                ? "minmax(320px, 620px)"
-                                : "repeat(auto-fill, minmax(360px, 1fr))",
-                            gap: "1.25rem",
-                            justifyContent:
-                              adminKotTableFilter !== "all"
-                                ? "center"
-                                : "stretch",
-                            alignItems: "stretch",
-                          }}
-                        >
-                          {kotDisplayTables.map((tbl) => {
-                            const allCompleted =
-                              tbl.items &&
-                              tbl.items.length > 0 &&
-                              tbl.items.every(
-                                (i) =>
-                                  i.kotStatus === "served" ||
-                                  i.kotStatus === "ready",
+                        <>
+                          {/* Compact Cards Grid matching Image 2 UI */}
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                adminKotTableFilter !== "all"
+                                  ? "minmax(200px, 320px)"
+                                  : "repeat(auto-fill, minmax(170px, 1fr))",
+                              gap: "0.85rem",
+                              justifyContent:
+                                adminKotTableFilter !== "all" ? "center" : "stretch",
+                              alignItems: "stretch",
+                            }}
+                          >
+                            {kotDisplayTables.map((tbl) => {
+                              const items = Array.isArray(tbl.items) ? tbl.items : [];
+                              const activeItems = items.filter(
+                                (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
                               );
-                            const isCooking =
-                              tbl.items &&
-                              tbl.items.some((i) => i.kotStatus === "cooking");
+                              const totalItemsCount = activeItems.reduce(
+                                (sum, item) => sum + (Number(item?.quantity) || 1),
+                                0
+                              );
+                              const allCompleted =
+                                activeItems.length > 0 &&
+                                activeItems.every(
+                                  (i) =>
+                                    i.kotStatus === "served" ||
+                                    i.kotStatus === "ready" ||
+                                    i.kotStatus === "completed"
+                                );
+                              const isCooking = activeItems.some((i) => i.kotStatus === "cooking");
 
-                            let statusBadge = "ORDER RECEIVED";
-                            let statusColor = "var(--status-occupied)";
-                            let statusBg = "rgba(245, 158, 11, 0.15)";
+                              const cardBorderColor = allCompleted
+                                ? "#10b981"
+                                : isCooking
+                                  ? "#ea580c"
+                                  : "rgba(245, 158, 11, 0.7)";
 
-                            if (allCompleted) {
-                              statusBadge = "PREPARATION COMPLETED";
-                              statusColor = "var(--success)";
-                              statusBg = "rgba(16, 185, 129, 0.15)";
-                            } else if (isCooking) {
-                              statusBadge = "IN PREPARATION";
-                              statusColor = "var(--accent-saffron)";
-                              statusBg = "rgba(234, 88, 12, 0.15)";
-                            }
+                              const cardShadow = allCompleted
+                                ? "0 4px 16px rgba(16, 185, 129, 0.2)"
+                                : isCooking
+                                  ? "0 4px 16px rgba(234, 88, 12, 0.2)"
+                                  : "0 4px 14px rgba(245, 158, 11, 0.16)";
 
-                            return (
-                              <div
-                                key={tbl.id}
-                                style={{
-                                  background: "var(--bg-secondary)",
-                                  borderRadius: "var(--radius-md)",
-                                  border: allCompleted
-                                    ? "2px solid rgba(16, 185, 129, 0.5)"
-                                    : "2px solid var(--accent-amber)",
-                                  overflow: "hidden",
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  height: "100%",
-                                  boxShadow: allCompleted
-                                    ? "0 4px 18px rgba(16, 185, 129, 0.08)"
-                                    : "0 4px 18px rgba(245, 158, 11, 0.08)",
-                                }}
-                              >
-                                {/* Table Number Header - 2 Clean Rows for Zero Crowding */}
+                              const statusDot = allCompleted
+                                ? "var(--status-vacant, #10b981)"
+                                : isCooking
+                                  ? "var(--accent-saffron, #ea580c)"
+                                  : "var(--status-occupied, #f59e0b)";
+
+                              const statusBadge = allCompleted
+                                ? { text: "🔔 Ready to Serve", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", border: "rgba(16, 185, 129, 0.3)" }
+                                : isCooking
+                                  ? { text: "🔥 In Preparation", color: "#ea580c", bg: "rgba(234, 88, 12, 0.15)", border: "rgba(234, 88, 12, 0.3)" }
+                                  : { text: "📥 Order Received", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)", border: "rgba(245, 158, 11, 0.3)" };
+
+                              const firstItem = activeItems[0];
+                              const moreCount = activeItems.length - 1;
+
+                              const tableNum = tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id;
+                              const tableNameDisplay = tbl.name ? (tbl.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i) ? `Table ${tableNum}` : tbl.name) : `Table ${tbl.id}`;
+
+                              return (
                                 <div
+                                  key={tbl.id}
+                                  onClick={() => setSelectedKotModalTable(tbl)}
+                                  title="Click to view ordered items and cook actions"
                                   style={{
-                                    padding: "0.8rem 1rem",
-                                    background: "var(--bg-primary)",
-                                    borderBottom: "1px solid var(--border-subtle)",
+                                    background: "var(--bg-secondary)",
+                                    borderRadius: "var(--radius-md, 10px)",
+                                    border: `1.5px solid ${cardBorderColor}`,
+                                    padding: "0.75rem 0.85rem",
+                                    position: "relative",
+                                    cursor: "pointer",
+                                    transition: "all 0.18s ease",
+                                    boxShadow: cardShadow,
                                     display: "flex",
                                     flexDirection: "column",
-                                    gap: "0.5rem",
+                                    justifyContent: "space-between",
+                                    gap: "0.45rem",
+                                    minHeight: "220px",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-2px)";
+                                    e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.3)";
+                                    e.currentTarget.style.borderColor = "var(--accent-amber)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = cardShadow;
+                                    e.currentTarget.style.borderColor = cardBorderColor;
                                   }}
                                 >
-                                  {/* Row 1: Table Badge + Status Pill */}
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      gap: "0.6rem",
-                                    }}
-                                  >
+                                  <div>
+                                    {/* Row 1: T{num} badge + Table Name + Status Dot */}
                                     <div
                                       style={{
-                                        background: allCompleted
-                                          ? "var(--status-vacant)"
-                                          : "linear-gradient(135deg, #f59e0b, #ea580c)",
-                                        color: "#ffffff",
-                                        padding: "0.28rem 0.65rem",
-                                        borderRadius: "7px",
-                                        fontWeight: 800,
-                                        fontSize: "0.95rem",
-                                        letterSpacing: "0.02em",
-                                        whiteSpace: "nowrap",
-                                        display: "inline-flex",
+                                        display: "flex",
                                         alignItems: "center",
-                                        justifyContent: "center",
-                                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.25)",
+                                        justifyContent: "space-between",
+                                        gap: "0.3rem",
+                                        marginBottom: "0.25rem",
                                       }}
                                     >
-                                      {tbl.name}
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "0.35rem",
+                                          minWidth: 0,
+                                          flex: 1,
+                                        }}
+                                      >
+                                        <span
+                                          style={{
+                                            background: allCompleted
+                                              ? "var(--status-vacant, #10b981)"
+                                              : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                            color: "#ffffff",
+                                            fontWeight: 900,
+                                            fontSize: "0.74rem",
+                                            padding: "2px 6px",
+                                            borderRadius: "4px",
+                                            letterSpacing: "0.03em",
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          T{tableNum}
+                                        </span>
+                                        <h3
+                                          style={{
+                                            fontSize: "0.98rem",
+                                            fontWeight: 900,
+                                            color: "var(--text-main)",
+                                            margin: 0,
+                                            lineHeight: 1.1,
+                                            letterSpacing: "-0.02em",
+                                            whiteSpace: "nowrap",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                          }}
+                                        >
+                                          {tableNameDisplay}
+                                        </h3>
+                                      </div>
+                                      <span
+                                        style={{
+                                          width: "9px",
+                                          height: "9px",
+                                          borderRadius: "50%",
+                                          background: statusDot,
+                                          boxShadow: `0 0 6px ${statusDot}`,
+                                          display: "inline-block",
+                                          flexShrink: 0,
+                                        }}
+                                      />
                                     </div>
 
-                                    <span
-                                      style={{
-                                        padding: "3.5px 9px",
-                                        borderRadius: "6px",
-                                        fontSize: "0.68rem",
-                                        fontWeight: 800,
-                                        letterSpacing: "0.04em",
-                                        textTransform: "uppercase",
-                                        background: statusBg,
-                                        color: statusColor,
-                                        border: `1px solid color-mix(in srgb, ${statusColor} 30%, transparent)`,
-                                        whiteSpace: "nowrap",
-                                        flexShrink: 0,
-                                        textAlign: "center",
-                                      }}
-                                    >
-                                      {statusBadge}
-                                    </span>
-                                  </div>
-
-                                  {/* Row 2: Section, Server & Order Received Time */}
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      gap: "0.5rem",
-                                      fontSize: "0.75rem",
-                                      lineHeight: 1.3,
-                                    }}
-                                  >
+                                    {/* Row 2: Section & Server */}
                                     <div
                                       style={{
-                                        color: "var(--text-main)",
-                                        fontWeight: 600,
+                                        fontSize: "0.68rem",
+                                        color: "var(--text-dim)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: "0.4rem",
+                                        paddingBottom: "0.35rem",
+                                        borderBottom: "1px solid var(--border-subtle)",
+                                        marginBottom: "0.35rem",
                                         whiteSpace: "nowrap",
                                         overflow: "hidden",
                                         textOverflow: "ellipsis",
-                                        minWidth: 0,
-                                        flex: 1,
                                       }}
-                                      title={`${tbl.section || "Main Hall"} • Server: ${tbl.server || "Staff"}`}
                                     >
-                                      <span style={{ color: "var(--text-dim)" }}>
+                                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                                         {tbl.section || "Main Hall"}
                                       </span>
-                                      <span style={{ margin: "0 5px", color: "var(--border-card)" }}>
-                                        •
+                                      <span style={{ flexShrink: 0 }}>
+                                        Server: {tbl.server || "Staff"}
                                       </span>
-                                      <span>Server: {tbl.server || "Staff"}</span>
                                     </div>
 
+                                    {/* Row 3: Status Badge Pill */}
                                     <div
                                       style={{
-                                        color: "var(--accent-amber-light)",
-                                        fontWeight: 700,
-                                        fontSize: "0.72rem",
-                                        whiteSpace: "nowrap",
-                                        flexShrink: 0,
-                                        display: "inline-flex",
+                                        padding: "0.28rem 0.5rem",
+                                        borderRadius: "6px",
+                                        background: statusBadge.bg,
+                                        border: `1px solid ${statusBadge.border}`,
+                                        color: statusBadge.color,
+                                        fontSize: "0.68rem",
+                                        fontWeight: 800,
+                                        display: "flex",
                                         alignItems: "center",
-                                        gap: "4px",
+                                        justifyContent: "space-between",
+                                        marginBottom: "0.4rem",
                                       }}
                                     >
-                                      <Clock size={11} strokeWidth={2.4} />
-                                      <span>{tbl.orderTime || "Just Now"}</span>
+                                      <span>{statusBadge.text}</span>
+                                      <span style={{ fontSize: "0.66rem", opacity: 0.85, fontWeight: 700 }}>
+                                        {tbl.orderTime || "Just Now"}
+                                      </span>
                                     </div>
-                                  </div>
-                                </div>
 
-                                {/* Ordered Items List */}
-                                <div
-                                  style={{
-                                    padding: "0.9rem 1.1rem",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "0.55rem",
-                                    flex: 1,
-                                    minHeight: "140px",
-                                    maxHeight: "320px",
-                                    overflowY: "auto",
-                                  }}
-                                >
-                                  {tbl.items && tbl.items.length > 0 ? (
-                                    tbl.items.map((item, idx) => (
+                                    {/* Row 4: Items Preview Box (matching Image 2) */}
+                                    <div
+                                      style={{
+                                        background: "var(--bg-primary)",
+                                        border: "1px solid var(--border-subtle)",
+                                        borderRadius: "6px",
+                                        padding: "0.45rem 0.6rem",
+                                        fontSize: "0.72rem",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "0.2rem",
+                                      }}
+                                    >
                                       <div
-                                        key={idx}
                                         style={{
                                           display: "flex",
                                           justifyContent: "space-between",
                                           alignItems: "center",
-                                          padding: "0.55rem 0.75rem",
-                                          borderRadius: "var(--radius-sm)",
-                                          background: "var(--bg-primary)",
-                                          border: "1px solid var(--border-subtle)",
-                                          gap: "0.75rem",
+                                          fontWeight: 800,
+                                          color: "var(--accent-amber-light, #f59e0b)",
+                                          fontSize: "0.74rem",
                                         }}
                                       >
-                                        <div
-                                          style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "0.65rem",
-                                            minWidth: 0,
-                                            flex: 1,
-                                          }}
-                                        >
-                                          <span
-                                            className="font-mono"
-                                            style={{
-                                              background: "rgba(245, 158, 11, 0.16)",
-                                              border: "1px solid rgba(245, 158, 11, 0.4)",
-                                              color: "var(--accent-amber-light, #f59e0b)",
-                                              padding: "2px 7px",
-                                              borderRadius: "5px",
-                                              fontWeight: 800,
-                                              fontSize: "0.78rem",
-                                              flexShrink: 0,
-                                              minWidth: "26px",
-                                              textAlign: "center",
-                                            }}
-                                          >
-                                            {item.quantity}x
-                                          </span>
-                                          <div style={{ minWidth: 0, flex: 1 }}>
-                                            <div
-                                              style={{
-                                                fontSize: "0.88rem",
-                                                fontWeight: 700,
-                                                color: "var(--text-main)",
-                                                textTransform: "capitalize",
-                                                whiteSpace: "nowrap",
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                letterSpacing: "-0.01em",
-                                              }}
-                                              title={item.name}
-                                            >
-                                              {item.name}
-                                            </div>
-                                            {item.notes && (
-                                              <div
-                                                style={{
-                                                  fontSize: "0.72rem",
-                                                  color: "var(--danger)",
-                                                  fontWeight: 600,
-                                                  marginTop: "2px",
-                                                }}
-                                              >
-                                                Note: {item.notes}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-
-                                        <span
-                                          style={{
-                                            fontSize: "0.68rem",
-                                            fontWeight: 800,
-                                            letterSpacing: "0.04em",
-                                            textTransform: "uppercase",
-                                            padding: "3px 8px",
-                                            borderRadius: "6px",
-                                            flexShrink: 0,
-                                            whiteSpace: "nowrap",
-                                            background:
-                                              item.kotStatus === "served" ||
-                                              item.kotStatus === "ready"
-                                                ? "rgba(16, 185, 129, 0.12)"
-                                                : "rgba(245, 158, 11, 0.12)",
-                                            border:
-                                              item.kotStatus === "served" ||
-                                              item.kotStatus === "ready"
-                                                ? "1px solid rgba(16, 185, 129, 0.3)"
-                                                : "1px solid rgba(245, 158, 11, 0.3)",
-                                            color:
-                                              item.kotStatus === "served" ||
-                                              item.kotStatus === "ready"
-                                                ? "#10b981"
-                                                : "#f59e0b",
-                                          }}
-                                        >
-                                          {item.kotStatus === "served" ||
-                                          item.kotStatus === "ready"
-                                            ? "READY"
-                                            : "IN PREP"}
+                                        <span>Items ({totalItemsCount}):</span>
+                                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                          {activeItems.length} {activeItems.length === 1 ? "dish" : "dishes"}
                                         </span>
                                       </div>
-                                    ))
-                                  ) : (
-                                    <p
+
+                                      {firstItem ? (
+                                        <>
+                                          <div
+                                            style={{
+                                              color: "var(--text-main)",
+                                              fontWeight: 600,
+                                              whiteSpace: "nowrap",
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                            }}
+                                          >
+                                            {firstItem.quantity || 1}x {firstItem.name}
+                                          </div>
+                                          {moreCount > 0 ? (
+                                            <div
+                                              style={{
+                                                color: "var(--text-dim)",
+                                                fontSize: "0.68rem",
+                                                fontStyle: "italic",
+                                              }}
+                                            >
+                                              + {moreCount} more {moreCount === 1 ? "dish" : "dishes"}...
+                                            </div>
+                                          ) : null}
+                                        </>
+                                      ) : (
+                                        <div style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>
+                                          No active items
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Row 5: Action Button (matching Image 2) */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedKotModalTable(tbl);
+                                    }}
+                                    style={{
+                                      width: "100%",
+                                      padding: "0.45rem 0.6rem",
+                                      borderRadius: "6px",
+                                      background: allCompleted
+                                        ? "rgba(16, 185, 129, 0.15)"
+                                        : "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 88, 12, 0.2))",
+                                      border: allCompleted
+                                        ? "1px solid rgba(16, 185, 129, 0.4)"
+                                        : "1px solid rgba(245, 158, 11, 0.4)",
+                                      color: allCompleted ? "#10b981" : "var(--accent-amber-light, #f59e0b)",
+                                      fontWeight: 800,
+                                      fontSize: "0.74rem",
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "0.35rem",
+                                      transition: "all 0.15s ease",
+                                      marginTop: "0.3rem",
+                                    }}
+                                  >
+                                    <ChefHat size={13} />
+                                    <span>View Items / Cook</span>
+                                    <ChevronRight size={13} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* ================= POPUP MODAL: ITEMS TO COOK ================= */}
+                          {activeKotModalTable && (
+                            <div
+                              onClick={() => setSelectedKotModalTable(null)}
+                              style={{
+                                position: "fixed",
+                                inset: 0,
+                                background: "var(--modal-overlay, rgba(0,0,0,0.75))",
+                                backdropFilter: "blur(8px)",
+                                WebkitBackdropFilter: "blur(8px)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                zIndex: 9999,
+                                padding: "1rem",
+                                animation: "fadeIn 0.15s ease",
+                              }}
+                            >
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  background: "var(--bg-secondary, #131d31)",
+                                  border: "1.5px solid var(--accent-amber, #f59e0b)",
+                                  boxShadow:
+                                    "0 25px 60px rgba(0,0,0,0.85), 0 0 30px rgba(245, 158, 11, 0.25)",
+                                  borderRadius: "14px",
+                                  width: "100%",
+                                  maxWidth: "520px",
+                                  maxHeight: "90vh",
+                                  overflow: "hidden",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                }}
+                              >
+                                {/* Modal Header */}
+                                <div
+                                  style={{
+                                    padding: "0.85rem 1.15rem",
+                                    background: "var(--bg-primary, #0b1120)",
+                                    borderBottom: "1px solid var(--border-subtle)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: "0.75rem",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                                    <div
                                       style={{
-                                        fontSize: "0.8rem",
-                                        color: "var(--text-muted)",
-                                        margin: "auto",
-                                        textAlign: "center",
+                                        background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                        color: "#ffffff",
+                                        padding: "0.3rem 0.65rem",
+                                        borderRadius: "7px",
+                                        fontWeight: 900,
+                                        fontSize: "0.95rem",
                                       }}
                                     >
+                                      T{activeKotModalTable.name ? activeKotModalTable.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : activeKotModalTable.id}
+                                    </div>
+                                    <div>
+                                      <h3
+                                        style={{
+                                          fontSize: "1.1rem",
+                                          fontWeight: 900,
+                                          color: "var(--text-main)",
+                                          margin: 0,
+                                          lineHeight: 1.2,
+                                        }}
+                                      >
+                                        {activeKotModalTable.name} — Items to Cook
+                                      </h3>
+                                      <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                                        {activeKotModalTable.section || "Main Hall"} • Server: <strong style={{ color: "var(--text-main)" }}>{activeKotModalTable.server || "Staff"}</strong> • Ordered: {activeKotModalTable.orderTime || "Just Now"}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedKotModalTable(null)}
+                                    style={{
+                                      background: "transparent",
+                                      border: "none",
+                                      color: "var(--text-muted)",
+                                      cursor: "pointer",
+                                      padding: "4px",
+                                      borderRadius: "6px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                    title="Close"
+                                  >
+                                    <X size={20} />
+                                  </button>
+                                </div>
+
+                                {/* Items List Body */}
+                                <div
+                                  style={{
+                                    padding: "1rem 1.15rem",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "0.6rem",
+                                    overflowY: "auto",
+                                    flex: 1,
+                                    maxHeight: "55vh",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      fontSize: "0.75rem",
+                                      fontWeight: 800,
+                                      color: "var(--text-dim)",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.05em",
+                                      marginBottom: "0.2rem",
+                                    }}
+                                  >
+                                    <span>Ordered Dishes & Beverages ({activeKotModalTable.items?.length || 0})</span>
+                                    <span>Status</span>
+                                  </div>
+
+                                  {activeKotModalTable.items && activeKotModalTable.items.length > 0 ? (
+                                    activeKotModalTable.items.map((item, idx) => {
+                                      const isReady =
+                                        item.kotStatus === "ready" ||
+                                        item.kotStatus === "served" ||
+                                        item.kotStatus === "completed";
+                                      const isCooking = item.kotStatus === "cooking";
+
+                                      return (
+                                        <div
+                                          key={idx}
+                                          style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            padding: "0.6rem 0.8rem",
+                                            borderRadius: "8px",
+                                            background: "var(--bg-primary, #0b1120)",
+                                            border: isReady
+                                              ? "1px solid rgba(16, 185, 129, 0.4)"
+                                              : isCooking
+                                                ? "1px solid rgba(234, 88, 12, 0.4)"
+                                                : "1px solid var(--border-subtle)",
+                                            gap: "0.75rem",
+                                          }}
+                                        >
+                                          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
+                                            <span
+                                              style={{
+                                                background: "rgba(245, 158, 11, 0.16)",
+                                                border: "1px solid rgba(245, 158, 11, 0.4)",
+                                                color: "var(--accent-amber-light, #f59e0b)",
+                                                padding: "3px 8px",
+                                                borderRadius: "6px",
+                                                fontWeight: 800,
+                                                fontSize: "0.82rem",
+                                                flexShrink: 0,
+                                              }}
+                                            >
+                                              {item.quantity || 1}x
+                                            </span>
+                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                              <div
+                                                style={{
+                                                  fontSize: "0.92rem",
+                                                  fontWeight: 700,
+                                                  color: "var(--text-main)",
+                                                  textTransform: "capitalize",
+                                                  whiteSpace: "nowrap",
+                                                  overflow: "hidden",
+                                                  textOverflow: "ellipsis",
+                                                }}
+                                                title={item.name}
+                                              >
+                                                {item.name}
+                                              </div>
+                                              {item.notes && (
+                                                <div
+                                                  style={{
+                                                    fontSize: "0.72rem",
+                                                    color: "var(--danger, #ef4444)",
+                                                    fontWeight: 600,
+                                                    marginTop: "2px",
+                                                  }}
+                                                >
+                                                  Note: {item.notes}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Status Toggle Button / Pill */}
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (onUpdateItemKotStatus) {
+                                                const nextStatus = isReady ? "cooking" : "ready";
+                                                onUpdateItemKotStatus(activeKotModalTable.id, item.id, nextStatus);
+                                              }
+                                            }}
+                                            title="Click to toggle status"
+                                            style={{
+                                              fontSize: "0.7rem",
+                                              fontWeight: 800,
+                                              letterSpacing: "0.04em",
+                                              textTransform: "uppercase",
+                                              padding: "4px 10px",
+                                              borderRadius: "6px",
+                                              flexShrink: 0,
+                                              whiteSpace: "nowrap",
+                                              cursor: onUpdateItemKotStatus ? "pointer" : "default",
+                                              background: isReady
+                                                ? "rgba(16, 185, 129, 0.18)"
+                                                : isCooking
+                                                  ? "rgba(234, 88, 12, 0.18)"
+                                                  : "rgba(245, 158, 11, 0.18)",
+                                              border: isReady
+                                                ? "1px solid rgba(16, 185, 129, 0.4)"
+                                                : isCooking
+                                                  ? "1px solid rgba(234, 88, 12, 0.4)"
+                                                  : "1px solid rgba(245, 158, 11, 0.4)",
+                                              color: isReady ? "#10b981" : isCooking ? "#ea580c" : "#f59e0b",
+                                              transition: "all 0.15s ease",
+                                            }}
+                                          >
+                                            {isReady ? "✓ READY" : isCooking ? "🔥 COOKING" : "📥 RECEIVED"}
+                                          </button>
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", textAlign: "center", margin: "2rem auto" }}>
                                       No items currently ordered for this table.
                                     </p>
                                   )}
                                 </div>
 
-                                {/* Footer Action: Preparation Completed */}
-                                {tbl.items && tbl.items.length > 0 && (
-                                  <div
+                                {/* Modal Footer */}
+                                <div
+                                  style={{
+                                    padding: "0.85rem 1.15rem",
+                                    background: "var(--bg-primary, #0b1120)",
+                                    borderTop: "1px solid var(--border-subtle)",
+                                    display: "flex",
+                                    gap: "0.6rem",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedKotModalTable(null)}
                                     style={{
-                                      marginTop: "auto",
-                                      padding: "0.75rem 1.1rem",
-                                      borderTop: "1px solid var(--border-subtle)",
-                                      background: "var(--bg-primary)",
-                                      display: "flex",
-                                      gap: "0.5rem",
+                                      padding: "0.55rem 1rem",
+                                      borderRadius: "7px",
+                                      background: "var(--bg-tertiary)",
+                                      border: "1px solid var(--border-subtle)",
+                                      color: "var(--text-main)",
+                                      fontWeight: 700,
+                                      fontSize: "0.82rem",
+                                      cursor: "pointer",
                                     }}
                                   >
-                                    {!allCompleted ? (
-                                      <button
-                                        onClick={() =>
-                                          onCompleteTableKot &&
-                                          onCompleteTableKot(tbl.id)
+                                    Close
+                                  </button>
+
+                                  {activeKotModalTable.items && activeKotModalTable.items.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (onCompleteTableKot) {
+                                          onCompleteTableKot(activeKotModalTable.id);
                                         }
-                                        style={{
-                                          width: "100%",
-                                          minHeight: "42px",
-                                          padding: "0.65rem",
-                                          borderRadius: "var(--radius-sm)",
-                                          background:
-                                            "linear-gradient(135deg, #10b981, #059669)",
-                                          color: "#ffffff",
-                                          fontWeight: 800,
-                                          fontSize: "0.84rem",
-                                          border: "none",
-                                          cursor: "pointer",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          gap: "0.4rem",
-                                          boxShadow:
-                                            "0 3px 10px rgba(16, 185, 129, 0.3)",
-                                          transition: "all 0.2s ease",
-                                        }}
-                                      >
-                                        <CheckCircle2 size={16} />
-                                        <span>Mark Preparation Completed</span>
-                                      </button>
-                                    ) : (
-                                      <div
-                                        style={{
-                                          width: "100%",
-                                          minHeight: "42px",
-                                          padding: "0.6rem",
-                                          borderRadius: "var(--radius-sm)",
-                                          background: "rgba(16, 185, 129, 0.15)",
-                                          border: "1px solid rgba(16, 185, 129, 0.3)",
-                                          color: "var(--success)",
-                                          fontWeight: 800,
-                                          fontSize: "0.82rem",
-                                          textAlign: "center",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          gap: "0.35rem",
-                                        }}
-                                      >
-                                        <CheckCircle2 size={15} />
-                                        <span>
-                                          Preparation Completed (Ready to Serve)
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                        setSelectedKotModalTable(null);
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        padding: "0.55rem 1rem",
+                                        borderRadius: "7px",
+                                        background: "linear-gradient(135deg, #10b981, #059669)",
+                                        border: "none",
+                                        color: "#ffffff",
+                                        fontWeight: 800,
+                                        fontSize: "0.84rem",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "0.4rem",
+                                        boxShadow: "0 3px 10px rgba(16, 185, 129, 0.3)",
+                                      }}
+                                    >
+                                      <CheckCircle2 size={16} />
+                                      <span>Mark Preparation Completed</span>
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                            );
-                          })}
-                        </div>
+                            </div>
+                          )}
+                        </>
                       );
                     })()}
                   </div>
