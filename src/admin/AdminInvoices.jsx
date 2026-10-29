@@ -111,11 +111,14 @@ async function requestLiveInvoiceRecords() {
     records: sortOrdersBySettlementTime(
       dedupeOrders(mergeLiveInvoiceRecords(invoices || [], orders || [])),
     ),
-    error: invoices === null
-      ? `Invoice records could not be loaded (${invoiceResponse?.error || "server unavailable"}). Showing live settled POS orders instead.`
-      : orders === null
-        ? `Settled order details could not be loaded (${orderResponse?.error || "server unavailable"}). Some invoice details may be incomplete.`
-        : "",
+    error: (invoices === null && orders === null)
+      ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
+      : "",
+
+
+
+
+
   };
 }
 

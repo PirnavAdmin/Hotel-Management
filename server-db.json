@@ -15,18 +15,9 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 1,
-      "tableName": "Table-1",
-      "branchId": 1,
-      "sectionArea": "VIP Lounge",
-      "location": "VIP Lounge",
-      "capacityChairs": 6,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "assignedServerId": 1,
-      "assignedServerName": "Rajesh K.",
-      "qrCodeUrl": null,
       "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
@@ -35,7 +26,16 @@
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 1,
+      "tableName": "Table-1",
+      "branchId": 1,
+      "sectionArea": "VIP Lounge",
+      "location": "VIP Lounge",
+      "capacityChairs": 6,
+      "assignedServerId": 1,
+      "assignedServerName": "Rajesh K.",
+      "qrCodeUrl": null
     },
     {
       "id": 2,
@@ -43,61 +43,37 @@
       "tableNumber": "Table-2",
       "section": "Main Hall",
       "capacity": 5,
-      "status": "occupied",
+      "status": "vacant",
       "server": "Rajesh K.",
-      "guests": 2,
-      "items": [
-        {
-          "id": 41,
-          "name": "bagara with mutton",
-          "price": 280,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:44 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        },
-        {
-          "id": 35,
-          "name": "Paneer Butter Masala",
-          "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:44 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        }
-      ],
-      "orderTime": "12:44 PM",
+      "guests": 0,
+      "items": [],
+      "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
       "backendTableId": 2,
+      "occupiedChairs": 0,
+      "selectedSeats": [],
+      "orderTimestamp": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
+      "activeOrderId": null,
+      "discountAmount": 0,
+      "subtotal": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "grandTotal": 0,
       "tableName": "Table-2",
       "branchId": 1,
       "sectionArea": "Main Hall",
       "location": "Main Hall",
       "capacityChairs": 5,
-      "occupiedChairs": 2,
-      "selectedSeats": [
-        "S3",
-        "S4"
-      ],
       "assignedServerId": 1,
       "assignedServerName": "Rajesh K.",
       "qrCodeUrl": null,
-      "orderTimestamp": 1792998883485,
-      "activeOrderId": null,
-      "cookingStartedAt": "12:44 PM",
-      "completedAt": null,
-      "completedDuration": null,
-      "kotSent": false,
-      "discountAmount": 0,
-      "subtotal": 0,
-      "taxAmount": 0,
-      "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "kotSent": false
     },
     {
       "id": 3,
@@ -105,87 +81,36 @@
       "tableNumber": "Table-3",
       "section": "Main Hall",
       "capacity": 4,
-      "status": "occupied",
+      "status": "vacant",
       "server": "Staff",
       "guests": 0,
-      "items": [
-        {
-          "id": "dr-0",
-          "name": "Aromas Fresh Brewed Coffee",
-          "price": 90,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:03 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        },
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:03 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        },
-        {
-          "id": "dr-2",
-          "name": "Sweet Punjabi Lassi",
-          "price": 110,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:03 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        },
-        {
-          "id": "dr-3",
-          "name": "Fresh Masala Lemonade",
-          "price": 80,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:03 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        },
-        {
-          "id": "dr-4",
-          "name": "Spiced Buttermilk (Chaas)",
-          "price": 70,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "06:04 PM",
-          "kotStatus": "ready",
-          "kotSent": true
-        }
-      ],
-      "orderTime": "06:03 PM",
+      "items": [],
+      "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
       "backendTableId": 3,
-      "orderTimestamp": 1793104430501,
-      "completedAt": "07:17 PM",
-      "completedDuration": "1h 14m 52s",
-      "tableName": "Table-3",
-      "branchId": 1,
-      "sectionArea": "Main Hall",
-      "location": "Main Hall",
-      "capacityChairs": 4,
       "occupiedChairs": 0,
       "selectedSeats": [],
-      "assignedServerId": null,
-      "assignedServerName": "Staff",
-      "qrCodeUrl": null,
+      "orderTimestamp": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
       "activeOrderId": null,
-      "cookingStartedAt": "06:03 PM",
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
+      "tableName": "Table-3",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 4,
+      "assignedServerId": null,
+      "assignedServerName": "Staff",
+      "qrCodeUrl": null,
       "kotSent": true
     },
     {
@@ -194,76 +119,38 @@
       "tableNumber": "Table-4",
       "section": "Main Hall",
       "capacity": 6,
-      "status": "occupied",
+      "status": "vacant",
       "server": "Karan D.",
-      "guests": 3,
-      "items": [
-        {
-          "id": "bir-4",
-          "name": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "07:01 PM",
-          "kotStatus": "ready",
-          "kotSent": true,
-          "kotPendingServer": false
-        },
-        {
-          "id": "bir-5",
-          "name": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "07:02 PM",
-          "kotStatus": "ready",
-          "kotSent": true,
-          "kotPendingServer": false
-        },
-        {
-          "id": "st-1",
-          "name": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "07:15 PM",
-          "kotStatus": "ready",
-          "kotSent": true,
-          "kotPendingServer": false
-        }
-      ],
-      "orderTime": "07:01 PM",
+      "guests": 0,
+      "items": [],
+      "orderTime": null,
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
       "backendTableId": 4,
-      "tableName": "Table-4",
-      "branchId": 1,
-      "sectionArea": "Main Hall",
-      "location": "Main Hall",
-      "capacityChairs": 6,
-      "occupiedChairs": 3,
-      "selectedSeats": [
-        "S3",
-        "S2",
-        "S5"
-      ],
-      "orderTimestamp": 1793107919415,
-      "assignedServerId": 6,
-      "assignedServerName": "Karan D.",
-      "qrCodeUrl": null,
-      "cookingStartedAt": "07:18 PM",
-      "completedAt": "07:50 PM",
-      "completedDuration": "5h 30m 04s",
-      "kotSent": true,
-      "activeOrderId": 1793108730874,
+      "occupiedChairs": 0,
+      "selectedSeats": [],
+      "orderTimestamp": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendOrderId": 1793108730874
+      "tableName": "Table-4",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 6,
+      "assignedServerId": 6,
+      "assignedServerName": "Karan D.",
+      "qrCodeUrl": null,
+      "kotSent": true,
+      "backendOrderId": 1793120571085
     },
     {
       "id": 5,
@@ -280,26 +167,26 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 5,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
-      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 5
     },
     {
       "id": 6,
-      "name": "Table-6",
+      "name": "Table 6",
       "tableNumber": "Table-6",
       "section": "Main Hall",
-      "capacity": 4,
+      "capacity": 1,
       "status": "vacant",
       "server": "Staff",
       "guests": 0,
@@ -325,10 +212,10 @@
     },
     {
       "id": 7,
-      "name": "Table-7",
+      "name": "Table 7",
       "tableNumber": "Table-7",
-      "section": "VIP Lounge",
-      "capacity": 8,
+      "section": "Main Hall",
+      "capacity": 4,
       "status": "vacant",
       "server": "Staff",
       "guests": 0,
@@ -354,10 +241,10 @@
     },
     {
       "id": 8,
-      "name": "Table-8",
+      "name": "Table 8",
       "tableNumber": "Table-8",
-      "section": "VIP Lounge",
-      "capacity": 8,
+      "section": "Main Hall",
+      "capacity": 4,
       "status": "vacant",
       "server": "Staff",
       "guests": 0,
@@ -396,19 +283,19 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 9,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
-      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 9
     },
     {
       "id": 10,
@@ -425,19 +312,19 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 10,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
-      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 10
     },
     {
       "id": 11,
@@ -454,19 +341,19 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 11,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
-      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 11
     },
     {
       "id": 12,
@@ -483,19 +370,19 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 12,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
-      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 12
     },
     {
       "id": 13,
@@ -512,19 +399,19 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 13,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
-      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 13
     },
     {
       "id": 14,
@@ -541,14 +428,40 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 14,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "discountAmount": 0,
+      "subtotal": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "grandTotal": 0,
+      "backendTableId": 14
+    },
+    {
+      "id": 14,
+      "name": "table 20",
+      "section": "first flour",
+      "capacity": 2,
+      "status": "vacant",
+      "server": "Staff",
+      "guests": 0,
+      "items": [],
+      "orderTime": null,
+      "discountPercent": 0,
+      "serviceCharge": 5,
+      "occupiedSince": null,
+      "occupiedChairs": 0,
+      "selectedSeats": [],
+      "orderTimestamp": null,
       "activeOrderId": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
@@ -570,19 +483,19 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
-      "backendTableId": 15,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
+      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
-      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "backendTableId": 15
     }
   ],
   "gourmet_pos_menu_items_v2": [
@@ -601,35 +514,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -653,35 +566,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -705,35 +618,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -757,35 +670,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -809,35 +722,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792671646183-h25n",
+          "inventoryId": "inv-1793120708013-jge5",
           "name": "Fresh Paneer",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -861,35 +774,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792671646183-h25n",
+          "inventoryId": "inv-1793120708013-jge5",
           "name": "Fresh Paneer",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -913,35 +826,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -965,35 +878,35 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671645921-c2eu",
+          "inventoryId": "inv-1793162279100-1ac0",
           "name": "Basmati Rice",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.25,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792671646584-q6gd",
+          "inventoryId": "inv-1793162283989-vkb6",
           "name": "Onions & Mint",
           "quantity": 0.08,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646877-2u72",
+          "inventoryId": "inv-1793120590518-2jfu",
           "name": "Biryani Spices & Masala",
           "quantity": 0.02,
           "unit": "KG",
@@ -1017,21 +930,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735781520-8i1b",
+          "inventoryId": "inv-1793121022785-rxt7",
           "name": "Shawarma Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1055,28 +968,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.3,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735772841-2zk4",
+          "inventoryId": "inv-1793162292351-ecof",
           "name": "Curry Gravies & Onions",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735772965-yb1q",
+          "inventoryId": "inv-1793120690207-pc2g",
           "name": "Curry Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -1100,28 +1013,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671646183-h25n",
+          "inventoryId": "inv-1793120708013-jge5",
           "name": "Fresh Paneer",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735773418-986i",
+          "inventoryId": "inv-1793120734455-z1eu",
           "name": "Cooking Butter & Cream",
           "quantity": 0.05,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735773479-wvx8",
+          "inventoryId": "inv-1793162298561-2hs9",
           "name": "Tomato & Onion Gravy",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792735773570-7z66",
+          "inventoryId": "inv-1793120769779-e8na",
           "name": "Garam Masala Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -1139,41 +1052,46 @@
       "spiceLevel": 0,
       "description": "Indo-Chinese style crispy chicken wok-tossed with spring onions, crunchy bell peppers, and spicy soya glaze.",
       "prepTime": "",
-      "prepTimeMinutes": 0,
+      "prepTimeMinutes": 15,
       "isChefSpecial": false,
       "isChefsSpecial": false,
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.3,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735772841-2zk4",
-          "name": "Curry Gravies & Onions",
+          "inventoryId": "recipe-ingredient-1793162268500-lxcwc",
+          "name": "Onions",
           "quantity": 0.15,
           "unit": "KG",
-          "category": "Produce & Veggies"
+          "category": "Vegetables & Fresh Produce"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735772965-yb1q",
+          "inventoryId": "inv-1793120690207-pc2g",
           "name": "Curry Spices",
           "quantity": 0.02,
           "unit": "KG",
           "category": "Spices & Seasoning"
         }
       ],
-      "image": "/assets/chinese/chilli-chicken.jpg?v=20261015-v4"
+      "image": "/assets/chinese/chilli-chicken.jpg?v=20261015-v4",
+      "dishName": "Chilli Chicken Dry",
+      "dietaryType": "NON-VEG",
+      "shortDescription": "Indo-Chinese style crispy chicken wok-tossed with spring onions, crunchy bell peppers, and spicy soya glaze.",
+      "imageUrl": "/assets/chinese/chilli-chicken.jpg?v=20261015-v4",
+      "isSpecial": false
     },
     {
       "id": "st-4",
@@ -1190,21 +1108,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735781042-r0os",
+          "inventoryId": "inv-1793162301163-abz9",
           "name": "Crispy Corn Salt & Pepper Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1228,21 +1146,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735780931-lmtc",
+          "inventoryId": "inv-1793121020334-9rpp",
           "name": "Apollo Fish Fry Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1266,21 +1184,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735780796-mrvo",
+          "inventoryId": "inv-1793121018469-icpk",
           "name": "Fresh Garden Salad Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1304,28 +1222,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.3,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735772841-2zk4",
+          "inventoryId": "inv-1793162292351-ecof",
           "name": "Curry Gravies & Onions",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735772965-yb1q",
+          "inventoryId": "inv-1793120690207-pc2g",
           "name": "Curry Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -1349,21 +1267,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735780661-0mro",
+          "inventoryId": "inv-1793121016234-onva",
           "name": "Murgh Malai Kebab Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1387,28 +1305,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671646183-h25n",
+          "inventoryId": "inv-1793120708013-jge5",
           "name": "Fresh Paneer",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735773418-986i",
+          "inventoryId": "inv-1793120734455-z1eu",
           "name": "Cooking Butter & Cream",
           "quantity": 0.05,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735773479-wvx8",
+          "inventoryId": "inv-1793162298561-2hs9",
           "name": "Tomato & Onion Gravy",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792735773570-7z66",
+          "inventoryId": "inv-1793120769779-e8na",
           "name": "Garam Masala Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -1432,21 +1350,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735780382-chds",
+          "inventoryId": "inv-1793120858416-5rmw",
           "name": "Mutton Seekh Kebab Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1470,28 +1388,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735770976-ifxr",
+          "inventoryId": "inv-1793120800056-v6dj",
           "name": "Pizza Base",
           "quantity": 1,
           "unit": "PCS",
           "category": "Bakery & Bread"
         },
         {
-          "inventoryId": "inv-1792735771075-z7m5",
+          "inventoryId": "inv-1793120805723-3x4o",
           "name": "Mozzarella Cheese",
           "quantity": 0.1,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735771220-ztpc",
+          "inventoryId": "inv-1793120810258-b3r6",
           "name": "Pizza Marinara Sauce",
           "quantity": 0.05,
           "unit": "KG",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735771444-c7f9",
+          "inventoryId": "inv-1793120816048-t7a6",
           "name": "Toppings (Veggies/Meat)",
           "quantity": 0.08,
           "unit": "KG",
@@ -1515,28 +1433,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735770147-1een",
+          "inventoryId": "inv-1793120779417-orj5",
           "name": "Burger Buns",
           "quantity": 1,
           "unit": "PCS",
           "category": "Bakery & Bread"
         },
         {
-          "inventoryId": "inv-1792735770329-ickl",
+          "inventoryId": "inv-1793120785116-96go",
           "name": "Burger Patty",
           "quantity": 1,
           "unit": "PCS",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735770551-1ctj",
+          "inventoryId": "inv-1793120790169-q13p",
           "name": "Cheese Slice",
           "quantity": 1,
           "unit": "PCS",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735770777-ohtw",
+          "inventoryId": "inv-1793120795692-ogo9",
           "name": "Lettuce & Burger Sauce",
           "quantity": 0.04,
           "unit": "KG",
@@ -1560,21 +1478,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735780197-yebh",
+          "inventoryId": "inv-1793121013305-iuqp",
           "name": "Crispy French Fries Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1598,21 +1516,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735779970-q4gw",
+          "inventoryId": "inv-1793121009724-6via",
           "name": "Creamy Alfredo Pasta Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1636,28 +1554,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.3,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735772841-2zk4",
+          "inventoryId": "inv-1793162292351-ecof",
           "name": "Curry Gravies & Onions",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735772965-yb1q",
+          "inventoryId": "inv-1793120690207-pc2g",
           "name": "Curry Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -1681,28 +1599,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.3,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735772841-2zk4",
+          "inventoryId": "inv-1793162292351-ecof",
           "name": "Curry Gravies & Onions",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735772965-yb1q",
+          "inventoryId": "inv-1793120690207-pc2g",
           "name": "Curry Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -1726,28 +1644,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792671646183-h25n",
+          "inventoryId": "inv-1793120708013-jge5",
           "name": "Fresh Paneer",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735773418-986i",
+          "inventoryId": "inv-1793120734455-z1eu",
           "name": "Cooking Butter & Cream",
           "quantity": 0.05,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735773479-wvx8",
+          "inventoryId": "inv-1793162298561-2hs9",
           "name": "Tomato & Onion Gravy",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792735773570-7z66",
+          "inventoryId": "inv-1793120769779-e8na",
           "name": "Garam Masala Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -1771,21 +1689,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735779788-nke9",
+          "inventoryId": "inv-1793121006168-g1lo",
           "name": "Dal Makhani Bukhara Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Grains & Rice"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1809,21 +1727,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735779585-jxlk",
+          "inventoryId": "inv-1793121001945-2ii1",
           "name": "Mutton Rogan Josh Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1847,21 +1765,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735779337-6cop",
+          "inventoryId": "inv-1793120997618-afil",
           "name": "Butter Garlic Naan Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1885,21 +1803,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735779077-ghrf",
+          "inventoryId": "inv-1793120992221-o2vi",
           "name": "Cheese Garlic Naan Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1923,21 +1841,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735778632-a320",
+          "inventoryId": "inv-1793120987201-ih6p",
           "name": "Tandoori Roti (Butter) Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -1961,21 +1879,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735765169-ihed",
+          "inventoryId": "inv-1793120840336-axpc",
           "name": "Coffee Powder / Beans",
           "quantity": 0.02,
           "unit": "KG",
           "category": "Beverages & Bar"
         },
         {
-          "inventoryId": "inv-1792735766371-6bxb",
+          "inventoryId": "inv-1793120845764-edv1",
           "name": "Fresh Milk",
           "quantity": 0.18,
           "unit": "L",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735766932-8io6",
+          "inventoryId": "inv-1793120850537-ju1i",
           "name": "Sugar",
           "quantity": 0.015,
           "unit": "KG",
@@ -1999,21 +1917,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735778051-y9fw",
+          "inventoryId": "inv-1793120982727-74qd",
           "name": "Royal Mango Lassi Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2037,21 +1955,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735777696-jzzd",
+          "inventoryId": "inv-1793120976368-wzsl",
           "name": "Sweet Punjabi Lassi Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2075,28 +1993,28 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735772170-3til",
+          "inventoryId": "inv-1793120538894-ng3g",
           "name": "Raw Chicken",
           "quantity": 0.3,
           "unit": "KG",
           "category": "Meat & Seafood"
         },
         {
-          "inventoryId": "inv-1792735772841-2zk4",
+          "inventoryId": "inv-1793162292351-ecof",
           "name": "Curry Gravies & Onions",
           "quantity": 0.15,
           "unit": "KG",
           "category": "Produce & Veggies"
         },
         {
-          "inventoryId": "inv-1792671646402-dw7q",
+          "inventoryId": "inv-1793120560791-omvs",
           "name": "Cooking Oil",
           "quantity": 0.04,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735772965-yb1q",
+          "inventoryId": "inv-1793120690207-pc2g",
           "name": "Curry Spices",
           "quantity": 0.02,
           "unit": "KG",
@@ -2120,21 +2038,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735775747-w2b6",
+          "inventoryId": "inv-1793120968171-wesx",
           "name": "Spiced Buttermilk (Chaas) Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2158,21 +2076,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735768681-z0p1",
+          "inventoryId": "inv-1793120954530-7i4b",
           "name": "Ice cream Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "Dairy & Eggs"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2196,21 +2114,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735777281-yfdx",
+          "inventoryId": "inv-1793120933929-y268",
           "name": "Gulab Jamun with Rabdi (2 Pcs) Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2234,21 +2152,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735776849-oaxy",
+          "inventoryId": "inv-1793120898222-x9kx",
           "name": "Royal Shahi Tukda Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2272,21 +2190,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735776315-8r3h",
+          "inventoryId": "inv-1793120868595-jo8u",
           "name": "Matka Kulfi Falooda Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2310,21 +2228,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735773917-crpg",
+          "inventoryId": "inv-1793120851835-x1uf",
           "name": "Fluffy Golden Pancakes Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -2348,21 +2266,21 @@
       "isAvailable": true,
       "recipe": [
         {
-          "inventoryId": "inv-1792735774773-i8kx",
+          "inventoryId": "inv-1793120823256-1nio",
           "name": "Decadent Chocolate Cake Main Ingredient",
           "quantity": 0.2,
           "unit": "KG",
           "category": "General Supplies"
         },
         {
-          "inventoryId": "inv-1792735769204-ztan",
+          "inventoryId": "inv-1793120831904-1wzl",
           "name": "Cooking Oil / Butter",
           "quantity": 0.03,
           "unit": "L",
           "category": "Oils & Condiments"
         },
         {
-          "inventoryId": "inv-1792735769329-8qfk",
+          "inventoryId": "inv-1793120836113-irbg",
           "name": "Seasoning & Spices",
           "quantity": 0.01,
           "unit": "KG",
@@ -309301,6 +309219,50 @@
       ],
       "id": 1793108730874,
       "orderId": 1793108730874
+    },
+    {
+      "tableId": 4,
+      "tableName": "Table-4",
+      "tableNumber": "Table-4",
+      "serverName": "Karan D.",
+      "guests": 1,
+      "status": "Active",
+      "items": [
+        {
+          "name": "Chicken 65 Biryani",
+          "price": 360,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "received",
+          "kotSent": true
+        },
+        {
+          "name": "Hyderabadi Veg Dum Biryani",
+          "price": 240,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "received",
+          "kotSent": true
+        },
+        {
+          "name": "Chicken 65 Biryani",
+          "price": 360,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "received",
+          "kotSent": true
+        },
+        {
+          "name": "Hyderabadi Veg Dum Biryani",
+          "price": 240,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "received",
+          "kotSent": true
+        }
+      ],
+      "id": 1793120571085,
+      "orderId": 1793120571085
     }
   ],
   "avsr_auth_users_v1": [
@@ -309442,14 +309404,14 @@
     }
   ],
   "avsr_latest_kitchen_alert": {
-    "id": 1793110837134.7312,
-    "timestamp": "07:50 PM",
+    "id": 1793120625011.1646,
+    "timestamp": "10:33 PM",
     "read": false,
     "tableId": 4,
     "tableName": "Table-4",
     "type": "cooking_completed",
-    "title": "Food Ready to Serve!",
-    "message": "All dishes for Table-4 are cooked and ready to serve! ðŸ½ï¸"
+    "title": "🔔 Food Ready to Serve!",
+    "message": "All dishes for Table-4 are cooked and ready to serve! 🍽️"
   },
   "avsr_last_invoice_counter_v1": "214153",
   "avsr_daily_inv_cnt_12_Oct_2026": "1068",
@@ -309504,22 +309466,7 @@
   "avsr_daily_inv_cnt_21_Oct_2026": "46",
   "gourmet_pos_inventory_v1": [
     {
-      "id": "inv-1792735781520-8i1b",
-      "name": "Shawarma Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735781042-r0os",
+      "id": "inv-1793162301163-abz9",
       "name": "Crispy Corn Salt & Pepper Main Ingredient",
       "category": "Grains & Rice",
       "subcategory": "",
@@ -309531,310 +309478,10 @@
       "mrp": 25,
       "totalUsed": 0,
       "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
+      "lastRestocked": "28 Oct 2026"
     },
     {
-      "id": "inv-1792735780931-lmtc",
-      "name": "Apollo Fish Fry Main Ingredient",
-      "category": "Meat & Seafood",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 420,
-      "mrp": 420,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735780796-mrvo",
-      "name": "Fresh Garden Salad Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735780661-0mro",
-      "name": "Murgh Malai Kebab Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735780382-chds",
-      "name": "Mutton Seekh Kebab Main Ingredient",
-      "category": "Meat & Seafood",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 700,
-      "mrp": 700,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735780197-yebh",
-      "name": "Crispy French Fries Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735779970-q4gw",
-      "name": "Creamy Alfredo Pasta Main Ingredient",
-      "category": "Grains & Rice",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 180,
-      "mrp": 180,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735779788-nke9",
-      "name": "Dal Makhani Bukhara Main Ingredient",
-      "category": "Grains & Rice",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735779585-jxlk",
-      "name": "Mutton Rogan Josh Main Ingredient",
-      "category": "Meat & Seafood",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 700,
-      "mrp": 700,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735779337-6cop",
-      "name": "Butter Garlic Naan Main Ingredient",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 550,
-      "mrp": 550,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735779077-ghrf",
-      "name": "Cheese Garlic Naan Main Ingredient",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 420,
-      "mrp": 420,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735778632-a320",
-      "name": "Tandoori Roti (Butter) Main Ingredient",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 550,
-      "mrp": 550,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735778051-y9fw",
-      "name": "Royal Mango Lassi Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735777696-jzzd",
-      "name": "Sweet Punjabi Lassi Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735777281-yfdx",
-      "name": "Gulab Jamun with Rabdi (2 Pcs) Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735776849-oaxy",
-      "name": "Royal Shahi Tukda Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735776315-8r3h",
-      "name": "Matka Kulfi Falooda Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735775747-w2b6",
-      "name": "Spiced Buttermilk (Chaas) Main Ingredient",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 65,
-      "mrp": 65,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735774773-i8kx",
-      "name": "Decadent Chocolate Cake Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735773917-crpg",
-      "name": "Fluffy Golden Pancakes Main Ingredient",
-      "category": "General Supplies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735773570-7z66",
-      "name": "Garam Masala Spices",
-      "category": "Spices & Seasoning",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 250,
-      "mrp": 250,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735773479-wvx8",
+      "id": "inv-1793162298561-2hs9",
       "name": "Tomato & Onion Gravy",
       "category": "Produce & Veggies",
       "subcategory": "",
@@ -309846,40 +309493,10 @@
       "mrp": 40,
       "totalUsed": 0,
       "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
+      "lastRestocked": "28 Oct 2026"
     },
     {
-      "id": "inv-1792735773418-986i",
-      "name": "Cooking Butter & Cream",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 550,
-      "mrp": 550,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735772965-yb1q",
-      "name": "Curry Spices",
-      "category": "Spices & Seasoning",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 250,
-      "mrp": 250,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735772841-2zk4",
+      "id": "inv-1793162292351-ecof",
       "name": "Curry Gravies & Onions",
       "category": "Produce & Veggies",
       "subcategory": "",
@@ -309891,250 +309508,10 @@
       "mrp": 40,
       "totalUsed": 0,
       "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
+      "lastRestocked": "28 Oct 2026"
     },
     {
-      "id": "inv-1792735772170-3til",
-      "name": "Raw Chicken",
-      "category": "Meat & Seafood",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 280,
-      "mrp": 280,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735771444-c7f9",
-      "name": "Toppings (Veggies/Meat)",
-      "category": "Produce & Veggies",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 8,
-      "mrp": 8,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735771220-ztpc",
-      "name": "Pizza Marinara Sauce",
-      "category": "Oils & Condiments",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 220,
-      "mrp": 220,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735771075-z7m5",
-      "name": "Mozzarella Cheese",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 420,
-      "mrp": 420,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735770976-ifxr",
-      "name": "Pizza Base",
-      "category": "Bakery & Bread",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "PCS",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 180,
-      "mrp": 180,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735770777-ohtw",
-      "name": "Lettuce & Burger Sauce",
-      "category": "Oils & Condiments",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 220,
-      "mrp": 220,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735770551-1ctj",
-      "name": "Cheese Slice",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "PCS",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 420,
-      "mrp": 420,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735770329-ickl",
-      "name": "Burger Patty",
-      "category": "Meat & Seafood",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "PCS",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 100,
-      "mrp": 100,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735770147-1een",
-      "name": "Burger Buns",
-      "category": "Bakery & Bread",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "PCS",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 120,
-      "mrp": 120,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735769329-8qfk",
-      "name": "Seasoning & Spices",
-      "category": "Spices & Seasoning",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 250,
-      "mrp": 250,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735769204-ztan",
-      "name": "Cooking Oil / Butter",
-      "category": "Oils & Condiments",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "L",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 550,
-      "mrp": 550,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735768681-z0p1",
-      "name": "Ice cream Main Ingredient",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 280,
-      "mrp": 280,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735766932-8io6",
-      "name": "Sugar",
-      "category": "Grains & Rice",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 50,
-      "mrp": 50,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735766371-6bxb",
-      "name": "Fresh Milk",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "L",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 65,
-      "mrp": 65,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792735765169-ihed",
-      "name": "Coffee Powder / Beans",
-      "category": "Beverages & Bar",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 900,
-      "mrp": 900,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "23 Oct 2026"
-    },
-    {
-      "id": "inv-1792671646877-2u72",
-      "name": "Biryani Spices & Masala",
-      "category": "Spices & Seasoning",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 250,
-      "mrp": 250,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "22 Oct 2026"
-    },
-    {
-      "id": "inv-1792671646584-q6gd",
+      "id": "inv-1793162283989-vkb6",
       "name": "Onions & Mint",
       "category": "Produce & Veggies",
       "subcategory": "",
@@ -310146,40 +309523,10 @@
       "mrp": 40,
       "totalUsed": 0,
       "totalRestocked": 50,
-      "lastRestocked": "22 Oct 2026"
+      "lastRestocked": "28 Oct 2026"
     },
     {
-      "id": "inv-1792671646402-dw7q",
-      "name": "Cooking Oil",
-      "category": "Oils & Condiments",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "L",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 180,
-      "mrp": 180,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "22 Oct 2026"
-    },
-    {
-      "id": "inv-1792671646183-h25n",
-      "name": "Fresh Paneer",
-      "category": "Dairy & Eggs",
-      "subcategory": "",
-      "supplier": "Local Supplier",
-      "unit": "KG",
-      "stock": 50,
-      "minThreshold": 10,
-      "unitCost": 360,
-      "mrp": 360,
-      "totalUsed": 0,
-      "totalRestocked": 50,
-      "lastRestocked": "22 Oct 2026"
-    },
-    {
-      "id": "inv-1792671645921-c2eu",
+      "id": "inv-1793162279100-1ac0",
       "name": "Basmati Rice",
       "category": "Grains & Rice",
       "subcategory": "",
@@ -310191,7 +309538,904 @@
       "mrp": 120,
       "totalUsed": 0,
       "totalRestocked": 50,
-      "lastRestocked": "22 Oct 2026"
+      "lastRestocked": "28 Oct 2026"
+    },
+    {
+      "id": "recipe-ingredient-1793162268500-lxcwc",
+      "name": "Onions",
+      "category": "Vegetables & Fresh Produce",
+      "stock": 299.84,
+      "totalUsed": 0.16,
+      "totalRestocked": 300,
+      "minThreshold": 0,
+      "unit": "KG",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "recipe-ingredient-1793162268500-lxcwc",
+        "inv-1793161631278-84yg"
+      ],
+      "subcategory": "Onions",
+      "mrp": 40
+    },
+    {
+      "id": "inv-1793161645222-a8b0",
+      "name": "Table Salt & Rock Salt",
+      "category": "Spices & Seasonings",
+      "subcategory": "Table Salt & Rock Salt",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "unit": "KG",
+      "stock": 100,
+      "minThreshold": 10,
+      "unitCost": 25,
+      "mrp": 25,
+      "totalUsed": 0,
+      "totalRestocked": 100,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793161645222-a8b0"
+      ]
+    },
+    {
+      "id": "inv-1793161625338-m6gs",
+      "name": "Basmati Biryani Rice",
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "unit": "KG",
+      "stock": 99.6,
+      "minThreshold": 10,
+      "unitCost": 120,
+      "mrp": 120,
+      "totalUsed": 0.4,
+      "totalRestocked": 100,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793161625338-m6gs"
+      ]
+    },
+    {
+      "id": "inv-1793121022785-rxt7",
+      "name": "Shawarma Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121022785-rxt7"
+      ]
+    },
+    {
+      "id": "inv-1793121020334-9rpp",
+      "name": "Apollo Fish Fry Main Ingredient",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 420,
+      "mrp": 420,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121020334-9rpp"
+      ]
+    },
+    {
+      "id": "inv-1793121018469-icpk",
+      "name": "Fresh Garden Salad Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121018469-icpk"
+      ]
+    },
+    {
+      "id": "inv-1793121016234-onva",
+      "name": "Murgh Malai Kebab Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121016234-onva"
+      ]
+    },
+    {
+      "id": "inv-1793121013305-iuqp",
+      "name": "Crispy French Fries Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121013305-iuqp"
+      ]
+    },
+    {
+      "id": "inv-1793121009724-6via",
+      "name": "Creamy Alfredo Pasta Main Ingredient",
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 180,
+      "mrp": 180,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121009724-6via"
+      ]
+    },
+    {
+      "id": "inv-1793121006168-g1lo",
+      "name": "Dal Makhani Bukhara Main Ingredient",
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121006168-g1lo"
+      ]
+    },
+    {
+      "id": "inv-1793121001945-2ii1",
+      "name": "Mutton Rogan Josh Main Ingredient",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 700,
+      "mrp": 700,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793121001945-2ii1"
+      ]
+    },
+    {
+      "id": "inv-1793120997618-afil",
+      "name": "Butter Garlic Naan Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120997618-afil"
+      ]
+    },
+    {
+      "id": "inv-1793120992221-o2vi",
+      "name": "Cheese Garlic Naan Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 420,
+      "mrp": 420,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120992221-o2vi"
+      ]
+    },
+    {
+      "id": "inv-1793120987201-ih6p",
+      "name": "Tandoori Roti (Butter) Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120987201-ih6p"
+      ]
+    },
+    {
+      "id": "inv-1793120982727-74qd",
+      "name": "Royal Mango Lassi Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120982727-74qd"
+      ]
+    },
+    {
+      "id": "inv-1793120976368-wzsl",
+      "name": "Sweet Punjabi Lassi Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120976368-wzsl"
+      ]
+    },
+    {
+      "id": "inv-1793120968171-wesx",
+      "name": "Spiced Buttermilk (Chaas) Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 65,
+      "mrp": 65,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120968171-wesx"
+      ]
+    },
+    {
+      "id": "inv-1793120954530-7i4b",
+      "name": "Ice cream Main Ingredient",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 280,
+      "mrp": 280,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120954530-7i4b"
+      ]
+    },
+    {
+      "id": "inv-1793120933929-y268",
+      "name": "Gulab Jamun with Rabdi (2 Pcs) Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120933929-y268"
+      ]
+    },
+    {
+      "id": "inv-1793120898222-x9kx",
+      "name": "Royal Shahi Tukda Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120898222-x9kx"
+      ]
+    },
+    {
+      "id": "inv-1793120868595-jo8u",
+      "name": "Matka Kulfi Falooda Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120868595-jo8u"
+      ]
+    },
+    {
+      "id": "inv-1793120858416-5rmw",
+      "name": "Mutton Seekh Kebab Main Ingredient",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 700,
+      "mrp": 700,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120858416-5rmw"
+      ]
+    },
+    {
+      "id": "inv-1793120851835-x1uf",
+      "name": "Fluffy Golden Pancakes Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120851835-x1uf"
+      ]
+    },
+    {
+      "id": "inv-1793120850537-ju1i",
+      "name": "Sugar",
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 50,
+      "mrp": 50,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120850537-ju1i"
+      ]
+    },
+    {
+      "id": "inv-1793120845764-edv1",
+      "name": "Fresh Milk",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "L",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 65,
+      "mrp": 65,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120845764-edv1"
+      ]
+    },
+    {
+      "id": "inv-1793120840336-axpc",
+      "name": "Coffee Powder / Beans",
+      "category": "Beverages & Bar",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 900,
+      "mrp": 900,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120840336-axpc"
+      ]
+    },
+    {
+      "id": "inv-1793120836113-irbg",
+      "name": "Seasoning & Spices",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120836113-irbg"
+      ]
+    },
+    {
+      "id": "inv-1793120831904-1wzl",
+      "name": "Cooking Oil / Butter",
+      "category": "Oils & Condiments",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "L",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120831904-1wzl"
+      ]
+    },
+    {
+      "id": "inv-1793120823256-1nio",
+      "name": "Decadent Chocolate Cake Main Ingredient",
+      "category": "General Supplies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120823256-1nio"
+      ]
+    },
+    {
+      "id": "inv-1793120816048-t7a6",
+      "name": "Toppings (Veggies/Meat)",
+      "category": "Produce & Veggies",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 8,
+      "mrp": 8,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120816048-t7a6"
+      ]
+    },
+    {
+      "id": "inv-1793120810258-b3r6",
+      "name": "Pizza Marinara Sauce",
+      "category": "Oils & Condiments",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 220,
+      "mrp": 220,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120810258-b3r6"
+      ]
+    },
+    {
+      "id": "inv-1793120805723-3x4o",
+      "name": "Mozzarella Cheese",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 420,
+      "mrp": 420,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120805723-3x4o"
+      ]
+    },
+    {
+      "id": "inv-1793120800056-v6dj",
+      "name": "Pizza Base",
+      "category": "Bakery & Bread",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "PCS",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 180,
+      "mrp": 180,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120800056-v6dj"
+      ]
+    },
+    {
+      "id": "inv-1793120795692-ogo9",
+      "name": "Lettuce & Burger Sauce",
+      "category": "Oils & Condiments",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 220,
+      "mrp": 220,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120795692-ogo9"
+      ]
+    },
+    {
+      "id": "inv-1793120790169-q13p",
+      "name": "Cheese Slice",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "PCS",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 420,
+      "mrp": 420,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120790169-q13p"
+      ]
+    },
+    {
+      "id": "inv-1793120785116-96go",
+      "name": "Burger Patty",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "PCS",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 100,
+      "mrp": 100,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120785116-96go"
+      ]
+    },
+    {
+      "id": "inv-1793120779417-orj5",
+      "name": "Burger Buns",
+      "category": "Bakery & Bread",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "PCS",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 120,
+      "mrp": 120,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120779417-orj5"
+      ]
+    },
+    {
+      "id": "inv-1793120769779-e8na",
+      "name": "Garam Masala Spices",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120769779-e8na"
+      ]
+    },
+    {
+      "id": "inv-1793120734455-z1eu",
+      "name": "Cooking Butter & Cream",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 550,
+      "mrp": 550,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120734455-z1eu"
+      ]
+    },
+    {
+      "id": "inv-1793120708013-jge5",
+      "name": "Fresh Paneer",
+      "category": "Dairy & Eggs",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 360,
+      "mrp": 360,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120708013-jge5"
+      ]
+    },
+    {
+      "id": "inv-1793120690207-pc2g",
+      "name": "Curry Spices",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "associatedIds": [
+        "inv-1793120690207-pc2g"
+      ]
+    },
+    {
+      "id": "inv-1793120590518-2jfu",
+      "name": "Biryani Spices & Masala",
+      "category": "Spices & Seasoning",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 49.96,
+      "minThreshold": 10,
+      "unitCost": 250,
+      "mrp": 250,
+      "totalUsed": 0.04,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "currentStock": 49.96,
+      "associatedIds": [
+        "inv-1793120590518-2jfu"
+      ]
+    },
+    {
+      "id": "inv-1793120560791-omvs",
+      "name": "Cooking Oil",
+      "category": "Oils & Condiments",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "L",
+      "stock": 49.92,
+      "minThreshold": 10,
+      "unitCost": 180,
+      "mrp": 180,
+      "totalUsed": 0.08,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "currentStock": 49.92,
+      "associatedIds": [
+        "inv-1793120560791-omvs"
+      ]
+    },
+    {
+      "id": "inv-1793120538894-ng3g",
+      "name": "Raw Chicken",
+      "category": "Meat & Seafood",
+      "subcategory": "General Supplies",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 49.75,
+      "minThreshold": 10,
+      "unitCost": 280,
+      "mrp": 280,
+      "totalUsed": 0.25,
+      "totalRestocked": 50,
+      "lastRestocked": "27 Oct 2026",
+      "currentStock": 49.75,
+      "associatedIds": [
+        "inv-1793120538894-ng3g"
+      ]
+    },
+    {
+      "id": "7",
+      "name": "Alphonso Mango Pulp Tin",
+      "unit": "pack",
+      "stock": 25,
+      "minThreshold": 5,
+      "mrp": 180,
+      "associatedIds": [
+        "7"
+      ],
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "totalUsed": 0,
+      "totalRestocked": 0,
+      "lastRestocked": "Not restocked"
+    },
+    {
+      "id": "6",
+      "name": "Fresh Curd (Dahi)",
+      "unit": "KG",
+      "stock": 30,
+      "minThreshold": 5,
+      "mrp": 65,
+      "associatedIds": [
+        "6"
+      ],
+      "category": "Dairy & Cheeses",
+      "subcategory": "Fresh Curd (Dahi)",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "totalUsed": 0,
+      "totalRestocked": 0,
+      "lastRestocked": "Not restocked"
+    },
+    {
+      "id": "5",
+      "name": "Amul Butter Blocks",
+      "unit": "kg",
+      "stock": 18.2,
+      "minThreshold": 5,
+      "mrp": 480,
+      "associatedIds": [
+        "5"
+      ],
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "totalUsed": 0,
+      "totalRestocked": 0,
+      "lastRestocked": "Not restocked"
+    },
+    {
+      "id": "3",
+      "name": "Fresh Goat Meat (Mutton)",
+      "unit": "kg",
+      "stock": 35,
+      "minThreshold": 5,
+      "mrp": 750,
+      "associatedIds": [
+        "3"
+      ],
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "totalUsed": 0,
+      "totalRestocked": 0,
+      "lastRestocked": "Not restocked"
+    },
+    {
+      "id": "2",
+      "name": "Fresh Boneless Chicken",
+      "unit": "kg",
+      "stock": 45,
+      "minThreshold": 5,
+      "mrp": 240,
+      "associatedIds": [
+        "2"
+      ],
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "totalUsed": 0,
+      "totalRestocked": 0,
+      "lastRestocked": "Not restocked"
+    },
+    {
+      "id": "1",
+      "name": "Fresh Malai Paneer",
+      "unit": "kg",
+      "stock": 24.5,
+      "minThreshold": 5,
+      "mrp": 320,
+      "associatedIds": [
+        "1"
+      ],
+      "category": "Grains & Rice",
+      "subcategory": "Basmati Biryani Rice",
+      "supplier": "Metro Cash & Carry Wholesale",
+      "totalUsed": 0,
+      "totalRestocked": 0,
+      "lastRestocked": "Not restocked"
     }
   ],
   "avsr_daily_inv_cnt_23_Oct_2026": "507",
@@ -310261,5 +310505,5 @@
     }
   },
   "avsr_daily_inv_cnt_26_Oct_2026": "217",
-  "avsr_daily_inv_cnt_27_Oct_2026": "4"
+  "avsr_daily_inv_cnt_27_Oct_2026": "3"
 }

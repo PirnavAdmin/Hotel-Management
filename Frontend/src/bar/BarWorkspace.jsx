@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight, Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package, Pencil, Plus, Printer, Receipt, RefreshCw, Search, SquarePen, Star, Trash2, Wine, X,
+  Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
+  Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
+  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
 } from "lucide-react";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+
 import { formatCurrency } from "../utils/formatCurrency";
 import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
+import { BAR_DRINKS } from "../data/barDrinksMockData";
 import { BarKOTView } from "./BarKOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
 import "./BarWorkspace.css";
@@ -1234,7 +1237,6 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
       <section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-form-title">
         <header className="bar-modal-head">
           <div>
-            <span className="bar-kicker">DEMO DATA • NOT SAVED TO SERVER</span>
             <h2 id="bar-form-title">{initial ? "Edit" : "Add"} {kind === "drink" ? "Drink" : kind === "table" ? "Bar Table" : kind === "staff" ? "Bar Staff Member" : "Bar Order"}</h2>
           </div>
           <button className="bar-icon-button" aria-label="Close" onClick={onClose} type="button"><X size={18} /></button>
@@ -1474,6 +1476,10 @@ function getDrinkIcon(name = "", category = "") {
 
 function BarDrinksMenu({
   drinks = [],
+  onAddDrink,
+  onUpdateDrink,
+  onDeleteDrink,
+  onToggleDrinkAvailability,
   onAddMenuItem,
   onUpdateMenuItem,
   onDeleteMenuItem,
@@ -1485,7 +1491,6 @@ function BarDrinksMenu({
     category: "",
     drinkType: "",
     availability: "",
-    special: "",
   });
   const [menuPage, setMenuPage] = useState(1);
   const [menuPageSize, setMenuPageSize] = useState(6);
@@ -1504,9 +1509,14 @@ function BarDrinksMenu({
     abv: "",
     isVeg: false,
     isChefSpecial: false,
+    prepTime: "15 min",
+    measure: "30 ml (Single Peg)",
+    customMeasure: "",
+    drinkType: "Alcoholic",
+    abv: "40",
     description: "",
     image: "",
-    isAvailable: true,
+    isAvailable: "Available",
   });
 
   const categoryOptions = useMemo(() => {
@@ -1520,6 +1530,17 @@ function BarDrinksMenu({
       }
     });
     return Array.from(map.values());
+  }, [drinks]);
+
+  const measureOptions = useMemo(() => {
+    const list = [...BAR_SERVING_MEASURES];
+    drinks.forEach((d) => {
+      const msr = String(d.measure || d.servingMeasure || "").trim();
+      if (msr && !list.some((m) => m.toLowerCase() === msr.toLowerCase())) {
+        list.push(msr);
+      }
+    });
+    return list;
   }, [drinks]);
 
   const filteredDrinks = useMemo(() => {
@@ -1545,18 +1566,11 @@ function BarDrinksMenu({
         !menuFilters.availability ||
         (item.isAvailable !== false && item.isAvailable !== "Unavailable") ===
           (menuFilters.availability === "available");
-
-      const matchesSpecial =
-        !menuFilters.special ||
-        Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) ===
-          (menuFilters.special === "special");
-
       return (
         matchesSearch &&
         matchesCategory &&
         matchesDrinkType &&
-        matchesAvailability &&
-        matchesSpecial
+        matchesAvailability
       );
     });
   }, [drinks, searchFilter, menuFilters]);
@@ -1569,35 +1583,42 @@ function BarDrinksMenu({
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
-      const isKnownCategory = categoryOptions.some(
-        (opt) => opt.value.toLowerCase() === String(item.category || "").toLowerCase()
+      const cat = String(item.category || "").trim();
+      const isKnownCat = BAR_CATEGORIES.some(
+        (c) => c.toLowerCase() === cat.toLowerCase()
       );
-      setIsCustomCategory(!isKnownCategory && Boolean(item.category));
+      const isCustomCat = !isKnownCat && Boolean(cat);
+      setIsCustomCategory(isCustomCat);
 
+      const msr = String(item.measure || item.servingMeasure || "").trim();
       const isKnownMeasure = BAR_SERVING_MEASURES.some(
-        (m) => m.toLowerCase() === String(item.measure || item.servingMeasure || "").toLowerCase()
+        (m) => m.toLowerCase() === msr.toLowerCase()
       );
-      const initialMeasure = item.measure || item.servingMeasure || "Glass (250 ml)";
-      setIsCustomMeasure(!isKnownMeasure && Boolean(item.measure || item.servingMeasure));
+      const isCustomMsr = !isKnownMeasure && Boolean(msr);
+      setIsCustomMeasure(isCustomMsr);
 
-      const isAlcoholic = item.drinkType
-        ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
-        : (!item.isVeg || Boolean(item.abv) || Boolean(item.alcoholPct));
+      const isSpecial = Boolean(
+        item.isChefSpecial ||
+        item.isChefsSpecial ||
+        item.isSpecial ||
+        item.isBartenderSpecial
+      );
 
       setItemForm({
-        name: item.name || item.dishName || item.drinkName || "",
-        category: isKnownCategory ? (item.category || "Cocktails") : "__custom__",
-        customCategory: isKnownCategory ? "" : (item.category || ""),
-        price: item.price !== undefined && item.price !== null ? String(item.price) : (item.sellingPrice ? String(item.sellingPrice) : ""),
-        drinkType: isAlcoholic ? "Alcoholic" : "Non-Alcoholic",
-        measure: isKnownMeasure ? initialMeasure : "__custom__",
-        customMeasure: isKnownMeasure ? "" : initialMeasure,
-        abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : (item.alcoholPct !== undefined && item.alcoholPct !== null ? String(item.alcoholPct) : ""),
-        isVeg: !isAlcoholic,
-        isChefSpecial: Boolean(item.isChefSpecial || item.isChefsSpecial || item.isSpecial),
-        description: item.description || item.shortDescription || "",
+        name: item.name || "",
+        category: isCustomCat ? "__custom__" : (cat || "Cocktails"),
+        customCategory: isCustomCat ? cat : "",
+        price: item.price !== undefined && item.price !== null ? String(item.price) : "",
+        isVeg: Boolean(item.isVeg),
+        isChefSpecial: isSpecial,
+        prepTime: item.prepTime || "15 min",
+        measure: isCustomMsr ? "__custom__" : (msr || "30 ml (Single Peg)"),
+        customMeasure: isCustomMsr ? msr : "",
+        drinkType: item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic"),
+        abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : "",
+        description: item.description || "",
         image: item.image || item.imageUrl || "",
-        isAvailable: item.isAvailable !== false && item.isAvailable !== "Unavailable",
+        isAvailable: item.isAvailable === false || item.isAvailable === "Unavailable" ? "Unavailable" : "Available",
       });
     } else {
       setEditingItem(null);
@@ -1608,15 +1629,18 @@ function BarDrinksMenu({
         category: "Cocktails",
         customCategory: "",
         price: "",
-        drinkType: "Alcoholic",
-        measure: "Glass (250 ml)",
+        isVeg: false,
+        isChefSpecial: false,
+        prepTime: "15 min",
+        measure: "30 ml (Single Peg)",
         customMeasure: "",
-        abv: "",
+        drinkType: "Alcoholic",
+        abv: "40",
         isVeg: false,
         isChefSpecial: false,
         description: "",
         image: "",
-        isAvailable: true,
+        isAvailable: "Available",
       });
     }
     setIsItemModalOpen(true);
@@ -1633,44 +1657,57 @@ function BarDrinksMenu({
       return;
     }
 
-    const finalCategory =
-      itemForm.category === "__custom__"
-        ? (itemForm.customCategory.trim() || "Cocktails")
-        : (itemForm.category || "Cocktails");
+    // Resolve Category: custom input or dropdown selection
+    let finalCategory = "Cocktails";
+    if (isCustomCategory || itemForm.category === "__custom__") {
+      finalCategory = String(itemForm.customCategory || "").trim();
+      if (!finalCategory) {
+        setToast?.("Please enter a custom category name.");
+        return;
+      }
+    } else {
+      finalCategory = String(itemForm.category || "").trim() || "Cocktails";
+    }
 
-    const finalMeasure =
-      itemForm.measure === "__custom__"
-        ? (itemForm.customMeasure.trim() || "Glass (250 ml)")
-        : (itemForm.measure || "Glass (250 ml)");
+    // Resolve Serving Measure: custom input or dropdown selection
+    let finalMeasure = "30 ml (Single Peg)";
+    if (isCustomMeasure || itemForm.measure === "__custom__") {
+      finalMeasure = String(itemForm.customMeasure || "").trim();
+      if (!finalMeasure) {
+        setToast?.("Please enter a custom serving measure / volume.");
+        return;
+      }
+    } else {
+      finalMeasure = String(itemForm.measure || "").trim() || "30 ml (Single Peg)";
+    }
 
-    const isAlcoholic = itemForm.drinkType === "Alcoholic";
+    const isSpecial = Boolean(itemForm.isChefSpecial);
 
     const payload = {
       ...(editingItem || {}),
-      id: editingItem?.id || ("m-" + Date.now()),
+      id: editingItem?.id || `DR-${Date.now()}`,
       name: itemForm.name.trim(),
       dishName: itemForm.name.trim(),
       drinkName: itemForm.name.trim(),
       category: finalCategory,
       price: parseFloat(itemForm.price || 0),
-      sellingPrice: parseFloat(itemForm.price || 0),
-      drinkType: isAlcoholic ? "Alcoholic" : "Non-Alcoholic",
+      isVeg: Boolean(itemForm.isVeg),
+      dietaryType: itemForm.drinkType === "Non-Alcoholic" ? "VEG" : "NON-VEG",
+      isChefSpecial: isSpecial,
+      isChefsSpecial: isSpecial,
+      isSpecial: isSpecial,
+      isBartenderSpecial: isSpecial,
+      prepTime: itemForm.prepTime || "15 min",
+      prepTimeMinutes: parseInt(itemForm.prepTime, 10) || 15,
       measure: finalMeasure,
       servingMeasure: finalMeasure,
-      prepTime: finalMeasure,
-      isVeg: !isAlcoholic,
-      dietaryType: isAlcoholic ? "NON-VEG" : "VEG",
+      drinkType: itemForm.drinkType || (itemForm.abv ? "Alcoholic" : itemForm.isVeg ? "Non-Alcoholic" : "Alcoholic"),
       abv: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
-      alcoholPct: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
-      alcoholContent: itemForm.abv !== "" ? Number(itemForm.abv) : undefined,
-      isChefSpecial: Boolean(itemForm.isChefSpecial),
-      isChefsSpecial: Boolean(itemForm.isChefSpecial),
-      isSpecial: Boolean(itemForm.isChefSpecial),
       description: itemForm.description || "",
       shortDescription: itemForm.description || "",
       image: itemForm.image || "",
       imageUrl: itemForm.image || "",
-      isAvailable: itemForm.isAvailable !== false,
+      isAvailable: itemForm.isAvailable !== false && itemForm.isAvailable !== "Unavailable",
       isBarItem: true,
       isBarDrink: true,
       isBeverage: true,
@@ -1678,31 +1715,37 @@ function BarDrinksMenu({
 
     console.info("[Bar Drinks] Saving drink item...", payload);
     try {
-      const result = editingItem
-        ? await onUpdateMenuItem?.(payload)
-        : await onAddMenuItem?.(payload);
-      if (result === false || result?.success === false) {
-        setToast?.(result?.error || "Could not save drink to menu.");
-        return;
+      if (editingItem) {
+        if (onUpdateDrink) onUpdateDrink(payload);
+        else if (onUpdateMenuItem) await onUpdateMenuItem(payload);
+      } else {
+        if (onAddDrink) onAddDrink(payload);
+        else if (onAddMenuItem) await onAddMenuItem(payload);
       }
-      setToast?.('Drink "' + payload.name + '" ' + (editingItem ? "updated" : "added") + " successfully.");
       setIsItemModalOpen(false);
     } catch (err) {
       setToast?.(err?.message || "Could not save drink item.");
     }
   };
 
-  const handleToggleAvailability = (item) => {
+    const handleToggleAvailability = (item) => {
     const isAvail = item.isAvailable !== false && item.isAvailable !== "Unavailable";
     console.info("[Bar Drinks] Toggling availability for:", item.name, !isAvail);
-    onSetMenuAvailability?.(item.id, !isAvail);
+    if (onToggleDrinkAvailability) {
+      onToggleDrinkAvailability(item.id, !isAvail);
+    } else if (onSetMenuAvailability) {
+      onSetMenuAvailability(item.id, !isAvail);
+    }
   };
 
   const handleDeleteItem = (item) => {
     if (!window.confirm('Are you sure you want to delete "' + item.name + '" from the drinks menu?')) return;
     console.info("[Bar Drinks] Deleting drink item:", item.id);
-    onDeleteMenuItem?.(item.id);
-    setToast?.('Drink "' + item.name + '" deleted.');
+    if (onDeleteDrink) {
+      onDeleteDrink(item.id);
+    } else if (onDeleteMenuItem) {
+      onDeleteMenuItem(item.id);
+    }
   };
 
   return (
@@ -1774,7 +1817,7 @@ function BarDrinksMenu({
                 margin: "2px 0 0 0",
               }}
             >
-              Manage bar beverages, cocktails, spirits, beers and drink pricing
+              Manage your bar drinks, categories and pricing
             </p>
           </div>
         </div>
@@ -1904,26 +1947,12 @@ function BarDrinksMenu({
           </select>
         </label>
 
-        <label className="menu-filter-field">
-          <span>Special</span>          <select
-            value={menuFilters.special}
-            onChange={(e) => {
-              setMenuFilters((prev) => ({ ...prev, special: e.target.value }));
-              setMenuPage(1);
-            }}
-          >
-            <option value="">All</option>
-            <option value="special">Special</option>
-            <option value="regular">Regular</option>
-          </select>
-        </label>
-
         <button
           type="button"
           className="menu-filter-clear"
           onClick={() => {
             setSearchFilter("");
-            setMenuFilters({ category: "", drinkType: "", availability: "", special: "" });
+            setMenuFilters({ category: "", drinkType: "", availability: "" });
             setMenuPage(1);
           }}
           style={{
@@ -1948,7 +1977,7 @@ function BarDrinksMenu({
         <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
           <thead>
             <tr style={{ borderBottom: "1.5px solid var(--border-subtle)" }}>
-              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "38%" }}>Drink Name</th>
+              <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "40%" }}>Drink Name</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Category</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "16%" }}>Drink Type</th>
               <th style={{ padding: "0.6rem 0.85rem", color: "var(--text-dim)", fontSize: "0.78rem", fontWeight: 700, width: "14%" }}>Price (₹)</th>
@@ -2008,18 +2037,39 @@ function BarDrinksMenu({
                               gap: "6px",
                             }}
                           >
-                            <span>{item.name || item.dishName || item.drinkName}</span>
-                            {isSpecial && (
-                              <Star
-                                size={14}
-                                fill="#f59e0b"
-                                color="#f59e0b"
-                                title="Special Drink"
+                            <span>{item.name}</span>
+                            {Boolean(
+                              item.isChefSpecial ||
+                              item.isChefsSpecial ||
+                              item.isSpecial ||
+                              item.isBartenderSpecial
+                            ) && (
+                              <span
+                                title="Bartender's Special"
                                 style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "3px",
+                                  background: "rgba(245, 158, 11, 0.15)",
+                                  border: "1px solid rgba(245, 158, 11, 0.35)",
+                                  color: "#f59e0b",
+                                  borderRadius: "12px",
+                                  padding: "1px 7px",
+                                  fontSize: "0.68rem",
+                                  fontWeight: 800,
                                   flexShrink: 0,
-                                  filter: "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
                                 }}
-                              />
+                              >
+                                <Star
+                                  size={11}
+                                  fill="#f59e0b"
+                                  color="#f59e0b"
+                                  style={{
+                                    filter: "drop-shadow(0 0 2px rgba(245, 158, 11, 0.5))",
+                                  }}
+                                />
+                                <span>Special</span>
+                              </span>
                             )}
                           </div>
                           <div
@@ -2034,7 +2084,12 @@ function BarDrinksMenu({
                               overflow: "hidden",
                             }}
                           >
-                            {(item.measure || item.servingMeasure || item.prepTime || "Glass (250 ml)") + " • " + (item.description || item.shortDescription || (item.abv ? (item.abv + "% ABV") : (isAlcoholic ? "Alcoholic" : "Non-Alcoholic")))}
+                            {(item.measure || item.servingMeasure) && (
+                              <span style={{ color: "var(--accent-amber-light)", fontWeight: 700 }}>
+                                {item.measure || item.servingMeasure} •{" "}
+                              </span>
+                            )}
+                            {item.prepTime || "15 min"} • {item.description || item.drinkType || ""}
                           </div>
                         </div>
                       </div>
@@ -2071,7 +2126,7 @@ function BarDrinksMenu({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          ALCOHOLIC 🍸
+                          ALCOHOLIC
                         </span>
                       ) : (
                         <span
@@ -2088,7 +2143,7 @@ function BarDrinksMenu({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          NON-ALCOHOLIC 🍹
+                          NON-ALCOHOLIC
                         </span>
                       )}
                     </td>
@@ -2300,7 +2355,7 @@ function BarDrinksMenu({
         </div>
       )}
 
-      {/* Modal: Add / Edit Drink - Drink Specialized Features */}
+      {/* Modal: Add / Edit Drink - Exactly Matching Requested Layout */}
       {isItemModalOpen && (
         <div
           style={{
@@ -2322,7 +2377,7 @@ function BarDrinksMenu({
               borderRadius: "var(--radius-lg)",
               boxShadow: "var(--shadow-lg)",
               width: "100%",
-              maxWidth: "580px",
+              maxWidth: "680px",
               maxHeight: "calc(100dvh - 2rem)",
               padding: "1.6rem",
               display: "flex",
@@ -2341,16 +2396,18 @@ function BarDrinksMenu({
                 paddingBottom: "0.85rem",
               }}
             >
-              <h3
-                style={{
-                  fontSize: "1.15rem",
-                  fontWeight: 800,
-                  color: "var(--text-main)",
-                  margin: 0,
-                }}
-              >
-                {editingItem ? "Edit Dish / Item" : "Add New Menu Item"}
-              </h3>
+              <div>
+                <h3
+                  style={{
+                    fontSize: "1.15rem",
+                    fontWeight: 800,
+                    color: "var(--text-main)",
+                    margin: "2px 0 0 0",
+                  }}
+                >
+                  {editingItem ? "Edit Drink" : "Add Drink"}
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsItemModalOpen(false)}
@@ -2371,40 +2428,6 @@ function BarDrinksMenu({
               </button>
             </div>
 
-            {/* Drink Name */}
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Dish Name <span style={{ color: "#ea580c" }}>*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Mojito / Whiskey Sour / Kingfisher Draught"                value={itemForm.name}
-                onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                }}
-              />
-            </div>
-
-            {/* Category & Price */}
             <div
               style={{
                 display: "grid",
@@ -2413,6 +2436,7 @@ function BarDrinksMenu({
                 alignItems: "start",
               }}
             >
+              {/* Row 1, Col 1: Drink Name */}
               <div>
                 <label
                   style={{
@@ -2423,19 +2447,14 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Category <span style={{ color: "#ea580c" }}>*</span>
+                  Drink Name <span style={{ color: "#ea580c" }}>*</span>
                 </label>
-                <select
-                  value={itemForm.category}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "__custom__") {
-                      setIsCustomCategory(true);
-                    } else {
-                      setIsCustomCategory(false);
-                    }
-                    setItemForm({ ...itemForm, category: val });
-                  }}
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Special Mojito / Blue Lagoon"
+                  value={itemForm.name}
+                  onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
                   style={{
                     width: "100%",
                     boxSizing: "border-box",
@@ -2448,38 +2467,11 @@ function BarDrinksMenu({
                     fontWeight: 600,
                     fontSize: "0.9rem",
                     outline: "none",
-                    cursor: "pointer",
                   }}
-                >
-                  {categoryOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                  <option value="__custom__">+ Custom Category</option>
-                </select>
-                {isCustomCategory && (
-                  <input
-                    type="text"
-                    placeholder="Type new category..."
-                    value={itemForm.customCategory}
-                    onChange={(e) => setItemForm({ ...itemForm, customCategory: e.target.value })}
-                    style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      marginTop: "6px",
-                      background: "var(--bg-tertiary)",
-                      border: "1.5px solid var(--border-subtle)",
-                      borderRadius: "8px",
-                      padding: "0.5rem 0.85rem",
-                      color: "var(--text-main)",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                    }}
-                  />
-                )}
+                />
               </div>
 
+              {/* Row 1, Col 2: Category * with + Custom button */}
               <div>
                 <label
                   style={{
@@ -2490,7 +2482,311 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Price in Rupees (₹) <span style={{ color: "#ea580c" }}>*</span>
+                  Category <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                {isCustomCategory ? (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Type custom category..."
+                      value={itemForm.customCategory}
+                      onChange={(e) => setItemForm({ ...itemForm, customCategory: e.target.value })}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        outline: "none",
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCategory(false);
+                        setItemForm((prev) => ({ ...prev, category: BAR_CATEGORIES[0] }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 10px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      List
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <select
+                      value={itemForm.category}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "__custom__") {
+                          setIsCustomCategory(true);
+                          setItemForm((prev) => ({ ...prev, customCategory: "" }));
+                        } else {
+                          setItemForm((prev) => ({ ...prev, category: val }));
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {categoryOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Category...</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCategory(true);
+                        setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "" }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 12px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      + Custom
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 2, Col 1: Drink Type */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Drink Type
+                </label>
+                <select
+                  value={itemForm.drinkType}
+                  onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="Alcoholic">Alcoholic</option>
+                  <option value="Non-Alcoholic">Non-Alcoholic</option>
+                </select>
+              </div>
+
+              {/* Row 2, Col 2: Alcohol Content (ABV %) */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Alcohol Content (ABV %)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="e.g. 40"
+                  disabled={itemForm.drinkType === "Non-Alcoholic"}
+                  value={itemForm.drinkType === "Non-Alcoholic" ? "" : itemForm.abv}
+                  onChange={(e) => setItemForm({ ...itemForm, abv: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    opacity: itemForm.drinkType === "Non-Alcoholic" ? 0.45 : 1,
+                  }}
+                />
+              </div>
+
+              {/* Row 3, Col 1: Serving Measure / Volume with + Custom button */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Serving Measure / Volume
+                </label>
+                {isCustomMeasure ? (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      placeholder="e.g. 45 ml, 500 ml Pitcher..."
+                      value={itemForm.customMeasure}
+                      onChange={(e) => setItemForm({ ...itemForm, customMeasure: e.target.value })}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        outline: "none",
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomMeasure(false);
+                        setItemForm((prev) => ({ ...prev, measure: BAR_SERVING_MEASURES[0] }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 10px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      List
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <select
+                      value={itemForm.measure}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "__custom__") {
+                          setIsCustomMeasure(true);
+                          setItemForm((prev) => ({ ...prev, customMeasure: "" }));
+                        } else {
+                          setItemForm((prev) => ({ ...prev, measure: val }));
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        height: "38px",
+                        boxSizing: "border-box",
+                        background: "var(--bg-tertiary)",
+                        border: "1.5px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "0 0.85rem",
+                        color: "var(--text-main)",
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <option value="">Select serving measure</option>
+                      {measureOptions.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Measure...</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomMeasure(true);
+                        setItemForm((prev) => ({ ...prev, measure: "__custom__", customMeasure: "" }));
+                      }}
+                      style={{
+                        height: "38px",
+                        padding: "0 12px",
+                        borderRadius: "8px",
+                        border: "1.5px solid var(--border-subtle)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      + Custom
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 3, Col 2: Selling Price (₹) * */}
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Selling Price (₹) <span style={{ color: "#ea580c" }}>*</span>
                 </label>
                 <input
                   type="number"
@@ -2515,17 +2811,8 @@ function BarDrinksMenu({
                   }}
                 />
               </div>
-            </div>
 
-            {/* Drink Type & Serving Measure */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "0.85rem",
-                alignItems: "start",
-              }}
-            >
+              {/* Row 4, Col 1: Availability */}
               <div>
                 <label
                   style={{
@@ -2536,15 +2823,15 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Drink Type <span style={{ color: "#ea580c" }}>*</span>
+                  Availability
                 </label>
                 <select
-                  value={itemForm.drinkType}
-                  onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value, isVeg: e.target.value === "Non-Alcoholic" })}
+                  value={itemForm.isAvailable}
+                  onChange={(e) => setItemForm({ ...itemForm, isAvailable: e.target.value })}
                   style={{
                     width: "100%",
-                    boxSizing: "border-box",
                     height: "38px",
+                    boxSizing: "border-box",
                     background: "var(--bg-tertiary)",
                     border: "1.5px solid var(--border-subtle)",
                     borderRadius: "8px",
@@ -2556,12 +2843,26 @@ function BarDrinksMenu({
                     cursor: "pointer",
                   }}
                 >
-                  <option value="Alcoholic">Alcoholic 🍸</option>
-                  <option value="Non-Alcoholic">Non-Alcoholic 🍹</option>
+                  <option value="Available">Available</option>
+                  <option value="Unavailable">Unavailable</option>
                 </select>
               </div>
 
-              <div>
+              {/* Row 4, Col 2: Bartender's Special */}
+              <div style={{ display: "flex", alignItems: "center", height: "100%", paddingTop: "20px" }}>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.84rem", fontWeight: 700, color: "var(--text-main)" }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(itemForm.isChefSpecial)}
+                    onChange={(e) => setItemForm({ ...itemForm, isChefSpecial: e.target.checked })}
+                    style={{ width: "16px", height: "16px", accentColor: "#f59e0b", cursor: "pointer" }}
+                  />
+                  <span>Mark as Bartender's Special ⭐</span>
+                </label>
+              </div>
+
+              {/* Row 5: Description (Full Width) */}
+              <div style={{ gridColumn: "1 / -1" }}>
                 <label
                   style={{
                     fontSize: "0.82rem",
@@ -2571,252 +2872,113 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Serving Measure / Volume
+                  Description
                 </label>
-                <select
-                  value={itemForm.measure}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "__custom__") {
-                      setIsCustomMeasure(true);
-                    } else {
-                      setIsCustomMeasure(false);
-                    }
-                    setItemForm({ ...itemForm, measure: val });
-                  }}
+                <textarea
+                  rows={2}
+                  placeholder="Short description of the drink..."
+                  value={itemForm.description}
+                  onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
                   style={{
                     width: "100%",
                     boxSizing: "border-box",
-                    height: "38px",
                     background: "var(--bg-tertiary)",
                     border: "1.5px solid var(--border-subtle)",
                     borderRadius: "8px",
-                    padding: "0 0.85rem",
+                    padding: "0.65rem 0.85rem",
                     color: "var(--text-main)",
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
+                    fontSize: "0.85rem",
                     outline: "none",
-                    cursor: "pointer",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              {/* Row 6: Choose Image (Full Width) */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
                   }}
                 >
-                  {BAR_SERVING_MEASURES.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                  <option value="__custom__">+ Custom Measure...</option>
-                </select>
-                {isCustomMeasure && (
-                  <input
-                    type="text"
-                    placeholder="e.g. 500 ml Stein / 100 ml Shot"
-                    value={itemForm.customMeasure}
-                    onChange={(e) => setItemForm({ ...itemForm, customMeasure: e.target.value })}
+                  Choose Image
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  {itemForm.image && (
+                    <img
+                      src={itemForm.image}
+                      alt="Drink preview"
+                      style={{
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "8px",
+                        objectFit: "cover",
+                        border: "1px solid var(--border-card)",
+                      }}
+                    />
+                  )}
+                  <label
                     style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      marginTop: "6px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      height: "36px",
+                      padding: "0 14px",
                       background: "var(--bg-tertiary)",
                       border: "1.5px solid var(--border-subtle)",
                       borderRadius: "8px",
-                      padding: "0.5rem 0.85rem",
                       color: "var(--text-main)",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Alcohol By Volume (ABV %) - shown when Alcoholic */}
-            {itemForm.drinkType === "Alcoholic" && (
-              <div>
-                <label
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    color: "var(--text-main)",
-                    display: "block",
-                    marginBottom: "5px",
-                  }}
-                >
-                  Alcohol By Volume (ABV %)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  placeholder="e.g. 5.0% for Beer, 42.8% for Whiskey"
-                  value={itemForm.abv}
-                  onChange={(e) => setItemForm({ ...itemForm, abv: e.target.value })}
-                  style={{
-                    width: "100%",
-                    height: "38px",
-                    boxSizing: "border-box",
-                    background: "var(--bg-tertiary)",
-                    border: "1.5px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0 0.85rem",
-                    color: "var(--text-main)",
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Choose Drink Image */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
-                <label
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    color: "var(--text-main)",
-                    margin: 0,
-                  }}
-                >
-                  Choose Drink Image (URL, Preset, or Upload)
-                </label>
-                <label
-                  style={{
-                    fontSize: "0.74rem",
-                    color: "var(--accent-amber-light)",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Browse File
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => setItemForm((current) => ({ ...current, image: String(reader.result || "") }));
-                      reader.readAsDataURL(file);
-                    }}
-                  />
-                </label>
-              </div>
-              <input
-                type="text"
-                placeholder="https://... or select a drink preset below"
-                value={itemForm.image}
-                onChange={(e) => setItemForm({ ...itemForm, image: e.target.value })}
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.6rem 0.85rem",
-                  color: "var(--text-main)",
-                  fontSize: "0.85rem",
-                  outline: "none",
-                  marginBottom: "6px",
-                }}
-              />
-              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                {[
-                  { label: "🍸 Mojito", url: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=400&q=80" },
-                  { label: "🍺 Beer", url: "https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=400&q=80" },
-                  { label: "🍷 Wine", url: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=400&q=80" },
-                  { label: "🥃 Whiskey", url: "https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=400&q=80" },
-                  { label: "🍹 Mocktail", url: "https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=400&q=80" },
-                  { label: "🥤 Lime Soda", url: "/assets/beverages/fresh-lime-soda.jpg" },
-                  { label: "🍉 Watermelon", url: "/assets/beverages/watermelon-juice.jpg" },
-                  { label: "☕ Coffee", url: "/assets/beverages/coffee.jpg" },
-                ].map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => setItemForm({ ...itemForm, image: preset.url })}
-                    style={{
-                      border: "1px solid var(--border-card)",
-                      background: itemForm.image === preset.url ? "rgba(245, 158, 11, 0.2)" : "var(--bg-tertiary)",
-                      color: itemForm.image === preset.url ? "var(--accent-amber-light)" : "var(--text-dim)",
-                      borderRadius: "6px",
-                      padding: "3px 8px",
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
                       cursor: "pointer",
                     }}
                   >
-                    {preset.label}
-                  </button>
-                ))}
+                    <Plus size={15} />
+                    <span>{itemForm.image ? "Change Image" : "+ Choose Image"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setItemForm((curr) => ({ ...curr, image: String(reader.result || "") }));
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  {itemForm.image && (
+                    <button
+                      type="button"
+                      onClick={() => setItemForm((curr) => ({ ...curr, image: "" }))}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--danger)",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✕ Remove
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Description */}
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Description
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Short description of the drink, ingredients, garnish, or aroma..."
-                value={itemForm.description}
-                onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-main)",
-                  fontSize: "0.85rem",
-                  outline: "none",
-                  resize: "vertical",
-                }}
-              />
-            </div>
-
-            {/* Special & Availability Checkboxes */}
-            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.82rem", color: "var(--text-main)", fontWeight: 600 }}>
-                <input
-                  type="checkbox"
-                  checked={itemForm.isChefSpecial}
-                  onChange={(e) => setItemForm({ ...itemForm, isChefSpecial: e.target.checked })}
-                />
-                <span>Bar Special Drink ⭐</span>
-              </label>
-
-              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.82rem", color: "var(--text-main)", fontWeight: 600 }}>
-                <input
-                  type="checkbox"
-                  checked={itemForm.isAvailable}
-                  onChange={(e) => setItemForm({ ...itemForm, isAvailable: e.target.checked })}
-                />
-                <span>Available for Ordering</span>
-              </label>
-            </div>
-
             {/* Modal Footer Buttons */}
-            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.6rem" }}>
               <button
                 type="button"
                 onClick={() => setIsItemModalOpen(false)}
                 style={{
-                  flex: 1,
-                  padding: "0.7rem",
+                  padding: "0.65rem 1.4rem",
                   background: "var(--bg-tertiary)",
                   border: "1.5px solid var(--border-subtle)",
                   color: "var(--text-main)",
@@ -2831,8 +2993,7 @@ function BarDrinksMenu({
               <button
                 type="submit"
                 style={{
-                  flex: 1,
-                  padding: "0.7rem",
+                  padding: "0.65rem 1.6rem",
                   background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                   border: "none",
                   color: "#ffffff",
@@ -2843,7 +3004,7 @@ function BarDrinksMenu({
                   boxShadow: "0 4px 12px rgba(245, 158, 11, 0.35)",
                 }}
               >
-                {editingItem ? "Update Drink" : "Add Drink"}
+                {editingItem ? "Save Drink Changes" : "Add Drink"}
               </button>
             </div>
           </form>
@@ -2922,7 +3083,93 @@ export function BarWorkspace({
   const route = activeTab || "bar-overview";
 
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const drinks = useMemo(() => (Array.isArray(menuItems) ? menuItems : []).filter((item) => isBeverageCategory(item.category ?? item.categoryName) || item.isBeverage || item.isBarDrink || item.category === "bar"), [menuItems]);
+  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v1";
+
+  // Dedicated bar drinks state - independent from Dine menu items
+  const [barDrinks, setBarDrinks] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_BAR_DRINKS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    // Initial default bar drinks: includes the user's added Mojito and standard bar drinks
+    return [
+      {
+        id: "DR-MOJITO",
+        name: "mojito",
+        category: "Cocktails",
+        price: 130,
+        isVeg: false,
+        drinkType: "Alcoholic",
+        prepTime: "15 min",
+        description: "Fresh mint, lime, white rum, and sparkling soda.",
+        isAvailable: true,
+        isBarDrink: true,
+      },
+      ...BAR_DRINKS.map((d) => ({
+        ...d,
+        isVeg: d.category === "Mocktails" || d.category === "Juices" || d.category === "Water" || d.category === "Soft Drinks",
+        drinkType: d.abv ? "Alcoholic" : "Non-Alcoholic",
+        isBarDrink: true,
+      })),
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
+    } catch {}
+  }, [barDrinks]);
+
+  // If mojito was previously pushed to Dine menuItems, remove it from dine
+  useEffect(() => {
+    const mojitoInDine = (Array.isArray(menuItems) ? menuItems : []).find(
+      (m) => String(m.name || m.dishName || "").trim().toLowerCase() === "mojito" || m.isBarDrink
+    );
+    if (mojitoInDine?.id && onDeleteMenuItem) {
+      onDeleteMenuItem(mojitoInDine.id);
+    }
+  }, [menuItems, onDeleteMenuItem]);
+
+  const handleAddDrink = (newDrink) => {
+    const item = {
+      ...newDrink,
+      id: newDrink.id || `DR-${Date.now()}`,
+      price: Number(newDrink.price || 0),
+      isBarDrink: true,
+      isAvailable: newDrink.isAvailable !== false,
+    };
+    setBarDrinks((prev) => [item, ...prev]);
+    setToast?.(`Drink "${item.name}" added to Bar Drinks Menu.`);
+    return true;
+  };
+
+  const handleUpdateDrink = (updatedDrink) => {
+    setBarDrinks((prev) =>
+      prev.map((d) =>
+        String(d.id) === String(updatedDrink.id) ? { ...d, ...updatedDrink, isBarDrink: true } : d
+      )
+    );
+    setToast?.(`Drink "${updatedDrink.name}" updated.`);
+    return true;
+  };
+
+  const handleDeleteDrink = (drinkId) => {
+    setBarDrinks((prev) => prev.filter((d) => String(d.id) !== String(drinkId)));
+    setToast?.("Drink deleted from Bar Drinks Menu.");
+    return true;
+  };
+
+  const handleToggleDrinkAvailability = (drinkId, newStatus) => {
+    setBarDrinks((prev) =>
+      prev.map((d) => (String(d.id) === String(drinkId) ? { ...d, isAvailable: newStatus } : d))
+    );
+    return true;
+  };
+
+  const drinks = barDrinks;
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
@@ -3639,7 +3886,7 @@ export function BarWorkspace({
             </button>
           </div>
         </div>
-      ) : (
+      ) : ["bar-drinks", "bar-tables"].includes(route) ? null : (
         <div className="bar-page-title">
           <div>
             <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
@@ -4258,7 +4505,18 @@ export function BarWorkspace({
         </section>
       </>}
 
-      {listPage}
+      {route === "bar-drinks" ? (
+        <BarDrinksMenu
+          drinks={barDrinks}
+          onAddDrink={handleAddDrink}
+          onUpdateDrink={handleUpdateDrink}
+          onDeleteDrink={handleDeleteDrink}
+          onToggleDrinkAvailability={handleToggleDrinkAvailability}
+          setToast={setToast}
+        />
+      ) : (
+        listPage
+      )}
 
       {route === "bar-kot" && <BarKOTView menuItems={menuItems} tables={tables} staffList={dineStaff} onItemsUpdated={onBarOrderItemStatusUpdated} />}
 

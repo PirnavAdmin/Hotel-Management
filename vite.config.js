@@ -1006,6 +1006,187 @@ function globalSyncPlugin() {
           );
         }
 
+        // REST API: /api/v1/invoices (GET, POST)
+        const invoiceByIdMatch = req.url.match(/^\/api\/v1\/invoices\/([^/?]+)$/i);
+        const invoiceByOrderMatch = req.url.match(/^\/api\/v1\/invoices\/by-order\/([^/?]+)$/i);
+        const invoicePaymentsMatch = req.url.match(/^\/api\/v1\/invoices\/([^/]+)\/payments$/i);
+
+        if (req.url.startsWith("/api/v1/invoices") && !invoiceByIdMatch && !invoiceByOrderMatch && !invoicePaymentsMatch && req.method === "GET") {
+          db = loadDb();
+          const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const customInvoices = db.invoices || db.gourmet_pos_invoices || [];
+
+          const mappedFromOrders = pastOrders.map((ord) => {
+            const subtotal = Number(ord.subtotal ?? ord.totalAmount ?? ord.total ?? 0);
+            const discountAmount = Number(ord.discountAmount ?? 0);
+            const taxableAmount = Number(ord.taxableAmount ?? Math.max(0, subtotal - discountAmount));
+            const taxAmount = Number(ord.taxAmount ?? 0);
+            const grandTotal = Number(ord.grandTotal ?? ord.total ?? (taxableAmount + taxAmount));
+            return {
+              id: ord.id || ord.orderId,
+              invoiceId: ord.id || ord.orderId,
+              orderId: ord.id || ord.orderId,
+              invoiceNumber: ord.invoiceNo || ord.invoiceNumber || `INV-${ord.id || Date.now()}`,
+              invoiceNo: ord.invoiceNo || ord.invoiceNumber || `INV-${ord.id || Date.now()}`,
+              tableName: ord.tableName || `Table-${ord.tableId || "1"}`,
+              tableId: ord.tableId,
+              serverName: ord.server || ord.serverName || "Staff",
+              server: ord.server || ord.serverName || "Staff",
+              status: ord.status || "Settled",
+              subtotal,
+              discountAmount,
+              discountPercent: Number(ord.discountPercent ?? ord.discount ?? 0),
+              taxableAmount,
+              taxAmount,
+              serviceChargeAmount: Number(ord.serviceChargeAmount ?? 0),
+              tipAmount: Number(ord.tipAmount ?? 0),
+              grandTotal,
+              totalAmount: grandTotal,
+              paidAmount: Number(ord.paidAmount ?? grandTotal),
+              paymentMethod: ord.paymentMethod || ord.paymentMode || "Cash",
+              payments: Array.isArray(ord.payments) && ord.payments.length ? ord.payments : [
+                {
+                  amount: Number(ord.paidAmount ?? grandTotal),
+                  paymentMode: ord.paymentMethod || ord.paymentMode || "Cash",
+                  paidAt: ord.settledAt || ord.createdAt || new Date().toISOString()
+                }
+              ],
+              items: ord.items || [],
+              createdAt: ord.settledAt || ord.createdAt || ord.orderTime || new Date().toISOString(),
+              settledAt: ord.settledAt || ord.createdAt || new Date().toISOString(),
+            };
+          });
+
+          const invoiceMap = new Map();
+          customInvoices.forEach((inv) => invoiceMap.set(String(inv.id || inv.invoiceNumber || inv.invoiceNo), inv));
+          mappedFromOrders.forEach((inv) => {
+            const key = String(inv.id || inv.invoiceNumber || inv.invoiceNo);
+            if (!invoiceMap.has(key)) {
+              invoiceMap.set(key, inv);
+            }
+          });
+
+          const invoices = Array.from(invoiceMap.values());
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              data: invoices,
+              invoices,
+              count: invoices.length,
+            })
+          );
+        }
+
+        if (invoiceByOrderMatch && req.method === "GET") {
+          const targetOrderId = decodeURIComponent(invoiceByOrderMatch[1]);
+          db = loadDb();
+          const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const matchedOrder = pastOrders.find((o) => String(o.id ?? o.orderId) === targetOrderId);
+          if (matchedOrder) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: matchedOrder, invoice: matchedOrder }));
+          }
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "Invoice not found for order" }));
+        }
+
+        if (invoiceByIdMatch && req.method === "GET") {
+          const targetId = decodeURIComponent(invoiceByIdMatch[1]);
+          db = loadDb();
+          const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const customInvoices = db.invoices || db.gourmet_pos_invoices || [];
+          const found = customInvoices.find((i) => String(i.id || i.invoiceId || i.invoiceNo) === targetId) ||
+            pastOrders.find((o) => String(o.id ?? o.orderId ?? o.invoiceNo) === targetId);
+          if (found) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: found, invoice: found }));
+          }
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "Invoice not found" }));
+        }
+
+        if ((req.url === "/api/v1/invoices" || req.url === "/api/v1/invoices/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = db.invoices || db.gourmet_pos_invoices || [];
+              const newInvoice = {
+                ...payload,
+                id: payload.id || `inv-${Date.now()}`,
+                invoiceNo: payload.invoiceNo || payload.invoiceNumber || `INV-${Date.now()}`,
+                createdAt: payload.createdAt || new Date().toISOString(),
+                status: payload.status || "PAID",
+              };
+              const updated = [newInvoice, ...existing];
+              db.gourmet_pos_invoices = updated;
+              db.invoices = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_invoices: updated });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: newInvoice, invoice: newInvoice }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: POST /api/v1/orders/:id/settle
+        const orderSettleMatch = req.url.match(/^\/api\/v1\/orders\/([^/]+)\/settle$/i);
+        if (orderSettleMatch && req.method === "POST") {
+          const targetOrderId = decodeURIComponent(orderSettleMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const orders = db.gourmet_pos_past_orders_v2_inr || [];
+              let updatedOrder = null;
+              const nextOrders = orders.map((ord) => {
+                if (String(ord.id ?? ord.orderId ?? "") === targetOrderId || String(ord.invoiceNo ?? "") === targetOrderId) {
+                  updatedOrder = {
+                    ...ord,
+                    status: "Settled",
+                    paymentMethod: payload.paymentMethod || ord.paymentMethod || "Cash",
+                    invoiceNo: payload.invoiceNumber || ord.invoiceNo,
+                    settledAt: new Date().toISOString(),
+                  };
+                  return updatedOrder;
+                }
+                return ord;
+              });
+
+              if (!updatedOrder) {
+                updatedOrder = {
+                  id: targetOrderId,
+                  orderId: targetOrderId,
+                  status: "Settled",
+                  paymentMethod: payload.paymentMethod || "Cash",
+                  invoiceNo: payload.invoiceNumber || `INV-${targetOrderId}`,
+                  settledAt: new Date().toISOString(),
+                };
+                nextOrders.unshift(updatedOrder);
+              }
+
+              db.gourmet_pos_past_orders_v2_inr = nextOrders;
+              saveDb(db);
+              broadcast({ gourmet_pos_past_orders_v2_inr: nextOrders });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: updatedOrder, order: updatedOrder }));
+            } catch (err) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
         // REST API: PATCH /api/v1/orders/:id/discount
         const discountRoute = req.url.match(/^\/api\/v1\/orders\/([^/]+)\/discount$/i);
         if (discountRoute && req.method === "PATCH") {
