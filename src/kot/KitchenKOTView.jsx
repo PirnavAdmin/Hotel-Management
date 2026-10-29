@@ -2236,6 +2236,7 @@ import {
   X,
   Users,
   ChevronDown,
+  ChevronRight,
   Sun,
   Moon,
 } from "lucide-react";
@@ -3749,17 +3750,17 @@ export function KitchenKOTView({
               </div>
             </div>
           ) : (
-            /* Cards Grid: 4 KOT Tickets per row */
+            /* Compact Cards Grid matching Image 2 UI */
             <div
               className="kot-cards-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns:
                   selectedTableFilter !== "all"
-                    ? "minmax(300px, 580px)"
-                    : "repeat(4, minmax(0, 1fr))",
-                gap: "0.65rem",
-                alignItems: "start",
+                    ? "minmax(200px, 320px)"
+                    : "repeat(auto-fill, minmax(170px, 1fr))",
+                gap: "0.85rem",
+                alignItems: "stretch",
                 justifyContent:
                   selectedTableFilter !== "all" ? "center" : "stretch",
               }}
@@ -3777,1144 +3778,344 @@ export function KitchenKOTView({
                   ? tbl.items.filter(isItemCompleted).length
                   : 0;
                 const totalCount = tbl.items ? tbl.items.length : 0;
+                const activeItems = Array.isArray(tbl.items)
+                  ? tbl.items.filter(
+                      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+                    )
+                  : [];
+                const totalQuantity = activeItems.reduce(
+                  (sum, item) => sum + (Number(item?.quantity) || 1),
+                  0
+                );
 
-                const delayMeta = getDelayMeta(tbl);
+                const cardBorderColor = allServed || tbl.isPaid
+                  ? "#10b981"
+                  : isCooking
+                    ? "#ea580c"
+                    : "rgba(245, 158, 11, 0.7)";
 
-                let headerBg = isLightTheme
-                  ? "#f8fafc"
-                  : "linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)";
-                let badgeText = "📥 ORDER RECEIVED";
-                let badgeColor = "var(--status-occupied)";
-                let badgeBg = "rgba(245, 158, 11, 0.18)";
-                let tableBadgeBg = "linear-gradient(135deg, #f59e0b, #d97706)";
+                const cardShadow = allServed || tbl.isPaid
+                  ? "0 4px 16px rgba(16, 185, 129, 0.2)"
+                  : isCooking
+                    ? "0 4px 16px rgba(234, 88, 12, 0.2)"
+                    : "0 4px 14px rgba(245, 158, 11, 0.16)";
 
-                if (tbl.isPaid) {
-                  badgeText = "💰 COMPLETED (PAID)";
-                  badgeColor = "var(--success)";
-                  badgeBg = "rgba(16, 185, 129, 0.2)";
-                  tableBadgeBg = "linear-gradient(135deg, #059669, #047857)";
-                } else if (allServed) {
-                  badgeText = "✅ PREPARATION COMPLETED";
-                  badgeColor = "var(--success)";
-                  badgeBg = "rgba(16, 185, 129, 0.18)";
-                  tableBadgeBg = "linear-gradient(135deg, #10b981, #059669)";
-                } else if (isCooking) {
-                  badgeText =
-                    preparedCount > 0
-                      ? `🔥 COOKING (${preparedCount}/${totalCount} PREPARED)`
-                      : "🔥 COOKING IN PROGRESS";
-                  badgeColor = "var(--accent-saffron)";
-                  badgeBg = "rgba(234, 88, 12, 0.18)";
-                  tableBadgeBg = "linear-gradient(135deg, #ea580c, #c2410c)";
-                } else {
-                  badgeText =
-                    preparedCount > 0
-                      ? `📥 ORDER RECEIVED (${preparedCount}/${totalCount} PREPARED)`
-                      : "📥 ORDER RECEIVED";
-                }
+                const statusDot = allServed || tbl.isPaid
+                  ? "var(--status-vacant, #10b981)"
+                  : isCooking
+                    ? "var(--accent-saffron, #ea580c)"
+                    : "var(--status-occupied, #f59e0b)";
 
-                if (delayMeta.isDelayed) {
-                  badgeText = `🔴 DELAYED ${delayMeta.deltaText}`;
-                  badgeColor = "var(--danger)";
-                  badgeBg = "rgba(239, 68, 68, 0.18)";
-                  tableBadgeBg = "linear-gradient(135deg, #ef4444, #b91c1c)";
-                } else if (delayMeta.isOnTime && tbl.cookingStartedAt) {
-                  badgeText = "🟢 ON TIME";
-                  badgeColor = "var(--success)";
-                  badgeBg = "rgba(34, 197, 94, 0.18)";
-                  tableBadgeBg = "linear-gradient(135deg, #22c55e, #16a34a)";
-                }
-
-                // Pre-calculate timestamps and stopped duration
-                const elapsedSec = getCookingElapsedSeconds(tbl);
-                const elapsedFormatted = formatElapsedTimer(elapsedSec);
-                const urgency = getTimerUrgencyColor(elapsedSec);
-
-                let stoppedDuration = tbl.completedDuration;
-                if (!stoppedDuration && tbl.completedAt) {
-                  stoppedDuration = formatElapsedTimer(
-                    parseTimeToSeconds(tbl.orderTime, tbl.completedAt),
-                  );
-                }
-                if (!stoppedDuration && completedTimers[tbl.id]) {
-                  stoppedDuration = completedTimers[tbl.id];
-                }
-                if (!stoppedDuration && completedTimers[`table-${tbl.id}`]) {
-                  stoppedDuration = completedTimers[`table-${tbl.id}`];
-                }
-                if (!stoppedDuration && completedTimers[tbl.uniqueKey]) {
-                  stoppedDuration = completedTimers[tbl.uniqueKey];
-                }
-
-                // Cooking started time display
-                let cookingStartedDisplay = tbl.cookingStartedAt;
-                if (!cookingStartedDisplay) {
-                  if (isCooking) {
-                    cookingStartedDisplay = tbl.orderTime || "Started";
-                  } else if (allServed || tbl.isPaid) {
-                    cookingStartedDisplay =
-                      tbl.cookingStartedAt || tbl.orderTime || "Done";
-                  } else {
-                    cookingStartedDisplay = "In Queue";
-                  }
-                }
-
-                // Completed time display
-                let completedTimeDisplay = tbl.completedAt || tbl.settledAt;
-                if (!completedTimeDisplay && (allServed || tbl.isPaid)) {
-                  completedTimeDisplay = "Ready";
-                }
-
-                const cardBorder =
-                  allServed || tbl.isPaid
-                    ? "2px solid #10b981"
+                const statusBadge = tbl.isPaid
+                  ? {
+                      text: "💰 Paid",
+                      color: "#10b981",
+                      bg: "rgba(16, 185, 129, 0.15)",
+                      border: "rgba(16, 185, 129, 0.3)",
+                    }
+                  : allServed
+                    ? {
+                        text: "🔔 Ready to Serve",
+                        color: "#10b981",
+                        bg: "rgba(16, 185, 129, 0.15)",
+                        border: "rgba(16, 185, 129, 0.3)",
+                      }
                     : isCooking
-                      ? "2px solid #ff7b00"
-                      : "2px solid #f59e0b";
+                      ? {
+                          text: `🔥 Cooking (${preparedCount}/${totalCount})`,
+                          color: "#ea580c",
+                          bg: "rgba(234, 88, 12, 0.15)",
+                          border: "rgba(234, 88, 12, 0.3)",
+                        }
+                      : {
+                          text: "📥 Order Received",
+                          color: "#f59e0b",
+                          bg: "rgba(245, 158, 11, 0.15)",
+                          border: "rgba(245, 158, 11, 0.3)",
+                        };
 
-                const cardGlow =
-                  allServed || tbl.isPaid
-                    ? "0 6px 20px rgba(16, 185, 129, 0.2), 0 0 10px rgba(16, 185, 129, 0.14)"
-                    : isCooking
-                      ? "0 6px 20px rgba(255, 123, 0, 0.26), 0 0 10px rgba(255, 123, 0, 0.16)"
-                      : "0 6px 20px rgba(245, 158, 11, 0.22), 0 0 10px rgba(245, 158, 11, 0.14)";
+                const firstItem = activeItems[0];
+                const moreCount = activeItems.length - 1;
+                const tableNum = formatCleanTableNum(tbl.name, tbl.id);
+                const tableNameDisplay = formatCleanTableName(tbl.name, tbl.id);
 
                 return (
                   <div
                     key={tbl.uniqueKey || tbl.id}
-                    className={
-                      isCooking
-                        ? "kot-order-card kot-order-card--cooking"
-                        : "kot-order-card"
-                    }
                     onClick={() => setSelectedDetailTicket(tbl)}
-                    title="Click anywhere on this card to open full order details popup"
+                    title="Click to view ordered items and cook actions"
                     style={{
-                      background: isLightTheme
-                        ? "#ffffff"
-                        : "var(--bg-card, #131d31)",
+                      background: isLightTheme ? "#ffffff" : "var(--bg-secondary, #131d31)",
                       borderRadius: "var(--radius-md, 10px)",
-                      border: cardBorder,
-                      boxShadow: cardGlow,
-                      overflow: "hidden",
+                      border: `1.5px solid ${cardBorderColor}`,
+                      padding: "0.75rem 0.85rem",
+                      position: "relative",
+                      cursor: "pointer",
+                      transition: "all 0.18s ease",
+                      boxShadow: cardShadow,
                       display: "flex",
                       flexDirection: "column",
-                      boxSizing: "border-box",
-                      cursor: "pointer",
-                      transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                      justifyContent: "space-between",
+                      gap: "0.45rem",
+                      minHeight: "220px",
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.3)";
+                      e.currentTarget.style.borderColor = "var(--accent-amber)";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = cardShadow;
+                      e.currentTarget.style.borderColor = cardBorderColor;
                     }}
                   >
-                    {/* --- CARD HEADER TIER 1: PROMINENT TABLE NUMBER & SERVER --- */}
-                    <div
-                      style={{
-                        padding: "0.45rem 0.65rem",
-                        background: headerBg,
-                        borderBottom: isLightTheme
-                          ? "1px solid #e2e8f0"
-                          : "1px solid rgba(var(--surface-rgb),0.08)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "0.4rem",
-                      }}
-                    >
-                      {/* Left: Table Number Badge & Table Info */}
+                    <div>
+                      {/* Row 1: T{num} badge + Table Name + Print & Status Dot */}
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: "0.5rem",
-                          minWidth: 0,
+                          justifyContent: "space-between",
+                          gap: "0.3rem",
+                          marginBottom: "0.25rem",
                         }}
                       >
                         <div
                           style={{
-                            background: tableBadgeBg,
-                            color: "#ffffff",
-                            padding: "0.22rem 0.45rem",
-                            borderRadius: "6px",
-                            fontWeight: 900,
-                            fontSize: "0.86rem",
-                            letterSpacing: "-0.02em",
-                            boxShadow:
-                              "0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(var(--surface-rgb),0.3)",
                             display: "flex",
-                            flexDirection: "column",
                             alignItems: "center",
-                            justifyContent: "center",
-                            minWidth: "40px",
-                            flexShrink: 0,
+                            gap: "0.35rem",
+                            minWidth: 0,
+                            flex: 1,
                           }}
                         >
                           <span
                             style={{
-                              fontSize: "0.46rem",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.08em",
-                              opacity: 0.95,
-                              fontWeight: 800,
+                              background:
+                                allServed || tbl.isPaid
+                                  ? "var(--status-vacant, #10b981)"
+                                  : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                              color: "#ffffff",
+                              fontWeight: 900,
+                              fontSize: "0.74rem",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              letterSpacing: "0.03em",
+                              flexShrink: 0,
                             }}
                           >
-                            TABLE
+                            T{tableNum}
                           </span>
-                          <span>{formatCleanTableNum(tbl.name, tbl.id)}</span>
-                        </div>
-
-                        <div style={{ minWidth: 0 }}>
                           <h3
                             style={{
-                              fontSize: "0.94rem",
+                              fontSize: "0.98rem",
                               fontWeight: 900,
                               color: cardPrimaryText,
                               margin: 0,
-                              lineHeight: 1.15,
+                              lineHeight: 1.1,
+                              letterSpacing: "-0.02em",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
-                              letterSpacing: "-0.01em",
                             }}
                           >
-                            {formatCleanTableName(tbl.name, tbl.id)}
+                            {tableNameDisplay}
                           </h3>
-                          <div
-                            style={{
-                              fontSize: "0.66rem",
-                              color: "var(--text-muted)",
-                              marginTop: "1px",
-                              fontWeight: 600,
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActivePrintTable(tbl);
                             }}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: "var(--text-muted)",
+                              padding: "2px",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                            title="Print Kitchen Slip"
                           >
-                            {tbl.section} • {tbl.server}
-                          </div>
+                            <Printer size={12} />
+                          </button>
+                          <span
+                            style={{
+                              width: "9px",
+                              height: "9px",
+                              borderRadius: "50%",
+                              background: statusDot,
+                              boxShadow: `0 0 6px ${statusDot}`,
+                              display: "inline-block",
+                              flexShrink: 0,
+                            }}
+                          />
                         </div>
                       </div>
 
-                      {/* Right: Paid Pill + Print Slip Button */}
+                      {/* Row 2: Section & Server */}
                       <div
                         style={{
+                          fontSize: "0.68rem",
+                          color: "var(--text-dim)",
                           display: "flex",
                           alignItems: "center",
-                          gap: "0.3rem",
-                          flexShrink: 0,
+                          justifyContent: "space-between",
+                          gap: "0.4rem",
+                          paddingBottom: "0.35rem",
+                          borderBottom: isLightTheme
+                            ? "1px solid #e2e8f0"
+                            : "1px solid var(--border-subtle, rgba(255,255,255,0.06))",
+                          marginBottom: "0.35rem",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                         }}
                       >
-                        {delayMeta.isDelayed && (
-                          <span
-                            style={{
-                              background: "rgba(239, 68, 68, 0.14)",
-                              color: "var(--danger)",
-                              border: "1px solid rgba(239, 68, 68, 0.45)",
-                              padding: "2px 6px",
-                              borderRadius: "5px",
-                              fontSize: "0.6rem",
-                              fontWeight: 900,
-                              whiteSpace: "nowrap",
-                              letterSpacing: "0.04em",
-                            }}
-                          >
-                            🔴 DELAYED {delayMeta.deltaText}
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {tbl.section || "Main Hall"}
+                        </span>
+                        <span style={{ flexShrink: 0 }}>
+                          Server: {tbl.server || "Staff"}
+                        </span>
+                      </div>
+
+                      {/* Row 3: Status Badge Pill */}
+                      <div
+                        style={{
+                          padding: "0.28rem 0.5rem",
+                          borderRadius: "6px",
+                          background: statusBadge.bg,
+                          border: `1px solid ${statusBadge.border}`,
+                          color: statusBadge.color,
+                          fontSize: "0.68rem",
+                          fontWeight: 800,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: "0.4rem",
+                        }}
+                      >
+                        <span>{statusBadge.text}</span>
+                        <span style={{ fontSize: "0.66rem", opacity: 0.85, fontWeight: 700 }}>
+                          {tbl.orderTime || "Just Now"}
+                        </span>
+                      </div>
+
+                      {/* Row 4: Items Preview Box (matching Image 2) */}
+                      <div
+                        style={{
+                          background: isLightTheme
+                            ? "#f8fafc"
+                            : "var(--bg-primary, #0b1120)",
+                          border: isLightTheme
+                            ? "1px solid #e2e8f0"
+                            : "1px solid var(--border-subtle)",
+                          borderRadius: "6px",
+                          padding: "0.45rem 0.6rem",
+                          fontSize: "0.72rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.2rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            fontWeight: 800,
+                            color: "var(--accent-amber-light, #f59e0b)",
+                            fontSize: "0.74rem",
+                          }}
+                        >
+                          <span>Items ({totalQuantity}):</span>
+                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                            {activeItems.length} {activeItems.length === 1 ? "dish" : "dishes"}
                           </span>
-                        )}
-                        {!delayMeta.isDelayed &&
-                          delayMeta.isOnTime &&
-                          tbl.cookingStartedAt && (
-                            <span
+                        </div>
+
+                        {firstItem ? (
+                          <>
+                            <div
                               style={{
-                                background: "rgba(34, 197, 94, 0.14)",
-                                color: "#22c55e",
-                                border: "1px solid rgba(34, 197, 94, 0.45)",
-                                padding: "2px 6px",
-                                borderRadius: "5px",
-                                fontSize: "0.6rem",
-                                fontWeight: 900,
+                                color: "var(--text-main)",
+                                fontWeight: 600,
                                 whiteSpace: "nowrap",
-                                letterSpacing: "0.04em",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
                               }}
                             >
-                              🟢 ON TIME
-                            </span>
-                          )}
-                        {tbl.isPaid && (
-                          <span
-                            style={{
-                              background: "rgba(16, 185, 129, 0.22)",
-                              color: "var(--success)",
-                              border: "1px solid rgba(16, 185, 129, 0.5)",
-                              padding: "2px 5px",
-                              borderRadius: "5px",
-                              fontSize: "0.6rem",
-                              fontWeight: 800,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            💰 PAID
-                          </span>
+                              {firstItem.quantity || 1}x {firstItem.name}
+                            </div>
+                            {moreCount > 0 ? (
+                              <div
+                                style={{
+                                  color: "var(--text-dim)",
+                                  fontSize: "0.68rem",
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                + {moreCount} more {moreCount === 1 ? "dish" : "dishes"}...
+                              </div>
+                            ) : null}
+                          </>
+                        ) : (
+                          <div style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>
+                            No active items
+                          </div>
                         )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActivePrintTable(tbl);
-                          }}
-                          style={{
-                            background: isLightTheme
-                              ? "#ffffff"
-                              : "rgba(var(--surface-rgb),0.08)",
-                            border: isLightTheme
-                              ? "1px solid #cbd5e1"
-                              : "1px solid rgba(var(--surface-rgb),0.15)",
-                            color: isLightTheme
-                              ? "#1f2937"
-                              : "var(--text-muted)",
-                            padding: "3px 6px",
-                            borderRadius: "5px",
-                            fontSize: "0.65rem",
-                            display: "flex",
-                            alignItems: "center",
-                            cursor: "pointer",
-                          }}
-                          title="Print Kitchen Slip"
-                        >
-                          <Printer size={12} />
-                        </button>
                       </div>
                     </div>
 
-                    {/* --- CARD HEADER TIER 2: FULL-WIDTH RADIANT STATUS BANNER --- */}
-                    <div
+                    {/* Row 5: Action Button (matching Image 2) */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDetailTicket(tbl);
+                      }}
                       style={{
-                        padding: "0.26rem 0.65rem",
-                        background: badgeBg,
-                        borderBottom: `1px solid color-mix(in srgb, ${badgeColor} 20.78%, transparent)`,
+                        width: "100%",
+                        padding: "0.45rem 0.6rem",
+                        borderRadius: "6px",
+                        background:
+                          allServed || tbl.isPaid
+                            ? "rgba(16, 185, 129, 0.15)"
+                            : "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 88, 12, 0.2))",
+                        border:
+                          allServed || tbl.isPaid
+                            ? "1px solid rgba(16, 185, 129, 0.4)"
+                            : "1px solid rgba(245, 158, 11, 0.4)",
+                        color:
+                          allServed || tbl.isPaid
+                            ? "#10b981"
+                            : "var(--accent-amber-light, #f59e0b)",
+                        fontWeight: 800,
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "0.35rem",
-                        color: badgeColor,
-                        fontSize: "0.66rem",
-                        fontWeight: 900,
-                        letterSpacing: "0.05em",
-                        textTransform: "uppercase",
+                        transition: "all 0.15s ease",
+                        marginTop: "0.3rem",
                       }}
                     >
-                      <span>{badgeText}</span>
-                    </div>
-
-                    {/* --- CARD HEADER TIER 3: NEAT & CLEAR 3-COLUMN LIFECYCLE TIMESTAMPS BAR --- */}
-                    <div
-                      style={{
-                        background: isLightTheme
-                          ? "#f8fafc"
-                          : "rgba(0, 0, 0, 0.32)",
-                        borderBottom: isLightTheme
-                          ? "1px solid #e2e8f0"
-                          : "1px solid rgba(var(--surface-rgb),0.08)",
-                        padding: "0.32rem 0.55rem",
-                        display: "grid",
-                        gridTemplateColumns: "repeat(3, 1fr)",
-                        gap: "0.32rem",
-                        alignItems: "stretch",
-                      }}
-                    >
-                      {/* 1. Received Time */}
-                      <div
-                        style={{
-                          background: isLightTheme
-                            ? "rgba(245, 158, 11, 0.10)"
-                            : "rgba(245, 158, 11, 0.12)",
-                          border: isLightTheme
-                            ? "1.5px solid rgba(245, 158, 11, 0.55)"
-                            : "1.5px solid rgba(245, 158, 11, 0.35)",
-                          borderRadius: "5px",
-                          padding: "0.22rem 0.35rem",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "center",
-                          gap: "1px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "2px",
-                            color: isLightTheme ? "#b45309" : "var(--accent-amber-light)",
-                            fontSize: "0.54rem",
-                            fontWeight: 800,
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          <Clock size={10} />
-                          <span>RECEIVED</span>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            fontWeight: 800,
-                            color: cardPrimaryText,
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          {tbl.orderTime || "--:--"}
-                        </span>
-                      </div>
-
-                      {/* 2. Cooking Started Time */}
-                      <div
-                        style={{
-                          background:
-                            isCooking || allServed || tbl.isPaid
-                              ? isLightTheme
-                                ? "rgba(255, 123, 0, 0.10)"
-                                : "rgba(255, 123, 0, 0.12)"
-                              : isLightTheme
-                                ? "#f8fafc"
-                                : "rgba(var(--surface-rgb),0.04)",
-                          border:
-                            isCooking || allServed || tbl.isPaid
-                              ? isLightTheme
-                                ? "1.5px solid rgba(234, 88, 12, 0.55)"
-                                : "1.5px solid rgba(255, 123, 0, 0.4)"
-                              : isLightTheme
-                                ? "1px solid #cbd5e1"
-                                : "1px solid rgba(var(--surface-rgb),0.08)",
-                          borderRadius: "5px",
-                          padding: "0.22rem 0.35rem",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "center",
-                          gap: "1px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "2px",
-                            color:
-                              isCooking || allServed || tbl.isPaid
-                                ? isLightTheme
-                                  ? "#c2410c"
-                                  : "#fb923c"
-                                : isLightTheme
-                                  ? "#64748b"
-                                  : "var(--text-muted)",
-                            fontSize: "0.54rem",
-                            fontWeight: 800,
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          <Flame size={10} />
-                          <span>COOKING</span>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            fontWeight: 800,
-                            color:
-                              isCooking ||
-                              allServed ||
-                              tbl.isPaid ||
-                              tbl.cookingStartedAt
-                                ? cardPrimaryText
-                                : "var(--text-dim)",
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          {cookingStartedDisplay}
-                        </span>
-                      </div>
-
-                      {/* 3. Completed Time & Stopped Duration */}
-                      <div
-                        style={{
-                          background:
-                            allServed || tbl.isPaid
-                              ? isLightTheme
-                                ? "rgba(16, 185, 129, 0.10)"
-                                : "rgba(16, 185, 129, 0.14)"
-                              : isLightTheme
-                                ? "#f8fafc"
-                                : "rgba(var(--surface-rgb),0.04)",
-                          border:
-                            allServed || tbl.isPaid
-                              ? isLightTheme
-                                ? "1.5px solid rgba(5, 150, 105, 0.55)"
-                                : "1.5px solid rgba(16, 185, 129, 0.45)"
-                              : isLightTheme
-                                ? "1px solid #cbd5e1"
-                                : "1px solid rgba(var(--surface-rgb),0.08)",
-                          borderRadius: "5px",
-                          padding: "0.22rem 0.35rem",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "center",
-                          gap: "1px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "2px",
-                            color:
-                              allServed || tbl.isPaid
-                                ? isLightTheme
-                                  ? "#047857"
-                                  : "#34d399"
-                                : isLightTheme
-                                  ? "#64748b"
-                                  : "var(--text-muted)",
-                            fontSize: "0.54rem",
-                            fontWeight: 800,
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          <CheckCircle2 size={10} />
-                          <span>COMPLETED</span>
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: "1px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              fontWeight: 800,
-                              color:
-                                allServed || tbl.isPaid
-                                  ? isLightTheme
-                                    ? "#047857"
-                                    : "#34d399"
-                                  : isLightTheme
-                                    ? "#64748b"
-                                    : "var(--text-dim)",
-                              fontFamily: "monospace",
-                            }}
-                          >
-                            {allServed || tbl.isPaid
-                              ? completedTimeDisplay
-                              : isCooking
-                                ? preparedCount > 0
-                                  ? `Cooking (${preparedCount}/${totalCount})`
-                                  : "Cooking"
-                                : preparedCount > 0
-                                  ? `${preparedCount}/${totalCount} Ready`
-                                  : "Pending"}
-                          </span>
-                          {(allServed || tbl.isPaid) && stoppedDuration && (
-                            <span
-                              style={{
-                                fontSize: "0.58rem",
-                                color: "var(--success)",
-                                fontWeight: 800,
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              ({stoppedDuration})
-                            </span>
-                          )}
-                          {!allServed && !tbl.isPaid && tbl.orderTime && (
-                            <span
-                              style={{
-                                fontSize: "0.58rem",
-                                color: urgency.text,
-                                fontWeight: 800,
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              ({elapsedFormatted})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* --- CARD BODY: DISHES ORDERED RECEIVED FROM TABLE --- */}
-                    <div
-                      style={{
-                        padding: "0.55rem 0.65rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.42rem",
-                        height: "164px",
-                        minHeight: "164px",
-                        boxSizing: "border-box",
-                        flex: "0 0 164px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: "0.64rem",
-                          fontWeight: 800,
-                          color: isLightTheme ? "var(--text-dim)" : "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          borderBottom: isLightTheme
-                            ? "1px solid #e2e8f0"
-                            : "1px solid rgba(var(--surface-rgb),0.08)",
-                          paddingBottom: "0.28rem",
-                        }}
-                      >
-                        <span>Ordered Dishes ({tbl.items?.length || 0})</span>
-                        <span>Dish Status (Click)</span>
-                      </div>
-
-                      <div
-                        style={{
-                          minHeight: "70px",
-                          height: "70px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.42rem",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {tbl.items &&
-                          tbl.items.slice(0, 1).map((item, idx) => {
-                            const itemReady = isItemCompleted(item);
-                            const itemCooking = isItemCooking(item);
-
-                            return (
-                              <div
-                                key={idx}
-                                style={{
-                                  background: itemReady
-                                    ? "rgba(16, 185, 129, 0.1)"
-                                    : itemCooking
-                                      ? "rgba(255, 123, 0, 0.1)"
-                                      : isLightTheme
-                                        ? "#f8fafc"
-                                        : "rgba(var(--surface-rgb),0.04)",
-                                  borderRadius: "var(--radius-sm)",
-                                  padding: "0.42rem 0.55rem",
-                                  border: itemReady
-                                    ? "1.5px solid rgba(16, 185, 129, 0.35)"
-                                    : itemCooking
-                                      ? "1.5px solid rgba(255, 123, 0, 0.4)"
-                                      : isLightTheme
-                                        ? "1px solid #cbd5e1"
-                                        : "1px solid rgba(var(--surface-rgb),0.08)",
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  justifyContent: "space-between",
-                                  gap: "0.45rem",
-                                  boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "flex-start",
-                                    gap: "0.45rem",
-                                    flex: 1,
-                                    minWidth: 0,
-                                  }}
-                                >
-                                  {/* Quantity badge */}
-                                  <span
-                                    style={{
-                                      background: itemReady
-                                        ? "linear-gradient(135deg, #10b981, #059669)"
-                                        : itemCooking
-                                          ? "linear-gradient(135deg, #ff7b00, #ea580c)"
-                                          : "linear-gradient(135deg, #f59e0b, #d97706)",
-                                      color: "#ffffff",
-                                      padding: "2px 5px",
-                                      borderRadius: "5px",
-                                      fontWeight: 900,
-                                      fontSize: "0.74rem",
-                                      minWidth: "24px",
-                                      textAlign: "center",
-                                      boxShadow: "0 2px 5px rgba(0,0,0,0.35)",
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    {item.quantity}x
-                                  </span>
-
-                                  <div style={{ minWidth: 0 }}>
-                                    <div
-                                      style={{
-                                        fontSize: "0.8rem",
-                                        fontWeight: 800,
-                                        color: cardPrimaryText,
-                                        lineHeight: 1.25,
-                                        letterSpacing: "-0.01em",
-                                      }}
-                                    >
-                                      {item.name}
-                                    </div>
-
-                                    {item.notes ? (
-                                      <div
-                                        style={{
-                                          fontSize: "0.66rem",
-                                          color: "var(--danger)",
-                                          fontWeight: 700,
-                                          marginTop: "2px",
-                                          background: "rgba(239, 68, 68, 0.15)",
-                                          padding: "1px 5px",
-                                          borderRadius: "3px",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "3px",
-                                        }}
-                                      >
-                                        <span>⚠️</span>
-                                        <strong>{item.notes}</strong>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </div>
-
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleItemStatus(tbl.uniqueKey, item);
-                                    }}
-                                    style={{
-                                      fontSize: "0.64rem",
-                                      fontWeight: 800,
-                                      padding: "3px 7px",
-                                      borderRadius: "5px",
-                                      textTransform: "uppercase",
-                                      background: itemReady
-                                        ? "rgba(16, 185, 129, 0.22)"
-                                        : itemCooking
-                                          ? "rgba(255, 123, 0, 0.22)"
-                                          : "rgba(245, 158, 11, 0.22)",
-                                      color: itemReady
-                                        ? "#34d399"
-                                        : itemCooking
-                                          ? "#ff9248"
-                                          : "#fbbf24",
-                                      border: itemReady
-                                        ? "1.5px solid #10b981"
-                                        : itemCooking
-                                          ? "1.5px solid #ff7b00"
-                                          : "1.5px solid #f59e0b",
-                                      boxShadow: itemReady
-                                        ? "0 0 8px rgba(16, 185, 129, 0.25)"
-                                        : itemCooking
-                                          ? "0 0 8px rgba(255, 123, 0, 0.25)"
-                                          : "none",
-                                      cursor: "pointer",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "3px",
-                                      whiteSpace: "nowrap",
-                                      transition: "all 0.15s ease",
-                                    }}
-                                    title="Click to toggle: Received -> Cooking -> Prepared"
-                                  >
-                                    {itemReady
-                                      ? "✓ Prepared"
-                                      : itemCooking
-                                        ? "🔥 Cooking"
-                                        : "📥 Received"}
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                        <div
-                          style={{
-                            height: "18px",
-                            minHeight: "18px",
-                            textAlign: "center",
-                            color: isLightTheme
-                              ? "#475569"
-                              : "var(--text-muted)",
-                            fontSize: "0.74rem",
-                            fontWeight: 700,
-                            lineHeight: "18px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {(tbl.items?.length || 0) > 1
-                            ? `+ ${(tbl.items?.length || 0) - 1} more items`
-                            : ""}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedDetailTicket(tbl);
-                        }}
-                        style={{
-                          width: "100%",
-                          padding: "0.45rem 0.65rem",
-                          borderRadius: "var(--radius-sm)",
-                          background: isLightTheme
-                            ? "rgba(245, 158, 11, 0.10)"
-                            : "rgba(245, 158, 11, 0.12)",
-                          border: isLightTheme
-                            ? "1px solid rgba(180, 83, 9, 0.45)"
-                            : "1px solid rgba(245, 158, 11, 0.4)",
-                          color: isLightTheme ? "#b45309" : "var(--accent-amber-light)",
-                          fontWeight: 800,
-                          fontSize: "0.72rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "0.35rem",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Utensils size={12} />
-                        <span>VIEW ITEMS ({tbl.items?.length || 0})</span>
-                        <ArrowRight size={12} />
-                      </button>
-                    </div>
-
-                    {/* --- CARD FOOTER: ACTION BUTTONS (ORDER RECEIVED -> START COOKING -> COMPLETED) --- */}
-                    <div
-                      style={{
-                        padding: "0.5rem 0.65rem",
-                        background: isLightTheme
-                          ? "#f8fafc"
-                          : "rgba(0,0,0,0.35)",
-                        borderTop: isLightTheme
-                          ? "1px solid #e2e8f0"
-                          : "1px solid rgba(var(--surface-rgb),0.08)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.42rem",
-                      }}
-                    >
-                      {/* STEP 1: ORDER RECEIVED -> NEXT STEP IS "START COOKING" */}
-                      {isReceived && (
-                        <div style={{ display: "flex", gap: "0.45rem" }}>
-                          <button
-                            className="kot-start-cooking-button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartCooking(tbl.uniqueKey);
-                            }}
-                            style={{
-                              flex: 2,
-                              padding: "0.52rem 0.65rem",
-                              borderRadius: "var(--radius-sm)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.35rem",
-                              border: "none",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Flame size={14} />
-                            <span>
-                              {preparedCount > 0
-                                ? `COOK REMAINING (${totalCount - preparedCount})`
-                                : "START COOKING"}
-                            </span>
-                          </button>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCompletePreparation(tbl.uniqueKey);
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: "0.52rem 0.5rem",
-                              borderRadius: "var(--radius-sm)",
-                              background: "rgba(16, 185, 129, 0.15)",
-                              border: "1px solid rgba(16, 185, 129, 0.4)",
-                              color: "var(--success)",
-                              fontWeight: 700,
-                              fontSize: "0.72rem",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.3rem",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <CheckCircle2 size={13} />
-                            <span>Direct Complete</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* STEP 2: COOKING IN PROGRESS -> NEXT STEP IS "PREPARATION COMPLETED" */}
-                      {isCooking && (
-                        <div style={{ display: "flex", gap: "0.45rem" }}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCompletePreparation(tbl.uniqueKey);
-                            }}
-                            style={{
-                              flex: 2,
-                              padding: "0.52rem 0.65rem",
-                              borderRadius: "var(--radius-sm)",
-                              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                              color: "#ffffff",
-                              fontWeight: 800,
-                              fontSize: "0.78rem",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.4rem",
-                              border: "none",
-                              cursor: "pointer",
-                              boxShadow: "0 3px 12px rgba(16, 185, 129, 0.35)",
-                            }}
-                          >
-                            <CheckCircle2 size={14} />
-                            <span>
-                              {preparedCount > 0
-                                ? `✅ COMPLETE REMAINING (${totalCount - preparedCount})`
-                                : "✅ PREPARATION COMPLETED"}
-                            </span>
-                          </button>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleResetToReceived(tbl.uniqueKey);
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: "0.52rem 0.5rem",
-                              borderRadius: "var(--radius-sm)",
-                              background: isLightTheme
-                                ? "#ffffff"
-                                : "rgba(var(--surface-rgb),0.06)",
-                              border: isLightTheme
-                                ? "1px solid #cbd5e1"
-                                : "1px solid rgba(var(--surface-rgb),0.12)",
-                              color: isLightTheme
-                                ? "#475569"
-                                : "var(--text-muted)",
-                              fontWeight: 600,
-                              fontSize: "0.72rem",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.25rem",
-                              cursor: "pointer",
-                            }}
-                            title="Revert back to received order"
-                          >
-                            <RotateCcw size={12} />
-                            <span>Revert</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* STEP 3: PREPARATION COMPLETED (Active vs Paid) */}
-                      {(allServed || tbl.isPaid) && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.45rem",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "100%",
-                              padding: "0.48rem 0.65rem",
-                              borderRadius: "var(--radius-sm)",
-                              background: isLightTheme
-                                ? "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.07) 100%)"
-                                : "linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.12) 100%)",
-                              border: isLightTheme
-                                ? "1.5px solid rgba(5, 150, 105, 0.45)"
-                                : "1.5px solid rgba(16, 185, 129, 0.45)",
-                              boxShadow: "0 2px 8px rgba(16, 185, 129, 0.12)",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.25rem",
-                              minHeight: "86px",
-                              boxSizing: "border-box",
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: isLightTheme ? "#047857" : "var(--success)",
-                                fontWeight: 900,
-                                fontSize: "0.8rem",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.35rem",
-                                textShadow: isLightTheme
-                                  ? "none"
-                                  : "0 0 10px rgba(52, 211, 153, 0.4)",
-                              }}
-                            >
-                              <CheckCircle2 size={14} />
-                              <span>PREPARATION COMPLETED</span>
-                            </div>
-                            <p
-                              style={{
-                                fontSize: "0.68rem",
-                                color: cardPrimaryText,
-                                textAlign: "center",
-                                fontWeight: 600,
-                                margin: 0,
-                              }}
-                            >
-                              Order for{" "}
-                              <strong style={{ color: cardPrimaryText }}>
-                                {formatCleanTableName(tbl.name, tbl.id)}
-                              </strong>{" "}
-                              is cooked & ready to be served to guests!
-                            </p>
-                          </div>
-
-                          {/* Actions: Completed ticket vs In-Preparation ticket */}
-                          {allServed ? (
-                            <div style={{ display: "flex", gap: "0.45rem" }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActivePrintTable(tbl);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  padding: "0.42rem",
-                                  borderRadius: "var(--radius-sm)",
-                                  background: isLightTheme
-                                    ? "#ffffff"
-                                    : "rgba(var(--surface-rgb),0.08)",
-                                  border: isLightTheme
-                                    ? "1px solid #cbd5e1"
-                                    : "1px solid rgba(var(--surface-rgb),0.15)",
-                                  color: isLightTheme ? "#1f2937" : "#ffffff",
-                                  fontWeight: 700,
-                                  fontSize: "0.72rem",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "0.3rem",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                <Printer size={12} />
-                                <span>Print Slip</span>
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDismissTicket(tbl.id);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  padding: "0.42rem",
-                                  borderRadius: "var(--radius-sm)",
-                                  background: "rgba(239, 68, 68, 0.12)",
-                                  border: "1px solid rgba(239, 68, 68, 0.35)",
-                                  color: "var(--danger)",
-                                  fontWeight: 700,
-                                  fontSize: "0.72rem",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "0.3rem",
-                                  cursor: "pointer",
-                                }}
-                                title="Clear this completed ticket from kitchen display"
-                              >
-                                <Check size={12} />
-                                <span>Clear from KOT</span>
-                              </button>
-                            </div>
-                          ) : (
-                            /* In Preparation: Re-cook / Reset */
-                            <div style={{ display: "flex", gap: "0.45rem" }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStartCooking(tbl.uniqueKey);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  padding: "0.42rem",
-                                  borderRadius: "var(--radius-sm)",
-                                  background: "rgba(234, 88, 12, 0.12)",
-                                  border: "1px solid rgba(234, 88, 12, 0.35)",
-                                  color: "var(--accent-amber-light)",
-                                  fontWeight: 700,
-                                  fontSize: "0.72rem",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "0.25rem",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                <Flame size={12} />
-                                <span>Re-cook</span>
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleResetToReceived(tbl.uniqueKey);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  padding: "0.42rem",
-                                  borderRadius: "var(--radius-sm)",
-                                  background: "rgba(245, 158, 11, 0.12)",
-                                  border: "1px solid rgba(245, 158, 11, 0.35)",
-                                  color: "#f59e0b",
-                                  fontWeight: 700,
-                                  fontSize: "0.72rem",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "0.25rem",
-                                  cursor: "pointer",
-                                }}
-                                title="Reset back to Order Received state"
-                              >
-                                <RotateCcw size={12} />
-                                <span>Reset to Received</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                      <ChefHat size={13} />
+                      <span>View Items / Cook</span>
+                      <ChevronRight size={13} />
+                    </button>
                   </div>
                 );
               })}

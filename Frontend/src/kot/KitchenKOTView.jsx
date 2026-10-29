@@ -2236,6 +2236,7 @@ import {
   X,
   Users,
   ChevronDown,
+  ChevronRight,
   Sun,
   Moon,
 } from "lucide-react";
@@ -3750,17 +3751,17 @@ export function KitchenKOTView({
               </div>
             </div>
           ) : (
-            /* Cards Grid: 4 KOT Tickets per row */
+            /* Compact Cards Grid matching Image 2 UI */
             <div
               className="kot-cards-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns:
                   selectedTableFilter !== "all"
-                    ? "minmax(300px, 580px)"
-                    : "repeat(4, minmax(0, 1fr))",
-                gap: "0.65rem",
-                alignItems: "start",
+                    ? "minmax(200px, 320px)"
+                    : "repeat(auto-fill, minmax(170px, 1fr))",
+                gap: "0.85rem",
+                alignItems: "stretch",
                 justifyContent:
                   selectedTableFilter !== "all" ? "center" : "stretch",
               }}
