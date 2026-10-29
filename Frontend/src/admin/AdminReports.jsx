@@ -31,6 +31,7 @@ import { printSurface } from "../utils/printSurface";
 import { apiGetOrderHistory } from "../api/orderApi";
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetInventory } from "../api/inventoryApi";
+import { SkeletonList } from "../common/Skeletons";
 import {
   extractInvoiceRecords,
   extractSettledOrderRecords,
@@ -1437,9 +1438,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     }}
                   >
                     {displayedDishes.length === 0 ? (
-                      <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.78rem' }}>
-                        {ordersLoaded ? "No settled orders recorded for this period" : "Loading orders data..."}
-                      </div>
+                      ordersLoaded ? <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.78rem' }}>No settled orders recorded for this period</div> : <SkeletonList count={3} />
                     ) : (
                       displayedDishes.map(([name, qty], index) => (
                         <div

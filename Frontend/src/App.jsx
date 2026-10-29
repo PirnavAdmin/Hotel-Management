@@ -58,6 +58,7 @@ import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
 import { useAppDialog } from "./common/DialogContext";
+import { SkeletonTable } from "./common/Skeletons";
 import {
   autoGenerateInventoryFromRecipe,
   getStandardDishSuggestions,
@@ -400,6 +401,8 @@ export function App() {
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
     staff: "loading",
+    menu: "loading",
+    menuError: "",
     tableError: "",
     staffError: "",
   });
@@ -580,8 +583,11 @@ export function App() {
             JSON.stringify(normalizedMenu),
           );
         } catch {}
+        setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
+      } else {
+        setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: response?.error || response?.data?.message || "Menu items could not be loaded." }));
       }
-    });
+    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: error?.message || "Menu items could not be loaded." })));
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((response) => {
@@ -2863,6 +2869,7 @@ export function App() {
               {activeView === "tables" && (
                 <TableView
                   tables={tables}
+                  loading={sharedRecordLoad.tables === "loading" && tables.length === 0}
                   onSelectTable={handleSelectTable}
                   onUpdateTable={handleUpdateTable}
                 />
@@ -2872,6 +2879,8 @@ export function App() {
                   table={currentTable}
                   allTables={tables}
                   menuItems={menuItems}
+                  menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+                  menuLoadError={sharedRecordLoad.menuError}
                   onSelectTable={setSelectedTableId}
                   onBackToTables={() => setActiveView("tables")}
                   onAddItemToTable={handleAddItemToTable}

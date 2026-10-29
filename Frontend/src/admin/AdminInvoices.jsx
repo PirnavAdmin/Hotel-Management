@@ -19,6 +19,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetOrderHistory } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
+import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
@@ -428,9 +429,10 @@ export function AdminInvoices({
             {invoiceLoadError}
           </div>
         )}
-        {isLoadingInvoices && (
-          <div role="status" style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-            Loading live invoices…
+        {isLoadingInvoices && invoiceRecords.length === 0 && (
+          <div style={{ marginBottom: "1rem" }}>
+            <SkeletonDashboard cards={3} />
+            <SkeletonTable rows={5} columns={6} />
           </div>
         )}
 

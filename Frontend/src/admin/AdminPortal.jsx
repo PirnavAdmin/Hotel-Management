@@ -67,6 +67,7 @@ import {
   handleDishImageError,
   getRelevantLocalFallback,
 } from "../utils/menuImageHelper";
+import { SkeletonTable } from "../common/Skeletons";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
@@ -1649,6 +1650,7 @@ export function AdminPortal({
                     tables={tables}
                     staffList={staffList}
                     pastOrders={pastOrders}
+                    sharedRecordLoad={sharedRecordLoad}
                     onNavigateTab={setActiveTab}
                     onOpenKOTView={onOpenKOTView}
                     onOpenItemModal={handleOpenItemModal}
@@ -1955,7 +1957,9 @@ export function AdminPortal({
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedItems.length === 0 ? (
+                          {sharedRecordLoad?.menu === "loading" && menuItems.length === 0 ? (
+                            <tr><td colSpan={5}><SkeletonTable rows={6} columns={5} /></td></tr>
+                          ) : paginatedItems.length === 0 ? (
                             <tr>
                               <td
                                 colSpan={5}
@@ -1966,7 +1970,7 @@ export function AdminPortal({
                                   fontSize: "0.85rem",
                                 }}
                               >
-                                No menu items match the selected filters.
+                                {sharedRecordLoad?.menu === "error" ? sharedRecordLoad.menuError || "Menu items could not be loaded." : "No menu items match the selected filters."}
                               </td>
                             </tr>
                           ) : (

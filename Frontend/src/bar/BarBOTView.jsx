@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Check, Clock3, Eye, Maximize2, Minimize2, Printer, RefreshCw, Search } from "lucide-react";
 import { apiGetActiveKitchenTickets, apiUpdateKitchenItemStatus } from "../api/kitchenApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+import { SkeletonCard } from "../common/Skeletons";
 
 function statusOf(item) {
   const status = String(item?.itemStatus ?? item?.kotStatus ?? "PENDING").trim().toLowerCase();
@@ -153,7 +154,7 @@ export function BarKOTView({ menuItems = [], tables = [], staffList = [], onItem
       <button className="bar-button secondary" type="button" onClick={() => refreshRef.current?.()} disabled={loading}><RefreshCw size={15} className={loading ? "bar-kot-spinning" : ""} /> Refresh</button>
     </div>
     {error && <div className="bar-kot-error" role="alert"><span>{error}</span><button className="bar-button secondary small" type="button" onClick={() => refreshRef.current?.()}>Retry</button></div>}
-    {loading ? <div className="bar-kot-empty" role="status"><Clock3 size={22} /> Loading persisted Bar tickets…</div>
+    {loading ? <div className="app-skeleton-dashboard" role="status" aria-label="Loading Bar tickets">{Array.from({ length: 3 }, (_, index) => <SkeletonCard key={index} lines={3} />)}</div>
       : menuItems.length === 0 ? <div className="bar-kot-empty" role="status">Menu categories are unavailable, so beverage tickets cannot be identified safely.</div>
         : displayed.length === 0 ? <div className="bar-kot-empty"><Check size={22} />{error ? "Bar tickets are unavailable." : "No persisted beverage tickets match these filters."}</div>
           : <div className="bar-kot-grid">{displayed.map((ticket) => {

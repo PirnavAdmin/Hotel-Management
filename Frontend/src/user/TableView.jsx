@@ -903,7 +903,9 @@ function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isL
   );
 }
 
-export function TableView({ tables, onSelectTable, onUpdateTable }) {
+import { SkeletonCard } from "../common/Skeletons";
+
+export function TableView({ tables, onSelectTable, onUpdateTable, loading = false }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -1815,7 +1817,11 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
       </div>
 
       {/* Tables Grid or Empty Filter State */}
-      {filteredTables.length === 0 ? (
+      {loading ? (
+        <div role="status" aria-label="Loading tables" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", margin: "1rem 0" }}>
+          {Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} lines={3} />)}
+        </div>
+      ) : filteredTables.length === 0 ? (
         <div
           style={{
             textAlign: "center",
