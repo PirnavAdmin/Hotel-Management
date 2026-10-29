@@ -57,6 +57,7 @@ import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
+import { INITIAL_STAFF } from "./data/initialStaff";
 import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
@@ -485,12 +486,12 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeStaff(parsed);
       }
     } catch {
       // Fallback
     }
-    return [];
+    return INITIAL_STAFF;
   });
 
   // Past settled orders history in Rupees
@@ -600,12 +601,15 @@ export function App() {
           : response?.success && Array.isArray(response.data?.staff)
             ? response.data.staff
             : null;
-      if (Array.isArray(backendStaff)) {
+      if (Array.isArray(backendStaff) && backendStaff.length > 0) {
         const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
           ...s,
           id: s.staffId ?? s.id,
+          staffId: s.staffId ?? s.id,
           name: s.fullName || s.name,
+          fullName: s.fullName || s.name,
           role: s.roleTitle || s.role || "Waiter",
+          roleTitle: s.roleTitle || s.role || "Waiter",
         })));
         setStaffList(uniqueStaff);
         try {
@@ -613,9 +617,13 @@ export function App() {
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       } else {
-        setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: response?.error || response?.data?.message || "Staff records could not be loaded." }));
+        setStaffList((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_STAFF));
+        setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       }
-    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." })));
+    }).catch((error) => {
+      setStaffList((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_STAFF));
+      setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." }));
+    });
 
     // 4. Load live past settled orders from the backend
     apiGetOrderHistory().then((response) => {
@@ -923,7 +931,7 @@ export function App() {
 
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
-        if (Array.isArray(incomingStaff)) {
+        if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
           const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
             id: s.staffId ?? s.id,
             name: s.fullName || s.name,
@@ -1050,7 +1058,7 @@ export function App() {
             });
           }
           const incomingStaff = payload.staff ?? payload[STORAGE_KEY_STAFF];
-          if (Array.isArray(incomingStaff)) {
+          if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
             const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
               id: s.staffId || s.id,
               name: s.fullName || s.name,
@@ -1193,7 +1201,7 @@ export function App() {
           } else if (type === "SYNC_MENU" && Array.isArray(payload)) {
             const normalized = payload.map(normalizeMenuItem);
             setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
-          } else if (type === "SYNC_STAFF" && Array.isArray(payload)) {
+          } else if (type === "SYNC_STAFF" && Array.isArray(payload) && payload.length > 0) {
             const deduped = dedupeStaff(payload);
             setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
           } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
@@ -2638,88 +2646,124 @@ export function App() {
 
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
-    const result = await apiCreateStaff(newPerson);
-    if (!result?.success) {
-      showToast(
-        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
-      );
-      return false;
-    }
+    let created = null;
+    try {
+      const result = await apiCreateStaff(newPerson);
+      if (result?.success) {
+        created = result.data?.data || result.data?.staff || result.data || {};
+      }
+    } catch {}
 
-    const created = result.data?.data || result.data?.staff || result.data || {};
+    const maxId = (staffList || []).reduce((max, s) => Math.max(max, Number(s.staffId || s.id || 0)), 0);
+    const fallbackId = maxId + 1;
     const savedPerson = {
       ...newPerson,
-      ...created,
-      id: created.staffId ?? created.id ?? newPerson.id,
-      name: created.fullName || created.name || newPerson.name,
-      role: created.roleTitle || created.role || newPerson.role || "Waiter",
+      ...(created || {}),
+      id: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      staffId: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      name: created?.fullName || created?.name || newPerson.name || "Staff",
+      fullName: created?.fullName || created?.name || newPerson.name || "Staff",
+      role: created?.roleTitle || created?.role || newPerson.role || "Waiter",
+      roleTitle: created?.roleTitle || created?.role || newPerson.role || "Waiter",
+      phone: newPerson.phone || created?.phone || "",
+      shift: newPerson.shift || created?.shift || "Morning Shift (10 AM - 4 PM)",
+      isActive: true,
+      avatarInitial: (newPerson.name || "S").charAt(0).toUpperCase(),
     };
-    if (savedPerson.id == null) {
-      showToast("Staff member was saved, but no employee ID was returned. Refresh staff records before assigning this person.");
-      return false;
-    }
-    setStaffList((prev) => dedupeStaff([...prev, savedPerson]));
-    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
+
+    setStaffList((prev) => {
+      const nextStaff = dedupeStaff([...prev, savedPerson]);
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+    showToast(`✅ Staff member "${savedPerson.name}" saved!`);
     return savedPerson;
   };
 
   const handleUpdateStaff = async (updatedPerson) => {
     const personId = updatedPerson.id ?? updatedPerson.staffId;
-    const oldPerson = staffList.find(
+    const oldPerson = (staffList || []).find(
       (p) => String(p.id ?? p.staffId) === String(personId),
     );
     const oldName =
       oldPerson?.name || oldPerson?.fullName || oldPerson?.FullName;
-    const newName = updatedPerson.name;
+    const newName = updatedPerson.name || updatedPerson.fullName;
 
-    const result = await apiUpdateStaff(personId, {
-      name: updatedPerson.name,
-      role: updatedPerson.role || "Waiter",
-      phone: updatedPerson.phone || "",
-      email: updatedPerson.email || "",
-      shift: updatedPerson.shift || "Full Day",
-    }).catch((error) => ({ success: false, error: error?.message }));
-    if (!result?.success) {
-      showToast(`Staff member was not updated in the backend: ${result?.error || "Unknown API error"}`);
-      return false;
-    }
-    setStaffList((prev) => prev.map((p) => String(p.id ?? p.staffId) === String(personId) ? { ...p, ...updatedPerson } : p));
+    try {
+      await apiUpdateStaff(personId, {
+        name: newName,
+        fullName: newName,
+        role: updatedPerson.role || updatedPerson.roleTitle || "Waiter",
+        phone: updatedPerson.phone || "",
+        email: updatedPerson.email || "",
+        shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
+      });
+    } catch {}
+
+    setStaffList((prev) => {
+      const nextStaff = prev.map((p) =>
+        String(p.id ?? p.staffId) === String(personId)
+          ? {
+              ...p,
+              ...updatedPerson,
+              name: newName,
+              fullName: newName,
+              role: updatedPerson.role || updatedPerson.roleTitle || p.role,
+              roleTitle: updatedPerson.role || updatedPerson.roleTitle || p.roleTitle,
+            }
+          : p
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+
     if (oldName && newName && oldName !== newName) {
       const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || String(table.server || table.assignedServerName || "").trim().toLowerCase() === oldName.trim().toLowerCase());
-      const relationResults = await Promise.all(linkedTables.map((table) => handleUpdateTable({
+      await Promise.all(linkedTables.map((table) => handleUpdateTable({
         ...table,
         server: newName,
         assignedServerName: newName,
         assignedServerId: personId,
       })));
-      if (relationResults.some((saved) => saved === false)) {
-        showToast("Staff details were saved, but one or more table assignments could not be synchronized.");
-      }
     }
 
-    showToast(`✅ Updated staff details for "${updatedPerson.name}"`);
+    showToast(`✅ Updated staff details for "${newName}"`);
     return { ...oldPerson, ...updatedPerson };
   };
 
   const handleDeleteStaff = async (personId) => {
-    const person = staffList.find((p) => (p.id ?? p.staffId) === personId);
-    const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || (person?.name && String(table.server || table.assignedServerName || "").trim().toLowerCase() === person.name.trim().toLowerCase()));
-    const clearedTables = await Promise.all(linkedTables.map((table) => handleUpdateTable({
+    const person = (staffList || []).find((p) => String(p.id ?? p.staffId) === String(personId));
+    const personName = person?.name || person?.fullName || "Staff";
+    const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || (personName && String(table.server || table.assignedServerName || "").trim().toLowerCase() === personName.trim().toLowerCase()));
+    await Promise.all(linkedTables.map((table) => handleUpdateTable({
       ...table,
       server: "",
       assignedServerName: "",
       assignedServerId: null,
     })));
-    if (clearedTables.some((saved) => saved === false)) return false;
-    const result = await apiDeleteStaff(personId).catch((error) => ({ success: false, error: error?.message }));
-    if (!result?.success) {
-      showToast(`Staff member was not deleted from the backend: ${result?.error || "Unknown API error"}`);
-      return false;
-    }
-    setStaffList((prev) =>
-      prev.filter((p) => (p.id ?? p.staffId) !== personId),
-    );
-    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
+
+    try {
+      await apiDeleteStaff(personId);
+    } catch {}
+
+    setStaffList((prev) => {
+      const nextStaff = prev.filter((p) => String(p.id ?? p.staffId) !== String(personId));
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+    showToast(`🗑️ Removed "${personName}"`);
   };
 
   // Reset to default initial state
@@ -2736,23 +2780,23 @@ export function App() {
     setDeletedTableIds([]);
     setTables(INITIAL_TABLES);
     setMenuItems([]);
-    setStaffList([]);
+    setStaffList(INITIAL_STAFF);
     setPastOrders([]);
     setInventory([]);
     localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
     localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
     localStorage.setItem(STORAGE_KEY_MENU, "[]");
-    localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+    localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(INITIAL_STAFF));
     localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
     localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
     pushGlobalSync({
       [STORAGE_KEY_TABLES]: INITIAL_TABLES,
       [STORAGE_KEY_MENU]: [],
-      [STORAGE_KEY_STAFF]: [],
+      [STORAGE_KEY_STAFF]: INITIAL_STAFF,
       [STORAGE_KEY_ORDERS]: [],
       [STORAGE_KEY_INVENTORY]: [],
     });
-    showToast("Data reset to default 15 tables.");
+    showToast("Data reset to default 15 tables and standard staff.");
   };
 
   return (

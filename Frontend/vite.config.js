@@ -905,10 +905,22 @@ function globalSyncPlugin() {
           );
         }
 
-        // REST API: /api/v1/staff
+        // REST API: /api/v1/staff (GET)
         if (req.url.startsWith("/api/v1/staff") && req.method === "GET") {
           db = loadDb();
-          const staff = db.gourmet_pos_staff_v1 || [];
+          let staff = db.gourmet_pos_staff_v1;
+          if (!Array.isArray(staff) || staff.length === 0) {
+            staff = [
+              { staffId: 1, id: 1, fullName: "Rajesh K.", name: "Rajesh K.", roleTitle: "Senior Captain", role: "Senior Captain", phone: "+91 98450 11223", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "R", createdAt: "2026-10-09T04:27:02.068846" },
+              { staffId: 2, id: 2, fullName: "Vikram S.", name: "Vikram S.", roleTitle: "Head Waiter", role: "Head Waiter", phone: "+91 98450 44556", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "V", createdAt: "2026-10-09T04:27:02.069079" },
+              { staffId: 3, id: 3, fullName: "Ananya R.", name: "Ananya R.", roleTitle: "Stewardess", role: "Stewardess", phone: "+91 98450 77889", shift: "Full Day (11 AM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "A", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 4, id: 4, fullName: "Pooja M.", name: "Pooja M.", roleTitle: "Captain", role: "Captain", phone: "+91 98450 99001", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "P", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 5, id: 5, fullName: "Suresh N.", name: "Suresh N.", roleTitle: "Server / Waiter", role: "Server / Waiter", phone: "+91 98450 33445", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "S", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 6, id: 6, fullName: "Karan D.", name: "Karan D.", roleTitle: "VIP Lounge Captain", role: "VIP Lounge Captain", phone: "+91 98450 66778", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 4, avatarInitial: "K", createdAt: "2026-10-09T04:27:02.069081" }
+            ];
+            db.gourmet_pos_staff_v1 = staff;
+            saveDb(db);
+          }
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(
             JSON.stringify({
@@ -918,6 +930,102 @@ function globalSyncPlugin() {
               data: staff,
             }),
           );
+        }
+
+        // REST API: /api/v1/staff (POST - create new staff)
+        if ((req.url === "/api/v1/staff" || req.url === "/api/v1/staff/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+              const maxId = existing.reduce((max, s) => Math.max(max, Number(s.staffId || s.id || 0)), 0);
+              const newId = maxId + 1;
+              const newPerson = {
+                staffId: newId,
+                id: newId,
+                fullName: payload.name || payload.fullName || "New Staff",
+                name: payload.name || payload.fullName || "New Staff",
+                roleTitle: payload.role || payload.roleTitle || "Waiter",
+                role: payload.role || payload.roleTitle || "Waiter",
+                phone: payload.phone || "",
+                email: payload.email || "",
+                shift: payload.shift || "Morning Shift (10 AM - 4 PM)",
+                isActive: true,
+                assignedTablesCount: 0,
+                avatarInitial: (payload.name || payload.fullName || "S").charAt(0).toUpperCase(),
+                createdAt: new Date().toISOString()
+              };
+              const updated = [...existing, newPerson];
+              db.gourmet_pos_staff_v1 = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_staff_v1: updated });
+              res.writeHead(201, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Staff created successfully", staff: newPerson, data: newPerson }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/staff/:id (PUT - update staff)
+        const staffPutMatch = req.url.match(/^\/api\/v1\/staff\/([^/?]+)/i);
+        if (staffPutMatch && req.method === "PUT") {
+          const targetId = decodeURIComponent(staffPutMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+              let updatedPerson = null;
+              const updated = existing.map((s) => {
+                if (String(s.staffId || s.id) === String(targetId)) {
+                  updatedPerson = {
+                    ...s,
+                    ...payload,
+                    fullName: payload.name || payload.fullName || s.fullName || s.name,
+                    name: payload.name || payload.fullName || s.name || s.fullName,
+                    roleTitle: payload.role || payload.roleTitle || s.roleTitle || s.role,
+                    role: payload.role || payload.roleTitle || s.role || s.roleTitle,
+                    phone: payload.phone !== undefined ? payload.phone : s.phone,
+                    shift: payload.shift !== undefined ? payload.shift : s.shift,
+                    updatedAt: new Date().toISOString()
+                  };
+                  return updatedPerson;
+                }
+                return s;
+              });
+              db.gourmet_pos_staff_v1 = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_staff_v1: updated });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Staff updated successfully", data: updatedPerson || payload }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/staff/:id (DELETE - delete staff)
+        const staffDeleteMatch = req.url.match(/^\/api\/v1\/staff\/([^/?]+)/i);
+        if (staffDeleteMatch && req.method === "DELETE") {
+          const targetId = decodeURIComponent(staffDeleteMatch[1]);
+          db = loadDb();
+          const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+          const updated = existing.filter((s) => String(s.staffId || s.id) !== String(targetId));
+          db.gourmet_pos_staff_v1 = updated;
+          saveDb(db);
+          broadcast({ gourmet_pos_staff_v1: updated });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, message: "Staff deleted successfully" }));
         }
 
         // REST API: /api/v1/inventory (GET)
