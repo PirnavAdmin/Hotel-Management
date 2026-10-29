@@ -2,16 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Banknote, 
-  CreditCard, 
-  QrCode, 
+QrCode, 
   CheckCircle2, 
   Receipt,
   Calendar,
   Clock,
   Users,
   Building2,
-  Wallet,
-  Zap,
+Zap,
   ShieldCheck,
   ArrowLeft
 } from 'lucide-react';
@@ -22,14 +20,13 @@ import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '.
 import paymentQrImage from '../assets/payment-qr.png';
 
 export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment }) {
-  // 'upi' | 'cash' | 'card' | 'wallet'
+  // 'upi' | 'cash'
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [cashTendered, setCashTendered] = useState("0.00");
   const [isDecimalMode, setIsDecimalMode] = useState(false);
   const [decimalDigits, setDecimalDigits] = useState("");
   const isAllSelectedRef = useRef(false);
   const cashInputRef = useRef(null);
-  const [selectedWallet, setSelectedWallet] = useState('paytm');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [currentTheme, setCurrentTheme] = useState(() => {
@@ -566,7 +563,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           </div>
         </div>
 
-        {/* Select Payment Mode 4-Tab Bar */}
+        {/* Select Payment Mode 2-Tab Bar */}
         <div>
           <div style={{
             display: 'flex',
@@ -577,20 +574,18 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             fontWeight: 700,
             color: 'var(--text-main, #cbd5e1)'
           }}>
-            <CreditCard size={15} color="var(--text-dim, #94a3b8)" />
+            <Banknote size={15} color="var(--text-dim, #94a3b8)" />
             <span>Select Payment Mode</span>
           </div>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '0.65rem'
           }}>
             {[
-              { id: 'upi', label: 'UPI / QR Tap', icon: QrCode },
-              { id: 'cash', label: 'Cash Tender', icon: Banknote },
-              { id: 'card', label: 'Credit / Debit Card', icon: CreditCard },
-              { id: 'wallet', label: 'Wallet', icon: Wallet }
+              { id: 'upi', label: 'UPI / Dynamic QR', icon: QrCode },
+              { id: 'cash', label: 'Cash Tender', icon: Banknote }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = paymentMethod === tab.id;
@@ -906,97 +901,6 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               }}>
                 {formatCurrency(changeDue)}
               </span>
-            </div>
-          </div>
-        )}
-
-        {paymentMethod === 'card' && (
-          <div style={{
-            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
-            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '14px',
-            padding: '1.4rem',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.6rem'
-          }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-amber, #f59e0b)'
-            }}>
-              <CreditCard size={26} />
-            </div>
-            <div style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
-              Tap or Insert Card on POS Terminal
-            </div>
-            <p style={{ fontSize: '0.76rem', color: 'var(--text-dim, #94a3b8)', maxWidth: '320px', margin: 0 }}>
-              Supports Visa, MasterCard, RuPay, Maestro & Contactless Tap
-            </p>
-          </div>
-        )}
-
-        {paymentMethod === 'wallet' && (
-          <div style={{
-            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
-            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '14px',
-            padding: '1.25rem 1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600 }}>
-              Choose Digital Wallet:
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem' }}>
-              {[
-                { id: 'gpay', name: 'Google Pay', icon: '🟢' },
-                { id: 'paytm', name: 'Paytm Wallet', icon: '💳' },
-                { id: 'phonepe', name: 'PhonePe Wallet', icon: '🟣' },
-                { id: 'amazon', name: 'Amazon Pay', icon: '📦' }
-              ].map(w => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => setSelectedWallet(w.id)}
-                  style={{
-                    padding: '0.65rem',
-                    borderRadius: '8px',
-                    background: selectedWallet === w.id
-                      ? isLight
-                        ? 'rgba(217, 119, 6, 0.16)'
-                        : 'rgba(245, 158, 11, 0.2)'
-                      : isLight
-                      ? '#ffffff'
-                      : 'rgba(255, 255, 255, 0.04)',
-                    border: selectedWallet === w.id
-                      ? '1.5px solid var(--accent-amber, #f59e0b)'
-                      : isLight
-                      ? '1px solid #cbd5e1'
-                      : '1px solid rgba(255, 255, 255, 0.08)',
-                    color: selectedWallet === w.id ? 'var(--accent-amber, #f59e0b)' : 'var(--text-main, #ffffff)',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span>{w.icon}</span>
-                  <span>{w.name}</span>
-                </button>
-              ))}
             </div>
           </div>
         )}

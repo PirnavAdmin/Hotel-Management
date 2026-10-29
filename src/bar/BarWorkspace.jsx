@@ -3764,7 +3764,7 @@ export function BarWorkspace({
                 Bar Operations Dashboard
               </h2>
               <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                Live overview of drinks, bar counter tabs, KOT tickets, and beverage sales
+                Live overview of drinks, bar counter tabs, BOT tickets, and beverage sales
               </div>
             </div>
           </div>
@@ -3836,7 +3836,7 @@ export function BarWorkspace({
               }}
             >
               <Clock3 size={14} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-main)"} />
-              <span>Live KOT ({pendingBarKotCount})</span>
+              <span>Live BOT ({pendingBarKotCount})</span>
             </button>
 
             <button
@@ -3890,10 +3890,10 @@ export function BarWorkspace({
         <div className="bar-page-title">
           <div>
             <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
-            <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar KOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
-            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the KOT service." : route === "bar-inventory" ? "Live beverage and liquor inventory ledger • tracked in real time." : "Independent Bar workspace • drink and order records are demo data."}</p>
+            <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar BOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
+            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the BOT service." : route === "bar-inventory" ? "Live beverage and liquor inventory ledger • tracked in real time." : "Independent Bar workspace • drink and order records are demo data."}</p>
           </div>
-          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE KOT DATA" : route === "bar-inventory" ? "BAR INVENTORY • LIVE LEDGER" : "DEMO DATA • SESSION ONLY"}</span>
+          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE BOT DATA" : route === "bar-inventory" ? "BAR INVENTORY • LIVE LEDGER" : "DEMO DATA • SESSION ONLY"}</span>
         </div>
       )}
 
@@ -3948,7 +3948,7 @@ export function BarWorkspace({
             </div>
           </div>
 
-          {/* Card 2: Bar KOT Live */}
+          {/* Card 2: Bar BOT Live */}
           <div
             onClick={() => go("bar-kot")}
             style={{
@@ -3969,18 +3969,18 @@ export function BarWorkspace({
               e.currentTarget.style.borderColor = pendingBarKotCount > 0 ? "rgba(239, 68, 68, 0.4)" : "var(--border-card)";
               e.currentTarget.style.transform = "translateY(0)";
             }}
-            title="Click to view Live Bar KOT screen"
+            title="Click to view Live Bar BOT screen"
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Bar KOT Live
+                Bar BOT Live
               </span>
               <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: pendingBarKotCount > 0 ? "rgba(239, 68, 68, 0.15)" : "rgba(100, 116, 139, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Clock3 size={12} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-dim)"} />
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {pendingBarKotCount} Active KOT
+              {pendingBarKotCount} Active BOT
             </div>
             <div style={{ fontSize: "0.66rem", color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               <span>{activePreparingCount} drinks in prep</span>

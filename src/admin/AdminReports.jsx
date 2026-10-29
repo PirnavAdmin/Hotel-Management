@@ -20,6 +20,11 @@ import {
   RotateCcw,
   Clock,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  PieChart,
+  Layers,
+  Percent,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { printSurface } from "../utils/printSurface";
@@ -189,11 +194,28 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const ordersLoaded = !isFetching;
   const startInputRef = useRef(null);
 
-  // Financial Sub-Tabs
-  const [activeFinanceTab, setActiveFinanceTab] = useState('statement'); // 'statement' | 'income' | 'expenditure'
+  // Single-Page View Mode Tabs
+  // 'sales' | 'statement' | 'income' | 'expenditure'
+  const [activeTab, setActiveTab] = useState('sales');
+
+  // Search & Filter State
   const [incomeSearch, setIncomeSearch] = useState('');
   const [invSearch, setInvSearch] = useState('');
   const [invCategoryFilter, setInvCategoryFilter] = useState('all');
+
+  // Compact Viewport Pagination
+  const ITEMS_PER_PAGE = 8;
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [invPage, setInvPage] = useState(1);
+
+  // Reset pagination on search / filter updates
+  useEffect(() => {
+    setOrdersPage(1);
+  }, [incomeSearch, filterPeriod, startDate, endDate]);
+
+  useEffect(() => {
+    setInvPage(1);
+  }, [invSearch, invCategoryFilter]);
 
   // Real-time Inventory State
   const [liveInventory, setLiveInventory] = useState(() => {
@@ -419,7 +441,6 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
       : 0;
   };
 
-  // Payment breakdown
   const paymentStats = {
     upi: filteredOrders.reduce(
       (sum, order) => sum + getPaymentTotal(order, "upi"),
@@ -527,6 +548,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const grossFoodSales = Math.max(0, totalRevenue - totalTax - totalService);
   const netRevenueAfterDiscount = Math.max(0, totalRevenue - totalDiscount);
   const profitMarginPercent = plIncome > 0 ? ((plNet / plIncome) * 100).toFixed(1) : '0.0';
+  const absMarginPercent = plIncome > 0 ? Math.abs((plNet / plIncome) * 100).toFixed(1) : '0.0';
 
   // Filtered Income Table Orders
   const searchedOrders = useMemo(() => {
@@ -540,6 +562,13 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
       return idMatch || tableMatch || itemMatch || payMatch;
     });
   }, [filteredOrders, incomeSearch]);
+
+  // Paginated Orders for Compact Single-Page Display
+  const totalOrdersPages = Math.max(1, Math.ceil(searchedOrders.length / ITEMS_PER_PAGE));
+  const paginatedOrders = useMemo(() => {
+    const start = (ordersPage - 1) * ITEMS_PER_PAGE;
+    return searchedOrders.slice(start, start + ITEMS_PER_PAGE);
+  }, [searchedOrders, ordersPage]);
 
   // Filtered Inventory Table Items
   const searchedInventory = useMemo(() => {
@@ -556,6 +585,13 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
       );
     });
   }, [inventoryItems, invSearch, invCategoryFilter]);
+
+  // Paginated Inventory for Compact Single-Page Display
+  const totalInvPages = Math.max(1, Math.ceil(searchedInventory.length / ITEMS_PER_PAGE));
+  const paginatedInventory = useMemo(() => {
+    const start = (invPage - 1) * ITEMS_PER_PAGE;
+    return searchedInventory.slice(start, start + ITEMS_PER_PAGE);
+  }, [searchedInventory, invPage]);
 
   const applyFetchedData = (data) => {
     setInvoicesData(data.records);
@@ -704,1393 +740,164 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
     }
   };
 
+  const navTabs = [
+    { id: 'sales', label: 'Sales & Channels', icon: BarChart3, badge: `${filteredOrders.length} Orders` },
+    { id: 'statement', label: 'Profit & Loss Statement', icon: FileSpreadsheet, badge: isProfit ? `+${absMarginPercent}%` : `-${absMarginPercent}%` },
+    { id: 'income', label: 'Detailed Income Ledger', icon: Receipt, badge: `${searchedOrders.length} Orders` },
+    { id: 'expenditure', label: 'Expenditure & Stock', icon: Boxes, badge: `${inventoryItems.length} Items` },
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       
-      {/* SCREEN VIEW ONLY (hidden completely during print) */}
-      <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%', maxWidth: '100%' }}>
-      
-      {/* ========================================================= */}
-      {/* CARD 1: SALES ANALYTICS & REVENUE REPORTS                 */}
-      {/* ========================================================= */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-card)',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* Header Strip inside Card */}
+      {/* SCREEN VIEW ONLY (Hidden during print) */}
+      <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '100%' }}>
+        
+        {/* ========================================================================= */}
+        {/* UNIFIED SINGLE-PAGE WORKSPACE CARD                                        */}
+        {/* ========================================================================= */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            marginBottom: '1.5rem',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            borderRadius: '16px',
+            padding: '1.25rem',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+            boxSizing: 'border-box',
           }}
         >
-          {/* Left Title with Orange Squircle */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-            <div
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
-                flexShrink: 0,
-              }}
-            >
-              <BarChart3 size={22} color='#ffffff' />
-            </div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          {/* Top Bar: Title & Global Date/Export Actions */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.85rem',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid var(--border-subtle)',
+              marginBottom: '1rem',
+            }}
+          >
+            {/* Title Section */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 3px 12px rgba(245, 158, 11, 0.35)',
+                  flexShrink: 0,
+                }}
+              >
+                <BarChart3 size={20} color='#ffffff' />
+              </div>
+              <div>
                 <h2
                   style={{
-                    fontSize: "1.35rem",
+                    fontSize: "1.2rem",
                     fontWeight: 800,
                     color: "var(--text-main)",
                     margin: 0,
+                    letterSpacing: "-0.01em",
                   }}
                 >
-                  Sales Analytics & Revenue Reports
+                  Sales Analytics &amp; Financial Reports
                 </h2>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Corner: Print Report Button */}
-          <button
-            onClick={() => printSurface("printable-report", {
-              title: "Sales and Revenue Report",
-              format: "a4",
-              emptyMessage: "There is no report data to print.",
-            })}
-            style={{
-              background: "var(--bg-tertiary)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "10px",
-              padding: "0.48rem 0.95rem",
-              color: "var(--text-main)",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(var(--surface-rgb),0.12)';
-              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(var(--surface-rgb),0.06)';
-              e.currentTarget.style.borderColor = 'rgba(var(--surface-rgb),0.14)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            title='Print or export PDF of the report'
-          >
-            <Printer size={15} color='#f59e0b' />
-            <span>Print Report</span>
-          </button>
-        </div>
-
-        {/* Filters and Fetch Action Bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.65rem',
-            flexWrap: 'wrap',
-            marginBottom: '1.5rem',
-          }}
-        >
-            {/* Quick period buttons are hidden; the period dropdown is the primary control. */}
-            <div
-              style={{
-                display: "none",
-                alignItems: "center",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "10px",
-                padding: "3px",
-                gap: "3px",
-                flexWrap: "wrap",
-              }}
-            >
-              {[
-                { id: "all", label: "All Time" },
-                { id: "today", label: "Daily (Today)" },
-                { id: "week", label: "Weekly (7D)" },
-                { id: "this_month", label: "Monthly" },
-                { id: "this_quarter", label: "Quarterly" },
-                { id: "this_year", label: "Yearly" },
-              ].map((p) => {
-                const active = filterPeriod === p.id || (p.id === "this_month" && filterPeriod === "month");
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => handleSelectPeriod(p.id)}
-                    style={{
-                      background: active
-                        ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                        : "transparent",
-                      color: active ? "#ffffff" : "var(--text-muted)",
-                      border: "none",
-                      borderRadius: "7px",
-                      padding: "0.38rem 0.65rem",
-                      fontSize: "0.76rem",
-                      fontWeight: active ? 700 : 600,
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* More Periods Dropdown */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "10px",
-                padding: "0.38rem 0.65rem",
-                gap: "0.4rem",
-              }}
-            >
-              <Calendar size={14} color="#f59e0b" />
-              <select
-                value={filterPeriod}
-                onChange={(e) => handleSelectPeriod(e.target.value)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text-main)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-                title="Select detailed reporting period"
-              >
-                <option value="all">All Time</option>
-                <optgroup label="Daily">
-                  <option value="today">Today</option>
-                  <option value="yesterday">Yesterday</option>
-                </optgroup>
-                <optgroup label="Weekly">
-                  <option value="this_week">This Week</option>
-                  <option value="last_week">Last Week</option>
-                </optgroup>
-                <optgroup label="Monthly">
-                  <option value="this_month">This Month</option>
-                  <option value="last_month">Last Month</option>
-                </optgroup>
-                <optgroup label="Quarterly">
-                  <option value="this_quarter">This Quarter</option>
-                  <option value="last_quarter">Last Quarter</option>
-                </optgroup>
-                <optgroup label="Yearly">
-                  <option value="this_year">This Year</option>
-                  <option value="last_year">Last Year</option>
-                </optgroup>
-                <option value="custom">Custom Date Range</option>
-              </select>
-            </div>
-
-            {/* Calendar Date-to-Date Range Picker */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background:
-                  filterPeriod === "custom"
-                    ? "rgba(245, 158, 11, 0.14)"
-                    : "var(--bg-tertiary)",
-                border:
-                  filterPeriod === "custom"
-                    ? "1.5px solid var(--accent-amber)"
-                    : "1px solid var(--border-subtle)",
-                borderRadius: "10px",
-                padding: "0.35rem 0.65rem",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <span
-                onClick={() => {
-                  try {
-                    startInputRef.current?.showPicker();
-                  } catch {}
-                }}
-                style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-                title="Click to select dates"
-              >
-                <Calendar size={15} color="var(--accent-amber)" style={{ flexShrink: 0 }} />
-              </span>
-              <input
-                ref={startInputRef}
-                type="date"
-                className="clean-date-input"
-                value={startDate}
-                max={endDate && endDate < todayYMD ? endDate : todayYMD}
-                onClick={(e) => {
-                  try {
-                    e.currentTarget.showPicker();
-                  } catch {}
-                }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const capped = val && val > todayYMD ? todayYMD : val;
-                  setStartDate(capped);
-                  setFilterPeriod("custom");
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text-main)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                }}
-                title="From Date (Future dates disabled)"
-              />
-              <span
-                style={{
-                  fontSize: "0.74rem",
-                  color: "var(--text-muted)",
-                  margin: "0 2px",
-                  fontWeight: 700,
-                  userSelect: "none",
-                }}
-              >
-                to
-              </span>
-              <input
-                type="date"
-                className="clean-date-input"
-                value={endDate}
-                min={startDate || undefined}
-                max={todayYMD}
-                onClick={(e) => {
-                  try {
-                    e.currentTarget.showPicker();
-                  } catch {}
-                }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const capped = val && val > todayYMD ? todayYMD : val;
-                  setEndDate(capped);
-                  setFilterPeriod("custom");
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text-main)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                }}
-                title="To Date (Future dates disabled)"
-              />
-            </div>
-
-            {/* Export CSV Button */}
-            <button
-              onClick={handleExportCSV}
-              style={{
-                background: "rgba(16, 185, 129, 0.12)",
-                border: "1px solid rgba(16, 185, 129, 0.35)",
-                borderRadius: "10px",
-                padding: "0.45rem 0.85rem",
-                color: "var(--success)",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                transition: "all 0.15s ease",
-              }}
-              title="Export report for this period to CSV spreadsheet"
-            >
-              <Download size={14} />
-              <span>Export CSV</span>
-            </button>
-
-            {/* Fetch Data Button */}
-            <button
-              onClick={() => { setIsFetching(true); setInvoiceLoadError(""); handleFetchData(); }}
-              disabled={isFetching}
-              style={{
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                border: "none",
-                borderRadius: "10px",
-                padding: "0.45rem 0.85rem",
-                color: "#ffffff",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                boxShadow: "0 3px 10px rgba(245, 158, 11, 0.35)",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = "0.92";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = "1";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <RefreshCw
-                size={13}
-                style={{
-                  transition: "transform 0.45s ease",
-                  transform: isFetching ? "rotate(360deg)" : "none",
-                }}
-              />
-              <span>Fetch Data</span>
-            </button>
-
-          </div>
-
-          {invoiceLoadError && (
-            <div role="alert" style={{ marginBottom: "1rem", padding: "0.7rem 0.9rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", background: "rgba(239, 68, 68, 0.08)", color: "var(--danger)", fontSize: "0.8rem" }}>
-              {invoiceLoadError}
-            </div>
-          )}
-
-          {/* Quick Section Navigation Bar */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              marginBottom: '1.25rem',
-              padding: '0.6rem 0.85rem',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 700 }}>
-              Quick Navigation:
-            </span>
-            <button
-              type='button'
-              onClick={() => {
-                const el = document.getElementById('admin-work-area');
-                if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
-                else window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.35)',
-                color: '#f59e0b',
-                borderRadius: '8px',
-                padding: '0.35rem 0.75rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-            >
-              <span>📊 Overview &amp; Metrics</span>
-            </button>
-            <button
-              type='button'
-              onClick={() => {
-                const target = document.getElementById('profit-loss-section');
-                if (target) {
-                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
-                border: '1.5px solid #10b981',
-                color: 'var(--success)',
-                borderRadius: '8px',
-                padding: '0.35rem 0.85rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-            >
-              <span>💰 Income, Expenditure &amp; Profit / Loss Report ↓</span>
-            </button>
-          </div>
-
-        {/* 6 Metric Overview Cards */}
-        <div
-          className="reports-metric-grid"
-          style={{
-            display: 'grid',
-            gap: '1rem',
-            marginBottom: '1.5rem',
-          }}
-        >
-          {/* Card 1: Total Collected */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-              Total Collected
-            </div>
-            <div
-              style={{
-                fontSize: '1.45rem',
-                fontWeight: 800,
-                color: '#f59e0b',
-                marginTop: '4px',
-              }}
-            >
-              {formatCurrency(totalRevenue)}
-            </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Across {filteredOrders.length} settled tickets
-            </div>
-          </div>
-
-          {/* Card 2: Total Orders */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-              Total Orders
-            </div>
-            <div
-              style={{
-                fontSize: '1.45rem',
-                fontWeight: 800,
-                color: 'var(--text-main)',
-                marginTop: '4px',
-              }}
-            >
-              {filteredOrders.length}
-            </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Settled dining orders
-            </div>
-          </div>
-
-          {/* Card 3: GST & Tax Collected */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-              GST & Tax Collected
-            </div>
-            <div
-              style={{
-                fontSize: '1.45rem',
-                fontWeight: 800,
-                color: 'var(--success)',
-                marginTop: '4px',
-              }}
-            >
-              {formatCurrency(totalTax)}
-            </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Tax collected across settled invoices
-            </div>
-          </div>
-
-          {/* Card 4: Service Charges */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-              Service Charges
-            </div>
-            <div
-              style={{
-                fontSize: '1.45rem',
-                fontWeight: 800,
-                color: 'var(--info)',
-                marginTop: '4px',
-              }}
-            >
-              {formatCurrency(totalService)}
-            </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Service charges on settled invoices
-            </div>
-          </div>
-
-          {/* Card 5: Average Bill */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-              Average Bill
-            </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--text-main)", marginTop: "4px" }}>
-              {formatCurrency(averageBill)}
-            </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Average collected per settled order
-            </div>
-          </div>
-
-          {/* Card 6: Discounts Given */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-              Discounts Given
-            </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--accent-purple)", marginTop: "4px" }}>
-              {formatCurrency(totalDiscount)}
-            </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
-              Total discounts on settled bills
-            </div>
-          </div>
-        </div>
-
-        {/* Two Column Grid: Payment Method Distribution & Top Dishes */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-            gap: '1.25rem',
-          }}
-        >
-          {/* Payment Methods Breakdown */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '14px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <h3
-              style={{
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                color: 'var(--text-main)',
-                marginBottom: '1rem',
-              }}
-            >
-              Payment Channel Distribution
-            </h3>
-
-            {/* UPI Bar */}
-            <div style={{ marginBottom: '1rem' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '0.82rem',
-                  marginBottom: '4px',
-                }}
-              >
-                <span
-                  style={{
-                    color: 'var(--info)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontWeight: 700,
-                  }}
-                >
-                  <Smartphone size={14} /> UPI Payments ({upiPercent}%)
-                </span>
-                <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
-                  {formatCurrency(paymentStats.upi)}
-                </span>
-              </div>
-              <div
-                style={{
-                  width: '100%',
-                  height: '8px',
-                  background: 'var(--border-subtle)',
-                  borderRadius: '4px',
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    width: `${upiPercent}%`,
-                    height: '100%',
-                    background: '#38bdf8',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Cash Bar */}
-            <div style={{ marginBottom: '1rem' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '0.82rem',
-                  marginBottom: '4px',
-                }}
-              >
-                <span
-                  style={{
-                    color: 'var(--success)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontWeight: 700,
-                  }}
-                >
-                  <Banknote size={14} /> Cash ({cashPercent}%)
-                </span>
-                <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
-                  {formatCurrency(paymentStats.cash)}
-                </span>
-              </div>
-              <div
-                style={{
-                  width: '100%',
-                  height: '8px',
-                  background: 'var(--border-subtle)',
-                  borderRadius: '4px',
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    width: `${cashPercent}%`,
-                    height: '100%',
-                    background: '#10b981',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Card Bar */}
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '0.82rem',
-                  marginBottom: '4px',
-                }}
-              >
-                <span
-                  style={{
-                    color: 'var(--accent-purple)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontWeight: 700,
-                  }}
-                >
-                  <CreditCard size={14} /> Card & POS Terminal ({cardPercent}%)
-                </span>
-                <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
-                  {formatCurrency(paymentStats.card)}
-                </span>
-              </div>
-              <div
-                style={{
-                  width: '100%',
-                  height: '8px',
-                  background: 'var(--border-subtle)',
-                  borderRadius: '4px',
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    width: `${cardPercent}%`,
-                    height: '100%',
-                    background: '#c084fc',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Top Selling Items Ranking */}
-          <div
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '14px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1rem',
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  margin: 0,
-                }}
-              >
-                Top Selling Items
-              </h3>
-              {sortedDishes.length > 3 && (
-                <button
-                  onClick={() => setShowAllDishes((prev) => !prev)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#f59e0b',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    padding: 0,
-                  }}
-                >
-                  <span>{showAllDishes ? 'Show Top 3' : 'View All'}</span>
-                  <ArrowRight size={13} />
-                </button>
-              )}
-            </div>
-
-            <div
-              className='no-scrollbar'
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.6rem',
-                maxHeight: '155px',
-                overflowY: 'auto',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
-            >
-              {displayedDishes.length === 0 ? (
-                <div
-                  style={{
-                    padding: '2rem 1rem',
-                    textAlign: 'center',
-                    color: 'var(--text-dim)',
-                    fontSize: '0.82rem',
-                  }}
-                >
-              {ordersLoaded ? "No settled invoices recorded for this period" : "Loading settled invoice data..."}
+                <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  All-in-one financial dashboard · settled dining revenue, P&amp;L accounting &amp; stock expenditure
                 </div>
-              ) : (
-                displayedDishes.map(([name, qty], index) => (
-                <div
-                  key={name}
+              </div>
+            </div>
+
+            {/* Actions: Period Selector, Custom Date Range, CSV, Print, Fetch */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              
+              {/* Period Dropdown */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "9px",
+                  padding: "0.32rem 0.55rem",
+                  gap: "0.35rem",
+                }}
+              >
+                <Calendar size={13} color="#f59e0b" />
+                <select
+                  value={filterPeriod}
+                  onChange={(e) => handleSelectPeriod(e.target.value)}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.5rem 0.65rem",
-                    borderRadius: "8px",
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border-subtle)",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "var(--text-main)",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
                   }}
+                  title="Select reporting period"
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        background:
-                          index === 0
-                            ? "#f59e0b"
-                            : index === 1
-                            ? "#64748b"
-                            : "var(--border-card)",
-                        color: index <= 1 ? "#000000" : "var(--text-main)",
-                        fontWeight: 800,
-                        fontSize: "0.72rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {index + 1}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.85rem",
-                        fontWeight: 700,
-                        color: "var(--text-main)",
-                      }}
-                    >
-                      {name}
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "var(--accent-amber-light)",
-                    }}
-                  >
-                    {qty} orders
-                  </span>
-                </div>
-              )))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* CARD 2: INCOME, EXPENDITURE & PROFIT / LOSS REPORT (DETAILED & USER FRIENDLY) */}
-      {/* ========================================================================= */}
-      <div
-        id="profit-loss-section"
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-card)',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* Section Header */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            borderBottom: '1px solid var(--border-subtle)',
-            paddingBottom: '1.25rem',
-            marginBottom: '1.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                background: isProfit
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: isProfit
-                  ? '0 4px 14px rgba(16, 185, 129, 0.35)'
-                  : '0 4px 14px rgba(239, 68, 68, 0.35)',
-                flexShrink: 0,
-              }}
-            >
-              <FileSpreadsheet size={22} color='#ffffff' />
-            </div>
-            <div>
-              <h2
-                style={{
-                  fontSize: '1.35rem',
-                  fontWeight: 800,
-                  color: 'var(--text-main)',
-                  margin: 0,
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                Income, Expenditure &amp; Profit / Loss
-              </h2>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Complete financial accounting evaluating settled dining revenue against inventory item costs
+                  <option value="all">All Time</option>
+                  <optgroup label="Daily">
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                  </optgroup>
+                  <optgroup label="Weekly">
+                    <option value="this_week">This Week</option>
+                    <option value="last_week">Last Week</option>
+                  </optgroup>
+                  <optgroup label="Monthly">
+                    <option value="this_month">This Month</option>
+                    <option value="last_month">Last Month</option>
+                  </optgroup>
+                  <optgroup label="Quarterly">
+                    <option value="this_quarter">This Quarter</option>
+                    <option value="last_quarter">Last Quarter</option>
+                  </optgroup>
+                  <optgroup label="Yearly">
+                    <option value="this_year">This Year</option>
+                    <option value="last_year">Last Year</option>
+                  </optgroup>
+                  <option value="custom">Custom Range...</option>
+                </select>
               </div>
-            </div>
-          </div>
 
-          {/* Profit / Loss Status Indicator Pill */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              background: isProfit ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-              border: `1.5px solid ${isProfit ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
-              borderRadius: '999px',
-              padding: '0.45rem 1.1rem',
-            }}
-          >
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: isProfit ? '#10b981' : '#ef4444',
-                boxShadow: `0 0 8px ${isProfit ? '#10b981' : '#ef4444'}`,
-              }}
-            />
-            <span
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 800,
-                color: isProfit ? 'var(--success)' : 'var(--danger)',
-                letterSpacing: '0.03em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {isProfit ? `NET PROFIT: +${formatCurrency(plNet)} (${profitMarginPercent}%)` : `NET LOSS: -${formatCurrency(Math.abs(plNet))} (${profitMarginPercent}%)`}
-            </span>
-          </div>
-        </div>
-
-        {/* Period Performance Insights Bar */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "0.75rem",
-            marginBottom: "1.25rem",
-          }}
-        >
-          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
-            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Period Orders Settled</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "var(--text-main)", marginTop: "2px" }}>
-              {filteredOrders.length} <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-dim)" }}>orders</span>
-            </div>
-          </div>
-          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
-            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Average Bill (AOV)</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "var(--info)", marginTop: "2px" }}>
-              {formatCurrency(averageBill)}
-            </div>
-          </div>
-          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
-            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Taxes &amp; Service Collected</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "#f59e0b", marginTop: "2px" }}>
-              {formatCurrency(totalTax + totalService)}
-            </div>
-          </div>
-          <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "0.65rem 0.95rem" }}>
-            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Promotions &amp; Discounts</div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 900, color: totalDiscount > 0 ? "var(--danger)" : "var(--success)", marginTop: "2px" }}>
-              {formatCurrency(totalDiscount)} <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-dim)" }}>({totalRevenue > 0 ? ((totalDiscount / totalRevenue) * 100).toFixed(1) : "0.0"}%)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3 Prominent Executive Balance Metric Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1.5rem',
-          }}
-        >
-          {/* 1. TOTAL INCOME */}
-          <div
-            style={{
-              background: 'linear-gradient(145deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%)',
-              border: '1.5px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '14px',
-              padding: '1.25rem',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Total Income (Sales)
-              </div>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--success)',
-                }}
-              >
-                <TrendingUp size={18} />
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: '1.75rem',
-                fontWeight: 900,
-                color: 'var(--success)',
-                marginTop: '0.6rem',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {formatCurrency(plIncome)}
-            </div>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-              Revenue generated from <strong style={{ color: 'var(--text-main)' }}>{filteredOrders.length}</strong> settled orders
-            </div>
-          </div>
-
-          {/* 2. TOTAL EXPENDITURE */}
-          <div
-            style={{
-              background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%)',
-              border: '1.5px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '14px',
-              padding: '1.25rem',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Total Expenditure (Costs)
-              </div>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--danger)',
-                }}
-              >
-                <TrendingDown size={18} />
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: '1.75rem',
-                fontWeight: 900,
-                color: 'var(--danger)',
-                marginTop: '0.6rem',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {formatCurrency(plExpenditure)}
-            </div>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-              Restock Purchases: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalInventoryPurchaseCost)}</strong> + Discounts: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(totalDiscount)}</strong> · COGS: <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(costOfGoodsSold)}</strong>
-            </div>
-          </div>
-
-          {/* 3. NET PROFIT / LOSS */}
-          <div
-            style={{
-              background: isProfit
-                ? 'linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%)'
-                : 'linear-gradient(145deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%)',
-              border: `1.5px solid ${isProfit ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.45)'}`,
-              borderRadius: '14px',
-              padding: '1.25rem',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div
-                style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: isProfit ? 'var(--success)' : 'var(--danger)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                {isProfit ? 'Net Operating Profit' : 'Net Operating Loss'}
-              </div>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: isProfit ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: isProfit ? 'var(--success)' : 'var(--danger)',
-                }}
-              >
-                <Award size={18} />
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: '1.75rem',
-                fontWeight: 900,
-                color: isProfit ? 'var(--success)' : 'var(--danger)',
-                marginTop: '0.6rem',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
-            </div>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-              Operating Margin: <strong style={{ color: isProfit ? 'var(--success)' : 'var(--danger)' }}>{profitMarginPercent}%</strong> (Income − Expenditure)
-            </div>
-          </div>
-        </div>
-
-        {/* Financial Sub-Navigation Tabs */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            background: 'var(--bg-tertiary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '12px',
-            padding: '6px',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            {/* Tab: Statement */}
-            <button
-              type='button'
-              onClick={() => setActiveFinanceTab('statement')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                border: 'none',
-                transition: 'all 0.15s ease',
-                background: activeFinanceTab === 'statement'
-                  ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)'
-                  : 'transparent',
-                color: activeFinanceTab === 'statement' ? '#ffffff' : 'var(--text-muted)',
-                boxShadow: activeFinanceTab === 'statement' ? '0 2px 8px rgba(245, 158, 11, 0.35)' : 'none',
-              }}
-            >
-              <FileSpreadsheet size={15} />
-              <span>Profit &amp; Loss Statement</span>
-            </button>
-
-            {/* Tab: Detailed Income */}
-            <button
-              type='button'
-              onClick={() => setActiveFinanceTab('income')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                border: 'none',
-                transition: 'all 0.15s ease',
-                background: activeFinanceTab === 'income'
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : 'transparent',
-                color: activeFinanceTab === 'income' ? '#ffffff' : 'var(--text-muted)',
-                boxShadow: activeFinanceTab === 'income' ? '0 2px 8px rgba(16, 185, 129, 0.35)' : 'none',
-              }}
-            >
-              <Receipt size={15} />
-              <span>Detailed Income ({filteredOrders.length} Orders)</span>
-            </button>
-
-            {/* Tab: Detailed Expenditure / Inventory */}
-            <button
-              type='button'
-              onClick={() => setActiveFinanceTab('expenditure')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                border: 'none',
-                transition: 'all 0.15s ease',
-                background: activeFinanceTab === 'expenditure'
-                  ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)'
-                  : 'transparent',
-                color: activeFinanceTab === 'expenditure' ? '#ffffff' : 'var(--text-muted)',
-                boxShadow: activeFinanceTab === 'expenditure' ? '0 2px 8px rgba(239, 68, 68, 0.35)' : 'none',
-              }}
-            >
-              <Boxes size={15} />
-              <span>Detailed Expenditure ({inventoryItems.length} Inventory Items)</span>
-            </button>
-          </div>
-
-          {/* Interactive Period Quick Filter in Sub-Nav (Screenshot Location) */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              flexWrap: "wrap",
-              paddingRight: "0.4rem",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.35rem",
-                background: "rgba(var(--surface-rgb),0.05)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "8px",
-                padding: "0.32rem 0.6rem",
-              }}
-            >
-              <Calendar size={13} color="#f59e0b" />
-              <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>Period:</span>
-              <select
-                value={filterPeriod}
-                onChange={(e) => handleSelectPeriod(e.target.value)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "#f59e0b",
-                  fontSize: "0.78rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  paddingRight: "4px",
-                }}
-                title="Select reporting period"
-              >
-                <option value="all">🌐 All Time (Complete History)</option>
-                <optgroup label="Daily &amp; Particular Day">
-                  <option value="today">📅 Today ({todayYMD})</option>
-                  <option value="yesterday">⏮️ Yesterday ({yesterdayYMD})</option>
-                </optgroup>
-                <optgroup label="Weekly Basis">
-                  <option value="this_week">📆 This Week (Mon → Today)</option>
-                  <option value="last_week">⏮️ Last Week (Full)</option>
-                </optgroup>
-                <optgroup label="Monthly Basis">
-                  <option value="this_month">📊 This Month ({now.toLocaleString("default", { month: "short" })})</option>
-                  <option value="last_month">⏮️ Last Month ({lastMonthDate.toLocaleString("default", { month: "short" })})</option>
-                </optgroup>
-                <optgroup label="Quarterly Basis">
-                  <option value="this_quarter">📈 This Quarter (Q{currentQNum} {currentYear})</option>
-                  <option value="last_quarter">⏮️ Last Quarter (Q{lastQNum})</option>
-                </optgroup>
-                <optgroup label="Yearly Basis">
-                  <option value="this_year">🏛️ This Year ({currentYear})</option>
-                  <option value="last_year">⏮️ Last Year ({currentYear - 1})</option>
-                </optgroup>
-                <optgroup label="Custom Range">
-                  <option value="custom">⚙️ Custom Date Range (From → To)...</option>
-                </optgroup>
-              </select>
-            </div>
-
-            {/* Direct Inline Custom Date Range Picker (From → To) */}
-            {filterPeriod === "custom" && (
+              {/* Custom Date Range Picker */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "0.35rem",
-                  background: "rgba(245, 158, 11, 0.12)",
-                  border: "1.5px solid var(--accent-amber)",
-                  borderRadius: "8px",
-                  padding: "0.28rem 0.6rem",
+                  background: filterPeriod === "custom" ? "rgba(245, 158, 11, 0.12)" : "var(--bg-tertiary)",
+                  border: filterPeriod === "custom" ? "1.5px solid var(--accent-amber)" : "1px solid var(--border-subtle)",
+                  borderRadius: "9px",
+                  padding: "0.3rem 0.55rem",
+                  transition: "all 0.15s ease",
                 }}
               >
-                <Calendar size={13} color="#f59e0b" />
-                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>From:</span>
+                <span
+                  onClick={() => {
+                    try { startInputRef.current?.showPicker(); } catch {}
+                  }}
+                  style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+                  title="Click to select dates"
+                >
+                  <Calendar size={13} color="var(--accent-amber)" style={{ flexShrink: 0 }} />
+                </span>
                 <input
+                  ref={startInputRef}
                   type="date"
                   className="clean-date-input"
-                  value={startDate || thisMonthStartYMD}
+                  value={startDate}
                   max={endDate && endDate < todayYMD ? endDate : todayYMD}
-                  onClick={(e) => {
-                    try { e.currentTarget.showPicker(); } catch {}
-                  }}
+                  onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
                   onChange={(e) => {
                     const val = e.target.value;
                     const capped = val && val > todayYMD ? todayYMD : val;
@@ -2102,23 +909,22 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     border: "none",
                     outline: "none",
                     color: "var(--text-main)",
-                    fontSize: "0.78rem",
-                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
                     fontFamily: "inherit",
                     cursor: "pointer",
+                    width: "95px",
                   }}
                   title="From Date"
                 />
-                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>to</span>
+                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 700 }}>to</span>
                 <input
                   type="date"
                   className="clean-date-input"
-                  value={endDate || todayYMD}
+                  value={endDate}
                   min={startDate || undefined}
                   max={todayYMD}
-                  onClick={(e) => {
-                    try { e.currentTarget.showPicker(); } catch {}
-                  }}
+                  onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
                   onChange={(e) => {
                     const val = e.target.value;
                     const capped = val && val > todayYMD ? todayYMD : val;
@@ -2130,777 +936,1384 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     border: "none",
                     outline: "none",
                     color: "var(--text-main)",
-                    fontSize: "0.78rem",
-                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
                     fontFamily: "inherit",
                     cursor: "pointer",
+                    width: "95px",
                   }}
                   title="To Date"
                 />
               </div>
-            )}
 
-            {/* Date range chip for other periods */}
-            {filterPeriod !== "custom" && (
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  color: "var(--text-dim)",
-                  background: "rgba(var(--surface-rgb),0.03)",
-                  padding: "0.28rem 0.55rem",
-                  borderRadius: "6px",
-                  border: "1px solid var(--border-subtle)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {getActiveDateRangeText()}
-              </span>
-            )}
-
-            {/* 1-click Reset button if filter is active */}
-            {filterPeriod !== "all" && (
+              {/* Export CSV */}
               <button
-                type="button"
-                onClick={() => handleSelectPeriod("all")}
+                onClick={handleExportCSV}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  background: "rgba(239, 68, 68, 0.12)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  color: "var(--danger)",
-                  borderRadius: "6px",
-                  padding: "0.28rem 0.55rem",
-                  fontSize: "0.7rem",
+                  background: "rgba(16, 185, 129, 0.12)",
+                  border: "1px solid rgba(16, 185, 129, 0.35)",
+                  borderRadius: "9px",
+                  padding: "0.38rem 0.75rem",
+                  color: "var(--success)",
+                  fontSize: "0.75rem",
                   fontWeight: 700,
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  transition: "all 0.15s ease",
                 }}
-                title="Reset filter to All Time"
+                title="Export report for this period to CSV spreadsheet"
               >
-                <RotateCcw size={11} />
-                <span>Reset</span>
+                <Download size={13} />
+                <span>Export CSV</span>
               </button>
-            )}
-          </div>
-        </div>
 
-        {/* ===================================================================== */}
-        {/* TAB 1: STRUCTURED PROFIT & LOSS STATEMENT                             */}
-        {/* ===================================================================== */}
-        {activeFinanceTab === 'statement' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Visual Margin Bar */}
+              {/* Print Report */}
+              <button
+                onClick={() => printSurface("printable-report", {
+                  title: "Sales and Revenue Report",
+                  format: "a4",
+                  emptyMessage: "There is no report data to print.",
+                })}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "9px",
+                  padding: "0.38rem 0.75rem",
+                  color: "var(--text-main)",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  transition: "all 0.15s ease",
+                }}
+                title="Print or export full audit report to PDF"
+              >
+                <Printer size={13} color="#f59e0b" />
+                <span>Print Report</span>
+              </button>
+
+              {/* Fetch Data */}
+              <button
+                onClick={() => { setIsFetching(true); setInvoiceLoadError(""); handleFetchData(); }}
+                disabled={isFetching}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  border: "none",
+                  borderRadius: "9px",
+                  padding: "0.38rem 0.8rem",
+                  color: "#ffffff",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <RefreshCw
+                  size={12}
+                  style={{
+                    transition: "transform 0.45s ease",
+                    transform: isFetching ? "rotate(360deg)" : "none",
+                  }}
+                />
+                <span>Fetch Data</span>
+              </button>
+
+            </div>
+          </div>
+
+          {invoiceLoadError && (
+            <div role="alert" style={{ marginBottom: "0.85rem", padding: "0.6rem 0.85rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", background: "rgba(239, 68, 68, 0.08)", color: "var(--danger)", fontSize: "0.78rem" }}>
+              {invoiceLoadError}
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 5 EXECUTIVE KEY NUMBERS - COMPACT 1-ROW DASHBOARD (ZERO SCROLLING)       */}
+          {/* ========================================================================= */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(185px, 1fr))',
+              gap: '0.65rem',
+              marginBottom: '1rem',
+            }}
+          >
+            {/* 1. Total Income */}
             <div
               style={{
                 background: 'var(--bg-tertiary)',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
+                borderRadius: '10px',
+                padding: '0.75rem 0.95rem',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Operating Balance Ratio (Revenue vs Expenditure)
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Total Income (Sales)
                 </span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isProfit ? 'var(--success)' : 'var(--danger)' }}>
-                  {isProfit ? 'Operating in Profit' : 'Operating at Loss'}
-                </span>
+                <TrendingUp size={13} color="var(--success)" />
               </div>
-              <div
-                style={{
-                  height: '10px',
-                  width: '100%',
-                  background: 'var(--border-subtle)',
-                  borderRadius: '5px',
-                  overflow: 'hidden',
-                  display: 'flex',
-                }}
-              >
-                <div
-                  style={{
-                    width: plIncome + plExpenditure > 0 ? `${Math.round((plIncome / (plIncome + plExpenditure)) * 100)}%` : '50%',
-                    background: '#10b981',
-                    transition: 'width 0.4s ease',
-                  }}
-                  title={`Revenue Share: ${formatCurrency(plIncome)}`}
-                />
-                <div
-                  style={{
-                    width: plIncome + plExpenditure > 0 ? `${Math.round((plExpenditure / (plIncome + plExpenditure)) * 100)}%` : '50%',
-                    background: '#ef4444',
-                    transition: 'width 0.4s ease',
-                  }}
-                  title={`Cost Share: ${formatCurrency(plExpenditure)}`}
-                />
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
+                {formatCurrency(totalRevenue)}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginTop: '6px' }}>
-                <span style={{ color: 'var(--success)', fontWeight: 700 }}>
-                  ● Income: {formatCurrency(plIncome)} ({plIncome + plExpenditure > 0 ? Math.round((plIncome / (plIncome + plExpenditure)) * 100) : 0}%)
-                </span>
-                <span style={{ color: 'var(--danger)', fontWeight: 700 }}>
-                  ● Expenditure: {formatCurrency(plExpenditure)} ({plIncome + plExpenditure > 0 ? Math.round((plExpenditure / (plIncome + plExpenditure)) * 100) : 0}%)
-                </span>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                From {filteredOrders.length} settled tickets
               </div>
             </div>
 
-            {/* Formal Accounting Table */}
+            {/* 2. Total Expenditure */}
             <div
               style={{
                 background: 'var(--bg-tertiary)',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                overflow: 'hidden',
+                borderRadius: '10px',
+                padding: '0.75rem 0.95rem',
               }}
             >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Accounting Head / Description</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Operational Context</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Amount (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* SECTION 1: REVENUE */}
-                  <tr style={{ background: 'rgba(16, 185, 129, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td colSpan={3} style={{ padding: '8px 14px', fontWeight: 800, color: 'var(--success)', fontSize: '0.85rem' }}>
-                      1. OPERATING REVENUE (INCOME)
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '8px 14px', paddingLeft: '28px', color: 'var(--text-main)', fontWeight: 600 }}>
-                      Gross Settled Dining Sales
-                    </td>
-                    <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
-                      Revenue from {filteredOrders.length} customer orders
-                    </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>
-                      +{formatCurrency(totalRevenue)}
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '8px 14px', paddingLeft: '28px', color: 'var(--text-muted)' }}>
-                      ↳ Food &amp; Beverage Net Sales
-                    </td>
-                    <td style={{ padding: '8px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
-                      Bill total minus GST &amp; service charge
-                    </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>
-                      {formatCurrency(grossFoodSales)}
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '8px 14px', paddingLeft: '28px', color: 'var(--text-muted)' }}>
-                      ↳ GST &amp; Direct Taxes Collected
-                    </td>
-                    <td style={{ padding: '8px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
-                      Tax liability collected from invoices
-                    </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', color: 'var(--info)' }}>
-                      {formatCurrency(totalTax)}
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '8px 14px', paddingLeft: '28px', color: 'var(--text-muted)' }}>
-                      ↳ Service Charges Collected
-                    </td>
-                    <td style={{ padding: '8px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
-                      Customer dining service fees
-                    </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', color: 'var(--info)' }}>
-                      {formatCurrency(totalService)}
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '8px 14px', paddingLeft: '28px', color: '#f59e0b', fontWeight: 600 }}>
-                      Less: Bill Discounts Given
-                    </td>
-                    <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
-                      Promotions &amp; customer reductions
-                    </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
-                      -{formatCurrency(totalDiscount)}
-                    </td>
-                  </tr>
-                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '9px 14px', fontWeight: 800, color: 'var(--text-main)' }}>
-                      Total Net Operating Revenue
-                    </td>
-                    <td style={{ padding: '9px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
-                      Total revenue adjusted for discounts
-                    </td>
-                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--success)', fontSize: '0.92rem' }}>
-                      {formatCurrency(netRevenueAfterDiscount)}
-                    </td>
-                  </tr>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Total Expenditure
+                </span>
+                <TrendingDown size={13} color="var(--danger)" />
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
+                {formatCurrency(plExpenditure)}
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                Stock: {formatCurrency(totalInventoryCost)} · Disc: {formatCurrency(totalDiscount)}
+              </div>
+            </div>
 
-                  {/* SECTION 2: EXPENDITURE */}
-                  <tr style={{ background: 'rgba(239, 68, 68, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td colSpan={3} style={{ padding: '8px 14px', fontWeight: 800, color: 'var(--danger)', fontSize: '0.85rem' }}>
-                      2. OPERATING EXPENDITURE &amp; INVENTORY
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '8px 14px', paddingLeft: '28px', color: 'var(--text-main)', fontWeight: 600 }}>
-                      Current Ingredient &amp; Raw Material Stock Valuation
-                    </td>
-                    <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
-                      {inventoryItems.length} inventory items evaluated at current stock and unit cost
-                    </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                      -{formatCurrency(totalInventoryCost)}
-                    </td>
-                  </tr>
+            {/* 3. Net Operating Profit */}
+            <div
+              style={{
+                background: isProfit ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                border: `1.5px solid ${isProfit ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+                borderRadius: '10px',
+                padding: '0.75rem 0.95rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: isProfit ? 'var(--success)' : 'var(--danger)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {isProfit ? 'Net Operating Profit' : 'Net Operating Loss'}
+                </span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: isProfit ? 'var(--success)' : 'var(--danger)', background: isProfit ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)', padding: '1px 5px', borderRadius: '4px' }}>
+                  {profitMarginPercent}%
+                </span>
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: isProfit ? 'var(--success)' : 'var(--danger)', marginTop: '2px' }}>
+                {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
+              </div>
+              <div style={{ fontSize: '0.68rem', color: isProfit ? 'var(--success)' : 'var(--danger)', marginTop: '2px' }}>
+                Operating Margin: {profitMarginPercent}%
+              </div>
+            </div>
 
-                  {/* Top categories breakdown */}
-                  {inventoryCategoryBreakdown.slice(0, 4).map(([cat, val]) => (
-                    <tr key={cat} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '6px 14px', paddingLeft: '38px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                        ↳ {cat} Stock Cost
-                      </td>
-                      <td style={{ padding: '6px 14px', color: 'var(--text-dim)', fontSize: '0.74rem' }}>
-                        Category inventory valuation
-                      </td>
-                      <td style={{ padding: '6px 14px', textAlign: 'right', color: 'var(--text-dim)', fontSize: '0.78rem' }}>
-                        {formatCurrency(val)}
-                      </td>
-                    </tr>
-                  ))}
+            {/* 4. Settled Orders */}
+            <div
+              style={{
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '10px',
+                padding: '0.75rem 0.95rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Settled Orders
+                </span>
+                <Utensils size={13} color="var(--text-muted)" />
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+                {filteredOrders.length} <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600 }}>Orders</span>
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                Avg Ticket: {formatCurrency(averageBill)}
+              </div>
+            </div>
 
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '8px 14px', paddingLeft: '28px', color: '#f59e0b', fontWeight: 600 }}>
-                      Customer Discounts Absorbed
-                    </td>
-                    <td style={{ padding: '8px 14px', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
-                      Promotional price reductions on settled bills
-                    </td>
-                    <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
-                      -{formatCurrency(totalDiscount)}
-                    </td>
-                  </tr>
-                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '9px 14px', fontWeight: 800, color: 'var(--text-main)' }}>
-                      Total Operating Expenditure
-                    </td>
-                    <td style={{ padding: '9px 14px', color: 'var(--text-dim)', fontSize: '0.76rem' }}>
-                      Lifetime tracked restock purchases + customer discounts
-                    </td>
-                    <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--danger)', fontSize: '0.92rem' }}>
-                      -{formatCurrency(plExpenditure)}
-                    </td>
-                  </tr>
+            {/* 5. Taxes & Service */}
+            <div
+              style={{
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '10px',
+                padding: '0.75rem 0.95rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Taxes &amp; Service
+                </span>
+                <CreditCard size={13} color="var(--info)" />
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--info)', marginTop: '2px' }}>
+                {formatCurrency(totalTax + totalService)}
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                GST: {formatCurrency(totalTax)} · Svc: {formatCurrency(totalService)}
+              </div>
+            </div>
 
-                  {/* SECTION 3: NET BOTTOM LINE */}
-                  <tr
-                    style={{
-                      background: isProfit ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                      borderTop: `2px solid ${isProfit ? '#10b981' : '#ef4444'}`,
-                    }}
-                  >
-                    <td style={{ padding: '12px 14px', fontWeight: 900, fontSize: '0.98rem', color: isProfit ? 'var(--success)' : 'var(--danger)' }}>
-                      {isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING LOSS'}
-                    </td>
-                    <td style={{ padding: '12px 14px', color: 'var(--text-main)', fontSize: '0.8rem', fontWeight: 600 }}>
-                      Total Income − Total Expenditure ({profitMarginPercent}% Operating Margin)
-                    </td>
-                    <td
+          </div>
+
+          {/* ========================================================================= */}
+          {/* MASTER VIEW MODE TABS (THE SPA ENGINE - ZERO SCROLLING)                   */}
+          {/* ========================================================================= */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flexWrap: 'nowrap',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '11px',
+              padding: '4px',
+              marginBottom: '1rem',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            {navTabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const Icon = tab.icon;
+
+              // Color logic:
+              // - statement: profit -> green, loss -> red
+              // - expenditure: orange
+              // - sales & income: amber/orange
+              let activeBackground = 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)';
+              let activeShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
+
+              if (tab.id === 'statement') {
+                if (isProfit) {
+                  activeBackground = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                  activeShadow = '0 2px 8px rgba(16, 185, 129, 0.35)';
+                } else {
+                  activeBackground = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                  activeShadow = '0 2px 8px rgba(239, 68, 68, 0.35)';
+                }
+              } else if (tab.id === 'expenditure') {
+                activeBackground = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+                activeShadow = '0 2px 8px rgba(249, 115, 22, 0.35)';
+              }
+
+              // Inactive styling for statement badge
+              let inactiveBadgeBg = 'rgba(var(--surface-rgb), 0.08)';
+              let inactiveBadgeColor = 'var(--text-dim)';
+              let inactiveBadgeBorder = 'none';
+
+              if (tab.id === 'statement' && !isActive) {
+                inactiveBadgeBg = isProfit ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+                inactiveBadgeColor = isProfit ? '#10b981' : '#ef4444';
+                inactiveBadgeBorder = `1px solid ${isProfit ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`;
+              }
+
+              return (
+                <button
+                  key={tab.id}
+                  type='button'
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: 'none',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    transition: 'all 0.15s ease',
+                    background: isActive ? activeBackground : 'transparent',
+                    color: isActive ? '#ffffff' : 'var(--text-muted)',
+                    boxShadow: isActive ? activeShadow : 'none',
+                  }}
+                >
+                  <Icon size={14} />
+                  <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span
                       style={{
-                        padding: '12px 14px',
-                        textAlign: 'right',
-                        fontWeight: 900,
-                        fontSize: '1.25rem',
-                        color: isProfit ? 'var(--success)' : 'var(--danger)',
+                        fontSize: '0.66rem',
+                        padding: '1px 5px',
+                        borderRadius: '10px',
+                        background: isActive ? 'rgba(255, 255, 255, 0.25)' : inactiveBadgeBg,
+                        color: isActive ? '#ffffff' : inactiveBadgeColor,
+                        border: isActive ? 'none' : inactiveBadgeBorder,
+                        fontWeight: 700,
                       }}
                     >
-                      {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        )}
 
-        {/* ===================================================================== */}
-        {/* TAB 2: DETAILED INCOME TABLE                                          */}
-        {/* ===================================================================== */}
-        {activeFinanceTab === 'income' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Search Bar for Orders */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-              }}
-            >
+          {/* ========================================================================= */}
+          {/* TAB 1: SALES & CHANNELS (PAYMENT DISTRIBUTION + TOP DISHES)               */}
+          {/* ========================================================================= */}
+          {activeTab === 'sales' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Two Column Grid */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                  gap: '1rem',
+                }}
+              >
+                {/* Left Column: Payment Channel Distribution */}
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      color: 'var(--text-main)',
+                      marginBottom: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    <CreditCard size={15} color="#38bdf8" />
+                    <span>Payment Channel Distribution</span>
+                  </h3>
+
+                  {/* UPI */}
+                  <div style={{ marginBottom: '0.85rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.78rem',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      <span style={{ color: 'var(--info)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                        <Smartphone size={13} /> UPI ({upiPercent}%)
+                      </span>
+                      <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
+                        {formatCurrency(paymentStats.upi)}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '7px', background: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${upiPercent}%`, height: '100%', background: '#38bdf8' }} />
+                    </div>
+                  </div>
+
+                  {/* Cash */}
+                  <div style={{ marginBottom: '0.85rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.78rem',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                        <Banknote size={13} /> Cash ({cashPercent}%)
+                      </span>
+                      <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
+                        {formatCurrency(paymentStats.cash)}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '7px', background: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${cashPercent}%`, height: '100%', background: '#10b981' }} />
+                    </div>
+                  </div>
+
+                  {/* Card */}
+                  <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.78rem',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      <span style={{ color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                        <CreditCard size={13} /> Card / POS ({cardPercent}%)
+                      </span>
+                      <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
+                        {formatCurrency(paymentStats.card)}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '7px', background: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${cardPercent}%`, height: '100%', background: '#c084fc' }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Top Selling Items */}
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '0.75rem',
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                        color: "var(--text-main)",
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <Award size={15} color="#f59e0b" />
+                      <span>Top Selling Items</span>
+                    </h3>
+                    {sortedDishes.length > 3 && (
+                      <button
+                        onClick={() => setShowAllDishes((prev) => !prev)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#f59e0b',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          padding: 0,
+                        }}
+                      >
+                        <span>{showAllDishes ? 'Top 3' : 'View All'}</span>
+                        <ArrowRight size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div
+                    className='no-scrollbar'
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {displayedDishes.length === 0 ? (
+                      <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.78rem' }}>
+                        {ordersLoaded ? "No settled orders recorded for this period" : "Loading orders data..."}
+                      </div>
+                    ) : (
+                      displayedDishes.map(([name, qty], index) => (
+                        <div
+                          key={name}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "0.45rem 0.6rem",
+                            borderRadius: "7px",
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border-subtle)",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                            <span
+                              style={{
+                                width: "20px",
+                                height: "20px",
+                                borderRadius: "50%",
+                                background: index === 0 ? "#f59e0b" : index === 1 ? "#64748b" : "var(--border-card)",
+                                color: index <= 1 ? "#000000" : "var(--text-main)",
+                                fontWeight: 800,
+                                fontSize: "0.68rem",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              {index + 1}
+                            </span>
+                            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-main)" }}>
+                              {name}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--accent-amber-light)" }}>
+                            {qty} orders
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Settlement Revenue Composition Strip */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '0.65rem',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '12px',
+                  padding: '0.85rem 1rem',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Food &amp; Beverage Net Sales</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+                    {formatCurrency(grossFoodSales)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>GST &amp; Direct Taxes Collected</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--success)', marginTop: '2px' }}>
+                    {formatCurrency(totalTax)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Customer Service Charges</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--info)', marginTop: '2px' }}>
+                    {formatCurrency(totalService)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Customer Discounts Given</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: totalDiscount > 0 ? 'var(--accent-purple)' : 'var(--text-dim)', marginTop: '2px' }}>
+                    {formatCurrency(totalDiscount)}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 2: STRUCTURED PROFIT & LOSS STATEMENT                                 */}
+          {/* ========================================================================= */}
+          {activeTab === 'statement' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              
+              {/* Visual Balance Bar */}
+              <div
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    Operating Balance Ratio (Revenue vs Expenditure)
+                  </span>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: isProfit ? 'var(--success)' : 'var(--danger)' }}>
+                    {isProfit ? 'Operating in Profit' : 'Operating at Loss'}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: '8px',
+                    width: '100%',
+                    background: 'var(--border-subtle)',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: plIncome + plExpenditure > 0 ? `${Math.round((plIncome / (plIncome + plExpenditure)) * 100)}%` : '50%',
+                      background: '#10b981',
+                      transition: 'width 0.4s ease',
+                    }}
+                    title={`Revenue Share: ${formatCurrency(plIncome)}`}
+                  />
+                  <div
+                    style={{
+                      width: plIncome + plExpenditure > 0 ? `${Math.round((plExpenditure / (plIncome + plExpenditure)) * 100)}%` : '50%',
+                      background: '#ef4444',
+                      transition: 'width 0.4s ease',
+                    }}
+                    title={`Cost Share: ${formatCurrency(plExpenditure)}`}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginTop: '5px' }}>
+                  <span style={{ color: 'var(--success)', fontWeight: 700 }}>
+                    ● Income: {formatCurrency(plIncome)} ({plIncome + plExpenditure > 0 ? Math.round((plIncome / (plIncome + plExpenditure)) * 100) : 0}%)
+                  </span>
+                  <span style={{ color: 'var(--danger)', fontWeight: 700 }}>
+                    ● Expenditure: {formatCurrency(plExpenditure)} ({plIncome + plExpenditure > 0 ? Math.round((plExpenditure / (plIncome + plExpenditure)) * 100) : 0}%)
+                  </span>
+                </div>
+              </div>
+
+              {/* Formal Accounting Table */}
+              <div
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '11px',
+                  overflow: 'hidden',
+                }}
+              >
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Accounting Head / Description</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Operational Context</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* SECTION 1: REVENUE */}
+                    <tr style={{ background: 'rgba(16, 185, 129, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td colSpan={3} style={{ padding: '7px 12px', fontWeight: 800, color: 'var(--success)', fontSize: '0.82rem' }}>
+                        1. OPERATING REVENUE (INCOME)
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
+                        Gross Settled Dining Sales
+                      </td>
+                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                        Revenue from {filteredOrders.length} customer orders
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>
+                        +{formatCurrency(totalRevenue)}
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
+                        ↳ Food &amp; Beverage Net Sales
+                      </td>
+                      <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                        Bill total minus GST &amp; service charge
+                      </td>
+                      <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                        {formatCurrency(grossFoodSales)}
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
+                        ↳ GST &amp; Direct Taxes Collected
+                      </td>
+                      <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                        Tax liability collected from invoices
+                      </td>
+                      <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--info)' }}>
+                        {formatCurrency(totalTax)}
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
+                        ↳ Service Charges Collected
+                      </td>
+                      <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                        Customer dining service fees
+                      </td>
+                      <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--info)' }}>
+                        {formatCurrency(totalService)}
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: '#f59e0b', fontWeight: 600 }}>
+                        Less: Bill Discounts Given
+                      </td>
+                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                        Promotions &amp; customer reductions
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                        -{formatCurrency(totalDiscount)}
+                      </td>
+                    </tr>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
+                        Total Net Operating Revenue
+                      </td>
+                      <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                        Total revenue adjusted for discounts
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--success)', fontSize: '0.88rem' }}>
+                        {formatCurrency(netRevenueAfterDiscount)}
+                      </td>
+                    </tr>
+
+                    {/* SECTION 2: EXPENDITURE */}
+                    <tr style={{ background: 'rgba(239, 68, 68, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td colSpan={3} style={{ padding: '7px 12px', fontWeight: 800, color: 'var(--danger)', fontSize: '0.82rem' }}>
+                        2. OPERATING EXPENDITURE &amp; INVENTORY
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
+                        Current Ingredient &amp; Raw Material Stock Valuation
+                      </td>
+                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                        {inventoryItems.length} inventory items evaluated at current stock and unit cost
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                        -{formatCurrency(totalInventoryCost)}
+                      </td>
+                    </tr>
+
+                    {inventoryCategoryBreakdown.slice(0, 4).map(([cat, val]) => (
+                      <tr key={cat} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '5px 12px', paddingLeft: '34px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                          ↳ {cat} Stock Cost
+                        </td>
+                        <td style={{ padding: '5px 12px', color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                          Category inventory valuation
+                        </td>
+                        <td style={{ padding: '5px 12px', textAlign: 'right', color: 'var(--text-dim)', fontSize: '0.74rem' }}>
+                          {formatCurrency(val)}
+                        </td>
+                      </tr>
+                    ))}
+
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: '#f59e0b', fontWeight: 600 }}>
+                        Customer Discounts Absorbed
+                      </td>
+                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                        Promotional price reductions on settled bills
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                        -{formatCurrency(totalDiscount)}
+                      </td>
+                    </tr>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
+                        Total Operating Expenditure
+                      </td>
+                      <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                        Tracked inventory purchases + customer discounts
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--danger)', fontSize: '0.88rem' }}>
+                        -{formatCurrency(plExpenditure)}
+                      </td>
+                    </tr>
+
+                    {/* SECTION 3: NET BOTTOM LINE */}
+                    <tr
+                      style={{
+                        background: isProfit ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                        borderTop: `2px solid ${isProfit ? '#10b981' : '#ef4444'}`,
+                      }}
+                    >
+                      <td style={{ padding: '10px 12px', fontWeight: 900, fontSize: '0.92rem', color: isProfit ? 'var(--success)' : 'var(--danger)' }}>
+                        {isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING LOSS'}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-main)', fontSize: '0.76rem', fontWeight: 600 }}>
+                        Total Income − Total Expenditure ({profitMarginPercent}% Operating Margin)
+                      </td>
+                      <td
+                        style={{
+                          padding: '10px 12px',
+                          textAlign: 'right',
+                          fontWeight: 900,
+                          fontSize: '1.15rem',
+                          color: isProfit ? 'var(--success)' : 'var(--danger)',
+                        }}
+                      >
+                        {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 3: DETAILED INCOME TABLE (PAGINATED - SINGLE PAGE VIEWPORT)           */}
+          {/* ========================================================================= */}
+          {activeTab === 'income' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* Search & Stats Bar */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '0.45rem 0.85rem',
-                  gap: '0.5rem',
-                  width: '320px',
-                  maxWidth: '100%',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.65rem',
                 }}
               >
-                <Search size={15} color='var(--text-muted)' />
-                <input
-                  type='text'
-                  placeholder='Search by order #, table, dish or payment...'
-                  value={incomeSearch}
-                  onChange={(e) => setIncomeSearch(e.target.value)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    color: 'var(--text-main)',
-                    fontSize: '0.8rem',
-                    width: '100%',
-                  }}
-                />
-              </div>
-
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Showing <strong style={{ color: 'var(--text-main)' }}>{searchedOrders.length}</strong> of {filteredOrders.length} settled tickets
-              </div>
-            </div>
-
-            {/* Orders Table */}
-            <div
-              style={{
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                overflowX: 'auto',
-                background: 'var(--bg-tertiary)',
-              }}
-            >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1.5px solid var(--border-subtle)' }}>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>#</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Order ID</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Date &amp; Time</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Dining Table</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Items Summary</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Payment Mode</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Tax (GST)</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Discount</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Total Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {searchedOrders.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                        No settled orders found matching the filter criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    searchedOrders.map((ord, idx) => {
-                      const itemSummary = (ord.items || [])
-                        .map((i) => `${i.name || 'Dish'}${i.quantity > 1 ? ` (x${i.quantity})` : ''}`)
-                        .join(', ');
-                      const settledAt = ord.settledAt || ord.closedAt || ord.createdAt || ord.time || '';
-                      const dateStr = settledAt
-                        ? new Date(settledAt).toLocaleString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : ord.date || '—';
-                      const pm = normalizePaymentMethod(ord);
-                      return (
-                        <tr
-                          key={ord.id || idx}
-                          style={{
-                            borderBottom: '1px solid var(--border-subtle)',
-                            background: idx % 2 === 0 ? 'transparent' : 'rgba(var(--surface-rgb),0.02)',
-                          }}
-                        >
-                          <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.75rem' }}>{idx + 1}</td>
-                          <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-main)' }}>
-                            #{ord.id || ord.orderNumber || idx + 1}
-                          </td>
-                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: '0.76rem' }}>
-                            {dateStr}
-                          </td>
-                          <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-main)' }}>
-                            {ord.table ? `Table ${ord.table}` : ord.tableName || 'Takeaway'}
-                          </td>
-                          <td
-                            style={{
-                              padding: '8px 12px',
-                              color: 'var(--text-muted)',
-                              maxWidth: '260px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              fontSize: '0.78rem',
-                            }}
-                            title={itemSummary}
-                          >
-                            {itemSummary || '—'}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                            <span
-                              style={{
-                                background:
-                                  pm === 'upi'
-                                    ? 'rgba(56, 189, 248, 0.15)'
-                                    : pm === 'cash'
-                                    ? 'rgba(16, 185, 129, 0.15)'
-                                    : 'rgba(192, 132, 252, 0.15)',
-                                color:
-                                  pm === 'upi'
-                                    ? '#38bdf8'
-                                    : pm === 'cash'
-                                    ? '#10b981'
-                                    : '#c084fc',
-                                border: `1px solid ${
-                                  pm === 'upi'
-                                    ? 'rgba(56, 189, 248, 0.3)'
-                                    : pm === 'cash'
-                                    ? 'rgba(16, 185, 129, 0.3)'
-                                    : 'rgba(192, 132, 252, 0.3)'
-                                }`,
-                                borderRadius: '999px',
-                                padding: '2px 8px',
-                                fontWeight: 700,
-                                fontSize: '0.72rem',
-                                textTransform: 'uppercase',
-                              }}
-                            >
-                              {pm || 'OTHER'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>
-                            {formatCurrency(ord.taxAmount || 0)}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--accent-purple)', fontWeight: 600 }}>
-                            {formatCurrency(ord.discountAmount || 0)}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>
-                            {formatCurrency(ord.grandTotal || ord.total || 0)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: 'var(--bg-secondary)', borderTop: '2px solid var(--border-subtle)' }}>
-                    <td colSpan={6} style={{ padding: '10px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
-                      TOTAL SUMMARY ({searchedOrders.length} TICKETS)
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--success)' }}>
-                      {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.taxAmount) || 0), 0))}
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--accent-purple)' }}>
-                      {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.discountAmount) || 0), 0))}
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#f59e0b', fontSize: '0.95rem' }}>
-                      {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.grandTotal || o.total || 0)), 0))}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ===================================================================== */}
-        {/* TAB 3: DETAILED EXPENDITURE / INVENTORY TABLE                         */}
-        {/* ===================================================================== */}
-        {activeFinanceTab === 'expenditure' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Inventory Status Overview Pills */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
-              <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                  {inventoryItems.length} Ingredients
-                </div>
-              </div>
-              <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Stock Valuation</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
-                  {formatCurrency(totalInventoryCost)}
-                </div>
-              </div>
-              <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600 }}>Low Stock Alert</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
-                  {lowStockCount} Items
-                </div>
-              </div>
-              <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem 1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600 }}>Out of Stock</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626', marginTop: '2px' }}>
-                  {outOfStockCount} Items
-                </div>
-              </div>
-            </div>
-
-            {/* Filter and Search Bar for Inventory */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     background: 'var(--bg-tertiary)',
                     border: '1px solid var(--border-subtle)',
-                    borderRadius: '10px',
-                    padding: '0.45rem 0.85rem',
-                    gap: '0.5rem',
-                    width: '280px',
+                    borderRadius: '9px',
+                    padding: '0.38rem 0.75rem',
+                    gap: '0.45rem',
+                    width: '300px',
                     maxWidth: '100%',
                   }}
                 >
-                  <Search size={15} color='var(--text-muted)' />
+                  <Search size={14} color='var(--text-muted)' />
                   <input
                     type='text'
-                    placeholder='Filter by item name or supplier...'
-                    value={invSearch}
-                    onChange={(e) => setInvSearch(e.target.value)}
+                    placeholder='Search order #, table, dish or payment...'
+                    value={incomeSearch}
+                    onChange={(e) => setIncomeSearch(e.target.value)}
                     style={{
                       background: 'transparent',
                       border: 'none',
                       outline: 'none',
                       color: 'var(--text-main)',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       width: '100%',
                     }}
                   />
+                  {incomeSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setIncomeSearch('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: '0.75rem', padding: 0 }}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
-                {/* Category Dropdown Filter */}
-                <select
-                  value={invCategoryFilter}
-                  onChange={(e) => setInvCategoryFilter(e.target.value)}
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '10px',
-                    padding: '0.45rem 0.85rem',
-                    color: 'var(--text-main)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value='all'>All Categories ({inventoryItems.length})</option>
-                  {inventoryCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Showing <strong style={{ color: 'var(--text-main)' }}>{searchedOrders.length}</strong> of {filteredOrders.length} settled tickets · Page {ordersPage} of {totalOrdersPages}
+                </div>
               </div>
 
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Showing <strong style={{ color: 'var(--text-main)' }}>{searchedInventory.length}</strong> items
-              </div>
-            </div>
-
-            {/* Inventory Cost Table */}
-            <div
-              style={{
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                overflowX: 'auto',
-                background: 'var(--bg-tertiary)',
-              }}
-            >
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1.5px solid var(--border-subtle)' }}>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>#</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Ingredient / Item</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Category</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Supplier</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Current Stock</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Min Threshold</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Unit Cost (₹)</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Total Valuation (₹)</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)', minWidth: '130px', whiteSpace: 'nowrap' }}>Stock Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {searchedInventory.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                        No inventory ingredients found matching the filter.
-                      </td>
+              {/* Paginated Orders Table */}
+              <div
+                style={{
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '11px',
+                  overflowX: 'auto',
+                  background: 'var(--bg-tertiary)',
+                }}
+              >
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', width: '35px' }}>#</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Order ID</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Date &amp; Time</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Table</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Items Summary</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Payment</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Tax</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Discount</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Total Amount</th>
                     </tr>
-                  ) : (
-                    searchedInventory.map((item, idx) => {
-                      const stock = Number(item.stock ?? 0);
-                      const mrp = Number(item.mrp ?? item.unitCost ?? 0);
-                      const totalCost = stock > 0 && mrp > 0 ? stock * mrp : 0;
-                      const min = Number(item.minThreshold ?? 0);
-                      const isOut = stock <= 0;
-                      const isLow = !isOut && stock <= min;
-
-                      return (
-                        <tr
-                          key={item.id || idx}
-                          style={{
-                            borderBottom: '1px solid var(--border-subtle)',
-                            background: idx % 2 === 0 ? 'transparent' : 'rgba(var(--surface-rgb),0.02)',
-                          }}
-                        >
-                          <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.75rem' }}>{idx + 1}</td>
-                          <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-main)' }}>
-                            {item.name || 'Unnamed Ingredient'}
-                          </td>
-                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                            {item.category || 'General'}
-                          </td>
-                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                            {item.supplier || 'Local Supplier'}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--text-main)' }}>
-                            {stock} {item.unit || ''}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.75rem' }}>
-                            {min} {item.unit || ''}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>
-                            {formatCurrency(mrp)}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: totalCost > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>
-                            {formatCurrency(totalCost)}
-                          </td>
-                          <td style={{ padding: '8px 14px', textAlign: 'center', minWidth: '130px', whiteSpace: 'nowrap' }}>
-                            <span
+                  </thead>
+                  <tbody>
+                    {paginatedOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          No settled orders found matching the filter criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedOrders.map((ord, idx) => {
+                        const itemSummary = (ord.items || [])
+                          .map((i) => `${i.name || 'Dish'}${i.quantity > 1 ? ` (x${i.quantity})` : ''}`)
+                          .join(', ');
+                        const settledAt = ord.settledAt || ord.closedAt || ord.createdAt || ord.time || '';
+                        const dateStr = settledAt
+                          ? new Date(settledAt).toLocaleString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : ord.date || '—';
+                        const pm = normalizePaymentMethod(ord);
+                        const globalIndex = (ordersPage - 1) * ITEMS_PER_PAGE + idx + 1;
+                        return (
+                          <tr
+                            key={ord.id || idx}
+                            style={{
+                              borderBottom: '1px solid var(--border-subtle)',
+                              background: idx % 2 === 0 ? 'transparent' : 'rgba(var(--surface-rgb),0.02)',
+                            }}
+                          >
+                            <td style={{ padding: '7px 10px', color: 'var(--text-dim)', fontSize: '0.72rem' }}>{globalIndex}</td>
+                            <td style={{ padding: '7px 10px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-main)' }}>
+                              #{ord.id || ord.orderNumber || globalIndex}
+                            </td>
+                            <td style={{ padding: '7px 10px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: '0.74rem' }}>
+                              {dateStr}
+                            </td>
+                            <td style={{ padding: '7px 10px', fontWeight: 600, color: 'var(--text-main)' }}>
+                              {ord.table ? `Table ${ord.table}` : ord.tableName || 'Takeaway'}
+                            </td>
+                            <td
                               style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                width: '116px',
-                                minWidth: '116px',
-                                height: '28px',
-                                boxSizing: 'border-box',
-                                borderRadius: '999px',
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
+                                padding: '7px 10px',
+                                color: 'var(--text-muted)',
+                                maxWidth: '240px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
-                                letterSpacing: '0.01em',
-                                flexShrink: 0,
-                                background: isOut
-                                  ? 'rgba(239, 68, 68, 0.14)'
-                                  : isLow
-                                  ? 'rgba(245, 158, 11, 0.14)'
-                                  : 'rgba(16, 185, 129, 0.14)',
-                                color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--success)',
-                                border: `1px solid ${
-                                  isOut
-                                    ? 'rgba(239, 68, 68, 0.35)'
-                                    : isLow
-                                    ? 'rgba(245, 158, 11, 0.35)'
-                                    : 'rgba(16, 185, 129, 0.35)'
-                                }`,
+                                fontSize: '0.75rem',
                               }}
+                              title={itemSummary}
                             >
+                              {itemSummary || '—'}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center' }}>
                               <span
                                 style={{
-                                  width: '6px',
-                                  height: '6px',
-                                  borderRadius: '50%',
-                                  background: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
-                                  boxShadow: `0 0 6px ${isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981'}`,
-                                  flexShrink: 0,
+                                  background:
+                                    pm === 'upi'
+                                      ? 'rgba(56, 189, 248, 0.15)'
+                                      : pm === 'cash'
+                                      ? 'rgba(16, 185, 129, 0.15)'
+                                      : 'rgba(192, 132, 252, 0.15)',
+                                  color:
+                                    pm === 'upi'
+                                      ? '#38bdf8'
+                                      : pm === 'cash'
+                                      ? '#10b981'
+                                      : '#c084fc',
+                                  border: `1px solid ${
+                                    pm === 'upi'
+                                      ? 'rgba(56, 189, 248, 0.3)'
+                                      : pm === 'cash'
+                                      ? 'rgba(16, 185, 129, 0.3)'
+                                      : 'rgba(192, 132, 252, 0.3)'
+                                  }`,
+                                  borderRadius: '999px',
+                                  padding: '2px 7px',
+                                  fontWeight: 700,
+                                  fontSize: '0.68rem',
+                                  textTransform: 'uppercase',
                                 }}
-                              />
-                              {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                  {totalDiscount > 0 && (
-                    <tr style={{ background: 'rgba(245, 158, 11, 0.05)', borderTop: '1px dashed var(--border-subtle)' }}>
-                      <td style={{ padding: '8px 12px', color: 'var(--text-dim)' }}>—</td>
-                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#f59e0b' }}>Bill Discounts (Promotions)</td>
-                      <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>Financial Deduction</td>
-                      <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>Restaurant Operations</td>
-                      <td colSpan={3} style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.74rem' }}>Discounts given to dining customers</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>
-                        {formatCurrency(totalDiscount)}
+                              >
+                                {pm || 'OTHER'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>
+                              {formatCurrency(ord.taxAmount || 0)}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--accent-purple)', fontWeight: 600 }}>
+                              {formatCurrency(ord.discountAmount || 0)}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>
+                              {formatCurrency(ord.grandTotal || ord.total || 0)}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: 'var(--bg-secondary)', borderTop: '1.5px solid var(--border-subtle)' }}>
+                      <td colSpan={6} style={{ padding: '8px 10px', fontWeight: 800, color: 'var(--text-main)', fontSize: '0.76rem' }}>
+                        TOTAL SUMMARY ({searchedOrders.length} TICKETS)
                       </td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center', minWidth: '130px', whiteSpace: 'nowrap' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            width: '116px',
-                            minWidth: '116px',
-                            height: '28px',
-                            boxSizing: 'border-box',
-                            borderRadius: '999px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap',
-                            letterSpacing: '0.01em',
-                            background: 'rgba(245, 158, 11, 0.14)',
-                            color: '#f59e0b',
-                            border: '1px solid rgba(245, 158, 11, 0.35)',
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              background: '#f59e0b',
-                              boxShadow: '0 0 6px #f59e0b',
-                              flexShrink: 0,
-                            }}
-                          />
-                          Deduction
-                        </span>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: 'var(--success)' }}>
+                        {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.taxAmount) || 0), 0))}
+                      </td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: 'var(--accent-purple)' }}>
+                        {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.discountAmount) || 0), 0))}
+                      </td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 900, color: '#f59e0b', fontSize: '0.88rem' }}>
+                        {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.grandTotal || o.total || 0)), 0))}
                       </td>
                     </tr>
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: 'var(--bg-secondary)', borderTop: '2px solid var(--border-subtle)' }}>
-                    <td colSpan={7} style={{ padding: '10px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
-                      TOTAL EXPENDITURE VALUATION (INVENTORY + DISCOUNTS)
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: 'var(--danger)', fontSize: '0.95rem' }}>
-                      {formatCurrency(plExpenditure)}
-                    </td>
-                    <td style={{ padding: '10px 12px' }} />
-                  </tr>
-                </tfoot>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Pagination Bar for Orders */}
+              {totalOrdersPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+                    disabled={ordersPage === 1}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '0.3rem 0.6rem',
+                      color: ordersPage === 1 ? 'var(--text-dim)' : 'var(--text-main)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: ordersPage === 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <ChevronLeft size={13} />
+                    <span>Previous</span>
+                  </button>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, padding: '0 6px' }}>
+                    Page {ordersPage} of {totalOrdersPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOrdersPage((p) => Math.min(totalOrdersPages, p + 1))}
+                    disabled={ordersPage === totalOrdersPages}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '0.3rem 0.6rem',
+                      color: ordersPage === totalOrdersPages ? 'var(--text-dim)' : 'var(--text-main)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: ordersPage === totalOrdersPages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-      </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 4: DETAILED EXPENDITURE & INVENTORY (PAGINATED - SINGLE PAGE VIEWPORT)*/}
+          {/* ========================================================================= */}
+          {activeTab === 'expenditure' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              
+              {/* 4 Mini Inventory Status Chips */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+                    {inventoryItems.length} Ingredients
+                  </div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Stock Valuation</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
+                    {formatCurrency(totalInventoryCost)}
+                  </div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Low Stock Alert</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
+                    {lowStockCount} Items
+                  </div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Out of Stock</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626', marginTop: '2px' }}>
+                    {outOfStockCount} Items
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter and Search Bar for Inventory */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.65rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '9px',
+                      padding: '0.38rem 0.75rem',
+                      gap: '0.45rem',
+                      width: '240px',
+                      maxWidth: '100%',
+                    }}
+                  >
+                    <Search size={14} color='var(--text-muted)' />
+                    <input
+                      type='text'
+                      placeholder='Filter by item or supplier...'
+                      value={invSearch}
+                      onChange={(e) => setInvSearch(e.target.value)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '0.78rem',
+                        width: '100%',
+                      }}
+                    />
+                    {invSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setInvSearch('')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: '0.75rem', padding: 0 }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Category Dropdown Filter */}
+                  <select
+                    value={invCategoryFilter}
+                    onChange={(e) => setInvCategoryFilter(e.target.value)}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '9px',
+                      padding: '0.38rem 0.75rem',
+                      color: 'var(--text-main)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value='all'>All Categories ({inventoryItems.length})</option>
+                    {inventoryCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Showing <strong style={{ color: 'var(--text-main)' }}>{searchedInventory.length}</strong> items · Page {invPage} of {totalInvPages}
+                </div>
+              </div>
+
+              {/* Paginated Inventory Table */}
+              <div
+                style={{
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '11px',
+                  overflowX: 'auto',
+                  background: 'var(--bg-tertiary)',
+                }}
+              >
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', width: '35px' }}>#</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Ingredient / Item</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Category</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Supplier</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Stock</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Threshold</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Unit Cost</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Valuation</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)', minWidth: '110px', whiteSpace: 'nowrap' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedInventory.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          No inventory ingredients found matching the filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedInventory.map((item, idx) => {
+                        const stock = Number(item.stock ?? 0);
+                        const mrp = Number(item.mrp ?? item.unitCost ?? 0);
+                        const totalCost = stock > 0 && mrp > 0 ? stock * mrp : 0;
+                        const min = Number(item.minThreshold ?? 0);
+                        const isOut = stock <= 0;
+                        const isLow = !isOut && stock <= min;
+                        const globalIndex = (invPage - 1) * ITEMS_PER_PAGE + idx + 1;
+
+                        return (
+                          <tr
+                            key={item.id || idx}
+                            style={{
+                              borderBottom: '1px solid var(--border-subtle)',
+                              background: idx % 2 === 0 ? 'transparent' : 'rgba(var(--surface-rgb),0.02)',
+                            }}
+                          >
+                            <td style={{ padding: '7px 10px', color: 'var(--text-dim)', fontSize: '0.72rem' }}>{globalIndex}</td>
+                            <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text-main)' }}>
+                              {item.name || 'Unnamed Item'}
+                            </td>
+                            <td style={{ padding: '7px 10px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                              {item.category || 'General'}
+                            </td>
+                            <td style={{ padding: '7px 10px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                              {item.supplier || 'Local Supplier'}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--text-main)' }}>
+                              {stock} {item.unit || ''}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                              {min} {item.unit || ''}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>
+                              {formatCurrency(mrp)}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800, color: totalCost > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>
+                              {formatCurrency(totalCost)}
+                            </td>
+                            <td style={{ padding: '7px 12px', textAlign: 'center', minWidth: '110px', whiteSpace: 'nowrap' }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '5px',
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  background: isOut
+                                    ? 'rgba(239, 68, 68, 0.14)'
+                                    : isLow
+                                    ? 'rgba(245, 158, 11, 0.14)'
+                                    : 'rgba(16, 185, 129, 0.14)',
+                                  color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--success)',
+                                  border: `1px solid ${
+                                    isOut
+                                      ? 'rgba(239, 68, 68, 0.35)'
+                                      : isLow
+                                      ? 'rgba(245, 158, 11, 0.35)'
+                                      : 'rgba(16, 185, 129, 0.35)'
+                                  }`,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    width: '5px',
+                                    height: '5px',
+                                    borderRadius: '50%',
+                                    background: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
+                                  }}
+                                />
+                                {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: 'var(--bg-secondary)', borderTop: '1.5px solid var(--border-subtle)' }}>
+                      <td colSpan={7} style={{ padding: '8px 10px', fontWeight: 800, color: 'var(--text-main)', fontSize: '0.76rem' }}>
+                        TOTAL EXPENDITURE VALUATION (INVENTORY + DISCOUNTS)
+                      </td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 900, color: 'var(--danger)', fontSize: '0.88rem' }}>
+                        {formatCurrency(plExpenditure)}
+                      </td>
+                      <td style={{ padding: '8px 10px' }} />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Pagination Bar for Inventory */}
+              {totalInvPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setInvPage((p) => Math.max(1, p - 1))}
+                    disabled={invPage === 1}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '0.3rem 0.6rem',
+                      color: invPage === 1 ? 'var(--text-dim)' : 'var(--text-main)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: invPage === 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <ChevronLeft size={13} />
+                    <span>Previous</span>
+                  </button>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, padding: '0 6px' }}>
+                    Page {invPage} of {totalInvPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setInvPage((p) => Math.min(totalInvPages, p + 1))}
+                    disabled={invPage === totalInvPages}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '0.3rem 0.6rem',
+                      color: invPage === totalInvPages ? 'var(--text-dim)' : 'var(--text-main)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: invPage === totalInvPages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -3004,7 +2417,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
               <tr style={{ background: "#f1f5f9" }}>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Gross Revenue</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Net Food Sales</th>
-                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total GST (5%)</th>
+                <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total GST</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Service Charges</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Total Orders</th>
                 <th style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "left" }}>Avg Ticket</th>
@@ -3022,7 +2435,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                   {formatCurrency(totalTax)}
                 </td>
                 <td style={{ border: '1px solid #cbd5e1', padding: '6px 8px' }}>
-                  {formatCurrency(totalDiscount)}
+                  {formatCurrency(totalService)}
                 </td>
                 <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 700 }}>
                   {filteredOrders.length}
