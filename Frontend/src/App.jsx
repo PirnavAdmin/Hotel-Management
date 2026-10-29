@@ -1,4 +1,4 @@
-﻿import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
+import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
@@ -110,7 +110,10 @@ const isRogueName = (name) => {
     lower.includes("table final") ||
     lower.includes("table 20") ||
     lower === "verification" ||
-    lower === "test"
+    lower === "test" ||
+    lower.startsWith("pat") ||
+    lower.startsWith("patio") ||
+    /^t-\d+$/i.test(lower)
   );
 };
 
@@ -183,9 +186,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = rawName.match(/^(?:table|t)\s*(\d+)$/i)
-        ? `Table ${num || targetId}`
-        : rawName || `Table ${targetId}`;
+      const cleanName = `Table-${num || targetId}`;
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
       const isExplicitlyVacant = rawStatus === "vacant";
