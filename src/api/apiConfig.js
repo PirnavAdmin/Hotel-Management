@@ -28,7 +28,9 @@ const DEFAULT_HEADERS = {
   "ngrok-skip-browser-warning": "true",
 };
 
-export async function apiClient(endpoint, options = {}) {
+const inFlightGetRequests = new Map();
+
+async function performApiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
   try {
@@ -166,4 +168,30 @@ export async function apiClient(endpoint, options = {}) {
   } catch (err) {
     return { success: false, error: err.message || "Network error occurred" };
   }
+}
+
+/** Share concurrent identical GETs (including React StrictMode remounts). */
+export function apiClient(endpoint, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET" || options.signal) {
+    return performApiRequest(endpoint, options);
+  }
+
+  let token = "";
+  try {
+    token = typeof localStorage !== "undefined"
+      ? localStorage.getItem("avsr_jwt_token") || ""
+      : "";
+  } catch {
+    // The request layer still supports environments where storage is blocked.
+  }
+  const key = `${API_BASE_URL}${endpoint}|${token}`;
+  const existing = inFlightGetRequests.get(key);
+  if (existing) return existing;
+
+  const request = performApiRequest(endpoint, options).finally(() => {
+    if (inFlightGetRequests.get(key) === request) inFlightGetRequests.delete(key);
+  });
+  inFlightGetRequests.set(key, request);
+  return request;
 }

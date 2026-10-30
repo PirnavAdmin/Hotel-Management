@@ -1370,7 +1370,8 @@ export function App() {
       window.removeEventListener("focus", syncAllFromStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
-      if (es) es.close();
+      if (localEs) localEs.close();
+      if (remoteEs) remoteEs.close();
     };
   }, []);
 
