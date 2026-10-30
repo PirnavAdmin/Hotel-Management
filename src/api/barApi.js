@@ -360,3 +360,252 @@ export async function apiGetBarRecentOrders(limit = 15, branchId = null) {
   const qs = query.toString();
   return await apiClient(`/api/v1/bar/orders${qs ? `?${qs}` : ''}`);
 }
+
+/**
+ * ============================================================================
+ * Screen 6 & 7: Bar Staff & Persons APIs
+ * ============================================================================
+ */
+
+/**
+ * Fetch bar staff members with optional filtering (search, role, shift, assignment).
+ * GET /api/v1/bar/staff
+ */
+export async function apiGetBarStaff(params = {}) {
+  const query = new URLSearchParams();
+  if (params.search) query.set('search', params.search);
+  if (params.role && params.role !== 'all' && params.role !== 'All Roles') query.set('role', params.role);
+  if (params.shift && params.shift !== 'all' && params.shift !== 'All Shifts') query.set('shift', params.shift);
+  if (params.assignment && params.assignment !== 'all' && params.assignment !== 'All Assignments' && params.assignment !== 'All Tables') {
+    query.set('assignment', params.assignment);
+  }
+
+  const qs = query.toString();
+  return await apiClient(`/api/v1/bar/staff${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Get single staff member by ID.
+ * GET /api/v1/bar/staff/{id}
+ */
+export async function apiGetBarStaffById(id) {
+  return await apiClient(`/api/v1/bar/staff/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Create a new bar staff member.
+ * POST /api/v1/bar/staff
+ */
+export async function apiCreateBarStaff(staffData) {
+  const name = String(staffData.fullName || staffData.name || '').trim();
+  const role = String(staffData.jobTitle || staffData.roleTitle || staffData.role || 'Server / Waiter').trim();
+  const phone = String(staffData.phone || staffData.contact || '').trim();
+  const shift = String(staffData.shift || 'Morning Shift (10 AM - 4 PM)').trim();
+  const assignedTableIds = Array.isArray(staffData.assignedTableIds) ? staffData.assignedTableIds : [];
+  const assignedTables = Array.isArray(staffData.assignedTables) ? staffData.assignedTables : [];
+  const isActive = staffData.isActive !== undefined ? Boolean(staffData.isActive) : true;
+
+  return await apiClient('/api/v1/bar/staff', {
+    method: 'POST',
+    body: JSON.stringify({
+      fullName: name,
+      name: name,
+      jobTitle: role,
+      role: role,
+      roleTitle: role,
+      phone: phone,
+      shift: shift,
+      assignedTableIds,
+      assignedTables,
+      isActive,
+    }),
+  });
+}
+
+/**
+ * Update an existing bar staff member.
+ * PUT /api/v1/bar/staff/{id}
+ */
+export async function apiUpdateBarStaff(id, staffData) {
+  const name = staffData.fullName || staffData.name;
+  const role = staffData.jobTitle || staffData.roleTitle || staffData.role;
+  const phone = staffData.phone || staffData.contact;
+  const shift = staffData.shift;
+  const assignedTableIds = staffData.assignedTableIds;
+  const assignedTables = staffData.assignedTables;
+  const isActive = staffData.isActive;
+
+  const payload = {};
+  if (name !== undefined) {
+    payload.fullName = String(name).trim();
+    payload.name = String(name).trim();
+  }
+  if (role !== undefined) {
+    payload.jobTitle = String(role).trim();
+    payload.role = String(role).trim();
+    payload.roleTitle = String(role).trim();
+  }
+  if (phone !== undefined) payload.phone = String(phone).trim();
+  if (shift !== undefined) payload.shift = String(shift).trim();
+  if (assignedTableIds !== undefined) payload.assignedTableIds = assignedTableIds;
+  if (assignedTables !== undefined) payload.assignedTables = assignedTables;
+  if (isActive !== undefined) payload.isActive = Boolean(isActive);
+
+  return await apiClient(`/api/v1/bar/staff/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Toggle active status of a staff member.
+ * PATCH /api/v1/bar/staff/{id}/toggle-status
+ */
+export async function apiToggleBarStaffStatus(id) {
+  return await apiClient(`/api/v1/bar/staff/${encodeURIComponent(id)}/toggle-status`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * Delete a bar staff member.
+ * DELETE /api/v1/bar/staff/{id}
+ */
+export async function apiDeleteBarStaff(id) {
+  return await apiClient(`/api/v1/bar/staff/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Get dropdown filter options for Staff & Persons screen.
+ * GET /api/v1/bar/staff/filter-options
+ */
+export async function apiGetBarStaffFilterOptions() {
+  return await apiClient('/api/v1/bar/staff/filter-options');
+}
+
+/**
+ * Get assignable bar tables for Staff table assignment.
+ * GET /api/v1/bar/staff/assignable-tables
+ */
+export async function apiGetAssignableTables() {
+  return await apiClient('/api/v1/bar/staff/assignable-tables');
+}
+
+// ============================================================================
+// Screen 8: Bar Order Tickets (BOT) Dispatch APIs
+// ============================================================================
+
+/**
+ * Get active Bar BOT tickets (with drinks list).
+ * GET /api/v1/bar/bot/tickets
+ */
+export async function apiGetBarBotTickets(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.search) params.append('search', filters.search);
+  if (filters.table && filters.table !== 'all') params.append('table', filters.table);
+  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return await apiClient(`/api/v1/bar/bot/tickets${qs}`);
+}
+
+/**
+ * Get KPI summary metrics for Bar BOT screen.
+ * GET /api/v1/bar/bot/summary
+ */
+export async function apiGetBarBotSummary() {
+  return await apiClient('/api/v1/bar/bot/summary');
+}
+
+/**
+ * Get filter dropdown options (Tables & Statuses) for Bar BOT.
+ * GET /api/v1/bar/bot/filter-options
+ */
+export async function apiGetBarBotFilterOptions() {
+  return await apiClient('/api/v1/bar/bot/filter-options');
+}
+
+/**
+ * Unified Bar BOT Screen Feed (Summary + Tickets + FilterOptions).
+ * GET /api/v1/bar/bot/screen-feed
+ */
+export async function apiGetBarBotScreenFeed(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.search) params.append('search', filters.search);
+  if (filters.table && filters.table !== 'all') params.append('table', filters.table);
+  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return await apiClient(`/api/v1/bar/bot/screen-feed${qs}`);
+}
+
+/**
+ * Get a single Bar BOT ticket by ID.
+ * GET /api/v1/bar/bot/{id}
+ */
+export async function apiGetBarBotTicketById(id) {
+  return await apiClient(`/api/v1/bar/bot/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Update the overall status of a Bar BOT ticket.
+ * PATCH /api/v1/bar/bot/{id}/status
+ */
+export async function apiUpdateBarBotStatus(id, status) {
+  return await apiClient(`/api/v1/bar/bot/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+/**
+ * Mark all drinks in a Bar BOT ticket as ready.
+ * POST /api/v1/bar/bot/{id}/mark-all-ready
+ */
+export async function apiMarkAllBarBotReady(id) {
+  return await apiClient(`/api/v1/bar/bot/${encodeURIComponent(id)}/mark-all-ready`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Mark all drinks for a specific table as ready.
+ * POST /api/v1/bar/bot/tables/{tableId}/mark-all-ready
+ */
+export async function apiMarkAllBarBotTableReady(tableId) {
+  return await apiClient(`/api/v1/bar/bot/tables/${encodeURIComponent(tableId)}/mark-all-ready`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Update the status of an individual drink line item inside a Bar BOT.
+ * PATCH /api/v1/bar/bot/items/{orderItemId}/status
+ */
+export async function apiUpdateBarBotItemStatus(orderItemId, status) {
+  return await apiClient(`/api/v1/bar/bot/items/${encodeURIComponent(orderItemId)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+/**
+ * Advance a drink item to its next status (queued -> cooking -> ready -> served).
+ * POST /api/v1/bar/bot/items/{orderItemId}/advance
+ */
+export async function apiAdvanceBarBotItemStatus(orderItemId) {
+  return await apiClient(`/api/v1/bar/bot/items/${encodeURIComponent(orderItemId)}/advance`, {
+    method: 'POST',
+  });
+}
+
+// Aliases for backwards compatibility with KOT terminology
+export const apiGetBarKotTickets = apiGetBarBotTickets;
+export const apiGetBarKotSummary = apiGetBarBotSummary;
+export const apiGetBarKotFilterOptions = apiGetBarBotFilterOptions;
+export const apiGetBarKotScreenFeed = apiGetBarBotScreenFeed;
+export const apiGetBarKotTicketById = apiGetBarBotTicketById;
+export const apiUpdateBarKotStatus = apiUpdateBarBotStatus;
+export const apiMarkAllBarKotReady = apiMarkAllBarBotReady;
+export const apiUpdateBarKotItemStatus = apiUpdateBarBotItemStatus;
+export const apiAdvanceBarKotItemStatus = apiAdvanceBarBotItemStatus;
