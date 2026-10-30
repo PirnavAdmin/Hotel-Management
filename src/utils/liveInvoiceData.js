@@ -1,3 +1,6 @@
+import { apiGetInvoices } from "../api/invoiceApi";
+import { apiGetOrderHistory } from "../api/orderApi";
+import { dedupeOrders, sortOrdersBySettlementTime } from "./orderDedupe";
 const valueFrom = (object, ...keys) => {
   for (const key of keys) {
     const value = object?.[key];
@@ -220,4 +223,39 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
   });
 
   return records;
+}
+
+
+export async function requestLiveInvoiceRecords() {
+  const [invoiceResponse, orderResponse] = await Promise.all([
+    apiGetInvoices().catch((err) => ({ success: false, error: err?.message })),
+    apiGetOrderHistory().catch((err) => ({ success: false, error: err?.message })),
+  ]);
+  const invoices = extractInvoiceRecords(invoiceResponse);
+  const orders = extractSettledOrderRecords(orderResponse);
+
+  let fallbackOrders = [];
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_past_orders_v2_inr") : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        fallbackOrders = parsed;
+      }
+    }
+  } catch {}
+
+  const merged = mergeLiveInvoiceRecords(
+    invoices || [],
+    (orders && orders.length > 0) ? orders : fallbackOrders,
+  );
+
+  const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(merged));
+
+  return {
+    records: cleanRecords,
+    error: (invoices === null && orders === null && cleanRecords.length === 0)
+      ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
+      : "",
+  };
 }

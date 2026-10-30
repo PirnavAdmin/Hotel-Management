@@ -55,6 +55,7 @@ import {
 import { apiAdjustStock } from "./api/inventoryApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
+import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
 import { INITIAL_STAFF } from "./data/initialStaff";
@@ -626,20 +627,15 @@ export function App() {
       setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." }));
     });
 
-    // 4. Load live past settled orders from the backend
-    apiGetOrderHistory().then((response) => {
-      const result = response?.data ?? response;
-      const backendOrders = Array.isArray(result)
-        ? result
-        : Array.isArray(result?.orders)
-          ? result.orders
-          : Array.isArray(result?.data)
-            ? result.data
-            : [];
-      if (Array.isArray(backendOrders) && backendOrders.length > 0) {
-        setPastOrders((current) => mergeSettledOrders(current, backendOrders));
+    // 4. Load live past settled orders & invoices from the backend
+    requestLiveInvoiceRecords().then(({ records }) => {
+      if (Array.isArray(records) && records.length > 0) {
+        setPastOrders((current) => mergeSettledOrders(current, records));
+        try {
+          localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
+        } catch {}
       }
-    });
+    }).catch(() => {});
   }, []);
 
   // ── Authentication sessions per route ────────────────────────────────
@@ -2820,7 +2816,17 @@ export function App() {
             setActiveView={setActiveView}
             selectedTableId={selectedTableId}
             onResetData={handleResetData}
-            onOpenPastOrders={() => setIsPastOrdersOpen(true)}
+            onOpenPastOrders={() => {
+              setIsPastOrdersOpen(true);
+              requestLiveInvoiceRecords().then(({ records }) => {
+                if (Array.isArray(records) && records.length > 0) {
+                  setPastOrders((current) => mergeSettledOrders(current, records));
+                  try {
+                    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
+                  } catch {}
+                }
+              }).catch(() => {});
+            }}
             onOpenAdmin={() => navigate("/admin")}
             onOpenKOTView={() => navigate("/kot")}
             currentTheme={theme}
@@ -3258,6 +3264,14 @@ export function App() {
         <PastOrdersModal
           pastOrders={pastOrders}
           onClose={() => setIsPastOrdersOpen(false)}
+          onRefresh={async (records) => {
+            if (Array.isArray(records) && records.length > 0) {
+              setPastOrders((current) => mergeSettledOrders(current, records));
+              try {
+                localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
+              } catch {}
+            }
+          }}
           onReprintReceipt={(order) => {
             const matchedTable = tables.find(t => t.id === order.tableId || t.name === order.tableName);
             const resolvedCapacity = order.capacity || matchedTable?.capacity || 0;
