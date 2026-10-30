@@ -2082,10 +2082,22 @@ function BarDrinksMenu({
                     key={item.id}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
-                      transition: "background 0.15s ease",
+                      transition: "background 0.15s ease, opacity 0.2s ease",
+                      opacity: isAvail ? 1 : 0.6,
+                      background: isAvail
+                        ? "transparent"
+                        : "rgba(239, 68, 68, 0.03)",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = isAvail
+                        ? "var(--bg-tertiary)"
+                        : "rgba(239, 68, 68, 0.07)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = isAvail
+                        ? "transparent"
+                        : "rgba(239, 68, 68, 0.03)";
+                    }}
                   >
                     {/* Drink Name + Thumbnail */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
@@ -2093,21 +2105,28 @@ function BarDrinksMenu({
                         <img
                           src={getMenuItemImage(item)}
                           alt={item.name}
-                          onError={handleDishImageError}
+                          onError={(e) => handleDishImageError(e, item)}
                           style={{
-                            width: "42px",
-                            height: "42px",
-                            borderRadius: "8px",
+                            width: "48px",
+                            height: "48px",
+                            borderRadius: "10px",
                             objectFit: "cover",
-                            border: "1px solid var(--border-subtle)",
+                            border: isAvail
+                              ? "1px solid var(--border-card)"
+                              : "1px solid rgba(239, 68, 68, 0.35)",
                             flexShrink: 0,
+                            filter: isAvail
+                              ? "none"
+                              : "grayscale(60%)",
                           }}
                         />
                         <div>
                           <div
                             style={{
                               fontWeight: 700,
-                              color: "var(--text-main)",
+                              color: isAvail
+                                ? "var(--text-main)"
+                                : "var(--text-dim)",
                               fontSize: "0.88rem",
                               lineHeight: 1.3,
                               display: "flex",
@@ -2258,7 +2277,11 @@ function BarDrinksMenu({
                         <button
                           type="button"
                           onClick={() => handleToggleAvailability(item)}
-                          title={isAvail ? "Make available" : "Mark unavailable"}
+                          title={
+                            !isAvail
+                              ? "Make available"
+                              : "Mark unavailable"
+                          }
                           style={{
                             border: isAvail
                               ? "1px solid rgba(16, 185, 129, 0.45)"
@@ -2273,6 +2296,22 @@ function BarDrinksMenu({
                             fontWeight: 700,
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isAvail
+                              ? "rgba(16, 185, 129, 0.22)"
+                              : "rgba(239, 68, 68, 0.22)";
+                            e.currentTarget.style.borderColor = isAvail
+                              ? "rgba(16, 185, 129, 0.7)"
+                              : "rgba(239, 68, 68, 0.7)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isAvail
+                              ? "rgba(16, 185, 129, 0.12)"
+                              : "rgba(239, 68, 68, 0.12)";
+                            e.currentTarget.style.borderColor = isAvail
+                              ? "rgba(16, 185, 129, 0.45)"
+                              : "rgba(239, 68, 68, 0.45)";
                           }}
                         >
                           {isAvail ? "Available" : "Unavailable"}
@@ -2294,6 +2333,14 @@ function BarDrinksMenu({
                             gap: "4px",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.15)";
+                            e.currentTarget.style.borderColor = "var(--accent-amber)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.06)";
+                            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
                           }}
                           title="Edit drink"
                         >
@@ -2317,6 +2364,14 @@ function BarDrinksMenu({
                             gap: "4px",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                            e.currentTarget.style.borderColor = "#ef4444";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(239, 68, 68, 0.06)";
+                            e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.35)";
                           }}
                           title="Delete drink"
                         >
@@ -6183,6 +6238,12 @@ export function BarWorkspace({
       prev.map((d) => (String(d.id) === String(drinkId) ? { ...d, isAvailable: newStatus } : d))
     );
 
+    if (onSetMenuAvailability) {
+      onSetMenuAvailability(drinkId, newStatus);
+    }
+
+    setToast?.(`Drink marked ${newStatus ? "Available" : "Unavailable"}.`);
+
     // Persist to backend
     try {
       await apiToggleBarDrinkAvailability(drinkId, newStatus);
@@ -7626,6 +7687,7 @@ export function BarWorkspace({
           onDeleteDrink={handleDeleteDrink}
           onToggleDrinkAvailability={handleToggleDrinkAvailability}
           onToggleDrinkSpecial={handleToggleDrinkSpecial}
+          onSetMenuAvailability={onSetMenuAvailability}
           setToast={setToast}
         />
       ) : route === "bar-tables" ? (
