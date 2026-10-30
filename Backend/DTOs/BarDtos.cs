@@ -840,7 +840,7 @@ public class BarReportsScreenDto
     public List<BarReportRowDto> KpiCards => Rows;
     public List<BarReportRowDto> TableRows => Rows;
     public string Title { get; set; } = "Bar Reports";
-    public string Subtitle { get; set; } = "Independent Bar workspace • drink and order records are demo data.";
+    public string Subtitle { get; set; } = "Independent bar workspace for live drink and order records.";
     public string Note { get; set; } = "Summary calculated from the shared menu, active orders, inventory, and loaded order history.";
     public string Badge { get; set; } = "DEMO DATA • SESSION ONLY";
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
@@ -876,4 +876,3 @@ public class BarScreenFeedDto
 }
 
 #endregion
-

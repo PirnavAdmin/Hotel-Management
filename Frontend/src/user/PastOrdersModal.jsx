@@ -69,14 +69,16 @@ const compareDatesNewestFirst = (a, b) =>
 
 export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, onRefresh }) {
   const [liveOrders, setLiveOrders] = useState([]);
+  const [liveOrdersLoaded, setLiveOrdersLoaded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const { records } = await requestLiveInvoiceRecords();
-      if (Array.isArray(records) && records.length > 0) {
+      const { records, error } = await requestLiveInvoiceRecords();
+      if (!error && Array.isArray(records)) {
         setLiveOrders(records);
+        setLiveOrdersLoaded(true);
         if (typeof onRefresh === 'function') {
           onRefresh(records);
         }
@@ -100,17 +102,16 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
   }, []);
 
   const uniquePastOrders = useMemo(() => {
-    const combined = [
-      ...(Array.isArray(liveOrders) ? liveOrders : []),
-      ...(Array.isArray(pastOrders) ? pastOrders : []),
-    ];
+    const combined = liveOrdersLoaded
+      ? liveOrders
+      : pastOrders;
     const settledOnly = combined.filter((o) => {
       if (!o || typeof o !== "object") return false;
       const status = String(o.status || o.Status || "").toLowerCase();
       return status !== "active" && status !== "dining" && status !== "vacant";
     });
     return dedupeOrders(settledOnly);
-  }, [pastOrders, liveOrders]);
+  }, [pastOrders, liveOrders, liveOrdersLoaded]);
 
 
   // Helper to parse date from order safely

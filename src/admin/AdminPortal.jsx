@@ -50,7 +50,6 @@ import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { isDrinkItem } from "../kot/orderRouting";
-import { INITIAL_STAFF } from "../data/initialStaff";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminInventory } from "./AdminInventory";
@@ -1575,19 +1574,6 @@ export function AdminPortal({
       shift: "",
     });
     setIsStaffModalOpen(false);
-  };
-
-  const handleRestoreDefaultStaff = async () => {
-    for (const defPerson of INITIAL_STAFF) {
-      const exists = (staffList || []).some(
-        (s) =>
-          String(s.name || s.fullName || "").trim().toLowerCase() ===
-          defPerson.name.toLowerCase(),
-      );
-      if (!exists && onAddStaff) {
-        await onAddStaff(defPerson);
-      }
-    }
   };
 
   const handleSyncPosUsers = async () => {
@@ -3463,28 +3449,6 @@ export function AdminPortal({
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                         <button
                           type="button"
-                          onClick={handleRestoreDefaultStaff}
-                          title="Restore standard restaurant staff team"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.35rem",
-                            padding: "0.5rem 0.9rem",
-                            background: "var(--bg-secondary)",
-                            border: "1px solid var(--border-card)",
-                            color: "var(--text-dim)",
-                            borderRadius: "8px",
-                            fontWeight: 600,
-                            fontSize: "0.8rem",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <RotateCcw size={14} />
-                          <span>Restore Defaults</span>
-                        </button>
-
-                        <button
-                          type="button"
                           onClick={handleSyncPosUsers}
                           title="Import POS users from Login Management as serving staff"
                           style={{
@@ -3771,7 +3735,7 @@ export function AdminPortal({
                               <p style={{ margin: 0, fontSize: "0.95rem" }}>
                                 {hasActiveStaffFilters
                                   ? "No staff members match the selected filters."
-                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one, or restore standard restaurant staff."}
+                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one."}
                               </p>
                               {hasActiveStaffFilters ? (
                                 <button
@@ -3793,26 +3757,6 @@ export function AdminPortal({
                                 </button>
                               ) : (
                                 <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-                                  <button
-                                    type="button"
-                                    onClick={handleRestoreDefaultStaff}
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "0.4rem",
-                                      background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-                                      color: "#fff",
-                                      border: "none",
-                                      padding: "0.45rem 1rem",
-                                      borderRadius: "6px",
-                                      fontSize: "0.85rem",
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    <RotateCcw size={14} />
-                                    <span>Restore Standard Staff (6 Members)</span>
-                                  </button>
                                   <button
                                     type="button"
                                     onClick={handleSyncPosUsers}

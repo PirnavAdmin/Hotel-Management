@@ -51,7 +51,6 @@ import {
   getCleanAlertTimestamp,
   sanitizeKitchenAlert,
 } from "./utils/notificationHelper";
-import { MENU_ITEMS } from "./data/menuData";
 import {
   apiGetStaff,
   apiCreateStaff,
@@ -72,8 +71,6 @@ import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
 import { getTodayDateString } from "./utils/invoiceCounter";
-import { INITIAL_TABLES } from "./data/initialTables";
-import { INITIAL_STAFF } from "./data/initialStaff";
 import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
@@ -156,14 +153,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
     : [];
   const tablesById = new Map();
 
-  // 1. Seed with default 15 tables from INITIAL_TABLES so the standard floor plan is always intact
-  INITIAL_TABLES.forEach((defTable) => {
-    if (!deletedIds.includes(String(defTable.id))) {
-      tablesById.set(Number(defTable.id), { ...defTable });
-    }
-  });
-
-  // 1b. Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
+  // Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
   try {
     const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
     if (rawSaved) {
@@ -440,7 +430,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return INITIAL_TABLES.filter((t) => !isDeleted(t.id));
+    return [];
   });
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
@@ -465,7 +455,6 @@ export function App() {
               !item.isBarItem &&
               String(item.name || "").trim().toLowerCase() !== "mojito"
           );
-          if (dineItems.length === 0) return MENU_ITEMS;
           if (dineItems.length !== parsed.length) {
             try {
               localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(dineItems));
@@ -534,7 +523,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return INITIAL_STAFF;
+    return [];
   });
 
   // Past settled orders history in Rupees
@@ -664,11 +653,14 @@ export function App() {
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       } else {
-        setStaffList((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_STAFF));
+        setStaffList([]);
+        try {
+          localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+        } catch {}
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       }
     }).catch((error) => {
-      setStaffList((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_STAFF));
+      setStaffList((prev) => Array.isArray(prev) ? prev : []);
       setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." }));
     });
 
@@ -2857,7 +2849,7 @@ export function App() {
   // Reset to default initial state
   const handleResetData = async () => {
     const confirmed = await confirmDialog(
-      "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
+      "Reset locally saved tables, menu, staff, inventory, and order history? Active orders will be cleared.",
       {
         title: "Reset all data?",
         confirmText: "Yes, Reset Data",
@@ -2866,25 +2858,25 @@ export function App() {
     if (!confirmed) return;
 
     setDeletedTableIds([]);
-    setTables(INITIAL_TABLES);
+    setTables([]);
     setMenuItems([]);
-    setStaffList(INITIAL_STAFF);
+    setStaffList([]);
     setPastOrders([]);
     setInventory([]);
-    localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
+    localStorage.setItem(STORAGE_KEY_TABLES, "[]");
     localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
     localStorage.setItem(STORAGE_KEY_MENU, "[]");
-    localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(INITIAL_STAFF));
+    localStorage.setItem(STORAGE_KEY_STAFF, "[]");
     localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
     localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
     pushGlobalSync({
-      [STORAGE_KEY_TABLES]: INITIAL_TABLES,
+      [STORAGE_KEY_TABLES]: [],
       [STORAGE_KEY_MENU]: [],
-      [STORAGE_KEY_STAFF]: INITIAL_STAFF,
+      [STORAGE_KEY_STAFF]: [],
       [STORAGE_KEY_ORDERS]: [],
       [STORAGE_KEY_INVENTORY]: [],
     });
-    showToast("Data reset to default 15 tables and standard staff.");
+    showToast("Data reset. Add your restaurant tables, menu, and staff to get started.");
   };
 
   return (

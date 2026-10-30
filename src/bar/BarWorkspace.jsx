@@ -258,17 +258,17 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const defaultForm = {
     name: "",
     category: "Whiskey & Scotch",
-    subcategory: "Single Malt Scotch",
+    subcategory: "",
     brand: "",
     unit: "Bottle (750 ml)",
     volumeMl: 750,
-    abv: 42.8,
-    stock: 12,
-    minThreshold: 5,
-    unitCost: 2500,
-    sellingPrice: 3500,
-    storageLocation: "Front Bar Display Shelf",
-    supplier: "State Beverages Corporation (TSBCL/Govt Depot)",
+    abv: 0,
+    stock: 0,
+    minThreshold: 0,
+    unitCost: 0,
+    sellingPrice: 0,
+    storageLocation: "",
+    supplier: "",
   };
 
   const [formData, setFormData] = useState(defaultForm);
@@ -799,7 +799,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                     No bar inventory items found.
                   </p>
                   <p style={{ margin: "0 0 16px", color: "var(--text-dim)" }}>
-                    All kitchen packaging mock data has been cleared. Add your first liquor or beverage item to get started.
+                    Add your first liquor or beverage item to get started.
                   </p>
                   <button className="bar-button primary" type="button" onClick={openAddModal}>
                     <Plus size={15} /> Add First Bar Inventory Item
@@ -1175,7 +1175,7 @@ function printBill(order) {
   const popup = window.open("", "_blank", "width=480,height=760");
   if (!popup) return false;
   const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
-  popup.document.write(`<html><head><title>${safe(order.id)} demo bill</title><style>body{font:14px Arial,sans-serif;padding:24px;color:#172033}h1{font-size:20px;margin:0 0 5px}p{color:#475569}.line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid #e2e8f0}.total{font-weight:700;font-size:17px}</style></head><body><h1>Telugu Taste • Bar</h1><p>DEMO BILL • Not saved to server</p><p><b>${safe(order.id)}</b> • ${safe(order.table)}<br/>${safe(order.customer)} • ${safe(order.time)}</p><div class="line"><span>Items</span><span>${safe(order.items)}</span></div><div class="line"><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></div><div class="line"><span>Discount</span><span>${formatCurrency(order.discount)}</span></div><div class="line"><span>GST</span><span>${formatCurrency(order.gst)}</span></div><div class="line"><span>Service charge</span><span>${formatCurrency(order.service)}</span></div><div class="line total"><span>Total</span><span>${formatCurrency(order.total)}</span></div><script>window.onload=()=>window.print()</script></body></html>`);
+  popup.document.write(`<html><head><title>${safe(order.id)} bar bill</title><style>body{font:14px Arial,sans-serif;padding:24px;color:#172033}h1{font-size:20px;margin:0 0 5px}p{color:#475569}.line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid #e2e8f0}.total{font-weight:700;font-size:17px}</style></head><body><h1>Telugu Taste • Bar</h1><p><b>${safe(order.id)}</b> • ${safe(order.table)}<br/>${safe(order.customer)} • ${safe(order.time)}</p><div class="line"><span>Items</span><span>${safe(order.items)}</span></div><div class="line"><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></div><div class="line"><span>Discount</span><span>${formatCurrency(order.discount)}</span></div><div class="line"><span>GST</span><span>${formatCurrency(order.gst)}</span></div><div class="line"><span>Service charge</span><span>${formatCurrency(order.service)}</span></div><div class="line total"><span>Total</span><span>${formatCurrency(order.total)}</span></div><script>window.onload=()=>window.print()</script></body></html>`);
   popup.document.close();
   return true;
 }
@@ -1459,7 +1459,7 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
           {error && <p className="bar-error" role="alert">{error}</p>}
           <footer className="bar-modal-footer">
             <button className="bar-button secondary" type="button" onClick={onClose}>Cancel</button>
-            <button className="bar-button primary" type="submit">Save Demo Changes</button>
+            <button className="bar-button primary" type="submit">Save Changes</button>
           </footer>
         </form>
       </section>
@@ -1469,7 +1469,7 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
 
 function DetailsModal({ item, onClose }) {
   if (!item) return null;
-  return <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-details-title"><header className="bar-modal-head"><div><span className="bar-kicker">DEMO DETAILS</span><h2 id="bar-details-title">{item.name || item.id || "Details"}</h2></div><button className="bar-icon-button" aria-label="Close details" onClick={onClose} type="button"><X size={18} /></button></header><dl className="bar-details-grid">{Object.entries(item).filter(([key, value]) => !["image"].includes(key) && value !== "" && value !== undefined && value !== null).map(([key, value]) => <div key={key}><dt>{key.replace(/([A-Z])/g, " $1")}</dt><dd>{typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}</dd></div>)}</dl><footer className="bar-modal-footer"><button type="button" className="bar-button secondary" onClick={onClose}>Close</button></footer></section></div>;
+  return <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-details-title"><header className="bar-modal-head"><div><span className="bar-kicker">Details</span><h2 id="bar-details-title">{item.name || item.id || "Details"}</h2></div><button className="bar-icon-button" aria-label="Close details" onClick={onClose} type="button"><X size={18} /></button></header><dl className="bar-details-grid">{Object.entries(item).filter(([key, value]) => !["image"].includes(key) && value !== "" && value !== undefined && value !== null).map(([key, value]) => <div key={key}><dt>{key.replace(/([A-Z])/g, " $1")}</dt><dd>{typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}</dd></div>)}</dl><footer className="bar-modal-footer"><button type="button" className="bar-button secondary" onClick={onClose}>Close</button></footer></section></div>;
 }
 
 function OrderItemsModal({ order, onClose }) {
