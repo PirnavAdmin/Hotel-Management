@@ -87,14 +87,24 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
   };
 
   useEffect(() => {
-    if (!pastOrders || pastOrders.length === 0) {
-      handleRefresh();
-    }
+    handleRefresh();
+    const handleUpdate = () => handleRefresh();
+    window.addEventListener("avsr-invoices-updated", handleUpdate);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "gourmet_pos_past_orders_v2_inr") handleRefresh();
+    });
+    return () => {
+      window.removeEventListener("avsr-invoices-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, []);
 
   const uniquePastOrders = useMemo(() => {
-    const source = (Array.isArray(pastOrders) && pastOrders.length > 0) ? pastOrders : liveOrders;
-    const settledOnly = (Array.isArray(source) ? source : []).filter((o) => {
+    const combined = [
+      ...(Array.isArray(liveOrders) ? liveOrders : []),
+      ...(Array.isArray(pastOrders) ? pastOrders : []),
+    ];
+    const settledOnly = combined.filter((o) => {
       if (!o || typeof o !== "object") return false;
       const status = String(o.status || o.Status || "").toLowerCase();
       return status !== "active" && status !== "dining" && status !== "vacant";

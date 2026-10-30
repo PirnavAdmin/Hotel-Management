@@ -15,6 +15,8 @@ import {
   BellRing,
   Flame,
   CheckCircle,
+  CheckCircle2,
+  MapPin,
   Sun,
   Moon,
   Trash2,
@@ -23,6 +25,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ProfileDropdown } from './ProfileDropdown';
+import { cleanNotificationText } from '../utils/notificationHelper';
 export function Header({
   tables,
   activeView,
@@ -630,7 +633,7 @@ export function Header({
                             boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
                           }}
                         >
-                          {isCompleted ? "🔔" : "🔥"}
+                          {isCompleted ? <CheckCircle2 size={16} color="#10b981" /> : <Flame size={16} color="#f59e0b" />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div
@@ -650,7 +653,7 @@ export function Header({
                                 letterSpacing: "-0.01em",
                               }}
                             >
-                              {n.title}
+                              {cleanNotificationText(n.title) || (isCompleted ? "Food Ready to Serve" : "Cooking in Progress")}
                             </span>
                             <span
                               style={{
@@ -658,9 +661,13 @@ export function Header({
                                 color: "var(--text-dim)",
                                 fontWeight: 700,
                                 fontFamily: "monospace",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "3px",
                               }}
                             >
-                              {n.timestamp}
+                              <Clock size={10} />
+                              <span>{cleanNotificationText(n.timestamp)}</span>
                             </span>
                           </div>
                           <div
@@ -671,7 +678,7 @@ export function Header({
                               fontWeight: 500,
                             }}
                           >
-                            {n.message}
+                            {cleanNotificationText(n.message) || (isCompleted ? "All dishes are prepared and ready to serve." : "Order is being prepared in the kitchen.")}
                           </div>
                           {n.tableId && (
                             <div
@@ -694,7 +701,7 @@ export function Header({
                                   borderRadius: "4px",
                                 }}
                               >
-                                📍 {n.tableName || `Table ${n.tableId}`}
+                                <><MapPin size={10} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} /><span>{cleanNotificationText(n.tableName) || (n.tableId ? `Table ${n.tableId}` : "Table")}</span></>
                               </span>
                               <span
                                 style={{

@@ -80,3 +80,24 @@ export function getTimerUrgencyColor(totalSeconds) {
     label: 'Normal'
   };
 }
+
+export function formatDisplayTime(raw) {
+  if (!raw) return "--:--";
+  const str = String(raw).trim();
+  if (["in queue", "started", "done", "ready", "pending", "waiting", "active", "cooked"].includes(str.toLowerCase())) {
+    return str;
+  }
+  if (/^\d{1,2}:\d{2}\s*(?:AM|PM)?$/i.test(str)) {
+    return str.toUpperCase();
+  }
+  if (/^\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)?$/i.test(str)) {
+    const parts = str.split(' ');
+    const timeParts = parts[0].split(':');
+    return (timeParts[0] + ':' + timeParts[1] + (parts[1] ? ' ' + parts[1] : '')).toUpperCase();
+  }
+  const d = new Date(str);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+  return str.replace(/T/g, ' ').replace(/\.\d+.*$/g, '').trim();
+}
