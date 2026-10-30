@@ -3,8 +3,7 @@ import {
   BarChart3,
   TrendingUp,
   TrendingDown,
-  CreditCard,
-  Smartphone,
+Smartphone,
   Banknote,
   Utensils,
   Award,
@@ -460,10 +459,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
     ? Math.round((paymentStats.upi / totalRevenue) * 100)
     : 0;
   const cashPercent = totalRevenue
-    ? Math.round((paymentStats.cash / totalRevenue) * 100)
-    : 0;
-  const cardPercent = totalRevenue
-    ? Math.max(0, 100 - upiPercent - cashPercent)
+    ? Math.max(0, 100 - upiPercent)
     : 0;
 
   // Top selling dishes across settled orders
@@ -1153,7 +1149,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Taxes &amp; Service
                 </span>
-                <CreditCard size={13} color="var(--info)" />
+                <Receipt size={13} color="var(--info)" />
               </div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--info)', marginTop: '2px' }}>
                 {formatCurrency(totalTax + totalService)}
@@ -1300,7 +1296,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                       gap: '0.4rem',
                     }}
                   >
-                    <CreditCard size={15} color="#38bdf8" />
+                    <Smartphone size={15} color="#38bdf8" />
                     <span>Payment Channel Distribution</span>
                   </h3>
 
@@ -1348,27 +1344,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     </div>
                   </div>
 
-                  {/* Card */}
-                  <div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '0.78rem',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      <span style={{ color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
-                        <CreditCard size={13} /> Card / POS ({cardPercent}%)
-                      </span>
-                      <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
-                        {formatCurrency(paymentStats.card)}
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '7px', background: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${cardPercent}%`, height: '100%', background: '#c084fc' }} />
-                    </div>
-                  </div>
+
                 </div>
 
                 {/* Right Column: Top Selling Items */}
@@ -2494,13 +2470,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                   </td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cashPercent}%</td>
                 </tr>
-                <tr>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Card / POS Swipe</td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
-                    {formatCurrency(paymentStats.card)}
-                  </td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cardPercent}%</td>
-                </tr>
+
                 <tr style={{ background: "#f1f5f9", fontWeight: 800 }}>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>Total Settlement</td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>

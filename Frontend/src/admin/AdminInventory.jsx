@@ -1699,7 +1699,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
             gap: "0.6rem",
             marginBottom: "0.9rem",
           }}
@@ -1779,17 +1779,37 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               >
                 <Icon size={17} />
               </div>
-              <div>
+              <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
                 <div
                   style={{
                     color: "var(--text-muted)",
                     fontSize: "0.72rem",
                     fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   {label}
                 </div>
-                <div style={{ color, fontSize: "1rem", fontWeight: 800 }}>
+                <div
+                  title={String(value)}
+                  style={{
+                    color,
+                    fontSize:
+                      typeof value === "string" && value.length > 11
+                        ? "0.82rem"
+                        : typeof value === "string" && value.length > 8
+                          ? "0.9rem"
+                          : "1.05rem",
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    lineHeight: "1.25",
+                    marginTop: "2px",
+                  }}
+                >
                   {value}
                 </div>
               </div>
