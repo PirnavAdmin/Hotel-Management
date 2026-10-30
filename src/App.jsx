@@ -353,21 +353,53 @@ export function App() {
         window.dispatchEvent(new Event("restaurant-settings-updated"));
       }
     };
-    fetch(`${API_BASE_URL}/api/state`, { headers: { "ngrok-skip-browser-warning": "true" } })
-      .then((response) => response.ok ? response.json() : null)
-      .then((data) => applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
-      .catch(() => {});
-    let events;
-    try {
-      events = new EventSource(`${API_BASE_URL}/api/events`);
-      events.onmessage = (event) => {
+    const loadInitialSettings = async () => {
+      let data = null;
+      try {
+        const res = await fetch("/api/state");
+        if (res.ok) data = await res.json();
+      } catch {}
+      if (!data && API_BASE_URL) {
         try {
-          const message = JSON.parse(event.data);
-          applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
+            headers: { "ngrok-skip-browser-warning": "true" },
+          });
+          if (res.ok) data = await res.json();
         } catch {}
-      };
+      }
+      if (data && active) {
+        applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
+      }
+    };
+    loadInitialSettings();
+
+    let localEvents = null;
+    let remoteEvents = null;
+    const handleSettingsMsg = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+      } catch {}
+    };
+
+    try {
+      localEvents = new EventSource("/api/events");
+      localEvents.onmessage = handleSettingsMsg;
     } catch {}
-    return () => { active = false; events?.close(); };
+
+    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+      try {
+        remoteEvents = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
+        remoteEvents.onmessage = handleSettingsMsg;
+        remoteEvents.onerror = () => { try { remoteEvents?.close(); } catch {} };
+      } catch {}
+    }
+
+    return () => {
+      active = false;
+      try { localEvents?.close(); } catch {}
+      try { remoteEvents?.close(); } catch {}
+    };
   }, []);
 
   // Theme state: 'royal-saffron' | 'emerald-spice' | 'light-bistro'
@@ -394,14 +426,21 @@ export function App() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           return mergeIncomingTables(parsed, delList)
-            .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+            .map((t) => {
+              const safeItems = Array.isArray(t.items) ? t.items : [];
+              const hasActiveItems = safeItems.some(i => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+              if (!hasActiveItems && t.status === "occupied") {
+                return { ...t, status: "vacant", guests: 0, occupiedChairs: 0, selectedSeats: [], items: [] };
+              }
+              return { ...t, items: safeItems };
+            })
             .filter((t) => !isDeleted(t.id));
         }
       }
     } catch {
       // Fallback
     }
-    return MENU_ITEMS;
+    return INITIAL_TABLES.filter((t) => !isDeleted(t.id));
   });
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
@@ -604,6 +643,10 @@ export function App() {
             ? response.data.data
           : response?.success && Array.isArray(response.data?.staff)
             ? response.data.staff
+          : response?.success && Array.isArray(response.staff)
+            ? response.staff
+          : Array.isArray(response?.staff)
+            ? response.staff
             : null;
       if (Array.isArray(backendStaff) && backendStaff.length > 0) {
         const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
@@ -767,14 +810,27 @@ export function App() {
 
   const pushGlobalSync = (payload) => {
     try {
-      fetch(`${API_BASE_URL}/api/sync`, {
+      const syncBody = JSON.stringify(payload);
+      const headers = {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+      };
+
+      // 1. Primary sync to the same-origin host server (instant LAN / multi-device SSE broadcast)
+      fetch("/api/sync", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(payload),
+        headers,
+        body: syncBody,
       }).catch(() => {});
+
+      // 2. Also sync to remote backend API if configured and different from host
+      if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+        fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/sync`, {
+          method: "POST",
+          headers,
+          body: syncBody,
+        }).catch(() => {});
+      }
     } catch {}
   };
 
@@ -885,20 +941,44 @@ export function App() {
         localStorage.setItem(STORAGE_KEY_ORDERS, ordersJson);
         pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
         broadcastSync("SYNC_ORDERS", pastOrders);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("avsr-invoices-updated", { detail: pastOrders }));
+        }
       }
     } catch {}
   }, [pastOrders]);
 
   // Real-time cross-device network synchronization via SSE Stream & REST API
   useEffect(() => {
-    // 1. Fetch initial network DB state on startup
-    fetch(`${API_BASE_URL}/api/state`, {
-      headers: {
-        "ngrok-skip-browser-warning": "true",
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    let isCancelled = false;
+
+    // 1. Fetch initial network DB state on startup (same-origin host with fallback)
+    const fetchInitialDbState = async () => {
+      let data = null;
+      try {
+        const res = await fetch("/api/state");
+        if (res.ok) data = await res.json();
+      } catch {}
+      if (!data && API_BASE_URL) {
+        try {
+          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
+            headers: { "ngrok-skip-browser-warning": "true" },
+          });
+          if (res.ok) data = await res.json();
+        } catch {}
+      }
+      // Load live backend invoices into pastOrders so all panels display identical billing records
+      try {
+        const { records: liveInvoices } = await requestLiveInvoiceRecords();
+        if (Array.isArray(liveInvoices) && liveInvoices.length > 0 && !isCancelled) {
+          setPastOrders((current) => mergeSettledOrders(current, liveInvoices));
+          try {
+            localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(liveInvoices));
+          } catch {}
+        }
+      } catch {}
+
+      if (!data || isCancelled) return;
         if (!data) return;
         const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
         if (Array.isArray(incomingTables)) {
@@ -966,16 +1046,14 @@ export function App() {
             window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
           } catch {}
         }
-      })
-      .catch(() => {});
+    };
+    fetchInitialDbState();
 
     // 2. Connect to realtime SSE stream push for instant multi-device updates
-    let es;
-    try {
-      es = new EventSource(
-        `${API_BASE_URL}/api/events`,
-      );
-      es.onmessage = (e) => {
+    let localEs = null;
+    let remoteEs = null;
+
+    const handleSseMessage = (e) => {
         try {
           const parsedMsg = JSON.parse(e.data);
           const payload = parsedMsg.payload;
@@ -1103,7 +1181,19 @@ export function App() {
           }
         } catch {}
       };
+
+    try {
+      localEs = new EventSource("/api/events");
+      localEs.onmessage = handleSseMessage;
     } catch {}
+
+    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+      try {
+        remoteEs = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
+        remoteEs.onmessage = handleSseMessage;
+        remoteEs.onerror = () => { try { remoteEs?.close(); } catch {} };
+      } catch {}
+    }
 
     const handleStorageChange = (e) => {
       if (!e.key || !e.newValue) return;

@@ -1838,8 +1838,23 @@ function globalSyncPlugin() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
+  let apiBase = env.VITE_API_BASE_URL;
+  if (!apiBase) {
+    try {
+      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
+      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
+      if (match) apiBase = match[0].replace(/\/$/, "");
+    } catch {}
+  }
+  if (!apiBase) {
+    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
+  }
+
   return {
     plugins: [react(), globalSyncPlugin()],
+    define: {
+      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBase),
+    },
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
@@ -1852,20 +1867,22 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
-        "/api": {
-          target: env.VITE_API_BASE_URL || "http://localhost:5018",
-          changeOrigin: true,
-          secure: false,
-        },
         "/uploads": {
-          target: env.VITE_API_BASE_URL || "http://localhost:5018",
+          target: apiBase,
+          changeOrigin: true,
+          headers: { "ngrok-skip-browser-warning": "true" },
+        },
+        "/api/v1": {
+          target: apiBase,
           changeOrigin: true,
           secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
         },
-        "/hubs": {
-          target: env.VITE_API_BASE_URL || "http://localhost:5018",
+        "/api/auth": {
+          target: apiBase,
           changeOrigin: true,
-          ws: true,
+          secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
         },
       },
     },

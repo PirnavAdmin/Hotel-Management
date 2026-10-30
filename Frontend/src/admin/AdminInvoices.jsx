@@ -144,22 +144,40 @@ export function AdminInvoices({
 
   useEffect(() => {
     let active = true;
-    requestLiveInvoiceRecords()
-      .then(({ records, error }) => {
-        if (!active) return;
-        setInvoiceRecords(records);
-        setInvoiceLoadError(error);
-      })
-      .catch((error) => {
-        if (!active) return;
-        setInvoiceLoadError(error?.message || "Live invoices could not be loaded.");
-        setInvoiceRecords([]);
-      })
-      .finally(() => {
-        if (active) setIsLoadingInvoices(false);
-      });
+    const fetchInvoices = () => {
+      requestLiveInvoiceRecords()
+        .then(({ records, error }) => {
+          if (!active) return;
+          setInvoiceRecords(records);
+          setInvoiceLoadError(error);
+        })
+        .catch((error) => {
+          if (!active) return;
+          setInvoiceLoadError(error?.message || "Live invoices could not be loaded.");
+          setInvoiceRecords([]);
+        })
+        .finally(() => {
+          if (active) setIsLoadingInvoices(false);
+        });
+    };
+
+    fetchInvoices();
+
+    const handleUpdate = () => {
+      if (active) fetchInvoices();
+    };
+
+    window.addEventListener("avsr-invoices-updated", handleUpdate);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "gourmet_pos_past_orders_v2_inr" && active) {
+        fetchInvoices();
+      }
+    });
+
     return () => {
       active = false;
+      window.removeEventListener("avsr-invoices-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
     };
   }, []);
 
