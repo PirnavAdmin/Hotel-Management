@@ -33,6 +33,7 @@ import {
 import { KOTModal } from "./KOTModal";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "./orderRouting";
 import { ProfileDropdown } from "../common/ProfileDropdown";
+import { ThemeToggle } from "../common/ThemeToggle";
 import { SkeletonOrderTicket } from "../common/Skeletons";
 import {
   parseTimeToSeconds,

@@ -1370,8 +1370,8 @@ export function App() {
       window.removeEventListener("focus", syncAllFromStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
-      if (localEs) localEs.close();
-      if (remoteEs) remoteEs.close();
+      try { localEs?.close(); } catch {}
+      try { remoteEs?.close(); } catch {}
     };
   }, []);
 
@@ -1671,14 +1671,17 @@ export function App() {
 
       const backendTableId = tbl?.backendTableId ?? tbl?.tableId ?? tableId;
       const orderResult = await apiGetOrderForTable(backendTableId);
-      if (!orderResult?.success) {
+      if (!orderResult?.success && orderResult?.status !== 404) {
         showToast(`KOT dispatch failed for ${tableName}: ${orderResult?.error || "Could not load the shared order."}`);
         return;
       }
-      let orderData = orderResult.data && Object.prototype.hasOwnProperty.call(orderResult.data, "data") ? orderResult.data.data : orderResult.data;
+      let orderData = orderResult?.data && Object.prototype.hasOwnProperty.call(orderResult.data, "data") ? orderResult.data.data : orderResult?.data;
       let backendOrderId = Number(orderData?.id ?? orderData?.Id ?? tbl?.backendOrderId ?? tbl?.activeOrderId) || null;
       let persistedTable = tbl;
-      const newItems = unsentItems.filter((item) => !item.kotPendingServer);
+      let newItems = unsentItems.filter((item) => !item.kotPendingServer);
+      if (!newItems.length && !backendOrderId) {
+        newItems = unsentItems;
+      }
       if (newItems.length) {
         const createResult = await apiCreateOrder({
           tableId: backendTableId,
@@ -1722,11 +1725,35 @@ export function App() {
           window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: pendingTables }));
         } catch {}
       }
-      if (!backendOrderId) {
-        showToast(`KOT dispatch failed for ${tableName}: no active shared order was found.`);
-        return;
+      let result = null;
+      if (backendOrderId) {
+        result = await apiSendOrderKot(backendOrderId);
       }
-      const result = await apiSendOrderKot(backendOrderId);
+      if (!result?.success && (!backendOrderId || String(result?.error || "").toLowerCase().includes("not found"))) {
+        const retryCreateResult = await apiCreateOrder({
+          tableId: backendTableId,
+          tableName,
+          tableNumber: String(tbl?.tableNumber ?? tbl?.name ?? tableName),
+          serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
+          guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
+          status: "Active",
+          items: unsentItems.map((item) => ({
+            menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
+            id: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
+            name: item.name || item.dishName || "Order Item",
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })),
+        });
+        if (retryCreateResult?.success) {
+          orderData = retryCreateResult.data?.data ?? retryCreateResult.data ?? orderData;
+          backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
+          if (backendOrderId) {
+            result = await apiSendOrderKot(backendOrderId);
+          }
+        }
+      }
       if (!result?.success) {
         showToast(`KOT dispatch failed for ${tableName}: ${result?.error || "The server did not confirm the ticket."}`);
         return;
