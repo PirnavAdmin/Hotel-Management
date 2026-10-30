@@ -1726,6 +1726,7 @@ import {
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { SkeletonMenuCard } from "../common/Skeletons";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1741,6 +1742,8 @@ export function TableDetailView({
   table,
   allTables,
   menuItems = [],
+  menuLoading = false,
+  menuLoadError = "",
   onSelectTable,
   onBackToTables,
   onAddItemToTable,
@@ -3016,7 +3019,9 @@ export function TableDetailView({
 
           {/* Menu Items Grid - 4 dishes per row */}
           <div className="pos-menu-grid">
-            {filteredMenuItems.length === 0 ? (
+            {menuLoading ? (
+              Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
+            ) : filteredMenuItems.length === 0 ? (
               <div
                 style={{
                   gridColumn: "1 / -1",
@@ -3037,7 +3042,7 @@ export function TableDetailView({
                     fontWeight: 700,
                   }}
                 >
-                  No dishes match "{searchQuery}"
+                  {menuLoadError ? "Menu items could not be loaded" : `No dishes match "${searchQuery}"`}
                 </h4>
                 <p
                   style={{
@@ -3046,8 +3051,7 @@ export function TableDetailView({
                     color: "var(--text-muted)",
                   }}
                 >
-                  Try searching for "Biryani", "Chicken", "Paneer", "Tandoori"
-                  or click "All Items".
+                  {menuLoadError || 'Try searching for "Biryani", "Chicken", "Paneer", "Tandoori" or click "All Items".'}
                 </p>
                 <button
                   className="primary-action-button"
@@ -3502,7 +3506,7 @@ export function TableDetailView({
                               style={{
                                 fontSize: "0.78rem",
                                 fontWeight: 900,
-                                color: "var(--success)",
+                                color: "#065F46",
                                 letterSpacing: "0.02em",
                               }}
                             >
@@ -3511,7 +3515,7 @@ export function TableDetailView({
                             <div
                               style={{
                                 fontSize: "0.68rem",
-                                color: "#a7f3d0",
+                                color: "#047857",
                                 fontWeight: 600,
                               }}
                             >
@@ -3522,7 +3526,7 @@ export function TableDetailView({
                         <span
                           style={{
                             background: "#10b981",
-                            color: "#000",
+                            color: "#064E3B",
                             fontSize: "0.65rem",
                             fontWeight: 900,
                             padding: "2px 8px",

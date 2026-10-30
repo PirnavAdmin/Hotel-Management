@@ -162,6 +162,8 @@ function globalSyncPlugin() {
   let sseClients = [];
   const getDataFile = () => {
     const candidates = [
+      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
+      path.resolve(process.cwd(), "..", "server-db.json"),
       path.resolve(process.cwd(), "server-db.json"),
       path.resolve(process.cwd(), "POS", "server-db.json"),
       path.resolve(process.cwd(), "Frontend", "server-db.json"),
@@ -190,6 +192,12 @@ function globalSyncPlugin() {
     try {
       const file = getDataFile();
       fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+      const altFile = file.includes("Frontend")
+        ? path.resolve(file, "..", "..", "server-db.json")
+        : path.resolve(file, "..", "Frontend", "server-db.json");
+      if (fs.existsSync(altFile) && altFile !== file) {
+        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
+      }
     } catch {}
   };
 
@@ -1570,6 +1578,16 @@ function globalSyncPlugin() {
         if (orderByTableMatch && req.method === "GET") {
           const tableId = decodeURIComponent(orderByTableMatch[1]);
           db = loadDb();
+          const activeOrders = db.active_orders || [];
+          const activeOrder = activeOrders.find(
+            (candidate) =>
+              String(candidate.tableId ?? "") === tableId &&
+              String(candidate.status || "").toLowerCase() === "active"
+          );
+          if (activeOrder) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify(activeOrder));
+          }
           const order = (db.gourmet_pos_past_orders_v2_inr || []).find(
             (candidate) =>
               String(candidate.tableId ?? candidate.id) === tableId &&
@@ -1583,20 +1601,69 @@ function globalSyncPlugin() {
         if (sendOrderKotMatch && req.method === "POST") {
           const orderId = decodeURIComponent(sendOrderKotMatch[1]);
           db = loadDb();
-          const orders = db.gourmet_pos_past_orders_v2_inr || [];
-          const order = orders.find((candidate) => String(candidate.id ?? candidate.orderId) === orderId);
+          const activeOrders = db.active_orders || [];
+          const historyOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const order = activeOrders.find((candidate) =>
+            String(candidate.id ?? candidate.orderId) === orderId ||
+            String(candidate.tableId) === orderId
+          );
           if (!order) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+            const historyOrder = historyOrders.find((candidate) =>
+              String(candidate.id ?? candidate.orderId) === orderId ||
+              String(candidate.tableId) === orderId
+            );
+            if (!historyOrder) {
+              const tables = db.gourmet_pos_tables_v2_inr || [];
+              const matchedTable = tables.find((t) =>
+                String(t.id) === orderId ||
+                String(t.backendOrderId) === orderId ||
+                String(t.activeOrderId) === orderId
+              );
+              if (matchedTable) {
+                const generatedOrderId = Number(orderId) || Date.now();
+                const newOrder = {
+                  id: generatedOrderId,
+                  orderId: generatedOrderId,
+                  tableId: matchedTable.id,
+                  tableName: matchedTable.name,
+                  tableNumber: matchedTable.name,
+                  serverName: matchedTable.serverName || "Server",
+                  status: "Active",
+                  items: (matchedTable.items || []).map((i) => ({
+                    ...i,
+                    kotStatus: i.kotStatus || "received",
+                    kotSent: true,
+                  })),
+                };
+                activeOrders.unshift(newOrder);
+                db.active_orders = activeOrders;
+                saveDb(db);
+                broadcast({ active_orders: activeOrders });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newOrder }));
+              }
+              res.writeHead(404, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+            }
+            historyOrder.items = (historyOrder.items || []).map((item) => ({
+              ...item,
+              kotStatus: item.kotStatus || "received",
+              kotSent: true,
+            }));
+            db.gourmet_pos_past_orders_v2_inr = historyOrders;
+            saveDb(db);
+            broadcast({ gourmet_pos_past_orders_v2_inr: historyOrders });
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: historyOrder }));
           }
           order.items = (order.items || []).map((item) => ({
             ...item,
             kotStatus: item.kotStatus || "received",
             kotSent: true,
           }));
-          db.gourmet_pos_past_orders_v2_inr = orders;
+          db.active_orders = activeOrders;
           saveDb(db);
-          broadcast({ gourmet_pos_past_orders_v2_inr: orders });
+          broadcast({ active_orders: activeOrders });
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: true, data: order }));
         }

@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
-  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Users, Wine, X, AlertCircle, RotateCcw
-} from "lucide-react";
+  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Users, Wine, X, AlertCircle, RotateCcw, CheckCircle2, AlertTriangle, TrendingDown, ChevronDown, Download
+, MinusCircle, PackagePlus } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
@@ -13,6 +13,7 @@ import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper
 import { SkeletonTable } from "../common/Skeletons";
 import { BarBOTView, BarKOTView } from "./BarBOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
+import { AdminReports } from "../admin/AdminReports";
 import "./BarWorkspace.css";
 import {
   apiGetBarTables,
@@ -250,10 +251,24 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const [modalError, setModalError] = useState("");
   const [editingItem, setEditingItem] = useState(null);
 
-  // Filter & Search states
+  // Filter & Search states (exact match with Dine Inventory)
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+
+  // Consume / Restock Modals (matching Dine Inventory)
+  const [consumeItem, setConsumeItem] = useState(null);
+  const [consumeAmount, setConsumeAmount] = useState("");
+  const [consumeReason, setConsumeReason] = useState("Bar Usage");
+  const [restockItem, setRestockItem] = useState(null);
+  const [restockAmount, setRestockAmount] = useState("");
+  const [restockSupplier, setRestockSupplier] = useState("");
+  const [customRestockSupplier, setCustomRestockSupplier] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const defaultForm = {
     name: "",
@@ -323,6 +338,38 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     return Array.from(set);
   }, [validBeverages]);
 
+  // Available suppliers for dropdown filter
+  const availableSuppliers = useMemo(() => {
+    const set = new Set();
+    BAR_SUPPLIERS.forEach((s) => set.add(s));
+    validBeverages.forEach((item) => {
+      if (item.supplier) set.add(item.supplier);
+    });
+    return Array.from(set);
+  }, [validBeverages]);
+
+  // Operational KPI metrics (exact formulas matching Dine Inventory)
+  const totalItems = validBeverages.length;
+  const inStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > th;
+  }).length;
+  const lowStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > 0 && s <= th;
+  }).length;
+  const outOfStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    return s <= 0;
+  }).length;
+  const totalValuation = validBeverages.reduce((sum, item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const cost = Number(item.unitCost ?? item.cost ?? item.sellingPrice ?? item.mrp ?? 0);
+    return sum + (s > 0 ? s * cost : 0);
+  }, 0);
+
   // Filtered rows matching search & filter
   const filteredRows = useMemo(() => {
     return validBeverages.filter((item) => {
@@ -332,65 +379,56 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
         String(item.name || "").toLowerCase().includes(q) ||
         String(item.brand || item.subcategory || "").toLowerCase().includes(q) ||
         String(item.category || "").toLowerCase().includes(q) ||
-        String(item.storageLocation || "").toLowerCase().includes(q);
+        String(item.storageLocation || "").toLowerCase().includes(q) ||
+        String(item.supplier || "").toLowerCase().includes(q);
 
       const matchesCat =
         categoryFilter === "all" ||
         String(item.category || "").toLowerCase() === categoryFilter.toLowerCase();
 
+      const matchesSupplier =
+        supplierFilter === "all" ||
+        String(item.supplier || "").toLowerCase() === supplierFilter.toLowerCase();
+
       const stock = Number(item.stock ?? item.currentStock ?? 0);
       const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+
       const matchesStock =
         stockFilter === "all" ||
+        (stockFilter === "expenditure" && stock > 0) ||
         (stockFilter === "out_of_stock" && stock <= 0) ||
         (stockFilter === "low_stock" && stock > 0 && stock <= threshold) ||
         (stockFilter === "in_stock" && stock > threshold);
 
-      return matchesSearch && matchesCat && matchesStock;
+      return matchesSearch && matchesCat && matchesSupplier && matchesStock;
     });
-  }, [validBeverages, query, categoryFilter, stockFilter]);
+  }, [validBeverages, query, categoryFilter, supplierFilter, stockFilter]);
 
-  // Operational KPI metrics
-  const totalItems = validBeverages.length;
-  const totalUnits = validBeverages.reduce((sum, item) => sum + Number(item.stock ?? item.currentStock ?? 0), 0);
-  const lowStockCount = validBeverages.filter((item) => {
-    const s = Number(item.stock ?? item.currentStock ?? 0);
-    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
-    return s > 0 && s <= th;
-  }).length;
-  const outOfStockCount = validBeverages.filter((item) => Number(item.stock ?? item.currentStock ?? 0) <= 0).length;
-  const inStockCount = validBeverages.filter((item) => {
-    const s = Number(item.stock ?? item.currentStock ?? 0);
-    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
-    return s > th;
-  }).length;
-  const totalValuation = validBeverages.reduce((sum, item) => {
-    const s = Number(item.stock ?? item.currentStock ?? 0);
-    const c = Number(item.unitCost ?? item.cost ?? 0);
-    return sum + (s * c);
-  }, 0);
+  // Pagination calculations
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
+  const visiblePage = Math.min(currentPage, pageCount);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const visibleItems = filteredRows.slice(pageStart, pageStart + itemsPerPage);
 
-  // Form field updater
-  const setField = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const setField = (key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleCategorySelect = (selectedCat) => {
-    if (selectedCat === "__custom__") {
+  const handleCategorySelect = (selected) => {
+    if (selected === "__custom__") {
       setCustomCategory(true);
-      setFormData((prev) => ({ ...prev, category: "" }));
-      return;
+      setField("category", "");
+      setField("subcategory", "");
+    } else {
+      setCustomCategory(false);
+      setField("category", selected);
+      const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selected);
+      if (matched) {
+        setField("subcategory", matched.subcategories[0] || "");
+        setField("unit", matched.defaultUnit || "Bottle (750 ml)");
+        setField("abv", matched.defaultAbv != null ? matched.defaultAbv : 40);
+      }
     }
-    setCustomCategory(false);
-    const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selectedCat);
-    setFormData((prev) => ({
-      ...prev,
-      category: selectedCat,
-      subcategory: matched?.subcategories?.[0] || prev.subcategory || "",
-      unit: matched?.defaultUnit || prev.unit || "Bottle (750 ml)",
-      abv: matched?.defaultAbv !== undefined ? matched.defaultAbv : prev.abv,
-      volumeMl: matched?.defaultUnit?.includes("750") ? 750 : matched?.defaultUnit?.includes("1 L") ? 1000 : matched?.defaultUnit?.includes("330") ? 330 : prev.volumeMl,
-    }));
   };
 
   const openAddModal = () => {
@@ -406,31 +444,25 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
 
   const openEditModal = (item) => {
     setEditingItem(item);
-    const catExists = BAR_INVENTORY_CATEGORIES.some((c) => c.category.toLowerCase() === String(item.category || "").toLowerCase());
-    const unitExists = BAR_INVENTORY_UNITS.some((u) => u.toLowerCase() === String(item.unit || "").toLowerCase());
-    const locExists = BAR_STORAGE_LOCATIONS.some((l) => l.toLowerCase() === String(item.storageLocation || "").toLowerCase());
-    const supExists = BAR_SUPPLIERS.some((s) => s.toLowerCase() === String(item.supplier || "").toLowerCase());
-
-    setCustomCategory(!catExists && Boolean(item.category));
-    setCustomUnit(!unitExists && Boolean(item.unit));
-    setCustomLocation(!locExists && Boolean(item.storageLocation));
-    setCustomSupplier(!supExists && Boolean(item.supplier));
-
     setFormData({
       name: item.name || "",
       category: item.category || "Whiskey & Scotch",
-      subcategory: item.subcategory || item.brand || "",
-      brand: item.brand || item.subcategory || "",
+      subcategory: item.subcategory || "",
+      brand: item.brand || "",
       unit: item.unit || "Bottle (750 ml)",
-      volumeMl: item.volumeMl ?? (String(item.unit || "").includes("750") ? 750 : String(item.unit || "").includes("1 L") ? 1000 : 750),
+      volumeMl: item.volumeMl ?? 750,
       abv: item.abv ?? 42.8,
-      stock: Number(item.stock ?? item.currentStock ?? 0),
-      minThreshold: Number(item.minThreshold ?? item.minimumThreshold ?? 5),
-      unitCost: Number(item.unitCost ?? item.cost ?? 0),
-      sellingPrice: Number(item.sellingPrice ?? item.mrp ?? 0),
+      stock: item.stock ?? item.currentStock ?? 1,
+      minThreshold: item.minThreshold ?? item.minimumThreshold ?? 5,
+      unitCost: item.unitCost ?? item.cost ?? 0,
+      sellingPrice: item.sellingPrice ?? item.mrp ?? 0,
       storageLocation: item.storageLocation || "Front Bar Display Shelf",
       supplier: item.supplier || "State Beverages Corporation (TSBCL/Govt Depot)",
     });
+    setCustomCategory(false);
+    setCustomUnit(false);
+    setCustomLocation(false);
+    setCustomSupplier(false);
     setModalError("");
     setModalOpen(true);
   };
@@ -440,29 +472,43 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     setModalBusy(true);
     setModalError("");
 
-    if (!formData.name.trim()) {
-      setModalError("Beverage item name is required.");
-      setModalBusy(false);
-      return;
-    }
-    if (!formData.category.trim()) {
-      setModalError("Category is required.");
-      setModalBusy(false);
-      return;
-    }
-
     try {
+      const payload = {
+        name: String(formData.name).trim(),
+        category: String(formData.category).trim() || "Beverages & Bar",
+        subcategory: String(formData.subcategory).trim(),
+        brand: String(formData.brand).trim(),
+        unit: String(formData.unit).trim() || "Bottle",
+        volumeMl: formData.volumeMl ? Number(formData.volumeMl) : null,
+        abv: formData.abv ? Number(formData.abv) : null,
+        stock: Number(formData.stock) || 0,
+        currentStock: Number(formData.stock) || 0,
+        minThreshold: Number(formData.minThreshold) || 5,
+        minimumThreshold: Number(formData.minThreshold) || 5,
+        unitCost: Number(formData.unitCost) || 0,
+        cost: Number(formData.unitCost) || 0,
+        sellingPrice: Number(formData.sellingPrice) || 0,
+        mrp: Number(formData.sellingPrice) || Number(formData.unitCost) || 0,
+        storageLocation: String(formData.storageLocation).trim() || "Front Bar Display Shelf",
+        supplier: String(formData.supplier).trim() || "State Beverages Corporation (TSBCL/Govt Depot)",
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (!payload.name) throw new Error("Beverage / Item Name is mandatory.");
+
+      let res;
       if (editingItem) {
         const targetId = editingItem.id ?? editingItem.ingredientId;
-        const res = await apiUpdateInventoryItem(targetId, formData);
-        if (!res?.success) throw new Error(res?.error || "Could not update the inventory item.");
+        res = await apiUpdateInventoryItem(targetId, payload);
       } else {
-        const res = await apiCreateInventoryItem(formData);
-        if (!res?.success) throw new Error(res?.error || "Could not create the inventory item.");
+        res = await apiCreateInventoryItem(payload);
       }
-      setModalOpen(false);
+
+      if (!res?.success) throw new Error(res?.error || "Failed to save bar inventory item.");
+
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      setModalOpen(false);
     } catch (requestError) {
       console.error("[Bar Inventory] Save failed:", requestError);
       setModalError(requestError?.message || "Could not save inventory item.");
@@ -471,31 +517,145 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     }
   };
 
-  const adjustStock = async (item, direction) => {
-    const isReceive = direction > 0;
-    const promptMsg = isReceive
-      ? `Enter quantity received for ${item.name} (${item.unit || "units"}):`
-      : `Enter quantity to adjust/deduct for ${item.name} (${item.unit || "units"}):`;
-    const input = window.prompt(promptMsg, "1");
-    if (input === null) return;
-    const amount = Number(input);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      window.alert("Please enter a valid positive number.");
-      return;
-    }
+  const handleAdjustStock = async (item, delta) => {
     setBusy(true);
     try {
-      const response = await apiAdjustStock({
-        ingredientId: item.id ?? item.ingredientId,
-        quantityChange: amount * direction,
-        reason: isReceive ? "Bar stock received" : "Bar stock adjustment / wastage",
+      const targetId = item.id ?? item.ingredientId;
+      const currentStock = Number(item.stock ?? item.currentStock ?? 0);
+      const nextStock = Math.max(0, Number((currentStock + delta).toFixed(2)));
+      const adjustedAmount = Math.abs(nextStock - currentStock);
+      const nextUsed = Number((Number(item.totalUsed || 0) + (delta < 0 ? adjustedAmount : 0)).toFixed(2));
+      const nextRestocked = Number((Number(item.totalRestocked || 0) + (delta > 0 ? adjustedAmount : 0)).toFixed(2));
+
+      await apiAdjustStock({
+        ingredientId: targetId,
+        quantityChange: delta,
+        reason: delta > 0 ? "Shipment Received" : "Quick Consume",
+      }).catch(async () => {
+        await apiUpdateInventoryItem(targetId, {
+          ...item,
+          stock: nextStock,
+          currentStock: nextStock,
+          totalUsed: nextUsed,
+          totalRestocked: nextRestocked,
+        });
       });
-      if (!response?.success) throw new Error(response?.error || "Stock adjustment failed.");
+
+      try {
+        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed, totalRestocked: nextRestocked } : it));
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
     } catch (requestError) {
       console.error("[Bar Inventory] Stock adjustment failed:", requestError);
-      window.alert(requestError?.message || "Stock adjustment failed.");
+      window.alert(requestError?.message || "Could not adjust stock.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRecordUsage = async (event) => {
+    event?.preventDefault?.();
+    const amount = Number(consumeAmount);
+    if (!consumeItem || !Number.isFinite(amount) || amount <= 0) return;
+    setBusy(true);
+    try {
+      const targetId = consumeItem.id ?? consumeItem.ingredientId;
+      const currentStock = Number(consumeItem.stock ?? consumeItem.currentStock ?? 0);
+      const nextStock = Math.max(0, Number((currentStock - amount).toFixed(2)));
+      const nextUsed = Number((Number(consumeItem.totalUsed || 0) + amount).toFixed(2));
+
+      await apiAdjustStock({
+        ingredientId: targetId,
+        quantityChange: -amount,
+        reason: consumeReason.trim() || "Bar Usage",
+      }).catch(async () => {
+        await apiUpdateInventoryItem(targetId, {
+          ...consumeItem,
+          stock: nextStock,
+          currentStock: nextStock,
+          totalUsed: nextUsed,
+        });
+      });
+
+      try {
+        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed } : it));
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
+
+        const ledger = JSON.parse(localStorage.getItem("gourmet_pos_inventory_deductions_v1") || "[]");
+        ledger.unshift({
+          id: `usage-${Date.now()}`,
+          itemId: targetId,
+          itemName: consumeItem.name,
+          quantity: amount,
+          unit: consumeItem.unit || "Bottle",
+          reason: consumeReason.trim() || "Bar Usage",
+          timestamp: new Date().toISOString(),
+        });
+        localStorage.setItem("gourmet_pos_inventory_deductions_v1", JSON.stringify(ledger.slice(0, 500)));
+      } catch {}
+
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      setConsumeItem(null);
+      setConsumeAmount("");
+      setConsumeReason("Bar Usage");
+    } catch (err) {
+      console.error("[Bar Inventory] Record usage failed:", err);
+      window.alert(err?.message || "Could not record usage.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReceiveStock = async (event) => {
+    event?.preventDefault?.();
+    const amount = Number(restockAmount);
+    if (!restockItem || !Number.isFinite(amount) || amount <= 0) return;
+    setBusy(true);
+    try {
+      const targetId = restockItem.id ?? restockItem.ingredientId;
+      const currentStock = Number(restockItem.stock ?? restockItem.currentStock ?? 0);
+      const nextStock = Number((currentStock + amount).toFixed(2));
+      const nextRestocked = Number((Number(restockItem.totalRestocked || 0) + amount).toFixed(2));
+      const supplierToUse = restockSupplier.trim() || restockItem.supplier || "State Beverages Corporation (TSBCL/Govt Depot)";
+
+      await apiAdjustStock({
+        ingredientId: targetId,
+        quantityChange: amount,
+        reason: `Shipment Received (${supplierToUse})`,
+      }).catch(async () => {
+        await apiUpdateInventoryItem(targetId, {
+          ...restockItem,
+          stock: nextStock,
+          currentStock: nextStock,
+          totalRestocked: nextRestocked,
+          supplier: supplierToUse,
+        });
+      });
+
+      try {
+        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalRestocked: nextRestocked, supplier: supplierToUse } : it));
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      setRestockItem(null);
+      setRestockAmount("");
+      setRestockSupplier("");
+      setCustomRestockSupplier(false);
+    } catch (err) {
+      console.error("[Bar Inventory] Receive stock failed:", err);
+      window.alert(err?.message || "Could not receive stock.");
     } finally {
       setBusy(false);
     }
@@ -558,262 +718,1587 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     }
   };
 
+  const exportExcel = () => {
+    const rows = [
+      [
+        "Ingredient / Supply",
+        "Category",
+        "Subcategory",
+        "Brand",
+        "Unit & Size",
+        "Volume (ml)",
+        "ABV %",
+        "MRP / Price (₹)",
+        "In-Stock",
+        "Threshold",
+        "Unit Cost (₹)",
+        "Stock Value (₹)",
+        "Storage Location",
+        "Status",
+        "Supplier",
+      ],
+      ...validBeverages.map((item) => {
+        const stock = Number(item.stock ?? item.currentStock ?? 0);
+        const cost = Number(item.unitCost ?? item.cost ?? 0);
+        const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+        const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+        const stockVal = stock * (cost > 0 ? cost : selling);
+        const status = stock <= 0 ? "Out of Stock" : stock <= threshold ? "Low Stock" : "In Stock";
+        return [
+          item.name,
+          item.category || "Beverages & Bar",
+          item.subcategory || "",
+          item.brand || "",
+          item.unit || "Bottle",
+          item.volumeMl || "",
+          item.abv != null ? `${item.abv}%` : "0%",
+          selling || cost,
+          stock,
+          threshold,
+          cost,
+          stockVal.toFixed(2),
+          item.storageLocation || "",
+          status,
+          item.supplier || "",
+        ];
+      }),
+    ];
+    csvDownload(`bar-inventory-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  };
+
   // Find subcategories for current category
   const currentCategoryObj = BAR_INVENTORY_CATEGORIES.find((c) => c.category === formData.category);
   const currentSubcategories = currentCategoryObj?.subcategories || [];
 
   return (
-    <section className="bar-page-card" style={{ padding: 0, overflow: "hidden" }}>
-      {/* 1. Header with Actions */}
-      <div className="bar-section-head" style={{ padding: "16px 18px", borderBottom: "1px solid var(--bar-line)" }}>
-        <div>
-          <h2 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, fontSize: "1.2rem" }}>
-            <Wine size={20} color="var(--accent-amber)" /> Bar Inventory & Liquor Ledger
-          </h2>
-          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: "0.75rem" }}>
-            Track bottles, barrels, kegs, spirits, wines, mixers, and bar consumables in real time.
-          </p>
-        </div>
-        <div className="bar-actions">
-          <button className="bar-button primary" type="button" onClick={openAddModal}>
-            <Plus size={15} /> Add Inventory
-          </button>
-          <button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading || busy}>
-            <RefreshCw size={15} className={loading ? "spin" : ""} /> Refresh
-          </button>
-          <button
-            className="bar-button secondary"
-            type="button"
-            title="Purge any leftover mock packaging items (Takeaway Handis, Foil Trays)"
-            onClick={purgeMockPackagingData}
-            disabled={loading || busy}
-            style={{ fontSize: "0.7rem" }}
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {/* Outer Card Matching Dine Inventory */}
+      <div
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
+          borderRadius: "16px",
+          padding: "1.1rem",
+        }}
+      >
+        {/* 1. Header Strip */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+          }}
+        >
+          {/* Left Title with Orange Squircle */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+              }}
+            >
+              <Package size={19} color="#ffffff" />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <h2
+                  style={{
+                    fontSize: "1.18rem",
+                    fontWeight: 800,
+                    color: "var(--text-main)",
+                    margin: 0,
+                  }}
+                >
+                  Raw Inventory & Supplies
+                </h2>
+                <span
+                  style={{
+                    background: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    color: "var(--accent-amber-light)",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    padding: "2px 10px",
+                    borderRadius: "20px",
+                  }}
+                >
+                  {validBeverages.length} items
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: "0.74rem",
+                  color: "var(--text-dim)",
+                  margin: "3px 0 0 0",
+                }}
+              >
+                Track restaurant raw ingredients, meat stock, spices and packaging units
+              </p>
+            </div>
+          </div>
+
+          {/* Top Right Corner Actions */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.55rem",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginLeft: "auto",
+            }}
           >
-            <Trash2 size={13} /> Clean Mock Items
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Top Operational KPI Summary Cards */}
-      <div className="bar-inv-kpis">
-        <div className="bar-inv-kpi">
-          <span>Total Bar Items</span>
-          <strong>{totalItems}</strong>
-          <small>Active beverage lines</small>
-        </div>
-        <div className="bar-inv-kpi">
-          <span>In-Stock Bottles / Units</span>
-          <strong>{totalUnits.toLocaleString("en-IN")}</strong>
-          <small>Total physical inventory</small>
-        </div>
-        <div className="bar-inv-kpi alert">
-          <span>Low Stock Alerts</span>
-          <strong style={{ color: lowStockCount > 0 ? "#f59e0b" : "inherit" }}>{lowStockCount}</strong>
-          <small>At or below threshold</small>
-        </div>
-        <div className="bar-inv-kpi danger">
-          <span>Out of Stock</span>
-          <strong style={{ color: outOfStockCount > 0 ? "#ef4444" : "inherit" }}>{outOfStockCount}</strong>
-          <small>Urgent re-order needed</small>
-        </div>
-        <div className="bar-inv-kpi highlight">
-          <span>Bar Stock Valuation</span>
-          <strong style={{ color: "var(--accent-amber, #f59e0b)" }}>{formatCurrency(totalValuation)}</strong>
-          <small>Total purchase value</small>
-        </div>
-      </div>
-
-      {/* 3. Search & Filter Bar */}
-      <div className="bar-list-tools">
-        <label className="bar-search">
-          <Search size={16} />
-          <input
-            placeholder="Search drink name, brand, category, rack location…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {query && (
-            <button className="bar-icon-button small" type="button" onClick={() => setQuery("")}>
-              <X size={14} />
+            <button
+              type="button"
+              onClick={exportExcel}
+              title="Download all bar inventory as an Excel-compatible CSV"
+              style={{
+                height: "36px",
+                background: "var(--bg-tertiary)",
+                color: "var(--success)",
+                border: "1px solid rgba(52, 211, 153, 0.4)",
+                borderRadius: "9px",
+                padding: "0 0.85rem",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Download size={15} />
+              <span>Export Excel</span>
             </button>
-          )}
-        </label>
-        <label className="bar-select-label">
-          <span>Category Filter</span>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="all">All Categories ({validBeverages.length})</option>
-            {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </label>
-        <label className="bar-select-label">
-          <span>Stock Status</span>
-          <select value={stockFilter} onChange={(e) => setStockFilter(e.target.value)}>
-            <option value="all">All Statuses ({validBeverages.length})</option>
-            <option value="in_stock">In Stock ({inStockCount})</option>
-            <option value="low_stock">Low Stock ({lowStockCount})</option>
-            <option value="out_of_stock">Out of Stock ({outOfStockCount})</option>
-          </select>
-        </label>
-      </div>
+            <button
+              type="button"
+              onClick={openAddModal}
+              style={{
+                height: "36px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "9px",
+                padding: "0 0.95rem",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                cursor: "pointer",
+                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Plus size={15} />
+              <span>Add Stock Item</span>
+            </button>
+          </div>
 
-      {error && <div className="bar-error" role="alert" style={{ margin: "14px 18px" }}>{error}</div>}
+          {/* Filter Bar: Search & Inventory Dropdowns */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              flex: "1 1 100%",
+              width: "100%",
+              marginTop: "0.25rem",
+            }}
+          >
+            {/* Search Input */}
+            <div
+              style={{
+                position: "relative",
+                flex: "1 1 240px",
+                minWidth: "220px",
+                height: "36px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Search
+                size={16}
+                color="var(--text-dim)"
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search raw items or suppliers..."
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "9px",
+                  padding: "0 12px 0 36px",
+                  color: "var(--text-main)",
+                  fontSize: "0.82rem",
+                  outline: "none",
+                }}
+              />
+            </div>
 
-      {/* 4. Inventory Records Table */}
-      {loading ? (
-        <SkeletonTable rows={6} columns={7} className="bar-table-wrap" />
-      ) : (
-        <div className="bar-table-wrap">
-          <table className="bar-table bar-inventory-table">
-            <thead>
-              <tr>
-                <th style={{ minWidth: "180px", textAlign: "left" }}>Item / Drink Name</th>
-                <th style={{ minWidth: "130px", textAlign: "left" }}>Category</th>
-                <th style={{ minWidth: "120px", textAlign: "left" }}>Unit & Size</th>
-                <th style={{ minWidth: "85px", textAlign: "center" }}>ABV %</th>
-                <th style={{ minWidth: "100px", textAlign: "center" }}>Current Stock</th>
-                <th style={{ minWidth: "80px", textAlign: "center" }}>Threshold</th>
-                <th style={{ minWidth: "105px", textAlign: "right" }}>Unit Cost</th>
-                <th style={{ minWidth: "105px", textAlign: "right" }}>Selling / MRP</th>
-                <th style={{ minWidth: "140px", textAlign: "left" }}>Storage Location</th>
-                <th style={{ minWidth: "95px", textAlign: "center" }}>Status</th>
-                <th style={{ minWidth: "240px", textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.map((item) => {
-                const stock = Number(item.stock ?? item.currentStock ?? 0);
-                const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
-                const abvVal = item.abv != null && item.abv !== "" ? Number(item.abv) : null;
-                const cost = Number(item.unitCost ?? item.cost ?? 0);
-                const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+            {/* 3 Dropdowns Grid */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                flex: "2 1 480px",
+                gap: "0.65rem",
+                minWidth: "300px",
+              }}
+            >
+              {/* Category Dropdown */}
+              <div style={{ position: "relative", minWidth: 0 }}>
+                <select
+                  aria-label="Filter by category"
+                  value={categoryFilter}
+                  onChange={(e) => {
+                    setCategoryFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    height: "40px",
+                    padding: "0 2.25rem 0 0.75rem",
+                    color: "var(--text-main)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "9px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    outline: "none",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    cursor: "pointer",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                >
+                  <option value="all">All Categories</option>
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: "0.75rem",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
 
-                let statusLabel = "In Stock";
-                if (stock <= 0) {
-                  statusLabel = "Out of Stock";
-                } else if (stock <= threshold) {
-                  statusLabel = "Low Stock";
-                }
+              {/* Status Dropdown */}
+              <div style={{ position: "relative", minWidth: 0 }}>
+                <select
+                  aria-label="Filter by status"
+                  value={stockFilter === "expenditure" ? "all" : stockFilter}
+                  onChange={(e) => {
+                    setStockFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    height: "40px",
+                    padding: "0 2.25rem 0 0.75rem",
+                    color: "var(--text-main)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "9px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    outline: "none",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    cursor: "pointer",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="in_stock">In Stock</option>
+                  <option value="low_stock">Low Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                </select>
+                <ChevronDown
+                  size={16}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: "0.75rem",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
 
-                const brandText = String(item.brand || "").trim();
-                const subcatText = String(item.subcategory || "").trim();
-                const displaySubtitle =
-                  brandText && subcatText && brandText.toLowerCase() !== subcatText.toLowerCase()
-                    ? `${brandText} • ${subcatText}`
-                    : brandText || subcatText || "";
+              {/* Supplier Dropdown */}
+              <div style={{ position: "relative", minWidth: 0 }}>
+                <select
+                  aria-label="Filter by supplier"
+                  value={supplierFilter}
+                  onChange={(e) => {
+                    setSupplierFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    height: "40px",
+                    padding: "0 2.25rem 0 0.75rem",
+                    color: "var(--text-main)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "9px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    outline: "none",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    cursor: "pointer",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                >
+                  <option value="all">All Suppliers</option>
+                  {availableSuppliers.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: "0.75rem",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
-                return (
-                  <tr key={item.id ?? item.ingredientId}>
-                    <td style={{ textAlign: "left" }}>
-                      <strong>{item.name}</strong>
-                      {displaySubtitle && (
-                        <small style={{ color: "var(--text-dim)", display: "block" }}>
-                          {displaySubtitle}
-                        </small>
-                      )}
-                    </td>
-                    <td style={{ textAlign: "left" }}>
-                      <span className="bar-category-chip">{item.category || "Beverage"}</span>
-                    </td>
-                    <td style={{ textAlign: "left" }}>
-                      <span>{item.unit || "Bottle"}</span>
-                      {item.volumeMl && <small style={{ display: "block", color: "var(--text-dim)" }}>{item.volumeMl} ml</small>}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      {abvVal != null && abvVal > 0 ? (
-                        <span style={{ fontWeight: 700, color: "var(--accent-amber)" }}>{abvVal}%</span>
-                      ) : (
-                        <span style={{ color: "var(--text-dim)", fontSize: "0.68rem" }}>0% Non-Alc</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <span className={`bar-stock-chip ${stock <= threshold ? "low" : ""}`}>
-                        {stock}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "center", color: "var(--text-muted)" }}>{threshold}</td>
-                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(cost)}</td>
-                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{selling > 0 ? formatCurrency(selling) : <span style={{ color: "var(--text-dim)" }}>—</span>}</td>
-                    <td style={{ textAlign: "left" }}>
-                      <small style={{ display: "block", color: "var(--text-muted)", fontSize: "0.72rem" }}>
-                        {item.storageLocation || "Front Bar Display Shelf"}
-                      </small>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <Status>{statusLabel}</Status>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div className="bar-inv-actions">
-                        <div className="bar-stock-btn-group">
-                          <button
-                            className="bar-stock-btn deduct"
-                            type="button"
-                            title={`Deduct / Adjust stock for ${item.name}`}
-                            disabled={busy}
-                            onClick={() => adjustStock(item, -1)}
+        {/* 3. Stock Summary Clickable Filter Cards (Exact Match with Dine Inventory) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+            gap: "0.6rem",
+            marginBottom: "0.9rem",
+          }}
+        >
+          {[
+            {
+              label: "Total Items",
+              value: totalItems,
+              status: "all",
+              color: "var(--info, #38bdf8)",
+              icon: Package,
+            },
+            {
+              label: "Stock Expenditure",
+              value: formatCurrency(totalValuation),
+              status: "expenditure",
+              color: "#f59e0b",
+              icon: IndianRupee,
+            },
+            {
+              label: "In Stock",
+              value: inStockCount,
+              status: "in_stock",
+              color: "var(--success, #10b981)",
+              icon: CheckCircle2,
+            },
+            {
+              label: "Low Stock",
+              value: lowStockCount,
+              status: "low_stock",
+              color: "var(--accent-amber-light, #f59e0b)",
+              icon: AlertTriangle,
+            },
+            {
+              label: "Out of Stock",
+              value: outOfStockCount,
+              status: "out_of_stock",
+              color: "var(--danger, #ef4444)",
+              icon: TrendingDown,
+            },
+          ].map(({ label, value, status, color, icon: Icon }) => (
+            <button
+              type="button"
+              key={label}
+              aria-label={`Show ${label.toLowerCase()} bar inventory items`}
+              aria-pressed={stockFilter === status}
+              onClick={() => {
+                setStockFilter(stockFilter === status ? "all" : status);
+                setCurrentPage(1);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                minWidth: 0,
+                width: "100%",
+                padding: "0.65rem 0.8rem",
+                background: "var(--bg-tertiary)",
+                border: `1px solid ${stockFilter === status ? color : "var(--border-subtle)"}`,
+                borderRadius: "10px",
+                color: "inherit",
+                textAlign: "left",
+                cursor: "pointer",
+                boxShadow: stockFilter === status ? `0 0 12px color-mix(in srgb, ${color} 25%, transparent)` : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  flexShrink: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  color,
+                  background: `color-mix(in srgb, ${color} 12.55%, transparent)`,
+                  borderRadius: "9px",
+                }}
+              >
+                <Icon size={17} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+                <div
+                  style={{
+                    color: "var(--text-muted)",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {label}
+                </div>
+                <div
+                  title={String(value)}
+                  style={{
+                    color,
+                    fontSize:
+                      typeof value === "string" && value.length > 11
+                        ? "0.82rem"
+                        : typeof value === "string" && value.length > 8
+                          ? "0.9rem"
+                          : "1.05rem",
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    lineHeight: "1.25",
+                    marginTop: "2px",
+                  }}
+                >
+                  {value}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              color: "var(--danger)",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              padding: "0.6rem 0.8rem",
+              background: "rgba(239, 68, 68, 0.1)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              borderRadius: "8px",
+              marginBottom: "0.9rem",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* 4. Inventory Records Table */}
+        {loading ? (
+          <SkeletonTable rows={6} columns={8} />
+        ) : (
+          <div
+            style={{
+              overflowX: "auto",
+              borderRadius: "12px",
+              border: "1px solid var(--border-card)",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                textAlign: "left",
+                fontSize: "0.85rem",
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--border-subtle)",
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  <th style={{ padding: "0.55rem 0.65rem" }}>Ingredient / Supply</th>
+                  <th style={{ padding: "0.55rem 0.65rem" }}>Category</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>MRP</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>In-Stock</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>Stock Value</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Used</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Threshold</th>
+                  <th style={{ padding: "0.55rem 0.6rem", textAlign: "center" }}>Status</th>
+                  <th style={{ padding: "0.55rem 0.65rem", textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleItems.map((item) => {
+                  const stock = Number(item.stock ?? item.currentStock ?? 0);
+                  const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+                  const cost = Number(item.unitCost ?? item.cost ?? 0);
+                  const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+                  const stockVal = stock * (cost > 0 ? cost : selling);
+
+                  const isOutOfStock = stock <= 0;
+                  const isLowStock = !isOutOfStock && stock <= threshold;
+                  const statusColor = isOutOfStock
+                    ? "#ef4444"
+                    : isLowStock
+                      ? "#f59e0b"
+                      : "#10b981";
+
+                  const brandText = String(item.brand || "").trim();
+                  const subcatText = String(item.subcategory || "").trim();
+                  const abvText = item.abv != null && Number(item.abv) > 0 ? `${item.abv}% ABV` : "";
+                  const subParts = [brandText, subcatText, abvText].filter(Boolean);
+                  const uniqueSubParts = [...new Set(subParts)];
+                  const displaySubtitle = uniqueSubParts.join(" • ");
+
+                  const unitLabel = item.unit ? (item.unit.startsWith("Bottle") ? "Bottle" : item.unit.split(" ")[0]) : "Bottle";
+
+                  return (
+                    <tr
+                      key={item.id ?? item.ingredientId}
+                      style={{
+                        borderBottom: "1px solid var(--border-subtle)",
+                        transition: "background 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {/* Ingredient / Supply */}
+                      <td style={{ padding: "0.55rem 0.65rem" }}>
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            color: "var(--text-main)",
+                            fontSize: "0.84rem",
+                            lineHeight: "1.25",
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "var(--text-muted)",
+                            marginTop: "2px",
+                            maxWidth: "180px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={`Supplier: ${item.supplier || "Supplier not set"}`}
+                        >
+                          Supplier: {item.supplier || "Supplier not set"}
+                        </div>
+                      </td>
+
+                      {/* Category */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.65rem",
+                          color: "var(--text-main)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <div style={{ lineHeight: "1.25" }}>{item.category || "Beverages & Bar"}</div>
+                        {displaySubtitle && (
+                          <div
+                            style={{
+                              color: "var(--text-muted)",
+                              fontSize: "0.7rem",
+                              fontWeight: 500,
+                              marginTop: "1px",
+                              maxWidth: "150px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            title={displaySubtitle}
                           >
-                            <span className="bar-stock-icon">−</span> Adjust
+                            {displaySubtitle}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* MRP */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          color: "var(--text-main)",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          textAlign: "right",
+                        }}
+                      >
+                        {selling > 0 ? formatCurrency(selling) : (cost > 0 ? formatCurrency(cost) : "—")}
+                      </td>
+
+                      {/* In-Stock */}
+                      <td style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            color: statusColor,
+                            fontSize: "0.82rem",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {stock} {unitLabel}
+                        </div>
+                      </td>
+
+                      {/* Stock Value */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          whiteSpace: "nowrap",
+                          textAlign: "right",
+                        }}
+                      >
+                        {stockVal <= 0 ? (
+                          <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>₹0.00</span>
+                        ) : (
+                          <span style={{ color: "#f59e0b", fontWeight: 800, fontSize: "0.82rem" }}>
+                            {formatCurrency(stockVal)}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Used */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConsumeItem(item);
+                            setConsumeAmount("");
+                            setConsumeReason("Bar Usage");
+                          }}
+                          title={`Click to manually record or add used ${item.name}`}
+                          style={{
+                            background: "transparent",
+                            border: "1px dashed transparent",
+                            padding: "1px 5px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            color: "var(--text-main)",
+                            fontWeight: 700,
+                            fontSize: "0.8rem",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            whiteSpace: "nowrap",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "var(--surface-tint)";
+                            e.currentTarget.style.borderColor = "var(--accent-amber)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.borderColor = "transparent";
+                          }}
+                        >
+                          <span>{Number(item.totalUsed || 0)} {unitLabel}</span>
+                          <Pencil size={10} color="var(--accent-amber)" />
+                        </button>
+                      </td>
+
+                      {/* Threshold */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        {threshold} {unitLabel}
+                      </td>
+
+                      {/* Status */}
+                      <td style={{ padding: "0.55rem 0.6rem", textAlign: "center", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            background: `${statusColor}1f`,
+                            border: `1px solid ${statusColor}4d`,
+                            color: statusColor,
+                            borderRadius: "12px",
+                            padding: "2px 8px",
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            whiteSpace: "nowrap",
+                            lineHeight: "1.2",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              background: statusColor,
+                            }}
+                          />
+                          {isOutOfStock ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock"}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.65rem",
+                          textAlign: "right",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(item)}
+                            aria-label={`Edit ${item.name}`}
+                            title="Edit inventory item"
+                            style={{
+                              background: "var(--bg-tertiary)",
+                              border: "1px solid var(--border-subtle)",
+                              color: "var(--text-main)",
+                              borderRadius: "6px",
+                              padding: "3px 6px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Pencil size={11} />
+                            <span>Edit</span>
                           </button>
                           <button
-                            className="bar-stock-btn receive"
                             type="button"
-                            title={`Receive stock shipment for ${item.name}`}
-                            disabled={busy}
-                            onClick={() => adjustStock(item, 1)}
+                            disabled={busy || stock <= 0}
+                            onClick={() => handleAdjustStock(item, -5)}
+                            style={{
+                              background: "var(--surface-tint)",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              color: "var(--text-main)",
+                              borderRadius: "6px",
+                              padding: "3px 7px",
+                              fontSize: "0.72rem",
+                              fontWeight: 800,
+                              cursor: stock <= 0 ? "not-allowed" : "pointer",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                              opacity: stock <= 0 ? 0.5 : 1,
+                            }}
+                            title="Quick consume -5 units"
                           >
-                            <span className="bar-stock-icon">+</span> Receive
+                            -5
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConsumeItem(item);
+                              setConsumeAmount("");
+                              setConsumeReason("Bar Usage");
+                            }}
+                            style={{
+                              background: "rgba(245, 158, 11, 0.14)",
+                              border: "1px solid rgba(245, 158, 11, 0.38)",
+                              color: "#f59e0b",
+                              borderRadius: "6px",
+                              padding: "3px 7px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                            title="Record custom used quantity manually"
+                          >
+                            <MinusCircle size={11} />
+                            <span>Use</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRestockItem(item);
+                              setRestockAmount("");
+                              setRestockSupplier(item.supplier || "");
+                              setCustomRestockSupplier(false);
+                            }}
+                            style={{
+                              background: "rgba(16, 185, 129, 0.1)",
+                              border: "1px solid rgba(16, 185, 129, 0.3)",
+                              color: "#10b981",
+                              borderRadius: "6px",
+                              padding: "3px 7px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                            title="Record received stock quantity"
+                          >
+                            <PackagePlus size={12} />
+                            <span>Receive</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => deleteItem(item)}
+                            style={{
+                              background: "rgba(239, 68, 68, 0.08)",
+                              border: "1px solid rgba(239, 68, 68, 0.3)",
+                              color: "#ef4444",
+                              borderRadius: "6px",
+                              padding: "4px 6px",
+                              fontSize: "0.72rem",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                            title="Delete item"
+                          >
+                            <Trash2 size={12} />
                           </button>
                         </div>
-                        <button
-                          className="bar-icon-button small"
-                          type="button"
-                          title="Edit bar inventory item"
-                          disabled={busy}
-                          onClick={() => openEditModal(item)}
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          className="bar-icon-button small danger"
-                          type="button"
-                          title="Delete from bar inventory"
-                          disabled={busy}
-                          onClick={() => deleteItem(item)}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-          {filteredRows.length === 0 && !error && (
-            <div className="bar-empty">
-              {validBeverages.length === 0 ? (
-                <div>
-                  <p style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: 700 }}>
-                    No bar inventory items found.
+            {filteredRows.length === 0 && !error && (
+              <div style={{ padding: "2.5rem 1rem", textAlign: "center", color: "var(--text-dim)" }}>
+                {validBeverages.length === 0 ? (
+                  <div>
+                    <p style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: 700, color: "var(--text-main)" }}>
+                      No bar inventory items found.
+                    </p>
+                    <p style={{ margin: "0 0 16px", color: "var(--text-dim)", fontSize: "0.8rem" }}>
+                      Add your first beverage or bar supply item to get started.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={openAddModal}
+                      style={{
+                        height: "36px",
+                        background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "9px",
+                        padding: "0 1rem",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Plus size={15} style={{ verticalAlign: "middle", marginRight: "4px" }} />
+                      Add First Bar Item
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                    No items match your current search or filters. Try clearing your filters.
                   </p>
-                  <p style={{ margin: "0 0 16px", color: "var(--text-dim)" }}>
-                    Add your first liquor or beverage item to get started.
-                  </p>
-                  <button className="bar-button primary" type="button" onClick={openAddModal}>
-                    <Plus size={15} /> Add First Bar Inventory Item
-                  </button>
-                </div>
-              ) : (
-                <p>No beverage items match your current search or filters. Try adjusting your search query.</p>
-              )}
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 5. Pagination Bar matching Dine Inventory */}
+        {filteredRows.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              marginTop: "0.85rem",
+              padding: "0 0.2rem",
+            }}
+          >
+            <div style={{ color: "var(--text-muted)", fontSize: "0.76rem" }}>
+              Showing {Math.min(filteredRows.length, pageStart + 1)}–{Math.min(filteredRows.length, pageStart + itemsPerPage)} of {filteredRows.length} items
             </div>
-          )}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <button
+                type="button"
+                disabled={visiblePage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                style={{
+                  height: "30px",
+                  padding: "0 0.55rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-card)",
+                  background: "var(--bg-tertiary)",
+                  color: visiblePage <= 1 ? "var(--text-dim)" : "var(--text-main)",
+                  cursor: visiblePage <= 1 ? "not-allowed" : "pointer",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                <ChevronLeft size={14} />
+                <span>Prev</span>
+              </button>
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  padding: "0 0.4rem",
+                }}
+              >
+                Page {visiblePage} of {pageCount}
+              </span>
+              <button
+                type="button"
+                disabled={visiblePage >= pageCount}
+                onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+                style={{
+                  height: "30px",
+                  padding: "0 0.55rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-card)",
+                  background: "var(--bg-tertiary)",
+                  color: visiblePage >= pageCount ? "var(--text-dim)" : "var(--text-main)",
+                  cursor: visiblePage >= pageCount ? "not-allowed" : "pointer",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 6. Add / Edit Bar Inventory Modal */}
+      {/* Record Used Modal (Matching Dine Inventory) */}
+      {consumeItem && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 175,
+            padding: "1rem",
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <form
+            onSubmit={handleRecordUsage}
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              padding: "1.2rem",
+              borderRadius: "14px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              boxShadow: "var(--shadow-lg)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.4rem",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  color: "var(--text-main)",
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                }}
+              >
+                <MinusCircle size={18} color="#f59e0b" />
+                Record Used: {consumeItem.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setConsumeItem(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-dim)",
+                  cursor: "pointer",
+                  padding: "4px",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                padding: "0.55rem 0.75rem",
+                borderRadius: "8px",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
+                marginBottom: "0.85rem",
+                fontSize: "0.78rem",
+              }}
+            >
+              <div>
+                <span style={{ color: "var(--text-dim)" }}>In-Stock:</span>{" "}
+                <strong
+                  style={{
+                    color:
+                      Number(consumeItem.stock ?? consumeItem.currentStock ?? 0) <=
+                      Number(consumeItem.minThreshold ?? consumeItem.minimumThreshold ?? 0)
+                        ? "#f59e0b"
+                        : "#10b981",
+                  }}
+                >
+                  {consumeItem.stock ?? consumeItem.currentStock ?? 0} {consumeItem.unit || "Bottle"}
+                </strong>
+              </div>
+              <div
+                style={{
+                  borderLeft: "1px solid var(--border-subtle)",
+                  paddingLeft: "0.75rem",
+                }}
+              >
+                <span style={{ color: "var(--text-dim)" }}>Total Used:</span>{" "}
+                <strong style={{ color: "var(--text-main)" }}>
+                  {Number(consumeItem.totalUsed || 0)} {consumeItem.unit || "Bottle"}
+                </strong>
+              </div>
+            </div>
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-main)",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              QUANTITY USED ({consumeItem.unit || "Bottle"}) *
+            </label>
+            <input
+              autoFocus
+              required
+              type="number"
+              min="0.001"
+              step="any"
+              value={consumeAmount}
+              onChange={(event) => setConsumeAmount(event.target.value)}
+              placeholder={`Enter amount used (e.g. 5, 20, 50 ${consumeItem.unit || "Bottle"})`}
+              style={{
+                width: "100%",
+                height: "40px",
+                boxSizing: "border-box",
+                padding: "0 0.75rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.9rem",
+                fontWeight: 700,
+                marginBottom: "0.5rem",
+              }}
+            />
+
+            {/* Quick Presets */}
+            <div
+              style={{
+                display: "flex",
+                gap: "0.35rem",
+                marginBottom: "0.85rem",
+                flexWrap: "wrap",
+              }}
+            >
+              {[1, 5, 10, 20, 50].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setConsumeAmount(String(val))}
+                  style={{
+                    padding: "3px 9px",
+                    borderRadius: "6px",
+                    background:
+                      consumeAmount === String(val)
+                        ? "var(--accent-amber)"
+                        : "var(--surface-tint)",
+                    color:
+                      consumeAmount === String(val)
+                        ? "#000000"
+                        : "var(--text-main)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  +{val} {consumeItem.unit || "Bottle"}
+                </button>
+              ))}
+            </div>
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              USAGE REASON / NOTE (OPTIONAL)
+            </label>
+            <input
+              type="text"
+              value={consumeReason}
+              onChange={(event) => setConsumeReason(event.target.value)}
+              placeholder="e.g. Bar service, Cocktails, Spoilage"
+              style={{
+                width: "100%",
+                height: "36px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.8rem",
+                marginBottom: "1rem",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setConsumeItem(null)}
+                style={{
+                  height: "36px",
+                  padding: "0 0.95rem",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "8px",
+                  color: "var(--text-main)",
+                  background: "var(--bg-tertiary)",
+                  fontWeight: 700,
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busy}
+                style={{
+                  height: "36px",
+                  padding: "0 1rem",
+                  border: 0,
+                  borderRadius: "8px",
+                  color: "#fff",
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  fontWeight: 800,
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                }}
+              >
+                {busy ? "Recording..." : "Record Used"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* 5. Add / Edit Bar Inventory Modal */}
+      {/* Receive Stock Modal (Matching Dine Inventory) */}
+      {restockItem && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 175,
+            padding: "1rem",
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <form
+            onSubmit={handleReceiveStock}
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              padding: "1.1rem",
+              borderRadius: "14px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              boxShadow: "var(--shadow-lg)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.25rem",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  color: "var(--text-main)",
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                }}
+              >
+                Receive {restockItem.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRestockItem(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-dim)",
+                  cursor: "pointer",
+                  padding: "4px",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p
+              style={{
+                margin: "0 0 0.9rem",
+                color: "var(--text-muted)",
+                fontSize: "0.75rem",
+              }}
+            >
+              Current stock: {restockItem.stock ?? restockItem.currentStock ?? 0} {restockItem.unit || "Bottle"}
+            </p>
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              QUANTITY RECEIVED ({restockItem.unit || "Bottle"}) *
+            </label>
+            <input
+              autoFocus
+              required
+              type="number"
+              min="0.001"
+              step="any"
+              value={restockAmount}
+              onChange={(event) => setRestockAmount(event.target.value)}
+              placeholder="Enter quantity"
+              style={{
+                width: "100%",
+                height: "38px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                marginBottom: "0.7rem",
+              }}
+            />
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              SUPPLIER
+            </label>
+            <div style={{ marginBottom: "0.9rem" }}>
+              {customRestockSupplier ? (
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={restockSupplier}
+                    onChange={(e) => setRestockSupplier(e.target.value)}
+                    placeholder="Type new supplier name..."
+                    style={{
+                      width: "100%",
+                      height: "38px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-card)",
+                      background: "var(--bg-tertiary)",
+                      color: "var(--text-main)",
+                      fontSize: "0.82rem",
+                      padding: "0 0.65rem",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCustomRestockSupplier(false)}
+                    style={{
+                      padding: "0 0.6rem",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      color: "var(--text-dim)",
+                      fontSize: "0.72rem",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Select from list
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={restockSupplier}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomRestockSupplier(true);
+                          setRestockSupplier("");
+                        } else {
+                          setRestockSupplier(e.target.value);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "38px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-card)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontSize: "0.82rem",
+                        padding: "0 2rem 0 0.65rem",
+                        appearance: "none",
+                        WebkitAppearance: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <option value="">Choose a supplier...</option>
+                      {availableSuppliers.map((sup) => (
+                        <option key={sup} value={sup}>{sup}</option>
+                      ))}
+                      <option value="__custom__">+ Type custom supplier...</option>
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      style={{
+                        position: "absolute",
+                        right: "0.65rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "var(--text-muted)",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ textAlign: "right", marginTop: "4px" }}>
+                    <button
+                      type="button"
+                      onClick={() => { setCustomRestockSupplier(true); setRestockSupplier(""); }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--accent-amber)",
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      + Type custom
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setRestockItem(null)}
+                style={{
+                  height: "36px",
+                  padding: "0 0.85rem",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "8px",
+                  color: "var(--text-main)",
+                  background: "var(--bg-tertiary)",
+                  fontWeight: 700,
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busy}
+                style={{
+                  height: "36px",
+                  padding: "0 0.9rem",
+                  border: 0,
+                  borderRadius: "8px",
+                  color: "#fff",
+                  background: "linear-gradient(135deg, #059669, #10b981)",
+                  fontWeight: 800,
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(16, 185, 129, 0.35)",
+                }}
+              >
+                {busy ? "Saving..." : "Save Received Stock"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {modalOpen && (
         <div
           className="bar-overlay"
@@ -1124,13 +2609,33 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 </label>
               </div>
 
-              {modalError && (
-                <p className="bar-error" role="alert" style={{ marginTop: "12px" }}>
-                  {modalError}
-                </p>
+              {Number(formData.unitCost) > 0 && Number(formData.stock) > 0 && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    padding: "0.5rem 0.85rem",
+                    borderRadius: "8px",
+                    background: "rgba(245, 158, 11, 0.1)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    fontSize: "0.78rem",
+                    color: "var(--accent-amber-light)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>Stock Holding Expenditure:</span>
+                  <strong>{formatCurrency(Number(formData.stock) * Number(formData.unitCost))}</strong>
+                </div>
               )}
 
-              <footer className="bar-modal-footer" style={{ marginTop: "18px", padding: "14px 0 0" }}>
+              {modalError && (
+                <div className="bar-error" role="alert" style={{ marginTop: "12px" }}>
+                  {modalError}
+                </div>
+              )}
+
+              <footer className="bar-modal-foot" style={{ marginTop: "16px" }}>
                 <button
                   className="bar-button secondary"
                   type="button"
@@ -1147,9 +2652,10 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
           </section>
         </div>
       )}
-    </section>
+    </div>
   );
 }
+
 function Status({ children }) {
   const cls = String(children || "").toLowerCase().replace(/\s+/g, "-");
   return <span className={`bar-status bar-status-${cls}`}>{children}</span>;
@@ -2082,10 +3588,22 @@ function BarDrinksMenu({
                     key={item.id}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
-                      transition: "background 0.15s ease",
+                      transition: "background 0.15s ease, opacity 0.2s ease",
+                      opacity: isAvail ? 1 : 0.6,
+                      background: isAvail
+                        ? "transparent"
+                        : "rgba(239, 68, 68, 0.03)",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = isAvail
+                        ? "var(--bg-tertiary)"
+                        : "rgba(239, 68, 68, 0.07)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = isAvail
+                        ? "transparent"
+                        : "rgba(239, 68, 68, 0.03)";
+                    }}
                   >
                     {/* Drink Name + Thumbnail */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
@@ -2093,21 +3611,28 @@ function BarDrinksMenu({
                         <img
                           src={getMenuItemImage(item)}
                           alt={item.name}
-                          onError={handleDishImageError}
+                          onError={(e) => handleDishImageError(e, item)}
                           style={{
-                            width: "42px",
-                            height: "42px",
-                            borderRadius: "8px",
+                            width: "48px",
+                            height: "48px",
+                            borderRadius: "10px",
                             objectFit: "cover",
-                            border: "1px solid var(--border-subtle)",
+                            border: isAvail
+                              ? "1px solid var(--border-card)"
+                              : "1px solid rgba(239, 68, 68, 0.35)",
                             flexShrink: 0,
+                            filter: isAvail
+                              ? "none"
+                              : "grayscale(60%)",
                           }}
                         />
                         <div>
                           <div
                             style={{
                               fontWeight: 700,
-                              color: "var(--text-main)",
+                              color: isAvail
+                                ? "var(--text-main)"
+                                : "var(--text-dim)",
                               fontSize: "0.88rem",
                               lineHeight: 1.3,
                               display: "flex",
@@ -2258,7 +3783,11 @@ function BarDrinksMenu({
                         <button
                           type="button"
                           onClick={() => handleToggleAvailability(item)}
-                          title={isAvail ? "Make available" : "Mark unavailable"}
+                          title={
+                            !isAvail
+                              ? "Make available"
+                              : "Mark unavailable"
+                          }
                           style={{
                             border: isAvail
                               ? "1px solid rgba(16, 185, 129, 0.45)"
@@ -2273,6 +3802,22 @@ function BarDrinksMenu({
                             fontWeight: 700,
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isAvail
+                              ? "rgba(16, 185, 129, 0.22)"
+                              : "rgba(239, 68, 68, 0.22)";
+                            e.currentTarget.style.borderColor = isAvail
+                              ? "rgba(16, 185, 129, 0.7)"
+                              : "rgba(239, 68, 68, 0.7)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isAvail
+                              ? "rgba(16, 185, 129, 0.12)"
+                              : "rgba(239, 68, 68, 0.12)";
+                            e.currentTarget.style.borderColor = isAvail
+                              ? "rgba(16, 185, 129, 0.45)"
+                              : "rgba(239, 68, 68, 0.45)";
                           }}
                         >
                           {isAvail ? "Available" : "Unavailable"}
@@ -2294,6 +3839,14 @@ function BarDrinksMenu({
                             gap: "4px",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.15)";
+                            e.currentTarget.style.borderColor = "var(--accent-amber)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.06)";
+                            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
                           }}
                           title="Edit drink"
                         >
@@ -2317,6 +3870,14 @@ function BarDrinksMenu({
                             gap: "4px",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                            e.currentTarget.style.borderColor = "#ef4444";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(239, 68, 68, 0.06)";
+                            e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.35)";
                           }}
                           title="Delete drink"
                         >
@@ -6183,6 +7744,12 @@ export function BarWorkspace({
       prev.map((d) => (String(d.id) === String(drinkId) ? { ...d, isAvailable: newStatus } : d))
     );
 
+    if (onSetMenuAvailability) {
+      onSetMenuAvailability(drinkId, newStatus);
+    }
+
+    setToast?.(`Drink marked ${newStatus ? "Available" : "Unavailable"}.`);
+
     // Persist to backend
     try {
       await apiToggleBarDrinkAvailability(drinkId, newStatus);
@@ -7626,6 +9193,7 @@ export function BarWorkspace({
           onDeleteDrink={handleDeleteDrink}
           onToggleDrinkAvailability={handleToggleDrinkAvailability}
           onToggleDrinkSpecial={handleToggleDrinkSpecial}
+          onSetMenuAvailability={onSetMenuAvailability}
           setToast={setToast}
         />
       ) : route === "bar-tables" ? (
@@ -7674,7 +9242,15 @@ export function BarWorkspace({
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
       <OrderItemsModal order={tableItems} onClose={() => setTableItems(null)} />
 
-      {route === "bar-reports" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Reports</h2><p>Summary calculated from the shared menu, active orders, inventory, and loaded order history.</p></div><button className="bar-button secondary" onClick={() => csvDownload("bar-report.csv", [["Report", "Value", "Source"], ...reportData])}>Export CSV</button></div><div className="bar-report-summary">{reportData.map(([label,value,note])=><article key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</div>{renderStaticTable(["Report","Value","Source"],reportData.map((row,index)=>({id:index,name:row[0],value:row[1],source:row[2]})),(column,row)=>({Report:row.name,Value:row.value,Source:row.source})[column])}</section>}
+      {route === "bar-reports" && (
+        <AdminReports
+          mode="bar"
+          menuItems={menuItems}
+          restaurantSettings={restaurantSettings}
+          inventory={inventory}
+          pastOrders={barInvoices}
+        />
+      )}
 
       {route === "bar-access" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Access Management</h2><p>Access changes use the application authorization system.</p></div></div><div className="bar-empty">No Bar-specific access management API is configured. Existing application roles and permissions remain authoritative.</div></section>}
 

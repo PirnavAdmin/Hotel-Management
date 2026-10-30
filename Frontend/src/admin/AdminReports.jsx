@@ -1,6 +1,7 @@
+import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  BarChart3,
+  BarChart3, Wine,
   TrendingUp,
   TrendingDown,
 Smartphone,
@@ -124,7 +125,8 @@ async function requestLiveReportData() {
   };
 }
 
-export function AdminReports({ menuItems = [], restaurantSettings = {}, inventory = [] }) {
+export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
+  const isBarMode = mode === "bar";
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
@@ -182,6 +184,41 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const thisYearEndYMD = `${currentYear}-12-31`;
   const lastYearStartYMD = `${currentYear - 1}-01-01`;
   const lastYearEndYMD = `${currentYear - 1}-12-31`;
+
+  const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
+
+  const isBarItem = (item) => {
+    if (!item) return false;
+    const name = item.name || item.dishName || item.menuItemName || "";
+    const menuItem = findMenuItem(menuLookup, { ...item, menuItemId: item.menuItemId ?? item.menu_item_id ?? item.id }) ||
+      (menuItems || []).find((c) => String(c.name || "").trim().toLowerCase() === String(name).trim().toLowerCase());
+    return isBeverageCategory(menuItem?.category ?? menuItem?.categoryName ?? item.category ?? item.categoryName ?? item.subcategory ?? name);
+  };
+
+  const isBarOrder = (order) => {
+    if (!order) return false;
+    if (order.source === "bar" || order.orderType === "bar" || order.isBarOrder) return true;
+    const items = Array.isArray(order.items) ? order.items : [];
+    return items.some(isBarItem);
+  };
+
+  const isBarInventoryItem = (item) => {
+    if (!item) return false;
+    const name = String(item.name || "").trim().toLowerCase();
+    const cat = String(item.category || item.subcategory || "").trim().toLowerCase();
+    if (
+      name.includes("handi") || name.includes("foil") || name.includes("container") ||
+      name.includes("tray") || name.includes("takeaway") || name.includes("chicken") ||
+      name.includes("mutton") || name.includes("biryani") || name.includes("paneer") ||
+      name.includes("naan") || name.includes("roti") || name.includes("kebab") ||
+      name.includes("shawarma") || cat.includes("packaging") || cat.includes("disposable") ||
+      cat.includes("produce") || cat.includes("meat") || cat.includes("grain") ||
+      cat.includes("spice") || cat.includes("hygiene") || cat.includes("cleaning")
+    ) {
+      return false;
+    }
+    return isBeverageCategory(item.category ?? item.subcategory ?? item.name);
+  };
 
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState("all");
@@ -290,10 +327,14 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
     };
   }, []);
 
-  const ordersData = useMemo(
-    () => sortOrdersBySettlementTime(dedupeOrders(invoicesData)),
-    [invoicesData],
-  );
+  const ordersData = useMemo(() => {
+    const sourceList = Array.isArray(invoicesData) && invoicesData.length > 0
+      ? invoicesData
+      : (Array.isArray(pastOrders) && pastOrders.length > 0 ? pastOrders : []);
+    const sorted = sortOrdersBySettlementTime(dedupeOrders(sourceList));
+    if (!isBarMode) return sorted;
+    return sorted.filter(isBarOrder);
+  }, [invoicesData, pastOrders, isBarMode]);
 
   const handleSelectPeriod = (periodId) => {
     setFilterPeriod(periodId);
@@ -477,7 +518,11 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const displayedDishes = showAllDishes ? sortedDishes : sortedDishes.slice(0, 3);
 
   // ================= INVENTORY & EXPENDITURE CALCULATIONS =================
-  const inventoryItems = Array.isArray(liveInventory) ? liveInventory : [];
+  const inventoryItems = useMemo(() => {
+    const base = Array.isArray(liveInventory) ? liveInventory : [];
+    if (!isBarMode) return base;
+    return base.filter(isBarInventoryItem);
+  }, [liveInventory, isBarMode]);
 
   const totalInventoryCost = useMemo(() => {
     return inventoryItems.reduce((sum, item) => {
@@ -681,7 +726,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const handleExportCSV = () => {
     try {
       const lines = [];
-      lines.push(`"FINANCIAL PERFORMANCE REPORT"`);
+      lines.push(`"${isBarMode ? "BAR FINANCIAL PERFORMANCE REPORT" : "FINANCIAL PERFORMANCE REPORT"}"`);
       lines.push(`"Period:","${getFilterPeriodLabel()}"`);
       lines.push(`"Date Range:","${getActiveDateRangeText()}"`);
       lines.push(`"Generated At:","${new Date().toLocaleString("en-IN")}"`);
@@ -790,7 +835,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                   flexShrink: 0,
                 }}
               >
-                <BarChart3 size={20} color='#ffffff' />
+                {isBarMode ? <Wine size={20} color='#ffffff' /> : <BarChart3 size={20} color='#ffffff' />}
               </div>
               <div>
                 <h2
@@ -802,10 +847,10 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  Sales Analytics &amp; Financial Reports
+                  {isBarMode ? "Bar Sales Analytics & Financial Reports" : "Sales Analytics & Financial Reports"}
                 </h2>
                 <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                  All-in-one financial dashboard · settled dining revenue, P&amp;L accounting &amp; stock expenditure
+                  {isBarMode ? "All-in-one financial dashboard · settled bar revenue, P&L accounting & liquor stock expenditure" : "All-in-one financial dashboard · settled dining revenue, P&L accounting & stock expenditure"}
                 </div>
               </div>
             </div>
@@ -1474,7 +1519,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Food &amp; Beverage Net Sales</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>{isBarMode ? "Beverage Net Sales" : "Food & Beverage Net Sales"}</div>
                   <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
                     {formatCurrency(grossFoodSales)}
                   </div>
@@ -1588,7 +1633,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     </tr>
                     <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        Gross Settled Dining Sales
+                        {isBarMode ? "Gross Settled Bar Sales" : "Gross Settled Dining Sales"}
                       </td>
                       <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
                         Revenue from {filteredOrders.length} customer orders
@@ -1599,7 +1644,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     </tr>
                     <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
-                        ↳ Food &amp; Beverage Net Sales
+                        ↳ {isBarMode ? "Beverage" : "Food & Beverage"} Net Sales
                       </td>
                       <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
                         Bill total minus GST &amp; service charge
@@ -2007,7 +2052,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                 <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                    {inventoryItems.length} Ingredients
+                    {inventoryItems.length} {isBarMode ? "Bar Items" : "Ingredients"}
                   </div>
                 </div>
                 <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
