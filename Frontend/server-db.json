@@ -157,19 +157,41 @@
       "name": "Table-5",
       "tableNumber": "Table-5",
       "section": "Main Hall",
-      "capacity": 4,
-      "status": "vacant",
+      "capacity": 2,
+      "status": "occupied",
       "server": "Staff",
       "guests": 0,
-      "items": [],
-      "orderTime": null,
+      "items": [
+        {
+          "id": 1,
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "11:51 AM",
+          "kotStatus": "new",
+          "kotSent": false,
+          "kotPendingServer": true
+        },
+        {
+          "id": 8,
+          "name": "Vikas Vodka",
+          "price": 700,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "11:51 AM",
+          "kotStatus": "new",
+          "kotSent": false
+        }
+      ],
+      "orderTime": "11:51 AM",
       "discountPercent": 0,
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
       "occupiedChairs": 0,
       "selectedSeats": [],
-      "orderTimestamp": null,
+      "orderTimestamp": 1793341297453,
       "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
@@ -179,7 +201,15 @@
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 5
+      "backendTableId": 5,
+      "tableName": "Table-5",
+      "branchId": 1,
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 2,
+      "assignedServerId": null,
+      "assignedServerName": "Staff",
+      "qrCodeUrl": "https://qr.hms.hotel/hyd01"
     },
     {
       "id": 6,
@@ -3048,6 +3078,28 @@
   "avsr_daily_inv_cnt_19_Oct_2026": "1",
   "avsr_daily_inv_cnt_21_Oct_2026": "46",
   "gourmet_pos_inventory_v1": [
+    {
+      "id": "inv-1793335708447-vuab",
+      "name": "Onions",
+      "category": "Vegetables & Fresh Produce",
+      "subcategory": "",
+      "supplier": "Local Supplier",
+      "unit": "KG",
+      "stock": 50,
+      "minThreshold": 10,
+      "unitCost": 40,
+      "mrp": 40,
+      "totalUsed": 0,
+      "totalRestocked": 50,
+      "lastRestocked": "30 Oct 2026",
+      "brand": "",
+      "abv": null,
+      "volumeMl": null,
+      "storageLocation": "",
+      "sellingPrice": 40,
+      "currentStock": 50,
+      "minimumThreshold": 10
+    },
     {
       "id": "inv-1793269818393-blzr",
       "name": "Crispy Corn Salt & Pepper Main Ingredient",
@@ -10205,6 +10257,44 @@
   },
   "avsr_daily_inv_cnt_26_Oct_2026": "217",
   "avsr_daily_inv_cnt_27_Oct_2026": "3",
-  "active_orders": [],
+  "active_orders": [
+    {
+      "tableId": 5,
+      "tableName": "Table-5",
+      "tableNumber": "Table-5",
+      "serverName": "Staff",
+      "guests": 1,
+      "status": "Active",
+      "items": [
+        {
+          "menuItemId": 1,
+          "id": 1,
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "menuItemId": 8,
+          "id": 8,
+          "name": "Vikas Vodka",
+          "price": 700,
+          "quantity": 1,
+          "notes": ""
+        },
+        {
+          "menuItemId": 8,
+          "id": 8,
+          "name": "Vikas Vodka",
+          "price": 700,
+          "quantity": 1,
+          "notes": ""
+        }
+      ],
+      "id": 1793341301822,
+      "orderId": 1793341301822,
+      "createdAt": "2026-10-30T06:21:41.822Z"
+    }
+  ],
   "avsr_daily_inv_cnt_29_Oct_2026": "8"
 }

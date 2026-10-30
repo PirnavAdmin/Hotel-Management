@@ -1,4 +1,4 @@
-﻿import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
+import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
@@ -36,6 +36,21 @@ import {
   normalizeMenuItem,
 } from "./api/menuApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
+import {
+  Bell,
+  CheckCircle2,
+  Flame,
+  Clock,
+  ArrowRight,
+  X,
+} from "lucide-react";
+import {
+  cleanNotificationText,
+  getCleanAlertTitle,
+  getCleanAlertMessage,
+  getCleanAlertTimestamp,
+  sanitizeKitchenAlert,
+} from "./utils/notificationHelper";
 import { MENU_ITEMS } from "./data/menuData";
 import {
   apiGetStaff,
@@ -59,6 +74,7 @@ import { getTodayDateString } from "./utils/invoiceCounter";
 import { INITIAL_TABLES } from "./data/initialTables";
 import { INITIAL_STAFF } from "./data/initialStaff";
 import { useAppDialog } from "./common/DialogContext";
+import { SkeletonTable } from "./common/Skeletons";
 import {
   autoGenerateInventoryFromRecipe,
   getStandardDishSuggestions,
@@ -74,19 +90,6 @@ const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
-const sanitizeKitchenAlert = (alert) => {
-  if (!alert || typeof alert !== "object") return alert;
-  const cleanText = (value) =>
-    String(value || "")
-      .replace(/(?:ðŸ[^\s]*|âœ…|â°|âœ•|ï¸|Â)+/gu, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  return {
-    ...alert,
-    title: cleanText(alert.title) || "Kitchen Update",
-    message: cleanText(alert.message),
-  };
-};
 
 const readRestaurantSettings = () => {
   try {
@@ -126,7 +129,10 @@ const isRogueName = (name) => {
     lower.includes("table final") ||
     lower.includes("table 20") ||
     lower === "verification" ||
-    lower === "test"
+    lower === "test" ||
+    lower.startsWith("pat") ||
+    lower.startsWith("patio") ||
+    /^t-\d+$/i.test(lower)
   );
 };
 
@@ -199,9 +205,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = rawName.match(/^(?:table|t)\s*(\d+)$/i)
-        ? `Table ${num || targetId}`
-        : rawName || `Table ${targetId}`;
+      const cleanName = `Table-${num || targetId}`;
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
       const hasActiveItems =
@@ -401,6 +405,8 @@ export function App() {
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
     staff: "loading",
+    menu: "loading",
+    menuError: "",
     tableError: "",
     staffError: "",
   });
@@ -581,8 +587,11 @@ export function App() {
             JSON.stringify(normalizedMenu),
           );
         } catch {}
+        setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
+      } else {
+        setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: response?.error || response?.data?.message || "Menu items could not be loaded." }));
       }
-    });
+    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: error?.message || "Menu items could not be loaded." })));
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((response) => {
@@ -744,7 +753,8 @@ export function App() {
   const [kitchenNotifications, setKitchenNotifications] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS);
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed.map(sanitizeKitchenAlert) : [];
     } catch {
       return [];
     }
@@ -1786,7 +1796,7 @@ export function App() {
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_started",
-        title: "🔥 Cooking Started",
+        title: "Cooking Started",
         message: itemName
           ? `Chef started cooking "${itemName}" for ${tbl?.name || `Table ${tableId}`}!`
           : `Chef started cooking order for ${tbl?.name || `Table ${tableId}`}!`,
@@ -1801,7 +1811,7 @@ export function App() {
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_completed",
-        title: itemName ? `🔔 "${itemName}" Ready!` : "🔔 Food Ready to Serve!",
+        title: itemName ? `Prepared: ${itemName}` : "Food Ready to Serve",
         message: itemName
           ? `"${itemName}" is prepared and ready to serve for ${tbl?.name || `Table ${tableId}`}!`
           : `Order preparation completed for ${tbl?.name || `Table ${tableId}`}! Food is ready to serve.`,
@@ -1893,12 +1903,10 @@ export function App() {
       tableId,
       tableName: tbl?.name || `Table ${tableId}`,
       type: "cooking_completed",
-      title: isSingleItem
-        ? `🔔 Prepared: ${itemObj.name}`
-        : "🔔 Food Ready to Serve!",
+      title: isSingleItem ? `Prepared: ${itemObj.name}` : "Food Ready to Serve",
       message: isSingleItem
         ? `"${itemObj.name}" is prepared! Ready to serve.`
-        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! 🍽️`,
+        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve!`,
     });
     showToast(
       isSingleItem
@@ -2907,6 +2915,7 @@ export function App() {
               {activeView === "tables" && (
                 <TableView
                   tables={tables}
+                  loading={sharedRecordLoad.tables === "loading" && tables.length === 0}
                   onSelectTable={handleSelectTable}
                   onUpdateTable={handleUpdateTable}
                 />
@@ -2916,6 +2925,8 @@ export function App() {
                   table={currentTable}
                   allTables={tables}
                   menuItems={menuItems}
+                  menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+                  menuLoadError={sharedRecordLoad.menuError}
                   onSelectTable={setSelectedTableId}
                   onBackToTables={() => setActiveView("tables")}
                   onAddItemToTable={handleAddItemToTable}
@@ -2978,179 +2989,180 @@ export function App() {
       </main>
 
       {/* Real-time Kitchen Status Alert Banner (Cooking Started & Cooking Completed) */}
-      {activeKitchenAlert && (
-        <div
-          style={{
-            position: "fixed",
-            top: "20px",
-            right: "24px",
-            zIndex: 9999,
-            width: "380px",
-            maxWidth: "calc(100vw - 32px)",
-            background:
-              activeKitchenAlert.type === "cooking_completed"
-                ? "linear-gradient(135deg, rgba(6, 78, 59, 0.96), rgba(15, 23, 42, 0.98))"
-                : "linear-gradient(135deg, rgba(124, 45, 18, 0.96), rgba(15, 23, 42, 0.98))",
-            backdropFilter: "blur(16px)",
-            border: `2px solid ${activeKitchenAlert.type === "cooking_completed" ? "#10b981" : "#f97316"}`,
-            borderRadius: "16px",
-            padding: "1rem 1.15rem",
-            boxShadow: `0 20px 45px rgba(0, 0, 0, 0.7), 0 0 30px ${activeKitchenAlert.type === "cooking_completed" ? "rgba(16, 185, 129, 0.45)" : "rgba(249, 115, 22, 0.45)"}`,
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.55rem",
-            animation: "slideInAlert 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        >
+      {activeKitchenAlert && (() => {
+        const isCompleted = activeKitchenAlert.type === "cooking_completed";
+        const titleText = getCleanAlertTitle(activeKitchenAlert);
+        const messageText = getCleanAlertMessage(activeKitchenAlert);
+        const timestampText = getCleanAlertTimestamp(activeKitchenAlert);
+        const tableLabel = activeKitchenAlert.tableName || (activeKitchenAlert.tableId ? `Table ${activeKitchenAlert.tableId}` : "Table");
+
+        return (
           <div
             style={{
+              position: "fixed",
+              top: "20px",
+              right: "24px",
+              zIndex: 9999,
+              width: "380px",
+              maxWidth: "calc(100vw - 32px)",
+              background: isCompleted
+                ? "linear-gradient(135deg, rgba(6, 78, 59, 0.96), rgba(15, 23, 42, 0.98))"
+                : "linear-gradient(135deg, rgba(124, 45, 18, 0.96), rgba(15, 23, 42, 0.98))",
+              backdropFilter: "blur(16px)",
+              border: `2px solid ${isCompleted ? "#10b981" : "#f97316"}`,
+              borderRadius: "16px",
+              padding: "1rem 1.15rem",
+              boxShadow: `0 20px 45px rgba(0, 0, 0, 0.7), 0 0 30px ${isCompleted ? "rgba(16, 185, 129, 0.45)" : "rgba(249, 115, 22, 0.45)"}`,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: "column",
+              gap: "0.55rem",
+              animation: "slideInAlert 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
             <div
-              style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
-            >
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10px",
-                  background:
-                    activeKitchenAlert.type === "cooking_completed"
-                      ? "rgba(16, 185, 129, 0.25)"
-                      : "rgba(249, 115, 22, 0.25)",
-                  border: `1.5px solid ${activeKitchenAlert.type === "cooking_completed" ? "rgba(16, 185, 129, 0.5)" : "rgba(249, 115, 22, 0.5)"}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "1.25rem",
-                }}
-              >
-                {activeKitchenAlert.type === "cooking_completed" ? "🔔" : "🔥"}
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.66rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color:
-                      activeKitchenAlert.type === "cooking_completed"
-                        ? "#34d399"
-                        : "#fb923c",
-                  }}
-                >
-                  {activeKitchenAlert.type === "cooking_completed"
-                    ? "✅ Food Ready To Serve"
-                    : "🔥 Cooking in Progress"}
-                </div>
-                <div
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: 900,
-                    color: "#ffffff",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {String(activeKitchenAlert.title || "Kitchen Update")
-                    .replace(/^ðŸ[^\s]*\s*/u, "")
-                    .replace(/^âœ…\s*/u, "")}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setActiveKitchenAlert(null)}
               style={{
-                background: "var(--surface-tint)",
-                border: "none",
-                color: "var(--text-dim)",
-                width: "26px",
-                height: "26px",
-                borderRadius: "50%",
-                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.85rem",
+                justifyContent: "space-between",
               }}
-              title="Dismiss"
             >
-              ✕
-            </button>
-          </div>
-
-          <div
-            style={{
-              fontSize: "0.84rem",
-              color: "#f1f5f9",
-              lineHeight: 1.35,
-              fontWeight: 600,
-            }}
-          >
-            {String(activeKitchenAlert.message || "")
-              .replaceAll("ðŸ“¥", "")
-              .replaceAll("ðŸ”¥", "")
-              .replaceAll("ðŸ””", "")
-              .replaceAll("âœ…", "")
-              .replaceAll("â°", "")
-              .trim()}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingTop: "0.45rem",
-              borderTop: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <span
-              style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700 }}
-            >
-              ⏰ {activeKitchenAlert.timestamp}
-            </span>
-            {activeKitchenAlert.tableId && (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+              >
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    background: isCompleted
+                      ? "rgba(16, 185, 129, 0.25)"
+                      : "rgba(249, 115, 22, 0.25)",
+                    border: `1.5px solid ${isCompleted ? "rgba(16, 185, 129, 0.5)" : "rgba(249, 115, 22, 0.5)"}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: isCompleted ? "#34d399" : "#fb923c",
+                  }}
+                >
+                  {isCompleted ? <Bell size={18} /> : <Flame size={18} />}
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.66rem",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: isCompleted ? "#34d399" : "#fb923c",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    {isCompleted ? <CheckCircle2 size={12} /> : <Flame size={12} />}
+                    <span>{isCompleted ? "Food Ready To Serve" : "Cooking in Progress"}</span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: 900,
+                      color: "#ffffff",
+                      lineHeight: 1.1,
+                      marginTop: "2px",
+                    }}
+                  >
+                    {titleText}
+                  </div>
+                </div>
+              </div>
               <button
-                onClick={() => {
-                  setSelectedTableId(activeKitchenAlert.tableId);
-                  setActiveView("order");
-                  navigate("/");
-                  setActiveKitchenAlert(null);
-                }}
+                onClick={() => setActiveKitchenAlert(null)}
                 style={{
-                  background:
-                    activeKitchenAlert.type === "cooking_completed"
-                      ? "linear-gradient(135deg, #10b981, #059669)"
-                      : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "var(--surface-tint)",
                   border: "none",
-                  color: "#ffffff",
-                  padding: "5px 14px",
-                  borderRadius: "7px",
-                  fontSize: "0.76rem",
-                  fontWeight: 800,
+                  color: "var(--text-dim)",
+                  width: "26px",
+                  height: "26px",
+                  borderRadius: "50%",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title="Dismiss"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                fontSize: "0.84rem",
+                color: "#f1f5f9",
+                lineHeight: 1.35,
+                fontWeight: 600,
+              }}
+            >
+              {messageText}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingTop: "0.45rem",
+                borderTop: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-dim)",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
                   gap: "4px",
-                  boxShadow:
-                    activeKitchenAlert.type === "cooking_completed"
-                      ? "0 4px 14px rgba(16, 185, 129, 0.4)"
-                      : "0 4px 14px rgba(245, 158, 11, 0.4)",
                 }}
               >
-                View{" "}
-                {activeKitchenAlert.tableName ||
-                  `Table ${activeKitchenAlert.tableId}`}{" "}
-                →
-              </button>
-            )}
+                <Clock size={12} />
+                <span>{timestampText}</span>
+              </span>
+              {activeKitchenAlert.tableId && (
+                <button
+                  onClick={() => {
+                    setSelectedTableId(activeKitchenAlert.tableId);
+                    setActiveView("order");
+                    navigate("/");
+                    setActiveKitchenAlert(null);
+                  }}
+                  style={{
+                    background: isCompleted
+                      ? "linear-gradient(135deg, #10b981, #059669)"
+                      : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                    border: "none",
+                    color: "#ffffff",
+                    padding: "5px 14px",
+                    borderRadius: "7px",
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: isCompleted
+                      ? "0 4px 14px rgba(16, 185, 129, 0.4)"
+                      : "0 4px 14px rgba(245, 158, 11, 0.4)",
+                  }}
+                >
+                  <span>View {tableLabel}</span>
+                  <ArrowRight size={13} />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Floating Notification Toast */}
       {toastMessage && (

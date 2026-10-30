@@ -890,6 +890,47 @@ function globalSyncPlugin() {
           return;
         }
 
+        // REST API: /api/v1/menu-items/categories (GET)
+        if ((req.url === "/api/v1/menu-items/categories" || req.url === "/api/v1/menu-items/categories/" || req.url.startsWith("/api/v1/menu-items/categories?")) && req.method === "GET") {
+          db = loadDb();
+          const menuItems = db.gourmet_pos_menu_items_v2 || [];
+          const categorySet = new Set();
+          menuItems.forEach((item) => {
+            const cat = item.category || item.categoryName;
+            if (cat && typeof cat === "string" && cat.trim()) {
+              categorySet.add(cat.trim());
+            }
+          });
+          ["biryani", "starters", "mains", "tandoor-kebabs", "fast-food", "breads", "beverages", "desserts"].forEach((c) => categorySet.add(c));
+          const categories = Array.from(categorySet);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              categories,
+              data: categories,
+            })
+          );
+        }
+
+        // REST API: /api/v1/menu-items/categories (POST)
+        if ((req.url === "/api/v1/menu-items/categories" || req.url === "/api/v1/menu-items/categories/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const name = String(payload.name || "").trim();
+              res.writeHead(201, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: { name } }));
+            } catch {
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true }));
+            }
+          });
+          return;
+        }
+
         // REST API: /api/v1/menu-items (GET)
         if (req.url.startsWith("/api/v1/menu-items") && req.method === "GET") {
           db = loadDb();
