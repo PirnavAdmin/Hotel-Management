@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
-  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X, AlertCircle, RotateCcw
+  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Users, Wine, X, AlertCircle, RotateCcw
 } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
@@ -11,9 +11,7 @@ import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/o
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonTable } from "../common/Skeletons";
-import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
-import { BAR_DRINKS } from "../data/barDrinksMockData";
-import { BarKOTView } from "./BarKOTView";
+import { BarBOTView, BarKOTView } from "./BarBOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
 import "./BarWorkspace.css";
 import {
@@ -36,6 +34,14 @@ import {
   apiGetBarAvailabilityOptions,
   apiGetBarOverview,
   apiGetBarRecentOrders,
+  apiGetBarStaff,
+  apiGetBarStaffById,
+  apiCreateBarStaff,
+  apiUpdateBarStaff,
+  apiToggleBarStaffStatus,
+  apiDeleteBarStaff,
+  apiGetBarStaffFilterOptions,
+  apiGetAssignableTables,
 } from "../api/barApi";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
@@ -2049,8 +2055,18 @@ function BarDrinksMenu({
           <tbody>
             {paginatedDrinks.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                  No drinks found matching your filters.
+                <td colSpan={5} style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--text-muted)" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem" }}>
+                    <Wine size={32} color="var(--text-dim)" style={{ opacity: 0.6 }} />
+                    <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-main)" }}>
+                      {drinks.length === 0 ? "No drinks in Bar Drinks Menu yet" : "No drinks found matching your filters"}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", maxWidth: "340px", textAlign: "center" }}>
+                      {drinks.length === 0
+                        ? 'Click "+ Add New Drink" above to add your first beverage, cocktail, or liquor item.'
+                        : "Try clearing your search query or changing category and availability filters."}
+                    </div>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -4405,6 +4421,1362 @@ function BarTablesView({
   );
 }
 
+
+// ============================================================================
+// Bar Staff & Serving Personnel View (Mirrors Dine Staff & Persons)
+// ============================================================================
+function BarStaffView({
+  staffList = [],
+  tables = [],
+  onAddStaff,
+  onUpdateStaff,
+  onDeleteStaff,
+  onReloadStaff,
+  loading = false,
+  setToast,
+}) {
+  const { requestDelete, confirmState, cancelDelete } = useConfirmDelete();
+
+  const emptyStaffFilters = {
+    search: "",
+    role: "",
+    shift: "",
+    assigned: "",
+  };
+  const [staffFilters, setStaffFilters] = useState(emptyStaffFilters);
+  const updateStaffFilter = (key, value) =>
+    setStaffFilters((previous) => ({ ...previous, [key]: value }));
+  const clearStaffFilters = () => setStaffFilters(emptyStaffFilters);
+  const hasActiveStaffFilters = Boolean(
+    staffFilters.search ||
+    staffFilters.role ||
+    staffFilters.shift ||
+    staffFilters.assigned
+  );
+
+  const [backendFilterOptions, setBackendFilterOptions] = useState(null);
+  const [assignableTables, setAssignableTables] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarStaffFilterOptions()
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.success && res?.data) {
+          setBackendFilterOptions(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn("[BarStaffView] apiGetBarStaffFilterOptions error:", err?.message);
+      });
+
+    apiGetAssignableTables()
+      .then((res) => {
+        if (!isMounted) return;
+        const list = res?.data || res?.tables;
+        if (Array.isArray(list)) {
+          setAssignableTables(list);
+        }
+      })
+      .catch((err) => {
+        console.warn("[BarStaffView] apiGetAssignableTables error:", err?.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const STORAGE_KEY_CUSTOM_ROLES = "avsr_custom_roles_v1";
+  const STORAGE_KEY_CUSTOM_SHIFTS = "avsr_custom_shifts_v1";
+
+  const [customRoles, setCustomRoles] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_ROLES);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customShifts, setCustomShifts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_SHIFTS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveCustomRole = (newRole) => {
+    if (!newRole || !newRole.trim()) return;
+    const trimmed = newRole.trim();
+    setCustomRoles((prev) => {
+      if (prev.some((r) => r.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_ROLES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomShift = (newShift) => {
+    if (!newShift || !newShift.trim()) return;
+    const trimmed = newShift.trim();
+    setCustomShifts((prev) => {
+      if (prev.some((sh) => sh.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_SHIFTS,
+          JSON.stringify(updated),
+        );
+      } catch {}
+      return updated;
+    });
+  };
+
+  const staffRoleOptions = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(backendFilterOptions?.roles)) {
+      backendFilterOptions.roles.forEach((r) => {
+        if (r && !r.toLowerCase().startsWith("all")) set.add(r.trim());
+      });
+    }
+    (staffList || []).forEach((s) => {
+      const r = String(s?.role || s?.roleTitle || s?.jobTitle || "").trim();
+      if (r) set.add(r);
+    });
+    return Array.from(set).sort();
+  }, [backendFilterOptions, staffList]);
+
+  const staffShiftOptions = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(backendFilterOptions?.shifts)) {
+      backendFilterOptions.shifts.forEach((sh) => {
+        if (sh && !sh.toLowerCase().startsWith("all")) set.add(sh.trim());
+      });
+    }
+    (staffList || []).forEach((s) => {
+      const sh = String(s?.shift || "").trim();
+      if (sh) set.add(sh);
+    });
+    return Array.from(set).sort();
+  }, [backendFilterOptions, staffList]);
+
+  const allRoleOptions = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(backendFilterOptions?.roles)) {
+      backendFilterOptions.roles.forEach((r) => {
+        if (r && !r.toLowerCase().startsWith("all") && !map.has(r.toLowerCase())) {
+          map.set(r.toLowerCase(), { value: r, label: r });
+        }
+      });
+    }
+    customRoles.forEach((r) => {
+      if (r && !map.has(r.toLowerCase())) {
+        map.set(r.toLowerCase(), { value: r, label: r });
+      }
+    });
+    (staffList || []).forEach((st) => {
+      const r = st.role || st.roleTitle || st.jobTitle;
+      if (r && !map.has(r.toLowerCase())) {
+        map.set(r.toLowerCase(), { value: r, label: r });
+      }
+    });
+    return Array.from(map.values());
+  }, [backendFilterOptions, customRoles, staffList]);
+
+  const allShiftOptions = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(backendFilterOptions?.shifts)) {
+      backendFilterOptions.shifts.forEach((sh) => {
+        if (sh && !sh.toLowerCase().startsWith("all") && !map.has(sh.toLowerCase())) {
+          map.set(sh.toLowerCase(), { value: sh, label: sh });
+        }
+      });
+    }
+    customShifts.forEach((sh) => {
+      if (sh && !map.has(sh.toLowerCase())) {
+        map.set(sh.toLowerCase(), { value: sh, label: sh });
+      }
+    });
+    (staffList || []).forEach((st) => {
+      if (st.shift && !map.has(st.shift.toLowerCase())) {
+        map.set(st.shift.toLowerCase(), { value: st.shift, label: st.shift });
+      }
+    });
+    return Array.from(map.values());
+  }, [backendFilterOptions, customShifts, staffList]);
+
+  const filteredStaffList = useMemo(() => {
+    return (staffList || []).filter((person) => {
+      const personName = String(
+        person?.name ||
+        person?.fullName ||
+        person?.FullName ||
+        person?.username ||
+        "Unnamed staff",
+      );
+      const personRole = String(person?.role || person?.roleTitle || person?.jobTitle || "Staff");
+      const personPhone = String(person?.phone || "");
+      const personShift = String(person?.shift || "");
+      const personId = person?.id ?? person?.staffId;
+      const assignedCount = (Array.isArray(person?.assignedTableIds) && person.assignedTableIds.length > 0)
+        ? person.assignedTableIds.length
+        : (person?.assignedTables && person.assignedTables !== "—"
+            ? person.assignedTables.split(",").filter(Boolean).length
+            : (tables || []).filter((t) => {
+                const sName = (t.server || t.assignedServer || t.assignedServerName || "").trim().toLowerCase();
+                const pName = personName.trim().toLowerCase();
+                const sId = String(t.assignedServerId || t.serverId || "");
+                const pId = String(personId || "");
+                return (sName && sName === pName) || (sId && pId && sId === pId);
+              }).length
+          );
+
+      if (staffFilters.search) {
+        const q = staffFilters.search.toLowerCase().trim();
+        const matches =
+          personName.toLowerCase().includes(q) ||
+          personPhone.toLowerCase().includes(q) ||
+          personRole.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      if (staffFilters.role && personRole.toLowerCase() !== staffFilters.role.toLowerCase()) {
+        return false;
+      }
+      if (staffFilters.shift && personShift.toLowerCase() !== staffFilters.shift.toLowerCase()) {
+        return false;
+      }
+      if (staffFilters.assigned) {
+        if (staffFilters.assigned === "assigned" && assignedCount === 0) return false;
+        if (staffFilters.assigned === "unassigned" && assignedCount > 0) return false;
+      }
+      return true;
+    });
+  }, [staffList, tables, staffFilters]);
+
+  // Modal State
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [staffForm, setStaffForm] = useState({
+    name: "",
+    role: "",
+    phone: "",
+    shift: "",
+    assignedTableIds: [],
+  });
+
+  const handleOpenStaffModal = (person = null) => {
+    if (person) {
+      const personName = String(
+        person?.name ||
+          person?.fullName ||
+          person?.FullName ||
+          person?.username ||
+          "",
+      );
+      const personRole = String(person?.role || person?.roleTitle || person?.jobTitle || "");
+      const personTableIds = Array.isArray(person?.assignedTableIds)
+        ? person.assignedTableIds
+        : [];
+      setEditingStaff(person);
+      setStaffForm({
+        name: personName,
+        role: personRole,
+        phone: person.phone || "",
+        shift: person.shift || "",
+        assignedTableIds: personTableIds,
+      });
+    } else {
+      setEditingStaff(null);
+      setStaffForm({
+        name: "",
+        role: "",
+        phone: "",
+        shift: "",
+        assignedTableIds: [],
+      });
+    }
+    setIsStaffModalOpen(true);
+  };
+
+  const handleSaveStaff = async (e) => {
+    e.preventDefault();
+    if (!staffForm.name.trim()) return;
+
+    if (staffForm.role) {
+      saveCustomRole(staffForm.role);
+    }
+    if (staffForm.shift) {
+      saveCustomShift(staffForm.shift);
+    }
+
+    const payload = {
+      name: staffForm.name.trim(),
+      fullName: staffForm.name.trim(),
+      role: staffForm.role,
+      jobTitle: staffForm.role,
+      roleTitle: staffForm.role,
+      phone: staffForm.phone || "+91 98450 00000",
+      shift: staffForm.shift,
+      assignedTableIds: staffForm.assignedTableIds || [],
+    };
+
+    let saved;
+    if (editingStaff) {
+      if (onUpdateStaff) {
+        saved = await onUpdateStaff({
+          ...editingStaff,
+          ...payload,
+        });
+      }
+    } else {
+      if (onAddStaff) {
+        saved = await onAddStaff(payload);
+      }
+    }
+    if (saved === false) return;
+
+    setEditingStaff(null);
+    setStaffForm({
+      name: "",
+      role: "",
+      phone: "",
+      shift: "",
+      assignedTableIds: [],
+    });
+    setIsStaffModalOpen(false);
+    setToast?.(`Staff member "${staffForm.name}" ${editingStaff ? "updated" : "saved"} successfully!`);
+  };
+
+  const handleDeleteStaffClick = (person) => {
+    const personName = String(
+      person?.name ||
+      person?.fullName ||
+      person?.FullName ||
+      person?.username ||
+      "Staff",
+    );
+    const personId = person?.id ?? person?.staffId;
+    requestDelete({
+      title: "Remove Staff?",
+      message: `Are you sure you want to remove "${personName}" from the staff list? This action cannot be undone.`,
+      confirmLabel: "Yes, Remove",
+      onConfirm: async () => {
+        await onDeleteStaff?.(personId);
+        setToast?.(`Staff member "${personName}" removed.`);
+      },
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <style>{`
+        .staff-filter-toolbar {
+          display: grid;
+          grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+          align-items: end;
+          gap: 10px;
+          padding: 0.65rem;
+          margin-bottom: 0.5rem;
+          background: var(--bg-secondary);
+          border-radius: 8px;
+        }
+        .staff-filter-toolbar .menu-filter-field { min-width: 0; }
+        .staff-filter-toolbar .staff-filter-search { flex: initial; }
+        .staff-filter-toolbar .staff-filter-count {
+          min-width: max-content;
+          padding: 0 0.25rem 0.6rem;
+          color: var(--text-dim);
+          font-size: 0.74rem;
+          font-weight: 600;
+          white-space: nowrap;
+          text-align: right;
+        }
+        @media (max-width: 1100px) {
+          .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+          .staff-filter-toolbar .staff-filter-search { grid-column: span 2; }
+          .staff-filter-toolbar .staff-filter-count { grid-column: 1 / -1; padding: 0; }
+        }
+        @media (max-width: 600px) {
+          .staff-filter-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .staff-filter-toolbar .staff-filter-search { grid-column: 1 / -1; }
+          .staff-filter-toolbar .staff-filter-count { grid-column: 1 / -1; }
+        }
+        .staff-table-grid {
+          display: grid;
+          grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+          gap: 0.5rem;
+        }
+        .staff-table-grid > * { min-width: 0; }
+        @media (max-width: 900px) {
+          .staff-table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (max-width: 600px) {
+          .staff-table-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 380px) {
+          .staff-table-grid { grid-template-columns: minmax(0, 1fr); }
+        }
+      `}</style>
+
+      {/* Header: Title + Action Buttons */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0.2rem 0",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: "rgba(245, 158, 11, 0.15)",
+              border: "1.5px solid rgba(245, 158, 11, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent-amber-light)",
+            }}
+          >
+            <Users size={22} color="#f59e0b" />
+          </div>
+          <div>
+            <h2
+              style={{
+                fontSize: "1.25rem",
+                fontWeight: 800,
+                color: "var(--text-main)",
+                letterSpacing: "-0.01em",
+                margin: 0,
+              }}
+            >
+              Bar Staff & Serving Personnel
+            </h2>
+            <p
+              style={{
+                fontSize: "0.76rem",
+                color: "var(--text-muted)",
+                margin: "2px 0 0 0",
+              }}
+            >
+              Manage bartenders, bar captains and servers handling bar guests
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              onReloadStaff?.();
+              setToast?.("Staff list refreshed from database.");
+            }}
+            title="Reload staff list from backend database"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              padding: "0.5rem 0.9rem",
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-card)",
+              color: "var(--text-dim)",
+              borderRadius: "8px",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              cursor: "pointer",
+            }}
+          >
+            <RotateCcw size={14} />
+            <span>Refresh</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenStaffModal()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.55rem 1.3rem",
+              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              color: "#ffffff",
+              borderRadius: "8px",
+              fontWeight: 700,
+              fontSize: "0.85rem",
+              boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+              border: "none",
+              cursor: "pointer",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+            }}
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>+ Add New Person (Staff)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Staff Rows Container */}
+      <div
+        style={{
+          background: "var(--bg-tertiary)",
+          borderRadius: "10px",
+          border: "1px solid var(--neutral-border)",
+          overflow: "hidden",
+        }}
+      >
+        <div>
+          <div style={{ width: "100%", minWidth: 0, padding: "0.6rem", boxSizing: "border-box" }}>
+            {/* Column Filters Bar */}
+            <div className="staff-filter-toolbar" role="search" aria-label="Staff filters">
+              {/* Col 1: Search Filter */}
+              <label className="menu-filter-field menu-filter-search staff-filter-search" htmlFor="bar-staff-filter-search">
+                <span>Search Staff</span>
+                <div style={{ position: "relative", width: "100%", height: "36px", display: "flex", alignItems: "center" }}>
+                  <Search
+                    size={15}
+                    color="var(--text-dim)"
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    id="bar-staff-filter-search"
+                    type="text"
+                    placeholder="Search Staff..."
+                    value={staffFilters.search}
+                    onChange={(e) => updateStaffFilter("search", e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      padding: "0 10px 0 34px",
+                      background: "var(--bg-tertiary)",
+                      border: staffFilters.search
+                        ? "1px solid #f59e0b"
+                        : "1px solid var(--border-card)",
+                      borderRadius: "8px",
+                      color: "var(--text-main)",
+                      fontSize: "0.82rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </label>
+
+              {/* Col 2: Role Filter */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-role">
+                <span>Role</span>
+                <select
+                  id="bar-staff-filter-role"
+                  value={staffFilters.role}
+                  onChange={(e) => updateStaffFilter("role", e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0 10px",
+                    background: "var(--bg-tertiary)",
+                    border: staffFilters.role
+                      ? "1px solid #f59e0b"
+                      : "1px solid var(--border-card)",
+                    borderRadius: "8px",
+                    color: staffFilters.role ? "var(--accent-amber-light)" : "var(--text-main)",
+                    fontSize: "0.82rem",
+                    height: "36px",
+                    outline: "none",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
+                    All Roles
+                  </option>
+                  {staffRoleOptions.map((role) => (
+                    <option key={role} value={role} style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Col 3: Phone / Contact */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-contact">
+                <span>Phone / Contact</span>
+                <input id="bar-staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
+              </label>
+
+              {/* Col 4: Shift Filter */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-shift">
+                <span>Shift</span>
+                <select
+                  id="bar-staff-filter-shift"
+                  value={staffFilters.shift}
+                  onChange={(e) => updateStaffFilter("shift", e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0 10px",
+                    background: "var(--bg-tertiary)",
+                    border: staffFilters.shift
+                      ? "1px solid #f59e0b"
+                      : "1px solid var(--border-card)",
+                    borderRadius: "8px",
+                    color: staffFilters.shift ? "var(--accent-amber-light)" : "var(--text-main)",
+                    fontSize: "0.82rem",
+                    height: "36px",
+                    outline: "none",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
+                    All Shifts
+                  </option>
+                  {staffShiftOptions.map((shift) => (
+                    <option key={shift} value={shift} style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                      {shift}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Col 5: Assigned Tables Filter */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-assigned">
+                <span>Table Assignment</span>
+                <select
+                  id="bar-staff-filter-assigned"
+                  value={staffFilters.assigned}
+                  onChange={(e) => updateStaffFilter("assigned", e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0 10px",
+                    background: "var(--bg-tertiary)",
+                    border: staffFilters.assigned
+                      ? "1px solid #f59e0b"
+                      : "1px solid var(--border-card)",
+                    borderRadius: "8px",
+                    color: staffFilters.assigned ? "var(--accent-amber-light)" : "var(--text-main)",
+                    fontSize: "0.82rem",
+                    height: "36px",
+                    outline: "none",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
+                    All Tables
+                  </option>
+                  <option value="assigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                    Has Tables
+                  </option>
+                  <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                    No Tables
+                  </option>
+                </select>
+              </label>
+
+              {/* Col 6: Reset / Count */}
+              <div className="staff-filter-count">
+                {hasActiveStaffFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearStaffFilters}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "var(--danger)",
+                      padding: "0.35rem 0.65rem",
+                      borderRadius: "6px",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                    }}
+                    title="Clear all active staff filters"
+                  >
+                    <RotateCcw size={11} />
+                    <span>Reset</span>
+                  </button>
+                ) : (
+                  <span>
+                    {(staffList || []).length} Staff
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Staff table headings */}
+            <div
+              className="staff-table-grid"
+              style={{
+                alignItems: "center",
+                padding: "0.65rem 0.85rem",
+                marginBottom: "0.45rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                color: "var(--text-dim)",
+                fontSize: "0.84rem",
+                fontWeight: 600,
+              }}
+            >
+              <div>Staff Name</div>
+              <div>Role / Designation</div>
+              <div>Phone / Contact</div>
+              <div>Shift</div>
+              <div>Table Assignment</div>
+              <div style={{ textAlign: "right" }}>Actions</div>
+            </div>
+
+            {/* Empty State */}
+            {filteredStaffList.length === 0 && (
+              <div
+                style={{
+                  padding: "3rem 1.5rem",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.95rem" }}>
+                  {hasActiveStaffFilters
+                    ? "No staff members match the selected filters."
+                    : 'No staff members configured yet. Click "+ Add New Person (Staff)" to create one.'}
+                </p>
+                {hasActiveStaffFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearStaffFilters}
+                    style={{
+                      marginTop: "0.75rem",
+                      background: "transparent",
+                      border: "1px solid #f59e0b",
+                      color: "var(--accent-amber-light)",
+                      padding: "0.35rem 0.9rem",
+                      borderRadius: "6px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                ) : (
+                  <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStaffModal()}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                        color: "#fff",
+                        border: "none",
+                        padding: "0.45rem 1rem",
+                        borderRadius: "6px",
+                        fontSize: "0.85rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Plus size={14} />
+                      <span>+ Add New Person (Staff)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Staff Rows List */}
+            {filteredStaffList.map((person) => {
+              const personName = String(
+                person?.name ||
+                  person?.fullName ||
+                  person?.FullName ||
+                  person?.username ||
+                  "Unnamed staff",
+              );
+              const personRole = String(
+                person?.role || person?.roleTitle || person?.jobTitle || "Staff",
+              );
+              const personId = person?.id ?? person?.staffId;
+              const assignedCount = (Array.isArray(person?.assignedTableIds) && person.assignedTableIds.length > 0)
+                ? person.assignedTableIds.length
+                : (person?.assignedTables && person.assignedTables !== "—"
+                    ? person.assignedTables.split(",").filter(Boolean).length
+                    : (tables || []).filter((t) => {
+                        const sName = (t.server || t.assignedServer || t.assignedServerName || "").trim().toLowerCase();
+                        const pName = personName.trim().toLowerCase();
+                        const sId = String(t.assignedServerId || t.serverId || "");
+                        const pId = String(personId || "");
+                        return (sName && sName === pName) || (sId && pId && sId === pId);
+                      }).length
+                  );
+
+              return (
+                <div
+                  key={personId ?? personName}
+                  style={{
+                    display: "grid",
+                    alignItems: "center",
+                    padding: "0.55rem 0.85rem",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--neutral-border)",
+                    borderRadius: "8px",
+                    marginBottom: "0.45rem",
+                    transition: "background 0.15s ease, border-color 0.15s ease",
+                  }}
+                  className="staff-table-grid"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--bg-tertiary)";
+                    e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "var(--bg-secondary)";
+                    e.currentTarget.style.borderColor = "rgba(var(--surface-rgb),0.05)";
+                  }}
+                >
+                  {/* Col 1: Staff Avatar Badge + Name */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "6px",
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "var(--accent-amber-light)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.82rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {personName.charAt(0).toUpperCase()}
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {personName}
+                    </span>
+                  </div>
+
+                  {/* Col 2: Role */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={personRole}
+                  >
+                    {personRole}
+                  </div>
+
+                  {/* Col 3: Phone */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {person.phone || "—"}
+                  </div>
+
+                  {/* Col 4: Shift */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                    title={person.shift || "General Shift"}
+                  >
+                    {person.shift || "General Shift"}
+                  </div>
+
+                  {/* Col 5: Status Pill */}
+                  <div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.26rem 0.75rem",
+                        borderRadius: "20px",
+                        background:
+                          assignedCount > 0
+                            ? "rgba(16, 185, 129, 0.12)"
+                            : "rgba(100, 116, 139, 0.12)",
+                        border:
+                          assignedCount > 0
+                            ? "1px solid rgba(16, 185, 129, 0.3)"
+                            : "1px solid rgba(100, 116, 139, 0.25)",
+                        color: assignedCount > 0 ? "var(--success)" : "var(--text-dim)",
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        width: "fit-content",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          backgroundColor:
+                            assignedCount > 0 ? "#10b981" : "#64748b",
+                          boxShadow:
+                            assignedCount > 0 ? "0 0 6px #10b981" : "none",
+                        }}
+                      />
+                      <span>
+                        {assignedCount > 0
+                          ? `${assignedCount} ${assignedCount === 1 ? "TABLE" : "TABLES"}`
+                          : "0 TABLES"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Col 6: Actions */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStaffModal(person)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.35rem 0.55rem",
+                        background: "rgba(245, 158, 11, 0.08)",
+                        color: "#f59e0b",
+                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
+                        e.currentTarget.style.borderColor = "#f59e0b";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                      }}
+                      title="Edit Staff"
+                      aria-label="Edit Staff"
+                    >
+                      <SquarePen size={13} color="#f59e0b" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStaffClick(person)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.35rem 0.55rem",
+                        background: "rgba(239, 68, 68, 0.08)",
+                        color: "var(--danger)",
+                        border: "1px solid rgba(239, 68, 68, 0.35)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.22)";
+                        e.currentTarget.style.borderColor = "var(--danger)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.35)";
+                      }}
+                      title="Remove staff member"
+                      aria-label="Remove staff member"
+                    >
+                      <Trash2 size={13} color="var(--danger)" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal: Add / Edit Staff Person */}
+      {isStaffModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 130,
+            padding: "1rem",
+          }}
+        >
+          <form
+            onSubmit={handleSaveStaff}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1.5px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: "480px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "1.6rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.85rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {editingStaff ? "Edit Staff Details" : "Add New Staff Person"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStaff(null);
+                  setIsStaffModalOpen(false);
+                }}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Person Full Name <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Rajesh Kumar"
+                value={staffForm.name}
+                onChange={(e) =>
+                  setStaffForm({ ...staffForm, name: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Role / Designation
+              </label>
+              <CustomCreatableDropdown
+                value={staffForm.role}
+                onChange={(val) => setStaffForm({ ...staffForm, role: val })}
+                options={allRoleOptions}
+                placeholder="Select role"
+                customPlaceholder="Type new role..."
+                required
+                allowCustom
+                onSaveCustomOption={saveCustomRole}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Contact Phone
+              </label>
+              <input
+                type="text"
+                placeholder="+91 98450 12345"
+                value={staffForm.phone}
+                onChange={(e) =>
+                  setStaffForm({ ...staffForm, phone: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Shift
+              </label>
+              <CustomCreatableDropdown
+                value={staffForm.shift}
+                onChange={(val) => setStaffForm({ ...staffForm, shift: val })}
+                options={allShiftOptions}
+                placeholder="Select shift"
+                customPlaceholder="Type new shift..."
+                allowCustom
+                onSaveCustomOption={saveCustomShift}
+              />
+            </div>
+
+            {assignableTables.length > 0 && (
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Assigned Bar Tables
+                </label>
+                <div
+                  style={{
+                    maxHeight: "130px",
+                    overflowY: "auto",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.5rem 0.75rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.4rem",
+                  }}
+                >
+                  {assignableTables.map((tbl) => {
+                    const isChecked = staffForm.assignedTableIds.includes(tbl.tableId);
+                    return (
+                      <label
+                        key={tbl.tableId}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.55rem",
+                          fontSize: "0.82rem",
+                          color: isChecked ? "var(--accent-amber-light)" : "var(--text-main)",
+                          cursor: "pointer",
+                          fontWeight: isChecked ? 700 : 500,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setStaffForm((prev) => ({
+                                ...prev,
+                                assignedTableIds: [...prev.assignedTableIds, tbl.tableId],
+                              }));
+                            } else {
+                              setStaffForm((prev) => ({
+                                ...prev,
+                                assignedTableIds: prev.assignedTableIds.filter((id) => id !== tbl.tableId),
+                              }));
+                            }
+                          }}
+                          style={{ accentColor: "#f59e0b", cursor: "pointer" }}
+                        />
+                        <span>{tbl.label || tbl.tableNumber || `Table ${tbl.tableId}`}</span>
+                        {tbl.isCurrentlyAssigned && tbl.assignedStaffName && !isChecked && (
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
+                            ({tbl.assignedStaffName})
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div
+              style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStaff(null);
+                  setIsStaffModalOpen(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "0.7rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                style={{
+                  flex: 2,
+                  padding: "0.7rem",
+                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "0.88rem",
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                }}
+              >
+                {editingStaff ? "Save Changes" : "Add Person"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        icon={confirmState.icon}
+        onConfirm={confirmState.onConfirm}
+        onCancel={cancelDelete}
+      />
+    </div>
+  );
+}
+
 export function BarWorkspace({
   activeTab = "bar-overview",
   onNavigate,
@@ -4424,6 +5796,8 @@ export function BarWorkspace({
   onSetMenuAvailability,
   onOrderUpdated,
   onBarOrderItemStatusUpdated,
+  onUpdateItemKotStatus = null,
+  onCompleteTableKot = null,
   inventory: sharedInventory = [],
   pastOrders = [],
   restaurantName = "Restaurant",
@@ -4474,38 +5848,19 @@ export function BarWorkspace({
   const route = activeTab || "bar-overview";
 
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v1";
+  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v2";
 
-  // Dedicated bar drinks state - independent from Dine menu items
+  // Dedicated bar drinks state - loaded live from Backend API (no mock data)
   const [barDrinks, setBarDrinks] = useState(() => {
     try {
+      localStorage.removeItem("avsr_bar_drinks_menu_v1");
       const saved = localStorage.getItem(STORAGE_KEY_BAR_DRINKS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    // Initial default bar drinks: includes standard bar drinks
-    return [
-      {
-        id: "DR-MOJITO",
-        name: "mojito",
-        category: "Cocktails",
-        price: 130,
-        isVeg: false,
-        drinkType: "Alcoholic",
-        prepTime: "15 min",
-        description: "Fresh mint, lime, white rum, and sparkling soda.",
-        isAvailable: true,
-        isBarDrink: true,
-      },
-      ...BAR_DRINKS.map((d) => ({
-        ...d,
-        isVeg: d.category === "Mocktails" || d.category === "Juices" || d.category === "Water" || d.category === "Soft Drinks",
-        drinkType: d.abv ? "Alcoholic" : "Non-Alcoholic",
-        isBarDrink: true,
-      })),
-    ];
+    return [];
   });
 
   // Live Bar Overview dashboard state & loader
@@ -4540,7 +5895,7 @@ export function BarWorkspace({
     try {
       const res = await apiGetBarDrinks();
       const raw = res?.data?.data || res?.data;
-      if (res?.success && Array.isArray(raw) && raw.length > 0) {
+      if (res?.success && Array.isArray(raw)) {
         const formatted = raw.map((d) => ({
           ...d,
           id: d.menuItemId || d.id,
@@ -4587,6 +5942,168 @@ export function BarWorkspace({
       localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
     } catch {}
   }, [barDrinks]);
+
+  const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
+
+  // Dedicated bar staff state - loaded live from Backend API (no mock data)
+  const [barStaff, setBarStaff] = useState(() => {
+    try {
+      localStorage.removeItem("avsr_bar_staff_v1");
+      const saved = localStorage.getItem(STORAGE_KEY_BAR_STAFF);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [barStaffLoading, setBarStaffLoading] = useState(false);
+
+  const loadBarStaff = useCallback(async () => {
+    setBarStaffLoading(true);
+    try {
+      const res = await apiGetBarStaff();
+      const raw = res?.data?.data || res?.data;
+      if (res?.success && Array.isArray(raw)) {
+        const formatted = raw.map((s) => ({
+          ...s,
+          id: s.staffId || s.id,
+          staffId: s.staffId || s.id,
+          name: s.fullName || s.name || "",
+          fullName: s.fullName || s.name || "",
+          role: s.jobTitle || s.role || s.roleTitle || "Staff",
+          jobTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
+          roleTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
+          phone: s.phone || "",
+          shift: s.shift || "General Shift",
+          barArea: s.barArea || "—",
+          assignedTables: s.assignedTables || "—",
+          assignedTableIds: Array.isArray(s.assignedTableIds) ? s.assignedTableIds : [],
+          assignedTableDetails: Array.isArray(s.assignedTableDetails) ? s.assignedTableDetails : [],
+          isActive: s.isActive !== false && s.status !== "inactive",
+          status: s.status || (s.isActive !== false ? "active" : "inactive"),
+        }));
+        setBarStaff(formatted);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarStaff offline/fallback:", err?.message);
+    } finally {
+      setBarStaffLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBarStaff();
+  }, [loadBarStaff]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_BAR_STAFF, JSON.stringify(barStaff));
+    } catch {}
+  }, [barStaff]);
+
+  const handleAddBarStaff = async (newStaff) => {
+    try {
+      const res = await apiCreateBarStaff({
+        fullName: newStaff.name || newStaff.fullName,
+        jobTitle: newStaff.role || newStaff.jobTitle || newStaff.roleTitle,
+        phone: newStaff.phone,
+        shift: newStaff.shift,
+        assignedTableIds: newStaff.assignedTableIds || [],
+        assignedTables: newStaff.assignedTables || [],
+        isActive: true,
+      });
+      const created = res?.data?.data || res?.data;
+      if (created) {
+        const mapped = {
+          ...created,
+          id: created.staffId || created.id,
+          staffId: created.staffId || created.id,
+          name: created.fullName || created.name || newStaff.name,
+          fullName: created.fullName || created.name || newStaff.name,
+          role: created.jobTitle || created.role || created.roleTitle || newStaff.role,
+          jobTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
+          roleTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
+          phone: created.phone || newStaff.phone,
+          shift: created.shift || newStaff.shift,
+          barArea: created.barArea || "—",
+          assignedTables: created.assignedTables || "—",
+          assignedTableIds: created.assignedTableIds || [],
+          assignedTableDetails: created.assignedTableDetails || [],
+          isActive: true,
+          status: "active",
+        };
+        setBarStaff((prev) => [mapped, ...prev.filter((s) => s.id !== mapped.id)]);
+        return mapped;
+      }
+    } catch (err) {
+      console.error("[BarWorkspace] apiCreateBarStaff error:", err);
+      const fallback = {
+        ...newStaff,
+        id: Date.now(),
+        staffId: Date.now(),
+        fullName: newStaff.name,
+        jobTitle: newStaff.role,
+        roleTitle: newStaff.role,
+        isActive: true,
+        status: "active",
+      };
+      setBarStaff((prev) => [fallback, ...prev]);
+      return fallback;
+    }
+  };
+
+  const handleUpdateBarStaff = async (updatedStaff) => {
+    const id = updatedStaff.staffId || updatedStaff.id;
+    try {
+      const res = await apiUpdateBarStaff(id, {
+        fullName: updatedStaff.name || updatedStaff.fullName,
+        jobTitle: updatedStaff.role || updatedStaff.jobTitle || updatedStaff.roleTitle,
+        phone: updatedStaff.phone,
+        shift: updatedStaff.shift,
+        assignedTableIds: updatedStaff.assignedTableIds,
+        assignedTables: updatedStaff.assignedTables,
+        isActive: updatedStaff.isActive,
+      });
+      const updated = res?.data?.data || res?.data;
+      if (updated) {
+        const mapped = {
+          ...updated,
+          id: updated.staffId || updated.id || id,
+          staffId: updated.staffId || updated.id || id,
+          name: updated.fullName || updated.name || updatedStaff.name,
+          fullName: updated.fullName || updated.name || updatedStaff.name,
+          role: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
+          jobTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
+          roleTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
+          phone: updated.phone || updatedStaff.phone,
+          shift: updated.shift || updatedStaff.shift,
+          barArea: updated.barArea || "—",
+          assignedTables: updated.assignedTables || "—",
+          assignedTableIds: updated.assignedTableIds || [],
+          assignedTableDetails: updated.assignedTableDetails || [],
+          isActive: updated.isActive !== false,
+          status: updated.status || "active",
+        };
+        setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? mapped : s)));
+        return mapped;
+      }
+    } catch (err) {
+      console.error("[BarWorkspace] apiUpdateBarStaff error:", err);
+      setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? updatedStaff : s)));
+      return updatedStaff;
+    }
+  };
+
+  const handleDeleteBarStaff = async (staffId) => {
+    try {
+      await apiDeleteBarStaff(staffId);
+    } catch (err) {
+      console.error("[BarWorkspace] apiDeleteBarStaff error:", err);
+    }
+    setBarStaff((prev) => prev.filter((s) => s.id !== staffId && s.staffId !== staffId));
+    return true;
+  };
 
   // If mojito was previously pushed to Dine menuItems, remove it from dine
   useEffect(() => {
@@ -4744,8 +6261,7 @@ export function BarWorkspace({
     return { ...order, id: order.orderId ?? order.id, table: order.tableName || order.tableNumber || (order.tableId ? `Table ${order.tableId}` : "Takeaway"), customer: order.customerName || order.serverName || "—", items: Array.isArray(order.items) ? order.items : [], beverageItems: items, quantity: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), itemLabel: items.map((item) => `${item.quantity} × ${item.dishName || item.name || "Drink"}`).join(", "), total: Number(order.totalAmount ?? order.total ?? amount), status: order.status || order.orderStatus || "Pending", time: order.createdAt || order.orderTime || "—" };
   }).filter(Boolean), [orders, menuLookup]);
   const barOrders = useMemo(() => {
-    const demoOrders = BAR_BILL_DEMO_ORDERS.map((order) => ({ ...order, total: order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0), quantity: order.items.reduce((sum, item) => sum + item.quantity, 0), itemLabel: order.items.map((item) => `${item.quantity} × ${item.name}`).join(", ") }));
-    return [...apiBarOrders, ...demoOrders];
+    return apiBarOrders;
   }, [apiBarOrders]);
   const inventoryRows = useMemo(() => inventory.filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name)), [inventory]);
   const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter((order) => {
@@ -4757,20 +6273,17 @@ export function BarWorkspace({
       return isBeverageCategory(menuItem?.category ?? menuItem?.categoryName ?? item.category ?? item.categoryName ?? item.subcategory ?? name);
     });
   }), [pastOrders, menuItems, menuLookup]);
-  const demoTableItems = useMemo(() => {
-    const demosByNumber = { "Table-4": BAR_BILL_DEMO_ORDERS[0].items, "Table 4": BAR_BILL_DEMO_ORDERS[0].items, "Table-2": BAR_BILL_DEMO_ORDERS[1].items, "Table 2": BAR_BILL_DEMO_ORDERS[1].items, "Table-8": BAR_BILL_DEMO_ORDERS[2].items, "Table 8": BAR_BILL_DEMO_ORDERS[2].items };
-    return demosByNumber;
-  }, []);
 
   const staffIdOf = (person) => person?.staffId ?? person?.id;
   const staffNameOf = (person) => person?.fullName || person?.name || person?.FullName || "";
+  const effectiveStaffList = barStaff.length > 0 ? barStaff : (Array.isArray(dineStaff) ? dineStaff : []);
   const tables = (Array.isArray(dineTables) ? dineTables : []).map((source) => {
     const sourceTableId = source.backendTableId ?? source.tableId ?? source.id;
     const activeOrder = orders.find((order) => String(order.tableId ?? order.TableId) === String(sourceTableId))
       || orders.find((order) => String(order.tableId ?? order.TableId) === String(source.id));
     const serverName = source.server || source.assignedServerName || "";
-    const assigned = dineStaff.find((person) => String(staffIdOf(person)) === String(source.assignedServerId ?? source.serverId))
-      || dineStaff.find((person) => staffNameOf(person).trim().toLowerCase() === serverName.trim().toLowerCase());
+    const assigned = effectiveStaffList.find((person) => String(staffIdOf(person)) === String(source.assignedServerId ?? source.serverId))
+      || effectiveStaffList.find((person) => staffNameOf(person).trim().toLowerCase() === serverName.trim().toLowerCase());
     const rawStatus = String(source.status || "vacant").toLowerCase();
     const status = rawStatus === "reserved" ? "Reserved" : rawStatus === "cleaning" ? "Cleaning" : rawStatus === "inactive" ? "Inactive" : ["occupied", "dining", "billed"].includes(rawStatus) ? "Occupied" : "Available";
     const sourceItems = Array.isArray(source.items) ? source.items.filter((entry) => entry?.status !== "cancelled" && entry?.kotStatus !== "cancelled" && entry?.itemStatus !== "cancelled") : [];
@@ -4797,7 +6310,7 @@ export function BarWorkspace({
       _source: source,
     };
   });
-  const staff = (Array.isArray(dineStaff) ? dineStaff : []).map((source) => {
+  const staff = effectiveStaffList.map((source) => {
     const id = staffIdOf(source);
     const assignedTables = tables.filter((table) => String(table.staffId) === String(id));
     return {
@@ -5210,7 +6723,7 @@ export function BarWorkspace({
   const renderListCell = (column, row, kind) => {
     if (column === "Actions") return primaryActions(kind, row);
     if (column === "Current Order" && kind === "table") {
-      const sourceItems = Array.isArray(row.items) && row.items.length ? row.items : demoTableItems[row.number] || [];
+      const sourceItems = Array.isArray(row.items) ? row.items : [];
       return <button className="bar-button secondary small" type="button" onClick={() => {
       const items = sourceItems.map((item) => {
         const menuItem = findMenuItem(menuLookup, item);
@@ -5298,7 +6811,7 @@ export function BarWorkspace({
 
   return (
     <main className="bar-workspace">
-      {route === "bar-overview" ? (
+      {route === "bar-overview" && (
         /* 1. Unified Header Banner Card (Matching Dine Dashboard) */
         <div
           style={{
@@ -5488,15 +7001,6 @@ export function BarWorkspace({
               <span>{overviewLoading ? "Refreshing..." : "Refresh"}</span>
             </button>
           </div>
-        </div>
-     ) : ["bar-drinks", "bar-tables", "bar-staff"].includes(route) ? null : (
-        <div className="bar-page-title">
-          <div>
-            <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
-            <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar BOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
-            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the BOT service." : route === "bar-inventory" ? "Live beverage and liquor inventory ledger • tracked in real time." : "Independent Bar workspace • drink and order records are demo data."}</p>
-          </div>
-          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE BOT DATA" : route === "bar-inventory" ? "BAR INVENTORY • LIVE LEDGER" : "DEMO DATA • SESSION ONLY"}</span>
         </div>
       )}
 
@@ -5952,7 +7456,12 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {overviewSignatureDrinks.map((drink) => (
+              {overviewSignatureDrinks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.82rem" }}>
+                  No drinks added to menu yet.
+                </div>
+              ) : (
+                overviewSignatureDrinks.map((drink) => (
                 <div
                   key={drink.id}
                   onClick={() => go("bar-drinks")}
@@ -5997,7 +7506,8 @@ export function BarWorkspace({
                     {formatCurrency(drink.price)}
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
         </div>
@@ -6121,25 +7631,46 @@ export function BarWorkspace({
       ) : route === "bar-tables" ? (
         <BarTablesView
           tables={dineTables}
-          staffList={dineStaff}
+          staffList={effectiveStaffList}
           orders={orders}
           onAddTable={onAddTable}
           onUpdateTable={onUpdateTable}
           onDeleteTable={onDeleteTable}
-          onAddStaff={onAddStaff}
+          onAddStaff={handleAddBarStaff}
+          setToast={setToast}
+        />
+      ) : route === "bar-staff" ? (
+        <BarStaffView
+          staffList={barStaff}
+          tables={tables}
+          onAddStaff={handleAddBarStaff}
+          onUpdateStaff={handleUpdateBarStaff}
+          onDeleteStaff={handleDeleteBarStaff}
+          onReloadStaff={loadBarStaff}
+          loading={barStaffLoading}
           setToast={setToast}
         />
       ) : (
         listPage
       )}
 
-      {route === "bar-kot" && <BarKOTView menuItems={menuItems} tables={tables} staffList={dineStaff} onItemsUpdated={onBarOrderItemStatusUpdated} />}
+      {route === "bar-kot" && (
+        <BarBOTView
+          menuItems={menuItems}
+          tables={tables}
+          staffList={effectiveStaffList}
+          barDrinks={barDrinks}
+          onItemsUpdated={onBarOrderItemStatusUpdated}
+          onUpdateItemKotStatus={onUpdateItemKotStatus}
+          onCompleteTableKot={onCompleteTableKot}
+        />
+      )}
 
       {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 
-      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries, plus static demo examples.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError} Static demo orders are still available below.</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
+      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError}</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
       <OrderItemsModal order={tableItems} onClose={() => setTableItems(null)} />
 

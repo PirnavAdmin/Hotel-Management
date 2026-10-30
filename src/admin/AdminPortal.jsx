@@ -49,6 +49,7 @@ import {
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
+import { isDrinkItem } from "../kot/orderRouting";
 import { INITIAL_STAFF } from "../data/initialStaff";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
@@ -1798,6 +1799,8 @@ export function AdminPortal({
                 onAddStaff={onAddStaff}
                 onUpdateStaff={onUpdateStaff}
                 onDeleteStaff={onDeleteStaff}
+                onUpdateItemKotStatus={onUpdateItemKotStatus}
+                onCompleteTableKot={onCompleteTableKot}
               />
             ) : (
               <>
@@ -4234,7 +4237,7 @@ export function AdminPortal({
                               fontWeight: 600,
                             }}
                           >
-                            All Active Tables ({tablesWithOrders.length})
+                            All Active Tables ({tables.filter((t) => (t.items || []).some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i))).length})
                           </span>
                         )}
                       </div>
@@ -4691,7 +4694,10 @@ export function AdminPortal({
                             t.name === adminKotTableFilter
                           );
                         }
-                        return t.items && t.items.length > 0;
+                        const foodItems = (Array.isArray(t.items) ? t.items : []).filter(
+                          (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i)
+                        );
+                        return foodItems.length > 0;
                       });
 
                       const activeKotModalTable = selectedKotModalTable
@@ -4757,7 +4763,7 @@ export function AdminPortal({
                             {kotDisplayTables.map((tbl) => {
                               const items = Array.isArray(tbl.items) ? tbl.items : [];
                               const activeItems = items.filter(
-                                (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+                                (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i)
                               );
                               const totalItemsCount = activeItems.reduce(
                                 (sum, item) => sum + (Number(item?.quantity) || 1),
@@ -5168,12 +5174,12 @@ export function AdminPortal({
                                       marginBottom: "0.2rem",
                                     }}
                                   >
-                                    <span>Ordered Dishes & Beverages ({activeKotModalTable.items?.length || 0})</span>
+                                    <span>Ordered Dishes ({activeKotModalTable.items?.filter((i) => !isDrinkItem(i))?.length || 0})</span>
                                     <span>Status</span>
                                   </div>
 
-                                  {activeKotModalTable.items && activeKotModalTable.items.length > 0 ? (
-                                    activeKotModalTable.items.map((item, idx) => {
+                                  {activeKotModalTable.items && activeKotModalTable.items.filter((i) => !isDrinkItem(i)).length > 0 ? (
+                                    activeKotModalTable.items.filter((i) => !isDrinkItem(i)).map((item, idx) => {
                                       const isReady =
                                         item.kotStatus === "ready" ||
                                         item.kotStatus === "served" ||

@@ -29,6 +29,7 @@ import {
   extractInvoiceRecords,
   extractSettledOrderRecords,
   mergeLiveInvoiceRecords,
+  requestLiveInvoiceRecords,
 } from "../utils/liveInvoiceData";
 
 const localDateInputValue = (date = new Date()) => {
@@ -92,35 +93,6 @@ const formatInvoiceTime = (value) => {
     : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 
-async function requestLiveInvoiceRecords() {
-  const [invoiceResponse, orderResponse] = await Promise.all([
-    apiGetInvoices(),
-    apiGetOrderHistory(),
-  ]);
-  const invoices = extractInvoiceRecords(invoiceResponse);
-  const orders = extractSettledOrderRecords(orderResponse);
-  if (invoices === null && orders === null) {
-    throw new Error(
-      invoiceResponse?.error ||
-        orderResponse?.error ||
-        "The live invoice and settled-order records could not be loaded.",
-    );
-  }
-
-  return {
-    records: sortOrdersBySettlementTime(
-      dedupeOrders(mergeLiveInvoiceRecords(invoices || [], orders || [])),
-    ),
-    error: (invoices === null && orders === null)
-      ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
-      : "",
-
-
-
-
-
-  };
-}
 
 export function AdminInvoices({
   restaurantName = "Restaurant",

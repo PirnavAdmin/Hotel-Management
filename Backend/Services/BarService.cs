@@ -46,7 +46,7 @@ public class BarService
                     m.DishName.ToLower().Contains("mojito")))
                 .ToListAsync();
 
-            overview.TotalDrinks = barDrinks.Count > 0 ? barDrinks.Count : 12;
+            overview.TotalDrinks = barDrinks.Count;
             overview.AlcoholicDrinksCount = barDrinks.Count(d => d.DrinkType == "Alcoholic" || d.AlcoholPct > 0 || (d.DietaryType != null && d.DietaryType.ToLower().Contains("non-veg")));
             if (overview.AlcoholicDrinksCount == 0 && barDrinks.Count > 0)
             {
@@ -137,9 +137,9 @@ public class BarService
         {
             _logger.LogError(ex, "Error getting Bar Overview");
             // Graceful fallback with realistic initial values
-            overview.TotalDrinks = 12;
-            overview.AlcoholicDrinksCount = 7;
-            overview.NonAlcoholicDrinksCount = 5;
+            overview.TotalDrinks = 0;
+            overview.AlcoholicDrinksCount = 0;
+            overview.NonAlcoholicDrinksCount = 0;
             overview.ActiveBarOrders = 3;
             overview.PendingOrders = 1;
             overview.PreparingDrinks = 1;
@@ -1378,8 +1378,8 @@ public class BarService
         const string sql = @"
             SELECT 
                 t.table_id,
-                t.table_number,
-                COALESCE(t.section_area, t.location, 'Main Hall') AS area,
+                COALESCE(NULLIF(t.table_number, ''), NULLIF(t.table_name, ''), CONCAT('Table ', t.table_id)) AS table_number,
+                COALESCE(NULLIF(t.section_area, ''), NULLIF(t.location, ''), 'Main Hall') AS area,
                 t.assigned_server_id,
                 s.full_name AS server_name
             FROM restaurant_tables t
@@ -1392,7 +1392,8 @@ public class BarService
         {
             var serverId = SafeGetInt64(reader, "assigned_server_id");
             var serverName = SafeGetString(reader, "server_name");
-            var tNum = SafeGetString(reader, "table_number") ?? $"Table-{reader.GetInt64(reader.GetOrdinal("table_id"))}";
+            var rawNum = SafeGetString(reader, "table_number");
+            var tNum = !string.IsNullOrWhiteSpace(rawNum) ? rawNum : $"Table {reader.GetInt64(reader.GetOrdinal("table_id"))}";
             var area = SafeGetString(reader, "area") ?? "Main Hall";
 
             return new AssignableTableDto
@@ -1415,25 +1416,26 @@ public class BarService
     {
         const string sql = @"
             SELECT 
-                ko.kot_id,
-                ko.kot_number,
-                ko.order_id,
-                o.order_number,
+                COALESCE(ko.kot_id, o.order_id) AS kot_id,
+                COALESCE(ko.kot_number, CONCAT('BOT-', o.order_id)) AS kot_number,
+                o.order_id,
+                COALESCE(o.order_number, CONCAT('ORD-', o.order_id)) AS order_number,
                 o.table_id,
-                COALESCE(t.table_number, t.table_name, CONCAT('Table-', o.table_id)) AS table_number,
-                COALESCE(t.table_name, t.table_number, 'Bar Counter') AS table_name,
-                COALESCE(t.section_area, t.location, 'Main Hall') AS area,
-                COALESCE(s.full_name, 'Unassigned') AS server_name,
-                ko.status,
-                ko.priority,
+                COALESCE(t.table_number, t.table_name, o.table_name, CONCAT('Table-', o.table_id)) AS table_number,
+                COALESCE(t.table_name, t.table_number, o.table_name, 'Bar Counter') AS table_name,
+                COALESCE(t.section_area, t.location, o.section, 'Main Hall') AS area,
+                COALESCE(s.full_name, o.server_name, 'Unassigned') AS server_name,
+                COALESCE(ko.status, 'queued') AS status,
+                COALESCE(ko.priority, 'normal') AS priority,
                 ko.special_notes,
-                ko.created_at,
+                COALESCE(ko.created_at, o.created_at) AS created_at,
                 ko.completed_at
-            FROM kitchen_orders ko
-            INNER JOIN orders o ON ko.order_id = o.order_id
+            FROM orders o
+            LEFT JOIN kitchen_orders ko ON ko.order_id = o.order_id
             LEFT JOIN restaurant_tables t ON o.table_id = t.table_id
             LEFT JOIN staff_persons s ON o.waiter_id = s.staff_id OR t.assigned_server_id = s.staff_id
-            ORDER BY ko.created_at DESC;
+            WHERE o.is_active = 1 AND o.is_deleted = 0 AND o.status IN ('Active', 'active', 'Billed', 'billed')
+            ORDER BY COALESCE(ko.created_at, o.created_at) DESC;
         ";
 
         var tickets = await _spService.ExecuteSqlQueryAsync(sql, reader =>
@@ -1447,7 +1449,7 @@ public class BarService
             return new BarKotTicketDto
             {
                 KotId = kotId,
-                KotNumber = SafeGetString(reader, "kot_number") ?? $"KOT-{kotId}",
+                KotNumber = SafeGetString(reader, "kot_number") ?? $"BOT-{kotId}",
                 OrderId = reader.GetInt64(reader.GetOrdinal("order_id")),
                 OrderNumber = SafeGetString(reader, "order_number") ?? $"ORD-{reader.GetInt64(reader.GetOrdinal("order_id"))}",
                 TableId = SafeGetInt64(reader, "table_id"),
@@ -1482,7 +1484,8 @@ public class BarService
                 oi.preparation_notes,
                 COALESCE(m.category, 'Beverages') AS category,
                 COALESCE(m.serving_measure, '—') AS serving_measure,
-                COALESCE(m.is_bar_item, 0) AS is_bar_item
+                COALESCE(m.is_bar_item, 0) AS is_bar_item,
+                m.drink_type
             FROM order_items oi
             LEFT JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
             WHERE oi.is_deleted = 0;
@@ -1494,7 +1497,8 @@ public class BarService
             var kotId = SafeGetInt64(reader, "kot_id");
             var isBar = reader.GetInt32(reader.GetOrdinal("is_bar_item")) == 1;
             var cat = SafeGetString(reader, "category") ?? "Beverages";
-            var isBeverage = isBar || IsAlcoholicCategory(cat) || cat.Equals("beverages", StringComparison.OrdinalIgnoreCase);
+            var drinkType = SafeGetString(reader, "drink_type");
+            var isBeverage = isBar || !string.IsNullOrWhiteSpace(drinkType) || IsBeverageCategory(cat);
 
             return new
             {
@@ -1521,16 +1525,17 @@ public class BarService
         foreach (var t in tickets)
         {
             var itemsForTicket = allItems
-                .Where(x => (x.KotId.HasValue && x.KotId.Value == t.KotId) || (!x.KotId.HasValue && x.OrderId == t.OrderId))
+                .Where(x => (x.KotId.HasValue && x.KotId.Value == t.KotId) || x.OrderId == t.OrderId)
                 .Select(x => x.Item)
+                .Where(i => i.IsBarItem)
                 .ToList();
 
             t.Items = itemsForTicket;
             t.TotalItemsCount = itemsForTicket.Count;
-            t.DrinksCount = itemsForTicket.Where(i => i.IsBarItem).Sum(i => i.Quantity);
+            t.DrinksCount = itemsForTicket.Sum(i => i.Quantity);
         }
 
-        var filtered = tickets.Where(t => t.DrinksCount > 0 || t.Items.Count > 0).ToList();
+        var filtered = tickets.Where(t => t.DrinksCount > 0).ToList();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -1657,6 +1662,43 @@ public class BarService
     public async Task<BarKotTicketDto?> MarkAllBarKotReadyAsync(long kotId)
     {
         return await UpdateBarKotStatusAsync(kotId, "ready");
+    }
+
+    public async Task<bool> MarkAllBarKotTableReadyAsync(long tableId)
+    {
+        const string sqlOrder = @"
+            SELECT order_id FROM orders 
+            WHERE table_id = @tid AND is_active = 1 AND is_deleted = 0 AND status IN ('Active', 'active', 'Billed', 'billed');
+        ";
+        var orderIds = await _spService.ExecuteSqlQueryAsync(sqlOrder, r => r.GetInt64(0), new Dictionary<string, object?> { { "@tid", tableId } });
+
+        if (orderIds.Count == 0)
+        {
+            orderIds = await _spService.ExecuteSqlQueryAsync(
+                "SELECT order_id FROM orders WHERE order_id = @tid;",
+                r => r.GetInt64(0), new Dictionary<string, object?> { { "@tid", tableId } });
+        }
+
+        if (orderIds.Count == 0) return false;
+
+        foreach (var orderId in orderIds)
+        {
+            const string updateItems = @"
+                UPDATE order_items 
+                SET item_status = 'ready', updated_at = UTC_TIMESTAMP()
+                WHERE order_id = @oid AND is_deleted = 0;
+            ";
+            await _spService.ExecuteSqlNonQueryAsync(updateItems, new Dictionary<string, object?> { { "@oid", orderId } });
+
+            const string updateKo = @"
+                UPDATE kitchen_orders 
+                SET status = 'ready', completed_at = UTC_TIMESTAMP()
+                WHERE order_id = @oid;
+            ";
+            await _spService.ExecuteSqlNonQueryAsync(updateKo, new Dictionary<string, object?> { { "@oid", orderId } });
+        }
+
+        return true;
     }
 
     public async Task<BarKotItemDto?> UpdateBarKotItemStatusAsync(long orderItemId, string status)
@@ -2544,6 +2586,20 @@ public class BarService
         return cat.Contains("cocktail") || cat.Contains("beer") || cat.Contains("wine") ||
                cat.Contains("spirit") || cat.Contains("whisky") || cat.Contains("vodka") ||
                cat.Contains("rum") || cat.Contains("gin") || cat.Contains("brandy") || cat.Contains("liquor");
+    }
+
+    private static bool IsBeverageCategory(string? category)
+    {
+        if (string.IsNullOrWhiteSpace(category)) return false;
+        var cat = category.ToLower().Trim();
+        if (cat.Contains("biryani") || cat.Contains("curry") || cat.Contains("starter") || cat.Contains("rice") || cat.Contains("bread") || cat.Contains("dessert") || cat.Contains("chicken") || cat.Contains("mutton") || cat.Contains("main course") || cat.Contains("tandoor") || cat.Contains("soup") || cat.Contains("salad"))
+            return false;
+        return IsAlcoholicCategory(cat) ||
+               cat.Contains("beverage") || cat.Contains("mocktail") || cat.Contains("drink") ||
+               cat.Contains("juice") || cat.Contains("soda") || cat.Contains("tonic") ||
+               cat.Contains("cider") || cat.Contains("champagne") || cat.Contains("tea") ||
+               cat.Contains("coffee") || cat.Contains("bar") || cat.Contains("shake") ||
+               cat.Contains("smoothie") || cat.Contains("liquor") || cat.Contains("spirit");
     }
 
     private static string FormatOrderTime(DateTime dt)
