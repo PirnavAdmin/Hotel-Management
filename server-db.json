@@ -4,7 +4,7 @@
       "id": 1,
       "name": "Table-1",
       "tableNumber": "Table-1",
-      "section": "VIP Lounge",
+      "section": "Main Hall",
       "capacity": 6,
       "status": "vacant",
       "server": "Rajesh K.",
@@ -15,34 +15,38 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 1,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 1,
-      "tableName": "Table-1",
+      "tableId": 1,
       "branchId": 1,
-      "sectionArea": "VIP Lounge",
-      "location": "VIP Lounge",
+      "tableName": "Table-1",
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
       "capacityChairs": 6,
+      "qrCodeUrl": "https://qr.hms.hotel/t01",
+      "activeOrderNumber": null,
       "assignedServerId": 1,
       "assignedServerName": "Rajesh K.",
-      "qrCodeUrl": null
+      "assignedServerRole": "Senior Captain",
+      "createdAt": "2026-10-09T15:13:45"
     },
     {
       "id": 2,
       "name": "Table-2",
       "tableNumber": "Table-2",
       "section": "Main Hall",
-      "capacity": 5,
+      "capacity": 4,
       "status": "vacant",
       "server": "Rajesh K.",
       "guests": 0,
@@ -65,24 +69,27 @@
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "tableName": "Table-2",
+      "tableId": 2,
       "branchId": 1,
+      "tableName": "Table-2",
       "sectionArea": "Main Hall",
       "location": "Main Hall",
-      "capacityChairs": 5,
+      "capacityChairs": 4,
+      "qrCodeUrl": "https://qr.hms.hotel/t02",
+      "activeOrderNumber": null,
       "assignedServerId": 1,
       "assignedServerName": "Rajesh K.",
-      "qrCodeUrl": null,
-      "kotSent": false
+      "assignedServerRole": "Senior Captain",
+      "createdAt": "2026-10-09T15:13:45"
     },
     {
       "id": 3,
       "name": "Table-3",
       "tableNumber": "Table-3",
       "section": "Main Hall",
-      "capacity": 4,
+      "capacity": 12,
       "status": "vacant",
-      "server": "Staff",
+      "server": "Vikram S.",
       "guests": 0,
       "items": [],
       "orderTime": null,
@@ -103,22 +110,25 @@
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "tableName": "Table-3",
+      "tableId": 3,
       "branchId": 1,
+      "tableName": "Table-3",
       "sectionArea": "Main Hall",
       "location": "Main Hall",
-      "capacityChairs": 4,
-      "assignedServerId": null,
-      "assignedServerName": "Staff",
-      "qrCodeUrl": null,
-      "kotSent": true
+      "capacityChairs": 12,
+      "qrCodeUrl": "https://qr.hms.hotel/t03",
+      "activeOrderNumber": null,
+      "assignedServerId": 2,
+      "assignedServerName": "Vikram S.",
+      "assignedServerRole": "Head Waiter",
+      "createdAt": "2026-10-09T15:13:45"
     },
     {
       "id": 4,
       "name": "Table-4",
       "tableNumber": "Table-4",
       "section": "Main Hall",
-      "capacity": 6,
+      "capacity": 8,
       "status": "vacant",
       "server": "Karan D.",
       "guests": 0,
@@ -141,23 +151,25 @@
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "tableName": "Table-4",
+      "tableId": 4,
       "branchId": 1,
+      "tableName": "Table-4",
       "sectionArea": "Main Hall",
       "location": "Main Hall",
-      "capacityChairs": 6,
+      "capacityChairs": 8,
+      "qrCodeUrl": "https://qr.hms.hotel/vip01",
+      "activeOrderNumber": null,
       "assignedServerId": 6,
       "assignedServerName": "Karan D.",
-      "qrCodeUrl": null,
-      "kotSent": true,
-      "backendOrderId": 1793120571085
+      "assignedServerRole": "VIP Lounge Captain",
+      "createdAt": "2026-10-09T15:13:45"
     },
     {
       "id": 5,
       "name": "Table-5",
       "tableNumber": "Table-5",
       "section": "Main Hall",
-      "capacity": 4,
+      "capacity": 2,
       "status": "vacant",
       "server": "Staff",
       "guests": 0,
@@ -167,28 +179,40 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 5,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 5
+      "tableId": 5,
+      "branchId": 1,
+      "tableName": "Table-5",
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 2,
+      "qrCodeUrl": "https://qr.hms.hotel/hyd01",
+      "activeOrderNumber": null,
+      "assignedServerId": null,
+      "assignedServerName": null,
+      "assignedServerRole": null,
+      "createdAt": "2026-10-09T15:13:45"
     },
     {
       "id": 6,
-      "name": "Table 6",
+      "name": "Table-6",
       "tableNumber": "Table-6",
       "section": "Main Hall",
-      "capacity": 1,
+      "capacity": 10,
       "status": "vacant",
-      "server": "Staff",
+      "server": "Ananya R.",
       "guests": 0,
       "items": [],
       "orderTime": null,
@@ -208,14 +232,26 @@
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "tableId": 6,
+      "branchId": 1,
+      "tableName": "Table-6",
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 10,
+      "qrCodeUrl": "https://qr.hms.hotel/t06",
+      "activeOrderNumber": null,
+      "assignedServerId": 3,
+      "assignedServerName": "Ananya R.",
+      "assignedServerRole": "Stewardess",
+      "createdAt": "2026-10-09T17:34:42"
     },
     {
       "id": 7,
-      "name": "Table 7",
+      "name": "Table-7",
       "tableNumber": "Table-7",
-      "section": "Main Hall",
-      "capacity": 4,
+      "section": "VIP Lounge",
+      "capacity": 8,
       "status": "vacant",
       "server": "Staff",
       "guests": 0,
@@ -237,14 +273,26 @@
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "tableId": 7,
+      "branchId": 1,
+      "tableName": "Table-7",
+      "sectionArea": "VIP Lounge",
+      "location": "VIP Lounge",
+      "capacityChairs": 8,
+      "qrCodeUrl": "https://qr.hms.hotel/t07",
+      "activeOrderNumber": null,
+      "assignedServerId": null,
+      "assignedServerName": null,
+      "assignedServerRole": null,
+      "createdAt": "2026-10-09T17:37:38"
     },
     {
       "id": 8,
-      "name": "Table 8",
+      "name": "Table-8",
       "tableNumber": "Table-8",
-      "section": "Main Hall",
-      "capacity": 4,
+      "section": "VIP Lounge",
+      "capacity": 8,
       "status": "vacant",
       "server": "Staff",
       "guests": 0,
@@ -266,7 +314,19 @@
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "grandTotal": 0,
+      "tableId": 8,
+      "branchId": 1,
+      "tableName": "Table-8",
+      "sectionArea": "VIP Lounge",
+      "location": "VIP Lounge",
+      "capacityChairs": 8,
+      "qrCodeUrl": "https://qr.hms.hotel/t08",
+      "activeOrderNumber": null,
+      "assignedServerId": null,
+      "assignedServerName": null,
+      "assignedServerRole": null,
+      "createdAt": "2026-10-12T11:59:21"
     },
     {
       "id": 9,
@@ -275,7 +335,7 @@
       "section": "Terrace",
       "capacity": 4,
       "status": "vacant",
-      "server": "Staff",
+      "server": "Suresh N.",
       "guests": 0,
       "items": [],
       "orderTime": null,
@@ -283,19 +343,31 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 9,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 9
+      "tableId": 9,
+      "branchId": 1,
+      "tableName": "Table-9",
+      "sectionArea": "Terrace",
+      "location": "Terrace",
+      "capacityChairs": 4,
+      "qrCodeUrl": "https://qr.hms.hotel/t09",
+      "activeOrderNumber": null,
+      "assignedServerId": 5,
+      "assignedServerName": "Suresh N.",
+      "assignedServerRole": "Server / Waiter",
+      "createdAt": "2026-10-12T12:00:49"
     },
     {
       "id": 10,
@@ -304,7 +376,7 @@
       "section": "Terrace",
       "capacity": 4,
       "status": "vacant",
-      "server": "Staff",
+      "server": "Suresh N.",
       "guests": 0,
       "items": [],
       "orderTime": null,
@@ -312,28 +384,40 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 10,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 10
+      "tableId": 10,
+      "branchId": 1,
+      "tableName": "Table-10",
+      "sectionArea": "Terrace",
+      "location": "Terrace",
+      "capacityChairs": 4,
+      "qrCodeUrl": "https://qr.hms.hotel/t10",
+      "activeOrderNumber": null,
+      "assignedServerId": 5,
+      "assignedServerName": "Suresh N.",
+      "assignedServerRole": "Server / Waiter",
+      "createdAt": "2026-10-12T12:14:15"
     },
     {
       "id": 11,
       "name": "Table-11",
       "tableNumber": "Table-11",
-      "section": "Main Hall",
+      "section": "AC Family Hall",
       "capacity": 4,
       "status": "vacant",
-      "server": "Staff",
+      "server": "Vishnu kumar",
       "guests": 0,
       "items": [],
       "orderTime": null,
@@ -341,19 +425,31 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 56,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 11
+      "tableId": 56,
+      "branchId": 1,
+      "tableName": "Table 11",
+      "sectionArea": "AC Family Hall",
+      "location": "AC Family Hall",
+      "capacityChairs": 4,
+      "qrCodeUrl": null,
+      "activeOrderNumber": null,
+      "assignedServerId": 9,
+      "assignedServerName": "Vishnu kumar",
+      "assignedServerRole": "Server / Waiter",
+      "createdAt": "2026-10-22T11:01:58"
     },
     {
       "id": 12,
@@ -370,19 +466,31 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 12,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 12
+      "tableId": 12,
+      "branchId": 1,
+      "tableName": "Table-12",
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacityChairs": 4,
+      "qrCodeUrl": null,
+      "activeOrderNumber": null,
+      "assignedServerId": null,
+      "assignedServerName": null,
+      "assignedServerRole": null,
+      "createdAt": "2026-10-12T13:12:53"
     },
     {
       "id": 13,
@@ -399,19 +507,31 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 13,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 13
+      "tableId": 13,
+      "branchId": 1,
+      "tableName": "Table-13",
+      "sectionArea": "VIP Lounge",
+      "location": "VIP Lounge",
+      "capacityChairs": 6,
+      "qrCodeUrl": null,
+      "activeOrderNumber": null,
+      "assignedServerId": null,
+      "assignedServerName": null,
+      "assignedServerRole": null,
+      "createdAt": "2026-10-12T14:32:18"
     },
     {
       "id": 14,
@@ -428,45 +548,31 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 14,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 14
-    },
-    {
-      "id": 14,
-      "name": "table 20",
-      "section": "first flour",
-      "capacity": 2,
-      "status": "vacant",
-      "server": "Staff",
-      "guests": 0,
-      "items": [],
-      "orderTime": null,
-      "discountPercent": 0,
-      "serviceCharge": 5,
-      "occupiedSince": null,
-      "occupiedChairs": 0,
-      "selectedSeats": [],
-      "orderTimestamp": null,
-      "activeOrderId": null,
-      "cookingStartedAt": null,
-      "completedAt": null,
-      "completedDuration": null,
-      "discountAmount": 0,
-      "subtotal": 0,
-      "taxAmount": 0,
-      "serviceChargeAmount": 0,
-      "grandTotal": 0
+      "tableId": 14,
+      "branchId": 1,
+      "tableName": "Table-14",
+      "sectionArea": "VIP Lounge",
+      "location": "VIP Lounge",
+      "capacityChairs": 4,
+      "qrCodeUrl": null,
+      "activeOrderNumber": null,
+      "assignedServerId": null,
+      "assignedServerName": null,
+      "assignedServerRole": null,
+      "createdAt": "2026-10-15T12:18:15"
     },
     {
       "id": 15,
@@ -483,19 +589,111 @@
       "serviceCharge": 5,
       "occupiedSince": null,
       "order": null,
+      "backendTableId": 15,
       "occupiedChairs": 0,
       "selectedSeats": [],
       "orderTimestamp": null,
-      "activeOrderId": null,
       "cookingStartedAt": null,
       "completedAt": null,
       "completedDuration": null,
+      "activeOrderId": null,
       "discountAmount": 0,
       "subtotal": 0,
       "taxAmount": 0,
       "serviceChargeAmount": 0,
       "grandTotal": 0,
-      "backendTableId": 15
+      "tableId": 15,
+      "branchId": 1,
+      "tableName": "Table-15",
+      "sectionArea": "Terrace",
+      "location": "Terrace",
+      "capacityChairs": 4,
+      "qrCodeUrl": null,
+      "activeOrderNumber": null,
+      "assignedServerId": null,
+      "assignedServerName": null,
+      "assignedServerRole": null,
+      "createdAt": "2026-10-16T10:50:20"
+    },
+    {
+      "tableId": 55,
+      "branchId": 1,
+      "tableName": "Table 16",
+      "tableNumber": "Table 16",
+      "sectionArea": "VIP Lounge",
+      "location": "VIP Lounge",
+      "capacity": 8,
+      "capacityChairs": 8,
+      "occupiedChairs": 0,
+      "status": "vacant",
+      "qrCodeUrl": null,
+      "activeOrderNumber": null,
+      "assignedServerId": 10,
+      "assignedServerName": "Anish A.",
+      "assignedServerRole": "Server / Waiter",
+      "createdAt": "2026-10-22T10:10:25",
+      "id": 16,
+      "name": "Table-16",
+      "backendTableId": 55,
+      "section": "VIP Lounge",
+      "server": "Anish A.",
+      "guests": 0,
+      "selectedSeats": [],
+      "items": [],
+      "orderTime": null,
+      "orderTimestamp": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
+      "discountPercent": 0,
+      "serviceCharge": 5,
+      "occupiedSince": null,
+      "activeOrderId": null,
+      "discountAmount": 0,
+      "subtotal": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "grandTotal": 0
+    },
+    {
+      "tableId": 57,
+      "branchId": 1,
+      "tableName": "Table 17",
+      "tableNumber": "Table 17",
+      "sectionArea": "Main Hall",
+      "location": "Main Hall",
+      "capacity": 6,
+      "capacityChairs": 6,
+      "occupiedChairs": 0,
+      "status": "vacant",
+      "qrCodeUrl": null,
+      "activeOrderNumber": null,
+      "assignedServerId": 26,
+      "assignedServerName": "bhanu",
+      "assignedServerRole": "Waiter",
+      "createdAt": "2026-10-29T17:41:13",
+      "id": 17,
+      "name": "Table-17",
+      "backendTableId": 57,
+      "section": "Main Hall",
+      "server": "bhanu",
+      "guests": 0,
+      "selectedSeats": [],
+      "items": [],
+      "orderTime": null,
+      "orderTimestamp": null,
+      "cookingStartedAt": null,
+      "completedAt": null,
+      "completedDuration": null,
+      "discountPercent": 0,
+      "serviceCharge": 5,
+      "occupiedSince": null,
+      "activeOrderId": null,
+      "discountAmount": 0,
+      "subtotal": 0,
+      "taxAmount": 0,
+      "serviceChargeAmount": 0,
+      "grandTotal": 0
     }
   ],
   "gourmet_pos_menu_items_v2": [
@@ -505,51 +703,11 @@
       "category": "biryani",
       "price": 320,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Authentic kacchi dum biryani cooked with marinated tender chicken, long-grain basmati rice, aromatic saffron, and fried onions. Served with mirchi ka salan and raita.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/chicken-dum-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "15 min",
+      "description": "Authentic kacchi dum biryani cooked with marinated tender chicken, long-grain basmati rice, aromatic saffron, and fried onions. Served with mirchi ka salan and raita.",
+      "image": "/assets/chicken-dum-biryani.jpg"
     },
     {
       "id": "bir-2",
@@ -557,51 +715,11 @@
       "category": "biryani",
       "price": 440,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Succulent baby goat mutton slow-cooked in handi with shahi garam masalas, kewra water, and pure ghee basmati rice. Served with spicy salan.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/biryani/mutton-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "18 min",
+      "description": "Succulent baby goat mutton slow-cooked in handi with shahi garam masalas, kewra water, and pure ghee basmati rice. Served with spicy salan.",
+      "image": "/assets/biryani/mutton-biryani.jpg"
     },
     {
       "id": "bir-3",
@@ -609,51 +727,11 @@
       "category": "biryani",
       "price": 350,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Juicy boneless chicken cubes spiced with crushed pepper and green chilies, layered over fragrant spiced saffron rice.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/biryani/chicken-dum-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "15 min",
+      "description": "Juicy boneless chicken cubes spiced with crushed pepper and green chilies, layered over fragrant spiced saffron rice.",
+      "image": "/assets/biryani/chicken-dum-biryani.jpg"
     },
     {
       "id": "bir-4",
@@ -661,51 +739,11 @@
       "category": "biryani",
       "price": 360,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Crispy spicy Chicken 65 tossed with curry leaves and green chilies, layered on dum biryani rice with boiled egg.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/biryani/chicken-65-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 3,
+      "prepTime": "14 min",
+      "description": "Crispy spicy Chicken 65 tossed with curry leaves and green chilies, layered on dum biryani rice with boiled egg.",
+      "image": "/assets/biryani/chicken-65-biryani.jpg"
     },
     {
       "id": "bir-5",
@@ -713,51 +751,11 @@
       "category": "biryani",
       "price": 240,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Seasonal farm-fresh vegetables, baby potatoes, and French beans slow-cooked with whole spices and basmati rice in dum style. Served with boondi raita.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120708013-jge5",
-          "name": "Fresh Paneer",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/veg-dum-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "12 min",
+      "description": "Seasonal farm-fresh vegetables, baby potatoes, and French beans slow-cooked with whole spices and basmati rice in dum style. Served with boondi raita.",
+      "image": "/assets/veg-dum-biryani.jpg"
     },
     {
       "id": "bir-6",
@@ -765,51 +763,11 @@
       "category": "biryani",
       "price": 290,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Char-grilled cottage cheese cubes coated in Kashmiri tandoori spices, layered over aromatic saffron dum rice with mint and brown onions.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120708013-jge5",
-          "name": "Fresh Paneer",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/biryani/paneer-tikka-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "14 min",
+      "description": "Char-grilled cottage cheese cubes coated in Kashmiri tandoori spices, layered over aromatic saffron dum rice with mint and brown onions.",
+      "image": "/assets/biryani/paneer-tikka-biryani.jpg"
     },
     {
       "id": "bir-7",
@@ -817,51 +775,11 @@
       "category": "biryani",
       "price": 460,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Fresh coastal tiger prawns sautéed in spiced coconut-onion gravy, layered with royal basmati rice and fried cashews.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/biryani/prawns-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "15 min",
+      "description": "Fresh coastal tiger prawns sautéed in spiced coconut-onion gravy, layered with royal basmati rice and fried cashews.",
+      "image": "/assets/biryani/prawns-biryani.jpg"
     },
     {
       "id": "bir-8",
@@ -869,51 +787,11 @@
       "category": "biryani",
       "price": 220,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Pan-fried golden boiled eggs coated with spices, nestled in rich aromatic dum biryani rice. Served with cooling raita.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162279100-1ac0",
-          "name": "Basmati Rice",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.25,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793162283989-vkb6",
-          "name": "Onions & Mint",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120590518-2jfu",
-          "name": "Biryani Spices & Masala",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/biryani/egg-biryani.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "10 min",
+      "description": "Pan-fried golden boiled eggs coated with spices, nestled in rich aromatic dum biryani rice. Served with cooling raita.",
+      "image": "/assets/biryani/egg-biryani.jpg"
     },
     {
       "id": "st-0",
@@ -921,37 +799,11 @@
       "category": "starters",
       "price": 250,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Juicy spiced shredded chicken wrapped in warm pita bread with garlic toum sauce, pickles, and crispy fries.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121022785-rxt7",
-          "name": "Shawarma Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/chicken-65.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "10 min",
+      "description": "Juicy spiced shredded chicken wrapped in warm pita bread with garlic toum sauce, pickles, and crispy fries.",
+      "image": "/assets/starters/chicken-65.jpg"
     },
     {
       "id": "st-1",
@@ -959,44 +811,11 @@
       "category": "starters",
       "price": 260,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Deep-fried chicken pieces tossed in yogurt, spicy red chili sauce, garlic, and fresh curry leaves.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.3,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793162292351-ecof",
-          "name": "Curry Gravies & Onions",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120690207-pc2g",
-          "name": "Curry Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/chicken-65.jpg?v=20261015-v4"
+      "spiceLevel": 3,
+      "prepTime": "10 min",
+      "description": "Deep-fried chicken pieces tossed in yogurt, spicy red chili sauce, garlic, and fresh curry leaves.",
+      "image": "/assets/starters/chicken-65.jpg"
     },
     {
       "id": "st-2",
@@ -1004,44 +823,11 @@
       "category": "starters",
       "price": 220,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Golden fried paneer cubes tempered with mustard seeds, curd, green chilies, and South Indian curry spices.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120708013-jge5",
-          "name": "Fresh Paneer",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120734455-z1eu",
-          "name": "Cooking Butter & Cream",
-          "quantity": 0.05,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793162298561-2hs9",
-          "name": "Tomato & Onion Gravy",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120769779-e8na",
-          "name": "Garam Masala Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/paneer-tikka.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "10 min",
+      "description": "Golden fried paneer cubes tempered with mustard seeds, curd, green chilies, and South Indian curry spices.",
+      "image": "/assets/starters/paneer-tikka.jpg"
     },
     {
       "id": "st-3",
@@ -1049,49 +835,11 @@
       "category": "starters",
       "price": 280,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Indo-Chinese style crispy chicken wok-tossed with spring onions, crunchy bell peppers, and spicy soya glaze.",
-      "prepTime": "",
-      "prepTimeMinutes": 15,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.3,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "recipe-ingredient-1793162268500-lxcwc",
-          "name": "Onions",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Vegetables & Fresh Produce"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120690207-pc2g",
-          "name": "Curry Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/chinese/chilli-chicken.jpg?v=20261015-v4",
-      "dishName": "Chilli Chicken Dry",
-      "dietaryType": "NON-VEG",
-      "shortDescription": "Indo-Chinese style crispy chicken wok-tossed with spring onions, crunchy bell peppers, and spicy soya glaze.",
-      "imageUrl": "/assets/chinese/chilli-chicken.jpg?v=20261015-v4",
-      "isSpecial": false
+      "spiceLevel": 2,
+      "prepTime": "12 min",
+      "description": "Indo-Chinese style crispy chicken wok-tossed with spring onions, crunchy bell peppers, and spicy soya glaze.",
+      "image": "/assets/chinese/chilli-chicken.jpg"
     },
     {
       "id": "st-4",
@@ -1099,37 +847,11 @@
       "category": "starters",
       "price": 190,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Sweet golden corn kernels tossed with cracked black pepper, fresh lemon juice, scallions, and herbs.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793162301163-abz9",
-          "name": "Crispy Corn Salt & Pepper Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/crispy-corn.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "8 min",
+      "description": "Sweet golden corn kernels tossed with cracked black pepper, fresh lemon juice, scallions, and herbs.",
+      "image": "/assets/crispy-corn.jpg"
     },
     {
       "id": "st-5",
@@ -1137,37 +859,11 @@
       "category": "starters",
       "price": 340,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Boneless fish fillets fried crisp and tossed in Hyderabadi spicy yogurt tadka with green chillies.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121020334-9rpp",
-          "name": "Apollo Fish Fry Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/apollo-fish.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "12 min",
+      "description": "Boneless fish fillets fried crisp and tossed in Hyderabadi spicy yogurt tadka with green chillies.",
+      "image": "/assets/starters/apollo-fish.jpg"
     },
     {
       "id": "st-6",
@@ -1175,37 +871,11 @@
       "category": "starters",
       "price": 120,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Crisp cucumbers, vine-ripened tomatoes, sweet onions, bell peppers, and carrots with house herb lemon vinaigrette.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121018469-icpk",
-          "name": "Fresh Garden Salad Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/salad.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "5 min",
+      "description": "Crisp cucumbers, vine-ripened tomatoes, sweet onions, bell peppers, and carrots with house herb lemon vinaigrette.",
+      "image": "/assets/starters/salad.jpg"
     },
     {
       "id": "tk-1",
@@ -1213,44 +883,11 @@
       "category": "tandoor-kebabs",
       "price": 290,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Chicken bone-in marinated with hung curd, ginger garlic paste, and Kashmiri degi mirch, roasted in clay tandoor.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.3,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793162292351-ecof",
-          "name": "Curry Gravies & Onions",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120690207-pc2g",
-          "name": "Curry Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/tandoori-chicken.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "18 min",
+      "description": "Chicken bone-in marinated with hung curd, ginger garlic paste, and Kashmiri degi mirch, roasted in clay tandoor.",
+      "image": "/assets/starters/tandoori-chicken.jpg"
     },
     {
       "id": "tk-2",
@@ -1258,37 +895,11 @@
       "category": "tandoor-kebabs",
       "price": 320,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Melt-in-mouth chicken breast cubes marinated in heavy clotted cream, cheese, cardamom, and white pepper.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121016234-onva",
-          "name": "Murgh Malai Kebab Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/murgh-malai-kebab.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "15 min",
+      "description": "Melt-in-mouth chicken breast cubes marinated in heavy clotted cream, cheese, cardamom, and white pepper.",
+      "image": "/assets/starters/murgh-malai-kebab.jpg"
     },
     {
       "id": "tk-3",
@@ -1296,44 +907,11 @@
       "category": "tandoor-kebabs",
       "price": 260,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Fresh malai paneer cubes skewered with capsicum and diced onions, char-grilled to perfection.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120708013-jge5",
-          "name": "Fresh Paneer",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120734455-z1eu",
-          "name": "Cooking Butter & Cream",
-          "quantity": 0.05,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793162298561-2hs9",
-          "name": "Tomato & Onion Gravy",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120769779-e8na",
-          "name": "Garam Masala Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/paneer-tikka.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "14 min",
+      "description": "Fresh malai paneer cubes skewered with capsicum and diced onions, char-grilled to perfection.",
+      "image": "/assets/starters/paneer-tikka.jpg"
     },
     {
       "id": "tk-4",
@@ -1341,37 +919,11 @@
       "category": "tandoor-kebabs",
       "price": 390,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Minced lamb blended with mint, fresh coriander, ginger, and royal spices, roasted golden on charcoal skewers.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120858416-5rmw",
-          "name": "Mutton Seekh Kebab Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/starters/mutton-seekh-kebab.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "16 min",
+      "description": "Minced lamb blended with mint, fresh coriander, ginger, and royal spices, roasted golden on charcoal skewers.",
+      "image": "/assets/starters/mutton-seekh-kebab.jpg"
     },
     {
       "id": "ff-1",
@@ -1379,44 +931,11 @@
       "category": "fast-food",
       "price": 280,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Hand-stretched sourdough crust with San Marzano tomato sauce, fresh mozzarella cheese, and fragrant basil leaves.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120800056-v6dj",
-          "name": "Pizza Base",
-          "quantity": 1,
-          "unit": "PCS",
-          "category": "Bakery & Bread"
-        },
-        {
-          "inventoryId": "inv-1793120805723-3x4o",
-          "name": "Mozzarella Cheese",
-          "quantity": 0.1,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120810258-b3r6",
-          "name": "Pizza Marinara Sauce",
-          "quantity": 0.05,
-          "unit": "KG",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120816048-t7a6",
-          "name": "Toppings (Veggies/Meat)",
-          "quantity": 0.08,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        }
-      ],
-      "image": "/assets/fast-food/pizza.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "15 min",
+      "description": "Hand-stretched sourdough crust with San Marzano tomato sauce, fresh mozzarella cheese, and fragrant basil leaves.",
+      "image": "/assets/fast-food/pizza.jpg"
     },
     {
       "id": "ff-2",
@@ -1424,44 +943,11 @@
       "category": "fast-food",
       "price": 220,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Seared juicy patty in toasted brioche bun topped with melted cheddar, crisp lettuce, gherkins, and house sauce.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120779417-orj5",
-          "name": "Burger Buns",
-          "quantity": 1,
-          "unit": "PCS",
-          "category": "Bakery & Bread"
-        },
-        {
-          "inventoryId": "inv-1793120785116-96go",
-          "name": "Burger Patty",
-          "quantity": 1,
-          "unit": "PCS",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120790169-q13p",
-          "name": "Cheese Slice",
-          "quantity": 1,
-          "unit": "PCS",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120795692-ogo9",
-          "name": "Lettuce & Burger Sauce",
-          "quantity": 0.04,
-          "unit": "KG",
-          "category": "Oils & Condiments"
-        }
-      ],
-      "image": "/assets/fast-food/burger.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "12 min",
+      "description": "Seared juicy patty in toasted brioche bun topped with melted cheddar, crisp lettuce, gherkins, and house sauce.",
+      "image": "/assets/fast-food/burger.jpg"
     },
     {
       "id": "ff-3",
@@ -1469,37 +955,11 @@
       "category": "fast-food",
       "price": 140,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Golden crispy potato batons seasoned with sea salt and served with tangy dipping sauce.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121013305-iuqp",
-          "name": "Crispy French Fries Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/fast-food/french-fries.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "8 min",
+      "description": "Golden crispy potato batons seasoned with sea salt and served with tangy dipping sauce.",
+      "image": "/assets/fast-food/french-fries.jpg"
     },
     {
       "id": "ff-4",
@@ -1507,37 +967,11 @@
       "category": "fast-food",
       "price": 260,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Al dente penne pasta tossed in rich parmesan cream sauce with garlic, herbs, and sautéed mushrooms.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121009724-6via",
-          "name": "Creamy Alfredo Pasta Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/fast-food/pasta.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "12 min",
+      "description": "Al dente penne pasta tossed in rich parmesan cream sauce with garlic, herbs, and sautéed mushrooms.",
+      "image": "/assets/fast-food/pasta.jpg"
     },
     {
       "id": "mc-1",
@@ -1545,44 +979,11 @@
       "category": "mains",
       "price": 340,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Char-smoked shredded chicken simmered in rich velvety tomato, butter, and cashew nut gravy finished with kasuri methi.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.3,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793162292351-ecof",
-          "name": "Curry Gravies & Onions",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120690207-pc2g",
-          "name": "Curry Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/curries/butter-chicken.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "15 min",
+      "description": "Char-smoked shredded chicken simmered in rich velvety tomato, butter, and cashew nut gravy finished with kasuri methi.",
+      "image": "/assets/curries/butter-chicken.jpg"
     },
     {
       "id": "mc-2",
@@ -1590,44 +991,11 @@
       "category": "mains",
       "price": 320,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Tender chicken tossed with chunky capsicum, tomatoes, and freshly ground coriander-cumin spices in an iron wok.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.3,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793162292351-ecof",
-          "name": "Curry Gravies & Onions",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120690207-pc2g",
-          "name": "Curry Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/curries/kadai-chicken.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "15 min",
+      "description": "Tender chicken tossed with chunky capsicum, tomatoes, and freshly ground coriander-cumin spices in an iron wok.",
+      "image": "/assets/curries/kadai-chicken.jpg"
     },
     {
       "id": "mc-3",
@@ -1635,44 +1003,11 @@
       "category": "mains",
       "price": 270,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Cottage cheese cooked in a silky, mildly sweet spiced tomato-butter gravy topped with fresh cream.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120708013-jge5",
-          "name": "Fresh Paneer",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120734455-z1eu",
-          "name": "Cooking Butter & Cream",
-          "quantity": 0.05,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793162298561-2hs9",
-          "name": "Tomato & Onion Gravy",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120769779-e8na",
-          "name": "Garam Masala Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/curries/paneer-butter-masala.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "12 min",
+      "description": "Cottage cheese cooked in a silky, mildly sweet spiced tomato-butter gravy topped with fresh cream.",
+      "image": "/assets/curries/paneer-butter-masala.jpg"
     },
     {
       "id": "mc-4",
@@ -1680,37 +1015,11 @@
       "category": "mains",
       "price": 230,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Black lentils slow-cooked overnight over charcoal with butter, tomato purée, and cream for ultimate richness.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121006168-g1lo",
-          "name": "Dal Makhani Bukhara Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/curries/dal-makhani.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "10 min",
+      "description": "Black lentils slow-cooked overnight over charcoal with butter, tomato purée, and cream for ultimate richness.",
+      "image": "/assets/curries/dal-makhani.jpg"
     },
     {
       "id": "mc-5",
@@ -1718,37 +1027,11 @@
       "category": "mains",
       "price": 430,
       "isVeg": false,
-      "spiceLevel": 0,
-      "description": "Kashmiri delicacy of tender mutton cooked in aromatic gravy flavored with ratan jot and Kashmiri chilies.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793121001945-2ii1",
-          "name": "Mutton Rogan Josh Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/curries/mutton-rogan-josh.jpg?v=20261015-v4"
+      "spiceLevel": 2,
+      "prepTime": "18 min",
+      "description": "Kashmiri delicacy of tender mutton cooked in aromatic gravy flavored with ratan jot and Kashmiri chilies.",
+      "image": "/assets/curries/mutton-rogan-josh.jpg"
     },
     {
       "id": "br-1",
@@ -1756,37 +1039,11 @@
       "category": "breads",
       "price": 65,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Fluffy refined flour bread topped with minced garlic and cilantro, baked in tandoor and brushed with melted amul butter.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120997618-afil",
-          "name": "Butter Garlic Naan Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/breads/garlic-naan.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "5 min",
+      "description": "Fluffy refined flour bread topped with minced garlic and cilantro, baked in tandoor and brushed with melted amul butter.",
+      "image": "/assets/breads/garlic-naan.jpg"
     },
     {
       "id": "br-2",
@@ -1794,37 +1051,11 @@
       "category": "breads",
       "price": 95,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Tandoori naan stuffed with melted mozzarella cheese and topped with crushed garlic.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120992221-o2vi",
-          "name": "Cheese Garlic Naan Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/breads/cheese-garlic-naan.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "6 min",
+      "description": "Tandoori naan stuffed with melted mozzarella cheese and topped with crushed garlic.",
+      "image": "/assets/breads/cheese-garlic-naan.jpg"
     },
     {
       "id": "br-3",
@@ -1832,37 +1063,11 @@
       "category": "breads",
       "price": 35,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Whole wheat flatbread baked crisp in the clay oven and buttered.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120987201-ih6p",
-          "name": "Tandoori Roti (Butter) Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/breads/tandoori-roti.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "4 min",
+      "description": "Whole wheat flatbread baked crisp in the clay oven and buttered.",
+      "image": "/assets/breads/tandoori-roti.jpg"
     },
     {
       "id": "dr-0",
@@ -1870,37 +1075,11 @@
       "category": "beverages",
       "price": 90,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Rich freshly grounded artisan coffee with silky frothed milk and delicate crema.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120840336-axpc",
-          "name": "Coffee Powder / Beans",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Beverages & Bar"
-        },
-        {
-          "inventoryId": "inv-1793120845764-edv1",
-          "name": "Fresh Milk",
-          "quantity": 0.18,
-          "unit": "L",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120850537-ju1i",
-          "name": "Sugar",
-          "quantity": 0.015,
-          "unit": "KG",
-          "category": "Grains & Rice"
-        }
-      ],
-      "image": "/assets/beverages/coffee.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "3 min",
+      "description": "Rich freshly grounded artisan coffee with silky frothed milk and delicate crema.",
+      "image": "/assets/beverages/coffee.jpg"
     },
     {
       "id": "dr-1",
@@ -1908,37 +1087,11 @@
       "category": "beverages",
       "price": 130,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Thick creamy yogurt churned with sweet Alphonso mango pulp, saffron, and crushed pistachios.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120982727-74qd",
-          "name": "Royal Mango Lassi Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/beverages/mango-lassi.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "4 min",
+      "description": "Thick creamy yogurt churned with sweet Alphonso mango pulp, saffron, and crushed pistachios.",
+      "image": "/assets/beverages/mango-lassi.jpg"
     },
     {
       "id": "dr-2",
@@ -1946,37 +1099,11 @@
       "category": "beverages",
       "price": 110,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Traditional Punjabi churned curd beverage topped with fresh malai and kewra essence.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120976368-wzsl",
-          "name": "Sweet Punjabi Lassi Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/beverages/sweet-lassi.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "4 min",
+      "description": "Traditional Punjabi churned curd beverage topped with fresh malai and kewra essence.",
+      "image": "/assets/beverages/sweet-lassi.jpg"
     },
     {
       "id": "dr-3",
@@ -1984,44 +1111,11 @@
       "category": "beverages",
       "price": 80,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Chilled soda or water infused with fresh lemon juice, roasted cumin, black salt, and mint leaves.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120538894-ng3g",
-          "name": "Raw Chicken",
-          "quantity": 0.3,
-          "unit": "KG",
-          "category": "Meat & Seafood"
-        },
-        {
-          "inventoryId": "inv-1793162292351-ecof",
-          "name": "Curry Gravies & Onions",
-          "quantity": 0.15,
-          "unit": "KG",
-          "category": "Produce & Veggies"
-        },
-        {
-          "inventoryId": "inv-1793120560791-omvs",
-          "name": "Cooking Oil",
-          "quantity": 0.04,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120690207-pc2g",
-          "name": "Curry Spices",
-          "quantity": 0.02,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/beverages/fresh-lime-soda.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "3 min",
+      "description": "Chilled soda or water infused with fresh lemon juice, roasted cumin, black salt, and mint leaves.",
+      "image": "/assets/beverages/fresh-lime-soda.jpg"
     },
     {
       "id": "dr-4",
@@ -2029,37 +1123,11 @@
       "category": "beverages",
       "price": 70,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Refreshing curd drink spiced with crushed ginger, green chili, roasted cumin, and fresh cilantro.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120968171-wesx",
-          "name": "Spiced Buttermilk (Chaas) Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/beverages/buttermilk.jpg?v=20261015-v4"
+      "spiceLevel": 1,
+      "prepTime": "3 min",
+      "description": "Refreshing curd drink spiced with crushed ginger, green chili, roasted cumin, and fresh cilantro.",
+      "image": "/assets/beverages/buttermilk.jpg"
     },
     {
       "id": "ds-0",
@@ -2067,37 +1135,11 @@
       "category": "desserts",
       "price": 250,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Gourmet trio scoops of rich Belgian chocolate, Madagascar vanilla, and strawberry ice cream topped with waffle crisps.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120954530-7i4b",
-          "name": "Ice cream Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "Dairy & Eggs"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/desserts/ice-cream.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "3 min",
+      "description": "Gourmet trio scoops of rich Belgian chocolate, Madagascar vanilla, and strawberry ice cream topped with waffle crisps.",
+      "image": "/assets/desserts/ice-cream.jpg"
     },
     {
       "id": "ds-1",
@@ -2105,37 +1147,11 @@
       "category": "desserts",
       "price": 150,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Hot khoya dumplings soaked in rose-cardamom sugar syrup, served over chilled thick saffron rabdi.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120933929-y268",
-          "name": "Gulab Jamun with Rabdi (2 Pcs) Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/desserts/rabdi-gulab-jamun.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "4 min",
+      "description": "Hot khoya dumplings soaked in rose-cardamom sugar syrup, served over chilled thick saffron rabdi.",
+      "image": "/assets/desserts/rabdi-gulab-jamun.jpg"
     },
     {
       "id": "ds-2",
@@ -2143,37 +1159,11 @@
       "category": "desserts",
       "price": 160,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Hyderabadi dessert of ghee-fried crisp bread soaked in saffron syrup, coated with thickened condensed milk and nuts.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120898222-x9kx",
-          "name": "Royal Shahi Tukda Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/desserts/shahi-tukda.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "5 min",
+      "description": "Hyderabadi dessert of ghee-fried crisp bread soaked in saffron syrup, coated with thickened condensed milk and nuts.",
+      "image": "/assets/desserts/shahi-tukda.jpg"
     },
     {
       "id": "ds-3",
@@ -2181,37 +1171,11 @@
       "category": "desserts",
       "price": 140,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Creamy malai kulfi served with rose falooda sev, sabja basil seeds, and pure rose syrup.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120868595-jo8u",
-          "name": "Matka Kulfi Falooda Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/desserts/ice-cream.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "3 min",
+      "description": "Creamy malai kulfi served with rose falooda sev, sabja basil seeds, and pure rose syrup.",
+      "image": "/assets/desserts/ice-cream.jpg"
     },
     {
       "id": "ds-4",
@@ -2219,37 +1183,11 @@
       "category": "desserts",
       "price": 180,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Stack of warm golden buttermilk pancakes served with maple syrup and fresh berries.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": false,
-      "isChefsSpecial": false,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120851835-x1uf",
-          "name": "Fluffy Golden Pancakes Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/desserts/pancakes.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "8 min",
+      "description": "Stack of warm golden buttermilk pancakes served with maple syrup and fresh berries.",
+      "image": "/assets/desserts/pancakes.jpg"
     },
     {
       "id": "ds-5",
@@ -2257,37 +1195,11 @@
       "category": "desserts",
       "price": 190,
       "isVeg": true,
-      "spiceLevel": 0,
-      "description": "Rich dark chocolate layer cake layered with Belgian fudge ganache and chocolate curls.",
-      "prepTime": "",
-      "prepTimeMinutes": 0,
       "isChefSpecial": true,
-      "isChefsSpecial": true,
-      "isAvailable": true,
-      "recipe": [
-        {
-          "inventoryId": "inv-1793120823256-1nio",
-          "name": "Decadent Chocolate Cake Main Ingredient",
-          "quantity": 0.2,
-          "unit": "KG",
-          "category": "General Supplies"
-        },
-        {
-          "inventoryId": "inv-1793120831904-1wzl",
-          "name": "Cooking Oil / Butter",
-          "quantity": 0.03,
-          "unit": "L",
-          "category": "Oils & Condiments"
-        },
-        {
-          "inventoryId": "inv-1793120836113-irbg",
-          "name": "Seasoning & Spices",
-          "quantity": 0.01,
-          "unit": "KG",
-          "category": "Spices & Seasoning"
-        }
-      ],
-      "image": "/assets/desserts/cake.jpg?v=20261015-v4"
+      "spiceLevel": 0,
+      "prepTime": "5 min",
+      "description": "Rich dark chocolate layer cake layered with Belgian fudge ganache and chocolate curls.",
+      "image": "/assets/desserts/cake.jpg"
     }
   ],
   "gourmet_pos_staff_v1": [
@@ -2376,510 +1288,7 @@
       "createdAt": "2026-10-09T04:27:02.069081"
     }
   ],
-  "gourmet_pos_past_orders_v2_inr": [
-    {
-      "id": "ord_settled_1",
-      "orderId": "ord_settled_1",
-      "invoiceNo": "INV-001",
-      "invoiceNumber": "INV-001",
-      "tableId": 4,
-      "tableName": "Table-4",
-      "tableNumber": "Table-4",
-      "server": "Karan D.",
-      "serverName": "Karan D.",
-      "guests": 3,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 600,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 600,
-      "taxAmount": 30,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 630,
-      "total": 630,
-      "totalAmount": 630,
-      "paidAmount": 630,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Chicken 65 Biryani",
-          "dishName": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Hyderabadi Veg Dum Biryani",
-          "dishName": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_1"
-    },
-    {
-      "id": "ord_settled_2",
-      "orderId": "ord_settled_2",
-      "invoiceNo": "INV-002",
-      "invoiceNumber": "INV-002",
-      "tableId": 3,
-      "tableName": "Table-3",
-      "tableNumber": "Table-3",
-      "server": "Staff",
-      "serverName": "Staff",
-      "guests": 1,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 480,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 480,
-      "taxAmount": 24,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 504,
-      "total": 504,
-      "totalAmount": 504,
-      "paidAmount": 504,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Aromas Fresh Brewed Coffee",
-          "dishName": "Aromas Fresh Brewed Coffee",
-          "price": 90,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Royal Mango Lassi",
-          "dishName": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Sweet Punjabi Lassi",
-          "dishName": "Sweet Punjabi Lassi",
-          "price": 110,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Fresh Masala Lemonade",
-          "dishName": "Fresh Masala Lemonade",
-          "price": 80,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Spiced Buttermilk (Chaas)",
-          "dishName": "Spiced Buttermilk (Chaas)",
-          "price": 70,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_2"
-    },
-    {
-      "id": "ord_settled_3",
-      "orderId": "ord_settled_3",
-      "invoiceNo": "INV-003",
-      "invoiceNumber": "INV-003",
-      "tableId": 2,
-      "tableName": "Table-2",
-      "tableNumber": "Table-2",
-      "server": "Rajesh K.",
-      "serverName": "Rajesh K.",
-      "guests": 2,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 740,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 740,
-      "taxAmount": 37,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 777,
-      "total": 777,
-      "totalAmount": 777,
-      "paidAmount": 777,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Chilli Chicken Dry",
-          "dishName": "Chilli Chicken Dry",
-          "price": 280,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Spicy Prawns Biryani",
-          "dishName": "Spicy Prawns Biryani",
-          "price": 460,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_3"
-    },
-    {
-      "id": "ord_settled_4",
-      "orderId": "ord_settled_4",
-      "invoiceNo": "INV-004",
-      "invoiceNumber": "INV-004",
-      "tableId": 2,
-      "tableName": "Table-2",
-      "tableNumber": "Table-2",
-      "server": "Rajesh K.",
-      "serverName": "Rajesh K.",
-      "guests": 2,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 510,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 510,
-      "taxAmount": 26,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 536,
-      "total": 536,
-      "totalAmount": 536,
-      "paidAmount": 536,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Shawarma",
-          "dishName": "Shawarma",
-          "price": 250,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Crispy Chicken 65",
-          "dishName": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_4"
-    },
-    {
-      "id": "ord_settled_5",
-      "orderId": "ord_settled_5",
-      "invoiceNo": "INV-005",
-      "invoiceNumber": "INV-005",
-      "tableId": 1,
-      "tableName": "Table-1",
-      "tableNumber": "1",
-      "server": "Rajesh K.",
-      "serverName": "Rajesh K.",
-      "guests": 5,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 1390,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 1390,
-      "taxAmount": 70,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1460,
-      "total": 1460,
-      "totalAmount": 1460,
-      "paidAmount": 1460,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Royal Mutton Dum Biryani",
-          "dishName": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Special Boneless Chicken Biryani",
-          "dishName": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Chicken 65 Biryani",
-          "dishName": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Hyderabadi Veg Dum Biryani",
-          "dishName": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_5"
-    },
-    {
-      "id": "ord_settled_6",
-      "orderId": "ord_settled_6",
-      "invoiceNo": "INV-006",
-      "invoiceNumber": "INV-006",
-      "tableId": 3,
-      "tableName": "Table 3",
-      "tableNumber": "3",
-      "server": "Staff",
-      "serverName": "Staff",
-      "guests": 2,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 790,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 790,
-      "taxAmount": 40,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 830,
-      "total": 830,
-      "totalAmount": 830,
-      "paidAmount": 830,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Royal Mutton Dum Biryani",
-          "dishName": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Special Boneless Chicken Biryani",
-          "dishName": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_6"
-    },
-    {
-      "id": "ord_settled_7",
-      "orderId": "ord_settled_7",
-      "invoiceNo": "INV-007",
-      "invoiceNumber": "INV-007",
-      "tableId": 4,
-      "tableName": "Table-4",
-      "tableNumber": "Table-4",
-      "server": "Karan D.",
-      "serverName": "Karan D.",
-      "guests": 3,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 1460,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 1460,
-      "taxAmount": 73,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1533,
-      "total": 1533,
-      "totalAmount": 1533,
-      "paidAmount": 1533,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Chicken 65 Biryani",
-          "dishName": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Hyderabadi Veg Dum Biryani",
-          "dishName": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Chicken 65 Biryani",
-          "dishName": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Hyderabadi Veg Dum Biryani",
-          "dishName": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Crispy Chicken 65",
-          "dishName": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_7"
-    },
-    {
-      "id": "ord_settled_8",
-      "orderId": "ord_settled_8",
-      "invoiceNo": "INV-008",
-      "invoiceNumber": "INV-008",
-      "tableId": 4,
-      "tableName": "Table-4",
-      "tableNumber": "Table-4",
-      "server": "Karan D.",
-      "serverName": "Karan D.",
-      "guests": 1,
-      "capacity": 4,
-      "status": "Settled",
-      "Status": "Settled",
-      "paymentMethod": "Cash",
-      "paymentMode": "Cash",
-      "PaymentMethod": "Cash",
-      "subtotal": 1200,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxableAmount": 1200,
-      "taxAmount": 60,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1260,
-      "total": 1260,
-      "totalAmount": 1260,
-      "paidAmount": 1260,
-      "date": "12:48 PM",
-      "settledDate": "2026-10-29",
-      "settledAt": "12:48 PM",
-      "orderTime": "12:48 PM",
-      "items": [
-        {
-          "name": "Chicken 65 Biryani",
-          "dishName": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Hyderabadi Veg Dum Biryani",
-          "dishName": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Chicken 65 Biryani",
-          "dishName": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": ""
-        },
-        {
-          "name": "Hyderabadi Veg Dum Biryani",
-          "dishName": "Hyderabadi Veg Dum Biryani",
-          "price": 240,
-          "quantity": 1,
-          "notes": ""
-        }
-      ],
-      "createdAt": "12:48 PM",
-      "payments": [],
-      "isPaid": true,
-      "serviceCharge": 0,
-      "invoiceId": "ord_settled_8"
-    }
-  ],
+  "gourmet_pos_past_orders_v2_inr": [],
   "avsr_auth_users_v1": [
     {
       "id": "local-1793008699594-4u3r17",
