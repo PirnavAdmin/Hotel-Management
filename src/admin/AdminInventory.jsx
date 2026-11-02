@@ -2240,6 +2240,25 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleAdjustStock(item.id, -5)}
+                          style={{
+                            background: "var(--surface-tint)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            color: "var(--text-main)",
+                            borderRadius: "6px",
+                            padding: "3px 7px",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                          title="Quick consume -5 units"
+                        >
+                          -5
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => {
                             setConsumeItem(item);
                             setConsumeAmount("");

@@ -616,6 +616,7 @@ public class BarService
 
         var standard = new List<string>
         {
+            "All Categories",
             "Cocktails",
             "Mocktails",
             "Beers",
@@ -623,14 +624,11 @@ public class BarService
             "Vodka & Gin",
             "Rum & Brandy",
             "Wine & Champagne",
-            "Shots & Shooters"
-        };
-        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "All Categories", "all", "all categories", "beverages", "beverage",
-            "tea & coffee", "tea and coffee", "tea", "coffee",
-            "juices & shakes", "juices and shakes", "shakes", "juices",
-            "soft drinks & soda", "soft drinks", "soda", "food"
+            "Shots & Shooters",
+            "Juices & Shakes",
+            "Soft Drinks & Soda",
+            "Tea & Coffee",
+            "beverages"
         };
         foreach (var c in dbCategories)
         {
