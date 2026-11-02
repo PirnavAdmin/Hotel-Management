@@ -28,6 +28,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
 import { SkeletonDashboard } from "../common/Skeletons";
+import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 const BAR_MENU_CATEGORIES = new Set([
   "cocktails", "mocktails", "beers", "whiskey", "vodka & gin", "rum & brandy",
@@ -150,8 +151,8 @@ export function AdminOverview({
   ).length;
 
   const dineInMenuItems = menuItems.filter((item) => !isBarMenuItem(item));
-  const vegCount = dineInMenuItems.filter((i) => i.isVeg).length;
-  const nonVegCount = dineInMenuItems.filter((i) => !i.isVeg).length;
+  const vegCount = dineInMenuItems.filter((i) => (i.dietaryType?.toUpperCase() === "VEG" || i.isVeg === true)).length;
+  const nonVegCount = dineInMenuItems.filter((i) => (i.dietaryType?.toUpperCase() === "NON-VEG" || i.isVeg === false)).length;
 
   const lowStockItems = inventoryList.filter(
     (item) => Number(item.stock ?? item.currentStock ?? 0) <= Number(item.minThreshold ?? item.minimumThreshold ?? 5)

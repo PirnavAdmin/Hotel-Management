@@ -1813,8 +1813,8 @@ export function TableDetailView({
         itemCat.includes(normalizedQuery);
 
       let matchDietary = true;
-      if (dietaryFilter === "veg") matchDietary = item.isVeg;
-      if (dietaryFilter === "non-veg") matchDietary = !item.isVeg;
+      if (dietaryFilter === "veg") matchDietary = (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg === true);
+      if (dietaryFilter === "non-veg") matchDietary = (item.dietaryType?.toUpperCase() === "NON-VEG" || item.isVeg === false);
       if (dietaryFilter === "special") matchDietary = Boolean(item.isChefSpecial || item.isChefsSpecial);
 
       return matchCat && matchSearch && matchDietary;
@@ -3156,14 +3156,14 @@ export function TableDetailView({
                       <div className="pos-menu-badge">
                         <span
                           style={{
-                            width: "6px",
-                            height: "6px",
-                            borderRadius: "2px",
-                            backgroundColor: item.isVeg ? "#10b981" : "#ef4444",
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "#10b981" : "#ef4444",
                             display: "inline-block",
                           }}
                         />
-                        <span>{item.isVeg ? "VEG" : "NON-VEG"}</span>
+                        <span>{(item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "VEG" : "NON-VEG"}</span>
                       </div>
 
                       {/* Chef Special Badge */}

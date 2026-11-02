@@ -596,7 +596,7 @@ public static class DbInitializer
             EnsureColumnExists(conn, "menu_items", "dish_name", "VARCHAR(100) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "menu_items", "category", "VARCHAR(100) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "menu_items", "price", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
-            EnsureColumnExists(conn, "menu_items", "dietary_type", "VARCHAR(20) NOT NULL DEFAULT 'Non-Veg'");
+            EnsureColumnExists(conn, "menu_items", "dietary_type", "VARCHAR(20) NULL DEFAULT 'N/A'");
             EnsureColumnExists(conn, "menu_items", "spice_level", "INT NOT NULL DEFAULT 0");
             EnsureColumnExists(conn, "menu_items", "prep_time_minutes", "INT NULL DEFAULT 15");
             EnsureColumnExists(conn, "menu_items", "short_description", "VARCHAR(500) NULL");

@@ -1,4 +1,4 @@
-﻿import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
+import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
@@ -36,6 +36,7 @@ import {
   normalizeMenuItem,
 } from "./api/menuApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
+import { isDrinkCategory } from "./utils/drinkCategoryHelper";
 import { MENU_ITEMS } from "./data/menuData";
 import {
   apiGetStaff,
@@ -1012,7 +1013,8 @@ export function App() {
                   name: m.dishName || m.name,
                   category: m.category || "",
                   price: parseFloat(m.price || 0),
-                  isVeg: m.dietaryType === "VEG" || m.isVeg === true,
+                  dietaryType: isDrinkCategory(m.category, m) ? "N/A" : (m.dietaryType || (m.isVeg ? "VEG" : "NON-VEG")),
+                  isVeg: isDrinkCategory(m.category, m) ? null : (m.dietaryType === "VEG" || m.isVeg === true),
                   spiceLevel:
                     m.spiceLevel === 1
                       ? "Mild"

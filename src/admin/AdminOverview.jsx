@@ -148,8 +148,8 @@ export function AdminOverview({
   ).length;
 
   const dineInMenuItems = menuItems.filter((item) => !isBarMenuItem(item));
-  const vegCount = dineInMenuItems.filter((i) => i.isVeg).length;
-  const nonVegCount = dineInMenuItems.filter((i) => !i.isVeg).length;
+  const vegCount = dineInMenuItems.filter((i) => (i.dietaryType?.toUpperCase() === "VEG" || i.isVeg === true)).length;
+  const nonVegCount = dineInMenuItems.filter((i) => (i.dietaryType?.toUpperCase() === "NON-VEG" || i.isVeg === false)).length;
 
   const lowStockItems = inventoryList.filter(
     (item) => Number(item.stock ?? item.currentStock ?? 0) <= Number(item.minThreshold ?? item.minimumThreshold ?? 5)
