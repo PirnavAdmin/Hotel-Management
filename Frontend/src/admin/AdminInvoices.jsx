@@ -105,6 +105,7 @@ const formatInvoiceTime = (value) => {
 
 export function AdminInvoices({
   pastOrders = [],
+  preferPastOrders = false,
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
@@ -195,8 +196,13 @@ export function AdminInvoices({
   }, []);
 
   // Include locally synchronized POS settlements alongside live API invoices.
-  // Takeaway checkouts may not have a table-backed API order record.
-  const allOrders = dedupeOrders([...pastOrders, ...invoiceRecords]);
+  // Takeaway checkouts are saved to the shared POS invoice history and may not
+  // have a table-backed API order record, so choosing only API data hid them here.
+  const allOrders = dedupeOrders(
+    preferPastOrders || invoiceLoadError
+      ? pastOrders
+      : [...pastOrders, ...invoiceRecords],
+  );
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);
@@ -269,22 +275,24 @@ export function AdminInvoices({
     pageStart + itemsPerPage,
   );
 
+  const getInvoiceTotal = (order) =>
+    Number(order.grandTotal ?? order.total ?? order.totalAmount ?? order.paidAmount ?? 0) || 0;
   const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
+    (sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
     0,
   );
 
   const upiTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "upi")
-    .reduce((sum, o) => sum + invoicePaidAmount(o), 0);
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cashTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "cash")
-    .reduce((sum, o) => sum + invoicePaidAmount(o), 0);
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cardTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "card")
-    .reduce((sum, o) => sum + invoicePaidAmount(o), 0);
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cashOrdersCount = filteredOrders.filter(
     (o) => normalizePaymentMethod(o) === "cash",
