@@ -39,6 +39,8 @@ import {
 import { apiGetBarDrinks } from "./api/barApi";
 import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
+import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
+import { MENU_ITEMS } from "./data/menuData";
 import {
   Bell,
   CheckCircle2,
@@ -1102,7 +1104,8 @@ export function App() {
                   name: m.dishName || m.name,
                   category: m.category || "",
                   price: parseFloat(m.price || 0),
-                  isVeg: m.dietaryType === "VEG" || m.isVeg === true,
+                  dietaryType: isDrinkCategory(m.category, m) ? "N/A" : (m.dietaryType || (m.isVeg ? "VEG" : "NON-VEG")),
+                  isVeg: isDrinkCategory(m.category, m) ? null : (m.dietaryType === "VEG" || m.isVeg === true),
                   spiceLevel:
                     m.spiceLevel === 1
                       ? "Mild"

@@ -9,3 +9,5 @@ export const MENU_CATEGORIES = [
   { id: 'beverages', name: 'Beverages & Coffee', icon: 'Coffee' },
   { id: 'desserts', name: 'Desserts & Sweets', icon: 'IceCream' }
 ];
+
+export const MENU_ITEMS = [];
