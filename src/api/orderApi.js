@@ -8,6 +8,22 @@ export async function apiGetActiveOrders() {
   return await apiClient("/api/v1/orders/active");
 }
 
+export async function apiGetTakeawayOrders() {
+  return await apiClient("/api/v1/orders/takeaway", { remoteOnly: true });
+}
+
+export async function apiDispatchTakeawayOrder(orderId) {
+  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}/dispatch`, { method: "POST", remoteOnly: true });
+}
+
+export async function apiCreatePaidTakeawayOrder(orderData) {
+  return await apiClient("/api/v1/orders", { method: "POST", remoteOnly: true, body: JSON.stringify(orderData) });
+}
+
+export async function apiSendTakeawayOrderToKitchen(orderId) {
+  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}/send-kot`, { method: "POST", remoteOnly: true });
+}
+
 export async function apiGetOrder(id) {
   return await apiClient(`/api/v1/orders/${id}`);
 }

@@ -171,8 +171,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
     setIsProcessing(true);
     sounds.playSuccess();
 
-    setTimeout(() => {
-      onConfirmPayment({
+    setTimeout(async () => {
+      try {
+        const result = await onConfirmPayment({
         tableId: table.id,
         tableName: table.name,
         section: table.section,
@@ -208,7 +209,12 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         date: getTodayDateString(),
         settledDate: getBusinessDayStart().toISOString().slice(0, 10),
         invoiceNo: getNextInvoiceNumber()
-      });
+        });
+        if (result === false) setIsProcessing(false);
+      } catch (error) {
+        console.error("Payment confirmation failed", error);
+        setIsProcessing(false);
+      }
     }, 450);
   };
 

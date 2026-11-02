@@ -396,6 +396,7 @@ export function KitchenKOTView({
       id: tableId,
       backendTableId,
       backendOrderId: orderId,
+      orderType: ticket.orderType || ticket.OrderType || "DineIn",
       kotBatch: batch,
       name: ticket.tableName || `Table ${tableId}`,
       section: ticket.section || ticket.sectionArea || "Main Hall",
@@ -403,7 +404,7 @@ export function KitchenKOTView({
       orderTime: ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt,
       priority: ticket.priority || "normal",
       uniqueKey: `active-${orderId}-${batch}`,
-      isPaid: false,
+      isPaid: String(ticket.orderType || ticket.OrderType || "").toLowerCase() === "takeaway",
       ticketType: "active",
       items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
         const isDrink = isDrinkItem(item, menuLookup);
@@ -1715,10 +1716,10 @@ export function KitchenKOTView({
                     <div className="kot-compact-header">
                       <span className="kot-compact-table-badge" style={{ background: `${compactStatus.color}1c`, color: compactStatus.color }}>
                         <small>TABLE</small>
-                        {formatCleanTableNum(tbl.name, tbl.id)}
+                        {String(tbl.orderType).toLowerCase() === "takeaway" ? "TAKEAWAY" : formatCleanTableNum(tbl.name, tbl.id)}
                       </span>
                       <div className="kot-compact-copy">
-                        <strong className="kot-compact-title">{formatCleanTableName(tbl.name, tbl.id)}</strong>
+                        <strong className="kot-compact-title">{String(tbl.orderType).toLowerCase() === "takeaway" ? "Takeaway Order" : formatCleanTableName(tbl.name, tbl.id)}</strong>
                         <span className="kot-compact-order-number">Order #{tbl.backendOrderId ?? tbl.id}</span>
                       </div>
                       <span className="kot-compact-status" style={{ color: "var(--text-main)" }}>
