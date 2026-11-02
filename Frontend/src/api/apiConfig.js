@@ -36,8 +36,10 @@ const DEFAULT_HEADERS = {
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
   const { remoteOnly = false, ...requestOptions } = options;
+  const url = import.meta.env.DEV && remoteOnly
+    ? `/__backend_api${endpoint}`
+    : `${API_BASE_URL}${endpoint}`;
 
   try {
     const token =
