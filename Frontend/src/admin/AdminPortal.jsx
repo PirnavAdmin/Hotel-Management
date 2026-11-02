@@ -50,7 +50,7 @@ import {
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
-import { isDrinkItem } from "../kot/orderRouting";
+import { isBeverageCategory, isDrinkItem } from "../kot/orderRouting";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminInventory } from "./AdminInventory";
