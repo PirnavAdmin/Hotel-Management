@@ -48,6 +48,7 @@ import {
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { isDrinkCategory, isAlcoholicCategory, getDrinkDietaryType } from "../utils/drinkCategoryHelper";
 
 
 const PAGE_SIZE = 8;
