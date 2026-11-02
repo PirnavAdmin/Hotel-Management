@@ -2271,15 +2271,17 @@ export function App() {
         })),
       });
       if (!createResult?.success) {
-        showToast(`Payment was not recorded: ${createResult?.error || "The server could not save the takeaway order."}`);
-        return false;
+        const errorMessage = `Payment was not recorded: ${createResult?.error || "The server could not save the takeaway order."}`;
+        showToast(errorMessage);
+        return errorMessage;
       }
 
       const backendOrder = createResult.data?.data ?? createResult.data;
       const backendOrderId = Number(backendOrder?.id ?? backendOrder?.Id) || null;
       if (!backendOrderId) {
-        showToast("The server saved the takeaway order but did not return its order number. Please check invoices before retrying.");
-        return false;
+        const errorMessage = "The server saved the takeaway order but did not return its order number. Please check invoices before retrying.";
+        showToast(errorMessage);
+        return errorMessage;
       }
       enrichedSettlement.backendOrderId = backendOrderId;
       enrichedSettlement.billingSessionId = String(backendOrderId);

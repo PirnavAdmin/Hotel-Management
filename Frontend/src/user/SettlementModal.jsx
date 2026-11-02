@@ -27,6 +27,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   const isAllSelectedRef = useRef(false);
   const cashInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingError, setProcessingError] = useState("");
 
   const [currentTheme, setCurrentTheme] = useState(() => {
     return (
@@ -168,6 +169,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
   const handleSettle = () => {
     if (hasInvalidItems) return;
+    setProcessingError("");
     setIsProcessing(true);
     sounds.playSuccess();
 
@@ -210,9 +212,16 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         settledDate: getBusinessDayStart().toISOString().slice(0, 10),
         invoiceNo: getNextInvoiceNumber()
         });
-        if (result === false) setIsProcessing(false);
+        if (result === false) {
+          setProcessingError("Payment was not completed. Please correct the order and try again.");
+          setIsProcessing(false);
+        } else if (typeof result === "string") {
+          setProcessingError(result);
+          setIsProcessing(false);
+        }
       } catch (error) {
         console.error("Payment confirmation failed", error);
+        setProcessingError(error?.message || "Could not reach the server. Check the connection and try again.");
         setIsProcessing(false);
       }
     }, 450);
@@ -941,6 +950,12 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             <ArrowLeft size={16} />
             <span>Cancel</span>
           </button>
+
+          {processingError && (
+            <div role="alert" style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(248, 113, 113, .45)", background: "rgba(127, 29, 29, .25)", color: "#fecaca", fontSize: 13, lineHeight: 1.45 }}>
+              {processingError}
+            </div>
+          )}
 
           {/* Confirm & Vacate Table Button (Vibrant Orange-Amber Gradient) */}
           <button
