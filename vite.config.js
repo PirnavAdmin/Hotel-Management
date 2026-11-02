@@ -216,6 +216,37 @@ function globalSyncPlugin() {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
             server.middlewares.use((req, res, next) => {
+        const requestUrl = req.url || "/";
+        if (requestUrl.startsWith("/__backend_api/")) {
+          const targetUrl = `http://127.0.0.1:5018${requestUrl.slice("/__backend_api".length)}`;
+          const requestChunks = [];
+          req.on("data", (chunk) => requestChunks.push(chunk));
+          req.on("end", async () => {
+            try {
+              const headers = {};
+              if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];
+              if (req.headers.authorization) headers.Authorization = req.headers.authorization;
+              const method = String(req.method || "GET").toUpperCase();
+              const body = Buffer.concat(requestChunks);
+              const upstream = await fetch(targetUrl, {
+                method,
+                headers,
+                ...(method === "GET" || method === "HEAD" ? {} : { body }),
+              });
+              const responseBody = Buffer.from(await upstream.arrayBuffer());
+              res.writeHead(upstream.status, {
+                "Content-Type": upstream.headers.get("content-type") || "application/json",
+                "Cache-Control": "no-store",
+              });
+              return res.end(responseBody);
+            } catch {
+              res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+              return res.end(JSON.stringify({ success: false, error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer." }));
+            }
+          });
+          return;
+        }
+
         // Centralized Backend HTTP Request/Response Logger
         const start = Date.now();
         const method = req.method || "GET";
