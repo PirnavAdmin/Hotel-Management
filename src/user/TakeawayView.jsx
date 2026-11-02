@@ -32,7 +32,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout }
         .takeaway-menu-card { box-sizing: border-box; display: flex; flex-direction: column; height: auto; min-height: 0; min-width: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--bg-secondary); }
         .takeaway-menu-card img { display: block; width: 100%; height: 64px; flex: 0 0 64px; object-fit: cover; background: var(--bg-tertiary); }
         .takeaway-menu-card-body { display: flex; flex-direction: column; gap: .35rem; padding: .38rem; }
-        .takeaway-menu-card-name { display: -webkit-box; min-height: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.1; font-size: .8rem; }
+        .takeaway-menu-card-name { display: -webkit-box; height: 2.2em; min-height: 2.2em; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.1; font-size: .8rem; }
         .takeaway-menu-description { display: none; }
         .takeaway-add-button, .takeaway-qty-button { display: inline-flex; align-items: center; justify-content: center; gap: .2rem; min-height: 27px; padding: .25rem .45rem; border: 1px solid rgba(245,158,11,.45); border-radius: 6px; background: linear-gradient(135deg,#f59e0b,#ea580c); color: #111827; font-size: .76rem; font-weight: 800; cursor: pointer; }
         .takeaway-qty-button { width: 26px; min-height: 26px; padding: 0; background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
