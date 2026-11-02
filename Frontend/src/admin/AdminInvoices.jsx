@@ -184,7 +184,9 @@ export function AdminInvoices({
     };
   }, []);
 
-  const allOrders = invoiceRecords;
+  // Include locally synchronized POS settlements alongside live API invoices.
+  // Takeaway checkouts may not have a table-backed API order record.
+  const allOrders = dedupeOrders([...pastOrders, ...invoiceRecords]);
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);
