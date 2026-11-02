@@ -48,7 +48,11 @@ import {
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
-
+import {
+  isDrinkCategory,
+  isAlcoholicCategory,
+  getDrinkDietaryType,
+} from "../utils/drinkCategoryHelper";
 
 const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
@@ -75,9 +79,6 @@ export const BAR_CATEGORIES = [
   "Rum & Brandy",
   "Wine & Champagne",
   "Shots & Shooters",
-  "Juices & Shakes",
-  "Soft Drinks & Soda",
-  "Tea & Coffee",
 ];
 
 export const BAR_SERVING_MEASURES = [
@@ -1564,27 +1565,6 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                           </button>
                           <button
                             type="button"
-                            disabled={busy || stock <= 0}
-                            onClick={() => handleAdjustStock(item, -5)}
-                            style={{
-                              background: "var(--surface-tint)",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
-                              color: "var(--text-main)",
-                              borderRadius: "6px",
-                              padding: "3px 7px",
-                              fontSize: "0.72rem",
-                              fontWeight: 800,
-                              cursor: stock <= 0 ? "not-allowed" : "pointer",
-                              whiteSpace: "nowrap",
-                              flexShrink: 0,
-                              opacity: stock <= 0 ? 0.5 : 1,
-                            }}
-                            title="Quick consume -5 units"
-                          >
-                            -5
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => {
                               setConsumeItem(item);
                               setConsumeAmount("");
@@ -2710,11 +2690,18 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
   }));
 
   const allKnownCategories = useMemo(() => {
+    const excluded = new Set([
+      "all", "all categories", "all category", "all items", "category", "categories",
+      "beverages", "beverage", "tea & coffee", "tea and coffee", "tea", "coffee",
+      "juices & shakes", "juices and shakes", "shakes", "juices", "soft drinks & soda",
+      "soft drinks", "soda", "food"
+    ]);
     const list = [...BAR_CATEGORIES];
     if (Array.isArray(drinks)) {
       drinks.forEach((d) => {
-        if (d.category && !list.some((c) => c.toLowerCase() === d.category.toLowerCase())) {
-          list.push(d.category);
+        const cat = String(d?.category || "").trim();
+        if (cat && !excluded.has(cat.toLowerCase()) && !list.some((c) => c.toLowerCase() === cat.toLowerCase())) {
+          list.push(cat);
         }
       });
     }
@@ -3091,15 +3078,66 @@ function BarDrinksMenu({
   });
 
   const categoryOptions = useMemo(() => {
+    const excluded = new Set([
+      "all",
+      "all categories",
+      "all category",
+      "all items",
+      "category",
+      "categories",
+      "beverages",
+      "beverage",
+      "tea & coffee",
+      "tea and coffee",
+      "tea",
+      "coffee",
+      "juices & shakes",
+      "juices and shakes",
+      "shakes",
+      "juices",
+      "soft drinks & soda",
+      "soft drinks",
+      "soda",
+      "food",
+      "biryani",
+      "curries",
+      "curry",
+      "starters",
+      "starter",
+      "soups",
+      "breads",
+      "rice",
+      "desserts",
+    ]);
+
     const map = new Map();
-    [...BAR_CATEGORIES, ...extraCategories].forEach((cat) => {
-      if (cat) map.set(cat.toLowerCase(), { value: cat, label: cat });
-    });
-    drinks.forEach((d) => {
-      if (d.category && !map.has(d.category.toLowerCase())) {
-        map.set(d.category.toLowerCase(), { value: d.category, label: d.category });
+    // 1. Standard bar categories
+    BAR_CATEGORIES.forEach((cat) => {
+      const key = cat.toLowerCase().trim();
+      if (!excluded.has(key)) {
+        map.set(key, { value: cat, label: cat });
       }
     });
+
+    // 2. Extra categories from API (filter out non-bar and duplicate entries)
+    (extraCategories || []).forEach((cat) => {
+      if (!cat) return;
+      const key = String(cat).toLowerCase().trim();
+      if (!excluded.has(key) && !map.has(key)) {
+        map.set(key, { value: cat, label: cat });
+      }
+    });
+
+    // 3. Categories from loaded drink items (filter out non-bar entries)
+    (drinks || []).forEach((d) => {
+      const cat = String(d?.category || "").trim();
+      if (!cat) return;
+      const key = cat.toLowerCase();
+      if (!excluded.has(key) && !map.has(key)) {
+        map.set(key, { value: cat, label: cat });
+      }
+    });
+
     return Array.from(map.values());
   }, [drinks, extraCategories]);
 
@@ -3433,7 +3471,7 @@ function BarDrinksMenu({
 
       {/* Filter Toolbar */}
       <div
-        className="menu-filter-toolbar menu-items-filter-toolbar"
+        className="menu-filter-toolbar menu-items-filter-toolbar bar-drinks-filter-toolbar"
         role="search"
         aria-label="Drink item filters"
       >
@@ -3537,20 +3575,10 @@ function BarDrinksMenu({
             setMenuFilters({ category: "", drinkType: "", availability: "" });
             setMenuPage(1);
           }}
-          style={{
-            height: "36px",
-            padding: "0 14px",
-            background: "var(--bg-tertiary)",
-            border: "1px solid var(--border-card)",
-            borderRadius: "8px",
-            color: "var(--text-muted)",
-            fontSize: "0.82rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
+          title="Reset drink filters"
         >
-          Clear Filters
+          <RotateCcw size={13} strokeWidth={2.2} />
+          <span>Clear Filters</span>
         </button>
       </div>
 
@@ -3643,45 +3671,106 @@ function BarDrinksMenu({
                                 : "var(--text-dim)",
                               fontSize: "0.88rem",
                               lineHeight: 1.3,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "6px",
                             }}
                           >
-                            <span>{item.name}</span>
-                            {Boolean(
-                              item.isChefSpecial ||
-                              item.isChefsSpecial ||
-                              item.isSpecial ||
-                              item.isBartenderSpecial
-                            ) && (
-                              <span
-                                title="Bartender's Special"
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "3px",
-                                  background: "rgba(245, 158, 11, 0.15)",
-                                  border: "1px solid rgba(245, 158, 11, 0.35)",
-                                  color: "#f59e0b",
-                                  borderRadius: "12px",
-                                  padding: "1px 7px",
-                                  fontSize: "0.68rem",
-                                  fontWeight: 800,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <Star
-                                  size={11}
-                                  fill="#f59e0b"
-                                  color="#f59e0b"
-                                  style={{
-                                    filter: "drop-shadow(0 0 2px rgba(245, 158, 11, 0.5))",
-                                  }}
-                                />
-                                <span>Special</span>
-                              </span>
-                            )}
+                            {(() => {
+                              const isSpecial = Boolean(
+                                item.isChefSpecial ||
+                                item.isChefsSpecial ||
+                                item.isSpecial ||
+                                item.isBartenderSpecial
+                              );
+                              if (!isSpecial) {
+                                return <span>{item.name}</span>;
+                              }
+                              const words = (item.name || "").trim().split(/\s+/);
+                              if (words.length <= 1) {
+                                return (
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    <span>{item.name}</span>
+                                    <span
+                                      title="Bartender's Special"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "3px",
+                                        background: "rgba(245, 158, 11, 0.15)",
+                                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                                        color: "#f59e0b",
+                                        borderRadius: "12px",
+                                        padding: "1px 7px",
+                                        fontSize: "0.68rem",
+                                        fontWeight: 800,
+                                        verticalAlign: "middle",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      <Star
+                                        size={11}
+                                        fill="#f59e0b"
+                                        color="#f59e0b"
+                                        style={{
+                                          filter: "drop-shadow(0 0 2px rgba(245, 158, 11, 0.5))",
+                                        }}
+                                      />
+                                      <span>Special</span>
+                                    </span>
+                                  </span>
+                                );
+                              }
+                              const lastWord = words.pop();
+                              const leadingText = words.join(" ");
+                              return (
+                                <span>
+                                  {leadingText}{" "}
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      whiteSpace: "nowrap",
+                                      verticalAlign: "middle",
+                                    }}
+                                  >
+                                    <span>{lastWord}</span>
+                                    <span
+                                      title="Bartender's Special"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "3px",
+                                        background: "rgba(245, 158, 11, 0.15)",
+                                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                                        color: "#f59e0b",
+                                        borderRadius: "12px",
+                                        padding: "1px 7px",
+                                        fontSize: "0.68rem",
+                                        fontWeight: 800,
+                                        verticalAlign: "middle",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      <Star
+                                        size={11}
+                                        fill="#f59e0b"
+                                        color="#f59e0b"
+                                        style={{
+                                          filter: "drop-shadow(0 0 2px rgba(245, 158, 11, 0.5))",
+                                        }}
+                                      />
+                                      <span>Special</span>
+                                    </span>
+                                  </span>
+                                </span>
+                              );
+                            })()}
                           </div>
                           <div
                             style={{
@@ -6385,10 +6474,10 @@ function BarStaffView({
       <style>{`
         .staff-filter-toolbar {
           display: grid;
-          grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
           align-items: end;
-          gap: 10px;
-          padding: 0.65rem;
+          gap: 0.5rem;
+          padding: 0.65rem 0.85rem;
           margin-bottom: 0.5rem;
           background: var(--bg-secondary);
           border-radius: 8px;
@@ -6396,13 +6485,15 @@ function BarStaffView({
         .staff-filter-toolbar .menu-filter-field { min-width: 0; }
         .staff-filter-toolbar .staff-filter-search { flex: initial; }
         .staff-filter-toolbar .staff-filter-count {
-          min-width: max-content;
-          padding: 0 0.25rem 0.6rem;
+          min-width: 0;
+          padding: 0 0 0.45rem;
           color: var(--text-dim);
           font-size: 0.74rem;
           font-weight: 600;
           white-space: nowrap;
-          text-align: right;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         @media (max-width: 1100px) {
           .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -6416,7 +6507,7 @@ function BarStaffView({
         }
         .staff-table-grid {
           display: grid;
-          grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
           gap: 0.5rem;
         }
         .staff-table-grid > * { min-width: 0; }
@@ -6629,12 +6720,6 @@ function BarStaffView({
                 </select>
               </label>
 
-              {/* Col 3: Phone / Contact */}
-              <label className="menu-filter-field" htmlFor="bar-staff-filter-contact">
-                <span>Phone / Contact</span>
-                <input id="bar-staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
-              </label>
-
               {/* Col 4: Shift Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-shift">
                 <span>Shift</span>
@@ -6760,10 +6845,9 @@ function BarStaffView({
             >
               <div>Staff Name</div>
               <div>Role / Designation</div>
-              <div>Phone / Contact</div>
               <div>Shift</div>
               <div>Table Assignment</div>
-              <div style={{ textAlign: "right" }}>Actions</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
             </div>
 
             {/* Empty State */}
@@ -6922,18 +7006,6 @@ function BarStaffView({
                     {personRole}
                   </div>
 
-                  {/* Col 3: Phone */}
-                  <div
-                    style={{
-                      color: "var(--text-muted)",
-                      fontSize: "0.84rem",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {person.phone || "—"}
-                  </div>
-
                   {/* Col 4: Shift */}
                   <div
                     style={{
@@ -6991,7 +7063,7 @@ function BarStaffView({
                   </div>
 
                   {/* Col 6: Actions */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                     <button
                       type="button"
                       onClick={() => handleOpenStaffModal(person)}
@@ -7202,41 +7274,6 @@ function BarStaffView({
                   marginBottom: "5px",
                 }}
               >
-                Contact Phone
-              </label>
-              <input
-                type="text"
-                placeholder="+91 98450 12345"
-                value={staffForm.phone}
-                onChange={(e) =>
-                  setStaffForm({ ...staffForm, phone: e.target.value })
-                }
-                style={{
-                  width: "100%",
-                  height: "38px",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
                 Shift
               </label>
               <CustomCreatableDropdown
@@ -7403,6 +7440,7 @@ export function BarWorkspace({
   onOrderUpdated,
   onBarOrderItemStatusUpdated,
   onUpdateItemKotStatus = null,
+  onCompleteTableKot = null,
   inventory: sharedInventory = [],
   pastOrders = [],
   restaurantName = "Restaurant",
@@ -7601,6 +7639,7 @@ export function BarWorkspace({
     try {
       localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
     } catch {}
+    window.dispatchEvent(new CustomEvent("avsr-bar-drinks-updated", { detail: barDrinks }));
   }, [barDrinks]);
 
 const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
@@ -8358,10 +8397,10 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
   const listConfig = {
     "bar-drinks": { title: "Drinks Menu", description: "Beverage items from the shared restaurant menu.", rows: drinks, kind: "drink", columns: ["Drink Name", "Category", "Serving / Measure", "Price", "Availability", "Actions"] },
     "bar-tables": { title: "Bar Tables", description: "The shared hotel table records and complete food-and-drink orders.", rows: tables, kind: "table", columns: ["Table #", "Area", "Chairs / Capacity", "Assigned Server", "Status", "Guests", "Current Order", "Order Amount", "Actions"] },
-    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Phone / Contact", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
+    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
 
-  const filterChoices = route === "bar-drinks" ? ["all", ...new Set([...BAR_CATEGORIES, ...drinks.map((drink) => drink.category).filter(Boolean)])] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
+  const filterChoices = route === "bar-drinks" ? ["all", ...new Set([...BAR_CATEGORIES, ...drinks.map((drink) => drink.category).filter(Boolean)].filter((c) => !["all", "all categories", "beverages", "tea & coffee", "juices & shakes", "soft drinks & soda"].includes(String(c).toLowerCase().trim())))] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
   const listRows = (() => {
     if (!listConfig) return [];
     return listConfig.rows.filter((row) => {
@@ -9333,10 +9372,11 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
           barDrinks={barDrinks}
           onItemsUpdated={onBarOrderItemStatusUpdated}
           onUpdateItemKotStatus={onUpdateItemKotStatus}
+          onCompleteTableKot={onCompleteTableKot}
         />
       )}
 
-      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
+      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} preferPastOrders restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 

@@ -71,7 +71,7 @@ import {
   handleDishImageError,
   getRelevantLocalFallback,
 } from "../utils/menuImageHelper";
-import { isDrinkCategory, isAlcoholicCategory, getDrinkDietaryType } from "../utils/drinkCategoryHelper";
+import { isDrinkCategory, isAlcoholicCategory, isFoodCategory, getDrinkDietaryType } from "../utils/drinkCategoryHelper";
 import { SkeletonTable } from "../common/Skeletons";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
@@ -418,6 +418,127 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
   return mappedRecipe;
 }
 
+export const CANONICAL_CATEGORY_MAP = {
+  "soups": "soups",
+  "soup": "soups",
+  "soups & salads": "soups",
+  "salads": "soups",
+  "salad": "soups",
+  "starters": "starters",
+  "starter": "starters",
+  "starters & appetizers": "starters",
+  "appetizers": "starters",
+  "appetizer": "starters",
+  "tandoori": "tandoor-kebabs",
+  "tandoor": "tandoor-kebabs",
+  "tandoori & kebabs": "tandoor-kebabs",
+  "kebabs": "tandoor-kebabs",
+  "kebab": "tandoor-kebabs",
+  "tandoor-kebabs": "tandoor-kebabs",
+  "biryani": "biryani",
+  "biryanis": "biryani",
+  "biryanis & rice special": "biryani",
+  "biryani & rice special": "biryani",
+  "rice special": "biryani",
+  "mains": "mains",
+  "main course": "mains",
+  "main course & curries": "mains",
+  "curries": "mains",
+  "curry": "mains",
+  "breads": "breads",
+  "bread": "breads",
+  "naan & roti": "breads",
+  "roti & naan": "breads",
+  "roti": "breads",
+  "naan": "breads",
+  "rice": "rice",
+  "rice items": "rice",
+  "fried rice": "rice",
+  "fast-food": "fast-food",
+  "fast food": "fast-food",
+  "burgers, pizza & fast food": "fast-food",
+  "pizza & fast food": "fast-food",
+  "burgers": "fast-food",
+  "pizza": "fast-food",
+  "chinese": "chinese",
+  "chinese & noodles": "chinese",
+  "noodles": "chinese",
+  "south-indian": "south-indian",
+  "south indian": "south-indian",
+  "desserts": "desserts",
+  "dessert": "desserts",
+  "desserts & sweets": "desserts",
+  "sweets & desserts": "desserts",
+  "sweets": "desserts",
+  "beverages": "beverages",
+  "beverage": "beverages",
+  "beverages & cold drinks": "beverages",
+  "beverages & coffee": "beverages",
+  "tea & coffee": "beverages",
+  "soft drinks": "beverages",
+  "drinks": "beverages",
+  "cocktails": "cocktails",
+  "cocktail": "cocktails",
+  "mocktails": "mocktails",
+  "mocktail": "mocktails",
+  "beers": "beers",
+  "beer": "beers",
+  "beers & ciders": "beers",
+  "ciders": "beers",
+  "whiskey": "whiskey",
+  "whisky": "whiskey",
+  "scotch": "whiskey",
+  "whiskey & scotch": "whiskey",
+  "vodka-gin": "vodka-gin",
+  "vodka": "vodka-gin",
+  "gin": "vodka-gin",
+  "vodka & gin": "vodka-gin",
+  "rum-brandy": "rum-brandy",
+  "rum": "rum-brandy",
+  "brandy": "rum-brandy",
+  "rum & brandy": "rum-brandy",
+  "wine": "wine",
+  "wines": "wine",
+  "wine & champagne": "wine",
+};
+
+export const STANDARD_DINE_CATEGORIES = [
+  { value: "soups", label: "Soups & Salads" },
+  { value: "starters", label: "Starters & Appetizers" },
+  { value: "tandoor-kebabs", label: "Tandoori & Kebabs" },
+  { value: "biryani", label: "Biryanis & Rice Special" },
+  { value: "mains", label: "Main Course & Curries" },
+  { value: "breads", label: "Naan & Roti" },
+  { value: "rice", label: "Rice Items" },
+  { value: "fast-food", label: "Burgers, Pizza & Fast Food" },
+  { value: "chinese", label: "Chinese & Noodles" },
+  { value: "south-indian", label: "South Indian" },
+  { value: "desserts", label: "Desserts & Sweets" },
+  { value: "beverages", label: "Beverages & Cold Drinks" },
+];
+
+export const STANDARD_BAR_CATEGORIES = [
+  { value: "cocktails", label: "Cocktails" },
+  { value: "mocktails", label: "Mocktails" },
+  { value: "beers", label: "Beers & Ciders" },
+  { value: "whiskey", label: "Whiskey & Scotch" },
+  { value: "vodka-gin", label: "Vodka & Gin" },
+  { value: "rum-brandy", label: "Rum & Brandy" },
+  { value: "wine", label: "Wine & Champagne" },
+  { value: "shots", label: "Shots & Shooters" },
+];
+
+export function matchesCategory(itemCat, filterCat) {
+  if (!filterCat) return true;
+  if (!itemCat) return false;
+  const ic = String(itemCat).trim().toLowerCase();
+  const fc = String(filterCat).trim().toLowerCase();
+  if (ic === fc) return true;
+  const c1 = CANONICAL_CATEGORY_MAP[ic] || ic.replace(/[^a-z0-9]/g, "");
+  const c2 = CANONICAL_CATEGORY_MAP[fc] || fc.replace(/[^a-z0-9]/g, "");
+  return c1 === c2;
+}
+
 const STORAGE_KEY_CUSTOM_CATEGORIES = "pos_custom_menu_categories";
 const STORAGE_KEY_CUSTOM_SECTIONS = "pos_custom_table_sections";
 const STORAGE_KEY_CUSTOM_ROLES = "pos_custom_staff_roles";
@@ -598,7 +719,6 @@ export function AdminPortal({
 
   const [searchFilter, setSearchFilter] = useState("");
   const emptyMenuFilters = {
-    section: "dine",
     category: "",
     dietary: "",
     availability: "",
@@ -1117,53 +1237,36 @@ export function AdminPortal({
   }, [menuItems]);
 
   const allCategoryOptions = React.useMemo(() => {
+    const baseList = [...STANDARD_DINE_CATEGORIES];
+
     const map = new Map();
+    const seenLabels = new Set();
+
+    baseList.forEach((cat) => {
+      const canonical = CANONICAL_CATEGORY_MAP[cat.value.toLowerCase()] || cat.value.toLowerCase();
+      map.set(canonical, cat);
+      seenLabels.add(cat.label.toLowerCase());
+    });
+
     const dishNames = new Set(
       (menuItems || [])
         .map((i) => String(i.name || i.dishName || "").toLowerCase().trim())
         .filter(Boolean),
     );
 
-    // Standard high-level categories
-    const standardCategories = [
-      { value: "starters", label: "Starters & Appetizers" },
-      { value: "biryani", label: "Biryanis & Rice Special" },
-      { value: "mains", label: "Main Course & Curries" },
-      { value: "tandoor-kebabs", label: "Tandoori & Kebabs" },
-      { value: "fast-food", label: "Burgers, Pizza & Fast Food" },
-      { value: "breads", label: "Naan & Roti" },
-      { value: "desserts", label: "Desserts & Sweets" },
-    ];
-    if (menuFilters.section === "bar" || menuFilters.section === "all") {
-      standardCategories.push(
-        { value: "cocktails", label: "Cocktails" },
-        { value: "mocktails", label: "Mocktails" },
-        { value: "beverages", label: "Beverages & Coffee" },
-        { value: "beers", label: "Beers & Ciders" },
-        { value: "whiskey", label: "Whiskey & Scotch" },
-        { value: "vodka-gin", label: "Vodka & Gin" },
-        { value: "rum-brandy", label: "Rum & Brandy" },
-        { value: "wine", label: "Wine & Champagne" }
-      );
-    }
-
-    standardCategories.forEach((cat) => {
-      map.set(cat.value.toLowerCase(), cat);
-    });
-
-    const getCleanCategoryLabel = (catVal) => {
-      const s = String(catVal || "").trim().toLowerCase();
-      if (s === "cocktail") return "Cocktails";
-      if (s === "curries" || s === "curry") return "Main Course & Curries";
-      const found = standardCategories.find(
-        (c) => c.value.toLowerCase() === s || c.label.toLowerCase() === s
-      );
-      if (found) return found.label;
-      const str = String(catVal).replace(/[-_]/g, " ");
-      return str.charAt(0).toUpperCase() + str.slice(1);
+    const isExcludedDineCategory = (catName) => {
+      if (!catName) return true;
+      if (isAlcoholicCategory(catName)) return true;
+      const low = catName.toLowerCase();
+      if (
+        ["cocktail", "cocktails", "mocktail", "mocktails", "beer", "beers", "whiskey", "whisky", "vodka", "rum", "brandy", "wine", "liquor", "spirits"].some((w) => low.includes(w))
+      ) {
+        return true;
+      }
+      return false;
     };
 
-    // Add valid custom categories (strictly excluding any dish items)
+    // Add any genuine custom categories from customCategories
     (customCategories || []).forEach((cat) => {
       const name =
         typeof cat === "string"
@@ -1171,37 +1274,39 @@ export function AdminPortal({
           : cat.categoryName || cat.category || cat.name || cat.label || cat.value;
       if (!name || typeof name !== "string") return;
       const trimmed = name.trim();
-      let lower = trimmed.toLowerCase();
-      if (lower === "cocktail") lower = "cocktails";
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      const lower = trimmed.toLowerCase();
+      if (dishNames.has(lower) || isDisallowedItemName(trimmed)) return;
+      if (isExcludedDineCategory(trimmed)) return;
+
+      const canonical = CANONICAL_CATEGORY_MAP[lower] || lower;
+      if (!map.has(canonical) && !seenLabels.has(lower)) {
+        const cleanLabel = trimmed.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        map.set(canonical, { value: canonical, label: cleanLabel });
+        seenLabels.add(cleanLabel.toLowerCase());
       }
     });
 
-    // Add any genuine custom categories from menuItems
+    // Add any genuine categories from menuItems
     (menuItems || []).forEach((item) => {
       const isDrink = isDrinkItem(item);
-      if (menuFilters.section === "dine" && isDrink) return;
-      if (menuFilters.section === "bar" && !isDrink) return;
+      if (isDrink) return;
+
       const cat = item.category || item.categoryName;
       if (!cat || typeof cat !== "string") return;
       const trimmed = cat.trim();
-      if (menuFilters.section === "dine" && isBeverageCategory(trimmed)) return;
       const lower = trimmed.toLowerCase();
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      if (dishNames.has(lower) || isDisallowedItemName(trimmed)) return;
+      if (isExcludedDineCategory(trimmed)) return;
+
+      const canonical = CANONICAL_CATEGORY_MAP[lower] || lower;
+      if (!map.has(canonical) && !seenLabels.has(lower)) {
+        const cleanLabel = trimmed.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        map.set(canonical, { value: canonical, label: cleanLabel });
+        seenLabels.add(cleanLabel.toLowerCase());
       }
     });
 
-    return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
+    return Array.from(map.values());
   }, [customCategories, menuItems]);
 
   const allSectionOptions = React.useMemo(() => {
@@ -1667,14 +1772,7 @@ export function AdminPortal({
   // Filtered menu items
   const filteredItems = menuItems.filter((item) => {
     const isDrink = isDrinkItem(item);
-    if (menuFilters.section === "bar") {
-      if (!isDrink) return false;
-    } else if (menuFilters.section === "all") {
-      // show both
-    } else {
-      // Default: "dine" -> only food/dine items
-      if (isDrink) return false;
-    }
+    if (isDrink) return false;
 
     const query = searchFilter.trim().toLowerCase();
     return (
@@ -1683,8 +1781,7 @@ export function AdminPortal({
           .toLowerCase()
           .includes(query),
       ) &&
-      (!menuFilters.category ||
-        (String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase() || String(item.category ?? "").toLowerCase().replace(/[-_]/g, "") === menuFilters.category.toLowerCase().replace(/[-_]/g, ""))) &&
+      (!menuFilters.category || matchesCategory(item.category, menuFilters.category)) &&
       (!menuFilters.dietary ||
         (menuFilters.dietary === "na"
           ? isDrinkCategory(item.category, item) || item.dietaryType === "N/A" || item.isVeg === null
@@ -1999,119 +2096,110 @@ export function AdminPortal({
                       </div>
                     </div>
 
-                    <div
-                      className="menu-filter-toolbar menu-items-filter-toolbar"
-                      role="search"
-                      aria-label="Menu item filters"
-                    >
-                      <label className="menu-filter-field menu-filter-search">
-                        <span>Search</span>
-                        <div
-                          style={{
-                            position: "relative",
-                            width: "100%",
-                            height: "36px",
-                            display: "flex",
-                            alignItems: "center",
-                          }}
-                        >
-                          <Search
-                            size={15}
-                            color="var(--text-dim)"
+                    <div className="menu-filter-shell" role="search" aria-label="Menu item filters">
+                      <div className="menu-filter-toolbar menu-items-filter-toolbar admin-menu-filter-toolbar">
+                        <label className="menu-filter-field menu-filter-search">
+                          <span>Search</span>
+                          <div
                             style={{
-                              position: "absolute",
-                              left: "12px",
-                              pointerEvents: "none",
-                            }}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Search dishes to edit, delete..."
-                            value={searchFilter}
-                            onChange={(e) => {
-                              setSearchFilter(e.target.value);
-                              setMenuPage(1);
-                            }}
-                            aria-label="Search dishes"
-                            style={{
+                              position: "relative",
                               width: "100%",
-                              height: "100%",
-                              background: "var(--bg-tertiary)",
-                              border: "1px solid var(--border-card)",
-                              borderRadius: "8px",
-                              padding: "0 10px 0 34px",
-                              color: "var(--text-main)",
-                              fontSize: "0.82rem",
-                              outline: "none",
+                              height: "36px",
+                              display: "flex",
+                              alignItems: "center",
                             }}
-                          />
-                        </div>
-                      </label>
-                      {[
-                        {
-                          key: "section",
-                          label: "Section",
-                          options: [
-                            { value: "dine", label: "Dine In (Food)" },
-                            { value: "bar", label: "Bar (Drinks)" },
-                            { value: "all", label: "All Items" },
-                          ],
-                        },
-                        {
-                          key: "category",
-                          label: "Category",
-                          options: allCategoryOptions,
-                        },
-                        {
-                          key: "dietary",
-                          label: "Dietary Type",
-                          options: [
-                            { value: "veg", label: "Veg" },
-                            { value: "non-veg", label: "Non-Veg" },
-                            { value: "na", label: "Drinks (N/A)" },
-                          ],
-                        },
-                        {
-                          key: "availability",
-                          label: "Availability",
-                          options: [
-                            { value: "available", label: "Available" },
-                            { value: "unavailable", label: "Unavailable" },
-                          ],
-                        },
-                        {
-                          key: "special",
-                          label: "Special Dish",
-                          options: [
-                            { value: "special", label: "Special" },
-                            { value: "regular", label: "Regular" },
-                          ],
-                        },
-                      ].map(({ key, label, options }) => (
-                        <label className="menu-filter-field" key={key}>
-                          <span>{label}</span>
-                          <select
-                            value={menuFilters[key]}
-                            onChange={(event) =>
-                              updateMenuFilter(key, event.target.value)
-                            }
                           >
-                            {key !== "section" && <option value="">All</option>}
-                            {options.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
+                            <Search
+                              size={15}
+                              color="var(--text-dim)"
+                              style={{
+                                position: "absolute",
+                                left: "12px",
+                                pointerEvents: "none",
+                              }}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Search dishes to edit, delete..."
+                              value={searchFilter}
+                              onChange={(e) => {
+                                setSearchFilter(e.target.value);
+                                setMenuPage(1);
+                              }}
+                              aria-label="Search dishes"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                background: "var(--bg-tertiary)",
+                                border: "1px solid var(--border-card)",
+                                borderRadius: "8px",
+                                padding: "0 10px 0 34px",
+                                color: "var(--text-main)",
+                                fontSize: "0.82rem",
+                                outline: "none",
+                              }}
+                            />
+                          </div>
                         </label>
-                      ))}
-                      <button
-                        type="button"
-                        className="menu-filter-clear"
-                        onClick={clearMenuFilters}
-                      >
-                        Clear Filters
-                      </button>
+                        {[
+                          {
+                            key: "category",
+                            label: "Category",
+                            options: allCategoryOptions,
+                          },
+                          {
+                            key: "dietary",
+                            label: "Dietary Type",
+                            options: [
+                              { value: "veg", label: "Veg" },
+                              { value: "non-veg", label: "Non-Veg" },
+                              { value: "na", label: "Drinks (N/A)" },
+                            ],
+                          },
+                          {
+                            key: "availability",
+                            label: "Availability",
+                            options: [
+                              { value: "available", label: "Available" },
+                              { value: "unavailable", label: "Unavailable" },
+                            ],
+                          },
+                          {
+                            key: "special",
+                            label: "Special Dish",
+                            options: [
+                              { value: "special", label: "Special" },
+                              { value: "regular", label: "Regular" },
+                            ],
+                          },
+                        ].map(({ key, label, options }) => (
+                          <label className="menu-filter-field" key={key}>
+                            <span>{label}</span>
+                            <select
+                              value={menuFilters[key]}
+                              onChange={(event) =>
+                                updateMenuFilter(key, event.target.value)
+                              }
+                            >
+                              <option value="">All</option>
+                              {options.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
+                        <button
+                          type="button"
+                          className="menu-filter-clear"
+                          onClick={clearMenuFilters}
+                          title="Reset all filters"
+                        >
+                          <RotateCcw size={13} strokeWidth={2.2} />
+                          <span>Clear Filters</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Items Table List */}
@@ -2140,44 +2228,23 @@ export function AdminPortal({
                               fontWeight: 700,
                             }}
                           >
-                            <th
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                width: "44%",
-                              }}
+                            <th style={{ padding: "0.6rem 0.85rem", width: "44%", verticalAlign: "middle" }}
                             >
                               Dish Name
                             </th>
-                            <th
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                width: "14%",
-                              }}
+                            <th style={{ padding: "0.6rem 0.85rem", width: "14%", verticalAlign: "middle" }}
                             >
                               Category
                             </th>
-                            <th
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                width: "14%",
-                              }}
+                            <th style={{ padding: "0.6rem 0.85rem", width: "14%", verticalAlign: "middle" }}
                             >
                               Dietary
                             </th>
-                            <th
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                width: "12%",
-                              }}
+                            <th style={{ padding: "0.6rem 0.85rem", width: "12%", verticalAlign: "middle" }}
                             >
                               Price (₹)
                             </th>
-                            <th
-                              style={{
-                                padding: "0.6rem 0.85rem",
-                                width: "16%",
-                                textAlign: "center",
-                              }}
+                            <th style={{ padding: "0.6rem 0.85rem", width: "16%", textAlign: "center", verticalAlign: "middle" }}
                             >
                               Actions
                             </th>
@@ -2263,29 +2330,73 @@ export function AdminPortal({
                                               : "var(--text-dim)",
                                             fontSize: "0.92rem",
                                             lineHeight: 1.3,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
                                           }}
                                         >
-                                          <span>{item.name}</span>
-                                          {Boolean(
-                                            item.isChefSpecial ||
-                                            item.isChefsSpecial ||
-                                            item.isSpecial,
-                                          ) && (
-                                            <Star
-                                              size={14}
-                                              fill="#f59e0b"
-                                              color="#f59e0b"
-                                              title="Chef's Special"
-                                              style={{
-                                                flexShrink: 0,
-                                                filter:
-                                                  "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
-                                              }}
-                                            />
-                                          )}
+                                          {(() => {
+                                            const isSpecial = Boolean(
+                                              item.isChefSpecial ||
+                                              item.isChefsSpecial ||
+                                              item.isSpecial
+                                            );
+                                            if (!isSpecial) {
+                                              return <span>{item.name}</span>;
+                                            }
+                                            const words = (item.name || "").trim().split(/\s+/);
+                                            if (words.length <= 1) {
+                                              return (
+                                                <span
+                                                  style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    whiteSpace: "nowrap",
+                                                  }}
+                                                >
+                                                  <span>{item.name}</span>
+                                                  <Star
+                                                    size={14}
+                                                    fill="#f59e0b"
+                                                    color="#f59e0b"
+                                                    title="Chef's Special"
+                                                    style={{
+                                                      flexShrink: 0,
+                                                      filter:
+                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                    }}
+                                                  />
+                                                </span>
+                                              );
+                                            }
+                                            const lastWord = words.pop();
+                                            const leadingText = words.join(" ");
+                                            return (
+                                              <span>
+                                                {leadingText}{" "}
+                                                <span
+                                                  style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    whiteSpace: "nowrap",
+                                                    verticalAlign: "middle",
+                                                  }}
+                                                >
+                                                  <span>{lastWord}</span>
+                                                  <Star
+                                                    size={14}
+                                                    fill="#f59e0b"
+                                                    color="#f59e0b"
+                                                    title="Chef's Special"
+                                                    style={{
+                                                      flexShrink: 0,
+                                                      filter:
+                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                    }}
+                                                  />
+                                                </span>
+                                              </span>
+                                            );
+                                          })()}
                                         </div>
                                         <div
                                           style={{
@@ -3426,10 +3537,10 @@ export function AdminPortal({
                     <style>{`
                       .staff-filter-toolbar {
                         display: grid;
-                        grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
                         align-items: end;
-                        gap: 10px;
-                        padding: 0.65rem;
+                        gap: 0.5rem;
+                        padding: 0.65rem 0.85rem;
                         margin-bottom: 0.5rem;
                         background: var(--bg-secondary);
                         border-radius: 8px;
@@ -3437,13 +3548,15 @@ export function AdminPortal({
                       .staff-filter-toolbar .menu-filter-field { min-width: 0; }
                       .staff-filter-toolbar .staff-filter-search { flex: initial; }
                       .staff-filter-toolbar .staff-filter-count {
-                        min-width: max-content;
-                        padding: 0 0.25rem 0.6rem;
+                        min-width: 0;
+                        padding: 0 0 0.45rem;
                         color: var(--text-dim);
                         font-size: 0.74rem;
                         font-weight: 600;
                         white-space: nowrap;
-                        text-align: right;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
                       }
                       @media (max-width: 1100px) {
                         .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -3457,7 +3570,7 @@ export function AdminPortal({
                       }
                       .staff-table-grid {
                         display: grid;
-                        grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
                         gap: 0.5rem;
                       }
                       .staff-table-grid > * { min-width: 0; }
@@ -3666,12 +3779,6 @@ export function AdminPortal({
                               </select>
                             </label>
 
-                            {/* Col 3: Phone / Contact (display-only column; filtering behavior unchanged) */}
-                            <label className="menu-filter-field" htmlFor="staff-filter-contact">
-                              <span>Phone / Contact</span>
-                              <input id="staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
-                            </label>
-
                             {/* Col 4: Shift Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-shift">
                               <span>Shift</span>
@@ -3797,10 +3904,9 @@ export function AdminPortal({
                           >
                             <div>Staff Name</div>
                             <div>Role / Designation</div>
-                            <div>Phone / Contact</div>
                             <div>Shift</div>
                             <div>Table Assignment</div>
-                            <div style={{ textAlign: "right" }}>Actions</div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
                           </div>
 
                           {/* Empty State */}
@@ -3950,18 +4056,6 @@ export function AdminPortal({
                                   {personRole}
                                 </div>
 
-                                {/* Col 3: Phone */}
-                                <div
-                                  style={{
-                                    color: "var(--text-muted)",
-                                    fontSize: "0.84rem",
-                                    fontWeight: 500,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {person.phone || "—"}
-                                </div>
-
                                 {/* Col 4: Shift (Full Description without truncation) */}
                                 <div
                                   style={{
@@ -4019,7 +4113,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions (Edit Staff + Delete button matching Image 2) */}
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                                   {/* Edit Staff button */}
                                   <button
                                     type="button"
@@ -5809,40 +5903,6 @@ export function AdminPortal({
                   fontSize: "0.88rem",
                   outline: "none",
                   resize: "vertical",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Employee ID
-              </label>
-              <input
-                type="text"
-                readOnly
-                value={
-                  editingStaff
-                    ? `EMP-${String(editingStaff.staffId ?? editingStaff.id).padStart(5, "0")}`
-                    : "Assigned automatically on save"
-                }
-                style={{
-                  width: "100%",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
                 }}
               />
             </div>
