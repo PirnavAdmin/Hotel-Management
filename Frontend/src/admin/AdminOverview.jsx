@@ -164,6 +164,17 @@ export function AdminOverview({
   const sevenDayRevenue = sevenDaySales.reduce((sum, day) => sum + day.revenue, 0);
   const sevenDayOrderCount = sevenDaySales.reduce((sum, day) => sum + day.count, 0);
   const maxSevenDayRevenue = Math.max(1, ...sevenDaySales.map((day) => day.revenue));
+  const priorSevenDayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13);
+  const priorSevenDayStartKey = `${priorSevenDayStart.getFullYear()}-${String(priorSevenDayStart.getMonth() + 1).padStart(2, "0")}-${String(priorSevenDayStart.getDate()).padStart(2, "0")}`;
+  const previousSevenDayRevenue = cleanOrders.reduce((sum, order) => {
+    const orderDate = parseOrderToYMD(order);
+    return orderDate >= priorSevenDayStartKey && orderDate < sevenDaySales[0].key
+      ? sum + (Number(order.grandTotal ?? order.total) || 0)
+      : sum;
+  }, 0);
+  const weeklyChangePercent = previousSevenDayRevenue > 0
+    ? ((sevenDayRevenue - previousSevenDayRevenue) / previousSevenDayRevenue) * 100
+    : null;
 
   if (
     (sharedRecordLoad.tables === "loading" && tables.length === 0) ||
@@ -694,13 +705,17 @@ export function AdminOverview({
             </div>
             <span style={{ padding: ".25rem .55rem", borderRadius: 20, background: "rgba(245,158,11,.12)", color: "var(--accent-amber-light)", fontSize: ".68rem", fontWeight: 700 }}>7 day view</span>
           </div>
-          <div style={{ height: 118, display: "grid", gridTemplateColumns: "repeat(7, minmax(0,1fr))", alignItems: "end", gap: ".6rem", padding: ".2rem .1rem 0", borderBottom: "1px solid var(--border-subtle)" }}>
+          <div style={{ height: 132, display: "grid", gridTemplateColumns: "repeat(7, minmax(0,1fr))", alignItems: "end", gap: ".6rem", padding: ".2rem .1rem 0", borderBottom: "1px solid var(--border-card)" }}>
             {sevenDaySales.map((day) => {
-              const barHeight = day.revenue > 0 ? Math.max(8, (day.revenue / maxSevenDayRevenue) * 88) : 4;
+              const barHeight = day.revenue > 0 ? Math.max(8, (day.revenue / maxSevenDayRevenue) * 72) : 4;
+              const compactAmount = day.revenue > 0
+                ? `₹${new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 }).format(day.revenue)}`
+                : "₹0";
               return (
-                <div key={day.key} title={`${day.label}: ${formatCurrency(day.revenue)} · ${day.count} bills`} style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: ".35rem", minWidth: 0 }}>
-                  <span style={{ width: "min(100%, 34px)", height: `${barHeight}px`, minHeight: 4, borderRadius: "6px 6px 2px 2px", background: day.revenue > 0 ? "linear-gradient(180deg, #fbbf24, #ea580c)" : "var(--bg-tertiary)", boxShadow: day.revenue > 0 ? "0 3px 10px rgba(234,88,12,.18)" : "none", transition: "height .2s ease" }} />
-                  <span style={{ color: "var(--text-muted)", fontSize: ".65rem", paddingBottom: ".3rem" }}>{day.label}</span>
+                <div key={day.key} title={`${day.label}: ${formatCurrency(day.revenue)} · ${day.count} bills`} style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: ".3rem", minWidth: 0 }}>
+                  <span style={{ color: "var(--text-main)", fontSize: ".62rem", lineHeight: 1, fontWeight: 700, whiteSpace: "nowrap" }}>{compactAmount}</span>
+                  <span style={{ width: "min(100%, 34px)", height: `${barHeight}px`, minHeight: 4, borderRadius: "6px 6px 2px 2px", background: day.revenue > 0 ? "linear-gradient(180deg, var(--accent-amber-light), var(--accent-saffron))" : "var(--bg-tertiary)", boxShadow: day.revenue > 0 ? "0 3px 10px var(--accent-amber-glow)" : "none", transition: "height .2s ease" }} />
+                  <span style={{ color: "var(--text-main)", fontSize: ".65rem", fontWeight: 600, paddingBottom: ".3rem" }}>{day.label}</span>
                 </div>
               );
             })}
@@ -711,6 +726,12 @@ export function AdminOverview({
           <div style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
             <div><div style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>Bills</div><strong style={{ color: "var(--text-main)", fontSize: ".9rem" }}>{sevenDayOrderCount}</strong></div>
             <div><div style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>Daily average</div><strong style={{ color: "var(--text-main)", fontSize: ".9rem" }}>{formatCurrency(sevenDayRevenue / 7)}</strong></div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", paddingTop: ".55rem", borderTop: "1px solid var(--border-card)" }}>
+            <span style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>vs previous 7 days</span>
+            <strong style={{ color: weeklyChangePercent === null ? "var(--text-muted)" : weeklyChangePercent >= 0 ? "var(--success)" : "var(--danger)", fontSize: ".75rem" }}>
+              {weeklyChangePercent === null ? "No prior data" : `${weeklyChangePercent >= 0 ? "+" : ""}${weeklyChangePercent.toFixed(1)}%`}
+            </strong>
           </div>
         </div>
       </section>
