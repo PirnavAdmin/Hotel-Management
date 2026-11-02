@@ -1732,7 +1732,13 @@ function globalSyncPlugin() {
           return;
         }
 
-        // REST API: /api/v1/auth/login
+        // Authentication must be handled by the ASP.NET API, never local JSON.
+        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "Authentication server is unavailable." }));
+        }
+
+        // REST API: /api/v1/auth/login (disabled local mock)
         if (req.url === "/api/v1/auth/login" && req.method === "POST") {
           let body = "";
           req.on("data", (chunk) => {

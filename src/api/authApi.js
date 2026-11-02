@@ -117,6 +117,7 @@ export async function apiVerifyOtp(email, otp) {
 export async function apiLogin(username, password) {
   return await apiClient('/api/v1/auth/login', {
     method: 'POST',
+    remoteOnly: true,
     body: JSON.stringify({ 
       usernameOrEmail: username,
       username: username,

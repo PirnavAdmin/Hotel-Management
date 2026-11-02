@@ -7,6 +7,7 @@ import {
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";

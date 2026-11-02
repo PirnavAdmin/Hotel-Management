@@ -32,6 +32,7 @@ const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
+  const { remoteOnly = false, ...requestOptions } = options;
 
   try {
     const token =
@@ -46,14 +47,14 @@ async function performApiRequest(endpoint, options = {}) {
     };
 
     const config = {
-      ...options,
+      ...requestOptions,
       headers,
     };
 
     let res;
     try {
       res = await fetch(url, config);
-      if (API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+      if (!remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
         try {
           const localRes = await fetch(endpoint, config);
           if (localRes.ok) {
@@ -62,7 +63,7 @@ async function performApiRequest(endpoint, options = {}) {
         } catch {}
       }
     } catch (fetchErr) {
-      if (API_BASE_URL) {
+      if (API_BASE_URL && !remoteOnly) {
         console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
         res = await fetch(endpoint, config);
       } else {
