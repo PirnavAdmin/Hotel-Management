@@ -54,6 +54,15 @@ const localWeekEndValue = (date = new Date()) => {
 };
 
 const invoiceDateKey = (order) => parseOrderToYMD(order);
+const invoicePaidAmount = (order) => {
+  if (Array.isArray(order?.payments) && order.payments.length > 0) {
+    return order.payments.reduce(
+      (sum, payment) => sum + (Number(payment.amount ?? payment.Amount) || 0),
+      0,
+    );
+  }
+  return Number(order?.paidAmount ?? order?.amountPaid ?? order?.AmountPaid ?? order?.grandTotal ?? 0) || 0;
+};
 
 const invoiceDisplayDate = (order) => {
   const dateKey = invoiceDateKey(order);
@@ -261,21 +270,21 @@ export function AdminInvoices({
   );
 
   const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
+    (sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
     0,
   );
 
   const upiTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "upi")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + invoicePaidAmount(o), 0);
 
   const cashTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "cash")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + invoicePaidAmount(o), 0);
 
   const cardTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "card")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + invoicePaidAmount(o), 0);
 
   const cashOrdersCount = filteredOrders.filter(
     (o) => normalizePaymentMethod(o) === "cash",
@@ -1161,7 +1170,7 @@ export function AdminInvoices({
                         fontSize: "0.95rem",
                       }}
                     >
-                      {formatCurrency(order.grandTotal)}
+                      {formatCurrency(order.grandTotal ?? order.totalAmount ?? order.total ?? 0)}
                     </td>
 
                     {/* Action */}

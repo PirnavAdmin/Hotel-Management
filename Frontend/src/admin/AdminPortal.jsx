@@ -1518,7 +1518,7 @@ export function AdminPortal({
       onAddStaff({
         name: assignedServer,
         role: newServerRole.trim(),
-        phone: "+91 98450 00000",
+        phone: "",
         shift: "",
       });
     }
@@ -1610,7 +1610,7 @@ export function AdminPortal({
           ...editingStaff,
           name: staffForm.name.trim(),
           role: staffForm.role,
-          phone: staffForm.phone || "+91 98450 00000",
+          phone: staffForm.phone,
           shift: staffForm.shift,
         });
       }
@@ -1618,7 +1618,7 @@ export function AdminPortal({
       saved = await onAddStaff({
         name: staffForm.name.trim(),
         role: staffForm.role,
-        phone: staffForm.phone || "+91 98450 00000",
+        phone: staffForm.phone,
         shift: staffForm.shift,
       });
     }
@@ -1656,7 +1656,7 @@ export function AdminPortal({
           await onAddStaff({
             name: uName,
             role: "Floor Staff / POS",
-            phone: u.mobile || u.phone || "+91 98450 00000",
+            phone: u.mobile || u.phone || "",
             shift: "Morning Shift (10 AM - 4 PM)",
           });
         }
@@ -6568,10 +6568,9 @@ export function AdminPortal({
                       )
                     ) {
                       onAddStaff({
-                        id: Date.now(),
                         name: newServer,
                         role: "",
-                        phone: "+91 98450 00000",
+                        phone: "",
                         shift: "",
                       });
                     }

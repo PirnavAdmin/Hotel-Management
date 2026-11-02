@@ -32,7 +32,8 @@ export function extractInvoiceRecords(response) {
   return records.filter((r) => {
     if (!r || typeof r !== "object") return false;
     const status = String(r.status || r.Status || "").toLowerCase();
-    return status !== "active" && status !== "dining" && status !== "vacant";
+    return status !== "active" && status !== "dining" && status !== "vacant" &&
+      status !== "void" && status !== "cancelled";
   });
 }
 
@@ -51,7 +52,8 @@ export function extractSettledOrderRecords(response) {
   return records.filter((r) => {
     if (!r || typeof r !== "object") return false;
     const status = String(r.status || r.Status || "").toLowerCase();
-    return status !== "active" && status !== "dining" && status !== "vacant";
+    return status !== "active" && status !== "dining" && status !== "vacant" &&
+      status !== "void" && status !== "cancelled";
   });
 }
 
@@ -67,8 +69,8 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const payments = valueFrom(invoice, "payments", "Payments") || [];
   const latestPayment = payments[payments.length - 1];
 
-  const rawOrderTotal = valueFrom(order, "grandTotal", "GrandTotal", "totalAmount", "TotalAmount");
-  const rawInvoiceTotal = valueFrom(invoice, "totalAmount", "TotalAmount", "grandTotal", "GrandTotal");
+  const rawOrderTotal = valueFrom(order, "grandTotal", "GrandTotal", "totalAmount", "TotalAmount", "total", "Total");
+  const rawInvoiceTotal = valueFrom(invoice, "totalAmount", "TotalAmount", "grandTotal", "GrandTotal", "total", "Total");
   const rawSubtotal = Number(
     valueFrom(invoice, "subtotal", "Subtotal") ??
       valueFrom(order, "subtotal", "Subtotal"),
@@ -103,7 +105,7 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const invoicePaidAmount = valueFrom(invoice, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid");
   const paidAmount = Number(
     invoicePaidAmount ??
-      valueFrom(order, "paidAmount", "PaidAmount") ??
+      valueFrom(order, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid") ??
       grandTotal,
   ) || 0;
 
@@ -120,6 +122,8 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     valueFrom(invoice, "paymentMethod", "PaymentMethod") ??
     valueFrom(order, "paymentMethod", "PaymentMethod") ??
     "Cash";
+  const normalizedStatus = String(valueFrom(invoice, "status", "Status") || "").toLowerCase();
+  const isVoidInvoice = normalizedStatus === "void" || normalizedStatus === "cancelled";
 
   let invoiceNumber =
     valueFrom(invoice, "invoiceNumber", "InvoiceNumber", "invoiceNo", "InvoiceNo") ??
@@ -163,8 +167,8 @@ export function normalizeInvoiceRecord(invoice, order = null) {
       valueFrom(order, "orderTime", "OrderTime") ??
       valueFrom(latestPayment, "paidAt", "PaidAt") ??
       createdAt,
-    status: "Settled",
-    isPaid: true,
+    status: isVoidInvoice ? "Void" : "Settled",
+    isPaid: !isVoidInvoice,
     subtotal,
     discountAmount,
     discountPercent:
@@ -192,12 +196,14 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
   const settledInvoices = (Array.isArray(invoices) ? invoices : []).filter((inv) => {
     if (!inv || typeof inv !== "object") return false;
     const s = String(inv.status || inv.Status || "").toLowerCase();
-    return s !== "active" && s !== "dining" && s !== "vacant";
+    return s !== "active" && s !== "dining" && s !== "vacant" &&
+      s !== "void" && s !== "cancelled";
   });
   const settledOrders = (Array.isArray(orders) ? orders : []).filter((ord) => {
     if (!ord || typeof ord !== "object") return false;
     const s = String(ord.status || ord.Status || "").toLowerCase();
-    return s !== "active" && s !== "dining" && s !== "vacant";
+    return s !== "active" && s !== "dining" && s !== "vacant" &&
+      s !== "void" && s !== "cancelled";
   });
 
   const ordersById = new Map(
@@ -212,7 +218,11 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
   const records = settledInvoices.map((invoice) => {
     const orderId = valueFrom(invoice, "orderId", "OrderId");
     if (orderId !== undefined) includedOrderIds.add(String(orderId));
-    return normalizeInvoiceRecord(invoice, ordersById.get(String(orderId ?? "")));
+    const matchingOrder = ordersById.get(String(orderId ?? ""));
+    if (matchingOrder) {
+      includedOrderIds.add(String(valueFrom(matchingOrder, "id", "Id", "orderId", "OrderId")));
+    }
+    return normalizeInvoiceRecord(invoice, matchingOrder);
   });
 
   settledOrders.forEach((order) => {
@@ -246,8 +256,12 @@ export async function requestLiveInvoiceRecords() {
   } catch {}
 
   const liveRecords = mergeLiveInvoiceRecords(invoices || [], orders || []);
-  const merged = mergeSettledOrders(liveRecords, fallbackOrders);
-  const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(merged));
+  const merged = liveRecords.length > 0 || invoices !== null || orders !== null
+    ? mergeSettledOrders(liveRecords, fallbackOrders)
+    : mergeSettledOrders(fallbackOrders);
+  const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(merged)).filter(
+    (record) => !["void", "cancelled"].includes(String(record.status || record.Status || "").toLowerCase()),
+  );
 
   return {
     records: cleanRecords,

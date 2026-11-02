@@ -54,12 +54,6 @@ const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
 const BAR_ROLES = ["Bartender", "Head Bartender", "Bar Manager", "Bar Waiter", "Bar Server", "Mixologist", "Bar Assistant"];
 const BAR_SHIFTS = ["Morning (10 AM-4 PM)", "Evening (4 PM-10 PM)", "Night (6 PM-Close)"];
-const SETTINGS_DEFAULTS = {
-  barName: "Telugu Taste Bar", contact: "+91 80 4567 8900", area: "Ground Floor • East Wing",
-  opening: "10:00", closing: "23:30", prepTime: 8, kotPrefix: "BKOT", autoPrint: false,
-  allowCancellation: true, currency: "INR (₹)", tax: 5, service: 5,
-  lowStock: 6, stockTracking: true, stockUnit: "Bottle",
-};
 const ACCESS_ROLES = ["Bar Manager", "Head Bartender", "Bartender", "Bar Server", "Bar Cashier"];
 const ACCESS_PAGES = ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar Staff", "Bar KOT", "Inventory", "Orders", "Reports", "Settings"];
 const ACCESS_DEFAULTS = Object.fromEntries(ACCESS_ROLES.map((role, index) => [role, Object.fromEntries(ACCESS_PAGES.map((page) => [page, index === 0 || (index === 1 && page !== "Settings") || (index === 2 && ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar KOT"].includes(page)) || (index === 3 && ["Bar Overview", "Bar Tables", "Bar KOT"].includes(page)) || (index === 4 && ["Bar Overview", "Orders"].includes(page))]))]));
@@ -5944,19 +5938,6 @@ function BarTablesView({
                 onSaveCustomOption={(newServer) => {
                   if (newServer && newServer !== "__add_new__") {
                     setTableForm({ ...tableForm, server: newServer });
-                    if (
-                      !staffList.some(
-                        (s) => (s.name || s.fullName || "").toLowerCase() === newServer.toLowerCase()
-                      )
-                    ) {
-                      onAddStaff?.({
-                        id: Date.now(),
-                        name: newServer,
-                        role: "",
-                        phone: "+91 98450 00000",
-                        shift: "",
-                      });
-                    }
                   }
                 }}
               />
@@ -6328,7 +6309,7 @@ function BarStaffView({
       role: staffForm.role,
       jobTitle: staffForm.role,
       roleTitle: staffForm.role,
-      phone: staffForm.phone || "+91 98450 00000",
+      phone: staffForm.phone,
       shift: staffForm.shift,
       assignedTableIds: staffForm.assignedTableIds || [],
     };
@@ -7428,8 +7409,6 @@ export function BarWorkspace({
   const [orderServing, setOrderServing] = useState("");
   const [orderIce, setOrderIce] = useState("");
   const [orderMixer, setOrderMixer] = useState("");
-  const [settings, setSettings] = useState(SETTINGS_DEFAULTS);
-  const [savedSettings, setSavedSettings] = useState(SETTINGS_DEFAULTS);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [extraFilter, setExtraFilter] = useState("all");
@@ -7698,18 +7677,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
       }
     } catch (err) {
       console.error("[BarWorkspace] apiCreateBarStaff error:", err);
-      const fallback = {
-        ...newStaff,
-        id: Date.now(),
-        staffId: Date.now(),
-        fullName: newStaff.name,
-        jobTitle: newStaff.role,
-        roleTitle: newStaff.role,
-        isActive: true,
-        status: "active",
-      };
-      setBarStaff((prev) => [fallback, ...prev]);
-      return fallback;
+      return false;
     }
   };
 
@@ -8189,7 +8157,10 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
     }
     if (kind === "table" && !(await saveSharedTable(values, item))) return false;
     if (kind === "staff" && !(await saveSharedStaff(values, item))) return false;
-    if (kind === "order") setOrders((rows) => [{ ...saved, time: "Just now", discount: 0, gst: Number(saved.subtotal) * 0.05, service: Number(saved.subtotal) * 0.05, total: Number(saved.subtotal) * 1.1, payment: "Pending", status: "Pending" }, ...rows]);
+    if (kind === "order") {
+      setToast("Orders must be created through New Bar Order so they are saved to the API.");
+      return false;
+    }
     setPage(1);
     if (kind === "drink") setToast(`${saved.name} ${item ? "updated" : "added"} in the shared menu.`);
     setModal(null);
