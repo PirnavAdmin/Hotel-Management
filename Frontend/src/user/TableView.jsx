@@ -250,6 +250,7 @@ import {
   Check,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import {
   parseTimeToSeconds,
   formatElapsedTimer,
@@ -1358,7 +1359,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
 
   // Extract distinct table list sorted numerically
   const uniqueTableNumbers = useMemo(() => {
-    return [...tables].sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    return [...tables].sort(compareTablesNaturally);
   }, [tables]);
 
   // Dynamic sections list based on active tables
@@ -1446,7 +1447,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
         matchesTableDropdown &&
         matchesSearch
       );
-    });
+    }).sort(compareTablesNaturally);
   }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
 
   const hasActiveFilters =
@@ -2049,7 +2050,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
                           flexShrink: 0,
                         }}
                       >
-                        T{table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id}
+                        T{getTableSortNumber(table) || (table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id)}
                       </span>
                       <h3
                         style={{

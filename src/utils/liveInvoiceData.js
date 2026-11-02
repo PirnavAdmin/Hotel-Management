@@ -62,7 +62,7 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const orderItems = valueFrom(order, "items", "Items");
   const invoiceItems = valueFrom(invoice, "items", "Items");
   const items = normalizeItems(
-    orderItems?.length ? orderItems : invoiceItems,
+    invoiceItems?.length ? invoiceItems : orderItems,
   );
   const payments = valueFrom(invoice, "payments", "Payments") || [];
   const latestPayment = payments[payments.length - 1];
@@ -70,12 +70,12 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const rawOrderTotal = valueFrom(order, "grandTotal", "GrandTotal", "totalAmount", "TotalAmount");
   const rawInvoiceTotal = valueFrom(invoice, "totalAmount", "TotalAmount", "grandTotal", "GrandTotal");
   const rawSubtotal = Number(
-    valueFrom(order, "subtotal", "Subtotal") ??
-      valueFrom(invoice, "subtotal", "Subtotal"),
+    valueFrom(invoice, "subtotal", "Subtotal") ??
+      valueFrom(order, "subtotal", "Subtotal"),
   ) || 0;
   const discountAmount = Number(
-    valueFrom(order, "discountAmount", "DiscountAmount") ??
-      valueFrom(invoice, "discountAmount", "DiscountAmount"),
+    valueFrom(invoice, "discountAmount", "DiscountAmount") ??
+      valueFrom(order, "discountAmount", "DiscountAmount"),
   ) || 0;
 
   // Compute item subtotal to prevent 0 totals when items exist
@@ -89,12 +89,12 @@ export function normalizeInvoiceRecord(invoice, order = null) {
       Math.max(0, subtotal - discountAmount),
   ) || 0;
   const taxAmount = Number(
-    valueFrom(order, "taxAmount", "TaxAmount") ??
-      valueFrom(invoice, "taxAmount", "TaxAmount") ??
+    valueFrom(invoice, "taxAmount", "TaxAmount") ??
+      valueFrom(order, "taxAmount", "TaxAmount") ??
       Math.round(taxableAmount * 0.05),
   ) || 0;
 
-  const rawTotal = Number(rawOrderTotal ?? rawInvoiceTotal) || 0;
+  const rawTotal = Number(rawInvoiceTotal ?? rawOrderTotal) || 0;
   const grandTotal = rawTotal > 0
     ? rawTotal
     : (subtotal > 0 ? (taxableAmount + taxAmount) : 0);
@@ -102,7 +102,7 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const isSettledOrder = String(valueFrom(order, "status", "Status") || "").toLowerCase() === "settled";
   const invoicePaidAmount = valueFrom(invoice, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid");
   const paidAmount = Number(
-    (isSettledOrder && rawOrderTotal !== undefined ? rawOrderTotal : invoicePaidAmount) ??
+    invoicePaidAmount ??
       valueFrom(order, "paidAmount", "PaidAmount") ??
       grandTotal,
   ) || 0;
@@ -247,7 +247,9 @@ export async function requestLiveInvoiceRecords() {
 
   const merged = mergeLiveInvoiceRecords(
     invoices || [],
-    (orders && orders.length > 0) ? orders : fallbackOrders,
+    orders !== null
+      ? orders
+      : (invoices === null ? fallbackOrders : []),
   );
 
   const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(merged));

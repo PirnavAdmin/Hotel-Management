@@ -38,6 +38,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
@@ -49,7 +50,7 @@ import {
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
-import { isDrinkItem, isBeverageCategory } from "../kot/orderRouting";
+import { isDrinkItem } from "../kot/orderRouting";
 import { INITIAL_STAFF } from "../data/initialStaff";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
@@ -681,7 +682,7 @@ export function AdminPortal({
       tableStatus === normalizeTableFilterText(tableFilters.status);
 
     return matchesSearch && matchesStatus;
-  }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }).sort(compareTablesNaturally);
 
   const [tableSortField, setTableSortField] = useState("id");
   const [tableSortDirection, setTableSortDirection] = useState("asc");
@@ -700,15 +701,17 @@ export function AdminPortal({
     return [...filteredTables].sort((a, b) => {
       let aVal = a[tableSortField];
       let bVal = b[tableSortField];
-      if (tableSortField === "id") {
-        aVal = Number(a.id || 0);
-        bVal = Number(b.id || 0);
+      if (tableSortField === "id" || tableSortField === "name") {
+        const aNum = getTableSortNumber(a);
+        const bNum = getTableSortNumber(b);
+        if (aNum !== bNum) {
+          return tableSortDirection === "asc" ? aNum - bNum : bNum - aNum;
+        }
+        aVal = String(a.name || a.tableName || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || b.tableName || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "capacity") {
         aVal = Number(a.capacity || 0);
         bVal = Number(b.capacity || 0);
-      } else if (tableSortField === "name") {
-        aVal = String(a.name || `Table ${a.id || ""}`).toLowerCase();
-        bVal = String(b.name || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "area") {
         aVal = String(a.section || "").toLowerCase();
         bVal = String(b.section || "").toLowerCase();
@@ -1487,9 +1490,15 @@ export function AdminPortal({
     }
 
     if (editingTable) {
+      const parsedNum = parseInt(String(tableForm.name || "").replace(/\D/g, ""), 10);
+      const targetNum = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : getTableSortNumber(editingTable);
+      const formattedName = targetNum > 0 ? `Table-${targetNum}` : (tableForm.name || `Table-${editingTable.id}`);
       onUpdateTable({
         ...editingTable,
-        name: tableForm.name,
+        id: targetNum > 0 ? targetNum : editingTable.id,
+        name: formattedName,
+        tableName: formattedName,
+        tableNumber: formattedName,
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 2,
         server: assignedServer,
@@ -1589,19 +1598,6 @@ export function AdminPortal({
       shift: "",
     });
     setIsStaffModalOpen(false);
-  };
-
-  const handleRestoreDefaultStaff = async () => {
-    for (const defPerson of INITIAL_STAFF) {
-      const exists = (staffList || []).some(
-        (s) =>
-          String(s.name || s.fullName || "").trim().toLowerCase() ===
-          defPerson.name.toLowerCase(),
-      );
-      if (!exists && onAddStaff) {
-        await onAddStaff(defPerson);
-      }
-    }
   };
 
   const handleSyncPosUsers = async () => {
@@ -3165,7 +3161,7 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                   >
-                                    <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
+                                    <span>T{getTableSortNumber(tbl) || (tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id)}</span>
                                   </div>
                                   <span
                                     style={{
@@ -3496,28 +3492,6 @@ export function AdminPortal({
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                         <button
                           type="button"
-                          onClick={handleRestoreDefaultStaff}
-                          title="Restore standard restaurant staff team"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.35rem",
-                            padding: "0.5rem 0.9rem",
-                            background: "var(--bg-secondary)",
-                            border: "1px solid var(--border-card)",
-                            color: "var(--text-dim)",
-                            borderRadius: "8px",
-                            fontWeight: 600,
-                            fontSize: "0.8rem",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <RotateCcw size={14} />
-                          <span>Restore Defaults</span>
-                        </button>
-
-                        <button
-                          type="button"
                           onClick={handleSyncPosUsers}
                           title="Import POS users from Login Management as serving staff"
                           style={{
@@ -3804,7 +3778,7 @@ export function AdminPortal({
                               <p style={{ margin: 0, fontSize: "0.95rem" }}>
                                 {hasActiveStaffFilters
                                   ? "No staff members match the selected filters."
-                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one, or restore standard restaurant staff."}
+                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one."}
                               </p>
                               {hasActiveStaffFilters ? (
                                 <button
@@ -3826,26 +3800,6 @@ export function AdminPortal({
                                 </button>
                               ) : (
                                 <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-                                  <button
-                                    type="button"
-                                    onClick={handleRestoreDefaultStaff}
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "0.4rem",
-                                      background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-                                      color: "#fff",
-                                      border: "none",
-                                      padding: "0.45rem 1rem",
-                                      borderRadius: "6px",
-                                      fontSize: "0.85rem",
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    <RotateCcw size={14} />
-                                    <span>Restore Standard Staff (6 Members)</span>
-                                  </button>
                                   <button
                                     type="button"
                                     onClick={handleSyncPosUsers}

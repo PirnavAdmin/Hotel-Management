@@ -31,6 +31,7 @@ import {
   apiUpdateKitchenItemStatus,
 } from "../api/kitchenApi";
 import { KOTModal } from "./KOTModal";
+import { compareTablesNaturally } from "../utils/tableSortHelper";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "./orderRouting";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { ThemeToggle } from "../common/ThemeToggle";
@@ -1351,7 +1352,7 @@ export function KitchenKOTView({
                     {allKitchenTickets.length}
                   </span>
                 </button>
-                {tables.map((table) => {
+                {tables.slice().sort(compareTablesNaturally).map((table) => {
                   const matchingTickets = allKitchenTickets.filter(
                     (ticket) =>
                       String(ticket.id) === String(table.id) ||
