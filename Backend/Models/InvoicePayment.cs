@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -15,6 +16,12 @@ public class InvoicePayment
 
     [Column("amount", TypeName = "decimal(18,2)")]
     public decimal Amount { get; set; }
+
+    [Column("amount_paid", TypeName = "decimal(10,2)")]
+    public decimal AmountPaid { get; set; }
+
+    [Column("payment_method")]
+    public string PaymentMethod { get; set; } = "cash";
 
     [Required]
     [MaxLength(30)]

@@ -15,6 +15,9 @@ public class OrderItem
     // order_items.kot_id
     public long? KotId { get; set; }
 
+    // order_items.bot_id
+    public long? BotId { get; set; }
+
     // order_items.menu_item_id
     public long MenuItemId { get; set; }
 

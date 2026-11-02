@@ -32,7 +32,7 @@ import {
 } from "../api/kitchenApi";
 import { KOTModal } from "./KOTModal";
 import { compareTablesNaturally } from "../utils/tableSortHelper";
-import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "./orderRouting";
+import { createMenuItemLookup, findMenuItem, isBeverageCategory, isDrinkItem } from "./orderRouting";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { SkeletonOrderTicket } from "../common/Skeletons";
@@ -407,7 +407,8 @@ export function KitchenKOTView({
       ticketType: "active",
       items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
         const category = findMenuItem(menuLookup, item)?.category;
-        return isBarStation ? isBeverageCategory(category) : !isBeverageCategory(category);
+        const isDrink = isDrinkItem(item, menuLookup);
+        return isBarStation ? isDrink : !isDrink;
       }).map((item) => ({
         ...item,
         id: item.id ?? item.orderItemId,

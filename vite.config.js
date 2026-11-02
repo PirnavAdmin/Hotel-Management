@@ -1903,9 +1903,17 @@ function globalSyncPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const env = loadEnv(mode, process.cwd(), "");
 
-  let apiBase = env.VITE_API_BASE_URL;
+  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
+  const backendTarget =
+    process.env.BACKEND_URL ||
+    env.BACKEND_URL ||
+    process.env.VITE_BACKEND_URL ||
+    env.VITE_BACKEND_URL ||
+    "http://localhost:5018";
+
+  let apiBase = env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
   if (!apiBase) {
     try {
       const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
@@ -1914,7 +1922,9 @@ export default defineConfig(({ mode }) => {
     } catch {}
   }
   if (!apiBase) {
-    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
+    apiBase = "";
+  } else {
+    apiBase = apiBase.trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
   }
 
   return {
@@ -1934,22 +1944,22 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
+        "/api": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
+        },
         "/uploads": {
-          target: apiBase,
-          changeOrigin: true,
-          headers: { "ngrok-skip-browser-warning": "true" },
-        },
-        "/api/v1": {
-          target: apiBase,
+          target: backendTarget,
           changeOrigin: true,
           secure: false,
           headers: { "ngrok-skip-browser-warning": "true" },
         },
-        "/api/auth": {
-          target: apiBase,
+        "/swagger": {
+          target: backendTarget,
           changeOrigin: true,
           secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
         },
       },
     },

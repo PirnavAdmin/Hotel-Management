@@ -139,7 +139,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:5173")
+                .SetIsOriginAllowed(origin => true)
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()
@@ -161,6 +161,7 @@ builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
+builder.Services.AddScoped<TakeawayService>();
 builder.Services.AddSignalR();
 
 // ============================================================

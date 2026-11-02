@@ -9,7 +9,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/tables")]
-[Route("api/Tables")]
+[Route("api/tables")]
 public class TablesController : ControllerBase
 {
     private readonly TableService _tableService;
@@ -189,7 +189,6 @@ public class TablesController : ControllerBase
     // DELETE /api/v1/tables/{id} or /api/Tables/{id}
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Tables/{id}")]
     public async Task<IActionResult> DeleteTable(string id)
     {
         if (string.IsNullOrWhiteSpace(id))

@@ -44,9 +44,9 @@ public class KitchenController : ControllerBase
 
         foreach (var order in orders)
         {
-            var batches = order.Items
+            var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
+            var batches = kitchenItems
                 .Where(i =>
-                    !barMenuItemIds.Contains(i.MenuItemId) &&
                     (i.KotStatus == "Queued" ||
                      i.KotStatus == "queued" ||
                      i.KotStatus == "Cooking" ||
@@ -222,7 +222,8 @@ public class KitchenController : ControllerBase
             });
         }
 
-        var itemsToUpdate = order.Items
+        var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
+        var itemsToUpdate = kitchenItems
             .Where(i =>
                 (i.KotBatch == batch || batch == 0) &&
                 (i.KotStatus == "Queued" ||
@@ -285,7 +286,8 @@ public class KitchenController : ControllerBase
             });
         }
 
-        var itemsToUpdate = order.Items
+        var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
+        var itemsToUpdate = kitchenItems
             .Where(i =>
                 (i.KotBatch == batch || batch == 0) &&
                 i.KotStatus != "served")

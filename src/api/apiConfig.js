@@ -1,6 +1,6 @@
 export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
-  "https://chapter-catnip-evaluator.ngrok-free.dev"
+  ""
 ).trim().replace(/\/$/, "");
 
 // The Vite dev server provides its own same-origin SSE endpoint for local

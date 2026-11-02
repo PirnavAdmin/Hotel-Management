@@ -112,4 +112,8 @@ public class Order
 
     [NotMapped]
     public DateTime? SettledAt { get; set; }
+    [NotMapped]
+    public string? KitchenKotNumber { get; set; }
+    [NotMapped]
+    public string? BarBotNumber { get; set; }
 }

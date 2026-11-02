@@ -1426,11 +1426,29 @@ export function App() {
     };
   }, []);
 
-  const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
+  const [takeawayOrder, setTakeawayOrder] = useState({
+    id: "takeaway",
+    backendTableId: null,
+    name: "Takeaway",
+    tableName: "Takeaway",
+    section: "Takeaway",
+    isTakeaway: true,
+    items: [],
+    status: "vacant",
+    server: "Cashier",
+    guests: 1,
+    capacity: 1,
+  });
+
+  const isTakeawayActive = String(selectedTableId) === "takeaway";
+  const currentTable = isTakeawayActive
+    ? takeawayOrder
+    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
 
   // Table selection handler
   const handleSelectTable = (id) => {
-    setSelectedTableId(id);
+    const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
+    setSelectedTableId(tableId);
     setActiveView("order");
     sounds.playAddItem();
   };
@@ -1540,6 +1558,21 @@ export function App() {
 
   // Update Item Quantity
   const handleUpdateItemQuantity = (tableId, itemId, newQty) => {
+    if (String(tableId) === "takeaway") {
+      setTakeawayOrder((prev) => {
+        const currentItems = Array.isArray(prev.items) ? prev.items : [];
+        let newItems;
+        if (newQty <= 0) {
+          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        } else {
+          newItems = currentItems.map((i) =>
+            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i
+          );
+        }
+        return { ...prev, items: newItems, status: newItems.length > 0 ? "occupied" : "vacant" };
+      });
+      return;
+    }
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
@@ -1834,10 +1867,15 @@ export function App() {
       } catch {}
 
       const submittedIds = new Set(unsentItems.map((item) => String(item.id ?? item.menuItemId ?? item.name)));
+      const resKitchenKot = result?.data?.kitchenKot ?? result?.kitchenKot;
+      const resBarKot = result?.data?.barKot ?? result?.barKot;
+
       const targetUpdatedTable = {
         ...persistedTable,
         backendOrderId,
         activeOrderId: backendOrderId,
+        kitchenKotNumber: resKitchenKot?.kotNumber || persistedTable.kitchenKotNumber,
+        barBotNumber: resBarKot?.botNumber || persistedTable.barBotNumber,
         kotSent: true,
         status: persistedTable.status === "vacant" ? "occupied" : persistedTable.status,
         orderTime: persistedTable.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -1884,7 +1922,7 @@ export function App() {
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
           if (itemId) {
-            return String(i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
+            return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
           // Table-level status change
           if (status === "cooking") {
@@ -2210,7 +2248,7 @@ export function App() {
   };
 
   // Confirm Payment & Settle Bill
-  const handleConfirmPayment = (settlementData) => {
+  const handleConfirmPayment = async (settlementData) => {
     const rawItems = Array.isArray(settlementData.items) ? settlementData.items : [];
     const billableItems = rawItems
       .map((item) => ({

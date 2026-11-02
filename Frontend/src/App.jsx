@@ -1382,17 +1382,55 @@ export function App() {
     };
   }, []);
 
-  const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
+  const [takeawayOrder, setTakeawayOrder] = useState({
+    id: "takeaway",
+    backendTableId: null,
+    name: "Takeaway",
+    tableName: "Takeaway",
+    section: "Takeaway",
+    isTakeaway: true,
+    items: [],
+    status: "vacant",
+    server: "Cashier",
+    guests: 1,
+    capacity: 1,
+  });
+
+  const isTakeawayActive = String(selectedTableId) === "takeaway";
+  const currentTable = isTakeawayActive
+    ? takeawayOrder
+    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
 
   // Table selection handler
   const handleSelectTable = (id) => {
-    setSelectedTableId(id);
+    const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
+    setSelectedTableId(tableId);
     setActiveView("order");
     sounds.playAddItem();
   };
 
   // Add Item to Table Order
   const handleAddItemToTable = (tableId, menuItem) => {
+    if (String(tableId) === "takeaway") {
+      setTakeawayOrder((prev) => {
+        const currentItems = Array.isArray(prev.items) ? prev.items : [];
+        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        let newItems;
+        if (existingIndex > -1) {
+          newItems = currentItems.map((item, idx) =>
+            idx === existingIndex
+              ? { ...item, quantity: item.quantity + (menuItem.quantity || 1) }
+              : item
+          );
+        } else {
+          newItems = [...currentItems, { ...menuItem, quantity: menuItem.quantity || 1, kotSent: false }];
+        }
+        return { ...prev, items: newItems, status: "occupied" };
+      });
+      sounds.playAddItem();
+      showToast(`Added ${menuItem.name} to Takeaway Order`);
+      return;
+    }
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
@@ -1491,6 +1529,21 @@ export function App() {
 
   // Update Item Quantity
   const handleUpdateItemQuantity = (tableId, itemId, newQty) => {
+    if (String(tableId) === "takeaway") {
+      setTakeawayOrder((prev) => {
+        const currentItems = Array.isArray(prev.items) ? prev.items : [];
+        let newItems;
+        if (newQty <= 0) {
+          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        } else {
+          newItems = currentItems.map((i) =>
+            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i
+          );
+        }
+        return { ...prev, items: newItems, status: newItems.length > 0 ? "occupied" : "vacant" };
+      });
+      return;
+    }
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
@@ -1794,10 +1847,15 @@ export function App() {
       } catch {}
 
       const submittedIds = new Set(unsentItems.map((item) => String(item.id ?? item.menuItemId ?? item.name)));
+      const resKitchenKot = result?.data?.kitchenKot ?? result?.kitchenKot;
+      const resBarKot = result?.data?.barKot ?? result?.barKot;
+
       const targetUpdatedTable = {
         ...persistedTable,
         backendOrderId,
         activeOrderId: backendOrderId,
+        kitchenKotNumber: resKitchenKot?.kotNumber || persistedTable.kitchenKotNumber,
+        barBotNumber: resBarKot?.botNumber || persistedTable.barBotNumber,
         kotSent: true,
         status: persistedTable.status === "vacant" ? "occupied" : persistedTable.status,
         orderTime: persistedTable.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -1851,10 +1909,10 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-          if (i.isBarItem || i.isBarDrink) return i;
           if (itemId) {
-            return String(i.menuItemId ?? i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
+            return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
+          if (i.isBarItem || i.isBarDrink) return i;
           // Table-level status change
           if (status === "cooking") {
             // If starting cooking for the table, DO NOT revert already prepared/served/completed dishes back to cooking!
@@ -2184,7 +2242,7 @@ export function App() {
   };
 
   // Confirm Payment & Settle Bill
-  const handleConfirmPayment = (settlementData) => {
+  const handleConfirmPayment = async (settlementData) => {
     const rawItems = Array.isArray(settlementData.items) ? settlementData.items : [];
     const billableItems = rawItems
       .map((item) => ({
