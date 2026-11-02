@@ -166,9 +166,14 @@ export const sortOrdersBySettlementTime = (orders = []) =>
   });
 
 export const mergeSettledOrders = (...sources) => {
-  const merged = sortOrdersBySettlementTime(
-    dedupeOrders(sources.flatMap((orders) => (Array.isArray(orders) ? orders : []))),
+  const settledOnly = sources.flatMap((orders) =>
+    (Array.isArray(orders) ? orders : []).filter((order) => {
+      if (!order || typeof order !== "object") return false;
+      const status = String(order.status || order.Status || "").toLowerCase();
+      return status !== "active" && status !== "dining" && status !== "vacant";
+    }),
   );
+  const merged = sortOrdersBySettlementTime(dedupeOrders(settledOnly));
   const current = sources[0];
   if (
     Array.isArray(current) &&
@@ -242,8 +247,38 @@ export function dedupeOrders(orders = []) {
   const result = [];
   const indexByIdentity = new Map();
 
-  for (const order of Array.isArray(orders) ? orders : []) {
-    if (!order || typeof order !== "object") continue;
+  const validOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
+    if (!order || typeof order !== "object") return false;
+    const status = String(order.status || order.Status || "").toLowerCase();
+    return status !== "active" && status !== "dining" && status !== "vacant";
+  });
+
+  for (const rawOrder of validOrders) {
+    if (!rawOrder || typeof rawOrder !== "object") continue;
+
+    const items = Array.isArray(rawOrder.items) ? rawOrder.items : [];
+    const itemsTotal = items.reduce(
+      (sum, it) => sum + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
+      0,
+    );
+    const orderSubtotal = Number(rawOrder.subtotal) > 0 ? Number(rawOrder.subtotal) : itemsTotal;
+    const discountAmount = Number(rawOrder.discountAmount || 0);
+    const taxableAmount = Math.max(0, orderSubtotal - discountAmount);
+    const taxAmount = Number(rawOrder.taxAmount) || Math.round(taxableAmount * 0.05);
+    const orderGrandTotal = Number(rawOrder.grandTotal ?? rawOrder.total ?? rawOrder.totalAmount) > 0
+      ? Number(rawOrder.grandTotal ?? rawOrder.total ?? rawOrder.totalAmount)
+      : (orderSubtotal > 0 ? (taxableAmount + taxAmount) : 0);
+
+    const order = {
+      ...rawOrder,
+      subtotal: orderSubtotal,
+      grandTotal: orderGrandTotal,
+      total: orderGrandTotal,
+      totalAmount: orderGrandTotal,
+      paidAmount: Number(rawOrder.paidAmount) || orderGrandTotal,
+      status: "Settled",
+      Status: "Settled",
+    };
     const fingerprint = saleFingerprint(order);
     const invoice = normalize(order.invoiceNo ?? order.InvoiceNo);
     const date = dateKey(order);

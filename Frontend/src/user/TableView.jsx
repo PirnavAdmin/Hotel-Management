@@ -2108,7 +2108,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
                         minWidth: 0,
                       }}
                     >
-                      {table.section}
+                      {table.section && !/^[\\|/\s]+$/.test(table.section.trim()) ? table.section : "Main Hall"}
                     </span>
                     <button
                       type="button"

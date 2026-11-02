@@ -27,6 +27,7 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
+import { SkeletonDashboard } from "../common/Skeletons";
 
 const BAR_MENU_CATEGORIES = new Set([
   "cocktails", "mocktails", "beers", "whiskey", "vodka & gin", "rum & brandy",
@@ -47,6 +48,7 @@ export function AdminOverview({
   onNavigateTab,
   onOpenKOTView,
   onOpenItemModal,
+  sharedRecordLoad = { tables: "ready", staff: "ready" },
 }) {
   // Dynamically load orders from localStorage or props with deduplication
   const [ordersList, setOrdersList] = useState(() => {
@@ -156,6 +158,13 @@ export function AdminOverview({
   );
 
   const averageOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
+
+  if (
+    (sharedRecordLoad.tables === "loading" && tables.length === 0) ||
+    (sharedRecordLoad.staff === "loading" && staffList.length === 0)
+  ) {
+    return <SkeletonDashboard cards={4} />;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>

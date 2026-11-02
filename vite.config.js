@@ -12,6 +12,44 @@ try {
 
 const env = loadEnv("development", process.cwd(), "");
 
+const getBusinessDateStr = (dateObj = new Date()) => {
+  const d = new Date(dateObj);
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+const getBusinessDateKey = (dateObj = new Date()) => {
+  const d = new Date(dateObj);
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const getNextInvoiceNoForServer = (db, dateObj = new Date()) => {
+  const dateStr = getBusinessDateStr(dateObj);
+  const pastOrders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+    (o) => o && String(o.status || "").toLowerCase() === "settled"
+  );
+  let highest = 0;
+  pastOrders.forEach((o) => {
+    const oDate = o.date || getBusinessDateStr(o.settledAt || o.createdAt || new Date());
+    if (oDate === dateStr && o.invoiceNo) {
+      const match = String(o.invoiceNo).match(/INV-(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > highest && num < 100000) {
+          highest = num;
+        }
+      }
+    }
+  });
+  const nextNum = highest + 1;
+  return `INV-${String(nextNum).padStart(3, '0')}`;
+};
+
 let mailTransporter = null;
 const getMailTransporter = async () => {
   if (!nodemailer) return null;
@@ -124,6 +162,8 @@ function globalSyncPlugin() {
   let sseClients = [];
   const getDataFile = () => {
     const candidates = [
+      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
+      path.resolve(process.cwd(), "..", "server-db.json"),
       path.resolve(process.cwd(), "server-db.json"),
       path.resolve(process.cwd(), "POS", "server-db.json"),
       path.resolve(process.cwd(), "Frontend", "server-db.json"),
@@ -152,6 +192,12 @@ function globalSyncPlugin() {
     try {
       const file = getDataFile();
       fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+      const altFile = file.includes("Frontend")
+        ? path.resolve(file, "..", "..", "server-db.json")
+        : path.resolve(file, "..", "Frontend", "server-db.json");
+      if (fs.existsSync(altFile) && altFile !== file) {
+        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
+      }
     } catch {}
   };
 
@@ -852,6 +898,47 @@ function globalSyncPlugin() {
           return;
         }
 
+        // REST API: /api/v1/menu-items/categories (GET)
+        if ((req.url === "/api/v1/menu-items/categories" || req.url === "/api/v1/menu-items/categories/" || req.url.startsWith("/api/v1/menu-items/categories?")) && req.method === "GET") {
+          db = loadDb();
+          const menuItems = db.gourmet_pos_menu_items_v2 || [];
+          const categorySet = new Set();
+          menuItems.forEach((item) => {
+            const cat = item.category || item.categoryName;
+            if (cat && typeof cat === "string" && cat.trim()) {
+              categorySet.add(cat.trim());
+            }
+          });
+          ["biryani", "starters", "mains", "tandoor-kebabs", "fast-food", "breads", "beverages", "desserts"].forEach((c) => categorySet.add(c));
+          const categories = Array.from(categorySet);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              categories,
+              data: categories,
+            })
+          );
+        }
+
+        // REST API: /api/v1/menu-items/categories (POST)
+        if ((req.url === "/api/v1/menu-items/categories" || req.url === "/api/v1/menu-items/categories/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const name = String(payload.name || "").trim();
+              res.writeHead(201, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: { name } }));
+            } catch {
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true }));
+            }
+          });
+          return;
+        }
+
         // REST API: /api/v1/menu-items (GET)
         if (req.url.startsWith("/api/v1/menu-items") && req.method === "GET") {
           db = loadDb();
@@ -867,10 +954,22 @@ function globalSyncPlugin() {
           );
         }
 
-        // REST API: /api/v1/staff
+        // REST API: /api/v1/staff (GET)
         if (req.url.startsWith("/api/v1/staff") && req.method === "GET") {
           db = loadDb();
-          const staff = db.gourmet_pos_staff_v1 || [];
+          let staff = db.gourmet_pos_staff_v1;
+          if (!Array.isArray(staff) || staff.length === 0) {
+            staff = [
+              { staffId: 1, id: 1, fullName: "Rajesh K.", name: "Rajesh K.", roleTitle: "Senior Captain", role: "Senior Captain", phone: "+91 98450 11223", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "R", createdAt: "2026-10-09T04:27:02.068846" },
+              { staffId: 2, id: 2, fullName: "Vikram S.", name: "Vikram S.", roleTitle: "Head Waiter", role: "Head Waiter", phone: "+91 98450 44556", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "V", createdAt: "2026-10-09T04:27:02.069079" },
+              { staffId: 3, id: 3, fullName: "Ananya R.", name: "Ananya R.", roleTitle: "Stewardess", role: "Stewardess", phone: "+91 98450 77889", shift: "Full Day (11 AM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "A", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 4, id: 4, fullName: "Pooja M.", name: "Pooja M.", roleTitle: "Captain", role: "Captain", phone: "+91 98450 99001", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "P", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 5, id: 5, fullName: "Suresh N.", name: "Suresh N.", roleTitle: "Server / Waiter", role: "Server / Waiter", phone: "+91 98450 33445", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "S", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 6, id: 6, fullName: "Karan D.", name: "Karan D.", roleTitle: "VIP Lounge Captain", role: "VIP Lounge Captain", phone: "+91 98450 66778", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 4, avatarInitial: "K", createdAt: "2026-10-09T04:27:02.069081" }
+            ];
+            db.gourmet_pos_staff_v1 = staff;
+            saveDb(db);
+          }
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(
             JSON.stringify({
@@ -880,6 +979,102 @@ function globalSyncPlugin() {
               data: staff,
             }),
           );
+        }
+
+        // REST API: /api/v1/staff (POST - create new staff)
+        if ((req.url === "/api/v1/staff" || req.url === "/api/v1/staff/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+              const maxId = existing.reduce((max, s) => Math.max(max, Number(s.staffId || s.id || 0)), 0);
+              const newId = maxId + 1;
+              const newPerson = {
+                staffId: newId,
+                id: newId,
+                fullName: payload.name || payload.fullName || "New Staff",
+                name: payload.name || payload.fullName || "New Staff",
+                roleTitle: payload.role || payload.roleTitle || "Waiter",
+                role: payload.role || payload.roleTitle || "Waiter",
+                phone: payload.phone || "",
+                email: payload.email || "",
+                shift: payload.shift || "Morning Shift (10 AM - 4 PM)",
+                isActive: true,
+                assignedTablesCount: 0,
+                avatarInitial: (payload.name || payload.fullName || "S").charAt(0).toUpperCase(),
+                createdAt: new Date().toISOString()
+              };
+              const updated = [...existing, newPerson];
+              db.gourmet_pos_staff_v1 = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_staff_v1: updated });
+              res.writeHead(201, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Staff created successfully", staff: newPerson, data: newPerson }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/staff/:id (PUT - update staff)
+        const staffPutMatch = req.url.match(/^\/api\/v1\/staff\/([^/?]+)/i);
+        if (staffPutMatch && req.method === "PUT") {
+          const targetId = decodeURIComponent(staffPutMatch[1]);
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              db = loadDb();
+              const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+              let updatedPerson = null;
+              const updated = existing.map((s) => {
+                if (String(s.staffId || s.id) === String(targetId)) {
+                  updatedPerson = {
+                    ...s,
+                    ...payload,
+                    fullName: payload.name || payload.fullName || s.fullName || s.name,
+                    name: payload.name || payload.fullName || s.name || s.fullName,
+                    roleTitle: payload.role || payload.roleTitle || s.roleTitle || s.role,
+                    role: payload.role || payload.roleTitle || s.role || s.roleTitle,
+                    phone: payload.phone !== undefined ? payload.phone : s.phone,
+                    shift: payload.shift !== undefined ? payload.shift : s.shift,
+                    updatedAt: new Date().toISOString()
+                  };
+                  return updatedPerson;
+                }
+                return s;
+              });
+              db.gourmet_pos_staff_v1 = updated;
+              saveDb(db);
+              broadcast({ gourmet_pos_staff_v1: updated });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Staff updated successfully", data: updatedPerson || payload }));
+            } catch (err) {
+              res.writeHead(500, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        // REST API: /api/v1/staff/:id (DELETE - delete staff)
+        const staffDeleteMatch = req.url.match(/^\/api\/v1\/staff\/([^/?]+)/i);
+        if (staffDeleteMatch && req.method === "DELETE") {
+          const targetId = decodeURIComponent(staffDeleteMatch[1]);
+          db = loadDb();
+          const existing = Array.isArray(db.gourmet_pos_staff_v1) ? db.gourmet_pos_staff_v1 : [];
+          const updated = existing.filter((s) => String(s.staffId || s.id) !== String(targetId));
+          db.gourmet_pos_staff_v1 = updated;
+          saveDb(db);
+          broadcast({ gourmet_pos_staff_v1: updated });
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, message: "Staff deleted successfully" }));
         }
 
         // REST API: /api/v1/inventory (GET)
@@ -996,7 +1191,9 @@ function globalSyncPlugin() {
         // REST API: /api/v1/orders/history
         if (req.url.startsWith("/api/v1/orders/history") && req.method === "GET") {
           db = loadDb();
-          const orders = db.gourmet_pos_past_orders_v2_inr || [];
+          const orders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+            (o) => o && String(o.status || "").toLowerCase() === "settled"
+          );
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(
             JSON.stringify({
@@ -1013,26 +1210,43 @@ function globalSyncPlugin() {
 
         if (req.url.startsWith("/api/v1/invoices") && !invoiceByIdMatch && !invoiceByOrderMatch && !invoicePaymentsMatch && req.method === "GET") {
           db = loadDb();
-          const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
-          const customInvoices = db.invoices || db.gourmet_pos_invoices || [];
+          const pastOrders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+            (o) => o && String(o.status || o.Status || "").toLowerCase() === "settled"
+          );
+          const customInvoices = (db.invoices || db.gourmet_pos_invoices || []).filter(
+            (i) => i && String(i.status || i.Status || "").toLowerCase() === "settled"
+          );
 
-          const mappedFromOrders = pastOrders.map((ord) => {
-            const subtotal = Number(ord.subtotal ?? ord.totalAmount ?? ord.total ?? 0);
+          const mappedFromOrders = pastOrders.map((ord, idx) => {
+            const items = Array.isArray(ord.items) ? ord.items : [];
+            const itemsSum = items.reduce(
+              (s, it) => s + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
+              0
+            );
+            const rawSubtotal = Number(ord.subtotal ?? ord.totalAmount ?? ord.total ?? 0);
+            const subtotal = rawSubtotal > 0 ? rawSubtotal : itemsSum;
             const discountAmount = Number(ord.discountAmount ?? 0);
             const taxableAmount = Number(ord.taxableAmount ?? Math.max(0, subtotal - discountAmount));
-            const taxAmount = Number(ord.taxAmount ?? 0);
-            const grandTotal = Number(ord.grandTotal ?? ord.total ?? (taxableAmount + taxAmount));
+            const taxAmount = Number(ord.taxAmount ?? Math.round(taxableAmount * 0.05));
+            const rawGrandTotal = Number(ord.grandTotal ?? ord.total ?? 0);
+            const grandTotal = rawGrandTotal > 0 ? rawGrandTotal : (subtotal > 0 ? (taxableAmount + taxAmount) : 0);
+
+            let invNum = ord.invoiceNo || ord.invoiceNumber;
+            if (!invNum || /^INV-\d{10,}$/i.test(String(invNum)) || /^Order\s*#\d{10,}$/i.test(String(invNum))) {
+              invNum = `INV-${String(idx + 1).padStart(3, '0')}`;
+            }
+
             return {
-              id: ord.id || ord.orderId,
-              invoiceId: ord.id || ord.orderId,
-              orderId: ord.id || ord.orderId,
-              invoiceNumber: ord.invoiceNo || ord.invoiceNumber || `INV-${ord.id || Date.now()}`,
-              invoiceNo: ord.invoiceNo || ord.invoiceNumber || `INV-${ord.id || Date.now()}`,
+              id: ord.id || ord.orderId || `ord_${idx + 1}`,
+              invoiceId: ord.id || ord.orderId || `ord_${idx + 1}`,
+              orderId: ord.id || ord.orderId || `ord_${idx + 1}`,
+              invoiceNumber: invNum,
+              invoiceNo: invNum,
               tableName: ord.tableName || `Table-${ord.tableId || "1"}`,
               tableId: ord.tableId,
               serverName: ord.server || ord.serverName || "Staff",
               server: ord.server || ord.serverName || "Staff",
-              status: ord.status || "Settled",
+              status: "Settled",
               subtotal,
               discountAmount,
               discountPercent: Number(ord.discountPercent ?? ord.discount ?? 0),
@@ -1042,16 +1256,16 @@ function globalSyncPlugin() {
               tipAmount: Number(ord.tipAmount ?? 0),
               grandTotal,
               totalAmount: grandTotal,
-              paidAmount: Number(ord.paidAmount ?? grandTotal),
+              paidAmount: grandTotal,
               paymentMethod: ord.paymentMethod || ord.paymentMode || "Cash",
               payments: Array.isArray(ord.payments) && ord.payments.length ? ord.payments : [
                 {
-                  amount: Number(ord.paidAmount ?? grandTotal),
+                  amount: grandTotal,
                   paymentMode: ord.paymentMethod || ord.paymentMode || "Cash",
                   paidAt: ord.settledAt || ord.createdAt || new Date().toISOString()
                 }
               ],
-              items: ord.items || [],
+              items,
               createdAt: ord.settledAt || ord.createdAt || ord.orderTime || new Date().toISOString(),
               settledAt: ord.settledAt || ord.createdAt || new Date().toISOString(),
             };
@@ -1146,39 +1360,75 @@ function globalSyncPlugin() {
             try {
               const payload = JSON.parse(body || "{}");
               db = loadDb();
-              const orders = db.gourmet_pos_past_orders_v2_inr || [];
-              let updatedOrder = null;
-              const nextOrders = orders.map((ord) => {
-                if (String(ord.id ?? ord.orderId ?? "") === targetOrderId || String(ord.invoiceNo ?? "") === targetOrderId) {
-                  updatedOrder = {
-                    ...ord,
-                    status: "Settled",
-                    paymentMethod: payload.paymentMethod || ord.paymentMethod || "Cash",
-                    invoiceNo: payload.invoiceNumber || ord.invoiceNo,
-                    settledAt: new Date().toISOString(),
-                  };
-                  return updatedOrder;
-                }
-                return ord;
+              const activeOrders = db.active_orders || [];
+              const pastOrders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
+                (o) => o && String(o.status || "").toLowerCase() === "settled"
+              );
+
+              const activeOrder = activeOrders.find(
+                (o) => String(o.id ?? o.orderId ?? "") === targetOrderId ||
+                       String(o.tableId ?? "") === targetOrderId
+              );
+
+              const items = Array.isArray(payload.items) && payload.items.length
+                ? payload.items
+                : (activeOrder?.items || []);
+              const itemsSubtotal = items.reduce(
+                (s, it) => s + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
+                0
+              );
+              const subtotal = Number(payload.subtotal) > 0 ? Number(payload.subtotal) : itemsSubtotal;
+              const discountPercent = Number(payload.discountPercent || activeOrder?.discountPercent || 0);
+              const discountAmount = Math.round((subtotal * discountPercent) / 100);
+              const taxableAmount = Math.max(0, subtotal - discountAmount);
+              const taxAmount = Math.round(taxableAmount * 0.05);
+              const grandTotal = taxableAmount + taxAmount;
+
+              const now = new Date();
+              const businessDate = getBusinessDateStr(now);
+              const nextInvNo = payload.invoiceNumber || getNextInvoiceNoForServer(db, now);
+
+              const settledOrder = {
+                ...(activeOrder || {}),
+                ...payload,
+                id: activeOrder?.id || targetOrderId || `ord_${Date.now()}`,
+                orderId: activeOrder?.orderId || targetOrderId || `ord_${Date.now()}`,
+                invoiceNo: nextInvNo,
+                invoiceNumber: nextInvNo,
+                status: "Settled",
+                Status: "Settled",
+                paymentMethod: payload.paymentMethod || activeOrder?.paymentMethod || "Cash",
+                paymentMode: payload.paymentMethod || activeOrder?.paymentMethod || "Cash",
+                items,
+                subtotal,
+                discountPercent,
+                discountAmount,
+                taxableAmount,
+                taxAmount,
+                grandTotal,
+                total: grandTotal,
+                totalAmount: grandTotal,
+                paidAmount: grandTotal,
+                date: businessDate,
+                settledDate: getBusinessDateKey(now),
+                settledAt: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              };
+
+              const nextPastOrders = [settledOrder, ...pastOrders];
+              db.gourmet_pos_past_orders_v2_inr = nextPastOrders;
+              db.active_orders = activeOrders.filter(
+                (o) => String(o.id ?? o.orderId ?? "") !== targetOrderId &&
+                       String(o.tableId ?? "") !== targetOrderId
+              );
+
+              saveDb(db);
+              broadcast({
+                gourmet_pos_past_orders_v2_inr: nextPastOrders,
+                active_orders: db.active_orders,
               });
 
-              if (!updatedOrder) {
-                updatedOrder = {
-                  id: targetOrderId,
-                  orderId: targetOrderId,
-                  status: "Settled",
-                  paymentMethod: payload.paymentMethod || "Cash",
-                  invoiceNo: payload.invoiceNumber || `INV-${targetOrderId}`,
-                  settledAt: new Date().toISOString(),
-                };
-                nextOrders.unshift(updatedOrder);
-              }
-
-              db.gourmet_pos_past_orders_v2_inr = nextOrders;
-              saveDb(db);
-              broadcast({ gourmet_pos_past_orders_v2_inr: nextOrders });
               res.writeHead(200, { "Content-Type": "application/json" });
-              return res.end(JSON.stringify({ success: true, data: updatedOrder, order: updatedOrder }));
+              return res.end(JSON.stringify({ success: true, data: settledOrder, order: settledOrder }));
             } catch (err) {
               res.writeHead(400, { "Content-Type": "application/json" });
               return res.end(JSON.stringify({ success: false, error: err.message }));
@@ -1319,9 +1569,7 @@ function globalSyncPlugin() {
 
         if (req.url === "/api/v1/orders/active" && req.method === "GET") {
           db = loadDb();
-          const orders = (db.gourmet_pos_past_orders_v2_inr || []).filter(
-            (order) => ["active", "billed"].includes(String(order.status || "").toLowerCase()),
-          );
+          const orders = db.active_orders || [];
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(JSON.stringify(orders));
         }
@@ -1330,6 +1578,16 @@ function globalSyncPlugin() {
         if (orderByTableMatch && req.method === "GET") {
           const tableId = decodeURIComponent(orderByTableMatch[1]);
           db = loadDb();
+          const activeOrders = db.active_orders || [];
+          const activeOrder = activeOrders.find(
+            (candidate) =>
+              String(candidate.tableId ?? "") === tableId &&
+              String(candidate.status || "").toLowerCase() === "active"
+          );
+          if (activeOrder) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify(activeOrder));
+          }
           const order = (db.gourmet_pos_past_orders_v2_inr || []).find(
             (candidate) =>
               String(candidate.tableId ?? candidate.id) === tableId &&
@@ -1343,20 +1601,69 @@ function globalSyncPlugin() {
         if (sendOrderKotMatch && req.method === "POST") {
           const orderId = decodeURIComponent(sendOrderKotMatch[1]);
           db = loadDb();
-          const orders = db.gourmet_pos_past_orders_v2_inr || [];
-          const order = orders.find((candidate) => String(candidate.id ?? candidate.orderId) === orderId);
+          const activeOrders = db.active_orders || [];
+          const historyOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const order = activeOrders.find((candidate) =>
+            String(candidate.id ?? candidate.orderId) === orderId ||
+            String(candidate.tableId) === orderId
+          );
           if (!order) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+            const historyOrder = historyOrders.find((candidate) =>
+              String(candidate.id ?? candidate.orderId) === orderId ||
+              String(candidate.tableId) === orderId
+            );
+            if (!historyOrder) {
+              const tables = db.gourmet_pos_tables_v2_inr || [];
+              const matchedTable = tables.find((t) =>
+                String(t.id) === orderId ||
+                String(t.backendOrderId) === orderId ||
+                String(t.activeOrderId) === orderId
+              );
+              if (matchedTable) {
+                const generatedOrderId = Number(orderId) || Date.now();
+                const newOrder = {
+                  id: generatedOrderId,
+                  orderId: generatedOrderId,
+                  tableId: matchedTable.id,
+                  tableName: matchedTable.name,
+                  tableNumber: matchedTable.name,
+                  serverName: matchedTable.serverName || "Server",
+                  status: "Active",
+                  items: (matchedTable.items || []).map((i) => ({
+                    ...i,
+                    kotStatus: i.kotStatus || "received",
+                    kotSent: true,
+                  })),
+                };
+                activeOrders.unshift(newOrder);
+                db.active_orders = activeOrders;
+                saveDb(db);
+                broadcast({ active_orders: activeOrders });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newOrder }));
+              }
+              res.writeHead(404, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+            }
+            historyOrder.items = (historyOrder.items || []).map((item) => ({
+              ...item,
+              kotStatus: item.kotStatus || "received",
+              kotSent: true,
+            }));
+            db.gourmet_pos_past_orders_v2_inr = historyOrders;
+            saveDb(db);
+            broadcast({ gourmet_pos_past_orders_v2_inr: historyOrders });
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: historyOrder }));
           }
           order.items = (order.items || []).map((item) => ({
             ...item,
             kotStatus: item.kotStatus || "received",
             kotSent: true,
           }));
-          db.gourmet_pos_past_orders_v2_inr = orders;
+          db.active_orders = activeOrders;
           saveDb(db);
-          broadcast({ gourmet_pos_past_orders_v2_inr: orders });
+          broadcast({ active_orders: activeOrders });
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: true, data: order }));
         }
@@ -1378,37 +1685,39 @@ function globalSyncPlugin() {
             try {
               const orderData = JSON.parse(body);
               db = loadDb();
-              const existingOrders = db.gourmet_pos_past_orders_v2_inr || [];
+              const activeOrders = db.active_orders || [];
               const tableId = String(orderData.tableId ?? "");
-              const existingOrder = existingOrders.find(
+              const generatedOrderId = Number(orderData.id) || Date.now();
+              const existingIndex = activeOrders.findIndex(
                 (order) =>
                   tableId &&
                   String(order.tableId ?? "") === tableId &&
-                  String(order.status || "").toLowerCase() === "active",
+                  String(order.status || "").toLowerCase() === "active"
               );
-              const generatedOrderId = Number(orderData.id) || Date.now();
-              const savedOrder = existingOrder
+              const savedOrder = existingIndex >= 0
                 ? {
-                    ...existingOrder,
+                    ...activeOrders[existingIndex],
                     ...orderData,
-                  id: Number(existingOrder.id ?? existingOrder.orderId) || generatedOrderId,
-                  orderId: Number(existingOrder.orderId ?? existingOrder.id) || generatedOrderId,
+                    id: Number(activeOrders[existingIndex].id) || generatedOrderId,
+                    orderId: Number(activeOrders[existingIndex].orderId) || generatedOrderId,
                     status: "Active",
-                    items: [...(existingOrder.items || []), ...(orderData.items || [])],
+                    items: [...(activeOrders[existingIndex].items || []), ...(orderData.items || [])],
                   }
                 : {
                     ...orderData,
-                  id: generatedOrderId,
-                  orderId: generatedOrderId,
+                    id: generatedOrderId,
+                    orderId: generatedOrderId,
                     status: "Active",
                     createdAt: orderData.createdAt || new Date().toISOString(),
                   };
-              const updatedOrders = existingOrder
-                ? existingOrders.map((order) => String(order.id) === String(existingOrder.id) ? savedOrder : order)
-                : [savedOrder, ...existingOrders];
-              db.gourmet_pos_past_orders_v2_inr = updatedOrders;
+              if (existingIndex >= 0) {
+                activeOrders[existingIndex] = savedOrder;
+              } else {
+                activeOrders.unshift(savedOrder);
+              }
+              db.active_orders = activeOrders;
               saveDb(db);
-              broadcast({ gourmet_pos_past_orders_v2_inr: updatedOrders });
+              broadcast({ active_orders: activeOrders });
               res.writeHead(200, { "Content-Type": "application/json" });
               return res.end(
                 JSON.stringify({ success: true, data: savedOrder, order: savedOrder }),
@@ -1596,8 +1905,23 @@ function globalSyncPlugin() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
+  let apiBase = env.VITE_API_BASE_URL;
+  if (!apiBase) {
+    try {
+      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
+      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
+      if (match) apiBase = match[0].replace(/\/$/, "");
+    } catch {}
+  }
+  if (!apiBase) {
+    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
+  }
+
   return {
     plugins: [react(), globalSyncPlugin()],
+    define: {
+      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBase),
+    },
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
@@ -1611,10 +1935,20 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         "/uploads": {
-          target:
-            env.VITE_API_BASE_URL ||
-            "https://cultivate-suitable-manmade.ngrok-free.dev",
+          target: apiBase,
           changeOrigin: true,
+          headers: { "ngrok-skip-browser-warning": "true" },
+        },
+        "/api/v1": {
+          target: apiBase,
+          changeOrigin: true,
+          secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
+        },
+        "/api/auth": {
+          target: apiBase,
+          changeOrigin: true,
+          secure: false,
           headers: { "ngrok-skip-browser-warning": "true" },
         },
       },

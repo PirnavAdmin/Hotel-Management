@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
-  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Wine, X,
-} from "lucide-react";
+  Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Users, Wine, X, AlertCircle, RotateCcw, CheckCircle2, AlertTriangle, TrendingDown, ChevronDown, Download
+, MinusCircle, PackagePlus } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
@@ -11,11 +11,43 @@ import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/o
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonTable } from "../common/Skeletons";
-import { BAR_BILL_DEMO_ORDERS } from "../data/barOrdersMockData";
-import { BAR_DRINKS } from "../data/barDrinksMockData";
-import { BarKOTView } from "./BarKOTView";
+import { BarBOTView, BarKOTView } from "./BarBOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
+import { AdminReports } from "../admin/AdminReports";
 import "./BarWorkspace.css";
+import {
+  apiGetBarTables,
+  apiCreateBarTable,
+  apiUpdateBarTable,
+  apiDeleteBarTable,
+  apiGetBarTableAreas,
+  apiUpdateBarTableStatus,
+  apiGetBarDrinks,
+  apiGetBarDrinkById,
+  apiCreateBarDrink,
+  apiUpdateBarDrink,
+  apiDeleteBarDrink,
+  apiToggleBarDrinkAvailability,
+  apiToggleBarDrinkSpecial,
+  apiGetBarDrinkCategories,
+  apiGetBarServingMeasures,
+  apiGetBarPriceRanges,
+  apiGetBarAvailabilityOptions,
+  apiGetBarOverview,
+  apiGetBarRecentOrders,
+  apiGetBarStaff,
+  apiGetBarStaffById,
+  apiCreateBarStaff,
+  apiUpdateBarStaff,
+  apiToggleBarStaffStatus,
+  apiDeleteBarStaff,
+  apiGetBarStaffFilterOptions,
+  apiGetAssignableTables,
+} from "../api/barApi";
+import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
+import { SelectSeatsModal } from "../common/SelectSeatsModal";
+import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+
 
 const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
@@ -219,25 +251,39 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const [modalError, setModalError] = useState("");
   const [editingItem, setEditingItem] = useState(null);
 
-  // Filter & Search states
+  // Filter & Search states (exact match with Dine Inventory)
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+
+  // Consume / Restock Modals (matching Dine Inventory)
+  const [consumeItem, setConsumeItem] = useState(null);
+  const [consumeAmount, setConsumeAmount] = useState("");
+  const [consumeReason, setConsumeReason] = useState("Bar Usage");
+  const [restockItem, setRestockItem] = useState(null);
+  const [restockAmount, setRestockAmount] = useState("");
+  const [restockSupplier, setRestockSupplier] = useState("");
+  const [customRestockSupplier, setCustomRestockSupplier] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const defaultForm = {
     name: "",
     category: "Whiskey & Scotch",
-    subcategory: "Single Malt Scotch",
+    subcategory: "",
     brand: "",
     unit: "Bottle (750 ml)",
     volumeMl: 750,
-    abv: 42.8,
-    stock: 12,
-    minThreshold: 5,
-    unitCost: 2500,
-    sellingPrice: 3500,
-    storageLocation: "Front Bar Display Shelf",
-    supplier: "State Beverages Corporation (TSBCL/Govt Depot)",
+    abv: 0,
+    stock: 0,
+    minThreshold: 0,
+    unitCost: 0,
+    sellingPrice: 0,
+    storageLocation: "",
+    supplier: "",
   };
 
   const [formData, setFormData] = useState(defaultForm);
@@ -292,6 +338,38 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     return Array.from(set);
   }, [validBeverages]);
 
+  // Available suppliers for dropdown filter
+  const availableSuppliers = useMemo(() => {
+    const set = new Set();
+    BAR_SUPPLIERS.forEach((s) => set.add(s));
+    validBeverages.forEach((item) => {
+      if (item.supplier) set.add(item.supplier);
+    });
+    return Array.from(set);
+  }, [validBeverages]);
+
+  // Operational KPI metrics (exact formulas matching Dine Inventory)
+  const totalItems = validBeverages.length;
+  const inStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > th;
+  }).length;
+  const lowStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+    return s > 0 && s <= th;
+  }).length;
+  const outOfStockCount = validBeverages.filter((item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    return s <= 0;
+  }).length;
+  const totalValuation = validBeverages.reduce((sum, item) => {
+    const s = Number(item.stock ?? item.currentStock ?? 0);
+    const cost = Number(item.unitCost ?? item.cost ?? item.sellingPrice ?? item.mrp ?? 0);
+    return sum + (s > 0 ? s * cost : 0);
+  }, 0);
+
   // Filtered rows matching search & filter
   const filteredRows = useMemo(() => {
     return validBeverages.filter((item) => {
@@ -301,65 +379,56 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
         String(item.name || "").toLowerCase().includes(q) ||
         String(item.brand || item.subcategory || "").toLowerCase().includes(q) ||
         String(item.category || "").toLowerCase().includes(q) ||
-        String(item.storageLocation || "").toLowerCase().includes(q);
+        String(item.storageLocation || "").toLowerCase().includes(q) ||
+        String(item.supplier || "").toLowerCase().includes(q);
 
       const matchesCat =
         categoryFilter === "all" ||
         String(item.category || "").toLowerCase() === categoryFilter.toLowerCase();
 
+      const matchesSupplier =
+        supplierFilter === "all" ||
+        String(item.supplier || "").toLowerCase() === supplierFilter.toLowerCase();
+
       const stock = Number(item.stock ?? item.currentStock ?? 0);
       const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+
       const matchesStock =
         stockFilter === "all" ||
+        (stockFilter === "expenditure" && stock > 0) ||
         (stockFilter === "out_of_stock" && stock <= 0) ||
         (stockFilter === "low_stock" && stock > 0 && stock <= threshold) ||
         (stockFilter === "in_stock" && stock > threshold);
 
-      return matchesSearch && matchesCat && matchesStock;
+      return matchesSearch && matchesCat && matchesSupplier && matchesStock;
     });
-  }, [validBeverages, query, categoryFilter, stockFilter]);
+  }, [validBeverages, query, categoryFilter, supplierFilter, stockFilter]);
 
-  // Operational KPI metrics
-  const totalItems = validBeverages.length;
-  const totalUnits = validBeverages.reduce((sum, item) => sum + Number(item.stock ?? item.currentStock ?? 0), 0);
-  const lowStockCount = validBeverages.filter((item) => {
-    const s = Number(item.stock ?? item.currentStock ?? 0);
-    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
-    return s > 0 && s <= th;
-  }).length;
-  const outOfStockCount = validBeverages.filter((item) => Number(item.stock ?? item.currentStock ?? 0) <= 0).length;
-  const inStockCount = validBeverages.filter((item) => {
-    const s = Number(item.stock ?? item.currentStock ?? 0);
-    const th = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
-    return s > th;
-  }).length;
-  const totalValuation = validBeverages.reduce((sum, item) => {
-    const s = Number(item.stock ?? item.currentStock ?? 0);
-    const c = Number(item.unitCost ?? item.cost ?? 0);
-    return sum + (s * c);
-  }, 0);
+  // Pagination calculations
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
+  const visiblePage = Math.min(currentPage, pageCount);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const visibleItems = filteredRows.slice(pageStart, pageStart + itemsPerPage);
 
-  // Form field updater
-  const setField = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const setField = (key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleCategorySelect = (selectedCat) => {
-    if (selectedCat === "__custom__") {
+  const handleCategorySelect = (selected) => {
+    if (selected === "__custom__") {
       setCustomCategory(true);
-      setFormData((prev) => ({ ...prev, category: "" }));
-      return;
+      setField("category", "");
+      setField("subcategory", "");
+    } else {
+      setCustomCategory(false);
+      setField("category", selected);
+      const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selected);
+      if (matched) {
+        setField("subcategory", matched.subcategories[0] || "");
+        setField("unit", matched.defaultUnit || "Bottle (750 ml)");
+        setField("abv", matched.defaultAbv != null ? matched.defaultAbv : 40);
+      }
     }
-    setCustomCategory(false);
-    const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selectedCat);
-    setFormData((prev) => ({
-      ...prev,
-      category: selectedCat,
-      subcategory: matched?.subcategories?.[0] || prev.subcategory || "",
-      unit: matched?.defaultUnit || prev.unit || "Bottle (750 ml)",
-      abv: matched?.defaultAbv !== undefined ? matched.defaultAbv : prev.abv,
-      volumeMl: matched?.defaultUnit?.includes("750") ? 750 : matched?.defaultUnit?.includes("1 L") ? 1000 : matched?.defaultUnit?.includes("330") ? 330 : prev.volumeMl,
-    }));
   };
 
   const openAddModal = () => {
@@ -375,31 +444,25 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
 
   const openEditModal = (item) => {
     setEditingItem(item);
-    const catExists = BAR_INVENTORY_CATEGORIES.some((c) => c.category.toLowerCase() === String(item.category || "").toLowerCase());
-    const unitExists = BAR_INVENTORY_UNITS.some((u) => u.toLowerCase() === String(item.unit || "").toLowerCase());
-    const locExists = BAR_STORAGE_LOCATIONS.some((l) => l.toLowerCase() === String(item.storageLocation || "").toLowerCase());
-    const supExists = BAR_SUPPLIERS.some((s) => s.toLowerCase() === String(item.supplier || "").toLowerCase());
-
-    setCustomCategory(!catExists && Boolean(item.category));
-    setCustomUnit(!unitExists && Boolean(item.unit));
-    setCustomLocation(!locExists && Boolean(item.storageLocation));
-    setCustomSupplier(!supExists && Boolean(item.supplier));
-
     setFormData({
       name: item.name || "",
       category: item.category || "Whiskey & Scotch",
-      subcategory: item.subcategory || item.brand || "",
-      brand: item.brand || item.subcategory || "",
+      subcategory: item.subcategory || "",
+      brand: item.brand || "",
       unit: item.unit || "Bottle (750 ml)",
-      volumeMl: item.volumeMl ?? (String(item.unit || "").includes("750") ? 750 : String(item.unit || "").includes("1 L") ? 1000 : 750),
+      volumeMl: item.volumeMl ?? 750,
       abv: item.abv ?? 42.8,
-      stock: Number(item.stock ?? item.currentStock ?? 0),
-      minThreshold: Number(item.minThreshold ?? item.minimumThreshold ?? 5),
-      unitCost: Number(item.unitCost ?? item.cost ?? 0),
-      sellingPrice: Number(item.sellingPrice ?? item.mrp ?? 0),
+      stock: item.stock ?? item.currentStock ?? 1,
+      minThreshold: item.minThreshold ?? item.minimumThreshold ?? 5,
+      unitCost: item.unitCost ?? item.cost ?? 0,
+      sellingPrice: item.sellingPrice ?? item.mrp ?? 0,
       storageLocation: item.storageLocation || "Front Bar Display Shelf",
       supplier: item.supplier || "State Beverages Corporation (TSBCL/Govt Depot)",
     });
+    setCustomCategory(false);
+    setCustomUnit(false);
+    setCustomLocation(false);
+    setCustomSupplier(false);
     setModalError("");
     setModalOpen(true);
   };
@@ -409,29 +472,43 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     setModalBusy(true);
     setModalError("");
 
-    if (!formData.name.trim()) {
-      setModalError("Beverage item name is required.");
-      setModalBusy(false);
-      return;
-    }
-    if (!formData.category.trim()) {
-      setModalError("Category is required.");
-      setModalBusy(false);
-      return;
-    }
-
     try {
+      const payload = {
+        name: String(formData.name).trim(),
+        category: String(formData.category).trim() || "Beverages & Bar",
+        subcategory: String(formData.subcategory).trim(),
+        brand: String(formData.brand).trim(),
+        unit: String(formData.unit).trim() || "Bottle",
+        volumeMl: formData.volumeMl ? Number(formData.volumeMl) : null,
+        abv: formData.abv ? Number(formData.abv) : null,
+        stock: Number(formData.stock) || 0,
+        currentStock: Number(formData.stock) || 0,
+        minThreshold: Number(formData.minThreshold) || 5,
+        minimumThreshold: Number(formData.minThreshold) || 5,
+        unitCost: Number(formData.unitCost) || 0,
+        cost: Number(formData.unitCost) || 0,
+        sellingPrice: Number(formData.sellingPrice) || 0,
+        mrp: Number(formData.sellingPrice) || Number(formData.unitCost) || 0,
+        storageLocation: String(formData.storageLocation).trim() || "Front Bar Display Shelf",
+        supplier: String(formData.supplier).trim() || "State Beverages Corporation (TSBCL/Govt Depot)",
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (!payload.name) throw new Error("Beverage / Item Name is mandatory.");
+
+      let res;
       if (editingItem) {
         const targetId = editingItem.id ?? editingItem.ingredientId;
-        const res = await apiUpdateInventoryItem(targetId, formData);
-        if (!res?.success) throw new Error(res?.error || "Could not update the inventory item.");
+        res = await apiUpdateInventoryItem(targetId, payload);
       } else {
-        const res = await apiCreateInventoryItem(formData);
-        if (!res?.success) throw new Error(res?.error || "Could not create the inventory item.");
+        res = await apiCreateInventoryItem(payload);
       }
-      setModalOpen(false);
+
+      if (!res?.success) throw new Error(res?.error || "Failed to save bar inventory item.");
+
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      setModalOpen(false);
     } catch (requestError) {
       console.error("[Bar Inventory] Save failed:", requestError);
       setModalError(requestError?.message || "Could not save inventory item.");
@@ -440,31 +517,145 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     }
   };
 
-  const adjustStock = async (item, direction) => {
-    const isReceive = direction > 0;
-    const promptMsg = isReceive
-      ? `Enter quantity received for ${item.name} (${item.unit || "units"}):`
-      : `Enter quantity to adjust/deduct for ${item.name} (${item.unit || "units"}):`;
-    const input = window.prompt(promptMsg, "1");
-    if (input === null) return;
-    const amount = Number(input);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      window.alert("Please enter a valid positive number.");
-      return;
-    }
+  const handleAdjustStock = async (item, delta) => {
     setBusy(true);
     try {
-      const response = await apiAdjustStock({
-        ingredientId: item.id ?? item.ingredientId,
-        quantityChange: amount * direction,
-        reason: isReceive ? "Bar stock received" : "Bar stock adjustment / wastage",
+      const targetId = item.id ?? item.ingredientId;
+      const currentStock = Number(item.stock ?? item.currentStock ?? 0);
+      const nextStock = Math.max(0, Number((currentStock + delta).toFixed(2)));
+      const adjustedAmount = Math.abs(nextStock - currentStock);
+      const nextUsed = Number((Number(item.totalUsed || 0) + (delta < 0 ? adjustedAmount : 0)).toFixed(2));
+      const nextRestocked = Number((Number(item.totalRestocked || 0) + (delta > 0 ? adjustedAmount : 0)).toFixed(2));
+
+      await apiAdjustStock({
+        ingredientId: targetId,
+        quantityChange: delta,
+        reason: delta > 0 ? "Shipment Received" : "Quick Consume",
+      }).catch(async () => {
+        await apiUpdateInventoryItem(targetId, {
+          ...item,
+          stock: nextStock,
+          currentStock: nextStock,
+          totalUsed: nextUsed,
+          totalRestocked: nextRestocked,
+        });
       });
-      if (!response?.success) throw new Error(response?.error || "Stock adjustment failed.");
+
+      try {
+        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed, totalRestocked: nextRestocked } : it));
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
     } catch (requestError) {
       console.error("[Bar Inventory] Stock adjustment failed:", requestError);
-      window.alert(requestError?.message || "Stock adjustment failed.");
+      window.alert(requestError?.message || "Could not adjust stock.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRecordUsage = async (event) => {
+    event?.preventDefault?.();
+    const amount = Number(consumeAmount);
+    if (!consumeItem || !Number.isFinite(amount) || amount <= 0) return;
+    setBusy(true);
+    try {
+      const targetId = consumeItem.id ?? consumeItem.ingredientId;
+      const currentStock = Number(consumeItem.stock ?? consumeItem.currentStock ?? 0);
+      const nextStock = Math.max(0, Number((currentStock - amount).toFixed(2)));
+      const nextUsed = Number((Number(consumeItem.totalUsed || 0) + amount).toFixed(2));
+
+      await apiAdjustStock({
+        ingredientId: targetId,
+        quantityChange: -amount,
+        reason: consumeReason.trim() || "Bar Usage",
+      }).catch(async () => {
+        await apiUpdateInventoryItem(targetId, {
+          ...consumeItem,
+          stock: nextStock,
+          currentStock: nextStock,
+          totalUsed: nextUsed,
+        });
+      });
+
+      try {
+        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed } : it));
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
+
+        const ledger = JSON.parse(localStorage.getItem("gourmet_pos_inventory_deductions_v1") || "[]");
+        ledger.unshift({
+          id: `usage-${Date.now()}`,
+          itemId: targetId,
+          itemName: consumeItem.name,
+          quantity: amount,
+          unit: consumeItem.unit || "Bottle",
+          reason: consumeReason.trim() || "Bar Usage",
+          timestamp: new Date().toISOString(),
+        });
+        localStorage.setItem("gourmet_pos_inventory_deductions_v1", JSON.stringify(ledger.slice(0, 500)));
+      } catch {}
+
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      setConsumeItem(null);
+      setConsumeAmount("");
+      setConsumeReason("Bar Usage");
+    } catch (err) {
+      console.error("[Bar Inventory] Record usage failed:", err);
+      window.alert(err?.message || "Could not record usage.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReceiveStock = async (event) => {
+    event?.preventDefault?.();
+    const amount = Number(restockAmount);
+    if (!restockItem || !Number.isFinite(amount) || amount <= 0) return;
+    setBusy(true);
+    try {
+      const targetId = restockItem.id ?? restockItem.ingredientId;
+      const currentStock = Number(restockItem.stock ?? restockItem.currentStock ?? 0);
+      const nextStock = Number((currentStock + amount).toFixed(2));
+      const nextRestocked = Number((Number(restockItem.totalRestocked || 0) + amount).toFixed(2));
+      const supplierToUse = restockSupplier.trim() || restockItem.supplier || "State Beverages Corporation (TSBCL/Govt Depot)";
+
+      await apiAdjustStock({
+        ingredientId: targetId,
+        quantityChange: amount,
+        reason: `Shipment Received (${supplierToUse})`,
+      }).catch(async () => {
+        await apiUpdateInventoryItem(targetId, {
+          ...restockItem,
+          stock: nextStock,
+          currentStock: nextStock,
+          totalRestocked: nextRestocked,
+          supplier: supplierToUse,
+        });
+      });
+
+      try {
+        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalRestocked: nextRestocked, supplier: supplierToUse } : it));
+        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+
+      await onRefresh();
+      window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
+      setRestockItem(null);
+      setRestockAmount("");
+      setRestockSupplier("");
+      setCustomRestockSupplier(false);
+    } catch (err) {
+      console.error("[Bar Inventory] Receive stock failed:", err);
+      window.alert(err?.message || "Could not receive stock.");
     } finally {
       setBusy(false);
     }
@@ -527,262 +718,1587 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     }
   };
 
+  const exportExcel = () => {
+    const rows = [
+      [
+        "Ingredient / Supply",
+        "Category",
+        "Subcategory",
+        "Brand",
+        "Unit & Size",
+        "Volume (ml)",
+        "ABV %",
+        "MRP / Price (₹)",
+        "In-Stock",
+        "Threshold",
+        "Unit Cost (₹)",
+        "Stock Value (₹)",
+        "Storage Location",
+        "Status",
+        "Supplier",
+      ],
+      ...validBeverages.map((item) => {
+        const stock = Number(item.stock ?? item.currentStock ?? 0);
+        const cost = Number(item.unitCost ?? item.cost ?? 0);
+        const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+        const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+        const stockVal = stock * (cost > 0 ? cost : selling);
+        const status = stock <= 0 ? "Out of Stock" : stock <= threshold ? "Low Stock" : "In Stock";
+        return [
+          item.name,
+          item.category || "Beverages & Bar",
+          item.subcategory || "",
+          item.brand || "",
+          item.unit || "Bottle",
+          item.volumeMl || "",
+          item.abv != null ? `${item.abv}%` : "0%",
+          selling || cost,
+          stock,
+          threshold,
+          cost,
+          stockVal.toFixed(2),
+          item.storageLocation || "",
+          status,
+          item.supplier || "",
+        ];
+      }),
+    ];
+    csvDownload(`bar-inventory-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  };
+
   // Find subcategories for current category
   const currentCategoryObj = BAR_INVENTORY_CATEGORIES.find((c) => c.category === formData.category);
   const currentSubcategories = currentCategoryObj?.subcategories || [];
 
   return (
-    <section className="bar-page-card" style={{ padding: 0, overflow: "hidden" }}>
-      {/* 1. Header with Actions */}
-      <div className="bar-section-head" style={{ padding: "16px 18px", borderBottom: "1px solid var(--bar-line)" }}>
-        <div>
-          <h2 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, fontSize: "1.2rem" }}>
-            <Wine size={20} color="var(--accent-amber)" /> Bar Inventory & Liquor Ledger
-          </h2>
-          <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: "0.75rem" }}>
-            Track bottles, barrels, kegs, spirits, wines, mixers, and bar consumables in real time.
-          </p>
-        </div>
-        <div className="bar-actions">
-          <button className="bar-button primary" type="button" onClick={openAddModal}>
-            <Plus size={15} /> Add Inventory
-          </button>
-          <button className="bar-button secondary" type="button" onClick={onRefresh} disabled={loading || busy}>
-            <RefreshCw size={15} className={loading ? "spin" : ""} /> Refresh
-          </button>
-          <button
-            className="bar-button secondary"
-            type="button"
-            title="Purge any leftover mock packaging items (Takeaway Handis, Foil Trays)"
-            onClick={purgeMockPackagingData}
-            disabled={loading || busy}
-            style={{ fontSize: "0.7rem" }}
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {/* Outer Card Matching Dine Inventory */}
+      <div
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
+          borderRadius: "16px",
+          padding: "1.1rem",
+        }}
+      >
+        {/* 1. Header Strip */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+          }}
+        >
+          {/* Left Title with Orange Squircle */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+              }}
+            >
+              <Package size={19} color="#ffffff" />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <h2
+                  style={{
+                    fontSize: "1.18rem",
+                    fontWeight: 800,
+                    color: "var(--text-main)",
+                    margin: 0,
+                  }}
+                >
+                  Raw Inventory & Supplies
+                </h2>
+                <span
+                  style={{
+                    background: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    color: "var(--accent-amber-light)",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    padding: "2px 10px",
+                    borderRadius: "20px",
+                  }}
+                >
+                  {validBeverages.length} items
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: "0.74rem",
+                  color: "var(--text-dim)",
+                  margin: "3px 0 0 0",
+                }}
+              >
+                Track restaurant raw ingredients, meat stock, spices and packaging units
+              </p>
+            </div>
+          </div>
+
+          {/* Top Right Corner Actions */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.55rem",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginLeft: "auto",
+            }}
           >
-            <Trash2 size={13} /> Clean Mock Items
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Top Operational KPI Summary Cards */}
-      <div className="bar-inv-kpis">
-        <div className="bar-inv-kpi">
-          <span>Total Bar Items</span>
-          <strong>{totalItems}</strong>
-          <small>Active beverage lines</small>
-        </div>
-        <div className="bar-inv-kpi">
-          <span>In-Stock Bottles / Units</span>
-          <strong>{totalUnits.toLocaleString("en-IN")}</strong>
-          <small>Total physical inventory</small>
-        </div>
-        <div className="bar-inv-kpi alert">
-          <span>Low Stock Alerts</span>
-          <strong style={{ color: lowStockCount > 0 ? "#f59e0b" : "inherit" }}>{lowStockCount}</strong>
-          <small>At or below threshold</small>
-        </div>
-        <div className="bar-inv-kpi danger">
-          <span>Out of Stock</span>
-          <strong style={{ color: outOfStockCount > 0 ? "#ef4444" : "inherit" }}>{outOfStockCount}</strong>
-          <small>Urgent re-order needed</small>
-        </div>
-        <div className="bar-inv-kpi highlight">
-          <span>Bar Stock Valuation</span>
-          <strong style={{ color: "var(--accent-amber, #f59e0b)" }}>{formatCurrency(totalValuation)}</strong>
-          <small>Total purchase value</small>
-        </div>
-      </div>
-
-      {/* 3. Search & Filter Bar */}
-      <div className="bar-list-tools">
-        <label className="bar-search">
-          <Search size={16} />
-          <input
-            placeholder="Search drink name, brand, category, rack location…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {query && (
-            <button className="bar-icon-button small" type="button" onClick={() => setQuery("")}>
-              <X size={14} />
+            <button
+              type="button"
+              onClick={exportExcel}
+              title="Download all bar inventory as an Excel-compatible CSV"
+              style={{
+                height: "36px",
+                background: "var(--bg-tertiary)",
+                color: "var(--success)",
+                border: "1px solid rgba(52, 211, 153, 0.4)",
+                borderRadius: "9px",
+                padding: "0 0.85rem",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Download size={15} />
+              <span>Export Excel</span>
             </button>
-          )}
-        </label>
-        <label className="bar-select-label">
-          <span>Category Filter</span>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="all">All Categories ({validBeverages.length})</option>
-            {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </label>
-        <label className="bar-select-label">
-          <span>Stock Status</span>
-          <select value={stockFilter} onChange={(e) => setStockFilter(e.target.value)}>
-            <option value="all">All Statuses ({validBeverages.length})</option>
-            <option value="in_stock">In Stock ({inStockCount})</option>
-            <option value="low_stock">Low Stock ({lowStockCount})</option>
-            <option value="out_of_stock">Out of Stock ({outOfStockCount})</option>
-          </select>
-        </label>
-      </div>
+            <button
+              type="button"
+              onClick={openAddModal}
+              style={{
+                height: "36px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "9px",
+                padding: "0 0.95rem",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                cursor: "pointer",
+                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Plus size={15} />
+              <span>Add Stock Item</span>
+            </button>
+          </div>
 
-      {error && <div className="bar-error" role="alert" style={{ margin: "14px 18px" }}>{error}</div>}
+          {/* Filter Bar: Search & Inventory Dropdowns */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              flex: "1 1 100%",
+              width: "100%",
+              marginTop: "0.25rem",
+            }}
+          >
+            {/* Search Input */}
+            <div
+              style={{
+                position: "relative",
+                flex: "1 1 240px",
+                minWidth: "220px",
+                height: "36px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Search
+                size={16}
+                color="var(--text-dim)"
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search raw items or suppliers..."
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "9px",
+                  padding: "0 12px 0 36px",
+                  color: "var(--text-main)",
+                  fontSize: "0.82rem",
+                  outline: "none",
+                }}
+              />
+            </div>
 
-      {/* 4. Inventory Records Table */}
-      {loading ? (
-        <SkeletonTable rows={6} columns={7} className="bar-table-wrap" />
-      ) : (
-        <div className="bar-table-wrap">
-          <table className="bar-table bar-inventory-table">
-            <thead>
-              <tr>
-                <th style={{ minWidth: "180px", textAlign: "left" }}>Item / Drink Name</th>
-                <th style={{ minWidth: "130px", textAlign: "left" }}>Category</th>
-                <th style={{ minWidth: "120px", textAlign: "left" }}>Unit & Size</th>
-                <th style={{ minWidth: "85px", textAlign: "center" }}>ABV %</th>
-                <th style={{ minWidth: "100px", textAlign: "center" }}>Current Stock</th>
-                <th style={{ minWidth: "80px", textAlign: "center" }}>Threshold</th>
-                <th style={{ minWidth: "105px", textAlign: "right" }}>Unit Cost</th>
-                <th style={{ minWidth: "105px", textAlign: "right" }}>Selling / MRP</th>
-                <th style={{ minWidth: "140px", textAlign: "left" }}>Storage Location</th>
-                <th style={{ minWidth: "95px", textAlign: "center" }}>Status</th>
-                <th style={{ minWidth: "240px", textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.map((item) => {
-                const stock = Number(item.stock ?? item.currentStock ?? 0);
-                const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
-                const abvVal = item.abv != null && item.abv !== "" ? Number(item.abv) : null;
-                const cost = Number(item.unitCost ?? item.cost ?? 0);
-                const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+            {/* 3 Dropdowns Grid */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                flex: "2 1 480px",
+                gap: "0.65rem",
+                minWidth: "300px",
+              }}
+            >
+              {/* Category Dropdown */}
+              <div style={{ position: "relative", minWidth: 0 }}>
+                <select
+                  aria-label="Filter by category"
+                  value={categoryFilter}
+                  onChange={(e) => {
+                    setCategoryFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    height: "40px",
+                    padding: "0 2.25rem 0 0.75rem",
+                    color: "var(--text-main)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "9px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    outline: "none",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    cursor: "pointer",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                >
+                  <option value="all">All Categories</option>
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: "0.75rem",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
 
-                let statusLabel = "In Stock";
-                if (stock <= 0) {
-                  statusLabel = "Out of Stock";
-                } else if (stock <= threshold) {
-                  statusLabel = "Low Stock";
-                }
+              {/* Status Dropdown */}
+              <div style={{ position: "relative", minWidth: 0 }}>
+                <select
+                  aria-label="Filter by status"
+                  value={stockFilter === "expenditure" ? "all" : stockFilter}
+                  onChange={(e) => {
+                    setStockFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    height: "40px",
+                    padding: "0 2.25rem 0 0.75rem",
+                    color: "var(--text-main)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "9px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    outline: "none",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    cursor: "pointer",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="in_stock">In Stock</option>
+                  <option value="low_stock">Low Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                </select>
+                <ChevronDown
+                  size={16}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: "0.75rem",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
 
-                const brandText = String(item.brand || "").trim();
-                const subcatText = String(item.subcategory || "").trim();
-                const displaySubtitle =
-                  brandText && subcatText && brandText.toLowerCase() !== subcatText.toLowerCase()
-                    ? `${brandText} • ${subcatText}`
-                    : brandText || subcatText || "";
+              {/* Supplier Dropdown */}
+              <div style={{ position: "relative", minWidth: 0 }}>
+                <select
+                  aria-label="Filter by supplier"
+                  value={supplierFilter}
+                  onChange={(e) => {
+                    setSupplierFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: "100%",
+                    minWidth: 0,
+                    height: "40px",
+                    padding: "0 2.25rem 0 0.75rem",
+                    color: "var(--text-main)",
+                    background: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "9px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    outline: "none",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    cursor: "pointer",
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                >
+                  <option value="all">All Suppliers</option>
+                  {availableSuppliers.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: "0.75rem",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
-                return (
-                  <tr key={item.id ?? item.ingredientId}>
-                    <td style={{ textAlign: "left" }}>
-                      <strong>{item.name}</strong>
-                      {displaySubtitle && (
-                        <small style={{ color: "var(--text-dim)", display: "block" }}>
-                          {displaySubtitle}
-                        </small>
-                      )}
-                    </td>
-                    <td style={{ textAlign: "left" }}>
-                      <span className="bar-category-chip">{item.category || "Beverage"}</span>
-                    </td>
-                    <td style={{ textAlign: "left" }}>
-                      <span>{item.unit || "Bottle"}</span>
-                      {item.volumeMl && <small style={{ display: "block", color: "var(--text-dim)" }}>{item.volumeMl} ml</small>}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      {abvVal != null && abvVal > 0 ? (
-                        <span style={{ fontWeight: 700, color: "var(--accent-amber)" }}>{abvVal}%</span>
-                      ) : (
-                        <span style={{ color: "var(--text-dim)", fontSize: "0.68rem" }}>0% Non-Alc</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <span className={`bar-stock-chip ${stock <= threshold ? "low" : ""}`}>
-                        {stock}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "center", color: "var(--text-muted)" }}>{threshold}</td>
-                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(cost)}</td>
-                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{selling > 0 ? formatCurrency(selling) : <span style={{ color: "var(--text-dim)" }}>—</span>}</td>
-                    <td style={{ textAlign: "left" }}>
-                      <small style={{ display: "block", color: "var(--text-muted)", fontSize: "0.72rem" }}>
-                        {item.storageLocation || "Front Bar Display Shelf"}
-                      </small>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <Status>{statusLabel}</Status>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div className="bar-inv-actions">
-                        <div className="bar-stock-btn-group">
-                          <button
-                            className="bar-stock-btn deduct"
-                            type="button"
-                            title={`Deduct / Adjust stock for ${item.name}`}
-                            disabled={busy}
-                            onClick={() => adjustStock(item, -1)}
+        {/* 3. Stock Summary Clickable Filter Cards (Exact Match with Dine Inventory) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+            gap: "0.6rem",
+            marginBottom: "0.9rem",
+          }}
+        >
+          {[
+            {
+              label: "Total Items",
+              value: totalItems,
+              status: "all",
+              color: "var(--info, #38bdf8)",
+              icon: Package,
+            },
+            {
+              label: "Stock Expenditure",
+              value: formatCurrency(totalValuation),
+              status: "expenditure",
+              color: "#f59e0b",
+              icon: IndianRupee,
+            },
+            {
+              label: "In Stock",
+              value: inStockCount,
+              status: "in_stock",
+              color: "var(--success, #10b981)",
+              icon: CheckCircle2,
+            },
+            {
+              label: "Low Stock",
+              value: lowStockCount,
+              status: "low_stock",
+              color: "var(--accent-amber-light, #f59e0b)",
+              icon: AlertTriangle,
+            },
+            {
+              label: "Out of Stock",
+              value: outOfStockCount,
+              status: "out_of_stock",
+              color: "var(--danger, #ef4444)",
+              icon: TrendingDown,
+            },
+          ].map(({ label, value, status, color, icon: Icon }) => (
+            <button
+              type="button"
+              key={label}
+              aria-label={`Show ${label.toLowerCase()} bar inventory items`}
+              aria-pressed={stockFilter === status}
+              onClick={() => {
+                setStockFilter(stockFilter === status ? "all" : status);
+                setCurrentPage(1);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                minWidth: 0,
+                width: "100%",
+                padding: "0.65rem 0.8rem",
+                background: "var(--bg-tertiary)",
+                border: `1px solid ${stockFilter === status ? color : "var(--border-subtle)"}`,
+                borderRadius: "10px",
+                color: "inherit",
+                textAlign: "left",
+                cursor: "pointer",
+                boxShadow: stockFilter === status ? `0 0 12px color-mix(in srgb, ${color} 25%, transparent)` : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  flexShrink: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  color,
+                  background: `color-mix(in srgb, ${color} 12.55%, transparent)`,
+                  borderRadius: "9px",
+                }}
+              >
+                <Icon size={17} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+                <div
+                  style={{
+                    color: "var(--text-muted)",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {label}
+                </div>
+                <div
+                  title={String(value)}
+                  style={{
+                    color,
+                    fontSize:
+                      typeof value === "string" && value.length > 11
+                        ? "0.82rem"
+                        : typeof value === "string" && value.length > 8
+                          ? "0.9rem"
+                          : "1.05rem",
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    lineHeight: "1.25",
+                    marginTop: "2px",
+                  }}
+                >
+                  {value}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              color: "var(--danger)",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              padding: "0.6rem 0.8rem",
+              background: "rgba(239, 68, 68, 0.1)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              borderRadius: "8px",
+              marginBottom: "0.9rem",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* 4. Inventory Records Table */}
+        {loading ? (
+          <SkeletonTable rows={6} columns={8} />
+        ) : (
+          <div
+            style={{
+              overflowX: "auto",
+              borderRadius: "12px",
+              border: "1px solid var(--border-card)",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                textAlign: "left",
+                fontSize: "0.85rem",
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--border-subtle)",
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  <th style={{ padding: "0.55rem 0.65rem" }}>Ingredient / Supply</th>
+                  <th style={{ padding: "0.55rem 0.65rem" }}>Category</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>MRP</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>In-Stock</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>Stock Value</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Used</th>
+                  <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Threshold</th>
+                  <th style={{ padding: "0.55rem 0.6rem", textAlign: "center" }}>Status</th>
+                  <th style={{ padding: "0.55rem 0.65rem", textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleItems.map((item) => {
+                  const stock = Number(item.stock ?? item.currentStock ?? 0);
+                  const threshold = Number(item.minThreshold ?? item.minimumThreshold ?? 0);
+                  const cost = Number(item.unitCost ?? item.cost ?? 0);
+                  const selling = Number(item.sellingPrice ?? item.mrp ?? 0);
+                  const stockVal = stock * (cost > 0 ? cost : selling);
+
+                  const isOutOfStock = stock <= 0;
+                  const isLowStock = !isOutOfStock && stock <= threshold;
+                  const statusColor = isOutOfStock
+                    ? "#ef4444"
+                    : isLowStock
+                      ? "#f59e0b"
+                      : "#10b981";
+
+                  const brandText = String(item.brand || "").trim();
+                  const subcatText = String(item.subcategory || "").trim();
+                  const abvText = item.abv != null && Number(item.abv) > 0 ? `${item.abv}% ABV` : "";
+                  const subParts = [brandText, subcatText, abvText].filter(Boolean);
+                  const uniqueSubParts = [...new Set(subParts)];
+                  const displaySubtitle = uniqueSubParts.join(" • ");
+
+                  const unitLabel = item.unit ? (item.unit.startsWith("Bottle") ? "Bottle" : item.unit.split(" ")[0]) : "Bottle";
+
+                  return (
+                    <tr
+                      key={item.id ?? item.ingredientId}
+                      style={{
+                        borderBottom: "1px solid var(--border-subtle)",
+                        transition: "background 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {/* Ingredient / Supply */}
+                      <td style={{ padding: "0.55rem 0.65rem" }}>
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            color: "var(--text-main)",
+                            fontSize: "0.84rem",
+                            lineHeight: "1.25",
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "var(--text-muted)",
+                            marginTop: "2px",
+                            maxWidth: "180px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={`Supplier: ${item.supplier || "Supplier not set"}`}
+                        >
+                          Supplier: {item.supplier || "Supplier not set"}
+                        </div>
+                      </td>
+
+                      {/* Category */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.65rem",
+                          color: "var(--text-main)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <div style={{ lineHeight: "1.25" }}>{item.category || "Beverages & Bar"}</div>
+                        {displaySubtitle && (
+                          <div
+                            style={{
+                              color: "var(--text-muted)",
+                              fontSize: "0.7rem",
+                              fontWeight: 500,
+                              marginTop: "1px",
+                              maxWidth: "150px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            title={displaySubtitle}
                           >
-                            <span className="bar-stock-icon">−</span> Adjust
+                            {displaySubtitle}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* MRP */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          color: "var(--text-main)",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          textAlign: "right",
+                        }}
+                      >
+                        {selling > 0 ? formatCurrency(selling) : (cost > 0 ? formatCurrency(cost) : "—")}
+                      </td>
+
+                      {/* In-Stock */}
+                      <td style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            color: statusColor,
+                            fontSize: "0.82rem",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {stock} {unitLabel}
+                        </div>
+                      </td>
+
+                      {/* Stock Value */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          whiteSpace: "nowrap",
+                          textAlign: "right",
+                        }}
+                      >
+                        {stockVal <= 0 ? (
+                          <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>₹0.00</span>
+                        ) : (
+                          <span style={{ color: "#f59e0b", fontWeight: 800, fontSize: "0.82rem" }}>
+                            {formatCurrency(stockVal)}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Used */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConsumeItem(item);
+                            setConsumeAmount("");
+                            setConsumeReason("Bar Usage");
+                          }}
+                          title={`Click to manually record or add used ${item.name}`}
+                          style={{
+                            background: "transparent",
+                            border: "1px dashed transparent",
+                            padding: "1px 5px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            color: "var(--text-main)",
+                            fontWeight: 700,
+                            fontSize: "0.8rem",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            whiteSpace: "nowrap",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "var(--surface-tint)";
+                            e.currentTarget.style.borderColor = "var(--accent-amber)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.borderColor = "transparent";
+                          }}
+                        >
+                          <span>{Number(item.totalUsed || 0)} {unitLabel}</span>
+                          <Pencil size={10} color="var(--accent-amber)" />
+                        </button>
+                      </td>
+
+                      {/* Threshold */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.5rem",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        {threshold} {unitLabel}
+                      </td>
+
+                      {/* Status */}
+                      <td style={{ padding: "0.55rem 0.6rem", textAlign: "center", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            background: `${statusColor}1f`,
+                            border: `1px solid ${statusColor}4d`,
+                            color: statusColor,
+                            borderRadius: "12px",
+                            padding: "2px 8px",
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            whiteSpace: "nowrap",
+                            lineHeight: "1.2",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              background: statusColor,
+                            }}
+                          />
+                          {isOutOfStock ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock"}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td
+                        style={{
+                          padding: "0.55rem 0.65rem",
+                          textAlign: "right",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(item)}
+                            aria-label={`Edit ${item.name}`}
+                            title="Edit inventory item"
+                            style={{
+                              background: "var(--bg-tertiary)",
+                              border: "1px solid var(--border-subtle)",
+                              color: "var(--text-main)",
+                              borderRadius: "6px",
+                              padding: "3px 6px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Pencil size={11} />
+                            <span>Edit</span>
                           </button>
                           <button
-                            className="bar-stock-btn receive"
                             type="button"
-                            title={`Receive stock shipment for ${item.name}`}
-                            disabled={busy}
-                            onClick={() => adjustStock(item, 1)}
+                            disabled={busy || stock <= 0}
+                            onClick={() => handleAdjustStock(item, -5)}
+                            style={{
+                              background: "var(--surface-tint)",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              color: "var(--text-main)",
+                              borderRadius: "6px",
+                              padding: "3px 7px",
+                              fontSize: "0.72rem",
+                              fontWeight: 800,
+                              cursor: stock <= 0 ? "not-allowed" : "pointer",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                              opacity: stock <= 0 ? 0.5 : 1,
+                            }}
+                            title="Quick consume -5 units"
                           >
-                            <span className="bar-stock-icon">+</span> Receive
+                            -5
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConsumeItem(item);
+                              setConsumeAmount("");
+                              setConsumeReason("Bar Usage");
+                            }}
+                            style={{
+                              background: "rgba(245, 158, 11, 0.14)",
+                              border: "1px solid rgba(245, 158, 11, 0.38)",
+                              color: "#f59e0b",
+                              borderRadius: "6px",
+                              padding: "3px 7px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                            title="Record custom used quantity manually"
+                          >
+                            <MinusCircle size={11} />
+                            <span>Use</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRestockItem(item);
+                              setRestockAmount("");
+                              setRestockSupplier(item.supplier || "");
+                              setCustomRestockSupplier(false);
+                            }}
+                            style={{
+                              background: "rgba(16, 185, 129, 0.1)",
+                              border: "1px solid rgba(16, 185, 129, 0.3)",
+                              color: "#10b981",
+                              borderRadius: "6px",
+                              padding: "3px 7px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                            title="Record received stock quantity"
+                          >
+                            <PackagePlus size={12} />
+                            <span>Receive</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => deleteItem(item)}
+                            style={{
+                              background: "rgba(239, 68, 68, 0.08)",
+                              border: "1px solid rgba(239, 68, 68, 0.3)",
+                              color: "#ef4444",
+                              borderRadius: "6px",
+                              padding: "4px 6px",
+                              fontSize: "0.72rem",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                            title="Delete item"
+                          >
+                            <Trash2 size={12} />
                           </button>
                         </div>
-                        <button
-                          className="bar-icon-button small"
-                          type="button"
-                          title="Edit bar inventory item"
-                          disabled={busy}
-                          onClick={() => openEditModal(item)}
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          className="bar-icon-button small danger"
-                          type="button"
-                          title="Delete from bar inventory"
-                          disabled={busy}
-                          onClick={() => deleteItem(item)}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-          {filteredRows.length === 0 && !error && (
-            <div className="bar-empty">
-              {validBeverages.length === 0 ? (
-                <div>
-                  <p style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: 700 }}>
-                    No bar inventory items found.
+            {filteredRows.length === 0 && !error && (
+              <div style={{ padding: "2.5rem 1rem", textAlign: "center", color: "var(--text-dim)" }}>
+                {validBeverages.length === 0 ? (
+                  <div>
+                    <p style={{ margin: "0 0 10px", fontSize: "0.9rem", fontWeight: 700, color: "var(--text-main)" }}>
+                      No bar inventory items found.
+                    </p>
+                    <p style={{ margin: "0 0 16px", color: "var(--text-dim)", fontSize: "0.8rem" }}>
+                      Add your first beverage or bar supply item to get started.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={openAddModal}
+                      style={{
+                        height: "36px",
+                        background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "9px",
+                        padding: "0 1rem",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Plus size={15} style={{ verticalAlign: "middle", marginRight: "4px" }} />
+                      Add First Bar Item
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                    No items match your current search or filters. Try clearing your filters.
                   </p>
-                  <p style={{ margin: "0 0 16px", color: "var(--text-dim)" }}>
-                    All kitchen packaging mock data has been cleared. Add your first liquor or beverage item to get started.
-                  </p>
-                  <button className="bar-button primary" type="button" onClick={openAddModal}>
-                    <Plus size={15} /> Add First Bar Inventory Item
-                  </button>
-                </div>
-              ) : (
-                <p>No beverage items match your current search or filters. Try adjusting your search query.</p>
-              )}
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 5. Pagination Bar matching Dine Inventory */}
+        {filteredRows.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              marginTop: "0.85rem",
+              padding: "0 0.2rem",
+            }}
+          >
+            <div style={{ color: "var(--text-muted)", fontSize: "0.76rem" }}>
+              Showing {Math.min(filteredRows.length, pageStart + 1)}–{Math.min(filteredRows.length, pageStart + itemsPerPage)} of {filteredRows.length} items
             </div>
-          )}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <button
+                type="button"
+                disabled={visiblePage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                style={{
+                  height: "30px",
+                  padding: "0 0.55rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-card)",
+                  background: "var(--bg-tertiary)",
+                  color: visiblePage <= 1 ? "var(--text-dim)" : "var(--text-main)",
+                  cursor: visiblePage <= 1 ? "not-allowed" : "pointer",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                <ChevronLeft size={14} />
+                <span>Prev</span>
+              </button>
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  padding: "0 0.4rem",
+                }}
+              >
+                Page {visiblePage} of {pageCount}
+              </span>
+              <button
+                type="button"
+                disabled={visiblePage >= pageCount}
+                onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+                style={{
+                  height: "30px",
+                  padding: "0 0.55rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-card)",
+                  background: "var(--bg-tertiary)",
+                  color: visiblePage >= pageCount ? "var(--text-dim)" : "var(--text-main)",
+                  cursor: visiblePage >= pageCount ? "not-allowed" : "pointer",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 6. Add / Edit Bar Inventory Modal */}
+      {/* Record Used Modal (Matching Dine Inventory) */}
+      {consumeItem && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 175,
+            padding: "1rem",
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <form
+            onSubmit={handleRecordUsage}
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              padding: "1.2rem",
+              borderRadius: "14px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              boxShadow: "var(--shadow-lg)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.4rem",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  color: "var(--text-main)",
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                }}
+              >
+                <MinusCircle size={18} color="#f59e0b" />
+                Record Used: {consumeItem.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setConsumeItem(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-dim)",
+                  cursor: "pointer",
+                  padding: "4px",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                padding: "0.55rem 0.75rem",
+                borderRadius: "8px",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
+                marginBottom: "0.85rem",
+                fontSize: "0.78rem",
+              }}
+            >
+              <div>
+                <span style={{ color: "var(--text-dim)" }}>In-Stock:</span>{" "}
+                <strong
+                  style={{
+                    color:
+                      Number(consumeItem.stock ?? consumeItem.currentStock ?? 0) <=
+                      Number(consumeItem.minThreshold ?? consumeItem.minimumThreshold ?? 0)
+                        ? "#f59e0b"
+                        : "#10b981",
+                  }}
+                >
+                  {consumeItem.stock ?? consumeItem.currentStock ?? 0} {consumeItem.unit || "Bottle"}
+                </strong>
+              </div>
+              <div
+                style={{
+                  borderLeft: "1px solid var(--border-subtle)",
+                  paddingLeft: "0.75rem",
+                }}
+              >
+                <span style={{ color: "var(--text-dim)" }}>Total Used:</span>{" "}
+                <strong style={{ color: "var(--text-main)" }}>
+                  {Number(consumeItem.totalUsed || 0)} {consumeItem.unit || "Bottle"}
+                </strong>
+              </div>
+            </div>
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-main)",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              QUANTITY USED ({consumeItem.unit || "Bottle"}) *
+            </label>
+            <input
+              autoFocus
+              required
+              type="number"
+              min="0.001"
+              step="any"
+              value={consumeAmount}
+              onChange={(event) => setConsumeAmount(event.target.value)}
+              placeholder={`Enter amount used (e.g. 5, 20, 50 ${consumeItem.unit || "Bottle"})`}
+              style={{
+                width: "100%",
+                height: "40px",
+                boxSizing: "border-box",
+                padding: "0 0.75rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.9rem",
+                fontWeight: 700,
+                marginBottom: "0.5rem",
+              }}
+            />
+
+            {/* Quick Presets */}
+            <div
+              style={{
+                display: "flex",
+                gap: "0.35rem",
+                marginBottom: "0.85rem",
+                flexWrap: "wrap",
+              }}
+            >
+              {[1, 5, 10, 20, 50].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setConsumeAmount(String(val))}
+                  style={{
+                    padding: "3px 9px",
+                    borderRadius: "6px",
+                    background:
+                      consumeAmount === String(val)
+                        ? "var(--accent-amber)"
+                        : "var(--surface-tint)",
+                    color:
+                      consumeAmount === String(val)
+                        ? "#000000"
+                        : "var(--text-main)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  +{val} {consumeItem.unit || "Bottle"}
+                </button>
+              ))}
+            </div>
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              USAGE REASON / NOTE (OPTIONAL)
+            </label>
+            <input
+              type="text"
+              value={consumeReason}
+              onChange={(event) => setConsumeReason(event.target.value)}
+              placeholder="e.g. Bar service, Cocktails, Spoilage"
+              style={{
+                width: "100%",
+                height: "36px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.8rem",
+                marginBottom: "1rem",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setConsumeItem(null)}
+                style={{
+                  height: "36px",
+                  padding: "0 0.95rem",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "8px",
+                  color: "var(--text-main)",
+                  background: "var(--bg-tertiary)",
+                  fontWeight: 700,
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busy}
+                style={{
+                  height: "36px",
+                  padding: "0 1rem",
+                  border: 0,
+                  borderRadius: "8px",
+                  color: "#fff",
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  fontWeight: 800,
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                }}
+              >
+                {busy ? "Recording..." : "Record Used"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* 5. Add / Edit Bar Inventory Modal */}
+      {/* Receive Stock Modal (Matching Dine Inventory) */}
+      {restockItem && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 175,
+            padding: "1rem",
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <form
+            onSubmit={handleReceiveStock}
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              padding: "1.1rem",
+              borderRadius: "14px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              boxShadow: "var(--shadow-lg)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.25rem",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  color: "var(--text-main)",
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                }}
+              >
+                Receive {restockItem.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRestockItem(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-dim)",
+                  cursor: "pointer",
+                  padding: "4px",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p
+              style={{
+                margin: "0 0 0.9rem",
+                color: "var(--text-muted)",
+                fontSize: "0.75rem",
+              }}
+            >
+              Current stock: {restockItem.stock ?? restockItem.currentStock ?? 0} {restockItem.unit || "Bottle"}
+            </p>
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              QUANTITY RECEIVED ({restockItem.unit || "Bottle"}) *
+            </label>
+            <input
+              autoFocus
+              required
+              type="number"
+              min="0.001"
+              step="any"
+              value={restockAmount}
+              onChange={(event) => setRestockAmount(event.target.value)}
+              placeholder="Enter quantity"
+              style={{
+                width: "100%",
+                height: "38px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                marginBottom: "0.7rem",
+              }}
+            />
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              SUPPLIER
+            </label>
+            <div style={{ marginBottom: "0.9rem" }}>
+              {customRestockSupplier ? (
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={restockSupplier}
+                    onChange={(e) => setRestockSupplier(e.target.value)}
+                    placeholder="Type new supplier name..."
+                    style={{
+                      width: "100%",
+                      height: "38px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-card)",
+                      background: "var(--bg-tertiary)",
+                      color: "var(--text-main)",
+                      fontSize: "0.82rem",
+                      padding: "0 0.65rem",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCustomRestockSupplier(false)}
+                    style={{
+                      padding: "0 0.6rem",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      color: "var(--text-dim)",
+                      fontSize: "0.72rem",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Select from list
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={restockSupplier}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomRestockSupplier(true);
+                          setRestockSupplier("");
+                        } else {
+                          setRestockSupplier(e.target.value);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "38px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-card)",
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-main)",
+                        fontSize: "0.82rem",
+                        padding: "0 2rem 0 0.65rem",
+                        appearance: "none",
+                        WebkitAppearance: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <option value="">Choose a supplier...</option>
+                      {availableSuppliers.map((sup) => (
+                        <option key={sup} value={sup}>{sup}</option>
+                      ))}
+                      <option value="__custom__">+ Type custom supplier...</option>
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      style={{
+                        position: "absolute",
+                        right: "0.65rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "var(--text-muted)",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ textAlign: "right", marginTop: "4px" }}>
+                    <button
+                      type="button"
+                      onClick={() => { setCustomRestockSupplier(true); setRestockSupplier(""); }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--accent-amber)",
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      + Type custom
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setRestockItem(null)}
+                style={{
+                  height: "36px",
+                  padding: "0 0.85rem",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "8px",
+                  color: "var(--text-main)",
+                  background: "var(--bg-tertiary)",
+                  fontWeight: 700,
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busy}
+                style={{
+                  height: "36px",
+                  padding: "0 0.9rem",
+                  border: 0,
+                  borderRadius: "8px",
+                  color: "#fff",
+                  background: "linear-gradient(135deg, #059669, #10b981)",
+                  fontWeight: 800,
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(16, 185, 129, 0.35)",
+                }}
+              >
+                {busy ? "Saving..." : "Save Received Stock"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {modalOpen && (
         <div
           className="bar-overlay"
@@ -1093,13 +2609,33 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 </label>
               </div>
 
-              {modalError && (
-                <p className="bar-error" role="alert" style={{ marginTop: "12px" }}>
-                  {modalError}
-                </p>
+              {Number(formData.unitCost) > 0 && Number(formData.stock) > 0 && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    padding: "0.5rem 0.85rem",
+                    borderRadius: "8px",
+                    background: "rgba(245, 158, 11, 0.1)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    fontSize: "0.78rem",
+                    color: "var(--accent-amber-light)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>Stock Holding Expenditure:</span>
+                  <strong>{formatCurrency(Number(formData.stock) * Number(formData.unitCost))}</strong>
+                </div>
               )}
 
-              <footer className="bar-modal-footer" style={{ marginTop: "18px", padding: "14px 0 0" }}>
+              {modalError && (
+                <div className="bar-error" role="alert" style={{ marginTop: "12px" }}>
+                  {modalError}
+                </div>
+              )}
+
+              <footer className="bar-modal-foot" style={{ marginTop: "16px" }}>
                 <button
                   className="bar-button secondary"
                   type="button"
@@ -1116,9 +2652,10 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
           </section>
         </div>
       )}
-    </section>
+    </div>
   );
 }
+
 function Status({ children }) {
   const cls = String(children || "").toLowerCase().replace(/\s+/g, "-");
   return <span className={`bar-status bar-status-${cls}`}>{children}</span>;
@@ -1144,7 +2681,7 @@ function printBill(order) {
   const popup = window.open("", "_blank", "width=480,height=760");
   if (!popup) return false;
   const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
-  popup.document.write(`<html><head><title>${safe(order.id)} demo bill</title><style>body{font:14px Arial,sans-serif;padding:24px;color:#172033}h1{font-size:20px;margin:0 0 5px}p{color:#475569}.line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid #e2e8f0}.total{font-weight:700;font-size:17px}</style></head><body><h1>Telugu Taste • Bar</h1><p>DEMO BILL • Not saved to server</p><p><b>${safe(order.id)}</b> • ${safe(order.table)}<br/>${safe(order.customer)} • ${safe(order.time)}</p><div class="line"><span>Items</span><span>${safe(order.items)}</span></div><div class="line"><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></div><div class="line"><span>Discount</span><span>${formatCurrency(order.discount)}</span></div><div class="line"><span>GST</span><span>${formatCurrency(order.gst)}</span></div><div class="line"><span>Service charge</span><span>${formatCurrency(order.service)}</span></div><div class="line total"><span>Total</span><span>${formatCurrency(order.total)}</span></div><script>window.onload=()=>window.print()</script></body></html>`);
+  popup.document.write(`<html><head><title>${safe(order.id)} bar bill</title><style>body{font:14px Arial,sans-serif;padding:24px;color:#172033}h1{font-size:20px;margin:0 0 5px}p{color:#475569}.line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid #e2e8f0}.total{font-weight:700;font-size:17px}</style></head><body><h1>Telugu Taste • Bar</h1><p><b>${safe(order.id)}</b> • ${safe(order.table)}<br/>${safe(order.customer)} • ${safe(order.time)}</p><div class="line"><span>Items</span><span>${safe(order.items)}</span></div><div class="line"><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></div><div class="line"><span>Discount</span><span>${formatCurrency(order.discount)}</span></div><div class="line"><span>GST</span><span>${formatCurrency(order.gst)}</span></div><div class="line"><span>Service charge</span><span>${formatCurrency(order.service)}</span></div><div class="line total"><span>Total</span><span>${formatCurrency(order.total)}</span></div><script>window.onload=()=>window.print()</script></body></html>`);
   popup.document.close();
   return true;
 }
@@ -1428,7 +2965,7 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
           {error && <p className="bar-error" role="alert">{error}</p>}
           <footer className="bar-modal-footer">
             <button className="bar-button secondary" type="button" onClick={onClose}>Cancel</button>
-            <button className="bar-button primary" type="submit">Save Demo Changes</button>
+            <button className="bar-button primary" type="submit">Save Changes</button>
           </footer>
         </form>
       </section>
@@ -1438,7 +2975,7 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
 
 function DetailsModal({ item, onClose }) {
   if (!item) return null;
-  return <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-details-title"><header className="bar-modal-head"><div><span className="bar-kicker">DEMO DETAILS</span><h2 id="bar-details-title">{item.name || item.id || "Details"}</h2></div><button className="bar-icon-button" aria-label="Close details" onClick={onClose} type="button"><X size={18} /></button></header><dl className="bar-details-grid">{Object.entries(item).filter(([key, value]) => !["image"].includes(key) && value !== "" && value !== undefined && value !== null).map(([key, value]) => <div key={key}><dt>{key.replace(/([A-Z])/g, " $1")}</dt><dd>{typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}</dd></div>)}</dl><footer className="bar-modal-footer"><button type="button" className="bar-button secondary" onClick={onClose}>Close</button></footer></section></div>;
+  return <div className="bar-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="bar-modal" role="dialog" aria-modal="true" aria-labelledby="bar-details-title"><header className="bar-modal-head"><div><span className="bar-kicker">Details</span><h2 id="bar-details-title">{item.name || item.id || "Details"}</h2></div><button className="bar-icon-button" aria-label="Close details" onClick={onClose} type="button"><X size={18} /></button></header><dl className="bar-details-grid">{Object.entries(item).filter(([key, value]) => !["image"].includes(key) && value !== "" && value !== undefined && value !== null).map(([key, value]) => <div key={key}><dt>{key.replace(/([A-Z])/g, " $1")}</dt><dd>{typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}</dd></div>)}</dl><footer className="bar-modal-footer"><button type="button" className="bar-button secondary" onClick={onClose}>Close</button></footer></section></div>;
 }
 
 function OrderItemsModal({ order, onClose }) {
@@ -1482,12 +3019,42 @@ function BarDrinksMenu({
   onUpdateDrink,
   onDeleteDrink,
   onToggleDrinkAvailability,
+  onToggleDrinkSpecial,
   onAddMenuItem,
   onUpdateMenuItem,
   onDeleteMenuItem,
   onSetMenuAvailability,
   setToast,
 }) {
+  const [extraCategories, setExtraCategories] = useState([]);
+  const [extraMeasures, setExtraMeasures] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarDrinkCategories()
+      .then((res) => {
+        if (!isMounted) return;
+        const cats = res?.data?.data || res?.data;
+        if (Array.isArray(cats) && cats.length > 0) {
+          setExtraCategories(cats);
+        }
+      })
+      .catch(() => {});
+
+    apiGetBarServingMeasures()
+      .then((res) => {
+        if (!isMounted) return;
+        const measures = res?.data?.data || res?.data;
+        if (Array.isArray(measures) && measures.length > 0) {
+          setExtraMeasures(measures);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const [searchFilter, setSearchFilter] = useState("");
   const [menuFilters, setMenuFilters] = useState({
     category: "",
@@ -1523,8 +3090,8 @@ function BarDrinksMenu({
 
   const categoryOptions = useMemo(() => {
     const map = new Map();
-    BAR_CATEGORIES.forEach((cat) => {
-      map.set(cat.toLowerCase(), { value: cat, label: cat });
+    [...BAR_CATEGORIES, ...extraCategories].forEach((cat) => {
+      if (cat) map.set(cat.toLowerCase(), { value: cat, label: cat });
     });
     drinks.forEach((d) => {
       if (d.category && !map.has(d.category.toLowerCase())) {
@@ -1532,10 +3099,15 @@ function BarDrinksMenu({
       }
     });
     return Array.from(map.values());
-  }, [drinks]);
+  }, [drinks, extraCategories]);
 
   const measureOptions = useMemo(() => {
     const list = [...BAR_SERVING_MEASURES];
+    extraMeasures.forEach((m) => {
+      if (m && !list.some((existing) => existing.toLowerCase() === m.toLowerCase())) {
+        list.push(m);
+      }
+    });
     drinks.forEach((d) => {
       const msr = String(d.measure || d.servingMeasure || "").trim();
       if (msr && !list.some((m) => m.toLowerCase() === msr.toLowerCase())) {
@@ -1543,7 +3115,7 @@ function BarDrinksMenu({
       }
     });
     return list;
-  }, [drinks]);
+  }, [drinks, extraMeasures]);
 
   const filteredDrinks = useMemo(() => {
     return drinks.filter((item) => {
@@ -1989,8 +3561,18 @@ function BarDrinksMenu({
           <tbody>
             {paginatedDrinks.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                  No drinks found matching your filters.
+                <td colSpan={5} style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--text-muted)" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem" }}>
+                    <Wine size={32} color="var(--text-dim)" style={{ opacity: 0.6 }} />
+                    <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-main)" }}>
+                      {drinks.length === 0 ? "No drinks in Bar Drinks Menu yet" : "No drinks found matching your filters"}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", maxWidth: "340px", textAlign: "center" }}>
+                      {drinks.length === 0
+                        ? 'Click "+ Add New Drink" above to add your first beverage, cocktail, or liquor item.'
+                        : "Try clearing your search query or changing category and availability filters."}
+                    </div>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -2006,10 +3588,22 @@ function BarDrinksMenu({
                     key={item.id}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
-                      transition: "background 0.15s ease",
+                      transition: "background 0.15s ease, opacity 0.2s ease",
+                      opacity: isAvail ? 1 : 0.6,
+                      background: isAvail
+                        ? "transparent"
+                        : "rgba(239, 68, 68, 0.03)",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = isAvail
+                        ? "var(--bg-tertiary)"
+                        : "rgba(239, 68, 68, 0.07)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = isAvail
+                        ? "transparent"
+                        : "rgba(239, 68, 68, 0.03)";
+                    }}
                   >
                     {/* Drink Name + Thumbnail */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
@@ -2017,21 +3611,28 @@ function BarDrinksMenu({
                         <img
                           src={getMenuItemImage(item)}
                           alt={item.name}
-                          onError={handleDishImageError}
+                          onError={(e) => handleDishImageError(e, item)}
                           style={{
-                            width: "42px",
-                            height: "42px",
-                            borderRadius: "8px",
+                            width: "48px",
+                            height: "48px",
+                            borderRadius: "10px",
                             objectFit: "cover",
-                            border: "1px solid var(--border-subtle)",
+                            border: isAvail
+                              ? "1px solid var(--border-card)"
+                              : "1px solid rgba(239, 68, 68, 0.35)",
                             flexShrink: 0,
+                            filter: isAvail
+                              ? "none"
+                              : "grayscale(60%)",
                           }}
                         />
                         <div>
                           <div
                             style={{
                               fontWeight: 700,
-                              color: "var(--text-main)",
+                              color: isAvail
+                                ? "var(--text-main)"
+                                : "var(--text-dim)",
                               fontSize: "0.88rem",
                               lineHeight: 1.3,
                               display: "flex",
@@ -2182,7 +3783,11 @@ function BarDrinksMenu({
                         <button
                           type="button"
                           onClick={() => handleToggleAvailability(item)}
-                          title={isAvail ? "Make available" : "Mark unavailable"}
+                          title={
+                            !isAvail
+                              ? "Make available"
+                              : "Mark unavailable"
+                          }
                           style={{
                             border: isAvail
                               ? "1px solid rgba(16, 185, 129, 0.45)"
@@ -2197,6 +3802,22 @@ function BarDrinksMenu({
                             fontWeight: 700,
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isAvail
+                              ? "rgba(16, 185, 129, 0.22)"
+                              : "rgba(239, 68, 68, 0.22)";
+                            e.currentTarget.style.borderColor = isAvail
+                              ? "rgba(16, 185, 129, 0.7)"
+                              : "rgba(239, 68, 68, 0.7)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isAvail
+                              ? "rgba(16, 185, 129, 0.12)"
+                              : "rgba(239, 68, 68, 0.12)";
+                            e.currentTarget.style.borderColor = isAvail
+                              ? "rgba(16, 185, 129, 0.45)"
+                              : "rgba(239, 68, 68, 0.45)";
                           }}
                         >
                           {isAvail ? "Available" : "Unavailable"}
@@ -2218,6 +3839,14 @@ function BarDrinksMenu({
                             gap: "4px",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.15)";
+                            e.currentTarget.style.borderColor = "var(--accent-amber)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.06)";
+                            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
                           }}
                           title="Edit drink"
                         >
@@ -2241,6 +3870,14 @@ function BarDrinksMenu({
                             gap: "4px",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                            e.currentTarget.style.borderColor = "#ef4444";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(239, 68, 68, 0.06)";
+                            e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.35)";
                           }}
                           title="Delete drink"
                         >
@@ -3016,6 +4653,2691 @@ function BarDrinksMenu({
   );
 }
 
+
+const DEFAULT_BAR_TABLE_SECTIONS = [
+  "Main Hall",
+  "AC Hall",
+  "Family Section",
+  "Balcony / Outdoor",
+  "Lounge",
+  "Bar Counter",
+  "Garden Area",
+  "VIP Lounge",
+];
+
+function BarTablesView({
+  tables = [],
+  staffList = [],
+  orders = [],
+  onAddTable,
+  onUpdateTable,
+  onDeleteTable,
+  onAddStaff,
+  setToast,
+}) {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
+  const [seatingStructureTable, setSeatingStructureTable] = useState(null);
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState(null);
+  const [liveBarTables, setLiveBarTables] = useState(null);
+  const [tableForm, setTableForm] = useState({
+    name: "",
+    section: "Main Hall",
+    capacity: 4,
+    server: staffList[0]?.name || "",
+  });
+
+  // Fetch live bar tables from backend API
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarTables()
+      .then((res) => {
+        if (!isMounted) return;
+        const fetched = res?.data || res?.tables;
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setLiveBarTables(fetched);
+        }
+      })
+      .catch((err) => {
+        console.warn("[BarTablesView] apiGetBarTables offline/fallback:", err?.message);
+      });
+
+    apiGetBarTableAreas()
+      .then((res) => {
+        const areas = res?.data || res?.areas;
+        if (Array.isArray(areas) && areas.length > 0) {
+          areas.forEach((a) => {
+            if (a) saveCustomSection(a);
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const effectiveTables = useMemo(() => {
+    if (!liveBarTables || liveBarTables.length === 0) return tables;
+    const map = new Map(tables.map((t) => [String(t.id ?? t.tableId), t]));
+    liveBarTables.forEach((st) => {
+      const key = String(st.id ?? st.tableId);
+      const existing = map.get(key) || {};
+      map.set(key, { ...existing, ...st });
+    });
+    return Array.from(map.values());
+  }, [tables, liveBarTables]);
+
+  const STORAGE_KEY_CUSTOM_SECTIONS = "avsr_custom_sections";
+  const [customSections, setCustomSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_SECTIONS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveCustomSection = (newSec) => {
+    if (!newSec || !newSec.trim()) return;
+    const trimmed = newSec.trim();
+    setCustomSections((prev) => {
+      if (prev.some((s) => s.toLowerCase() === trimmed.toLowerCase())) return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_SECTIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const allSectionOptions = useMemo(() => {
+    const map = new Map();
+    DEFAULT_BAR_TABLE_SECTIONS.forEach((s) => {
+      if (s) map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    customSections.forEach((s) => {
+      if (s) map.set(s.toLowerCase(), { value: s, label: s });
+    });
+    (tables || []).forEach((tbl) => {
+      const sec = tbl.section || tbl.area;
+      if (sec && !map.has(sec.toLowerCase())) {
+        map.set(sec.toLowerCase(), { value: sec, label: sec });
+      }
+    });
+    return Array.from(map.values());
+  }, [customSections, tables]);
+
+  const isTableOccupied = (tbl) => {
+    if (!tbl) return false;
+    const rawStatus = String(tbl?.status || "").trim().toLowerCase();
+    if (rawStatus === "vacant") return false;
+    const hasActiveItemsInTable = Array.isArray(tbl?.items) && tbl.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const activeOrder = Array.isArray(orders) && orders.find((o) => {
+      const orderTblId = String(o.tableId ?? o.TableId ?? "");
+      return orderTblId === String(tbl.id) || orderTblId === String(tbl.backendTableId);
+    });
+    const hasActiveItemsInOrder = activeOrder && Array.isArray(activeOrder.items) && activeOrder.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const hasActiveItems = hasActiveItemsInTable || Boolean(hasActiveItemsInOrder);
+    if (!hasActiveItems) return false;
+    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") return true;
+    return Boolean(hasActiveItems || rawStatus === "occupied");
+  };
+
+  const [tableFilters, setTableFilters] = useState({
+    search: "",
+    status: "all",
+  });
+  const updateTableFilter = (key, value) => {
+    setTableFilters((prev) => ({ ...prev, [key]: value }));
+  };
+  const clearTableFilters = () => {
+    setTableFilters({ search: "", status: "all" });
+  };
+  const hasActiveTableFilters = Boolean(
+    tableFilters.search || (tableFilters.status && tableFilters.status !== "all")
+  );
+
+  const normalizeTableFilterText = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+  const vacantTablesCount = effectiveTables.filter((t) => !isTableOccupied(t)).length;
+  const occupiedTablesCount = effectiveTables.filter((t) => isTableOccupied(t)).length;
+
+  const filteredTables = effectiveTables.filter((table) => {
+    const query = normalizeTableFilterText(tableFilters.search);
+    const isOccupied = isTableOccupied(table);
+    const tableStatus = isOccupied ? "occupied" : "vacant";
+
+    const matchesSearch =
+      !query ||
+      [
+        table.name,
+        table.tableNumber,
+        table.number,
+        table.id,
+        `table ${table.id}`,
+        `t${table.id}`,
+        table.section,
+        table.area,
+        table.server,
+      ].some((val) => normalizeTableFilterText(val).includes(query));
+
+    const matchesStatus =
+      !tableFilters.status ||
+      tableFilters.status === "all" ||
+      tableStatus === normalizeTableFilterText(tableFilters.status);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const [tableSortField, setTableSortField] = useState("id");
+  const [tableSortDirection, setTableSortDirection] = useState("asc");
+
+  const handleTableSort = (field) => {
+    if (tableSortField === field) {
+      setTableSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setTableSortField(field);
+      setTableSortDirection("asc");
+    }
+  };
+
+  const sortedTables = useMemo(() => {
+    return [...filteredTables].sort((a, b) => {
+      let aVal = a[tableSortField];
+      let bVal = b[tableSortField];
+      if (tableSortField === "id") {
+        aVal = Number(a.id || 0);
+        bVal = Number(b.id || 0);
+      } else if (tableSortField === "capacity") {
+        aVal = Number(a.capacity || 0);
+        bVal = Number(b.capacity || 0);
+      } else if (tableSortField === "name") {
+        aVal = String(a.name || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || `Table ${b.id || ""}`).toLowerCase();
+      } else if (tableSortField === "area") {
+        aVal = String(a.section || a.area || "").toLowerCase();
+        bVal = String(b.section || b.area || "").toLowerCase();
+      } else if (tableSortField === "server") {
+        aVal = String(a.server || "").toLowerCase();
+        bVal = String(b.server || "").toLowerCase();
+      } else if (tableSortField === "status") {
+        aVal = isTableOccupied(a) ? "occupied" : "vacant";
+        bVal = isTableOccupied(b) ? "occupied" : "vacant";
+      } else {
+        aVal = String(aVal || "").toLowerCase();
+        bVal = String(bVal || "").toLowerCase();
+      }
+      if (aVal < bVal) return tableSortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return tableSortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredTables, tableSortField, tableSortDirection]);
+
+  const handleOpenTableModal = (tbl = null) => {
+    if (tbl) {
+      setEditingTable(tbl);
+      setTableForm({
+        name: tbl.name || `Table ${tbl.id}`,
+        section: tbl.section || tbl.area || "Main Hall",
+        capacity: Number(tbl.capacity) || 4,
+        server: tbl.server || staffList[0]?.name || "",
+      });
+    } else {
+      setEditingTable(null);
+      const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      setTableForm({
+        name: `Table-${maxId + 1}`,
+        section: "Main Hall",
+        capacity: 4,
+        server: staffList[0]?.name || "",
+      });
+    }
+    setIsTableModalOpen(true);
+  };
+
+  const handleSaveTable = (e) => {
+    e.preventDefault();
+    if (!tableForm.name.trim()) return;
+
+    if (tableForm.section) {
+      saveCustomSection(tableForm.section);
+    }
+
+    const assignedServer = tableForm.server || "";
+
+    if (editingTable) {
+      const updatedPayload = {
+        ...editingTable,
+        name: tableForm.name,
+        tableName: tableForm.name,
+        tableNumber: tableForm.name,
+        section: tableForm.section,
+        sectionArea: tableForm.section,
+        area: tableForm.section,
+        capacity: Number(tableForm.capacity) || 2,
+        capacityChairs: Number(tableForm.capacity) || 2,
+        server: assignedServer,
+        assignedServer: assignedServer,
+      };
+
+      const targetApiId = editingTable.tableId || editingTable.backendTableId || editingTable.id;
+      apiUpdateBarTable(targetApiId, updatedPayload).catch((err) => {
+        console.warn("[BarWorkspace] apiUpdateBarTable warning:", err?.message);
+      });
+
+      onUpdateTable?.(updatedPayload);
+      setToast?.(`Table "${tableForm.name}" updated successfully.`);
+    } else {
+      const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
+      const maxId = effectiveTables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
+      const formattedName = tableForm.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i)
+        ? `Table ${parsedNum}`
+        : (/^\d+$/.test(tableForm.name.trim()) ? `Table ${tableForm.name.trim()}` : tableForm.name.trim());
+
+      const newTablePayload = {
+        id: chosenId,
+        name: formattedName,
+        tableName: formattedName,
+        tableNumber: formattedName,
+        section: tableForm.section,
+        sectionArea: tableForm.section,
+        area: tableForm.section,
+        capacity: Number(tableForm.capacity) || 4,
+        capacityChairs: Number(tableForm.capacity) || 4,
+        status: "available",
+        guests: Number(tableForm.capacity) || 4,
+        items: [],
+        discountPercent: 0,
+        serviceCharge: 5,
+        orderTime: null,
+        server: assignedServer,
+        assignedServer: assignedServer,
+      };
+
+      apiCreateBarTable(newTablePayload).then((res) => {
+        const createdId = res?.data?.tableId || res?.data?.id;
+        if (createdId) {
+          newTablePayload.backendTableId = createdId;
+        }
+      }).catch((err) => {
+        console.warn("[BarWorkspace] apiCreateBarTable warning:", err?.message);
+      });
+
+      onAddTable?.(newTablePayload);
+      setToast?.(`Table "${formattedName}" added successfully.`);
+    }
+    setIsTableModalOpen(false);
+  };
+
+  const handleDeleteTableClick = (tbl) => {
+    if (isTableOccupied(tbl)) {
+      requestDelete({
+        title: "Cannot Delete Table",
+        message: `Cannot delete ${tbl.name || `Table ${tbl.id}`} because it is currently occupied with diners. Clear or settle bill first.`,
+        confirmLabel: "Understood",
+        cancelLabel: "Close",
+        icon: <AlertCircle size={22} color="#f59e0b" />,
+        onConfirm: () => {},
+      });
+      return;
+    }
+    requestDelete({
+      title: "Delete Table?",
+      message: `Are you sure you want to delete ${tbl.name || `Table ${tbl.id}`} permanently? This action cannot be undone.`,
+      confirmLabel: "Yes, Delete",
+      onConfirm: async () => {
+        const targetApiId = tbl.tableId || tbl.backendTableId || tbl.id;
+        apiDeleteBarTable(targetApiId).catch((err) => {
+          console.warn("[BarWorkspace] apiDeleteBarTable warning:", err?.message);
+        });
+        await onDeleteTable?.(tbl.id);
+        setToast?.(`Table "${tbl.name || tbl.id}" deleted.`);
+      },
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.25rem",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: "rgba(245, 158, 11, 0.15)",
+              border: "1.5px solid rgba(245, 158, 11, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent-amber-light)",
+            }}
+          >
+            <Armchair size={22} color="#f59e0b" />
+          </div>
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 800,
+              color: "var(--text-main)",
+              letterSpacing: "-0.01em",
+              margin: 0,
+            }}
+          >
+            Floor Tables & Chair Configuration
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleOpenTableModal()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.45rem",
+            padding: "0.55rem 1.3rem",
+            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+            color: "#ffffff",
+            borderRadius: "8px",
+            fontWeight: 700,
+            fontSize: "0.85rem",
+            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+            border: "none",
+            cursor: "pointer",
+            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+          }}
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          <span>Add New Table</span>
+        </button>
+      </div>
+
+      {/* Table Rows Container */}
+      <div
+        style={{
+          background: "var(--bg-tertiary)",
+          borderRadius: "10px",
+          border: "1px solid var(--neutral-border)",
+          overflow: "hidden",
+        }}
+      >
+        <div className="floor-table-scroll" style={{ overflowX: "auto" }}>
+          <div className="floor-table-layout">
+            {/* Filter Toolbar: Vacant / Occupied Only + Search */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.75rem",
+                padding: "0.55rem 0.85rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                marginBottom: "0.5rem",
+                border: "1px solid rgba(var(--surface-rgb),0.05)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+                {/* Table # Search Filter */}
+                <div style={{ position: "relative", minWidth: "170px" }}>
+                  <Search
+                    size={13}
+                    color="var(--text-dim)"
+                    style={{
+                      position: "absolute",
+                      left: "9px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search Table #..."
+                    value={tableFilters.search}
+                    onChange={(e) => updateTableFilter("search", e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "0.42rem 0.5rem 0.42rem 1.6rem",
+                      background: "var(--input-bg)",
+                      border: tableFilters.search
+                        ? "1px solid #f59e0b"
+                        : "1px solid rgba(var(--surface-rgb),0.12)",
+                      borderRadius: "6px",
+                      color: "var(--text-main)",
+                      fontSize: "0.78rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                {/* Vacant & Occupied Status Filter Pills */}
+                <div
+                  style={{
+                    display: "inline-flex",
+                    gap: "0.3rem",
+                    background: "var(--input-bg)",
+                    padding: "3px",
+                    borderRadius: "7px",
+                    border: "1px solid rgba(var(--surface-rgb),0.08)",
+                  }}
+                >
+                  {/* All Tables */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "all")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: (!tableFilters.status || tableFilters.status === "all") ? 700 : 500,
+                      background: (!tableFilters.status || tableFilters.status === "all")
+                        ? "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                      color: (!tableFilters.status || tableFilters.status === "all")
+                        ? "#f59e0b"
+                        : "var(--text-dim)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span>All Tables</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: (!tableFilters.status || tableFilters.status === "all")
+                          ? "#f59e0b"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: (!tableFilters.status || tableFilters.status === "all")
+                          ? "#081628"
+                          : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {effectiveTables.length}
+                    </span>
+                  </button>
+
+                  {/* Vacant Filter */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "vacant")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: tableFilters.status === "vacant" ? 700 : 500,
+                      background: tableFilters.status === "vacant"
+                        ? "rgba(16, 185, 129, 0.2)"
+                        : "transparent",
+                      color: tableFilters.status === "vacant" ? "var(--success)" : "var(--text-dim)",
+                      boxShadow: tableFilters.status === "vacant"
+                        ? "0 0 10px rgba(16, 185, 129, 0.15)"
+                        : "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: "var(--success)",
+                        boxShadow: "0 0 6px #10b981",
+                      }}
+                    />
+                    <span>Vacant</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: tableFilters.status === "vacant"
+                          ? "#10b981"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: tableFilters.status === "vacant" ? "#081628" : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {vacantTablesCount}
+                    </span>
+                  </button>
+
+                  {/* Occupied Filter */}
+                  <button
+                    type="button"
+                    onClick={() => updateTableFilter("status", "occupied")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "5px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.74rem",
+                      fontWeight: tableFilters.status === "occupied" ? 700 : 500,
+                      background: tableFilters.status === "occupied"
+                        ? "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                      color: tableFilters.status === "occupied" ? "var(--accent-amber-light)" : "var(--text-dim)",
+                      boxShadow: tableFilters.status === "occupied"
+                        ? "0 0 10px rgba(245, 158, 11, 0.15)"
+                        : "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: "#f59e0b",
+                        boxShadow: "0 0 6px #f59e0b",
+                      }}
+                    />
+                    <span>Occupied</span>
+                    <span
+                      style={{
+                        padding: "1px 5px",
+                        borderRadius: "8px",
+                        background: tableFilters.status === "occupied"
+                          ? "#f59e0b"
+                          : "rgba(var(--surface-rgb),0.08)",
+                        color: tableFilters.status === "occupied" ? "#081628" : "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {occupiedTablesCount}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Reset or Count Info */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {hasActiveTableFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearTableFilters}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "var(--danger)",
+                      padding: "0.38rem 0.75rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    title="Clear all active table filters"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset Filters</span>
+                  </button>
+                ) : (
+                  <span style={{ fontSize: "0.76rem", color: "var(--text-dim)", fontWeight: 500 }}>
+                    Showing all {effectiveTables.length} tables
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Column Headers */}
+            <div
+              className="floor-table-grid floor-table-heading"
+              style={{
+                display: "grid",
+                alignItems: "center",
+                paddingBlock: "0.55rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                marginBottom: "0.5rem",
+                color: "var(--text-dim)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              <div
+                onClick={() => handleTableSort("name")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Table #</span>
+                {tableSortField === "name" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("area")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Area</span>
+                {tableSortField === "area" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("capacity")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Chairs / Capacity</span>
+                {tableSortField === "capacity" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("server")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Assigned Server</span>
+                {tableSortField === "server" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div
+                onClick={() => handleTableSort("status")}
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              >
+                <span>Status</span>
+                {tableSortField === "status" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
+              </div>
+              <div className="floor-table-actions-heading" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                Actions
+              </div>
+            </div>
+
+            {/* Empty State */}
+            {sortedTables.length === 0 && (
+              <div
+                style={{
+                  padding: "3rem 1.5rem",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.95rem" }}>
+                  {hasActiveTableFilters
+                    ? "No tables match the selected filters."
+                    : "No tables configured yet. Click \"+ Add New Table\" to create one."}
+                </p>
+                {hasActiveTableFilters && (
+                  <button
+                    type="button"
+                    onClick={clearTableFilters}
+                    style={{
+                      marginTop: "0.75rem",
+                      background: "transparent",
+                      border: "1px solid #f59e0b",
+                      color: "var(--accent-amber-light)",
+                      padding: "0.35rem 0.9rem",
+                      borderRadius: "6px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Rows List */}
+            {sortedTables.map((tbl) => {
+              const isOccupied = isTableOccupied(tbl);
+              const dotColor = isOccupied ? "#f59e0b" : "#10b981";
+              const textColor = isOccupied ? "var(--status-occupied)" : "var(--status-vacant)";
+              const bgColor = isOccupied ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)";
+              const borderColor = isOccupied ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)";
+              const label = isOccupied ? "OCCUPIED" : "VACANT";
+
+              return (
+                <div
+                  key={tbl.id}
+                  className="floor-table-grid floor-table-row"
+                  style={{
+                    display: "grid",
+                    alignItems: "center",
+                    paddingBlock: "0.58rem",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--neutral-border)",
+                    borderRadius: "8px",
+                    marginBottom: "0.45rem",
+                    transition: "background 0.15s ease, border-color 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--bg-tertiary)";
+                    e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "var(--bg-secondary)";
+                    e.currentTarget.style.borderColor = "var(--neutral-border)";
+                  }}
+                >
+                  {/* Col 1: Table # */}
+                  <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "6px",
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "var(--accent-amber-light)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        whiteSpace: "normal",
+                      }}
+                    >
+                      {tbl.name || `Table ${tbl.id}`}
+                    </span>
+                  </div>
+
+                  {/* Col 2: Area */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {tbl.section || tbl.area || "Main Hall"}
+                  </div>
+
+                  {/* Col 3: Chairs / Capacity */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSeatingStructureTable(tbl)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        color: "inherit",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "inherit",
+                        fontWeight: "inherit",
+                      }}
+                      title="Click to view & configure seating structure"
+                    >
+                      <Armchair size={13} color="var(--accent-amber)" />
+                      <span>{tbl.capacity} Chairs / {tbl.capacity} Persons</span>
+                    </button>
+                  </div>
+
+                  {/* Col 4: Assigned Server */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {tbl.server || "Unassigned"}
+                  </div>
+
+                  {/* Col 5: Status Pill */}
+                  <div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.26rem 0.75rem",
+                        borderRadius: "20px",
+                        background: bgColor,
+                        border: `1px solid ${borderColor}`,
+                        color: textColor,
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        width: "fit-content",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          backgroundColor: dotColor,
+                          boxShadow: `0 0 6px ${dotColor}`,
+                        }}
+                      />
+                      <span>{label}</span>
+                    </div>
+                  </div>
+
+                  {/* Col 6: Actions */}
+                  <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
+                    {/* Set / View Seating Structure Modal Button */}
+                    <button
+                      type="button"
+                      onClick={() => setSeatingStructureTable(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(16, 185, 129, 0.08)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16, 185, 129, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(16, 185, 129, 0.2)";
+                        e.currentTarget.style.borderColor = "#10b981";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(16, 185, 129, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.45)";
+                      }}
+                      title="Set Seating Structure & View Layout"
+                      aria-label="Set Seating Structure & View Layout"
+                    >
+                      <Armchair size={13} color="#10b981" />
+                    </button>
+                    {/* Edit Chairs / Area */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenTableModal(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(245, 158, 11, 0.08)",
+                        color: "#f59e0b",
+                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
+                        e.currentTarget.style.borderColor = "#f59e0b";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                      }}
+                      title="Edit Chairs / Area"
+                      aria-label="Edit Chairs / Area"
+                    >
+                      <SquarePen size={13} color="#f59e0b" />
+                    </button>
+
+                    {/* Delete Table */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTableClick(tbl)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.32rem 0.5rem",
+                        background: "rgba(239, 68, 68, 0.08)",
+                        color: "#ef4444",
+                        border: "1px solid rgba(239, 68, 68, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
+                        e.currentTarget.style.borderColor = "#ef4444";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.45)";
+                      }}
+                      title="Delete Table"
+                      aria-label="Delete Table"
+                    >
+                      <Trash2 size={13} color="#ef4444" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Add / Edit Table Modal */}
+      {isTableModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 130,
+            padding: "1rem",
+          }}
+        >
+          <form
+            onSubmit={handleSaveTable}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1.5px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: "480px",
+              padding: "1.6rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.85rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {editingTable ? `Edit ${editingTable.name}` : "Add New Restaurant Table"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsTableModalOpen(false)}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Table Name / Identifier <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={tableForm.name}
+                onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Dining Section / Area <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <CustomCreatableDropdown
+                value={tableForm.section}
+                onChange={(val) => setTableForm({ ...tableForm, section: val })}
+                options={allSectionOptions}
+                placeholder="Select dining section"
+                customPlaceholder="Type new section..."
+                required
+                allowCustom
+                onSaveCustomOption={saveCustomSection}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
+                Chairs / Seating Capacity (Persons) <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(5, 1fr)",
+                  gap: "0.5rem",
+                  marginBottom: "0.6rem",
+                }}
+              >
+                {[2, 4, 6, 8, 10].map((chairCount) => {
+                  const isSelected = Number(tableForm.capacity) === chairCount;
+                  return (
+                    <button
+                      key={chairCount}
+                      type="button"
+                      onClick={() => setTableForm({ ...tableForm, capacity: chairCount })}
+                      style={{
+                        padding: "0.55rem 0.3rem",
+                        borderRadius: "8px",
+                        background: isSelected
+                          ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                          : "var(--bg-tertiary)",
+                        color: isSelected ? "#ffffff" : "var(--text-main)",
+                        fontWeight: 800,
+                        fontSize: "0.82rem",
+                        border: isSelected ? "1.5px solid #ea580c" : "1.5px solid var(--border-subtle)",
+                        boxShadow: isSelected ? "0 3px 10px rgba(234, 88, 12, 0.35)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {chairCount} Seats
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={tableForm.capacity}
+                onChange={(e) => setTableForm({ ...tableForm, capacity: Number(e.target.value) })}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 700,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <div style={{ marginBottom: "5px" }}>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                  }}
+                >
+                  Default Server (Person)
+                </label>
+              </div>
+
+              <CustomCreatableDropdown
+                value={tableForm.server}
+                onChange={(val) => {
+                  setTableForm({ ...tableForm, server: val });
+                }}
+                options={staffList.map((staff) => {
+                  const staffName = String(
+                    staff?.name ||
+                    staff?.fullName ||
+                    staff?.FullName ||
+                    staff?.username ||
+                    "Unnamed staff"
+                  );
+                  const staffRole = staff?.role || staff?.roleTitle || "Staff";
+                  return {
+                    value: staffName,
+                    label: `${staffName} (${staffRole})`,
+                  };
+                })}
+                placeholder="Select server"
+                customPlaceholder="Type new server name..."
+                allowCustom
+                onSaveCustomOption={(newServer) => {
+                  if (newServer && newServer !== "__add_new__") {
+                    setTableForm({ ...tableForm, server: newServer });
+                    if (
+                      !staffList.some(
+                        (s) => (s.name || s.fullName || "").toLowerCase() === newServer.toLowerCase()
+                      )
+                    ) {
+                      onAddStaff?.({
+                        id: Date.now(),
+                        name: newServer,
+                        role: "",
+                        phone: "+91 98450 00000",
+                        shift: "",
+                      });
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => setIsTableModalOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: "0.7rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                style={{
+                  flex: 2,
+                  padding: "0.7rem",
+                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "0.88rem",
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                }}
+              >
+                {editingTable ? "Update Table Chairs" : "Add Table"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Select Seats Modal */}
+      <SelectSeatsModal
+        table={seatingStructureTable}
+        isOpen={Boolean(seatingStructureTable)}
+        onClose={() => setSeatingStructureTable(null)}
+        onUpdateTable={onUpdateTable}
+        role="admin"
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        icon={confirmState.icon}
+        onConfirm={confirmState.onConfirm}
+        onCancel={cancelDelete}
+      />
+    </div>
+  );
+}
+
+
+// ============================================================================
+// Bar Staff & Serving Personnel View (Mirrors Dine Staff & Persons)
+// ============================================================================
+function BarStaffView({
+  staffList = [],
+  tables = [],
+  onAddStaff,
+  onUpdateStaff,
+  onDeleteStaff,
+  onReloadStaff,
+  loading = false,
+  setToast,
+}) {
+  const { requestDelete, confirmState, cancelDelete } = useConfirmDelete();
+
+  const emptyStaffFilters = {
+    search: "",
+    role: "",
+    shift: "",
+    assigned: "",
+  };
+  const [staffFilters, setStaffFilters] = useState(emptyStaffFilters);
+  const updateStaffFilter = (key, value) =>
+    setStaffFilters((previous) => ({ ...previous, [key]: value }));
+  const clearStaffFilters = () => setStaffFilters(emptyStaffFilters);
+  const hasActiveStaffFilters = Boolean(
+    staffFilters.search ||
+    staffFilters.role ||
+    staffFilters.shift ||
+    staffFilters.assigned
+  );
+
+  const [backendFilterOptions, setBackendFilterOptions] = useState(null);
+  const [assignableTables, setAssignableTables] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGetBarStaffFilterOptions()
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.success && res?.data) {
+          setBackendFilterOptions(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn("[BarStaffView] apiGetBarStaffFilterOptions error:", err?.message);
+      });
+
+    apiGetAssignableTables()
+      .then((res) => {
+        if (!isMounted) return;
+        const list = res?.data || res?.tables;
+        if (Array.isArray(list)) {
+          setAssignableTables(list);
+        }
+      })
+      .catch((err) => {
+        console.warn("[BarStaffView] apiGetAssignableTables error:", err?.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const STORAGE_KEY_CUSTOM_ROLES = "avsr_custom_roles_v1";
+  const STORAGE_KEY_CUSTOM_SHIFTS = "avsr_custom_shifts_v1";
+
+  const [customRoles, setCustomRoles] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_ROLES);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [customShifts, setCustomShifts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_SHIFTS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveCustomRole = (newRole) => {
+    if (!newRole || !newRole.trim()) return;
+    const trimmed = newRole.trim();
+    setCustomRoles((prev) => {
+      if (prev.some((r) => r.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_ROLES, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const saveCustomShift = (newShift) => {
+    if (!newShift || !newShift.trim()) return;
+    const trimmed = newShift.trim();
+    setCustomShifts((prev) => {
+      if (prev.some((sh) => sh.toLowerCase() === trimmed.toLowerCase()))
+        return prev;
+      const updated = [...prev, trimmed];
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_CUSTOM_SHIFTS,
+          JSON.stringify(updated),
+        );
+      } catch {}
+      return updated;
+    });
+  };
+
+  const staffRoleOptions = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(backendFilterOptions?.roles)) {
+      backendFilterOptions.roles.forEach((r) => {
+        if (r && !r.toLowerCase().startsWith("all")) set.add(r.trim());
+      });
+    }
+    (staffList || []).forEach((s) => {
+      const r = String(s?.role || s?.roleTitle || s?.jobTitle || "").trim();
+      if (r) set.add(r);
+    });
+    return Array.from(set).sort();
+  }, [backendFilterOptions, staffList]);
+
+  const staffShiftOptions = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(backendFilterOptions?.shifts)) {
+      backendFilterOptions.shifts.forEach((sh) => {
+        if (sh && !sh.toLowerCase().startsWith("all")) set.add(sh.trim());
+      });
+    }
+    (staffList || []).forEach((s) => {
+      const sh = String(s?.shift || "").trim();
+      if (sh) set.add(sh);
+    });
+    return Array.from(set).sort();
+  }, [backendFilterOptions, staffList]);
+
+  const allRoleOptions = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(backendFilterOptions?.roles)) {
+      backendFilterOptions.roles.forEach((r) => {
+        if (r && !r.toLowerCase().startsWith("all") && !map.has(r.toLowerCase())) {
+          map.set(r.toLowerCase(), { value: r, label: r });
+        }
+      });
+    }
+    customRoles.forEach((r) => {
+      if (r && !map.has(r.toLowerCase())) {
+        map.set(r.toLowerCase(), { value: r, label: r });
+      }
+    });
+    (staffList || []).forEach((st) => {
+      const r = st.role || st.roleTitle || st.jobTitle;
+      if (r && !map.has(r.toLowerCase())) {
+        map.set(r.toLowerCase(), { value: r, label: r });
+      }
+    });
+    return Array.from(map.values());
+  }, [backendFilterOptions, customRoles, staffList]);
+
+  const allShiftOptions = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(backendFilterOptions?.shifts)) {
+      backendFilterOptions.shifts.forEach((sh) => {
+        if (sh && !sh.toLowerCase().startsWith("all") && !map.has(sh.toLowerCase())) {
+          map.set(sh.toLowerCase(), { value: sh, label: sh });
+        }
+      });
+    }
+    customShifts.forEach((sh) => {
+      if (sh && !map.has(sh.toLowerCase())) {
+        map.set(sh.toLowerCase(), { value: sh, label: sh });
+      }
+    });
+    (staffList || []).forEach((st) => {
+      if (st.shift && !map.has(st.shift.toLowerCase())) {
+        map.set(st.shift.toLowerCase(), { value: st.shift, label: st.shift });
+      }
+    });
+    return Array.from(map.values());
+  }, [backendFilterOptions, customShifts, staffList]);
+
+  const filteredStaffList = useMemo(() => {
+    return (staffList || []).filter((person) => {
+      const personName = String(
+        person?.name ||
+        person?.fullName ||
+        person?.FullName ||
+        person?.username ||
+        "Unnamed staff",
+      );
+      const personRole = String(person?.role || person?.roleTitle || person?.jobTitle || "Staff");
+      const personPhone = String(person?.phone || "");
+      const personShift = String(person?.shift || "");
+      const personId = person?.id ?? person?.staffId;
+      const assignedCount = (Array.isArray(person?.assignedTableIds) && person.assignedTableIds.length > 0)
+        ? person.assignedTableIds.length
+        : (person?.assignedTables && person.assignedTables !== "—"
+            ? person.assignedTables.split(",").filter(Boolean).length
+            : (tables || []).filter((t) => {
+                const sName = (t.server || t.assignedServer || t.assignedServerName || "").trim().toLowerCase();
+                const pName = personName.trim().toLowerCase();
+                const sId = String(t.assignedServerId || t.serverId || "");
+                const pId = String(personId || "");
+                return (sName && sName === pName) || (sId && pId && sId === pId);
+              }).length
+          );
+
+      if (staffFilters.search) {
+        const q = staffFilters.search.toLowerCase().trim();
+        const matches =
+          personName.toLowerCase().includes(q) ||
+          personPhone.toLowerCase().includes(q) ||
+          personRole.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      if (staffFilters.role && personRole.toLowerCase() !== staffFilters.role.toLowerCase()) {
+        return false;
+      }
+      if (staffFilters.shift && personShift.toLowerCase() !== staffFilters.shift.toLowerCase()) {
+        return false;
+      }
+      if (staffFilters.assigned) {
+        if (staffFilters.assigned === "assigned" && assignedCount === 0) return false;
+        if (staffFilters.assigned === "unassigned" && assignedCount > 0) return false;
+      }
+      return true;
+    });
+  }, [staffList, tables, staffFilters]);
+
+  // Modal State
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [staffForm, setStaffForm] = useState({
+    name: "",
+    role: "",
+    phone: "",
+    shift: "",
+    assignedTableIds: [],
+  });
+
+  const handleOpenStaffModal = (person = null) => {
+    if (person) {
+      const personName = String(
+        person?.name ||
+          person?.fullName ||
+          person?.FullName ||
+          person?.username ||
+          "",
+      );
+      const personRole = String(person?.role || person?.roleTitle || person?.jobTitle || "");
+      const personTableIds = Array.isArray(person?.assignedTableIds)
+        ? person.assignedTableIds
+        : [];
+      setEditingStaff(person);
+      setStaffForm({
+        name: personName,
+        role: personRole,
+        phone: person.phone || "",
+        shift: person.shift || "",
+        assignedTableIds: personTableIds,
+      });
+    } else {
+      setEditingStaff(null);
+      setStaffForm({
+        name: "",
+        role: "",
+        phone: "",
+        shift: "",
+        assignedTableIds: [],
+      });
+    }
+    setIsStaffModalOpen(true);
+  };
+
+  const handleSaveStaff = async (e) => {
+    e.preventDefault();
+    if (!staffForm.name.trim()) return;
+
+    if (staffForm.role) {
+      saveCustomRole(staffForm.role);
+    }
+    if (staffForm.shift) {
+      saveCustomShift(staffForm.shift);
+    }
+
+    const payload = {
+      name: staffForm.name.trim(),
+      fullName: staffForm.name.trim(),
+      role: staffForm.role,
+      jobTitle: staffForm.role,
+      roleTitle: staffForm.role,
+      phone: staffForm.phone || "+91 98450 00000",
+      shift: staffForm.shift,
+      assignedTableIds: staffForm.assignedTableIds || [],
+    };
+
+    let saved;
+    if (editingStaff) {
+      if (onUpdateStaff) {
+        saved = await onUpdateStaff({
+          ...editingStaff,
+          ...payload,
+        });
+      }
+    } else {
+      if (onAddStaff) {
+        saved = await onAddStaff(payload);
+      }
+    }
+    if (saved === false) return;
+
+    setEditingStaff(null);
+    setStaffForm({
+      name: "",
+      role: "",
+      phone: "",
+      shift: "",
+      assignedTableIds: [],
+    });
+    setIsStaffModalOpen(false);
+    setToast?.(`Staff member "${staffForm.name}" ${editingStaff ? "updated" : "saved"} successfully!`);
+  };
+
+  const handleDeleteStaffClick = (person) => {
+    const personName = String(
+      person?.name ||
+      person?.fullName ||
+      person?.FullName ||
+      person?.username ||
+      "Staff",
+    );
+    const personId = person?.id ?? person?.staffId;
+    requestDelete({
+      title: "Remove Staff?",
+      message: `Are you sure you want to remove "${personName}" from the staff list? This action cannot be undone.`,
+      confirmLabel: "Yes, Remove",
+      onConfirm: async () => {
+        await onDeleteStaff?.(personId);
+        setToast?.(`Staff member "${personName}" removed.`);
+      },
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <style>{`
+        .staff-filter-toolbar {
+          display: grid;
+          grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+          align-items: end;
+          gap: 10px;
+          padding: 0.65rem;
+          margin-bottom: 0.5rem;
+          background: var(--bg-secondary);
+          border-radius: 8px;
+        }
+        .staff-filter-toolbar .menu-filter-field { min-width: 0; }
+        .staff-filter-toolbar .staff-filter-search { flex: initial; }
+        .staff-filter-toolbar .staff-filter-count {
+          min-width: max-content;
+          padding: 0 0.25rem 0.6rem;
+          color: var(--text-dim);
+          font-size: 0.74rem;
+          font-weight: 600;
+          white-space: nowrap;
+          text-align: right;
+        }
+        @media (max-width: 1100px) {
+          .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+          .staff-filter-toolbar .staff-filter-search { grid-column: span 2; }
+          .staff-filter-toolbar .staff-filter-count { grid-column: 1 / -1; padding: 0; }
+        }
+        @media (max-width: 600px) {
+          .staff-filter-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .staff-filter-toolbar .staff-filter-search { grid-column: 1 / -1; }
+          .staff-filter-toolbar .staff-filter-count { grid-column: 1 / -1; }
+        }
+        .staff-table-grid {
+          display: grid;
+          grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+          gap: 0.5rem;
+        }
+        .staff-table-grid > * { min-width: 0; }
+        @media (max-width: 900px) {
+          .staff-table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (max-width: 600px) {
+          .staff-table-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 380px) {
+          .staff-table-grid { grid-template-columns: minmax(0, 1fr); }
+        }
+      `}</style>
+
+      {/* Header: Title + Action Buttons */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0.2rem 0",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: "rgba(245, 158, 11, 0.15)",
+              border: "1.5px solid rgba(245, 158, 11, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent-amber-light)",
+            }}
+          >
+            <Users size={22} color="#f59e0b" />
+          </div>
+          <div>
+            <h2
+              style={{
+                fontSize: "1.25rem",
+                fontWeight: 800,
+                color: "var(--text-main)",
+                letterSpacing: "-0.01em",
+                margin: 0,
+              }}
+            >
+              Bar Staff & Serving Personnel
+            </h2>
+            <p
+              style={{
+                fontSize: "0.76rem",
+                color: "var(--text-muted)",
+                margin: "2px 0 0 0",
+              }}
+            >
+              Manage bartenders, bar captains and servers handling bar guests
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              onReloadStaff?.();
+              setToast?.("Staff list refreshed from database.");
+            }}
+            title="Reload staff list from backend database"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              padding: "0.5rem 0.9rem",
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-card)",
+              color: "var(--text-dim)",
+              borderRadius: "8px",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              cursor: "pointer",
+            }}
+          >
+            <RotateCcw size={14} />
+            <span>Refresh</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenStaffModal()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.55rem 1.3rem",
+              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              color: "#ffffff",
+              borderRadius: "8px",
+              fontWeight: 700,
+              fontSize: "0.85rem",
+              boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+              border: "none",
+              cursor: "pointer",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+            }}
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>+ Add New Person (Staff)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Staff Rows Container */}
+      <div
+        style={{
+          background: "var(--bg-tertiary)",
+          borderRadius: "10px",
+          border: "1px solid var(--neutral-border)",
+          overflow: "hidden",
+        }}
+      >
+        <div>
+          <div style={{ width: "100%", minWidth: 0, padding: "0.6rem", boxSizing: "border-box" }}>
+            {/* Column Filters Bar */}
+            <div className="staff-filter-toolbar" role="search" aria-label="Staff filters">
+              {/* Col 1: Search Filter */}
+              <label className="menu-filter-field menu-filter-search staff-filter-search" htmlFor="bar-staff-filter-search">
+                <span>Search Staff</span>
+                <div style={{ position: "relative", width: "100%", height: "36px", display: "flex", alignItems: "center" }}>
+                  <Search
+                    size={15}
+                    color="var(--text-dim)"
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    id="bar-staff-filter-search"
+                    type="text"
+                    placeholder="Search Staff..."
+                    value={staffFilters.search}
+                    onChange={(e) => updateStaffFilter("search", e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      padding: "0 10px 0 34px",
+                      background: "var(--bg-tertiary)",
+                      border: staffFilters.search
+                        ? "1px solid #f59e0b"
+                        : "1px solid var(--border-card)",
+                      borderRadius: "8px",
+                      color: "var(--text-main)",
+                      fontSize: "0.82rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </label>
+
+              {/* Col 2: Role Filter */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-role">
+                <span>Role</span>
+                <select
+                  id="bar-staff-filter-role"
+                  value={staffFilters.role}
+                  onChange={(e) => updateStaffFilter("role", e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0 10px",
+                    background: "var(--bg-tertiary)",
+                    border: staffFilters.role
+                      ? "1px solid #f59e0b"
+                      : "1px solid var(--border-card)",
+                    borderRadius: "8px",
+                    color: staffFilters.role ? "var(--accent-amber-light)" : "var(--text-main)",
+                    fontSize: "0.82rem",
+                    height: "36px",
+                    outline: "none",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
+                    All Roles
+                  </option>
+                  {staffRoleOptions.map((role) => (
+                    <option key={role} value={role} style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Col 3: Phone / Contact */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-contact">
+                <span>Phone / Contact</span>
+                <input id="bar-staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
+              </label>
+
+              {/* Col 4: Shift Filter */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-shift">
+                <span>Shift</span>
+                <select
+                  id="bar-staff-filter-shift"
+                  value={staffFilters.shift}
+                  onChange={(e) => updateStaffFilter("shift", e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0 10px",
+                    background: "var(--bg-tertiary)",
+                    border: staffFilters.shift
+                      ? "1px solid #f59e0b"
+                      : "1px solid var(--border-card)",
+                    borderRadius: "8px",
+                    color: staffFilters.shift ? "var(--accent-amber-light)" : "var(--text-main)",
+                    fontSize: "0.82rem",
+                    height: "36px",
+                    outline: "none",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
+                    All Shifts
+                  </option>
+                  {staffShiftOptions.map((shift) => (
+                    <option key={shift} value={shift} style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                      {shift}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Col 5: Assigned Tables Filter */}
+              <label className="menu-filter-field" htmlFor="bar-staff-filter-assigned">
+                <span>Table Assignment</span>
+                <select
+                  id="bar-staff-filter-assigned"
+                  value={staffFilters.assigned}
+                  onChange={(e) => updateStaffFilter("assigned", e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0 10px",
+                    background: "var(--bg-tertiary)",
+                    border: staffFilters.assigned
+                      ? "1px solid #f59e0b"
+                      : "1px solid var(--border-card)",
+                    borderRadius: "8px",
+                    color: staffFilters.assigned ? "var(--accent-amber-light)" : "var(--text-main)",
+                    fontSize: "0.82rem",
+                    height: "36px",
+                    outline: "none",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="" style={{ background: "var(--input-bg)", color: "var(--text-dim)" }}>
+                    All Tables
+                  </option>
+                  <option value="assigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                    Has Tables
+                  </option>
+                  <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
+                    No Tables
+                  </option>
+                </select>
+              </label>
+
+              {/* Col 6: Reset / Count */}
+              <div className="staff-filter-count">
+                {hasActiveStaffFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearStaffFilters}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "var(--danger)",
+                      padding: "0.35rem 0.65rem",
+                      borderRadius: "6px",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                    }}
+                    title="Clear all active staff filters"
+                  >
+                    <RotateCcw size={11} />
+                    <span>Reset</span>
+                  </button>
+                ) : (
+                  <span>
+                    {(staffList || []).length} Staff
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Staff table headings */}
+            <div
+              className="staff-table-grid"
+              style={{
+                alignItems: "center",
+                padding: "0.65rem 0.85rem",
+                marginBottom: "0.45rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "8px",
+                color: "var(--text-dim)",
+                fontSize: "0.84rem",
+                fontWeight: 600,
+              }}
+            >
+              <div>Staff Name</div>
+              <div>Role / Designation</div>
+              <div>Phone / Contact</div>
+              <div>Shift</div>
+              <div>Table Assignment</div>
+              <div style={{ textAlign: "right" }}>Actions</div>
+            </div>
+
+            {/* Empty State */}
+            {filteredStaffList.length === 0 && (
+              <div
+                style={{
+                  padding: "3rem 1.5rem",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.95rem" }}>
+                  {hasActiveStaffFilters
+                    ? "No staff members match the selected filters."
+                    : 'No staff members configured yet. Click "+ Add New Person (Staff)" to create one.'}
+                </p>
+                {hasActiveStaffFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearStaffFilters}
+                    style={{
+                      marginTop: "0.75rem",
+                      background: "transparent",
+                      border: "1px solid #f59e0b",
+                      color: "var(--accent-amber-light)",
+                      padding: "0.35rem 0.9rem",
+                      borderRadius: "6px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                ) : (
+                  <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStaffModal()}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                        color: "#fff",
+                        border: "none",
+                        padding: "0.45rem 1rem",
+                        borderRadius: "6px",
+                        fontSize: "0.85rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Plus size={14} />
+                      <span>+ Add New Person (Staff)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Staff Rows List */}
+            {filteredStaffList.map((person) => {
+              const personName = String(
+                person?.name ||
+                  person?.fullName ||
+                  person?.FullName ||
+                  person?.username ||
+                  "Unnamed staff",
+              );
+              const personRole = String(
+                person?.role || person?.roleTitle || person?.jobTitle || "Staff",
+              );
+              const personId = person?.id ?? person?.staffId;
+              const assignedCount = (Array.isArray(person?.assignedTableIds) && person.assignedTableIds.length > 0)
+                ? person.assignedTableIds.length
+                : (person?.assignedTables && person.assignedTables !== "—"
+                    ? person.assignedTables.split(",").filter(Boolean).length
+                    : (tables || []).filter((t) => {
+                        const sName = (t.server || t.assignedServer || t.assignedServerName || "").trim().toLowerCase();
+                        const pName = personName.trim().toLowerCase();
+                        const sId = String(t.assignedServerId || t.serverId || "");
+                        const pId = String(personId || "");
+                        return (sName && sName === pName) || (sId && pId && sId === pId);
+                      }).length
+                  );
+
+              return (
+                <div
+                  key={personId ?? personName}
+                  style={{
+                    display: "grid",
+                    alignItems: "center",
+                    padding: "0.55rem 0.85rem",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--neutral-border)",
+                    borderRadius: "8px",
+                    marginBottom: "0.45rem",
+                    transition: "background 0.15s ease, border-color 0.15s ease",
+                  }}
+                  className="staff-table-grid"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--bg-tertiary)";
+                    e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "var(--bg-secondary)";
+                    e.currentTarget.style.borderColor = "rgba(var(--surface-rgb),0.05)";
+                  }}
+                >
+                  {/* Col 1: Staff Avatar Badge + Name */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "6px",
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "var(--accent-amber-light)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.82rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {personName.charAt(0).toUpperCase()}
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: "var(--text-main)",
+                        fontSize: "0.88rem",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {personName}
+                    </span>
+                  </div>
+
+                  {/* Col 2: Role */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={personRole}
+                  >
+                    {personRole}
+                  </div>
+
+                  {/* Col 3: Phone */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {person.phone || "—"}
+                  </div>
+
+                  {/* Col 4: Shift */}
+                  <div
+                    style={{
+                      color: "var(--text-muted)",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                    title={person.shift || "General Shift"}
+                  >
+                    {person.shift || "General Shift"}
+                  </div>
+
+                  {/* Col 5: Status Pill */}
+                  <div>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.26rem 0.75rem",
+                        borderRadius: "20px",
+                        background:
+                          assignedCount > 0
+                            ? "rgba(16, 185, 129, 0.12)"
+                            : "rgba(100, 116, 139, 0.12)",
+                        border:
+                          assignedCount > 0
+                            ? "1px solid rgba(16, 185, 129, 0.3)"
+                            : "1px solid rgba(100, 116, 139, 0.25)",
+                        color: assignedCount > 0 ? "var(--success)" : "var(--text-dim)",
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        width: "fit-content",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          backgroundColor:
+                            assignedCount > 0 ? "#10b981" : "#64748b",
+                          boxShadow:
+                            assignedCount > 0 ? "0 0 6px #10b981" : "none",
+                        }}
+                      />
+                      <span>
+                        {assignedCount > 0
+                          ? `${assignedCount} ${assignedCount === 1 ? "TABLE" : "TABLES"}`
+                          : "0 TABLES"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Col 6: Actions */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStaffModal(person)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.35rem 0.55rem",
+                        background: "rgba(245, 158, 11, 0.08)",
+                        color: "#f59e0b",
+                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
+                        e.currentTarget.style.borderColor = "#f59e0b";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                      }}
+                      title="Edit Staff"
+                      aria-label="Edit Staff"
+                    >
+                      <SquarePen size={13} color="#f59e0b" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStaffClick(person)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0.35rem 0.55rem",
+                        background: "rgba(239, 68, 68, 0.08)",
+                        color: "var(--danger)",
+                        border: "1px solid rgba(239, 68, 68, 0.35)",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.22)";
+                        e.currentTarget.style.borderColor = "var(--danger)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
+                        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.35)";
+                      }}
+                      title="Remove staff member"
+                      aria-label="Remove staff member"
+                    >
+                      <Trash2 size={13} color="var(--danger)" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal: Add / Edit Staff Person */}
+      {isStaffModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--modal-overlay)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 130,
+            padding: "1rem",
+          }}
+        >
+          <form
+            onSubmit={handleSaveStaff}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1.5px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: "480px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "1.6rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1.5px solid var(--border-subtle)",
+                paddingBottom: "0.85rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: 800,
+                  color: "var(--text-main)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {editingStaff ? "Edit Staff Details" : "Add New Staff Person"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStaff(null);
+                  setIsStaffModalOpen(false);
+                }}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Person Full Name <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Rajesh Kumar"
+                value={staffForm.name}
+                onChange={(e) =>
+                  setStaffForm({ ...staffForm, name: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0.65rem 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Role / Designation
+              </label>
+              <CustomCreatableDropdown
+                value={staffForm.role}
+                onChange={(val) => setStaffForm({ ...staffForm, role: val })}
+                options={allRoleOptions}
+                placeholder="Select role"
+                customPlaceholder="Type new role..."
+                required
+                allowCustom
+                onSaveCustomOption={saveCustomRole}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Contact Phone
+              </label>
+              <input
+                type="text"
+                placeholder="+91 98450 12345"
+                value={staffForm.phone}
+                onChange={(e) =>
+                  setStaffForm({ ...staffForm, phone: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Shift
+              </label>
+              <CustomCreatableDropdown
+                value={staffForm.shift}
+                onChange={(val) => setStaffForm({ ...staffForm, shift: val })}
+                options={allShiftOptions}
+                placeholder="Select shift"
+                customPlaceholder="Type new shift..."
+                allowCustom
+                onSaveCustomOption={saveCustomShift}
+              />
+            </div>
+
+            {assignableTables.length > 0 && (
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Assigned Bar Tables
+                </label>
+                <div
+                  style={{
+                    maxHeight: "130px",
+                    overflowY: "auto",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.5rem 0.75rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.4rem",
+                  }}
+                >
+                  {assignableTables.map((tbl) => {
+                    const isChecked = staffForm.assignedTableIds.includes(tbl.tableId);
+                    return (
+                      <label
+                        key={tbl.tableId}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.55rem",
+                          fontSize: "0.82rem",
+                          color: isChecked ? "var(--accent-amber-light)" : "var(--text-main)",
+                          cursor: "pointer",
+                          fontWeight: isChecked ? 700 : 500,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setStaffForm((prev) => ({
+                                ...prev,
+                                assignedTableIds: [...prev.assignedTableIds, tbl.tableId],
+                              }));
+                            } else {
+                              setStaffForm((prev) => ({
+                                ...prev,
+                                assignedTableIds: prev.assignedTableIds.filter((id) => id !== tbl.tableId),
+                              }));
+                            }
+                          }}
+                          style={{ accentColor: "#f59e0b", cursor: "pointer" }}
+                        />
+                        <span>{tbl.label || tbl.tableNumber || `Table ${tbl.tableId}`}</span>
+                        {tbl.isCurrentlyAssigned && tbl.assignedStaffName && !isChecked && (
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
+                            ({tbl.assignedStaffName})
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div
+              style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStaff(null);
+                  setIsStaffModalOpen(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "0.7rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                style={{
+                  flex: 2,
+                  padding: "0.7rem",
+                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "0.88rem",
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                }}
+              >
+                {editingStaff ? "Save Changes" : "Add Person"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        icon={confirmState.icon}
+        onConfirm={confirmState.onConfirm}
+        onCancel={cancelDelete}
+      />
+    </div>
+  );
+}
+
 export function BarWorkspace({
   activeTab = "bar-overview",
   onNavigate,
@@ -3035,6 +7357,8 @@ export function BarWorkspace({
   onSetMenuAvailability,
   onOrderUpdated,
   onBarOrderItemStatusUpdated,
+  onUpdateItemKotStatus = null,
+  onCompleteTableKot = null,
   inventory: sharedInventory = [],
   pastOrders = [],
   restaurantName = "Restaurant",
@@ -3085,45 +7409,262 @@ export function BarWorkspace({
   const route = activeTab || "bar-overview";
 
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v1";
+  const STORAGE_KEY_BAR_DRINKS = "avsr_bar_drinks_menu_v2";
 
-  // Dedicated bar drinks state - independent from Dine menu items
+  // Dedicated bar drinks state - loaded live from Backend API (no mock data)
   const [barDrinks, setBarDrinks] = useState(() => {
     try {
+      localStorage.removeItem("avsr_bar_drinks_menu_v1");
       const saved = localStorage.getItem(STORAGE_KEY_BAR_DRINKS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    // Initial default bar drinks: includes the user's added Mojito and standard bar drinks
-    return [
-      {
-        id: "DR-MOJITO",
-        name: "mojito",
-        category: "Cocktails",
-        price: 130,
-        isVeg: false,
-        drinkType: "Alcoholic",
-        prepTime: "15 min",
-        description: "Fresh mint, lime, white rum, and sparkling soda.",
-        isAvailable: true,
-        isBarDrink: true,
-      },
-      ...BAR_DRINKS.map((d) => ({
-        ...d,
-        isVeg: d.category === "Mocktails" || d.category === "Juices" || d.category === "Water" || d.category === "Soft Drinks",
-        drinkType: d.abv ? "Alcoholic" : "Non-Alcoholic",
-        isBarDrink: true,
-      })),
-    ];
+    return [];
   });
+
+  // Live Bar Overview dashboard state & loader
+  const [overviewData, setOverviewData] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+
+  const loadBarOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    try {
+      const res = await apiGetBarOverview();
+      const data = res?.data?.data || res?.data;
+      if (res?.success && data) {
+        setOverviewData(data);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarOverview offline/fallback:", err?.message);
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (route === "bar-overview") {
+      loadBarOverview();
+      const timer = window.setInterval(loadBarOverview, 15000);
+      return () => window.clearInterval(timer);
+    }
+  }, [route, loadBarOverview]);
+
+  // Fetch live drinks from backend API
+  const loadBarDrinks = useCallback(async () => {
+    try {
+      const res = await apiGetBarDrinks();
+      const raw = res?.data?.data || res?.data;
+      if (res?.success && Array.isArray(raw)) {
+        const formatted = raw.map((d) => ({
+          ...d,
+          id: d.menuItemId || d.id,
+          menuItemId: d.menuItemId || d.id,
+          name: d.drinkName || d.name || d.dishName || "",
+          dishName: d.drinkName || d.name || d.dishName || "",
+          drinkName: d.drinkName || d.name || d.dishName || "",
+          category: d.category || "Cocktails",
+          price: Number(d.price ?? d.sellingPrice ?? 0),
+          sellingPrice: Number(d.price ?? d.sellingPrice ?? 0),
+          measure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          servingMeasure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          servingVolume: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          isAvailable: d.isAvailable !== false && d.isAvailable !== "Unavailable",
+          drinkType: d.drinkType || (d.abv || d.alcoholContent ? "Alcoholic" : "Non-Alcoholic"),
+          abv: d.abv !== undefined && d.abv !== null ? d.abv : (d.alcoholContent !== undefined ? d.alcoholContent : ""),
+          alcoholContent: d.alcoholContent !== undefined ? d.alcoholContent : (d.abv !== undefined && d.abv !== null ? d.abv : 0),
+          isChefSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isChefsSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          isBartenderSpecial: Boolean(d.isSpecial || d.isBartenderSpecial || d.isChefsSpecial),
+          prepTime: d.prepTime || `${d.prepTimeMinutes || 15} min`,
+          prepTimeMinutes: d.prepTimeMinutes || 15,
+          description: d.description || d.shortDescription || "",
+          shortDescription: d.description || d.shortDescription || "",
+          image: d.imageUrl || d.image || "",
+          imageUrl: d.imageUrl || d.image || "",
+          isBarDrink: true,
+          isBarItem: true,
+        }));
+        setBarDrinks(formatted);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarDrinks offline/fallback:", err?.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBarDrinks();
+  }, [loadBarDrinks]);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
     } catch {}
   }, [barDrinks]);
+
+  const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
+
+  // Dedicated bar staff state - loaded live from Backend API (no mock data)
+  const [barStaff, setBarStaff] = useState(() => {
+    try {
+      localStorage.removeItem("avsr_bar_staff_v1");
+      const saved = localStorage.getItem(STORAGE_KEY_BAR_STAFF);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [barStaffLoading, setBarStaffLoading] = useState(false);
+
+  const loadBarStaff = useCallback(async () => {
+    setBarStaffLoading(true);
+    try {
+      const res = await apiGetBarStaff();
+      const raw = res?.data?.data || res?.data;
+      if (res?.success && Array.isArray(raw)) {
+        const formatted = raw.map((s) => ({
+          ...s,
+          id: s.staffId || s.id,
+          staffId: s.staffId || s.id,
+          name: s.fullName || s.name || "",
+          fullName: s.fullName || s.name || "",
+          role: s.jobTitle || s.role || s.roleTitle || "Staff",
+          jobTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
+          roleTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
+          phone: s.phone || "",
+          shift: s.shift || "General Shift",
+          barArea: s.barArea || "—",
+          assignedTables: s.assignedTables || "—",
+          assignedTableIds: Array.isArray(s.assignedTableIds) ? s.assignedTableIds : [],
+          assignedTableDetails: Array.isArray(s.assignedTableDetails) ? s.assignedTableDetails : [],
+          isActive: s.isActive !== false && s.status !== "inactive",
+          status: s.status || (s.isActive !== false ? "active" : "inactive"),
+        }));
+        setBarStaff(formatted);
+      }
+    } catch (err) {
+      console.warn("[BarWorkspace] apiGetBarStaff offline/fallback:", err?.message);
+    } finally {
+      setBarStaffLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBarStaff();
+  }, [loadBarStaff]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_BAR_STAFF, JSON.stringify(barStaff));
+    } catch {}
+  }, [barStaff]);
+
+  const handleAddBarStaff = async (newStaff) => {
+    try {
+      const res = await apiCreateBarStaff({
+        fullName: newStaff.name || newStaff.fullName,
+        jobTitle: newStaff.role || newStaff.jobTitle || newStaff.roleTitle,
+        phone: newStaff.phone,
+        shift: newStaff.shift,
+        assignedTableIds: newStaff.assignedTableIds || [],
+        assignedTables: newStaff.assignedTables || [],
+        isActive: true,
+      });
+      const created = res?.data?.data || res?.data;
+      if (created) {
+        const mapped = {
+          ...created,
+          id: created.staffId || created.id,
+          staffId: created.staffId || created.id,
+          name: created.fullName || created.name || newStaff.name,
+          fullName: created.fullName || created.name || newStaff.name,
+          role: created.jobTitle || created.role || created.roleTitle || newStaff.role,
+          jobTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
+          roleTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
+          phone: created.phone || newStaff.phone,
+          shift: created.shift || newStaff.shift,
+          barArea: created.barArea || "—",
+          assignedTables: created.assignedTables || "—",
+          assignedTableIds: created.assignedTableIds || [],
+          assignedTableDetails: created.assignedTableDetails || [],
+          isActive: true,
+          status: "active",
+        };
+        setBarStaff((prev) => [mapped, ...prev.filter((s) => s.id !== mapped.id)]);
+        return mapped;
+      }
+    } catch (err) {
+      console.error("[BarWorkspace] apiCreateBarStaff error:", err);
+      const fallback = {
+        ...newStaff,
+        id: Date.now(),
+        staffId: Date.now(),
+        fullName: newStaff.name,
+        jobTitle: newStaff.role,
+        roleTitle: newStaff.role,
+        isActive: true,
+        status: "active",
+      };
+      setBarStaff((prev) => [fallback, ...prev]);
+      return fallback;
+    }
+  };
+
+  const handleUpdateBarStaff = async (updatedStaff) => {
+    const id = updatedStaff.staffId || updatedStaff.id;
+    try {
+      const res = await apiUpdateBarStaff(id, {
+        fullName: updatedStaff.name || updatedStaff.fullName,
+        jobTitle: updatedStaff.role || updatedStaff.jobTitle || updatedStaff.roleTitle,
+        phone: updatedStaff.phone,
+        shift: updatedStaff.shift,
+        assignedTableIds: updatedStaff.assignedTableIds,
+        assignedTables: updatedStaff.assignedTables,
+        isActive: updatedStaff.isActive,
+      });
+      const updated = res?.data?.data || res?.data;
+      if (updated) {
+        const mapped = {
+          ...updated,
+          id: updated.staffId || updated.id || id,
+          staffId: updated.staffId || updated.id || id,
+          name: updated.fullName || updated.name || updatedStaff.name,
+          fullName: updated.fullName || updated.name || updatedStaff.name,
+          role: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
+          jobTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
+          roleTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
+          phone: updated.phone || updatedStaff.phone,
+          shift: updated.shift || updatedStaff.shift,
+          barArea: updated.barArea || "—",
+          assignedTables: updated.assignedTables || "—",
+          assignedTableIds: updated.assignedTableIds || [],
+          assignedTableDetails: updated.assignedTableDetails || [],
+          isActive: updated.isActive !== false,
+          status: updated.status || "active",
+        };
+        setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? mapped : s)));
+        return mapped;
+      }
+    } catch (err) {
+      console.error("[BarWorkspace] apiUpdateBarStaff error:", err);
+      setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? updatedStaff : s)));
+      return updatedStaff;
+    }
+  };
+
+  const handleDeleteBarStaff = async (staffId) => {
+    try {
+      await apiDeleteBarStaff(staffId);
+    } catch (err) {
+      console.error("[BarWorkspace] apiDeleteBarStaff error:", err);
+    }
+    setBarStaff((prev) => prev.filter((s) => s.id !== staffId && s.staffId !== staffId));
+    return true;
+  };
 
   // If mojito was previously pushed to Dine menuItems, remove it from dine
   useEffect(() => {
@@ -3135,7 +7676,7 @@ export function BarWorkspace({
     }
   }, [menuItems, onDeleteMenuItem]);
 
-  const handleAddDrink = (newDrink) => {
+  const handleAddDrink = async (newDrink) => {
     const item = {
       ...newDrink,
       id: newDrink.id || `DR-${Date.now()}`,
@@ -3143,31 +7684,103 @@ export function BarWorkspace({
       isBarDrink: true,
       isAvailable: newDrink.isAvailable !== false,
     };
+    // Optimistic UI update
     setBarDrinks((prev) => [item, ...prev]);
     setToast?.(`Drink "${item.name}" added to Bar Drinks Menu.`);
+
+    // Persist to backend
+    try {
+      const res = await apiCreateBarDrink(item);
+      const created = res?.data?.data || res?.data;
+      if (res?.success && created) {
+        const realId = created.menuItemId || created.id;
+        if (realId) {
+          setBarDrinks((prev) =>
+            prev.map((d) => (d.id === item.id ? { ...d, ...created, id: realId } : d))
+          );
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiCreateBarDrink fallback:", apiErr?.message);
+    }
     return true;
   };
 
-  const handleUpdateDrink = (updatedDrink) => {
+  const handleUpdateDrink = async (updatedDrink) => {
+    // Optimistic UI update
     setBarDrinks((prev) =>
       prev.map((d) =>
         String(d.id) === String(updatedDrink.id) ? { ...d, ...updatedDrink, isBarDrink: true } : d
       )
     );
     setToast?.(`Drink "${updatedDrink.name}" updated.`);
+
+    // Persist to backend
+    try {
+      await apiUpdateBarDrink(updatedDrink.id, updatedDrink);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiUpdateBarDrink fallback:", apiErr?.message);
+    }
     return true;
   };
 
-  const handleDeleteDrink = (drinkId) => {
+  const handleDeleteDrink = async (drinkId) => {
+    // Optimistic UI update
     setBarDrinks((prev) => prev.filter((d) => String(d.id) !== String(drinkId)));
     setToast?.("Drink deleted from Bar Drinks Menu.");
+
+    // Persist to backend
+    try {
+      await apiDeleteBarDrink(drinkId);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiDeleteBarDrink fallback:", apiErr?.message);
+    }
     return true;
   };
 
-  const handleToggleDrinkAvailability = (drinkId, newStatus) => {
+  const handleToggleDrinkAvailability = async (drinkId, newStatus) => {
+    // Optimistic UI update
     setBarDrinks((prev) =>
       prev.map((d) => (String(d.id) === String(drinkId) ? { ...d, isAvailable: newStatus } : d))
     );
+
+    if (onSetMenuAvailability) {
+      onSetMenuAvailability(drinkId, newStatus);
+    }
+
+    setToast?.(`Drink marked ${newStatus ? "Available" : "Unavailable"}.`);
+
+    // Persist to backend
+    try {
+      await apiToggleBarDrinkAvailability(drinkId, newStatus);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiToggleBarDrinkAvailability fallback:", apiErr?.message);
+    }
+    return true;
+  };
+
+  const handleToggleDrinkSpecial = async (drinkId, newStatus) => {
+    // Optimistic UI update
+    setBarDrinks((prev) =>
+      prev.map((d) =>
+        String(d.id) === String(drinkId)
+          ? {
+              ...d,
+              isSpecial: newStatus,
+              isBartenderSpecial: newStatus,
+              isChefSpecial: newStatus,
+              isChefsSpecial: newStatus,
+            }
+          : d
+      )
+    );
+
+    // Persist to backend
+    try {
+      await apiToggleBarDrinkSpecial(drinkId, newStatus);
+    } catch (apiErr) {
+      console.warn("[BarWorkspace] apiToggleBarDrinkSpecial fallback:", apiErr?.message);
+    }
     return true;
   };
 
@@ -3215,8 +7828,7 @@ export function BarWorkspace({
     return { ...order, id: order.orderId ?? order.id, table: order.tableName || order.tableNumber || (order.tableId ? `Table ${order.tableId}` : "Takeaway"), customer: order.customerName || order.serverName || "—", items: Array.isArray(order.items) ? order.items : [], beverageItems: items, quantity: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), itemLabel: items.map((item) => `${item.quantity} × ${item.dishName || item.name || "Drink"}`).join(", "), total: Number(order.totalAmount ?? order.total ?? amount), status: order.status || order.orderStatus || "Pending", time: order.createdAt || order.orderTime || "—" };
   }).filter(Boolean), [orders, menuLookup]);
   const barOrders = useMemo(() => {
-    const demoOrders = BAR_BILL_DEMO_ORDERS.map((order) => ({ ...order, total: order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0), quantity: order.items.reduce((sum, item) => sum + item.quantity, 0), itemLabel: order.items.map((item) => `${item.quantity} × ${item.name}`).join(", ") }));
-    return [...apiBarOrders, ...demoOrders];
+    return apiBarOrders;
   }, [apiBarOrders]);
   const inventoryRows = useMemo(() => inventory.filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name)), [inventory]);
   const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter((order) => {
@@ -3228,20 +7840,17 @@ export function BarWorkspace({
       return isBeverageCategory(menuItem?.category ?? menuItem?.categoryName ?? item.category ?? item.categoryName ?? item.subcategory ?? name);
     });
   }), [pastOrders, menuItems, menuLookup]);
-  const demoTableItems = useMemo(() => {
-    const demosByNumber = { "Table-4": BAR_BILL_DEMO_ORDERS[0].items, "Table 4": BAR_BILL_DEMO_ORDERS[0].items, "Table-2": BAR_BILL_DEMO_ORDERS[1].items, "Table 2": BAR_BILL_DEMO_ORDERS[1].items, "Table-8": BAR_BILL_DEMO_ORDERS[2].items, "Table 8": BAR_BILL_DEMO_ORDERS[2].items };
-    return demosByNumber;
-  }, []);
 
   const staffIdOf = (person) => person?.staffId ?? person?.id;
   const staffNameOf = (person) => person?.fullName || person?.name || person?.FullName || "";
+  const effectiveStaffList = barStaff.length > 0 ? barStaff : (Array.isArray(dineStaff) ? dineStaff : []);
   const tables = (Array.isArray(dineTables) ? dineTables : []).map((source) => {
     const sourceTableId = source.backendTableId ?? source.tableId ?? source.id;
     const activeOrder = orders.find((order) => String(order.tableId ?? order.TableId) === String(sourceTableId))
       || orders.find((order) => String(order.tableId ?? order.TableId) === String(source.id));
     const serverName = source.server || source.assignedServerName || "";
-    const assigned = dineStaff.find((person) => String(staffIdOf(person)) === String(source.assignedServerId ?? source.serverId))
-      || dineStaff.find((person) => staffNameOf(person).trim().toLowerCase() === serverName.trim().toLowerCase());
+    const assigned = effectiveStaffList.find((person) => String(staffIdOf(person)) === String(source.assignedServerId ?? source.serverId))
+      || effectiveStaffList.find((person) => staffNameOf(person).trim().toLowerCase() === serverName.trim().toLowerCase());
     const rawStatus = String(source.status || "vacant").toLowerCase();
     const status = rawStatus === "reserved" ? "Reserved" : rawStatus === "cleaning" ? "Cleaning" : rawStatus === "inactive" ? "Inactive" : ["occupied", "dining", "billed"].includes(rawStatus) ? "Occupied" : "Available";
     const sourceItems = Array.isArray(source.items) ? source.items.filter((entry) => entry?.status !== "cancelled" && entry?.kotStatus !== "cancelled" && entry?.itemStatus !== "cancelled") : [];
@@ -3268,7 +7877,7 @@ export function BarWorkspace({
       _source: source,
     };
   });
-  const staff = (Array.isArray(dineStaff) ? dineStaff : []).map((source) => {
+  const staff = effectiveStaffList.map((source) => {
     const id = staffIdOf(source);
     const assignedTables = tables.filter((table) => String(table.staffId) === String(id));
     return {
@@ -3541,6 +8150,53 @@ export function BarWorkspace({
       .slice(0, 10);
   }, [tables]);
 
+  const overviewTables = useMemo(() => {
+    if (Array.isArray(overviewData?.counterTables) && overviewData.counterTables.length > 0) {
+      return overviewData.counterTables.map((t) => ({
+        id: t.tableId || t.id,
+        number: t.tableName || t.tableNumber || `Table ${t.tableId || t.id}`,
+        area: t.sectionArea || t.area || "Main Hall",
+        status: t.status || "Available",
+        guests: t.currentGuests || t.occupiedChairs || t.guests || 0,
+        server: t.assignedServer || "Unassigned",
+      }));
+    }
+    return displayBarTables;
+  }, [overviewData, displayBarTables]);
+
+  const overviewSignatureDrinks = useMemo(() => {
+    if (Array.isArray(overviewData?.signatureDrinks) && overviewData.signatureDrinks.length > 0) {
+      return overviewData.signatureDrinks.map((d) => ({
+        ...d,
+        id: d.menuItemId || d.id,
+        name: d.drinkName || d.name || d.dishName || "",
+        category: d.category || "Cocktail",
+        price: Number(d.price ?? d.sellingPrice ?? 0),
+        prepTime: d.prepTime || `${d.prepTimeMinutes || 15} min`,
+        image: d.imageUrl || d.image || "",
+      }));
+    }
+    return drinks.slice(0, 5);
+  }, [overviewData, drinks]);
+
+  const overviewRecentOrders = useMemo(() => {
+    if (Array.isArray(overviewData?.recentOrders) && overviewData.recentOrders.length > 0) {
+      return overviewData.recentOrders.map((o) => ({
+        ...o,
+        id: o.orderNumber || (o.orderId ? `ORD-${o.orderId}` : String(o.id || "")),
+        orderId: o.orderId || o.id,
+        table: o.table || o.tableName || (o.tableId ? `Table ${o.tableId}` : "Bar Counter"),
+        itemLabel: o.drinkItems || o.itemLabel || "Beverages & Cocktails",
+        quantity: o.quantity || 1,
+        total: Number(o.amount ?? o.total ?? 0),
+        time: o.time || "—",
+        status: o.status || "Pending",
+        items: o.items || [],
+      }));
+    }
+    return barOrders.slice(0, 5);
+  }, [overviewData, barOrders]);
+
   const lowStockBeverages = useMemo(() => {
     return inventoryRows.filter((item) => {
       const stock = Number(item.stock ?? item.currentStock ?? 0);
@@ -3634,7 +8290,7 @@ export function BarWorkspace({
   const renderListCell = (column, row, kind) => {
     if (column === "Actions") return primaryActions(kind, row);
     if (column === "Current Order" && kind === "table") {
-      const sourceItems = Array.isArray(row.items) && row.items.length ? row.items : demoTableItems[row.number] || [];
+      const sourceItems = Array.isArray(row.items) ? row.items : [];
       return <button className="bar-button secondary small" type="button" onClick={() => {
       const items = sourceItems.map((item) => {
         const menuItem = findMenuItem(menuLookup, item);
@@ -3722,7 +8378,7 @@ export function BarWorkspace({
 
   return (
     <main className="bar-workspace">
-      {route === "bar-overview" ? (
+      {route === "bar-overview" && (
         /* 1. Unified Header Banner Card (Matching Dine Dashboard) */
         <div
           style={{
@@ -3886,16 +8542,32 @@ export function BarWorkspace({
               <Receipt size={14} color="#10b981" />
               <span>Invoices</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => loadBarOverview()}
+              disabled={overviewLoading}
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid rgba(245, 158, 11, 0.35)",
+                color: "var(--text-main)",
+                borderRadius: "8px",
+                padding: "0.42rem 0.85rem",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                cursor: "pointer",
+                height: "32px",
+                boxShadow: "var(--shadow-sm)",
+              }}
+              title="Refresh live bar overview"
+            >
+              <RefreshCw size={13} color="var(--accent-amber)" className={overviewLoading ? "spin" : ""} />
+              <span>{overviewLoading ? "Refreshing..." : "Refresh"}</span>
+            </button>
           </div>
-        </div>
-      ) : ["bar-drinks", "bar-tables"].includes(route) ? null : (
-        <div className="bar-page-title">
-          <div>
-            <span className="bar-kicker">TELUGU TASTE • BAR OPERATIONS</span>
-            <h1>{({ "bar-overview": "Bar Overview", "bar-drinks": "Drinks Menu", "bar-tables": "Bar Tables", "bar-staff": "Bar Staff & Persons", "bar-kot": "Bar BOT", "bar-inventory": "Bar Inventory", "bar-orders": "Bar Orders / Bills", "bar-reports": "Bar Reports", "bar-access": "Bar Access Management", "bar-settings": "Bar Settings" })[route] || (route === "bar-invoices" ? "Invoices" : "Bar Overview")}</h1>
-            <p>{["bar-tables", "bar-staff"].includes(route) ? "Shared hotel records • same tables and staff as Dine mode." : route === "bar-kot" ? "Persisted beverage tickets • live statuses from the BOT service." : route === "bar-inventory" ? "Live beverage and liquor inventory ledger • tracked in real time." : "Independent Bar workspace • drink and order records are demo data."}</p>
-          </div>
-          <span className="bar-demo-banner">{["bar-tables", "bar-staff"].includes(route) ? "SHARED HOTEL DATA" : route === "bar-kot" ? "LIVE BOT DATA" : route === "bar-inventory" ? "BAR INVENTORY • LIVE LEDGER" : "DEMO DATA • SESSION ONLY"}</span>
         </div>
       )}
 
@@ -3941,10 +8613,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {formatCurrency(completedDrinkSales)}
+              {formatCurrency(overviewData?.completedDrinkSales ?? completedDrinkSales)}
             </div>
             <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              <span>{barOrders.length} Orders</span>
+              <span>{(overviewData?.activeBarOrders ?? barOrders.length)} Orders</span>
               <span style={{ margin: "0 3px" }}>•</span>
               <span style={{ color: "var(--success)" }}>Active</span>
             </div>
@@ -3981,11 +8653,11 @@ export function BarWorkspace({
                 <Clock3 size={12} color={pendingBarKotCount > 0 ? "#ef4444" : "var(--text-dim)"} />
               </div>
             </div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {pendingBarKotCount} Active BOT
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: (overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount) > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount)} Active BOT
             </div>
-            <div style={{ fontSize: "0.66rem", color: pendingBarKotCount > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              <span>{activePreparingCount} drinks in prep</span>
+            <div style={{ fontSize: "0.66rem", color: (overviewData?.pendingOrders ?? overviewData?.pendingBarKotCount ?? pendingBarKotCount) > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span>{(overviewData?.preparingDrinks ?? overviewData?.activePreparingCount ?? activePreparingCount)} drinks in prep</span>
             </div>
           </div>
 
@@ -4021,10 +8693,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {occupiedBarTables.length} / {tables.length} Tables
+              {(overviewData?.occupiedTables ?? occupiedBarTables.length)} / {(overviewData?.totalTables ?? tables.length)} Tables
             </div>
-            <div style={{ fontSize: "0.66rem", color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {occupiedChairs} seated ({totalChairs} seats)
+            <div style={{ fontSize: "0.66rem", color: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "var(--accent-amber-light)" : "var(--status-vacant)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.occupiedSeats ?? occupiedChairs)} seated ({(overviewData?.totalSeats ?? totalChairs)} seats)
             </div>
           </div>
 
@@ -4059,11 +8731,11 @@ export function BarWorkspace({
                 <Package size={12} color={lowStockBeverages.length > 0 ? "#ef4444" : "#10b981"} />
               </div>
             </div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {inventoryRows.length} Items
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: (overviewData ? overviewData.lowStockItems > 0 : lowStockBeverages.length > 0) ? "var(--danger)" : "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {(overviewData?.totalInventoryItems ?? inventoryRows.length)} Items
             </div>
-            <div style={{ fontSize: "0.66rem", color: lowStockBeverages.length > 0 ? "var(--danger)" : "var(--text-muted)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {lowStockBeverages.length > 0 ? "⚠️ " + lowStockBeverages.length + " Low Stock" : "All stock healthy"}
+            <div style={{ fontSize: "0.66rem", color: (overviewData ? overviewData.lowStockItems > 0 : lowStockBeverages.length > 0) ? "var(--danger)" : "var(--text-muted)", fontWeight: 600, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {overviewData ? (overviewData.lowStockItems > 0 ? "⚠️ " + overviewData.lowStockItems + " Low Stock" : "All stock healthy") : (lowStockBeverages.length > 0 ? "⚠️ " + lowStockBeverages.length + " Low Stock" : "All stock healthy")}
             </div>
           </div>
 
@@ -4099,10 +8771,10 @@ export function BarWorkspace({
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {drinks.length} Drinks
+              {(overviewData?.totalDrinks ?? drinks.length)} Drinks
             </div>
             <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {alcoholicDrinksCount} Alc • {nonAlcoholicDrinksCount} Non-Alc
+              {overviewData ? `${overviewData.alcoholicDrinksCount} Alc • ${overviewData.nonAlcoholicDrinksCount} Non-Alc` : `${alcoholicDrinksCount} Alc • ${nonAlcoholicDrinksCount} Non-Alc`}
             </div>
           </div>
         </div>
@@ -4151,13 +8823,13 @@ export function BarWorkspace({
                   style={{
                     fontSize: "0.68rem",
                     fontWeight: 700,
-                    background: occupiedBarTables.length > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
-                    color: occupiedBarTables.length > 0 ? "var(--accent-amber-light)" : "var(--success)",
+                    background: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                    color: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "var(--accent-amber-light)" : "var(--success)",
                     padding: "1px 6px",
                     borderRadius: "10px",
                   }}
                 >
-                  {occupiedBarTables.length} Occupied
+                  {(overviewData?.occupiedTables ?? occupiedBarTables.length)} Occupied
                 </span>
               </div>
               <button
@@ -4190,7 +8862,7 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {displayBarTables.map((tbl) => {
+              {overviewTables.map((tbl) => {
                 const isOccupied = tbl.status === "Occupied";
                 const serverName = staff.find((m) => String(m.id) === String(tbl.staffId))?.name || tbl.server || "Unassigned";
                 return (
@@ -4351,7 +9023,12 @@ export function BarWorkspace({
                 paddingRight: "2px",
               }}
             >
-              {drinks.slice(0, 5).map((drink) => (
+              {overviewSignatureDrinks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-dim)", fontSize: "0.82rem" }}>
+                  No drinks added to menu yet.
+                </div>
+              ) : (
+                overviewSignatureDrinks.map((drink) => (
                 <div
                   key={drink.id}
                   onClick={() => go("bar-drinks")}
@@ -4396,7 +9073,8 @@ export function BarWorkspace({
                     {formatCurrency(drink.price)}
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
         </div>
@@ -4443,7 +9121,7 @@ export function BarWorkspace({
                   borderRadius: "10px",
                 }}
               >
-                {barOrders.length} Total Orders
+                {(overviewData?.activeBarOrders ?? barOrders.length)} Total Orders
               </span>
             </div>
 
@@ -4474,7 +9152,7 @@ export function BarWorkspace({
           ) : (
             renderStaticTable(
               ["Order Number", "Table", "Drink Items", "Quantity", "Amount", "Time", "Status", "Actions"],
-              barOrders.slice(0, 5),
+              overviewRecentOrders,
               (column, order) => ({
                 "Order Number": <strong>{order.id}</strong>,
                 Table: order.table,
@@ -4514,23 +9192,65 @@ export function BarWorkspace({
           onUpdateDrink={handleUpdateDrink}
           onDeleteDrink={handleDeleteDrink}
           onToggleDrinkAvailability={handleToggleDrinkAvailability}
+          onToggleDrinkSpecial={handleToggleDrinkSpecial}
+          onSetMenuAvailability={onSetMenuAvailability}
+          setToast={setToast}
+        />
+      ) : route === "bar-tables" ? (
+        <BarTablesView
+          tables={dineTables}
+          staffList={effectiveStaffList}
+          orders={orders}
+          onAddTable={onAddTable}
+          onUpdateTable={onUpdateTable}
+          onDeleteTable={onDeleteTable}
+          onAddStaff={handleAddBarStaff}
+          setToast={setToast}
+        />
+      ) : route === "bar-staff" ? (
+        <BarStaffView
+          staffList={barStaff}
+          tables={tables}
+          onAddStaff={handleAddBarStaff}
+          onUpdateStaff={handleUpdateBarStaff}
+          onDeleteStaff={handleDeleteBarStaff}
+          onReloadStaff={loadBarStaff}
+          loading={barStaffLoading}
           setToast={setToast}
         />
       ) : (
         listPage
       )}
 
-      {route === "bar-kot" && <BarKOTView menuItems={menuItems} tables={tables} staffList={dineStaff} onItemsUpdated={onBarOrderItemStatusUpdated} />}
+      {route === "bar-kot" && (
+        <BarBOTView
+          menuItems={menuItems}
+          tables={tables}
+          staffList={effectiveStaffList}
+          barDrinks={barDrinks}
+          onItemsUpdated={onBarOrderItemStatusUpdated}
+          onUpdateItemKotStatus={onUpdateItemKotStatus}
+          onCompleteTableKot={onCompleteTableKot}
+        />
+      )}
 
       {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 
-      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries, plus static demo examples.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError} Static demo orders are still available below.</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
+      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError}</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
       <OrderItemsModal order={tableItems} onClose={() => setTableItems(null)} />
 
-      {route === "bar-reports" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Reports</h2><p>Summary calculated from the shared menu, active orders, inventory, and loaded order history.</p></div><button className="bar-button secondary" onClick={() => csvDownload("bar-report.csv", [["Report", "Value", "Source"], ...reportData])}>Export CSV</button></div><div className="bar-report-summary">{reportData.map(([label,value,note])=><article key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</div>{renderStaticTable(["Report","Value","Source"],reportData.map((row,index)=>({id:index,name:row[0],value:row[1],source:row[2]})),(column,row)=>({Report:row.name,Value:row.value,Source:row.source})[column])}</section>}
+      {route === "bar-reports" && (
+        <AdminReports
+          mode="bar"
+          menuItems={menuItems}
+          restaurantSettings={restaurantSettings}
+          inventory={inventory}
+          pastOrders={barInvoices}
+        />
+      )}
 
       {route === "bar-access" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Access Management</h2><p>Access changes use the application authorization system.</p></div></div><div className="bar-empty">No Bar-specific access management API is configured. Existing application roles and permissions remain authoritative.</div></section>}
 

@@ -29,6 +29,43 @@ export const mapRole = (r) => {
   return str;
 };
 
+function getRegisteredEmail(user, jwt, usernameOrEmail) {
+  let managedUsers = [];
+  try {
+    managedUsers = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
+  } catch {}
+
+  if (!Array.isArray(managedUsers)) return '';
+
+  const loginUsername = String(
+    user?.username || user?.Username || jwt?.unique_name || jwt?.name || usernameOrEmail || ''
+  ).trim().toLowerCase();
+  const loginId = String(
+    user?.id || user?.userId || user?.Id || user?.UserId || jwt?.nameid || jwt?.sub || ''
+  );
+  const loginEmail = usernameOrEmail.includes('@') ? usernameOrEmail.toLowerCase() : '';
+
+  const registeredUser = managedUsers.find((managedUser) => {
+    const managedId = String(
+      managedUser?.id || managedUser?.Id || managedUser?.userId || managedUser?.UserId || ''
+    );
+    const managedUsername = String(managedUser?.username || managedUser?.Username || '').trim().toLowerCase();
+    const managedEmail = String(
+      managedUser?.email || managedUser?.Email ||
+      managedUser?.emailAddress || managedUser?.EmailAddress || ''
+    ).trim().toLowerCase();
+    return (loginId && managedId && managedId === loginId) ||
+      (loginUsername && managedUsername && managedUsername === loginUsername) ||
+      (loginEmail && managedEmail && managedEmail === loginEmail);
+  });
+
+  const email = String(
+    registeredUser?.email || registeredUser?.Email ||
+    registeredUser?.emailAddress || registeredUser?.EmailAddress || ''
+  ).trim();
+  return email.includes('@') ? email : '';
+}
+
 export async function getUsers() {
   const res = await apiGetUsers();
   const extractList = (value, depth = 0) => {
@@ -211,9 +248,12 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
 
   const trimmedInput = String(usernameOrEmail || '').trim();
   const isInputEmail = trimmedInput.includes('@');
-  const resolvedEmail = isInputEmail
-    ? trimmedInput.toLowerCase()
-    : String(user?.email || user?.Email || jwt?.email || '').trim().toLowerCase();
+  const registeredEmail = getRegisteredEmail(user, jwt, trimmedInput);
+  const resolvedEmail = (registeredEmail ||
+    (isInputEmail
+      ? trimmedInput
+      : String(user?.email || user?.Email || user?.emailAddress || jwt?.email || '').trim())
+  ).toLowerCase();
 
   const session = {
     userId: user?.id || user?.userId || user?.Id || user?.UserId || jwt?.nameid || jwt?.sub || '1',

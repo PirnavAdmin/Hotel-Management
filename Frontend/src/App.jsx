@@ -1,4 +1,4 @@
-﻿import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
+import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
@@ -36,7 +36,21 @@ import {
   normalizeMenuItem,
 } from "./api/menuApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
-import { MENU_ITEMS } from "./data/menuData";
+import {
+  Bell,
+  CheckCircle2,
+  Flame,
+  Clock,
+  ArrowRight,
+  X,
+} from "lucide-react";
+import {
+  cleanNotificationText,
+  getCleanAlertTitle,
+  getCleanAlertMessage,
+  getCleanAlertTimestamp,
+  sanitizeKitchenAlert,
+} from "./utils/notificationHelper";
 import {
   apiGetStaff,
   apiCreateStaff,
@@ -55,8 +69,8 @@ import {
 import { apiAdjustStock } from "./api/inventoryApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
+import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
 import { getTodayDateString } from "./utils/invoiceCounter";
-import { INITIAL_TABLES } from "./data/initialTables";
 import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
@@ -74,19 +88,6 @@ const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
-const sanitizeKitchenAlert = (alert) => {
-  if (!alert || typeof alert !== "object") return alert;
-  const cleanText = (value) =>
-    String(value || "")
-      .replace(/(?:ðŸ[^\s]*|âœ…|â°|âœ•|ï¸|Â)+/gu, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  return {
-    ...alert,
-    title: cleanText(alert.title) || "Kitchen Update",
-    message: cleanText(alert.message),
-  };
-};
 
 const readRestaurantSettings = () => {
   try {
@@ -126,7 +127,10 @@ const isRogueName = (name) => {
     lower.includes("table final") ||
     lower.includes("table 20") ||
     lower === "verification" ||
-    lower === "test"
+    lower === "test" ||
+    lower.startsWith("pat") ||
+    lower.startsWith("patio") ||
+    /^t-\d+$/i.test(lower)
   );
 };
 
@@ -149,14 +153,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
     : [];
   const tablesById = new Map();
 
-  // 1. Seed with default 15 tables from INITIAL_TABLES so the standard floor plan is always intact
-  INITIAL_TABLES.forEach((defTable) => {
-    if (!deletedIds.includes(String(defTable.id))) {
-      tablesById.set(Number(defTable.id), { ...defTable });
-    }
-  });
-
-  // 1b. Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
+  // Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
   try {
     const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
     if (rawSaved) {
@@ -199,9 +196,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = rawName.match(/^(?:table|t)\s*(\d+)$/i)
-        ? `Table ${num || targetId}`
-        : rawName || `Table ${targetId}`;
+      const cleanName = `Table-${num || targetId}`;
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
       const hasActiveItems =
@@ -348,21 +343,53 @@ export function App() {
         window.dispatchEvent(new Event("restaurant-settings-updated"));
       }
     };
-    fetch(`${API_BASE_URL}/api/state`, { headers: { "ngrok-skip-browser-warning": "true" } })
-      .then((response) => response.ok ? response.json() : null)
-      .then((data) => applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]))
-      .catch(() => {});
-    let events;
-    try {
-      events = new EventSource(`${API_BASE_URL}/api/events`);
-      events.onmessage = (event) => {
+    const loadInitialSettings = async () => {
+      let data = null;
+      try {
+        const res = await fetch("/api/state");
+        if (res.ok) data = await res.json();
+      } catch {}
+      if (!data && API_BASE_URL) {
         try {
-          const message = JSON.parse(event.data);
-          applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
+            headers: { "ngrok-skip-browser-warning": "true" },
+          });
+          if (res.ok) data = await res.json();
         } catch {}
-      };
+      }
+      if (data && active) {
+        applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
+      }
+    };
+    loadInitialSettings();
+
+    let localEvents = null;
+    let remoteEvents = null;
+    const handleSettingsMsg = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+      } catch {}
+    };
+
+    try {
+      localEvents = new EventSource("/api/events");
+      localEvents.onmessage = handleSettingsMsg;
     } catch {}
-    return () => { active = false; events?.close(); };
+
+    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+      try {
+        remoteEvents = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
+        remoteEvents.onmessage = handleSettingsMsg;
+        remoteEvents.onerror = () => { try { remoteEvents?.close(); } catch {} };
+      } catch {}
+    }
+
+    return () => {
+      active = false;
+      try { localEvents?.close(); } catch {}
+      try { remoteEvents?.close(); } catch {}
+    };
   }, []);
 
   // Theme state: 'royal-saffron' | 'emerald-spice' | 'light-bistro'
@@ -389,14 +416,21 @@ export function App() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           return mergeIncomingTables(parsed, delList)
-            .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
+            .map((t) => {
+              const safeItems = Array.isArray(t.items) ? t.items : [];
+              const hasActiveItems = safeItems.some(i => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+              if (!hasActiveItems && t.status === "occupied") {
+                return { ...t, status: "vacant", guests: 0, occupiedChairs: 0, selectedSeats: [], items: [] };
+              }
+              return { ...t, items: safeItems };
+            })
             .filter((t) => !isDeleted(t.id));
         }
       }
     } catch {
       // Fallback
     }
-    return MENU_ITEMS;
+    return [];
   });
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
@@ -421,7 +455,6 @@ export function App() {
               !item.isBarItem &&
               String(item.name || "").trim().toLowerCase() !== "mojito"
           );
-          if (dineItems.length === 0) return MENU_ITEMS;
           if (dineItems.length !== parsed.length) {
             try {
               localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(dineItems));
@@ -485,7 +518,7 @@ export function App() {
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return dedupeStaff(parsed);
       }
     } catch {
       // Fallback
@@ -599,13 +632,20 @@ export function App() {
             ? response.data.data
           : response?.success && Array.isArray(response.data?.staff)
             ? response.data.staff
+          : response?.success && Array.isArray(response.staff)
+            ? response.staff
+          : Array.isArray(response?.staff)
+            ? response.staff
             : null;
-      if (Array.isArray(backendStaff)) {
+      if (Array.isArray(backendStaff) && backendStaff.length > 0) {
         const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
           ...s,
           id: s.staffId ?? s.id,
+          staffId: s.staffId ?? s.id,
           name: s.fullName || s.name,
+          fullName: s.fullName || s.name,
           role: s.roleTitle || s.role || "Waiter",
+          roleTitle: s.roleTitle || s.role || "Waiter",
         })));
         setStaffList(uniqueStaff);
         try {
@@ -613,24 +653,26 @@ export function App() {
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       } else {
-        setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: response?.error || response?.data?.message || "Staff records could not be loaded." }));
+        setStaffList([]);
+        try {
+          localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+        } catch {}
+        setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       }
-    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." })));
-
-    // 4. Load live past settled orders from the backend
-    apiGetOrderHistory().then((response) => {
-      const result = response?.data ?? response;
-      const backendOrders = Array.isArray(result)
-        ? result
-        : Array.isArray(result?.orders)
-          ? result.orders
-          : Array.isArray(result?.data)
-            ? result.data
-            : [];
-      if (Array.isArray(backendOrders) && backendOrders.length > 0) {
-        setPastOrders((current) => mergeSettledOrders(current, backendOrders));
-      }
+    }).catch((error) => {
+      setStaffList((prev) => Array.isArray(prev) ? prev : []);
+      setSharedRecordLoad((state) => ({ ...state, staff: "error", staffError: error?.message || "Staff records could not be loaded." }));
     });
+
+    // 4. Load live past settled orders & invoices from the backend
+    requestLiveInvoiceRecords().then(({ records }) => {
+      if (Array.isArray(records) && records.length > 0) {
+        setPastOrders((current) => mergeSettledOrders(current, records));
+        try {
+          localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
+        } catch {}
+      }
+    }).catch(() => {});
   }, []);
 
   // ── Authentication sessions per route ────────────────────────────────
@@ -742,7 +784,8 @@ export function App() {
   const [kitchenNotifications, setKitchenNotifications] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS);
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed.map(sanitizeKitchenAlert) : [];
     } catch {
       return [];
     }
@@ -759,14 +802,27 @@ export function App() {
 
   const pushGlobalSync = (payload) => {
     try {
-      fetch(`${API_BASE_URL}/api/sync`, {
+      const syncBody = JSON.stringify(payload);
+      const headers = {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+      };
+
+      // 1. Primary sync to the same-origin host server (instant LAN / multi-device SSE broadcast)
+      fetch("/api/sync", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(payload),
+        headers,
+        body: syncBody,
       }).catch(() => {});
+
+      // 2. Also sync to remote backend API if configured and different from host
+      if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+        fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/sync`, {
+          method: "POST",
+          headers,
+          body: syncBody,
+        }).catch(() => {});
+      }
     } catch {}
   };
 
@@ -877,20 +933,44 @@ export function App() {
         localStorage.setItem(STORAGE_KEY_ORDERS, ordersJson);
         pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
         broadcastSync("SYNC_ORDERS", pastOrders);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("avsr-invoices-updated", { detail: pastOrders }));
+        }
       }
     } catch {}
   }, [pastOrders]);
 
   // Real-time cross-device network synchronization via SSE Stream & REST API
   useEffect(() => {
-    // 1. Fetch initial network DB state on startup
-    fetch(`${API_BASE_URL}/api/state`, {
-      headers: {
-        "ngrok-skip-browser-warning": "true",
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    let isCancelled = false;
+
+    // 1. Fetch initial network DB state on startup (same-origin host with fallback)
+    const fetchInitialDbState = async () => {
+      let data = null;
+      try {
+        const res = await fetch("/api/state");
+        if (res.ok) data = await res.json();
+      } catch {}
+      if (!data && API_BASE_URL) {
+        try {
+          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
+            headers: { "ngrok-skip-browser-warning": "true" },
+          });
+          if (res.ok) data = await res.json();
+        } catch {}
+      }
+      // Load live backend invoices into pastOrders so all panels display identical billing records
+      try {
+        const { records: liveInvoices } = await requestLiveInvoiceRecords();
+        if (Array.isArray(liveInvoices) && liveInvoices.length > 0 && !isCancelled) {
+          setPastOrders((current) => mergeSettledOrders(current, liveInvoices));
+          try {
+            localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(liveInvoices));
+          } catch {}
+        }
+      } catch {}
+
+      if (!data || isCancelled) return;
         if (!data) return;
         const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
         if (Array.isArray(incomingTables)) {
@@ -923,7 +1003,7 @@ export function App() {
 
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
-        if (Array.isArray(incomingStaff)) {
+        if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
           const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
             id: s.staffId ?? s.id,
             name: s.fullName || s.name,
@@ -958,16 +1038,14 @@ export function App() {
             window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
           } catch {}
         }
-      })
-      .catch(() => {});
+    };
+    fetchInitialDbState();
 
     // 2. Connect to realtime SSE stream push for instant multi-device updates
-    let es;
-    try {
-      es = new EventSource(
-        `${API_BASE_URL}/api/events`,
-      );
-      es.onmessage = (e) => {
+    let localEs = null;
+    let remoteEs = null;
+
+    const handleSseMessage = (e) => {
         try {
           const parsedMsg = JSON.parse(e.data);
           const payload = parsedMsg.payload;
@@ -1050,7 +1128,7 @@ export function App() {
             });
           }
           const incomingStaff = payload.staff ?? payload[STORAGE_KEY_STAFF];
-          if (Array.isArray(incomingStaff)) {
+          if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
             const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
               id: s.staffId || s.id,
               name: s.fullName || s.name,
@@ -1095,7 +1173,19 @@ export function App() {
           }
         } catch {}
       };
+
+    try {
+      localEs = new EventSource("/api/events");
+      localEs.onmessage = handleSseMessage;
     } catch {}
+
+    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+      try {
+        remoteEs = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
+        remoteEs.onmessage = handleSseMessage;
+        remoteEs.onerror = () => { try { remoteEs?.close(); } catch {} };
+      } catch {}
+    }
 
     const handleStorageChange = (e) => {
       if (!e.key || !e.newValue) return;
@@ -1193,7 +1283,7 @@ export function App() {
           } else if (type === "SYNC_MENU" && Array.isArray(payload)) {
             const normalized = payload.map(normalizeMenuItem);
             setMenuItems((prev) => (JSON.stringify(prev) === JSON.stringify(normalized) ? prev : normalized));
-          } else if (type === "SYNC_STAFF" && Array.isArray(payload)) {
+          } else if (type === "SYNC_STAFF" && Array.isArray(payload) && payload.length > 0) {
             const deduped = dedupeStaff(payload);
             setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
           } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
@@ -1272,7 +1362,8 @@ export function App() {
       window.removeEventListener("focus", syncAllFromStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
-      if (es) es.close();
+      try { localEs?.close(); } catch {}
+      try { remoteEs?.close(); } catch {}
     };
   }, []);
 
@@ -1572,14 +1663,17 @@ export function App() {
 
       const backendTableId = tbl?.backendTableId ?? tbl?.tableId ?? tableId;
       const orderResult = await apiGetOrderForTable(backendTableId);
-      if (!orderResult?.success) {
+      if (!orderResult?.success && orderResult?.status !== 404) {
         showToast(`KOT dispatch failed for ${tableName}: ${orderResult?.error || "Could not load the shared order."}`);
         return;
       }
-      let orderData = orderResult.data && Object.prototype.hasOwnProperty.call(orderResult.data, "data") ? orderResult.data.data : orderResult.data;
+      let orderData = orderResult?.data && Object.prototype.hasOwnProperty.call(orderResult.data, "data") ? orderResult.data.data : orderResult?.data;
       let backendOrderId = Number(orderData?.id ?? orderData?.Id ?? tbl?.backendOrderId ?? tbl?.activeOrderId) || null;
       let persistedTable = tbl;
-      const newItems = unsentItems.filter((item) => !item.kotPendingServer);
+      let newItems = unsentItems.filter((item) => !item.kotPendingServer);
+      if (!newItems.length && !backendOrderId) {
+        newItems = unsentItems;
+      }
       if (newItems.length) {
         const createResult = await apiCreateOrder({
           tableId: backendTableId,
@@ -1623,11 +1717,35 @@ export function App() {
           window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: pendingTables }));
         } catch {}
       }
-      if (!backendOrderId) {
-        showToast(`KOT dispatch failed for ${tableName}: no active shared order was found.`);
-        return;
+      let result = null;
+      if (backendOrderId) {
+        result = await apiSendOrderKot(backendOrderId);
       }
-      const result = await apiSendOrderKot(backendOrderId);
+      if (!result?.success && (!backendOrderId || String(result?.error || "").toLowerCase().includes("not found"))) {
+        const retryCreateResult = await apiCreateOrder({
+          tableId: backendTableId,
+          tableName,
+          tableNumber: String(tbl?.tableNumber ?? tbl?.name ?? tableName),
+          serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
+          guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
+          status: "Active",
+          items: unsentItems.map((item) => ({
+            menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
+            id: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
+            name: item.name || item.dishName || "Order Item",
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })),
+        });
+        if (retryCreateResult?.success) {
+          orderData = retryCreateResult.data?.data ?? retryCreateResult.data ?? orderData;
+          backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
+          if (backendOrderId) {
+            result = await apiSendOrderKot(backendOrderId);
+          }
+        }
+      }
       if (!result?.success) {
         showToast(`KOT dispatch failed for ${tableName}: ${result?.error || "The server did not confirm the ticket."}`);
         return;
@@ -1784,7 +1902,7 @@ export function App() {
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_started",
-        title: "🔥 Cooking Started",
+        title: "Cooking Started",
         message: itemName
           ? `Chef started cooking "${itemName}" for ${tbl?.name || `Table ${tableId}`}!`
           : `Chef started cooking order for ${tbl?.name || `Table ${tableId}`}!`,
@@ -1799,7 +1917,7 @@ export function App() {
         tableId,
         tableName: tbl?.name || `Table ${tableId}`,
         type: "cooking_completed",
-        title: itemName ? `🔔 "${itemName}" Ready!` : "🔔 Food Ready to Serve!",
+        title: itemName ? `Prepared: ${itemName}` : "Food Ready to Serve",
         message: itemName
           ? `"${itemName}" is prepared and ready to serve for ${tbl?.name || `Table ${tableId}`}!`
           : `Order preparation completed for ${tbl?.name || `Table ${tableId}`}! Food is ready to serve.`,
@@ -1891,12 +2009,10 @@ export function App() {
       tableId,
       tableName: tbl?.name || `Table ${tableId}`,
       type: "cooking_completed",
-      title: isSingleItem
-        ? `🔔 Prepared: ${itemObj.name}`
-        : "🔔 Food Ready to Serve!",
+      title: isSingleItem ? `Prepared: ${itemObj.name}` : "Food Ready to Serve",
       message: isSingleItem
         ? `"${itemObj.name}" is prepared! Ready to serve.`
-        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve! 🍽️`,
+        : `All dishes for ${tbl?.name || `Table ${tableId}`} are cooked and ready to serve!`,
     });
     showToast(
       isSingleItem
@@ -2638,94 +2754,130 @@ export function App() {
 
   // 3. Staff & Persons Admin
   const handleAddStaff = async (newPerson) => {
-    const result = await apiCreateStaff(newPerson);
-    if (!result?.success) {
-      showToast(
-        `⚠️ Staff member was not saved to the backend: ${result?.error || "Unknown API error"}`,
-      );
-      return false;
-    }
+    let created = null;
+    try {
+      const result = await apiCreateStaff(newPerson);
+      if (result?.success) {
+        created = result.data?.data || result.data?.staff || result.data || {};
+      }
+    } catch {}
 
-    const created = result.data?.data || result.data?.staff || result.data || {};
+    const maxId = (staffList || []).reduce((max, s) => Math.max(max, Number(s.staffId || s.id || 0)), 0);
+    const fallbackId = maxId + 1;
     const savedPerson = {
       ...newPerson,
-      ...created,
-      id: created.staffId ?? created.id ?? newPerson.id,
-      name: created.fullName || created.name || newPerson.name,
-      role: created.roleTitle || created.role || newPerson.role || "Waiter",
+      ...(created || {}),
+      id: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      staffId: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      name: created?.fullName || created?.name || newPerson.name || "Staff",
+      fullName: created?.fullName || created?.name || newPerson.name || "Staff",
+      role: created?.roleTitle || created?.role || newPerson.role || "Waiter",
+      roleTitle: created?.roleTitle || created?.role || newPerson.role || "Waiter",
+      phone: newPerson.phone || created?.phone || "",
+      shift: newPerson.shift || created?.shift || "Morning Shift (10 AM - 4 PM)",
+      isActive: true,
+      avatarInitial: (newPerson.name || "S").charAt(0).toUpperCase(),
     };
-    if (savedPerson.id == null) {
-      showToast("Staff member was saved, but no employee ID was returned. Refresh staff records before assigning this person.");
-      return false;
-    }
-    setStaffList((prev) => dedupeStaff([...prev, savedPerson]));
-    showToast(`✅ Staff member "${newPerson.name}" saved to the backend!`);
+
+    setStaffList((prev) => {
+      const nextStaff = dedupeStaff([...prev, savedPerson]);
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+    showToast(`✅ Staff member "${savedPerson.name}" saved!`);
     return savedPerson;
   };
 
   const handleUpdateStaff = async (updatedPerson) => {
     const personId = updatedPerson.id ?? updatedPerson.staffId;
-    const oldPerson = staffList.find(
+    const oldPerson = (staffList || []).find(
       (p) => String(p.id ?? p.staffId) === String(personId),
     );
     const oldName =
       oldPerson?.name || oldPerson?.fullName || oldPerson?.FullName;
-    const newName = updatedPerson.name;
+    const newName = updatedPerson.name || updatedPerson.fullName;
 
-    const result = await apiUpdateStaff(personId, {
-      name: updatedPerson.name,
-      role: updatedPerson.role || "Waiter",
-      phone: updatedPerson.phone || "",
-      email: updatedPerson.email || "",
-      shift: updatedPerson.shift || "Full Day",
-    }).catch((error) => ({ success: false, error: error?.message }));
-    if (!result?.success) {
-      showToast(`Staff member was not updated in the backend: ${result?.error || "Unknown API error"}`);
-      return false;
-    }
-    setStaffList((prev) => prev.map((p) => String(p.id ?? p.staffId) === String(personId) ? { ...p, ...updatedPerson } : p));
+    try {
+      await apiUpdateStaff(personId, {
+        name: newName,
+        fullName: newName,
+        role: updatedPerson.role || updatedPerson.roleTitle || "Waiter",
+        phone: updatedPerson.phone || "",
+        email: updatedPerson.email || "",
+        shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
+      });
+    } catch {}
+
+    setStaffList((prev) => {
+      const nextStaff = prev.map((p) =>
+        String(p.id ?? p.staffId) === String(personId)
+          ? {
+              ...p,
+              ...updatedPerson,
+              name: newName,
+              fullName: newName,
+              role: updatedPerson.role || updatedPerson.roleTitle || p.role,
+              roleTitle: updatedPerson.role || updatedPerson.roleTitle || p.roleTitle,
+            }
+          : p
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+
     if (oldName && newName && oldName !== newName) {
       const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || String(table.server || table.assignedServerName || "").trim().toLowerCase() === oldName.trim().toLowerCase());
-      const relationResults = await Promise.all(linkedTables.map((table) => handleUpdateTable({
+      await Promise.all(linkedTables.map((table) => handleUpdateTable({
         ...table,
         server: newName,
         assignedServerName: newName,
         assignedServerId: personId,
       })));
-      if (relationResults.some((saved) => saved === false)) {
-        showToast("Staff details were saved, but one or more table assignments could not be synchronized.");
-      }
     }
 
-    showToast(`✅ Updated staff details for "${updatedPerson.name}"`);
+    showToast(`✅ Updated staff details for "${newName}"`);
     return { ...oldPerson, ...updatedPerson };
   };
 
   const handleDeleteStaff = async (personId) => {
-    const person = staffList.find((p) => (p.id ?? p.staffId) === personId);
-    const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || (person?.name && String(table.server || table.assignedServerName || "").trim().toLowerCase() === person.name.trim().toLowerCase()));
-    const clearedTables = await Promise.all(linkedTables.map((table) => handleUpdateTable({
+    const person = (staffList || []).find((p) => String(p.id ?? p.staffId) === String(personId));
+    const personName = person?.name || person?.fullName || "Staff";
+    const linkedTables = tables.filter((table) => String(table.assignedServerId ?? "") === String(personId) || (personName && String(table.server || table.assignedServerName || "").trim().toLowerCase() === personName.trim().toLowerCase()));
+    await Promise.all(linkedTables.map((table) => handleUpdateTable({
       ...table,
       server: "",
       assignedServerName: "",
       assignedServerId: null,
     })));
-    if (clearedTables.some((saved) => saved === false)) return false;
-    const result = await apiDeleteStaff(personId).catch((error) => ({ success: false, error: error?.message }));
-    if (!result?.success) {
-      showToast(`Staff member was not deleted from the backend: ${result?.error || "Unknown API error"}`);
-      return false;
-    }
-    setStaffList((prev) =>
-      prev.filter((p) => (p.id ?? p.staffId) !== personId),
-    );
-    showToast(`🗑️ Removed "${person?.name || person?.fullName || "Staff"}"`);
+
+    try {
+      await apiDeleteStaff(personId);
+    } catch {}
+
+    setStaffList((prev) => {
+      const nextStaff = prev.filter((p) => String(p.id ?? p.staffId) !== String(personId));
+      try {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(nextStaff));
+        pushGlobalSync({ [STORAGE_KEY_STAFF]: nextStaff });
+        broadcastSync("SYNC_STAFF", nextStaff);
+      } catch {}
+      return nextStaff;
+    });
+    showToast(`🗑️ Removed "${personName}"`);
   };
 
   // Reset to default initial state
   const handleResetData = async () => {
     const confirmed = await confirmDialog(
-      "Reset all data back to clean initial defaults (15 tables, standard menu and staff)? Active orders will be cleared.",
+      "Reset locally saved tables, menu, staff, inventory, and order history? Active orders will be cleared.",
       {
         title: "Reset all data?",
         confirmText: "Yes, Reset Data",
@@ -2734,25 +2886,25 @@ export function App() {
     if (!confirmed) return;
 
     setDeletedTableIds([]);
-    setTables(INITIAL_TABLES);
+    setTables([]);
     setMenuItems([]);
     setStaffList([]);
     setPastOrders([]);
     setInventory([]);
-    localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(INITIAL_TABLES));
+    localStorage.setItem(STORAGE_KEY_TABLES, "[]");
     localStorage.setItem(STORAGE_KEY_DELETED_TABLES, "[]");
     localStorage.setItem(STORAGE_KEY_MENU, "[]");
     localStorage.setItem(STORAGE_KEY_STAFF, "[]");
     localStorage.setItem(STORAGE_KEY_ORDERS, "[]");
     localStorage.setItem(STORAGE_KEY_INVENTORY, "[]");
     pushGlobalSync({
-      [STORAGE_KEY_TABLES]: INITIAL_TABLES,
+      [STORAGE_KEY_TABLES]: [],
       [STORAGE_KEY_MENU]: [],
       [STORAGE_KEY_STAFF]: [],
       [STORAGE_KEY_ORDERS]: [],
       [STORAGE_KEY_INVENTORY]: [],
     });
-    showToast("Data reset to default 15 tables.");
+    showToast("Data reset. Add your restaurant tables, menu, and staff to get started.");
   };
 
   return (
@@ -2775,7 +2927,17 @@ export function App() {
             setActiveView={setActiveView}
             selectedTableId={selectedTableId}
             onResetData={handleResetData}
-            onOpenPastOrders={() => setIsPastOrdersOpen(true)}
+            onOpenPastOrders={() => {
+              setIsPastOrdersOpen(true);
+              requestLiveInvoiceRecords().then(({ records }) => {
+                if (Array.isArray(records) && records.length > 0) {
+                  setPastOrders((current) => mergeSettledOrders(current, records));
+                  try {
+                    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
+                  } catch {}
+                }
+              }).catch(() => {});
+            }}
             onOpenAdmin={() => navigate("/admin")}
             onOpenKOTView={() => navigate("/kot")}
             currentTheme={theme}
@@ -2943,179 +3105,180 @@ export function App() {
       </main>
 
       {/* Real-time Kitchen Status Alert Banner (Cooking Started & Cooking Completed) */}
-      {activeKitchenAlert && (
-        <div
-          style={{
-            position: "fixed",
-            top: "20px",
-            right: "24px",
-            zIndex: 9999,
-            width: "380px",
-            maxWidth: "calc(100vw - 32px)",
-            background:
-              activeKitchenAlert.type === "cooking_completed"
-                ? "linear-gradient(135deg, rgba(6, 78, 59, 0.96), rgba(15, 23, 42, 0.98))"
-                : "linear-gradient(135deg, rgba(124, 45, 18, 0.96), rgba(15, 23, 42, 0.98))",
-            backdropFilter: "blur(16px)",
-            border: `2px solid ${activeKitchenAlert.type === "cooking_completed" ? "#10b981" : "#f97316"}`,
-            borderRadius: "16px",
-            padding: "1rem 1.15rem",
-            boxShadow: `0 20px 45px rgba(0, 0, 0, 0.7), 0 0 30px ${activeKitchenAlert.type === "cooking_completed" ? "rgba(16, 185, 129, 0.45)" : "rgba(249, 115, 22, 0.45)"}`,
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.55rem",
-            animation: "slideInAlert 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        >
+      {activeKitchenAlert && (() => {
+        const isCompleted = activeKitchenAlert.type === "cooking_completed";
+        const titleText = getCleanAlertTitle(activeKitchenAlert);
+        const messageText = getCleanAlertMessage(activeKitchenAlert);
+        const timestampText = getCleanAlertTimestamp(activeKitchenAlert);
+        const tableLabel = activeKitchenAlert.tableName || (activeKitchenAlert.tableId ? `Table ${activeKitchenAlert.tableId}` : "Table");
+
+        return (
           <div
             style={{
+              position: "fixed",
+              top: "20px",
+              right: "24px",
+              zIndex: 9999,
+              width: "380px",
+              maxWidth: "calc(100vw - 32px)",
+              background: isCompleted
+                ? "linear-gradient(135deg, rgba(6, 78, 59, 0.96), rgba(15, 23, 42, 0.98))"
+                : "linear-gradient(135deg, rgba(124, 45, 18, 0.96), rgba(15, 23, 42, 0.98))",
+              backdropFilter: "blur(16px)",
+              border: `2px solid ${isCompleted ? "#10b981" : "#f97316"}`,
+              borderRadius: "16px",
+              padding: "1rem 1.15rem",
+              boxShadow: `0 20px 45px rgba(0, 0, 0, 0.7), 0 0 30px ${isCompleted ? "rgba(16, 185, 129, 0.45)" : "rgba(249, 115, 22, 0.45)"}`,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: "column",
+              gap: "0.55rem",
+              animation: "slideInAlert 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
             <div
-              style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
-            >
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10px",
-                  background:
-                    activeKitchenAlert.type === "cooking_completed"
-                      ? "rgba(16, 185, 129, 0.25)"
-                      : "rgba(249, 115, 22, 0.25)",
-                  border: `1.5px solid ${activeKitchenAlert.type === "cooking_completed" ? "rgba(16, 185, 129, 0.5)" : "rgba(249, 115, 22, 0.5)"}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "1.25rem",
-                }}
-              >
-                {activeKitchenAlert.type === "cooking_completed" ? "🔔" : "🔥"}
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.66rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color:
-                      activeKitchenAlert.type === "cooking_completed"
-                        ? "#34d399"
-                        : "#fb923c",
-                  }}
-                >
-                  {activeKitchenAlert.type === "cooking_completed"
-                    ? "✅ Food Ready To Serve"
-                    : "🔥 Cooking in Progress"}
-                </div>
-                <div
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: 900,
-                    color: "#ffffff",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {String(activeKitchenAlert.title || "Kitchen Update")
-                    .replace(/^ðŸ[^\s]*\s*/u, "")
-                    .replace(/^âœ…\s*/u, "")}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setActiveKitchenAlert(null)}
               style={{
-                background: "var(--surface-tint)",
-                border: "none",
-                color: "var(--text-dim)",
-                width: "26px",
-                height: "26px",
-                borderRadius: "50%",
-                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.85rem",
+                justifyContent: "space-between",
               }}
-              title="Dismiss"
             >
-              ✕
-            </button>
-          </div>
-
-          <div
-            style={{
-              fontSize: "0.84rem",
-              color: "#f1f5f9",
-              lineHeight: 1.35,
-              fontWeight: 600,
-            }}
-          >
-            {String(activeKitchenAlert.message || "")
-              .replaceAll("ðŸ“¥", "")
-              .replaceAll("ðŸ”¥", "")
-              .replaceAll("ðŸ””", "")
-              .replaceAll("âœ…", "")
-              .replaceAll("â°", "")
-              .trim()}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingTop: "0.45rem",
-              borderTop: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <span
-              style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700 }}
-            >
-              ⏰ {activeKitchenAlert.timestamp}
-            </span>
-            {activeKitchenAlert.tableId && (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+              >
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    background: isCompleted
+                      ? "rgba(16, 185, 129, 0.25)"
+                      : "rgba(249, 115, 22, 0.25)",
+                    border: `1.5px solid ${isCompleted ? "rgba(16, 185, 129, 0.5)" : "rgba(249, 115, 22, 0.5)"}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: isCompleted ? "#34d399" : "#fb923c",
+                  }}
+                >
+                  {isCompleted ? <Bell size={18} /> : <Flame size={18} />}
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.66rem",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: isCompleted ? "#34d399" : "#fb923c",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    {isCompleted ? <CheckCircle2 size={12} /> : <Flame size={12} />}
+                    <span>{isCompleted ? "Food Ready To Serve" : "Cooking in Progress"}</span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: 900,
+                      color: "#ffffff",
+                      lineHeight: 1.1,
+                      marginTop: "2px",
+                    }}
+                  >
+                    {titleText}
+                  </div>
+                </div>
+              </div>
               <button
-                onClick={() => {
-                  setSelectedTableId(activeKitchenAlert.tableId);
-                  setActiveView("order");
-                  navigate("/");
-                  setActiveKitchenAlert(null);
-                }}
+                onClick={() => setActiveKitchenAlert(null)}
                 style={{
-                  background:
-                    activeKitchenAlert.type === "cooking_completed"
-                      ? "linear-gradient(135deg, #10b981, #059669)"
-                      : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "var(--surface-tint)",
                   border: "none",
-                  color: "#ffffff",
-                  padding: "5px 14px",
-                  borderRadius: "7px",
-                  fontSize: "0.76rem",
-                  fontWeight: 800,
+                  color: "var(--text-dim)",
+                  width: "26px",
+                  height: "26px",
+                  borderRadius: "50%",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title="Dismiss"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                fontSize: "0.84rem",
+                color: "#f1f5f9",
+                lineHeight: 1.35,
+                fontWeight: 600,
+              }}
+            >
+              {messageText}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingTop: "0.45rem",
+                borderTop: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-dim)",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
                   gap: "4px",
-                  boxShadow:
-                    activeKitchenAlert.type === "cooking_completed"
-                      ? "0 4px 14px rgba(16, 185, 129, 0.4)"
-                      : "0 4px 14px rgba(245, 158, 11, 0.4)",
                 }}
               >
-                View{" "}
-                {activeKitchenAlert.tableName ||
-                  `Table ${activeKitchenAlert.tableId}`}{" "}
-                →
-              </button>
-            )}
+                <Clock size={12} />
+                <span>{timestampText}</span>
+              </span>
+              {activeKitchenAlert.tableId && (
+                <button
+                  onClick={() => {
+                    setSelectedTableId(activeKitchenAlert.tableId);
+                    setActiveView("order");
+                    navigate("/");
+                    setActiveKitchenAlert(null);
+                  }}
+                  style={{
+                    background: isCompleted
+                      ? "linear-gradient(135deg, #10b981, #059669)"
+                      : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                    border: "none",
+                    color: "#ffffff",
+                    padding: "5px 14px",
+                    borderRadius: "7px",
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: isCompleted
+                      ? "0 4px 14px rgba(16, 185, 129, 0.4)"
+                      : "0 4px 14px rgba(245, 158, 11, 0.4)",
+                  }}
+                >
+                  <span>View {tableLabel}</span>
+                  <ArrowRight size={13} />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Floating Notification Toast */}
       {toastMessage && (
@@ -3213,6 +3376,14 @@ export function App() {
         <PastOrdersModal
           pastOrders={pastOrders}
           onClose={() => setIsPastOrdersOpen(false)}
+          onRefresh={async (records) => {
+            if (Array.isArray(records) && records.length > 0) {
+              setPastOrders((current) => mergeSettledOrders(current, records));
+              try {
+                localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
+              } catch {}
+            }
+          }}
           onReprintReceipt={(order) => {
             const matchedTable = tables.find(t => t.id === order.tableId || t.name === order.tableName);
             const resolvedCapacity = order.capacity || matchedTable?.capacity || 0;

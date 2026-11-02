@@ -1,6 +1,7 @@
-export const API_BASE_URL =
+export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
-  "";
+  "https://chapter-catnip-evaluator.ngrok-free.dev"
+).trim().replace(/\/$/, "");
 
 // The Vite dev server provides its own same-origin SSE endpoint for local
 // cross-tab/device synchronization. Production can use the configured API.
@@ -27,7 +28,9 @@ const DEFAULT_HEADERS = {
   "ngrok-skip-browser-warning": "true",
 };
 
-export async function apiClient(endpoint, options = {}) {
+const inFlightGetRequests = new Map();
+
+async function performApiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
   try {
@@ -50,6 +53,14 @@ export async function apiClient(endpoint, options = {}) {
     let res;
     try {
       res = await fetch(url, config);
+      if (API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+        try {
+          const localRes = await fetch(endpoint, config);
+          if (localRes.ok) {
+            res = localRes;
+          }
+        } catch {}
+      }
     } catch (fetchErr) {
       if (API_BASE_URL) {
         console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
@@ -116,8 +127,18 @@ export async function apiClient(endpoint, options = {}) {
       return { success: true, data: null };
     }
 
-    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html')) {
-      const isNgrok = text.includes('ngrok') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
+    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
+      if (API_BASE_URL) {
+        try {
+          const localRes = await fetch(endpoint, config);
+          const localText = await localRes.text();
+          if (localRes.ok && !localText.trim().startsWith('<') && !localText.includes('ERR_NGROK')) {
+            const data = JSON.parse(localText);
+            return { success: true, data };
+          }
+        } catch {}
+      }
+      const isNgrok = text.includes('ngrok') || text.includes('ERR_NGROK') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
       const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
       let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;
       if (isNgrok) {
@@ -147,4 +168,30 @@ export async function apiClient(endpoint, options = {}) {
   } catch (err) {
     return { success: false, error: err.message || "Network error occurred" };
   }
+}
+
+/** Share concurrent identical GETs (including React StrictMode remounts). */
+export function apiClient(endpoint, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET" || options.signal) {
+    return performApiRequest(endpoint, options);
+  }
+
+  let token = "";
+  try {
+    token = typeof localStorage !== "undefined"
+      ? localStorage.getItem("avsr_jwt_token") || ""
+      : "";
+  } catch {
+    // The request layer still supports environments where storage is blocked.
+  }
+  const key = `${API_BASE_URL}${endpoint}|${token}`;
+  const existing = inFlightGetRequests.get(key);
+  if (existing) return existing;
+
+  const request = performApiRequest(endpoint, options).finally(() => {
+    if (inFlightGetRequests.get(key) === request) inFlightGetRequests.delete(key);
+  });
+  inFlightGetRequests.set(key, request);
+  return request;
 }
