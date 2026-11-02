@@ -27,17 +27,10 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
+import { SkeletonDashboard } from "../common/Skeletons";
+import { isDrinkItem } from "../kot/orderRouting";
 
-const BAR_MENU_CATEGORIES = new Set([
-  "cocktails", "mocktails", "beers", "whiskey", "vodka & gin", "rum & brandy",
-  "wine & champagne", "shots & shooters", "juices & shakes", "soft drinks & soda", "tea & coffee",
-]);
-
-const isBarMenuItem = (item) => {
-  const category = String(item?.category ?? item?.categoryName ?? "").trim().toLowerCase();
-  const section = String(item?.section ?? item?.menuSection ?? item?.itemType ?? "").trim().toLowerCase();
-  return Boolean(item?.drinkType) || section.includes("bar") || section === "beverage" || BAR_MENU_CATEGORIES.has(category);
-};
+const isBarMenuItem = (item) => isDrinkItem(item);
 
 export function AdminOverview({
   menuItems = [],
@@ -47,6 +40,7 @@ export function AdminOverview({
   onNavigateTab,
   onOpenKOTView,
   onOpenItemModal,
+  sharedRecordLoad = { tables: "ready", staff: "ready" },
 }) {
   // Dynamically load orders from localStorage or props with deduplication
   const [ordersList, setOrdersList] = useState(() => {
@@ -156,6 +150,13 @@ export function AdminOverview({
   );
 
   const averageOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
+
+  if (
+    (sharedRecordLoad.tables === "loading" && tables.length === 0) ||
+    (sharedRecordLoad.staff === "loading" && staffList.length === 0)
+  ) {
+    return <SkeletonDashboard cards={4} />;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>

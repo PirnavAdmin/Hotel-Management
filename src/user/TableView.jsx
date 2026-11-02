@@ -250,6 +250,7 @@ import {
   Check,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import {
   parseTimeToSeconds,
   formatElapsedTimer,
@@ -903,7 +904,9 @@ function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isL
   );
 }
 
-export function TableView({ tables, onSelectTable, onUpdateTable }) {
+import { SkeletonCard } from "../common/Skeletons";
+
+export function TableView({ tables, onSelectTable, onUpdateTable, loading = false }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -1356,7 +1359,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
 
   // Extract distinct table list sorted numerically
   const uniqueTableNumbers = useMemo(() => {
-    return [...tables].sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    return [...tables].sort(compareTablesNaturally);
   }, [tables]);
 
   // Dynamic sections list based on active tables
@@ -1444,7 +1447,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         matchesTableDropdown &&
         matchesSearch
       );
-    });
+    }).sort(compareTablesNaturally);
   }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
 
   const hasActiveFilters =
@@ -1815,7 +1818,11 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
       </div>
 
       {/* Tables Grid or Empty Filter State */}
-      {filteredTables.length === 0 ? (
+      {loading ? (
+        <div role="status" aria-label="Loading tables" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", margin: "1rem 0" }}>
+          {Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} lines={3} />)}
+        </div>
+      ) : filteredTables.length === 0 ? (
         <div
           style={{
             textAlign: "center",
@@ -2043,7 +2050,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           flexShrink: 0,
                         }}
                       >
-                        T{table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id}
+                        T{getTableSortNumber(table) || (table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id)}
                       </span>
                       <h3
                         style={{
@@ -2102,7 +2109,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         minWidth: 0,
                       }}
                     >
-                      {table.section}
+                      {table.section && !/^[\\|/\s]+$/.test(table.section.trim()) ? table.section : "Main Hall"}
                     </span>
                     <button
                       type="button"

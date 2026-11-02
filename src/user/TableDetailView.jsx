@@ -1725,7 +1725,9 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
+import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { SkeletonMenuCard } from "../common/Skeletons";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1741,6 +1743,11 @@ export function TableDetailView({
   table,
   allTables,
   menuItems = [],
+  barMenuItems = [],
+  menuLoading = false,
+  menuLoadError = "",
+  barMenuLoading = false,
+  barMenuLoadError = "",
   onSelectTable,
   onBackToTables,
   onAddItemToTable,
@@ -1779,11 +1786,17 @@ export function TableDetailView({
     0;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [orderMode, setOrderMode] = useState("kitchen");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // all | veg | non-veg | special
   const [searchQuery, setSearchQuery] = useState("");
   const [editingNoteItemId, setEditingNoteItemId] = useState(null);
   const [tempNote, setTempNote] = useState("");
   const [selectedMenuItemModal, setSelectedMenuItemModal] = useState(null);
+  const activeMenuItems = orderMode === "bar"
+    ? barMenuItems
+    : menuItems.filter((item) => !isDrinkItem(item, null, barMenuItems));
+  const activeMenuLoading = orderMode === "bar" ? barMenuLoading : menuLoading;
+  const activeMenuLoadError = orderMode === "bar" ? barMenuLoadError : menuLoadError;
 
   // Filter states
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
@@ -1795,7 +1808,7 @@ export function TableDetailView({
     const query = searchQuery.trim().toLowerCase();
     const normalizedQuery = query.replace(/biriyani/g, "biryani");
 
-    return (Array.isArray(menuItems) ? menuItems : []).filter((item) => {
+    return (Array.isArray(activeMenuItems) ? activeMenuItems : []).filter((item) => {
       const matchCat =
         selectedCategory === "all" || item.category === selectedCategory;
 
@@ -1819,7 +1832,7 @@ export function TableDetailView({
 
       return matchCat && matchSearch && matchDietary;
     });
-  }, [selectedCategory, dietaryFilter, searchQuery, menuItems]);
+  }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems]);
 
   // Financial calculations in Rupees
   const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
@@ -2809,7 +2822,7 @@ export function TableDetailView({
               padding: "0.5rem",
             }}
           >
-            {[{ id: "all", name: "All Items", icon: "Utensils" }, ...Array.from(new Map((menuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: "Utensils" }])).values())].map((category) => {
+            {[{ id: "all", name: "All Items", icon: "Utensils" }, ...Array.from(new Map((activeMenuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: "Utensils" }])).values())].map((category) => {
               const isSelected = selectedCategory === category.id;
               const IconComp = CATEGORY_ICONS[category.icon] || Utensils;
 
@@ -2902,6 +2915,68 @@ export function TableDetailView({
               flexShrink: 0,
             }}
           >
+            <div
+              role="group"
+              aria-label="Choose order station"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                width: "100%",
+                paddingBottom: "0.25rem",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  marginRight: "0.25rem",
+                }}
+              >
+                Order station
+              </span>
+              {[
+                { id: "kitchen", label: "Kitchen / Food", icon: ChefHat },
+                { id: "bar", label: "Bar / Beverages", icon: Coffee },
+              ].map(({ id, label, icon: Icon }) => {
+                const isActive = orderMode === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      setOrderMode(id);
+                      setSelectedCategory("all");
+                      setDietaryFilter("all");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.45rem",
+                      minHeight: "40px",
+                      minWidth: "170px",
+                      padding: "0.5rem 0.9rem",
+                      borderRadius: "var(--radius-md)",
+                      border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
+                      background: isActive ? "rgba(245, 158, 11, 0.16)" : "var(--bg-primary)",
+                      color: isActive ? "var(--accent-amber-light)" : "var(--text-muted)",
+                      fontSize: "0.82rem",
+                      fontWeight: 750,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Icon size={16} aria-hidden="true" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             {/* Search Input */}
             <div
               style={{
@@ -3016,7 +3091,9 @@ export function TableDetailView({
 
           {/* Menu Items Grid - 4 dishes per row */}
           <div className="pos-menu-grid">
-            {filteredMenuItems.length === 0 ? (
+            {activeMenuLoading ? (
+              Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
+            ) : filteredMenuItems.length === 0 ? (
               <div
                 style={{
                   gridColumn: "1 / -1",
@@ -3037,7 +3114,7 @@ export function TableDetailView({
                     fontWeight: 700,
                   }}
                 >
-                  No dishes match "{searchQuery}"
+                  {activeMenuLoadError ? "Menu items could not be loaded" : `No ${orderMode === "bar" ? "beverages" : "dishes"} match "${searchQuery}"`}
                 </h4>
                 <p
                   style={{
@@ -3046,8 +3123,7 @@ export function TableDetailView({
                     color: "var(--text-muted)",
                   }}
                 >
-                  Try searching for "Biryani", "Chicken", "Paneer", "Tandoori"
-                  or click "All Items".
+                  {activeMenuLoadError || (orderMode === "bar" ? "No bar beverages are available for this selection yet." : 'Try searching for "Biryani", "Chicken", "Paneer", "Tandoori" or click "All Items".')}
                 </p>
                 <button
                   className="primary-action-button"
@@ -3502,7 +3578,7 @@ export function TableDetailView({
                               style={{
                                 fontSize: "0.78rem",
                                 fontWeight: 900,
-                                color: "var(--success)",
+                                color: "#065F46",
                                 letterSpacing: "0.02em",
                               }}
                             >
@@ -3511,7 +3587,7 @@ export function TableDetailView({
                             <div
                               style={{
                                 fontSize: "0.68rem",
-                                color: "#a7f3d0",
+                                color: "#047857",
                                 fontWeight: 600,
                               }}
                             >
@@ -3522,7 +3598,7 @@ export function TableDetailView({
                         <span
                           style={{
                             background: "#10b981",
-                            color: "#000",
+                            color: "#064E3B",
                             fontSize: "0.65rem",
                             fontWeight: 900,
                             padding: "2px 8px",
@@ -3668,6 +3744,25 @@ export function TableDetailView({
                         >
                           {item.name}
                         </div>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            marginTop: "0.2rem",
+                            padding: "0.1rem 0.35rem",
+                            borderRadius: "999px",
+                            background: isDrinkItem(item, null, barMenuItems)
+                              ? "rgba(59, 130, 246, 0.15)"
+                              : "rgba(245, 158, 11, 0.15)",
+                            color: isDrinkItem(item, null, barMenuItems)
+                              ? "#60a5fa"
+                              : "var(--accent-amber-light)",
+                            fontSize: "0.62rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {isDrinkItem(item, null, barMenuItems) ? "Bar" : "Kitchen"}
+                        </span>
                         <div
                           style={{
                             display: "flex",
@@ -4456,6 +4551,24 @@ export function TableDetailView({
                     >
                       {item.name}
                     </div>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        marginTop: "0.2rem",
+                        padding: "0.1rem 0.35rem",
+                        borderRadius: "999px",
+                        background: isDrinkItem(item, null, barMenuItems)
+                          ? "rgba(59, 130, 246, 0.15)"
+                          : "rgba(245, 158, 11, 0.15)",
+                        color: isDrinkItem(item, null, barMenuItems)
+                          ? "#60a5fa"
+                          : "var(--accent-amber-light)",
+                        fontSize: "0.62rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {isDrinkItem(item, null, barMenuItems) ? "Bar" : "Kitchen"}
+                    </span>
                     <div
                       style={{
                         fontSize: "0.74rem",

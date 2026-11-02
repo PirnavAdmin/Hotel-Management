@@ -577,14 +577,26 @@ public class BarController : ControllerBase
         });
     }
 
+    private static bool TryResolveStaffId(string rawId, out long resolvedId)
+    {
+        if (long.TryParse(rawId, out resolvedId)) return true;
+        var digits = System.Text.RegularExpressions.Regex.Match(rawId ?? string.Empty, @"\d+").Value;
+        return long.TryParse(digits, out resolvedId);
+    }
+
     /// <summary>
     /// Gets a single staff member with assigned tables.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("staff/{id:long}")]
-    public async Task<IActionResult> GetBarStaffById(long id)
+    [HttpGet("staff/{id}")]
+    public async Task<IActionResult> GetBarStaffById(string id)
     {
-        var staff = await _barService.GetBarStaffByIdAsync(id);
+        if (!TryResolveStaffId(id, out var staffId))
+        {
+            return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
+        }
+
+        var staff = await _barService.GetBarStaffByIdAsync(staffId);
         if (staff == null)
         {
             return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
@@ -599,6 +611,13 @@ public class BarController : ControllerBase
     [HttpPost("staff")]
     public async Task<IActionResult> CreateBarStaff([FromBody] CreateBarStaffDto dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.FullName) && !string.IsNullOrWhiteSpace(dto.Name))
+            dto.FullName = dto.Name;
+        if (string.IsNullOrWhiteSpace(dto.JobTitle) && !string.IsNullOrWhiteSpace(dto.Role))
+            dto.JobTitle = dto.Role;
+        if (string.IsNullOrWhiteSpace(dto.JobTitle) && !string.IsNullOrWhiteSpace(dto.RoleTitle))
+            dto.JobTitle = dto.RoleTitle;
+
         if (!ModelState.IsValid)
         {
             return BadRequest(new { success = false, message = "Validation failed.", errors = ModelState });
@@ -628,10 +647,22 @@ public class BarController : ControllerBase
     /// Updates staff member information and rebinds assigned tables.
     /// </summary>
     [AllowAnonymous]
-    [HttpPut("staff/{id:long}")]
-    public async Task<IActionResult> UpdateBarStaff(long id, [FromBody] UpdateBarStaffDto dto)
+    [HttpPut("staff/{id}")]
+    public async Task<IActionResult> UpdateBarStaff(string id, [FromBody] UpdateBarStaffDto dto)
     {
-        var updated = await _barService.UpdateBarStaffAsync(id, dto);
+        if (!TryResolveStaffId(id, out var staffId))
+        {
+            return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.FullName) && !string.IsNullOrWhiteSpace(dto.Name))
+            dto.FullName = dto.Name;
+        if (string.IsNullOrWhiteSpace(dto.JobTitle) && !string.IsNullOrWhiteSpace(dto.Role))
+            dto.JobTitle = dto.Role;
+        if (string.IsNullOrWhiteSpace(dto.JobTitle) && !string.IsNullOrWhiteSpace(dto.RoleTitle))
+            dto.JobTitle = dto.RoleTitle;
+
+        var updated = await _barService.UpdateBarStaffAsync(staffId, dto);
         if (updated == null)
         {
             return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
@@ -651,10 +682,15 @@ public class BarController : ControllerBase
     /// Toggles active/inactive status of a staff member.
     /// </summary>
     [AllowAnonymous]
-    [HttpPatch("staff/{id:long}/toggle-status")]
-    public async Task<IActionResult> ToggleStaffStatus(long id)
+    [HttpPatch("staff/{id}/toggle-status")]
+    public async Task<IActionResult> ToggleStaffStatus(string id)
     {
-        var updated = await _barService.ToggleStaffStatusAsync(id);
+        if (!TryResolveStaffId(id, out var staffId))
+        {
+            return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
+        }
+
+        var updated = await _barService.ToggleStaffStatusAsync(staffId);
         if (updated == null)
         {
             return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
@@ -674,16 +710,21 @@ public class BarController : ControllerBase
     /// Soft deletes a staff member and clears their assigned table links.
     /// </summary>
     [AllowAnonymous]
-    [HttpDelete("staff/{id:long}")]
-    public async Task<IActionResult> DeleteBarStaff(long id)
+    [HttpDelete("staff/{id}")]
+    public async Task<IActionResult> DeleteBarStaff(string id)
     {
-        var deleted = await _barService.DeleteBarStaffAsync(id);
+        if (!TryResolveStaffId(id, out var staffId))
+        {
+            return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
+        }
+
+        var deleted = await _barService.DeleteBarStaffAsync(staffId);
         if (!deleted)
         {
             return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarStaffDeleted", id); } catch { }
+        try { await _hubContext.Clients.All.SendAsync("ReceiveBarStaffDeleted", staffId); } catch { }
 
         return Ok(new
         {
@@ -716,15 +757,17 @@ public class BarController : ControllerBase
 
     #endregion
 
-    #region Screen 8: Bar KOT (Image 4)
+    #region Screen 8: Bar KOT / BOT (Bar Order Tickets)
 
     /// <summary>
-    /// Returns list of Bar Kitchen Order Tickets with beverage items (Image 4).
+    /// Returns list of Bar Order Tickets (BOT) with beverage items.
     /// Supports filtering by search, table, and status.
     /// </summary>
     [AllowAnonymous]
     [HttpGet("kot")]
     [HttpGet("kot/tickets")]
+    [HttpGet("bot")]
+    [HttpGet("bot/tickets")]
     public async Task<IActionResult> GetBarKotTickets(
         [FromQuery] string? search,
         [FromQuery] string? table,
@@ -741,10 +784,11 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Returns summary KPI metrics for the Bar KOT screen (Image 4).
+    /// Returns summary KPI metrics for the Bar BOT / KOT screen.
     /// </summary>
     [AllowAnonymous]
     [HttpGet("kot/summary")]
+    [HttpGet("bot/summary")]
     public async Task<IActionResult> GetBarKotSummary()
     {
         var summary = await _barService.GetBarKotSummaryAsync();
@@ -752,10 +796,11 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Returns filter dropdown options (Tables and Statuses) for Bar KOT (Image 4).
+    /// Returns filter dropdown options (Tables and Statuses) for Bar BOT / KOT.
     /// </summary>
     [AllowAnonymous]
     [HttpGet("kot/filter-options")]
+    [HttpGet("bot/filter-options")]
     public async Task<IActionResult> GetBarKotFilterOptions()
     {
         var options = await _barService.GetBarKotFilterOptionsAsync();
@@ -763,11 +808,13 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Unified Bar KOT Screen Feed bundling Summary, Tickets, and Filter Options together.
+    /// Unified Bar BOT Screen Feed bundling Summary, Tickets, and Filter Options together.
     /// </summary>
     [AllowAnonymous]
     [HttpGet("kot/screen-feed")]
     [HttpGet("kot/screens")]
+    [HttpGet("bot/screen-feed")]
+    [HttpGet("bot/screens")]
     public async Task<IActionResult> GetBarKotScreenFeed(
         [FromQuery] string? search,
         [FromQuery] string? table,
@@ -777,38 +824,41 @@ public class BarController : ControllerBase
         return Ok(new
         {
             success = true,
-            message = "Bar KOT screen feed retrieved successfully.",
+            message = "Bar BOT screen feed retrieved successfully.",
             data = feed
         });
     }
 
     /// <summary>
-    /// Returns a single Bar KOT ticket by ID.
+    /// Returns a single Bar BOT ticket by ID.
     /// </summary>
     [AllowAnonymous]
     [HttpGet("kot/{id:long}")]
+    [HttpGet("bot/{id:long}")]
     public async Task<IActionResult> GetBarKotTicketById(long id)
     {
         var ticket = await _barService.GetBarKotTicketByIdAsync(id);
         if (ticket == null)
         {
-            return NotFound(new { success = false, message = $"Bar KOT ticket {id} not found." });
+            return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
         }
         return Ok(new { success = true, data = ticket });
     }
 
     /// <summary>
-    /// Updates status of a Bar KOT ticket (e.g. 'preparing', 'ready', 'served', 'cancelled').
+    /// Updates status of a Bar BOT ticket (e.g. 'preparing', 'ready', 'served', 'cancelled').
     /// </summary>
     [AllowAnonymous]
     [HttpPut("kot/{id:long}/status")]
     [HttpPatch("kot/{id:long}/status")]
+    [HttpPut("bot/{id:long}/status")]
+    [HttpPatch("bot/{id:long}/status")]
     public async Task<IActionResult> UpdateBarKotStatus(long id, [FromBody] UpdateBarKotStatusDto dto)
     {
         var updated = await _barService.UpdateBarKotStatusAsync(id, dto.Status);
         if (updated == null)
         {
-            return NotFound(new { success = false, message = $"Bar KOT ticket {id} not found." });
+            return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
         }
 
         try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
@@ -816,22 +866,23 @@ public class BarController : ControllerBase
         return Ok(new
         {
             success = true,
-            message = $"Bar KOT ticket {id} status updated to {dto.Status}.",
+            message = $"Bar BOT ticket {id} status updated to {dto.Status}.",
             data = updated
         });
     }
 
     /// <summary>
-    /// Marks all drink items in a Bar KOT ticket as 'ready'.
+    /// Marks all drink items in a Bar BOT ticket as 'ready'.
     /// </summary>
     [AllowAnonymous]
     [HttpPost("kot/{id:long}/mark-all-ready")]
+    [HttpPost("bot/{id:long}/mark-all-ready")]
     public async Task<IActionResult> MarkAllBarKotReady(long id)
     {
         var updated = await _barService.MarkAllBarKotReadyAsync(id);
         if (updated == null)
         {
-            return NotFound(new { success = false, message = $"Bar KOT ticket {id} not found." });
+            return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
         }
 
         try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
@@ -839,23 +890,50 @@ public class BarController : ControllerBase
         return Ok(new
         {
             success = true,
-            message = $"All drinks in Bar KOT ticket {id} marked as ready.",
+            message = $"All drinks in Bar BOT ticket {id} marked as ready.",
             data = updated
         });
     }
 
     /// <summary>
-    /// Updates status of an individual drink line item inside a Bar KOT.
+    /// Marks all drink items for a specific table as 'ready'.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("kot/tables/{tableId:long}/mark-all-ready")]
+    [HttpPost("bot/tables/{tableId:long}/mark-all-ready")]
+    public async Task<IActionResult> MarkAllBarKotTableReady(long tableId)
+    {
+        var success = await _barService.MarkAllBarKotTableReadyAsync(tableId);
+        if (!success)
+        {
+            return NotFound(new { success = false, message = $"No active beverage orders found for Table {tableId}." });
+        }
+
+        try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotTableUpdated", new { tableId, status = "ready" }); } catch { }
+
+        return Ok(new
+        {
+            success = true,
+            message = $"All drinks for Table {tableId} marked as ready.",
+            tableId = tableId,
+            status = "ready"
+        });
+    }
+
+    /// <summary>
+    /// Updates status of an individual drink line item inside a Bar BOT.
     /// </summary>
     [AllowAnonymous]
     [HttpPut("kot/items/{orderItemId:long}/status")]
     [HttpPatch("kot/items/{orderItemId:long}/status")]
+    [HttpPut("bot/items/{orderItemId:long}/status")]
+    [HttpPatch("bot/items/{orderItemId:long}/status")]
     public async Task<IActionResult> UpdateBarKotItemStatus(long orderItemId, [FromBody] UpdateBarKotItemStatusDto dto)
     {
         var updated = await _barService.UpdateBarKotItemStatusAsync(orderItemId, dto.Status);
         if (updated == null)
         {
-            return NotFound(new { success = false, message = $"Bar KOT item {orderItemId} not found." });
+            return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
         }
 
         try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
@@ -863,7 +941,7 @@ public class BarController : ControllerBase
         return Ok(new
         {
             success = true,
-            message = $"Bar KOT item {orderItemId} status updated to {dto.Status}.",
+            message = $"Bar BOT item {orderItemId} status updated to {dto.Status}.",
             data = updated
         });
     }
@@ -873,12 +951,13 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost("kot/items/{orderItemId:long}/advance")]
+    [HttpPost("bot/items/{orderItemId:long}/advance")]
     public async Task<IActionResult> AdvanceBarKotItemStatus(long orderItemId)
     {
         var updated = await _barService.AdvanceBarKotItemStatusAsync(orderItemId);
         if (updated == null)
         {
-            return NotFound(new { success = false, message = $"Bar KOT item {orderItemId} not found." });
+            return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
         }
 
         try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
@@ -886,7 +965,7 @@ public class BarController : ControllerBase
         return Ok(new
         {
             success = true,
-            message = $"Bar KOT item {orderItemId} status advanced to {updated.Status}.",
+            message = $"Bar BOT item {orderItemId} status advanced to {updated.Status}.",
             data = updated
         });
     }

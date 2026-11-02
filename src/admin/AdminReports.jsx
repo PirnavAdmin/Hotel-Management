@@ -1,10 +1,10 @@
+import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  BarChart3,
+  BarChart3, Wine,
   TrendingUp,
   TrendingDown,
-  CreditCard,
-  Smartphone,
+Smartphone,
   Banknote,
   Utensils,
   Award,
@@ -125,7 +125,8 @@ async function requestLiveReportData() {
   };
 }
 
-export function AdminReports({ menuItems = [], restaurantSettings = {}, inventory = [] }) {
+export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
+  const isBarMode = mode === "bar";
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
@@ -183,6 +184,41 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const thisYearEndYMD = `${currentYear}-12-31`;
   const lastYearStartYMD = `${currentYear - 1}-01-01`;
   const lastYearEndYMD = `${currentYear - 1}-12-31`;
+
+  const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
+
+  const isBarItem = (item) => {
+    if (!item) return false;
+    const name = item.name || item.dishName || item.menuItemName || "";
+    const menuItem = findMenuItem(menuLookup, { ...item, menuItemId: item.menuItemId ?? item.menu_item_id ?? item.id }) ||
+      (menuItems || []).find((c) => String(c.name || "").trim().toLowerCase() === String(name).trim().toLowerCase());
+    return isBeverageCategory(menuItem?.category ?? menuItem?.categoryName ?? item.category ?? item.categoryName ?? item.subcategory ?? name);
+  };
+
+  const isBarOrder = (order) => {
+    if (!order) return false;
+    if (order.source === "bar" || order.orderType === "bar" || order.isBarOrder) return true;
+    const items = Array.isArray(order.items) ? order.items : [];
+    return items.some(isBarItem);
+  };
+
+  const isBarInventoryItem = (item) => {
+    if (!item) return false;
+    const name = String(item.name || "").trim().toLowerCase();
+    const cat = String(item.category || item.subcategory || "").trim().toLowerCase();
+    if (
+      name.includes("handi") || name.includes("foil") || name.includes("container") ||
+      name.includes("tray") || name.includes("takeaway") || name.includes("chicken") ||
+      name.includes("mutton") || name.includes("biryani") || name.includes("paneer") ||
+      name.includes("naan") || name.includes("roti") || name.includes("kebab") ||
+      name.includes("shawarma") || cat.includes("packaging") || cat.includes("disposable") ||
+      cat.includes("produce") || cat.includes("meat") || cat.includes("grain") ||
+      cat.includes("spice") || cat.includes("hygiene") || cat.includes("cleaning")
+    ) {
+      return false;
+    }
+    return isBeverageCategory(item.category ?? item.subcategory ?? item.name);
+  };
 
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState("all");
@@ -291,10 +327,14 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
     };
   }, []);
 
-  const ordersData = useMemo(
-    () => sortOrdersBySettlementTime(dedupeOrders(invoicesData)),
-    [invoicesData],
-  );
+  const ordersData = useMemo(() => {
+    const sourceList = Array.isArray(invoicesData) && invoicesData.length > 0
+      ? invoicesData
+      : (Array.isArray(pastOrders) && pastOrders.length > 0 ? pastOrders : []);
+    const sorted = sortOrdersBySettlementTime(dedupeOrders(sourceList));
+    if (!isBarMode) return sorted;
+    return sorted.filter(isBarOrder);
+  }, [invoicesData, pastOrders, isBarMode]);
 
   const handleSelectPeriod = (periodId) => {
     setFilterPeriod(periodId);
@@ -460,10 +500,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
     ? Math.round((paymentStats.upi / totalRevenue) * 100)
     : 0;
   const cashPercent = totalRevenue
-    ? Math.round((paymentStats.cash / totalRevenue) * 100)
-    : 0;
-  const cardPercent = totalRevenue
-    ? Math.max(0, 100 - upiPercent - cashPercent)
+    ? Math.max(0, 100 - upiPercent)
     : 0;
 
   // Top selling dishes across settled orders
@@ -481,7 +518,11 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const displayedDishes = showAllDishes ? sortedDishes : sortedDishes.slice(0, 3);
 
   // ================= INVENTORY & EXPENDITURE CALCULATIONS =================
-  const inventoryItems = Array.isArray(liveInventory) ? liveInventory : [];
+  const inventoryItems = useMemo(() => {
+    const base = Array.isArray(liveInventory) ? liveInventory : [];
+    if (!isBarMode) return base;
+    return base.filter(isBarInventoryItem);
+  }, [liveInventory, isBarMode]);
 
   const totalInventoryCost = useMemo(() => {
     return inventoryItems.reduce((sum, item) => {
@@ -685,7 +726,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
   const handleExportCSV = () => {
     try {
       const lines = [];
-      lines.push(`"FINANCIAL PERFORMANCE REPORT"`);
+      lines.push(`"${isBarMode ? "BAR FINANCIAL PERFORMANCE REPORT" : "FINANCIAL PERFORMANCE REPORT"}"`);
       lines.push(`"Period:","${getFilterPeriodLabel()}"`);
       lines.push(`"Date Range:","${getActiveDateRangeText()}"`);
       lines.push(`"Generated At:","${new Date().toLocaleString("en-IN")}"`);
@@ -794,7 +835,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                   flexShrink: 0,
                 }}
               >
-                <BarChart3 size={20} color='#ffffff' />
+                {isBarMode ? <Wine size={20} color='#ffffff' /> : <BarChart3 size={20} color='#ffffff' />}
               </div>
               <div>
                 <h2
@@ -806,10 +847,10 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  Sales Analytics &amp; Financial Reports
+                  {isBarMode ? "Bar Sales Analytics & Financial Reports" : "Sales Analytics & Financial Reports"}
                 </h2>
                 <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                  All-in-one financial dashboard · settled dining revenue, P&amp;L accounting &amp; stock expenditure
+                  {isBarMode ? "All-in-one financial dashboard · settled bar revenue, P&L accounting & liquor stock expenditure" : "All-in-one financial dashboard · settled dining revenue, P&L accounting & stock expenditure"}
                 </div>
               </div>
             </div>
@@ -1153,7 +1194,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Taxes &amp; Service
                 </span>
-                <CreditCard size={13} color="var(--info)" />
+                <Receipt size={13} color="var(--info)" />
               </div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--info)', marginTop: '2px' }}>
                 {formatCurrency(totalTax + totalService)}
@@ -1300,7 +1341,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                       gap: '0.4rem',
                     }}
                   >
-                    <CreditCard size={15} color="#38bdf8" />
+                    <Smartphone size={15} color="#38bdf8" />
                     <span>Payment Channel Distribution</span>
                   </h3>
 
@@ -1348,27 +1389,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     </div>
                   </div>
 
-                  {/* Card */}
-                  <div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '0.78rem',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      <span style={{ color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
-                        <CreditCard size={13} /> Card / POS ({cardPercent}%)
-                      </span>
-                      <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
-                        {formatCurrency(paymentStats.card)}
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '7px', background: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${cardPercent}%`, height: '100%', background: '#c084fc' }} />
-                    </div>
-                  </div>
+
                 </div>
 
                 {/* Right Column: Top Selling Items */}
@@ -1498,7 +1519,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Food &amp; Beverage Net Sales</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>{isBarMode ? "Beverage Net Sales" : "Food & Beverage Net Sales"}</div>
                   <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
                     {formatCurrency(grossFoodSales)}
                   </div>
@@ -1612,7 +1633,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     </tr>
                     <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        Gross Settled Dining Sales
+                        {isBarMode ? "Gross Settled Bar Sales" : "Gross Settled Dining Sales"}
                       </td>
                       <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
                         Revenue from {filteredOrders.length} customer orders
@@ -1623,7 +1644,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                     </tr>
                     <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
-                        ↳ Food &amp; Beverage Net Sales
+                        ↳ {isBarMode ? "Beverage" : "Food & Beverage"} Net Sales
                       </td>
                       <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
                         Bill total minus GST &amp; service charge
@@ -2031,7 +2052,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                 <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                    {inventoryItems.length} Ingredients
+                    {inventoryItems.length} {isBarMode ? "Bar Items" : "Ingredients"}
                   </div>
                 </div>
                 <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
@@ -2494,13 +2515,7 @@ export function AdminReports({ menuItems = [], restaurantSettings = {}, inventor
                   </td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cashPercent}%</td>
                 </tr>
-                <tr>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", fontWeight: 600 }}>Card / POS Swipe</td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right", fontWeight: 700 }}>
-                    {formatCurrency(paymentStats.card)}
-                  </td>
-                  <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>{cardPercent}%</td>
-                </tr>
+
                 <tr style={{ background: "#f1f5f9", fontWeight: 800 }}>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px" }}>Total Settlement</td>
                   <td style={{ border: "1px solid #cbd5e1", padding: "6px 8px", textAlign: "right" }}>

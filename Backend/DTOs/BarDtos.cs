@@ -391,7 +391,10 @@ public class BarStaffDto
     public long StaffId { get; set; }
     public long Id => StaffId;
     public string FullName { get; set; } = string.Empty;
+    public string Name => FullName;
     public string JobTitle { get; set; } = string.Empty; // "Senior Captain", "Head Waiter", "Stewardess", "Server / Waiter"
+    public string Role => JobTitle;
+    public string RoleTitle => JobTitle;
     public string Phone { get; set; } = string.Empty;
     public string Shift { get; set; } = string.Empty; // "Morning Shift (10 AM - 4 PM)", "Evening Shift (5 PM - 11 PM)", "Full Day (11 AM - 11 PM)"
     public string BarArea { get; set; } = "—"; // e.g. "VIP Lounge, Main Hall" or "—"
@@ -406,19 +409,28 @@ public class BarStaffDto
 
 public class CreateBarStaffDto
 {
-    [Required(ErrorMessage = "Full Name is required.")]
+    private string _fullName = string.Empty;
     [MaxLength(100)]
-    public string FullName { get; set; } = string.Empty;
+    public string FullName
+    {
+        get => !string.IsNullOrWhiteSpace(_fullName) ? _fullName : (Name ?? string.Empty);
+        set => _fullName = value;
+    }
+    public string? Name { get; set; }
 
-    [Required(ErrorMessage = "Job Title is required.")]
+    private string _jobTitle = string.Empty;
     [MaxLength(50)]
-    public string JobTitle { get; set; } = string.Empty;
+    public string JobTitle
+    {
+        get => !string.IsNullOrWhiteSpace(_jobTitle) ? _jobTitle : (Role ?? RoleTitle ?? string.Empty);
+        set => _jobTitle = value;
+    }
+    public string? Role { get; set; }
+    public string? RoleTitle { get; set; }
 
-    [Required(ErrorMessage = "Phone / Contact is required.")]
     [MaxLength(20)]
     public string Phone { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Shift is required.")]
     [MaxLength(50)]
     public string Shift { get; set; } = string.Empty;
 
@@ -437,11 +449,24 @@ public class CreateBarStaffDto
 
 public class UpdateBarStaffDto
 {
+    private string? _fullName;
     [MaxLength(100)]
-    public string? FullName { get; set; }
+    public string? FullName
+    {
+        get => _fullName ?? Name;
+        set => _fullName = value;
+    }
+    public string? Name { get; set; }
 
+    private string? _jobTitle;
     [MaxLength(50)]
-    public string? JobTitle { get; set; }
+    public string? JobTitle
+    {
+        get => _jobTitle ?? Role ?? RoleTitle;
+        set => _jobTitle = value;
+    }
+    public string? Role { get; set; }
+    public string? RoleTitle { get; set; }
 
     [MaxLength(20)]
     public string? Phone { get; set; }
@@ -461,7 +486,7 @@ public class AssignableTableDto
     public long TableId { get; set; }
     public string TableNumber { get; set; } = string.Empty;
     public string Area { get; set; } = "Main Hall";
-    public string Label => $"{TableNumber} • {Area}"; // e.g. "Table-1 • VIP Lounge"
+    public string Label => $"{(string.IsNullOrWhiteSpace(TableNumber) ? $"Table {TableId}" : TableNumber)} • {Area}";
     public bool IsCurrentlyAssigned { get; set; } = false;
     public long? AssignedStaffId { get; set; }
     public string? AssignedStaffName { get; set; }
@@ -477,12 +502,14 @@ public class BarStaffFilterOptionsDto
 
 #endregion
 
-#region Screen 8: Bar KOT (Image 4)
+#region Screen 8: Bar KOT / BOT (Bar Order Tickets)
 
 public class BarKotTicketDto
 {
     public long KotId { get; set; }
+    public long BotId => KotId;
     public string KotNumber { get; set; } = string.Empty;
+    public string BotNumber => KotNumber;
     public long OrderId { get; set; }
     public string OrderNumber { get; set; } = string.Empty;
     public long? TableId { get; set; }
@@ -501,25 +528,33 @@ public class BarKotTicketDto
     public int TotalItemsCount { get; set; }
     public int DrinksCount { get; set; }
     public List<BarKotItemDto> Items { get; set; } = new();
+    public List<BarKotItemDto> Drinks => Items;
 }
+
+public class BarBotTicketDto : BarKotTicketDto { }
 
 public class BarKotItemDto
 {
     public long OrderItemId { get; set; }
     public long OrderId { get; set; }
     public long? KotId { get; set; }
+    public long? BotId => KotId;
     public long MenuItemId { get; set; }
     public string DishName { get; set; } = string.Empty;
+    public string Name => DishName;
     public string DrinkName => DishName;
     public string Category { get; set; } = "Cocktails";
     public string? ServingMeasure { get; set; }
     public int Quantity { get; set; } = 1;
     public string Status { get; set; } = "queued"; // "queued", "cooking", "ready", "served", "cancelled"
+    public string KotStatus => Status;
     public string StatusFormatted => char.ToUpper(Status[0]) + Status.Substring(1).ToLower();
     public string? SpecialNotes { get; set; }
     public string? PreparationNotes { get; set; }
     public bool IsBarItem { get; set; } = true;
 }
+
+public class BarBotItemDto : BarKotItemDto { }
 
 public class BarKotSummaryDto
 {
@@ -532,11 +567,15 @@ public class BarKotSummaryDto
     public DateTime LastUpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
+public class BarBotSummaryDto : BarKotSummaryDto { }
+
 public class BarKotFilterOptionsDto
 {
     public List<string> Tables { get; set; } = new() { "All Tables" };
     public List<string> Statuses { get; set; } = new() { "All statuses", "Queued", "Preparing", "Ready", "Served", "Cancelled" };
 }
+
+public class BarBotFilterOptionsDto : BarKotFilterOptionsDto { }
 
 public class BarKotScreenFeedDto
 {
@@ -547,17 +586,23 @@ public class BarKotScreenFeedDto
     public DateTime ServerTimeUtc { get; set; } = DateTime.UtcNow;
 }
 
+public class BarBotScreenFeedDto : BarKotScreenFeedDto { }
+
 public class UpdateBarKotStatusDto
 {
     [Required]
     public string Status { get; set; } = "preparing"; // "queued", "preparing", "ready", "served", "cancelled"
 }
 
+public class UpdateBarBotStatusDto : UpdateBarKotStatusDto { }
+
 public class UpdateBarKotItemStatusDto
 {
     [Required]
     public string Status { get; set; } = "ready"; // "queued", "cooking", "ready", "served", "cancelled"
 }
+
+public class UpdateBarBotItemStatusDto : UpdateBarKotItemStatusDto { }
 
 #endregion
 
@@ -796,7 +841,7 @@ public class BarReportsScreenDto
     public List<BarReportRowDto> KpiCards => Rows;
     public List<BarReportRowDto> TableRows => Rows;
     public string Title { get; set; } = "Bar Reports";
-    public string Subtitle { get; set; } = "Independent Bar workspace • drink and order records are demo data.";
+    public string Subtitle { get; set; } = "Independent bar workspace for live drink and order records.";
     public string Note { get; set; } = "Summary calculated from the shared menu, active orders, inventory, and loaded order history.";
     public string Badge { get; set; } = "DEMO DATA • SESSION ONLY";
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
@@ -832,4 +877,3 @@ public class BarScreenFeedDto
 }
 
 #endregion
-

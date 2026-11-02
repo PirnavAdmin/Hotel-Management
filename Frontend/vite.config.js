@@ -162,6 +162,8 @@ function globalSyncPlugin() {
   let sseClients = [];
   const getDataFile = () => {
     const candidates = [
+      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
+      path.resolve(process.cwd(), "..", "server-db.json"),
       path.resolve(process.cwd(), "server-db.json"),
       path.resolve(process.cwd(), "POS", "server-db.json"),
       path.resolve(process.cwd(), "Frontend", "server-db.json"),
@@ -190,6 +192,12 @@ function globalSyncPlugin() {
     try {
       const file = getDataFile();
       fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+      const altFile = file.includes("Frontend")
+        ? path.resolve(file, "..", "..", "server-db.json")
+        : path.resolve(file, "..", "Frontend", "server-db.json");
+      if (fs.existsSync(altFile) && altFile !== file) {
+        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
+      }
     } catch {}
   };
 
@@ -890,6 +898,47 @@ function globalSyncPlugin() {
           return;
         }
 
+        // REST API: /api/v1/menu-items/categories (GET)
+        if ((req.url === "/api/v1/menu-items/categories" || req.url === "/api/v1/menu-items/categories/" || req.url.startsWith("/api/v1/menu-items/categories?")) && req.method === "GET") {
+          db = loadDb();
+          const menuItems = db.gourmet_pos_menu_items_v2 || [];
+          const categorySet = new Set();
+          menuItems.forEach((item) => {
+            const cat = item.category || item.categoryName;
+            if (cat && typeof cat === "string" && cat.trim()) {
+              categorySet.add(cat.trim());
+            }
+          });
+          ["biryani", "starters", "mains", "tandoor-kebabs", "fast-food", "breads", "beverages", "desserts"].forEach((c) => categorySet.add(c));
+          const categories = Array.from(categorySet);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              success: true,
+              categories,
+              data: categories,
+            })
+          );
+        }
+
+        // REST API: /api/v1/menu-items/categories (POST)
+        if ((req.url === "/api/v1/menu-items/categories" || req.url === "/api/v1/menu-items/categories/") && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const name = String(payload.name || "").trim();
+              res.writeHead(201, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, data: { name } }));
+            } catch {
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true }));
+            }
+          });
+          return;
+        }
+
         // REST API: /api/v1/menu-items (GET)
         if (req.url.startsWith("/api/v1/menu-items") && req.method === "GET") {
           db = loadDb();
@@ -1529,6 +1578,16 @@ function globalSyncPlugin() {
         if (orderByTableMatch && req.method === "GET") {
           const tableId = decodeURIComponent(orderByTableMatch[1]);
           db = loadDb();
+          const activeOrders = db.active_orders || [];
+          const activeOrder = activeOrders.find(
+            (candidate) =>
+              String(candidate.tableId ?? "") === tableId &&
+              String(candidate.status || "").toLowerCase() === "active"
+          );
+          if (activeOrder) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify(activeOrder));
+          }
           const order = (db.gourmet_pos_past_orders_v2_inr || []).find(
             (candidate) =>
               String(candidate.tableId ?? candidate.id) === tableId &&
@@ -1542,20 +1601,69 @@ function globalSyncPlugin() {
         if (sendOrderKotMatch && req.method === "POST") {
           const orderId = decodeURIComponent(sendOrderKotMatch[1]);
           db = loadDb();
-          const orders = db.gourmet_pos_past_orders_v2_inr || [];
-          const order = orders.find((candidate) => String(candidate.id ?? candidate.orderId) === orderId);
+          const activeOrders = db.active_orders || [];
+          const historyOrders = db.gourmet_pos_past_orders_v2_inr || [];
+          const order = activeOrders.find((candidate) =>
+            String(candidate.id ?? candidate.orderId) === orderId ||
+            String(candidate.tableId) === orderId
+          );
           if (!order) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+            const historyOrder = historyOrders.find((candidate) =>
+              String(candidate.id ?? candidate.orderId) === orderId ||
+              String(candidate.tableId) === orderId
+            );
+            if (!historyOrder) {
+              const tables = db.gourmet_pos_tables_v2_inr || [];
+              const matchedTable = tables.find((t) =>
+                String(t.id) === orderId ||
+                String(t.backendOrderId) === orderId ||
+                String(t.activeOrderId) === orderId
+              );
+              if (matchedTable) {
+                const generatedOrderId = Number(orderId) || Date.now();
+                const newOrder = {
+                  id: generatedOrderId,
+                  orderId: generatedOrderId,
+                  tableId: matchedTable.id,
+                  tableName: matchedTable.name,
+                  tableNumber: matchedTable.name,
+                  serverName: matchedTable.serverName || "Server",
+                  status: "Active",
+                  items: (matchedTable.items || []).map((i) => ({
+                    ...i,
+                    kotStatus: i.kotStatus || "received",
+                    kotSent: true,
+                  })),
+                };
+                activeOrders.unshift(newOrder);
+                db.active_orders = activeOrders;
+                saveDb(db);
+                broadcast({ active_orders: activeOrders });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newOrder }));
+              }
+              res.writeHead(404, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: "Order not found." }));
+            }
+            historyOrder.items = (historyOrder.items || []).map((item) => ({
+              ...item,
+              kotStatus: item.kotStatus || "received",
+              kotSent: true,
+            }));
+            db.gourmet_pos_past_orders_v2_inr = historyOrders;
+            saveDb(db);
+            broadcast({ gourmet_pos_past_orders_v2_inr: historyOrders });
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: historyOrder }));
           }
           order.items = (order.items || []).map((item) => ({
             ...item,
             kotStatus: item.kotStatus || "received",
             kotSent: true,
           }));
-          db.gourmet_pos_past_orders_v2_inr = orders;
+          db.active_orders = activeOrders;
           saveDb(db);
-          broadcast({ gourmet_pos_past_orders_v2_inr: orders });
+          broadcast({ active_orders: activeOrders });
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: true, data: order }));
         }
@@ -1797,8 +1905,23 @@ function globalSyncPlugin() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
+  let apiBase = env.VITE_API_BASE_URL;
+  if (!apiBase) {
+    try {
+      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
+      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
+      if (match) apiBase = match[0].replace(/\/$/, "");
+    } catch {}
+  }
+  if (!apiBase) {
+    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
+  }
+
   return {
     plugins: [react(), globalSyncPlugin()],
+    define: {
+      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBase),
+    },
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
@@ -1811,20 +1934,22 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
-        "/api": {
-          target: env.VITE_API_BASE_URL || "http://localhost:5018",
-          changeOrigin: true,
-          secure: false,
-        },
         "/uploads": {
-          target: env.VITE_API_BASE_URL || "http://localhost:5018",
+          target: apiBase,
+          changeOrigin: true,
+          headers: { "ngrok-skip-browser-warning": "true" },
+        },
+        "/api/v1": {
+          target: apiBase,
           changeOrigin: true,
           secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
         },
-        "/hubs": {
-          target: env.VITE_API_BASE_URL || "http://localhost:5018",
+        "/api/auth": {
+          target: apiBase,
           changeOrigin: true,
-          ws: true,
+          secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
         },
       },
     },

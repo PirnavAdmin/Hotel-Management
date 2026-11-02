@@ -28,18 +28,9 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
 import { SkeletonDashboard } from "../common/Skeletons";
-import { isDrinkCategory } from "../utils/drinkCategoryHelper";
+import { isDrinkItem } from "../kot/orderRouting";
 
-const BAR_MENU_CATEGORIES = new Set([
-  "cocktails", "mocktails", "beers", "whiskey", "vodka & gin", "rum & brandy",
-  "wine & champagne", "shots & shooters", "juices & shakes", "soft drinks & soda", "tea & coffee",
-]);
-
-const isBarMenuItem = (item) => {
-  const category = String(item?.category ?? item?.categoryName ?? "").trim().toLowerCase();
-  const section = String(item?.section ?? item?.menuSection ?? item?.itemType ?? "").trim().toLowerCase();
-  return Boolean(item?.drinkType) || section.includes("bar") || section === "beverage" || BAR_MENU_CATEGORIES.has(category);
-};
+const isBarMenuItem = (item) => isDrinkItem(item);
 
 export function AdminOverview({
   menuItems = [],

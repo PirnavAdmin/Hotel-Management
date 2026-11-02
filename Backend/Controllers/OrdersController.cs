@@ -8,6 +8,7 @@ using HMS.Data;
 using HMS.DTOs;
 using HMS.Hubs;
 using HMS.Models;
+using HMS.Services;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -674,6 +675,24 @@ public class OrdersController : ControllerBase
             });
         }
 
+        var barItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
+            _context,
+            queuedItems.Select(item => item.MenuItemId));
+        var kitchenItems = queuedItems
+            .Where(item => !barItemIds.Contains(item.MenuItemId))
+            .ToList();
+
+        if (!kitchenItems.Any())
+        {
+            return Ok(new
+            {
+                success = true,
+                message = "Bar items are queued for the Bar BOT; no kitchen items were sent.",
+                botOnly = true,
+                orderId = order.Id
+            });
+        }
+
         // ========================================================
         // GET MAIN KITCHEN
         // ========================================================
@@ -753,7 +772,7 @@ public class OrdersController : ControllerBase
         // NOW INSERT ORDER ITEMS WITH KOT ID
         // ========================================================
 
-        foreach (var item in queuedItems)
+        foreach (var item in kitchenItems)
         {
             item.KotId = kot.Id;
 
@@ -812,7 +831,7 @@ public class OrdersController : ControllerBase
 
             orderTime = order.CreatedAt,
 
-            items = queuedItems
+            items = kitchenItems
                 .Select(MapToOrderItemDto)
                 .ToList()
         };

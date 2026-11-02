@@ -1725,6 +1725,7 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
+import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonMenuCard } from "../common/Skeletons";
 import { isDrinkCategory } from "../utils/drinkCategoryHelper";
@@ -1743,8 +1744,11 @@ export function TableDetailView({
   table,
   allTables,
   menuItems = [],
+  barMenuItems = [],
   menuLoading = false,
+  barMenuLoading = false,
   menuLoadError = "",
+  barMenuLoadError = "",
   onSelectTable,
   onBackToTables,
   onAddItemToTable,
@@ -1783,6 +1787,7 @@ export function TableDetailView({
     0;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [orderMode, setOrderMode] = useState("kitchen");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // all | veg | non-veg | special
   const [searchQuery, setSearchQuery] = useState("");
   const [editingNoteItemId, setEditingNoteItemId] = useState(null);
@@ -1793,13 +1798,21 @@ export function TableDetailView({
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
   const [tableStatusFilter, setTableStatusFilter] = useState("all"); // 'all' | 'vacant' | 'occupied' | 'billed'
   const [isMobileOrderSlipOpen, setIsMobileOrderSlipOpen] = useState(false);
+  const activeMenuItems = orderMode === "bar"
+    ? barMenuItems
+    : menuItems.filter((item) => !isDrinkItem(item));
+  const activeMenuLoading = orderMode === "bar" ? barMenuLoading : menuLoading;
+  const activeMenuLoadError = orderMode === "bar" ? barMenuLoadError : menuLoadError;
+  const barMenuItemIds = new Set(
+    barMenuItems.map((item) => String(item.menuItemId ?? item.id ?? "")).filter(Boolean),
+  );
 
   // Filtered menu items with spelling tolerance for biriyani / biryani
   const filteredMenuItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const normalizedQuery = query.replace(/biriyani/g, "biryani");
 
-    return (Array.isArray(menuItems) ? menuItems : []).filter((item) => {
+    return (Array.isArray(activeMenuItems) ? activeMenuItems : []).filter((item) => {
       const matchCat =
         selectedCategory === "all" || item.category === selectedCategory;
 
@@ -1823,7 +1836,7 @@ export function TableDetailView({
 
       return matchCat && matchSearch && matchDietary;
     });
-  }, [selectedCategory, dietaryFilter, searchQuery, menuItems]);
+  }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems]);
 
   // Financial calculations in Rupees
   const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
@@ -1853,7 +1866,21 @@ export function TableDetailView({
     );
   };
 
+  const isBarMenuItem = (item) => Boolean(
+    item?.isBarItem ||
+    item?.isBarDrink ||
+    barMenuItemIds.has(String(item?.menuItemId ?? item?.id ?? "")),
+  );
   const hasUnsentItems = safeItems.length > 0 && safeItems.some((i) => !isItemSentToKot(i));
+  const hasUnsentKitchenItems = safeItems.some((item) => !isBarMenuItem(item) && !isItemSentToKot(item));
+  const hasUnsentBarItems = safeItems.some((item) => isBarMenuItem(item) && !isItemSentToKot(item));
+  const dispatchButtonLabel = hasUnsentKitchenItems && hasUnsentBarItems
+    ? "Send KOT + BOT"
+    : hasUnsentBarItems
+      ? "Send BOT"
+      : hasUnsentKitchenItems
+        ? "Send KOT"
+        : "Send Orders";
   const allItemsSentToKot = safeItems.length > 0 && safeItems.every((i) => isItemSentToKot(i));
   const allCookingReady = safeItems.length > 0 && safeItems.every((i) => isItemCookedReady(i));
   const canSettleAndCheckout = safeItems.length > 0 && allItemsSentToKot && allCookingReady;
@@ -2813,7 +2840,7 @@ export function TableDetailView({
               padding: "0.5rem",
             }}
           >
-            {[{ id: "all", name: "All Items", icon: "Utensils" }, ...Array.from(new Map((menuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: "Utensils" }])).values())].map((category) => {
+            {[{ id: "all", name: orderMode === "bar" ? "All Drinks" : "All Items", icon: orderMode === "bar" ? "Coffee" : "Utensils" }, ...Array.from(new Map((activeMenuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: orderMode === "bar" ? "Coffee" : "Utensils" }])).values())].map((category) => {
               const isSelected = selectedCategory === category.id;
               const IconComp = CATEGORY_ICONS[category.icon] || Utensils;
 
@@ -2906,6 +2933,55 @@ export function TableDetailView({
               flexShrink: 0,
             }}
           >
+            <div
+              role="group"
+              aria-label="Choose order station"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                flexShrink: 0,
+              }}
+            >
+              {[
+                { id: "kitchen", label: "Kitchen / Food", icon: ChefHat },
+                { id: "bar", label: "Bar / Beverages", icon: Coffee },
+              ].map(({ id, label, icon: Icon }) => {
+                const isActive = orderMode === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      setOrderMode(id);
+                      setSelectedCategory("all");
+                      setDietaryFilter("all");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
+                      minHeight: "36px",
+                      padding: "0.45rem 0.75rem",
+                      borderRadius: "var(--radius-md)",
+                      border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
+                      background: isActive ? "rgba(245, 158, 11, 0.16)" : "var(--bg-primary)",
+                      color: isActive ? "var(--accent-amber-light)" : "var(--text-muted)",
+                      fontSize: "0.8rem",
+                      fontWeight: isActive ? 800 : 650,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Icon size={15} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Search Input */}
             <div
               style={{
@@ -2922,7 +2998,7 @@ export function TableDetailView({
               />
               <input
                 type="text"
-                placeholder="Search Biryani, Chicken 65, Naan, Desserts..."
+                placeholder={orderMode === "bar" ? "Search drinks..." : "Search Biryani, Chicken 65, Naan, Desserts..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -3020,7 +3096,7 @@ export function TableDetailView({
 
           {/* Menu Items Grid - 4 dishes per row */}
           <div className="pos-menu-grid">
-            {menuLoading ? (
+            {activeMenuLoading ? (
               Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
             ) : filteredMenuItems.length === 0 ? (
               <div
@@ -3043,7 +3119,7 @@ export function TableDetailView({
                     fontWeight: 700,
                   }}
                 >
-                  {menuLoadError ? "Menu items could not be loaded" : `No dishes match "${searchQuery}"`}
+                  {activeMenuLoadError ? (orderMode === "bar" ? "Bar drinks could not be loaded" : "Menu items could not be loaded") : `${orderMode === "bar" ? "No drinks" : "No dishes"} match "${searchQuery}"`}
                 </h4>
                 <p
                   style={{
@@ -3052,7 +3128,7 @@ export function TableDetailView({
                     color: "var(--text-muted)",
                   }}
                 >
-                  {menuLoadError || 'Try searching for "Biryani", "Chicken", "Paneer", "Tandoori" or click "All Items".'}
+                  {activeMenuLoadError || (orderMode === "bar" ? 'Try another drink search or select "All Drinks".' : 'Try searching for "Biryani", "Chicken", "Paneer", "Tandoori" or click "All Items".')}
                 </p>
                 <button
                   className="primary-action-button"
@@ -3071,7 +3147,7 @@ export function TableDetailView({
                     fontSize: "0.82rem",
                   }}
                 >
-                  Show All Dishes
+                  {orderMode === "bar" ? "Show All Drinks" : "Show All Dishes"}
                 </button>
               </div>
             ) : (
@@ -3662,16 +3738,32 @@ export function TableDetailView({
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                            color: "var(--text-main)",
-                            lineHeight: 1.3,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {item.name}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                          <div
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                              color: "var(--text-main)",
+                              lineHeight: 1.3,
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {item.name}
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "0.56rem",
+                              fontWeight: 800,
+                              padding: "1px 5px",
+                              borderRadius: "999px",
+                              background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
+                              color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
+                              border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {isBarMenuItem(item) ? "Bar" : "Kitchen"}
+                          </span>
                         </div>
                         <div
                           style={{
@@ -3692,8 +3784,9 @@ export function TableDetailView({
                             {formatCurrency(item.price)} × {item.quantity}
                           </span>
                           {(() => {
-                            const isReady = item.kotStatus === "ready" || item.kotStatus === "served" || item.kotStatus === "completed";
-                            const isCooking = item.kotStatus === "cooking";
+                            const itemStatus = String(item.kotStatus || "").toLowerCase();
+                            const isReady = itemStatus === "ready" || itemStatus === "served" || itemStatus === "completed";
+                            const isCooking = itemStatus === "cooking" || itemStatus === "mixing";
                             const isSent = isItemSentToKot(item);
 
                             if (isReady) {
@@ -3745,7 +3838,7 @@ export function TableDetailView({
                                     border: "1px solid rgba(245, 158, 11, 0.35)",
                                   }}
                                 >
-                                  📥 KOT Sent
+                                  📥 {isBarMenuItem(item) ? "BOT Sent" : "KOT Sent"}
                                 </span>
                               );
                             }
@@ -4214,7 +4307,7 @@ export function TableDetailView({
                     }}
                   >
                     <ChefHat size={13} color="var(--accent-amber)" />
-                    <span>{hasUnsentItems ? "Send KOT (Required)" : "Send KOT"}</span>
+                    <span>{hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel}</span>
                   </button>
                   <button
                     onClick={() => onOpenReceipt(targetTableId)}
@@ -4239,7 +4332,7 @@ export function TableDetailView({
                     }}
                   >
                     <Receipt size={13} color="var(--accent-amber)" />
-                    <span>Print Bill</span>
+                    <span>Generate Bill</span>
                   </button>
                 </div>
 
@@ -4247,7 +4340,7 @@ export function TableDetailView({
                   onClick={() => {
                     if (!canSettleAndCheckout) {
                       if (hasUnsentItems) {
-                        onShowToast?.("⚠️ Please Send KOT to kitchen first before settling!");
+                        onShowToast?.(`⚠️ Please ${dispatchButtonLabel} first before settling!`);
                       } else if (!allCookingReady) {
                         onShowToast?.("👨‍🍳 Cooking in progress! Settle will unlock once kitchen marks food ready.");
                       }
@@ -4287,7 +4380,7 @@ export function TableDetailView({
                     {safeItems.length === 0
                       ? `Settle & Checkout — ${formatCurrency(0)}`
                       : hasUnsentItems
-                        ? "🔒 Send KOT First to Settle"
+                        ? `🔒 ${dispatchButtonLabel} First to Settle`
                         : !allCookingReady
                           ? "👨‍🍳 Cooking in KOT... (Waiting Ready)"
                           : `✓ Settle & Checkout — ${formatCurrency(grandTotal)}`}
@@ -4452,14 +4545,29 @@ export function TableDetailView({
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "0.84rem",
-                        fontWeight: 700,
-                        color: "var(--text-main)",
-                      }}
-                    >
-                      {item.name}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                      <div
+                        style={{
+                          fontSize: "0.84rem",
+                          fontWeight: 700,
+                          color: "var(--text-main)",
+                        }}
+                      >
+                        {item.name}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.58rem",
+                          fontWeight: 800,
+                          padding: "1px 6px",
+                          borderRadius: "999px",
+                          background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
+                          color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
+                          border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
+                        }}
+                      >
+                        {isBarMenuItem(item) ? "Bar" : "Kitchen"}
+                      </span>
                     </div>
                     <div
                       style={{
@@ -4619,7 +4727,7 @@ export function TableDetailView({
                   }}
                 >
                   <ChefHat size={14} color="var(--accent-amber)" />
-                  <span>{hasUnsentItems ? "Send KOT (Required)" : "Send KOT"}</span>
+                  <span>{hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -4642,7 +4750,7 @@ export function TableDetailView({
                   }}
                 >
                   <Receipt size={14} color="var(--accent-amber)" />
-                  <span>Print Bill</span>
+                  <span>Generate Bill</span>
                 </button>
               </div>
 
@@ -4650,7 +4758,7 @@ export function TableDetailView({
                 onClick={() => {
                   if (!canSettleAndCheckout) {
                     if (hasUnsentItems) {
-                      onShowToast?.("⚠️ Please Send KOT to kitchen first before settling!");
+                      onShowToast?.(`⚠️ Please ${dispatchButtonLabel} first before settling!`);
                     } else if (!allCookingReady) {
                       onShowToast?.("👨‍🍳 Cooking in progress! Settle will unlock once kitchen marks food ready.");
                     }
@@ -4690,7 +4798,7 @@ export function TableDetailView({
                   {safeItems.length === 0
                     ? `Settle & Checkout — ${formatCurrency(0)}`
                     : hasUnsentItems
-                      ? "🔒 Send KOT First to Settle"
+                      ? `🔒 ${dispatchButtonLabel} First to Settle`
                       : !allCookingReady
                         ? "👨‍🍳 Cooking in KOT... (Waiting Ready)"
                         : `✓ Settle & Checkout — ${formatCurrency(grandTotal)}`}

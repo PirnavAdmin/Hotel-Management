@@ -38,6 +38,8 @@ import {
   Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
+import { formatDisplayTime } from "../utils/timer";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
@@ -48,7 +50,8 @@ import {
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
-import { INITIAL_STAFF } from "../data/initialStaff";
+import { isBeverageCategory, isDrinkItem } from "../kot/orderRouting";
+import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
@@ -69,10 +72,45 @@ import {
   getRelevantLocalFallback,
 } from "../utils/menuImageHelper";
 import { isDrinkCategory, isAlcoholicCategory, getDrinkDietaryType } from "../utils/drinkCategoryHelper";
+import { SkeletonTable } from "../common/Skeletons";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans", "Packets"];
+
+
+export function isDisallowedItemName(raw) {
+  if (!raw || typeof raw !== "string") return false;
+  const s = raw.toLowerCase().trim();
+
+  const standardAllowed = [
+    "all", "starters", "starters & appetizers", "appetizers", "appetizer",
+    "biryani", "biryanis", "biryanis & rice special", "rice special",
+    "mains", "main course", "main course & curries", "curries", "curry",
+    "tandoor", "tandoori", "tandoori & kebabs", "tandoor-kebabs", "kebabs",
+    "fast-food", "fast food", "burgers, pizza & fast food", "pizza & fast food", "burgers",
+    "breads", "naan & roti", "roti & naan", "roti",
+    "beverages", "beverages & coffee", "coffee & beverages", "coffee",
+    "desserts", "desserts & sweets", "sweets & desserts", "sweets",
+    "cocktails", "mocktails", "beers", "wines", "spirits", "liquor", "bar",
+    "chinese", "soups", "salads", "soups & salads", "south indian", "north indian", "thali", "snacks"
+  ];
+  if (standardAllowed.includes(s)) return false;
+
+  // Reject dishes with "with", "w/", "(", ")", numbers
+  if (/\b(with|w\/)\b/i.test(s) || /[\(\)\d]/.test(s)) return true;
+
+  // Specific food and drink items that must never appear in category dropdowns
+  const dishKeywords = [
+    "brownie", "shake", "milkshake", "jamun", "rabdi", "gulab", "kulfi",
+    "mojito", "margarita", "martini", "daiquiri", "cosmopolitan", "pinacolada",
+    "chicken", "mutton", "prawn", "fish", "paneer", "egg", "beef", "pork",
+    "shawarma", "bagara", "lassi", "lemonade", "buttermilk", "chaas",
+    "corn salt", "salt & pepper", "fried rice", "noodles", "chilli", "manchurian",
+    "dum biryani", "veg biryani", "biryani", "masala", "tikka", "kebab", "kabab", "fry", "dry"
+  ];
+  return dishKeywords.some((kw) => s.includes(kw));
+}
 
 export function inferIngredientCategory(rawName = "") {
   const name = String(rawName || "").toLowerCase().trim();
@@ -560,6 +598,7 @@ export function AdminPortal({
 
   const [searchFilter, setSearchFilter] = useState("");
   const emptyMenuFilters = {
+    section: "dine",
     category: "",
     dietary: "",
     availability: "",
@@ -643,7 +682,7 @@ export function AdminPortal({
       tableStatus === normalizeTableFilterText(tableFilters.status);
 
     return matchesSearch && matchesStatus;
-  }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }).sort(compareTablesNaturally);
 
   const [tableSortField, setTableSortField] = useState("id");
   const [tableSortDirection, setTableSortDirection] = useState("asc");
@@ -662,15 +701,17 @@ export function AdminPortal({
     return [...filteredTables].sort((a, b) => {
       let aVal = a[tableSortField];
       let bVal = b[tableSortField];
-      if (tableSortField === "id") {
-        aVal = Number(a.id || 0);
-        bVal = Number(b.id || 0);
+      if (tableSortField === "id" || tableSortField === "name") {
+        const aNum = getTableSortNumber(a);
+        const bNum = getTableSortNumber(b);
+        if (aNum !== bNum) {
+          return tableSortDirection === "asc" ? aNum - bNum : bNum - aNum;
+        }
+        aVal = String(a.name || a.tableName || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || b.tableName || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "capacity") {
         aVal = Number(a.capacity || 0);
         bVal = Number(b.capacity || 0);
-      } else if (tableSortField === "name") {
-        aVal = String(a.name || `Table ${a.id || ""}`).toLowerCase();
-        bVal = String(b.name || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "area") {
         aVal = String(a.section || "").toLowerCase();
         bVal = String(b.section || "").toLowerCase();
@@ -883,7 +924,15 @@ export function AdminPortal({
   const [customCategories, setCustomCategories] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_CATEGORIES);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      const cleaned = parsed.filter((cat) => {
+        const str = String(typeof cat === "string" ? cat : cat?.name || cat?.label || cat?.value || "").trim();
+        return str && !isDisallowedItemName(str);
+      });
+      localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(cleaned));
+      return cleaned;
     } catch {
       return [];
     }
@@ -1016,13 +1065,30 @@ export function AdminPortal({
         result.data?.items ||
         result.data;
       if (!Array.isArray(raw)) return;
+
+      const dishNames = new Set(
+        (menuItems || [])
+          .map((i) => String(i.name || i.dishName || "").toLowerCase().trim())
+          .filter(Boolean),
+      );
+
       const names = raw
         .map((item) =>
-          typeof item === "string" ? item : item?.name || item?.categoryName,
+          typeof item === "string" ? item : item?.categoryName || item?.category
         )
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((name) => {
+          const s = String(name).toLowerCase().trim();
+          return !dishNames.has(s) && !isDisallowedItemName(s);
+        });
+
       setCustomCategories((previous) => {
-        const merged = [...previous];
+        const merged = previous.filter(
+          (p) => {
+            const s = String(typeof p === "string" ? p : p?.name || "").toLowerCase().trim();
+            return !dishNames.has(s) && !isDisallowedItemName(s);
+          }
+        );
         names.forEach((name) => {
           if (
             !merged.some(
@@ -1048,26 +1114,94 @@ export function AdminPortal({
     return () => {
       active = false;
     };
-  }, []);
+  }, [menuItems]);
 
   const allCategoryOptions = React.useMemo(() => {
     const map = new Map();
-    customCategories.forEach((cat) => {
-      const name =
-        typeof cat === "string" ? cat : cat.name || cat.label || cat.value;
-      if (name && !map.has(name.toLowerCase())) {
-        map.set(name.toLowerCase(), { value: name, label: name });
-      }
+    const dishNames = new Set(
+      (menuItems || [])
+        .map((i) => String(i.name || i.dishName || "").toLowerCase().trim())
+        .filter(Boolean),
+    );
+
+    // Standard high-level categories
+    const standardCategories = [
+      { value: "starters", label: "Starters & Appetizers" },
+      { value: "biryani", label: "Biryanis & Rice Special" },
+      { value: "mains", label: "Main Course & Curries" },
+      { value: "tandoor-kebabs", label: "Tandoori & Kebabs" },
+      { value: "fast-food", label: "Burgers, Pizza & Fast Food" },
+      { value: "breads", label: "Naan & Roti" },
+      { value: "desserts", label: "Desserts & Sweets" },
+    ];
+    if (menuFilters.section === "bar" || menuFilters.section === "all") {
+      standardCategories.push(
+        { value: "cocktails", label: "Cocktails" },
+        { value: "mocktails", label: "Mocktails" },
+        { value: "beverages", label: "Beverages & Coffee" },
+        { value: "beers", label: "Beers & Ciders" },
+        { value: "whiskey", label: "Whiskey & Scotch" },
+        { value: "vodka-gin", label: "Vodka & Gin" },
+        { value: "rum-brandy", label: "Rum & Brandy" },
+        { value: "wine", label: "Wine & Champagne" }
+      );
+    }
+
+    standardCategories.forEach((cat) => {
+      map.set(cat.value.toLowerCase(), cat);
     });
-    (menuItems || []).forEach((item) => {
-      if (item.category) {
-        const name = item.category;
-        if (!map.has(name.toLowerCase())) {
-          map.set(name.toLowerCase(), { value: name, label: name });
+
+    const getCleanCategoryLabel = (catVal) => {
+      const s = String(catVal || "").trim().toLowerCase();
+      if (s === "cocktail") return "Cocktails";
+      if (s === "curries" || s === "curry") return "Main Course & Curries";
+      const found = standardCategories.find(
+        (c) => c.value.toLowerCase() === s || c.label.toLowerCase() === s
+      );
+      if (found) return found.label;
+      const str = String(catVal).replace(/[-_]/g, " ");
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    };
+
+    // Add valid custom categories (strictly excluding any dish items)
+    (customCategories || []).forEach((cat) => {
+      const name =
+        typeof cat === "string"
+          ? cat
+          : cat.categoryName || cat.category || cat.name || cat.label || cat.value;
+      if (!name || typeof name !== "string") return;
+      const trimmed = name.trim();
+      let lower = trimmed.toLowerCase();
+      if (lower === "cocktail") lower = "cocktails";
+      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
+        const canonicalKey = lower === "curries" ? "mains" : lower;
+        if (!map.has(canonicalKey)) {
+          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
         }
       }
     });
-    return Array.from(map.values());
+
+    // Add any genuine custom categories from menuItems
+    (menuItems || []).forEach((item) => {
+      const isDrink = isDrinkItem(item);
+      if (menuFilters.section === "dine" && isDrink) return;
+      if (menuFilters.section === "bar" && !isDrink) return;
+      const cat = item.category || item.categoryName;
+      if (!cat || typeof cat !== "string") return;
+      const trimmed = cat.trim();
+      if (menuFilters.section === "dine" && isBeverageCategory(trimmed)) return;
+      const lower = trimmed.toLowerCase();
+      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
+        const canonicalKey = lower === "curries" ? "mains" : lower;
+        if (!map.has(canonicalKey)) {
+          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
+        }
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) =>
+      a.label.localeCompare(b.label),
+    );
   }, [customCategories, menuItems]);
 
   const allSectionOptions = React.useMemo(() => {
@@ -1390,9 +1524,15 @@ export function AdminPortal({
     }
 
     if (editingTable) {
+      const parsedNum = parseInt(String(tableForm.name || "").replace(/\D/g, ""), 10);
+      const targetNum = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : getTableSortNumber(editingTable);
+      const formattedName = targetNum > 0 ? `Table-${targetNum}` : (tableForm.name || `Table-${editingTable.id}`);
       onUpdateTable({
         ...editingTable,
-        name: tableForm.name,
+        id: targetNum > 0 ? targetNum : editingTable.id,
+        name: formattedName,
+        tableName: formattedName,
+        tableNumber: formattedName,
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 2,
         server: assignedServer,
@@ -1401,9 +1541,7 @@ export function AdminPortal({
       const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
-      const formattedName = tableForm.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i)
-        ? `Table ${parsedNum}`
-        : (/^\d+$/.test(tableForm.name.trim()) ? `Table ${tableForm.name.trim()}` : tableForm.name.trim());
+      const formattedName = `Table-${parsedNum || chosenId}`;
       onAddTable({
         id: chosenId,
         name: formattedName,
@@ -1496,19 +1634,6 @@ export function AdminPortal({
     setIsStaffModalOpen(false);
   };
 
-  const handleRestoreDefaultStaff = async () => {
-    for (const defPerson of INITIAL_STAFF) {
-      const exists = (staffList || []).some(
-        (s) =>
-          String(s.name || s.fullName || "").trim().toLowerCase() ===
-          defPerson.name.toLowerCase(),
-      );
-      if (!exists && onAddStaff) {
-        await onAddStaff(defPerson);
-      }
-    }
-  };
-
   const handleSyncPosUsers = async () => {
     try {
       let users = [];
@@ -1541,6 +1666,16 @@ export function AdminPortal({
 
   // Filtered menu items
   const filteredItems = menuItems.filter((item) => {
+    const isDrink = isDrinkItem(item);
+    if (menuFilters.section === "bar") {
+      if (!isDrink) return false;
+    } else if (menuFilters.section === "all") {
+      // show both
+    } else {
+      // Default: "dine" -> only food/dine items
+      if (isDrink) return false;
+    }
+
     const query = searchFilter.trim().toLowerCase();
     return (
       [item.name, item.description, item.category].some((value) =>
@@ -1549,8 +1684,7 @@ export function AdminPortal({
           .includes(query),
       ) &&
       (!menuFilters.category ||
-        String(item.category ?? "").toLowerCase() ===
-          menuFilters.category.toLowerCase()) &&
+        (String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase() || String(item.category ?? "").toLowerCase().replace(/[-_]/g, "") === menuFilters.category.toLowerCase().replace(/[-_]/g, ""))) &&
       (!menuFilters.dietary ||
         (menuFilters.dietary === "na"
           ? isDrinkCategory(item.category, item) || item.dietaryType === "N/A" || item.isVeg === null
@@ -1721,6 +1855,8 @@ export function AdminPortal({
                 onAddStaff={onAddStaff}
                 onUpdateStaff={onUpdateStaff}
                 onDeleteStaff={onDeleteStaff}
+                onUpdateItemKotStatus={onUpdateItemKotStatus}
+                onCompleteTableKot={onCompleteTableKot}
               />
             ) : (
               <>
@@ -1731,6 +1867,7 @@ export function AdminPortal({
                     tables={tables}
                     staffList={staffList}
                     pastOrders={pastOrders}
+                    sharedRecordLoad={sharedRecordLoad}
                     onNavigateTab={setActiveTab}
                     onOpenKOTView={onOpenKOTView}
                     onOpenItemModal={handleOpenItemModal}
@@ -1912,6 +2049,15 @@ export function AdminPortal({
                       </label>
                       {[
                         {
+                          key: "section",
+                          label: "Section",
+                          options: [
+                            { value: "dine", label: "Dine In (Food)" },
+                            { value: "bar", label: "Bar (Drinks)" },
+                            { value: "all", label: "All Items" },
+                          ],
+                        },
+                        {
                           key: "category",
                           label: "Category",
                           options: allCategoryOptions,
@@ -1950,7 +2096,7 @@ export function AdminPortal({
                               updateMenuFilter(key, event.target.value)
                             }
                           >
-                            <option value="">All</option>
+                            {key !== "section" && <option value="">All</option>}
                             {options.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
@@ -2038,7 +2184,9 @@ export function AdminPortal({
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedItems.length === 0 ? (
+                          {sharedRecordLoad?.menu === "loading" && menuItems.length === 0 ? (
+                            <tr><td colSpan={5}><SkeletonTable rows={6} columns={5} /></td></tr>
+                          ) : paginatedItems.length === 0 ? (
                             <tr>
                               <td
                                 colSpan={5}
@@ -2049,7 +2197,7 @@ export function AdminPortal({
                                   fontSize: "0.85rem",
                                 }}
                               >
-                                No menu items match the selected filters.
+                                {sharedRecordLoad?.menu === "error" ? sharedRecordLoad.menuError || "Menu items could not be loaded." : "No menu items match the selected filters."}
                               </td>
                             </tr>
                           ) : (
@@ -3050,7 +3198,7 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                   >
-                                    <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
+                                    <span>T{getTableSortNumber(tbl) || (tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id)}</span>
                                   </div>
                                   <span
                                     style={{
@@ -3381,28 +3529,6 @@ export function AdminPortal({
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                         <button
                           type="button"
-                          onClick={handleRestoreDefaultStaff}
-                          title="Restore standard restaurant staff team"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.35rem",
-                            padding: "0.5rem 0.9rem",
-                            background: "var(--bg-secondary)",
-                            border: "1px solid var(--border-card)",
-                            color: "var(--text-dim)",
-                            borderRadius: "8px",
-                            fontWeight: 600,
-                            fontSize: "0.8rem",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <RotateCcw size={14} />
-                          <span>Restore Defaults</span>
-                        </button>
-
-                        <button
-                          type="button"
                           onClick={handleSyncPosUsers}
                           title="Import POS users from Login Management as serving staff"
                           style={{
@@ -3689,7 +3815,7 @@ export function AdminPortal({
                               <p style={{ margin: 0, fontSize: "0.95rem" }}>
                                 {hasActiveStaffFilters
                                   ? "No staff members match the selected filters."
-                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one, or restore standard restaurant staff."}
+                                  : "No staff members configured yet. Click \"+ Add New Person (Staff)\" to create one."}
                               </p>
                               {hasActiveStaffFilters ? (
                                 <button
@@ -3711,26 +3837,6 @@ export function AdminPortal({
                                 </button>
                               ) : (
                                 <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-                                  <button
-                                    type="button"
-                                    onClick={handleRestoreDefaultStaff}
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "0.4rem",
-                                      background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-                                      color: "#fff",
-                                      border: "none",
-                                      padding: "0.45rem 1rem",
-                                      borderRadius: "6px",
-                                      fontSize: "0.85rem",
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    <RotateCcw size={14} />
-                                    <span>Restore Standard Staff (6 Members)</span>
-                                  </button>
                                   <button
                                     type="button"
                                     onClick={handleSyncPosUsers}
@@ -4155,7 +4261,7 @@ export function AdminPortal({
                               fontWeight: 600,
                             }}
                           >
-                            All Active Tables ({tablesWithOrders.length})
+                            All Active Tables ({tables.filter((t) => (t.items || []).some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i))).length})
                           </span>
                         )}
                       </div>
@@ -4612,7 +4718,10 @@ export function AdminPortal({
                             t.name === adminKotTableFilter
                           );
                         }
-                        return t.items && t.items.length > 0;
+                        const foodItems = (Array.isArray(t.items) ? t.items : []).filter(
+                          (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i)
+                        );
+                        return foodItems.length > 0;
                       });
 
                       const activeKotModalTable = selectedKotModalTable
@@ -4678,7 +4787,7 @@ export function AdminPortal({
                             {kotDisplayTables.map((tbl) => {
                               const items = Array.isArray(tbl.items) ? tbl.items : [];
                               const activeItems = items.filter(
-                                (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+                                (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i)
                               );
                               const totalItemsCount = activeItems.reduce(
                                 (sum, item) => sum + (Number(item?.quantity) || 1),
@@ -5039,7 +5148,7 @@ export function AdminPortal({
                                         {activeKotModalTable.name} — Items to Cook
                                       </h3>
                                       <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                                        {activeKotModalTable.section || "Main Hall"} • Server: <strong style={{ color: "var(--text-main)" }}>{activeKotModalTable.server || "Staff"}</strong> • Ordered: {activeKotModalTable.orderTime || "Just Now"}
+                                        {activeKotModalTable.section || "Main Hall"} • Server: <strong style={{ color: "var(--text-main)" }}>{activeKotModalTable.server || "Staff"}</strong> • Ordered: {formatDisplayTime(activeKotModalTable.orderTime) || "Just Now"}
                                       </div>
                                     </div>
                                   </div>
@@ -5089,12 +5198,12 @@ export function AdminPortal({
                                       marginBottom: "0.2rem",
                                     }}
                                   >
-                                    <span>Ordered Dishes & Beverages ({activeKotModalTable.items?.length || 0})</span>
+                                    <span>Ordered Dishes ({activeKotModalTable.items?.filter((i) => !isDrinkItem(i))?.length || 0})</span>
                                     <span>Status</span>
                                   </div>
 
-                                  {activeKotModalTable.items && activeKotModalTable.items.length > 0 ? (
-                                    activeKotModalTable.items.map((item, idx) => {
+                                  {activeKotModalTable.items && activeKotModalTable.items.filter((i) => !isDrinkItem(i)).length > 0 ? (
+                                    activeKotModalTable.items.filter((i) => !isDrinkItem(i)).map((item, idx) => {
                                       const isReady =
                                         item.kotStatus === "ready" ||
                                         item.kotStatus === "served" ||
