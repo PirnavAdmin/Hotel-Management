@@ -1725,9 +1725,9 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
+import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonMenuCard } from "../common/Skeletons";
-import { isDrinkItem } from "../kot/orderRouting";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
