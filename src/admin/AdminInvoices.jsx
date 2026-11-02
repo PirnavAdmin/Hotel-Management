@@ -103,6 +103,7 @@ export function AdminInvoices({
 }) {
   const [invoiceRecords, setInvoiceRecords] = useState([]);
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
+  const [isRefreshingInvoices, setIsRefreshingInvoices] = useState(false);
   const [invoiceLoadError, setInvoiceLoadError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
@@ -131,6 +132,7 @@ export function AdminInvoices({
 
   const refreshInvoices = async () => {
     setIsLoadingInvoices(true);
+    setIsRefreshingInvoices(true);
     setInvoiceLoadError("");
     try {
       const { records, error } = await requestLiveInvoiceRecords();
@@ -141,6 +143,7 @@ export function AdminInvoices({
       setInvoiceRecords([]);
     } finally {
       setIsLoadingInvoices(false);
+      setIsRefreshingInvoices(false);
     }
   };
 
@@ -413,7 +416,7 @@ export function AdminInvoices({
               />
             </div>
             <button type="button" onClick={refreshInvoices} disabled={isLoadingInvoices} aria-label="Refresh live invoices" title="Refresh live invoices" style={{ height: "40px", display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0 0.75rem", borderRadius: "9px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", cursor: isLoadingInvoices ? "wait" : "pointer" }}>
-              <RefreshCw size={14} style={{ animation: isLoadingInvoices ? "spin 1s linear infinite" : "none" }} />
+              <RefreshCw size={14} style={{ animation: isRefreshingInvoices ? "spin 1s linear infinite" : "none" }} />
               Refresh
             </button>
           </div>
