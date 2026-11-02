@@ -95,6 +95,7 @@ const formatInvoiceTime = (value) => {
 
 
 export function AdminInvoices({
+  pastOrders = [],
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
