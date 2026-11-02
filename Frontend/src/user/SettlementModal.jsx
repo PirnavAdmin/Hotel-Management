@@ -17,7 +17,6 @@ import { sounds } from '../utils/audio';
 import { logFormSubmission, logUserAction } from '../utils/logger';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
-import paymentQrImage from '../assets/payment-qr.png';
 
 export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment }) {
   // 'upi' | 'cash'
@@ -28,6 +27,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   const isAllSelectedRef = useRef(false);
   const cashInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingError, setProcessingError] = useState("");
 
   const [currentTheme, setCurrentTheme] = useState(() => {
     return (
@@ -91,10 +91,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         }
       }
     } catch {}
-    return {
-      configuredQrs: [{ id: "default", label: "Main Counter UPI", image: paymentQrImage, active: true }],
-      initialIndex: 0,
-    };
+    return { configuredQrs: [], initialIndex: 0 };
   };
 
   const [qrConfig, setQrConfig] = useState(() => getQrConfig());
@@ -116,6 +113,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
   const configuredQrs = qrConfig.configuredQrs;
   const activeQr = configuredQrs[selectedQrIndex] || configuredQrs[0];
+  const upiUnavailable = paymentMethod === "upi" && !activeQr?.image;
 
   const handleSelectQr = (idx) => {
     setSelectedQrIndex(idx);
@@ -171,15 +169,17 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
   const handleSettle = () => {
     if (hasInvalidItems) return;
+    setProcessingError("");
     setIsProcessing(true);
     sounds.playSuccess();
 
-    setTimeout(() => {
-      onConfirmPayment({
+    setTimeout(async () => {
+      try {
+        const result = await onConfirmPayment({
         tableId: table.id,
         tableName: table.name,
         section: table.section,
-        server: table.server || 'Srija Chepuri',
+        server: table.server || "",
         guests:
           (Number(table.guests) > 0 ? Number(table.guests) : null) ??
           (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
@@ -211,7 +211,19 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         date: getTodayDateString(),
         settledDate: getBusinessDayStart().toISOString().slice(0, 10),
         invoiceNo: getNextInvoiceNumber()
-      });
+        });
+        if (result === false) {
+          setProcessingError("Payment was not completed. Please correct the order and try again.");
+          setIsProcessing(false);
+        } else if (typeof result === "string") {
+          setProcessingError(result);
+          setIsProcessing(false);
+        }
+      } catch (error) {
+        console.error("Payment confirmation failed", error);
+        setProcessingError(error?.message || "Could not reach the server. Check the connection and try again.");
+        setIsProcessing(false);
+      }
     }, 450);
   };
 
@@ -628,8 +640,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderLeft: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 0 4px' }} />
               <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderRight: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 4px 0' }} />
 
-              {/* Real Payment QR */}
-              <div style={{
+              {activeQr?.image ? <div style={{
                 background: 'var(--bg-card)',
                 padding: '6px',
                 borderRadius: '10px',
@@ -639,7 +650,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 boxShadow: isLight ? '0 4px 15px rgba(0,0,0,0.12)' : '0 4px 20px rgba(0,0,0,0.5)'
               }}>
                 <img
-                  src={activeQr?.image || paymentQrImage}
+                  src={activeQr.image}
                   alt={activeQr?.label || "Scan to Pay"}
                   style={{
                     width: '115px',
@@ -649,7 +660,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                     display: 'block'
                   }}
                 />
-              </div>
+              </div> : <div role="status" style={{ width: 115, height: 115, display: 'grid', placeItems: 'center', padding: '8px', boxSizing: 'border-box', border: '1px dashed var(--border-card)', borderRadius: '10px', color: 'var(--text-dim)', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700 }}>No UPI QR configured</div>}
             </div>
 
             {/* Scan & Pay Instructions & Brand Badges */}
@@ -658,7 +669,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Zap size={16} color="var(--accent-amber, #f59e0b)" fill="var(--accent-amber, #f59e0b)" />
                   <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
-                    Scan & Pay
+                    {activeQr?.image ? 'Scan & Pay' : 'UPI payment unavailable'}
                   </span>
                 </div>
                 <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-amber, #f59e0b)' }}>
@@ -669,7 +680,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               {/* Configured QR Label */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-dim, #cbd5e1)', fontWeight: 600 }}>
-                  {activeQr?.label || "UPI / QR to Pay"}
+                  {activeQr?.label || "Add a real UPI QR in Settings to accept UPI payments."}
                 </span>
               </div>
 
@@ -940,12 +951,18 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             <span>Cancel</span>
           </button>
 
+          {processingError && (
+            <div role="alert" style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(248, 113, 113, .45)", background: "rgba(127, 29, 29, .25)", color: "#fecaca", fontSize: 13, lineHeight: 1.45 }}>
+              {processingError}
+            </div>
+          )}
+
           {/* Confirm & Vacate Table Button (Vibrant Orange-Amber Gradient) */}
           <button
             type="button"
             onClick={handleSettle}
-            disabled={hasInvalidItems || isProcessing}
-            title={hasInvalidItems ? "Remove or correct unnamed/invalid items before settling" : "Settle bill"}
+            disabled={hasInvalidItems || isProcessing || upiUnavailable}
+            title={hasInvalidItems ? "Remove or correct unnamed/invalid items before settling" : upiUnavailable ? "Configure a real UPI QR or select Cash" : "Settle bill"}
             style={{
               flex: 2,
               height: '46px',
@@ -959,8 +976,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
-              cursor: isProcessing || hasInvalidItems ? 'not-allowed' : 'pointer',
-              opacity: hasInvalidItems ? 0.55 : 1,
+              cursor: isProcessing || hasInvalidItems || upiUnavailable ? 'not-allowed' : 'pointer',
+              opacity: hasInvalidItems || upiUnavailable ? 0.55 : 1,
               boxShadow: '0 6px 20px rgba(234, 88, 12, 0.4)',
               transition: 'all 0.18s ease'
             }}

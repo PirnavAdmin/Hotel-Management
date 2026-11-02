@@ -51,7 +51,7 @@ import {
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
-import { isBeverageCategory, isDrinkItem } from "../kot/orderRouting";
+import { isDrinkItem, isBeverageCategory } from "../kot/orderRouting";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminInventory } from "./AdminInventory";
@@ -80,7 +80,6 @@ import {
   handleDishImageError,
   getRelevantLocalFallback,
 } from "../utils/menuImageHelper";
-import { isDrinkCategory, isAlcoholicCategory, getDrinkDietaryType } from "../utils/drinkCategoryHelper";
 import { SkeletonTable } from "../common/Skeletons";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
@@ -607,7 +606,6 @@ export function AdminPortal({
 
   const [searchFilter, setSearchFilter] = useState("");
   const emptyMenuFilters = {
-    section: "dine",
     category: "",
     dietary: "",
     availability: "",
@@ -1140,18 +1138,6 @@ export function AdminPortal({
       { value: "breads", label: "Naan & Roti" },
       { value: "desserts", label: "Desserts & Sweets" },
     ];
-    if (menuFilters.section === "bar" || menuFilters.section === "all") {
-      standardCategories.push(
-        { value: "cocktails", label: "Cocktails" },
-        { value: "mocktails", label: "Mocktails" },
-        { value: "beverages", label: "Beverages & Coffee" },
-        { value: "beers", label: "Beers & Ciders" },
-        { value: "whiskey", label: "Whiskey & Scotch" },
-        { value: "vodka-gin", label: "Vodka & Gin" },
-        { value: "rum-brandy", label: "Rum & Brandy" },
-        { value: "wine", label: "Wine & Champagne" }
-      );
-    }
 
     standardCategories.forEach((cat) => {
       map.set(cat.value.toLowerCase(), cat);
@@ -1189,13 +1175,11 @@ export function AdminPortal({
 
     // Add any genuine custom categories from menuItems
     (menuItems || []).forEach((item) => {
-      const isDrink = isDrinkItem(item);
-      if (menuFilters.section === "dine" && isDrink) return;
-      if (menuFilters.section === "bar" && !isDrink) return;
+      if (isDrinkItem(item)) return;
       const cat = item.category || item.categoryName;
       if (!cat || typeof cat !== "string") return;
       const trimmed = cat.trim();
-      if (menuFilters.section === "dine" && isBeverageCategory(trimmed)) return;
+      if (isBeverageCategory(trimmed)) return;
       const lower = trimmed.toLowerCase();
       if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
         const canonicalKey = lower === "curries" ? "mains" : lower;
@@ -1324,10 +1308,6 @@ export function AdminPortal({
 
     if (item) {
       setEditingItem(item);
-      const isDrink = isDrinkCategory(item.category, item);
-      const defaultType = isDrink
-        ? (item.drinkType || (isAlcoholicCategory(item.category, null, item.alcoholPct ?? item.abv) ? "Alcoholic" : "Non-Alcoholic"))
-        : "Alcoholic";
       setItemForm({
         name: item.name,
         category: item.category || "",
@@ -1340,9 +1320,6 @@ export function AdminPortal({
         prepTime: item.prepTime || "12 min",
         description: item.description || "",
         image: item.image || "",
-        drinkType: defaultType,
-        alcoholPct: item.alcoholPct ?? item.abv ?? (defaultType === "Alcoholic" ? 40 : 0),
-        servingMeasure: item.servingMeasure ?? item.measure ?? (defaultType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"),
         recipe: Array.isArray(item.recipe) ? item.recipe.map((r) => ({ ...r })) : [],
       });
     } else {
@@ -1357,9 +1334,6 @@ export function AdminPortal({
         prepTime: "",
         description: "",
         image: "",
-        drinkType: "Alcoholic",
-        alcoholPct: "40",
-        servingMeasure: "30 ml (Single Peg)",
         recipe: [],
       });
     }
@@ -1432,32 +1406,8 @@ export function AdminPortal({
     }
 
     const isSpecialValue = Boolean(itemForm.isChefSpecial);
-    const isDrink = isDrinkCategory(itemForm.category);
-    const drinkType = isDrink
-      ? (itemForm.drinkType || (isAlcoholicCategory(itemForm.category, null, itemForm.alcoholPct) ? "Alcoholic" : "Non-Alcoholic"))
-      : null;
-    const dietaryType = isDrink
-      ? getDrinkDietaryType(drinkType, itemForm.category, itemForm.alcoholPct)
-      : (itemForm.isVeg ? "Veg" : "Non-Veg");
-    const isVeg = isDrink ? (drinkType === "Alcoholic") : Boolean(itemForm.isVeg);
-    const alcoholPct = isDrink
-      ? Number(itemForm.alcoholPct ?? (drinkType === "Alcoholic" ? 40 : 0))
-      : null;
-    const servingMeasure = isDrink
-      ? (itemForm.servingMeasure || (drinkType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"))
-      : null;
-
     const payload = {
       ...itemForm,
-      isBarItem: isDrink,
-      isBarDrink: isDrink,
-      drinkType: drinkType,
-      alcoholPct: alcoholPct,
-      abv: alcoholPct,
-      servingMeasure: servingMeasure,
-      measure: servingMeasure,
-      dietaryType: dietaryType,
-      isVeg: isVeg,
       recipe: mappedRecipe,
       image: itemImage,
       price: Number(itemForm.price) || 0,
@@ -1524,7 +1474,7 @@ export function AdminPortal({
       onAddStaff({
         name: assignedServer,
         role: newServerRole.trim(),
-        phone: "+91 98450 00000",
+        phone: "",
         shift: "",
       });
     }
@@ -1616,7 +1566,7 @@ export function AdminPortal({
           ...editingStaff,
           name: staffForm.name.trim(),
           role: staffForm.role,
-          phone: staffForm.phone || "+91 98450 00000",
+          phone: staffForm.phone,
           shift: staffForm.shift,
         });
       }
@@ -1624,7 +1574,7 @@ export function AdminPortal({
       saved = await onAddStaff({
         name: staffForm.name.trim(),
         role: staffForm.role,
-        phone: staffForm.phone || "+91 98450 00000",
+        phone: staffForm.phone,
         shift: staffForm.shift,
       });
     }
@@ -1662,7 +1612,7 @@ export function AdminPortal({
           await onAddStaff({
             name: uName,
             role: "Floor Staff / POS",
-            phone: u.mobile || u.phone || "+91 98450 00000",
+            phone: u.mobile || u.phone || "",
             shift: "Morning Shift (10 AM - 4 PM)",
           });
         }
@@ -1670,17 +1620,9 @@ export function AdminPortal({
     } catch {}
   };
 
-  // Filtered menu items
+  // Filtered menu items (strictly exclude bar drinks from Dine menu)
   const filteredItems = menuItems.filter((item) => {
-    const isDrink = isDrinkItem(item);
-    if (menuFilters.section === "bar") {
-      if (!isDrink) return false;
-    } else if (menuFilters.section === "all") {
-      // show both
-    } else {
-      // Default: "dine" -> only food/dine items
-      if (isDrink) return false;
-    }
+    if (isDrinkItem(item)) return false;
 
     const query = searchFilter.trim().toLowerCase();
     return (
@@ -1692,9 +1634,7 @@ export function AdminPortal({
       (!menuFilters.category ||
         (String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase() || String(item.category ?? "").toLowerCase().replace(/[-_]/g, "") === menuFilters.category.toLowerCase().replace(/[-_]/g, ""))) &&
       (!menuFilters.dietary ||
-        (menuFilters.dietary === "na"
-          ? isDrinkCategory(item.category, item) || item.dietaryType === "N/A" || item.isVeg === null
-          : !isDrinkCategory(item.category, item) && Boolean(item.isVeg) === (menuFilters.dietary === "veg"))) &&
+        Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
       (!menuFilters.availability ||
         (item.isAvailable !== false) ===
           (menuFilters.availability === "available")) &&
@@ -2055,15 +1995,6 @@ export function AdminPortal({
                       </label>
                       {[
                         {
-                          key: "section",
-                          label: "Section",
-                          options: [
-                            { value: "dine", label: "Dine In (Food)" },
-                            { value: "bar", label: "Bar (Drinks)" },
-                            { value: "all", label: "All Items" },
-                          ],
-                        },
-                        {
                           key: "category",
                           label: "Category",
                           options: allCategoryOptions,
@@ -2074,7 +2005,6 @@ export function AdminPortal({
                           options: [
                             { value: "veg", label: "Veg" },
                             { value: "non-veg", label: "Non-Veg" },
-                            { value: "na", label: "Drinks (N/A)" },
                           ],
                         },
                         {
@@ -2102,7 +2032,7 @@ export function AdminPortal({
                               updateMenuFilter(key, event.target.value)
                             }
                           >
-                            {key !== "section" && <option value="">All</option>}
+                            <option value="">All</option>
                             {options.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
@@ -2269,29 +2199,73 @@ export function AdminPortal({
                                               : "var(--text-dim)",
                                             fontSize: "0.92rem",
                                             lineHeight: 1.3,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
                                           }}
                                         >
-                                          <span>{item.name}</span>
-                                          {Boolean(
-                                            item.isChefSpecial ||
-                                            item.isChefsSpecial ||
-                                            item.isSpecial,
-                                          ) && (
-                                            <Star
-                                              size={14}
-                                              fill="#f59e0b"
-                                              color="#f59e0b"
-                                              title="Chef's Special"
-                                              style={{
-                                                flexShrink: 0,
-                                                filter:
-                                                  "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
-                                              }}
-                                            />
-                                          )}
+                                          {(() => {
+                                            const isSpecial = Boolean(
+                                              item.isChefSpecial ||
+                                              item.isChefsSpecial ||
+                                              item.isSpecial
+                                            );
+                                            if (!isSpecial) {
+                                              return <span>{item.name}</span>;
+                                            }
+                                            const words = String(item.name || "").trim().split(/\s+/);
+                                            if (words.length <= 1) {
+                                              return (
+                                                <span
+                                                  style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    whiteSpace: "nowrap",
+                                                  }}
+                                                >
+                                                  <span>{item.name}</span>
+                                                  <Star
+                                                    size={14}
+                                                    fill="#f59e0b"
+                                                    color="#f59e0b"
+                                                    title="Chef's Special"
+                                                    style={{
+                                                      flexShrink: 0,
+                                                      filter:
+                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                    }}
+                                                  />
+                                                </span>
+                                              );
+                                            }
+                                            const lastWord = words.pop();
+                                            const leadingText = words.join(" ");
+                                            return (
+                                              <span>
+                                                {leadingText}{" "}
+                                                <span
+                                                  style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    whiteSpace: "nowrap",
+                                                    verticalAlign: "middle",
+                                                  }}
+                                                >
+                                                  <span>{lastWord}</span>
+                                                  <Star
+                                                    size={14}
+                                                    fill="#f59e0b"
+                                                    color="#f59e0b"
+                                                    title="Chef's Special"
+                                                    style={{
+                                                      flexShrink: 0,
+                                                      filter:
+                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                    }}
+                                                  />
+                                                </span>
+                                              </span>
+                                            );
+                                          })()}
                                         </div>
                                         <div
                                           style={{
@@ -2324,7 +2298,7 @@ export function AdminPortal({
                                     {item.category.replace("-", " ")}
                                   </td>
                                   <td style={{ padding: "0.6rem 0.85rem" }}>
-                                    {(item.dietaryType?.toUpperCase() === "VEG" || (item.dietaryType?.toUpperCase() !== "NON-VEG" && item.isVeg === true)) ? (
+                                    {item.isVeg ? (
                                       <span
                                         style={{
                                           background: "rgba(16, 185, 129, 0.12)",
@@ -3432,10 +3406,10 @@ export function AdminPortal({
                     <style>{`
                       .staff-filter-toolbar {
                         display: grid;
-                        grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
                         align-items: end;
-                        gap: 10px;
-                        padding: 0.65rem;
+                        gap: 0.5rem;
+                        padding: 0.65rem 0.85rem;
                         margin-bottom: 0.5rem;
                         background: var(--bg-secondary);
                         border-radius: 8px;
@@ -3443,13 +3417,15 @@ export function AdminPortal({
                       .staff-filter-toolbar .menu-filter-field { min-width: 0; }
                       .staff-filter-toolbar .staff-filter-search { flex: initial; }
                       .staff-filter-toolbar .staff-filter-count {
-                        min-width: max-content;
-                        padding: 0 0.25rem 0.6rem;
+                        min-width: 0;
+                        padding: 0 0 0.45rem;
                         color: var(--text-dim);
                         font-size: 0.74rem;
                         font-weight: 600;
                         white-space: nowrap;
-                        text-align: right;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
                       }
                       @media (max-width: 1100px) {
                         .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -3463,7 +3439,7 @@ export function AdminPortal({
                       }
                       .staff-table-grid {
                         display: grid;
-                        grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
                         gap: 0.5rem;
                       }
                       .staff-table-grid > * { min-width: 0; }
@@ -3672,12 +3648,6 @@ export function AdminPortal({
                               </select>
                             </label>
 
-                            {/* Col 3: Phone / Contact (display-only column; filtering behavior unchanged) */}
-                            <label className="menu-filter-field" htmlFor="staff-filter-contact">
-                              <span>Phone / Contact</span>
-                              <input id="staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
-                            </label>
-
                             {/* Col 4: Shift Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-shift">
                               <span>Shift</span>
@@ -3803,10 +3773,9 @@ export function AdminPortal({
                           >
                             <div>Staff Name</div>
                             <div>Role / Designation</div>
-                            <div>Phone / Contact</div>
                             <div>Shift</div>
                             <div>Table Assignment</div>
-                            <div style={{ textAlign: "right" }}>Actions</div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
                           </div>
 
                           {/* Empty State */}
@@ -3956,18 +3925,6 @@ export function AdminPortal({
                                   {personRole}
                                 </div>
 
-                                {/* Col 3: Phone */}
-                                <div
-                                  style={{
-                                    color: "var(--text-muted)",
-                                    fontSize: "0.84rem",
-                                    fontWeight: 500,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {person.phone || "—"}
-                                </div>
-
                                 {/* Col 4: Shift (Full Description without truncation) */}
                                 <div
                                   style={{
@@ -4025,7 +3982,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions (Edit Staff + Delete button matching Image 2) */}
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                                   {/* Edit Staff button */}
                                   <button
                                     type="button"
@@ -5810,166 +5767,88 @@ export function AdminPortal({
               </div>
             </div>
 
-            {/* Dynamic Dietary Type / Drink Type Row */}
-            {isDrinkCategory(itemForm.category) ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "0.85rem",
-                  alignItems: "start",
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "var(--text-main)",
-                      display: "block",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    Drink Type <span style={{ color: "#ea580c" }}>*</span>
-                  </label>
-                  <select
-                    value={itemForm.drinkType || (isAlcoholicCategory(itemForm.category) ? "Alcoholic" : "Non-Alcoholic")}
-                    onChange={(e) => {
-                      const newType = e.target.value;
-                      setItemForm((curr) => ({
-                        ...curr,
-                        drinkType: newType,
-                        isVeg: newType === "Alcoholic",
-                        alcoholPct: newType === "Alcoholic" ? (curr.alcoholPct || 40) : 0,
-                      }));
-                    }}
-                    style={{
-                      width: "100%",
-                      background: "var(--bg-tertiary)",
-                      border: "1.5px solid var(--border-subtle)",
-                      borderRadius: "8px",
-                      padding: "0.65rem 0.85rem",
-                      color: "var(--text-main)",
-                      fontWeight: 600,
-                      fontSize: "0.9rem",
-                      outline: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <option value="Alcoholic">Alcoholic</option>
-                    <option value="Non-Alcoholic">Non-Alcoholic</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "var(--text-main)",
-                      display: "block",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    Dietary Type <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 500 }}>(Auto-assigned)</span>
-                  </label>
-                  {((itemForm.drinkType || (isAlcoholicCategory(itemForm.category) ? "Alcoholic" : "Non-Alcoholic")) === "Alcoholic") ? (
-                    <div style={{ width: "100%", background: "rgba(16, 185, 129, 0.12)", border: "1.5px solid rgba(16, 185, 129, 0.35)", borderRadius: "8px", padding: "0.65rem 0.85rem", color: "var(--success)", fontWeight: 700, fontSize: "0.88rem", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span>Veg 🟢</span>
-                      <span style={{ fontSize: "0.72rem", opacity: 0.85, fontWeight: 500 }}>(Alcoholic = Veg)</span>
-                    </div>
-                  ) : (
-                    <div style={{ width: "100%", background: "rgba(239, 68, 68, 0.12)", border: "1.5px solid rgba(239, 68, 68, 0.35)", borderRadius: "8px", padding: "0.65rem 0.85rem", color: "var(--danger)", fontWeight: 700, fontSize: "0.88rem", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span>Non-Veg 🔴</span>
-                      <span style={{ fontSize: "0.72rem", opacity: 0.85, fontWeight: 500 }}>(Non-Alcoholic = Non-Veg)</span>
-                    </div>
-                  )}
-                </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0.85rem",
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Dietary Type <span style={{ color: "#ea580c" }}>*</span>
+                </label>
+                <select
+                  value={itemForm.isVeg ? "veg" : "non-veg"}
+                  onChange={(e) =>
+                    setItemForm({
+                      ...itemForm,
+                      isVeg: e.target.value === "veg",
+                    })
+                  }
+                  style={{
+                    width: "100%",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.65rem 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="non-veg">Non-Veg 🔴</option>
+                  <option value="veg">Pure Veg 🟢</option>
+                </select>
               </div>
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "0.85rem",
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "var(--text-main)",
-                      display: "block",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    Dietary Type <span style={{ color: "#ea580c" }}>*</span>
-                  </label>
-                  <select
-                    value={itemForm.isVeg ? "veg" : "non-veg"}
-                    onChange={(e) =>
-                      setItemForm({
-                        ...itemForm,
-                        isVeg: e.target.value === "veg",
-                      })
-                    }
-                    style={{
-                      width: "100%",
-                      background: "var(--bg-tertiary)",
-                      border: "1.5px solid var(--border-subtle)",
-                      borderRadius: "8px",
-                      padding: "0.65rem 0.85rem",
-                      color: "var(--text-main)",
-                      fontWeight: 600,
-                      fontSize: "0.9rem",
-                      outline: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <option value="non-veg">Non-Veg 🔴</option>
-                    <option value="veg">Pure Veg 🟢</option>
-                  </select>
-                </div>
 
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "var(--text-main)",
-                      display: "block",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    Spice Level (0 to 3)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="3"
-                    value={itemForm.spiceLevel}
-                    onChange={(e) =>
-                      setItemForm({
-                        ...itemForm,
-                        spiceLevel: Number(e.target.value),
-                      })
-                    }
-                    style={{
-                      width: "100%",
-                      background: "var(--bg-tertiary)",
-                      border: "1.5px solid var(--border-subtle)",
-                      borderRadius: "8px",
-                      padding: "0.65rem 0.85rem",
-                      color: "var(--text-main)",
-                      fontWeight: 600,
-                      fontSize: "0.9rem",
-                      outline: "none",
-                    }}
-                  />
-                </div>
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  Spice Level (0 to 3)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="3"
+                  value={itemForm.spiceLevel}
+                  onChange={(e) =>
+                    setItemForm({
+                      ...itemForm,
+                      spiceLevel: Number(e.target.value),
+                    })
+                  }
+                  style={{
+                    width: "100%",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0.65rem 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    outline: "none",
+                  }}
+                />
               </div>
-            )}
+            </div>
 
             <div>
               <label
@@ -6001,40 +5880,6 @@ export function AdminPortal({
                   fontSize: "0.88rem",
                   outline: "none",
                   resize: "vertical",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Employee ID
-              </label>
-              <input
-                type="text"
-                readOnly
-                value={
-                  editingStaff
-                    ? `EMP-${String(editingStaff.staffId ?? editingStaff.id).padStart(5, "0")}`
-                    : "Assigned automatically on save"
-                }
-                style={{
-                  width: "100%",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
                 }}
               />
             </div>
@@ -6760,10 +6605,9 @@ export function AdminPortal({
                       )
                     ) {
                       onAddStaff({
-                        id: Date.now(),
                         name: newServer,
                         role: "",
-                        phone: "+91 98450 00000",
+                        phone: "",
                         shift: "",
                       });
                     }

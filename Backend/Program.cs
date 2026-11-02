@@ -1,6 +1,8 @@
 using System.Text;
 using HMS.Data;
 using HMS.Services;
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -140,6 +142,7 @@ builder.Services.AddCors(options =>
         {
             policy
                 .SetIsOriginAllowed(origin => true)
+
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()

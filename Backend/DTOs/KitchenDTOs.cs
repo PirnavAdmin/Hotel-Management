@@ -11,6 +11,8 @@ public class KotTicketDto
 
     public long OrderId { get; set; }
 
+    public string OrderType { get; set; } = "DineIn";
+
     public long TableId { get; set; }
 
     public string TableName { get; set; } = string.Empty;

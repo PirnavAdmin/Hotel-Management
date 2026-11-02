@@ -17,26 +17,25 @@ import {
   Utensils,
   Lock,
 } from "lucide-react";
-import defaultPaymentQr from "../assets/payment-qr.png";
 import { UpiOtpVerificationModal } from "../common/UpiOtpVerificationModal";
 import { getUsers } from "../utils/auth";
 
 const DEFAULT_PAYMENT_QRS = [
   {
     id: "qr-1",
-    label: "Main Counter UPI",
-    image: defaultPaymentQr,
-    active: true,
+    label: "QR 1",
+    image: null,
+    active: false,
   },
   {
     id: "qr-2",
-    label: "Counter 2 / Bar UPI",
+    label: "QR 2",
     image: null,
     active: false,
   },
   {
     id: "qr-3",
-    label: "Counter 3 / Takeaway UPI",
+    label: "QR 3",
     image: null,
     active: false,
   },
@@ -54,7 +53,7 @@ const getInitialSettings = (initialSettings) => {
     currency: "₹",
     receiptHeader: "",
     receiptFooter: "",
-    selectedQrId: "qr-1",
+    selectedQrId: "",
     paymentQrs: DEFAULT_PAYMENT_QRS,
     showLogoOnReceipt: true,
     showAddressOnReceipt: true,
@@ -86,7 +85,7 @@ const getInitialSettings = (initialSettings) => {
       source.selectedQrId ||
       qrs.find((q) => q.active && q.image)?.id ||
       qrs.find((q) => q.image)?.id ||
-      "qr-1";
+      "";
 
     qrs = qrs.map((q) => ({
       ...q,
@@ -263,7 +262,7 @@ export function AdminSettings({
           prev.selectedQrId ||
           qrs.find((q) => q.active && q.image)?.id ||
           qrs.find((q) => q.image)?.id ||
-          "qr-1";
+          "";
 
         qrs = qrs.map((q) => ({
           ...q,

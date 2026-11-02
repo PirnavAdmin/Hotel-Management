@@ -15,6 +15,7 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import { TakeawayView } from "./user/TakeawayView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
@@ -67,6 +68,8 @@ import {
   apiCreateOrder,
   apiAddOrderItems,
   apiSendOrderKot,
+  apiCreatePaidTakeawayOrder,
+  apiSendTakeawayOrderToKitchen,
   apiUpdateOrderDiscount,
   apiSettleOrder,
 } from "./api/orderApi";
@@ -537,6 +540,8 @@ export function App() {
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
+  const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -682,9 +687,6 @@ export function App() {
     requestLiveInvoiceRecords().then(({ records }) => {
       if (Array.isArray(records) && records.length > 0) {
         setPastOrders((current) => mergeSettledOrders(current, records));
-        try {
-          localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
-        } catch {}
       }
     }).catch(() => {});
   }, []);
@@ -978,9 +980,6 @@ export function App() {
         const { records: liveInvoices } = await requestLiveInvoiceRecords();
         if (Array.isArray(liveInvoices) && liveInvoices.length > 0 && !isCancelled) {
           setPastOrders((current) => mergeSettledOrders(current, liveInvoices));
-          try {
-            localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(liveInvoices));
-          } catch {}
         }
       } catch {}
 
@@ -1734,11 +1733,13 @@ export function App() {
         (item) => !item.kotSent && !["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase()),
       );
       const isBarItem = (item) => Boolean(
+        isDrinkItem(item, null, barMenuItems) ||
         item.isBarItem ||
         item.isBarDrink ||
         barMenuItems.some((drink) =>
-          String(drink.menuItemId ?? drink.id ?? "") === String(item.menuItemId ?? item.id ?? ""),
-        ),
+          String(drink.menuItemId ?? drink.id ?? "") === String(item.menuItemId ?? item.id ?? "") ||
+          String(drink.name || "").trim().toLowerCase() === String(item.name || "").trim().toLowerCase()
+        )
       );
       const hasKitchenItems = unsentItems.some((item) => !isBarItem(item));
       const hasBarItems = unsentItems.some(isBarItem);
@@ -2261,7 +2262,7 @@ export function App() {
     if (billableItems.length === 0 || hasInvalidItems) {
       showToast("Cannot settle this bill: remove or correct every unnamed/invalid item first.");
       setIsSettlementOpen(false);
-      return;
+      return false;
     }
     settlementData = { ...settlementData, items: billableItems };
     const tableObj = tables.find((t) => t.id === settlementData.tableId);
@@ -2304,6 +2305,51 @@ export function App() {
         `local:${settlementData.tableId}:${tableObj?.orderTimestamp || Date.now()}`,
       ),
     };
+
+    const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
+    if (isTakeawayOrder) {
+      const createResult = await apiCreatePaidTakeawayOrder({
+        orderType: "Takeaway",
+        tableId: null,
+        tableName: "Takeaway",
+        serverName: settlementData.server || posSession?.name || "Server",
+        guests: 1,
+        status: "Settled",
+        paymentMethod: enrichedSettlement.paymentMethod,
+        invoiceNumber: settlementData.invoiceNo,
+        discountPercent: Number(settlementData.discountPercent) || 0,
+        serviceChargeEnabled: false,
+        tipAmount: Number(settlementData.tipAmount) || 0,
+        items: billableItems.map((item) => ({
+          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          notes: item.notes || "",
+        })),
+      });
+      if (!createResult?.success) {
+        const errorMessage = `Payment was not recorded: ${createResult?.error || "The server could not save the takeaway order."}`;
+        showToast(errorMessage);
+        return errorMessage;
+      }
+
+      const backendOrder = createResult.data?.data ?? createResult.data;
+      const backendOrderId = Number(backendOrder?.id ?? backendOrder?.Id) || null;
+      if (!backendOrderId) {
+        const errorMessage = "The server saved the takeaway order but did not return its order number. Please check invoices before retrying.";
+        showToast(errorMessage);
+        return errorMessage;
+      }
+      enrichedSettlement.backendOrderId = backendOrderId;
+      enrichedSettlement.billingSessionId = String(backendOrderId);
+      enrichedSettlement.serverInvoiceNo = backendOrder?.invoiceNo ?? backendOrder?.InvoiceNo ?? settlementData.invoiceNo;
+
+      const kotResult = await apiSendTakeawayOrderToKitchen(backendOrderId);
+      if (!kotResult?.success) {
+        showToast(`Payment saved for takeaway order #${backendOrderId}, but kitchen dispatch failed: ${kotResult?.error || "Please contact the kitchen."}`);
+      }
+    }
 
     // Deduct recipe ingredients once the bill is paid. A ledger prevents
     // repeated settlement/re-render events from deducting the same invoice twice.
@@ -2436,6 +2482,7 @@ export function App() {
     } catch {}
     void (async () => {
       try {
+        if (String(settlementData.tableId) === "TAKEAWAY") return;
         const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
         const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
         const currentResult = await apiGetOrderForTable(backendTableId);
@@ -2550,7 +2597,7 @@ export function App() {
 
     try {
       const targetApiId = tableObj?.backendTableId || tableObj?.id || settlementData.tableId;
-      if (targetApiId) {
+      if (targetApiId && String(settlementData.tableId) !== "TAKEAWAY") {
         apiVacateTable(targetApiId).catch(() => {});
         apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
       }
@@ -2558,7 +2605,8 @@ export function App() {
 
     setIsSettlementOpen(false);
     setSelectedTableId(null);
-    setActiveView("tables");
+    setActiveView(isTakeawayOrder ? "takeaway" : "tables");
+    if (isTakeawayOrder) setTakeawayOrderRefreshToken((current) => current + 1);
     showToast(
       `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
     );
@@ -2584,6 +2632,7 @@ export function App() {
       date: enrichedSettlement.date,
     });
     setIsReceiptOpen(true);
+    return true;
   };
 
   const handleUpdateInvoiceDiscount = async (orderId, discountPercent) => {
@@ -3040,9 +3089,6 @@ export function App() {
               requestLiveInvoiceRecords().then(({ records }) => {
                 if (Array.isArray(records) && records.length > 0) {
                   setPastOrders((current) => mergeSettledOrders(current, records));
-                  try {
-                    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
-                  } catch {}
                 }
               }).catch(() => {});
             }}
@@ -3142,6 +3188,18 @@ export function App() {
                   loading={sharedRecordLoad.tables === "loading" && tables.length === 0}
                   onSelectTable={handleSelectTable}
                   onUpdateTable={handleUpdateTable}
+                />
+              )}
+              {activeView === "takeaway" && (
+                <TakeawayView
+                  menuItems={menuItems}
+                  menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+                  orderPlacedSignal={takeawayOrderRefreshToken}
+                  onCheckout={(items) => {
+                    const orderTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                    setTakeawayCheckoutTable({ id: "TAKEAWAY", name: "Takeaway", section: "Takeaway", server: posSession?.name || "Server", guests: 1, capacity: 1, items, orderTime, discountPercent: 0, serviceCharge: 0 });
+                    setIsSettlementOpen(true);
+                  }}
                 />
               )}
               {activeView === "order" && (
@@ -3455,7 +3513,7 @@ export function App() {
       {/* Settlement Checkout Modal */}
       {isSettlementOpen && (
         <SettlementModal
-          table={currentTable}
+          table={activeView === "takeaway" ? takeawayCheckoutTable : currentTable}
           menuItems={menuItems}
           onClose={() => setIsSettlementOpen(false)}
           onConfirmPayment={handleConfirmPayment}
@@ -3491,9 +3549,6 @@ export function App() {
           onRefresh={async (records) => {
             if (Array.isArray(records) && records.length > 0) {
               setPastOrders((current) => mergeSettledOrders(current, records));
-              try {
-                localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
-              } catch {}
             }
           }}
           onReprintReceipt={(order) => {

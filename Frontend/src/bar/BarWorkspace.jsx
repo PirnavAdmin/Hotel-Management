@@ -48,18 +48,13 @@ import {
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { isDrinkCategory, isAlcoholicCategory, getDrinkDietaryType } from "../utils/drinkCategoryHelper";
 
 
 const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
 const BAR_ROLES = ["Bartender", "Head Bartender", "Bar Manager", "Bar Waiter", "Bar Server", "Mixologist", "Bar Assistant"];
 const BAR_SHIFTS = ["Morning (10 AM-4 PM)", "Evening (4 PM-10 PM)", "Night (6 PM-Close)"];
-const SETTINGS_DEFAULTS = {
-  barName: "Telugu Taste Bar", contact: "+91 80 4567 8900", area: "Ground Floor • East Wing",
-  opening: "10:00", closing: "23:30", prepTime: 8, kotPrefix: "BKOT", autoPrint: false,
-  allowCancellation: true, currency: "INR (₹)", tax: 5, service: 5,
-  lowStock: 6, stockTracking: true, stockUnit: "Bottle",
-};
 const ACCESS_ROLES = ["Bar Manager", "Head Bartender", "Bartender", "Bar Server", "Bar Cashier"];
 const ACCESS_PAGES = ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar Staff", "Bar KOT", "Inventory", "Orders", "Reports", "Settings"];
 const ACCESS_DEFAULTS = Object.fromEntries(ACCESS_ROLES.map((role, index) => [role, Object.fromEntries(ACCESS_PAGES.map((page) => [page, index === 0 || (index === 1 && page !== "Settings") || (index === 2 && ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar KOT"].includes(page)) || (index === 3 && ["Bar Overview", "Bar Tables", "Bar KOT"].includes(page)) || (index === 4 && ["Bar Overview", "Orders"].includes(page))]))]));
@@ -5944,19 +5939,6 @@ function BarTablesView({
                 onSaveCustomOption={(newServer) => {
                   if (newServer && newServer !== "__add_new__") {
                     setTableForm({ ...tableForm, server: newServer });
-                    if (
-                      !staffList.some(
-                        (s) => (s.name || s.fullName || "").toLowerCase() === newServer.toLowerCase()
-                      )
-                    ) {
-                      onAddStaff?.({
-                        id: Date.now(),
-                        name: newServer,
-                        role: "",
-                        phone: "+91 98450 00000",
-                        shift: "",
-                      });
-                    }
                   }
                 }}
               />
@@ -6328,7 +6310,7 @@ function BarStaffView({
       role: staffForm.role,
       jobTitle: staffForm.role,
       roleTitle: staffForm.role,
-      phone: staffForm.phone || "+91 98450 00000",
+      phone: staffForm.phone,
       shift: staffForm.shift,
       assignedTableIds: staffForm.assignedTableIds || [],
     };
@@ -6385,10 +6367,10 @@ function BarStaffView({
       <style>{`
         .staff-filter-toolbar {
           display: grid;
-          grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
           align-items: end;
-          gap: 10px;
-          padding: 0.65rem;
+          gap: 0.5rem;
+          padding: 0.65rem 0.85rem;
           margin-bottom: 0.5rem;
           background: var(--bg-secondary);
           border-radius: 8px;
@@ -6396,13 +6378,15 @@ function BarStaffView({
         .staff-filter-toolbar .menu-filter-field { min-width: 0; }
         .staff-filter-toolbar .staff-filter-search { flex: initial; }
         .staff-filter-toolbar .staff-filter-count {
-          min-width: max-content;
-          padding: 0 0.25rem 0.6rem;
+          min-width: 0;
+          padding: 0 0 0.45rem;
           color: var(--text-dim);
           font-size: 0.74rem;
           font-weight: 600;
           white-space: nowrap;
-          text-align: right;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         @media (max-width: 1100px) {
           .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -6416,7 +6400,7 @@ function BarStaffView({
         }
         .staff-table-grid {
           display: grid;
-          grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
           gap: 0.5rem;
         }
         .staff-table-grid > * { min-width: 0; }
@@ -6629,12 +6613,6 @@ function BarStaffView({
                 </select>
               </label>
 
-              {/* Col 3: Phone / Contact */}
-              <label className="menu-filter-field" htmlFor="bar-staff-filter-contact">
-                <span>Phone / Contact</span>
-                <input id="bar-staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
-              </label>
-
               {/* Col 4: Shift Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-shift">
                 <span>Shift</span>
@@ -6760,10 +6738,9 @@ function BarStaffView({
             >
               <div>Staff Name</div>
               <div>Role / Designation</div>
-              <div>Phone / Contact</div>
               <div>Shift</div>
               <div>Table Assignment</div>
-              <div style={{ textAlign: "right" }}>Actions</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
             </div>
 
             {/* Empty State */}
@@ -6922,18 +6899,6 @@ function BarStaffView({
                     {personRole}
                   </div>
 
-                  {/* Col 3: Phone */}
-                  <div
-                    style={{
-                      color: "var(--text-muted)",
-                      fontSize: "0.84rem",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {person.phone || "—"}
-                  </div>
-
                   {/* Col 4: Shift */}
                   <div
                     style={{
@@ -6991,7 +6956,7 @@ function BarStaffView({
                   </div>
 
                   {/* Col 6: Actions */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                     <button
                       type="button"
                       onClick={() => handleOpenStaffModal(person)}
@@ -7202,41 +7167,6 @@ function BarStaffView({
                   marginBottom: "5px",
                 }}
               >
-                Contact Phone
-              </label>
-              <input
-                type="text"
-                placeholder="+91 98450 12345"
-                value={staffForm.phone}
-                onChange={(e) =>
-                  setStaffForm({ ...staffForm, phone: e.target.value })
-                }
-                style={{
-                  width: "100%",
-                  height: "38px",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
                 Shift
               </label>
               <CustomCreatableDropdown
@@ -7428,8 +7358,6 @@ export function BarWorkspace({
   const [orderServing, setOrderServing] = useState("");
   const [orderIce, setOrderIce] = useState("");
   const [orderMixer, setOrderMixer] = useState("");
-  const [settings, setSettings] = useState(SETTINGS_DEFAULTS);
-  const [savedSettings, setSavedSettings] = useState(SETTINGS_DEFAULTS);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [extraFilter, setExtraFilter] = useState("all");
@@ -7698,18 +7626,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
       }
     } catch (err) {
       console.error("[BarWorkspace] apiCreateBarStaff error:", err);
-      const fallback = {
-        ...newStaff,
-        id: Date.now(),
-        staffId: Date.now(),
-        fullName: newStaff.name,
-        jobTitle: newStaff.role,
-        roleTitle: newStaff.role,
-        isActive: true,
-        status: "active",
-      };
-      setBarStaff((prev) => [fallback, ...prev]);
-      return fallback;
+      return false;
     }
   };
 
@@ -8189,7 +8106,10 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
     }
     if (kind === "table" && !(await saveSharedTable(values, item))) return false;
     if (kind === "staff" && !(await saveSharedStaff(values, item))) return false;
-    if (kind === "order") setOrders((rows) => [{ ...saved, time: "Just now", discount: 0, gst: Number(saved.subtotal) * 0.05, service: Number(saved.subtotal) * 0.05, total: Number(saved.subtotal) * 1.1, payment: "Pending", status: "Pending" }, ...rows]);
+    if (kind === "order") {
+      setToast("Orders must be created through New Bar Order so they are saved to the API.");
+      return false;
+    }
     setPage(1);
     if (kind === "drink") setToast(`${saved.name} ${item ? "updated" : "added"} in the shared menu.`);
     setModal(null);
@@ -8358,7 +8278,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
   const listConfig = {
     "bar-drinks": { title: "Drinks Menu", description: "Beverage items from the shared restaurant menu.", rows: drinks, kind: "drink", columns: ["Drink Name", "Category", "Serving / Measure", "Price", "Availability", "Actions"] },
     "bar-tables": { title: "Bar Tables", description: "The shared hotel table records and complete food-and-drink orders.", rows: tables, kind: "table", columns: ["Table #", "Area", "Chairs / Capacity", "Assigned Server", "Status", "Guests", "Current Order", "Order Amount", "Actions"] },
-    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Phone / Contact", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
+    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
 
   const filterChoices = route === "bar-drinks" ? ["all", ...new Set([...BAR_CATEGORIES, ...drinks.map((drink) => drink.category).filter(Boolean)])] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
@@ -9336,7 +9256,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
         />
       )}
 
-      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
+      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} preferPastOrders restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 

@@ -34,7 +34,11 @@ public class KitchenController : ControllerBase
                 (o.Status == "Active" ||
                  o.Status == "active" ||
                  o.Status == "Billed" ||
-                 o.Status == "billed"))
+                 o.Status == "billed" ||
+                 (o.OrderType == "Takeaway" && o.Status == "Settled" &&
+                  o.Items.Any(i => i.KotStatus == "Queued" || i.KotStatus == "queued" ||
+                                   i.KotStatus == "Cooking" || i.KotStatus == "cooking" ||
+                                   i.KotStatus == "Ready" || i.KotStatus == "ready"))))
             .ToListAsync();
 
         var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
@@ -80,11 +84,13 @@ public class KitchenController : ControllerBase
 
                     OrderId = order.Id,
 
+                    OrderType = order.OrderType,
+
                     TableId = order.TableId ?? 0,
 
-                    TableName = order.TableName,
+                    TableName = order.OrderType == "Takeaway" ? "Takeaway" : order.TableName,
 
-                    Section = order.Section,
+                    Section = order.OrderType == "Takeaway" ? "Takeaway" : order.Section,
 
                     ServerName = order.ServerName,
 

@@ -1867,9 +1867,10 @@ export function TableDetailView({
   };
 
   const isBarMenuItem = (item) => Boolean(
+    isDrinkItem(item, null, barMenuItems) ||
     item?.isBarItem ||
     item?.isBarDrink ||
-    barMenuItemIds.has(String(item?.menuItemId ?? item?.id ?? "")),
+    barMenuItemIds.has(String(item?.menuItemId ?? item?.id ?? ""))
   );
   const hasUnsentItems = safeItems.length > 0 && safeItems.some((i) => !isItemSentToKot(i));
   const hasUnsentKitchenItems = safeItems.some((item) => !isBarMenuItem(item) && !isItemSentToKot(item));

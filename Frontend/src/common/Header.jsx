@@ -53,6 +53,7 @@ export function Header({
   const isAdminRoute = location.pathname === "/admin";
 
   const [time, setTime] = useState(new Date());
+  const [serviceMode, setServiceMode] = useState("dine-in");
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const notifRef = useRef(null);
@@ -262,8 +263,9 @@ export function Header({
           }}
         >
           <button
-            className={isUserRoute ? "primary-action-button" : undefined}
+            className={isUserRoute && serviceMode === "dine-in" ? "primary-action-button" : undefined}
             onClick={() => {
+              setServiceMode("dine-in");
               setActiveView("tables");
               navigate("/");
             }}
@@ -274,9 +276,9 @@ export function Header({
               padding: "0.45rem 0.85rem",
               borderRadius: "var(--radius-sm)",
               fontSize: "0.82rem",
-              fontWeight: isUserRoute ? 800 : 600,
-              background: isUserRoute ? "var(--accent-amber)" : "transparent",
-              color: isUserRoute ? "#000000" : "var(--text-muted)",
+              fontWeight: isUserRoute && serviceMode === "dine-in" ? 800 : 600,
+              background: isUserRoute && serviceMode === "dine-in" ? "var(--accent-amber)" : "transparent",
+              color: isUserRoute && serviceMode === "dine-in" ? "#000000" : "var(--text-muted)",
               border: "none",
               cursor: "pointer",
               transition: "all 0.15s ease",
@@ -284,12 +286,43 @@ export function Header({
             title="User Dining Floor & Table Billing (Route: /)"
           >
             <LayoutGrid size={15} />
-            <span>User POS ({tables.length})</span>
+            <span>Dine In</span>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={serviceMode === "takeaway" && isUserRoute}
+            onClick={() => {
+              setServiceMode("takeaway");
+              setActiveView("takeaway");
+              navigate("/");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.45rem 0.85rem",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "0.82rem",
+              fontWeight: isUserRoute && serviceMode === "takeaway" ? 800 : 600,
+              background: isUserRoute && serviceMode === "takeaway" ? "var(--accent-amber)" : "transparent",
+              color: isUserRoute && serviceMode === "takeaway" ? "#000000" : "var(--text-muted)",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="Switch to takeaway orders"
+          >
+            <UtensilsCrossed size={15} />
+            <span>Takeaway</span>
           </button>
 
           {/* Invoices History Button */}
           <button
-            onClick={onOpenPastOrders}
+            onClick={() => {
+              setServiceMode("dine-in");
+              onOpenPastOrders();
+            }}
             style={{
               display: "flex",
               alignItems: "center",

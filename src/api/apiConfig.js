@@ -1,6 +1,11 @@
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "https://chapter-catnip-evaluator.ngrok-free.dev";
+
+// In Vite development, point every LAN client at the API on the same host
+// serving the frontend, instead of allowing separate .env tunnel URLs to split data.
 export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
   ""
+
 ).trim().replace(/\/$/, "");
 
 // The Vite dev server provides its own same-origin SSE endpoint for local
@@ -32,6 +37,7 @@ const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
+  const { remoteOnly = false, ...requestOptions } = options;
 
   try {
     const token =
@@ -46,14 +52,14 @@ async function performApiRequest(endpoint, options = {}) {
     };
 
     const config = {
-      ...options,
+      ...requestOptions,
       headers,
     };
 
     let res;
     try {
       res = await fetch(url, config);
-      if (API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+      if (!remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
         try {
           const localRes = await fetch(endpoint, config);
           if (localRes.ok) {
@@ -62,7 +68,7 @@ async function performApiRequest(endpoint, options = {}) {
         } catch {}
       }
     } catch (fetchErr) {
-      if (API_BASE_URL) {
+      if (API_BASE_URL && !remoteOnly) {
         console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
         res = await fetch(endpoint, config);
       } else {

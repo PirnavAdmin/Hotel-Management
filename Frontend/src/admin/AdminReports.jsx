@@ -28,14 +28,8 @@ Smartphone,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { printSurface } from "../utils/printSurface";
-import { apiGetOrderHistory } from "../api/orderApi";
-import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetInventory } from "../api/inventoryApi";
-import {
-  extractInvoiceRecords,
-  extractSettledOrderRecords,
-  mergeLiveInvoiceRecords,
-} from "../utils/liveInvoiceData";
+import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
@@ -90,19 +84,12 @@ const normalizeInventoryList = (items) => {
 };
 
 async function requestLiveReportData() {
-  const [invoiceResponse, orderResponse, inventoryResponse] = await Promise.all([
-    apiGetInvoices(),
-    apiGetOrderHistory(),
+  const [invoiceResult, inventoryResponse] = await Promise.all([
+    requestLiveInvoiceRecords(),
     apiGetInventory(),
   ]);
-  const invoiceRows = extractInvoiceRecords(invoiceResponse);
-  const orderRows = extractSettledOrderRecords(orderResponse);
-  if (invoiceRows === null && orderRows === null) {
-    throw new Error(
-      invoiceResponse?.error ||
-        orderResponse?.error ||
-        "Live invoice and settled-order records could not be loaded.",
-    );
+  if (invoiceResult.error && invoiceResult.records.length === 0) {
+    throw new Error(invoiceResult.error);
   }
 
   const inventoryPayload = inventoryResponse?.data ?? inventoryResponse;
@@ -115,12 +102,8 @@ async function requestLiveReportData() {
         : [];
 
   return {
-    records: mergeLiveInvoiceRecords(invoiceRows || [], orderRows || []),
-    invoiceError: invoiceRows === null
-      ? `Invoice records could not be loaded (${invoiceResponse?.error || "server unavailable"}). Showing live settled POS orders instead.`
-      : orderRows === null
-        ? `Settled order details could not be loaded (${orderResponse?.error || "server unavailable"}). Some invoice details may be incomplete.`
-        : "",
+    records: invoiceResult.records,
+    invoiceError: invoiceResult.error,
     inventory: normalizeInventoryList(inventoryRows),
   };
 }
@@ -328,9 +311,9 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
   }, []);
 
   const ordersData = useMemo(() => {
-    const sourceList = Array.isArray(invoicesData) && invoicesData.length > 0
+    const sourceList = Array.isArray(invoicesData)
       ? invoicesData
-      : (Array.isArray(pastOrders) && pastOrders.length > 0 ? pastOrders : []);
+      : (Array.isArray(pastOrders) ? pastOrders : []);
     const sorted = sortOrdersBySettlementTime(dedupeOrders(sourceList));
     if (!isBarMode) return sorted;
     return sorted.filter(isBarOrder);
@@ -443,7 +426,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
 
   const totalRevenue = filteredOrders.reduce((sum, order) => {
     const grandTotal = Number(
-      order.paidAmount ?? order.grandTotal ?? order.totalAmount ?? order.finalTotal ?? order.amount ?? order.total ?? 0,
+      order.grandTotal ?? order.totalAmount ?? order.finalTotal ?? order.amount ?? order.total ?? 0,
     ) || 0;
     return sum + Math.max(0, grandTotal);
   }, 0);

@@ -27,6 +27,7 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
+import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
 
@@ -42,6 +43,7 @@ export function AdminOverview({
   onOpenItemModal,
   sharedRecordLoad = { tables: "ready", staff: "ready" },
 }) {
+  const [salesRange, setSalesRange] = useState(7);
   // Dynamically load orders from localStorage or props with deduplication
   const [ordersList, setOrdersList] = useState(() => {
     try {
@@ -53,6 +55,13 @@ export function AdminOverview({
     } catch {}
     return Array.isArray(pastOrders) && pastOrders.length > 0 ? dedupeOrders(pastOrders) : [];
   });
+  useEffect(() => {
+    let active = true;
+    requestLiveInvoiceRecords().then(({ records }) => {
+      if (active && records.length > 0) setOrdersList(dedupeOrders(records));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // Track inventory items and low stock
   const [inventoryList, setInventoryList] = useState(() => {
@@ -64,7 +73,9 @@ export function AdminOverview({
   });
 
   useEffect(() => {
-    setOrdersList(dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []));
+    if (Array.isArray(pastOrders) && pastOrders.length > 0) {
+      setOrdersList(dedupeOrders(pastOrders));
+    }
   }, [pastOrders]);
 
   useEffect(() => {
@@ -150,6 +161,36 @@ export function AdminOverview({
   );
 
   const averageOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
+  const salesSeries = Array.from({ length: salesRange }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (salesRange - 1 - index));
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const dayOrders = cleanOrders.filter((order) => parseOrderToYMD(order) === key);
+    return {
+      key,
+      label: salesRange === 7
+        ? date.toLocaleDateString("en-IN", { weekday: "short" })
+        : salesRange === 15 || index % 5 === 0 || index === salesRange - 1
+          ? String(date.getDate())
+          : "",
+      accessibleDate: date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+      revenue: dayOrders.reduce((sum, order) => sum + (Number(order.grandTotal ?? order.total) || 0), 0),
+      count: dayOrders.length,
+    };
+  });
+  const periodRevenue = salesSeries.reduce((sum, day) => sum + day.revenue, 0);
+  const periodOrderCount = salesSeries.reduce((sum, day) => sum + day.count, 0);
+  const maxPeriodRevenue = Math.max(1, ...salesSeries.map((day) => day.revenue));
+  const previousPeriodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (salesRange * 2 - 1));
+  const previousPeriodStartKey = `${previousPeriodStart.getFullYear()}-${String(previousPeriodStart.getMonth() + 1).padStart(2, "0")}-${String(previousPeriodStart.getDate()).padStart(2, "0")}`;
+  const previousPeriodRevenue = cleanOrders.reduce((sum, order) => {
+    const orderDate = parseOrderToYMD(order);
+    return orderDate >= previousPeriodStartKey && orderDate < salesSeries[0].key
+      ? sum + (Number(order.grandTotal ?? order.total) || 0)
+      : sum;
+  }, 0);
+  const periodChangePercent = previousPeriodRevenue > 0
+    ? ((periodRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100
+    : null;
 
   if (
     (sharedRecordLoad.tables === "loading" && tables.length === 0) ||
@@ -160,8 +201,14 @@ export function AdminOverview({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <style>{`
+        @media (max-width: 1180px) { .admin-overview-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
+        @media (max-width: 820px) { .admin-overview-sales { grid-template-columns: minmax(0, 1fr) !important; } .admin-overview-week-summary { border-left: 0 !important; border-top: 1px solid var(--border-subtle); padding: .75rem 0 0 !important; } }
+        @media (max-width: 560px) { .admin-overview-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+      `}</style>
       {/* 1. Overview Header Banner */}
       <div
+        className="admin-overview-kpis"
         style={{
           background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)",
           border: "1px solid rgba(245, 158, 11, 0.25)",
@@ -650,6 +697,63 @@ export function AdminOverview({
           </div>
         </div>
       </div>
+
+      {/* 2.5 Sales trend */}
+      <section
+        className="admin-overview-sales"
+        aria-label={`${salesRange} day sales performance`}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.7fr) minmax(220px, 0.8fr)",
+          gap: "1rem",
+          alignItems: "stretch",
+          padding: "1rem 1.1rem",
+          border: "1px solid var(--border-card)",
+          borderRadius: "12px",
+          background: "var(--bg-card)",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: ".75rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
+            <div>
+              <h3 style={{ margin: 0, color: "var(--text-main)", fontSize: ".95rem", fontWeight: 800 }}>Sales performance</h3>
+              <p style={{ margin: ".2rem 0 0", color: "var(--text-muted)", fontSize: ".72rem" }}>Settled revenue for the last {salesRange} days</p>
+            </div>
+            <div role="radiogroup" aria-label="Sales chart date range" style={{ display: "flex", alignItems: "center", gap: ".15rem", padding: ".2rem", borderRadius: 9, border: "1px solid var(--border-card)", background: "var(--bg-primary)" }}>
+              {[7, 15, 30].map((range) => <button key={range} type="button" role="radio" aria-checked={salesRange === range} onClick={() => setSalesRange(range)} style={{ minWidth: 42, padding: ".3rem .5rem", border: 0, borderRadius: 7, background: salesRange === range ? "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))" : "transparent", color: salesRange === range ? "var(--text-on-accent)" : "var(--text-muted)", fontSize: ".66rem", fontWeight: 800, cursor: "pointer" }}>{range}D</button>)}
+            </div>
+          </div>
+          <div style={{ height: 132, display: "grid", gridTemplateColumns: `repeat(${salesRange}, minmax(0,1fr))`, alignItems: "end", gap: salesRange === 30 ? ".15rem" : salesRange === 15 ? ".35rem" : ".6rem", padding: ".2rem .1rem 0", borderBottom: "1px solid var(--border-card)" }}>
+            {salesSeries.map((day, index) => {
+              const barHeight = day.revenue > 0 ? Math.max(8, (day.revenue / maxPeriodRevenue) * 72) : 4;
+              const compactAmount = day.revenue > 0
+                ? `₹${new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 }).format(day.revenue)}`
+                : "₹0";
+              const showAmount = salesRange !== 30 || index % 5 === 0 || day.revenue === maxPeriodRevenue;
+              return (
+                <div key={day.key} title={`${day.accessibleDate}: ${formatCurrency(day.revenue)} · ${day.count} bills`} style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: ".3rem", minWidth: 0 }}>
+                  <span style={{ minHeight: ".7rem", color: "var(--text-main)", fontSize: salesRange === 30 ? ".5rem" : ".62rem", lineHeight: 1, fontWeight: 700, whiteSpace: "nowrap" }}>{showAmount ? compactAmount : ""}</span>
+                  <span style={{ width: salesRange === 30 ? "min(100%, 16px)" : "min(100%, 34px)", height: `${barHeight}px`, minHeight: 4, borderRadius: "6px 6px 2px 2px", background: day.revenue > 0 ? "linear-gradient(180deg, var(--accent-amber-light), var(--accent-saffron))" : "var(--bg-tertiary)", boxShadow: day.revenue > 0 ? "0 3px 10px var(--accent-amber-glow)" : "none", transition: "height .2s ease" }} />
+                  <span style={{ minHeight: ".7rem", color: "var(--text-main)", fontSize: salesRange === 30 ? ".52rem" : ".65rem", fontWeight: 600, paddingBottom: ".3rem" }}>{day.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="admin-overview-week-summary" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: ".8rem", padding: ".2rem .25rem .2rem .9rem", borderLeft: "1px solid var(--border-subtle)" }}>
+          <div><div style={{ color: "var(--text-muted)", fontSize: ".7rem", fontWeight: 700 }}>{salesRange} DAY REVENUE</div><strong style={{ display: "block", marginTop: ".2rem", color: "var(--accent-amber)", fontSize: "1.3rem", lineHeight: 1.15 }}>{formatCurrency(periodRevenue)}</strong></div>
+          <div style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
+            <div><div style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>Bills</div><strong style={{ color: "var(--text-main)", fontSize: ".9rem" }}>{periodOrderCount}</strong></div>
+            <div><div style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>Daily average</div><strong style={{ color: "var(--text-main)", fontSize: ".9rem" }}>{formatCurrency(periodRevenue / salesRange)}</strong></div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", paddingTop: ".55rem", borderTop: "1px solid var(--border-card)" }}>
+            <span style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>vs previous {salesRange} days</span>
+            <strong style={{ color: periodChangePercent === null ? "var(--text-muted)" : periodChangePercent >= 0 ? "var(--success)" : "var(--danger)", fontSize: ".75rem" }}>
+              {periodChangePercent === null ? "No prior data" : `${periodChangePercent >= 0 ? "+" : ""}${periodChangePercent.toFixed(1)}%`}
+            </strong>
+          </div>
+        </div>
+      </section>
 
       {/* 3. Two Column Grid: Floor Tables Monitor & Signature Dishes */}
       <div

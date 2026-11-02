@@ -54,6 +54,15 @@ const localWeekEndValue = (date = new Date()) => {
 };
 
 const invoiceDateKey = (order) => parseOrderToYMD(order);
+const invoicePaidAmount = (order) => {
+  if (Array.isArray(order?.payments) && order.payments.length > 0) {
+    return order.payments.reduce(
+      (sum, payment) => sum + (Number(payment.amount ?? payment.Amount) || 0),
+      0,
+    );
+  }
+  return Number(order?.paidAmount ?? order?.amountPaid ?? order?.AmountPaid ?? order?.grandTotal ?? 0) || 0;
+};
 
 const invoiceDisplayDate = (order) => {
   const dateKey = invoiceDateKey(order);
@@ -95,6 +104,8 @@ const formatInvoiceTime = (value) => {
 
 
 export function AdminInvoices({
+  pastOrders = [],
+  preferPastOrders = false,
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
@@ -184,7 +195,14 @@ export function AdminInvoices({
     };
   }, []);
 
-  const allOrders = invoiceRecords;
+  // Include locally synchronized POS settlements alongside live API invoices.
+  // Takeaway checkouts are saved to the shared POS invoice history and may not
+  // have a table-backed API order record, so choosing only API data hid them here.
+  const allOrders = dedupeOrders(
+    preferPastOrders || invoiceLoadError
+      ? pastOrders
+      : [...pastOrders, ...invoiceRecords],
+  );
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);
@@ -257,6 +275,8 @@ export function AdminInvoices({
     pageStart + itemsPerPage,
   );
 
+  const getInvoiceTotal = (order) =>
+    Number(order.grandTotal ?? order.total ?? order.totalAmount ?? order.paidAmount ?? 0) || 0;
   const totalCollected = filteredOrders.reduce(
     (sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
     0,
@@ -1158,7 +1178,7 @@ export function AdminInvoices({
                         fontSize: "0.95rem",
                       }}
                     >
-                      {formatCurrency(order.grandTotal)}
+                      {formatCurrency(order.grandTotal ?? order.totalAmount ?? order.total ?? 0)}
                     </td>
 
                     {/* Action */}

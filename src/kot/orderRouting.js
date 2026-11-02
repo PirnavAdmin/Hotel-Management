@@ -40,20 +40,34 @@ export function isBeverageCategory(category) {
 export function createMenuItemLookup(menuItems = []) {
   const lookup = new Map();
   menuItems.forEach((item) => {
-    const id = item.id ?? item.menuItemId ?? item.menu_item_id;
-    if (id == null) return;
-    lookup.set(String(id), item);
-    const numericId = String(id).replace(/\D/g, "");
-    if (numericId) lookup.set(numericId, item);
+    const id = item.id ?? item.menuItemId ?? item.menu_item_id ?? item.backendId;
+    if (id != null) {
+      lookup.set(String(id), item);
+      const numericId = String(id).replace(/\D/g, "");
+      if (numericId) lookup.set(numericId, item);
+    }
+    const name = String(item.name || item.dishName || "").trim().toLowerCase();
+    if (name) {
+      lookup.set(`name:${name}`, item);
+    }
   });
   return lookup;
 }
 
 export function findMenuItem(lookup, item) {
-  const id = item?.menuItemId ?? item?.menu_item_id;
-  if (id == null) return null;
-  const key = String(id);
-  return lookup.get(key) ?? lookup.get(key.replace(/\D/g, "")) ?? null;
+  if (!lookup || !item) return null;
+  const id = item?.menuItemId ?? item?.menu_item_id ?? item?.id ?? item?.backendId;
+  if (id != null) {
+    const key = String(id);
+    const foundById = lookup.get(key) ?? lookup.get(key.replace(/\D/g, ""));
+    if (foundById) return foundById;
+  }
+  const name = String(item?.name || item?.dishName || "").trim().toLowerCase();
+  if (name) {
+    const foundByName = lookup.get(`name:${name}`);
+    if (foundByName) return foundByName;
+  }
+  return null;
 }
 
 const DRINK_NAME_REGEX = /\b(?:virgin\s+)?(?:mojito|margarita|martini|cocktail|mocktail|beer|whisky|whiskey|scotch|bourbon|vodka|rum|gin|brandy|cognac|tequila|mezcal|wine|champagne|sangria|cider|breezer|shooter|shot|liqueur|soda|tonic)\b/i;

@@ -5,6 +5,11 @@ namespace HMS.DTOs;
 
 public class CreateOrderRequest
 {
+    public string? OrderType { get; set; }
+
+    [MaxLength(50)]
+    public string? InvoiceNumber { get; set; }
+
     [JsonConverter(typeof(FlexibleNullableLongConverter))]
     public long? TableId { get; set; }
 
@@ -24,11 +29,9 @@ public class CreateOrderRequest
     public string? Server { get; set; }
 
     public int Guests { get; set; } = 1;
-    public string? OrderType { get; set; }
     public bool IsTakeaway { get; set; }
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
-    public string? InvoiceNumber { get; set; }
     public string? IdempotencyKey { get; set; }
 
     public List<OrderItemInput> Items { get; set; } = new();
@@ -109,6 +112,8 @@ public class OrderDto
 {
     public long Id { get; set; }
 
+    public string OrderType { get; set; } = "DineIn";
+
     public long TableId { get; set; }
 
     public string TableName { get; set; } = string.Empty;
@@ -143,7 +148,6 @@ public class OrderDto
 
     public string? InvoiceNo { get; set; }
     public long? InvoiceId { get; set; }
-    public string? OrderType { get; set; }
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
     public string? KitchenKotNumber { get; set; }
@@ -160,6 +164,8 @@ public class OrderItemDto
 {
     public long Id { get; set; }
 
+    public long? KotId { get; set; }
+
     public long OrderId { get; set; }
 
     public long MenuItemId { get; set; }
@@ -175,7 +181,6 @@ public class OrderItemDto
     public string KotStatus { get; set; } = "Queued";
 
     public int KotBatch { get; set; }
-    public long? KotId { get; set; }
     public long? BotId { get; set; }
     public bool IsBarItem { get; set; }
     public string? Department { get; set; }
