@@ -1545,7 +1545,7 @@ function globalSyncPlugin() {
                   ...it,
                   id: it.id ?? idx + 1,
                   dishName: it.name,
-                  category: it.category || "Beverage",
+                  category: it.category || (/\b(?:vodka|rum|whisky|whiskey|gin|beer|wine|brandy|cocktail|mocktail|soda|beverage|drink|liqueur|tequila)\b/i.test(it.name || "") ? "Beverages" : "Main Course"),
                   kotStatus: it.kotStatus || "Queued",
                 })),
               });

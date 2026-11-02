@@ -1677,11 +1677,13 @@ export function App() {
         (item) => !item.kotSent && !["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase()),
       );
       const isBarItem = (item) => Boolean(
+        isDrinkItem(item, null, barMenuItems) ||
         item.isBarItem ||
         item.isBarDrink ||
         barMenuItems.some((drink) =>
-          String(drink.menuItemId ?? drink.id ?? "") === String(item.menuItemId ?? item.id ?? ""),
-        ),
+          String(drink.menuItemId ?? drink.id ?? "") === String(item.menuItemId ?? item.id ?? "") ||
+          String(drink.name || "").trim().toLowerCase() === String(item.name || "").trim().toLowerCase()
+        )
       );
       const hasKitchenItems = unsentItems.some((item) => !isBarItem(item));
       const hasBarItems = unsentItems.some(isBarItem);
