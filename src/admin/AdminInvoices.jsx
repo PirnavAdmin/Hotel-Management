@@ -186,9 +186,14 @@ export function AdminInvoices({
     };
   }, []);
 
-  const allOrders = preferPastOrders || invoiceLoadError
-    ? pastOrders
-    : invoiceRecords;
+  // Include locally synchronized POS settlements alongside live API invoices.
+  // Takeaway checkouts are saved to the shared POS invoice history and may not
+  // have a table-backed API order record, so choosing only API data hid them here.
+  const allOrders = dedupeOrders(
+    preferPastOrders || invoiceLoadError
+      ? pastOrders
+      : [...pastOrders, ...invoiceRecords],
+  );
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);

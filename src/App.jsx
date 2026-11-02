@@ -15,6 +15,7 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import { TakeawayView } from "./user/TakeawayView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser } from "./utils/auth";
@@ -561,6 +562,7 @@ export function App() {
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
 
   useEffect(() => {
     const handleBarDrinksUpdated = (event) => {
@@ -2401,6 +2403,7 @@ export function App() {
     } catch {}
     void (async () => {
       try {
+        if (String(settlementData.tableId) === "TAKEAWAY") return;
         const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
         const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
         const currentResult = await apiGetOrderForTable(backendTableId);
@@ -2515,7 +2518,7 @@ export function App() {
 
     try {
       const targetApiId = tableObj?.backendTableId || tableObj?.id || settlementData.tableId;
-      if (targetApiId) {
+      if (targetApiId && String(settlementData.tableId) !== "TAKEAWAY") {
         apiVacateTable(targetApiId).catch(() => {});
         apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
       }
@@ -3106,6 +3109,17 @@ export function App() {
                   onUpdateTable={handleUpdateTable}
                 />
               )}
+              {activeView === "takeaway" && (
+                <TakeawayView
+                  menuItems={menuItems}
+                  menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+                  onCheckout={(items) => {
+                    const orderTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                    setTakeawayCheckoutTable({ id: "TAKEAWAY", name: "Takeaway", section: "Takeaway", server: posSession?.name || "Server", guests: 1, capacity: 1, items, orderTime, discountPercent: 0, serviceCharge: 0 });
+                    setIsSettlementOpen(true);
+                  }}
+                />
+              )}
               {activeView === "order" && (
                 <TableDetailView
                   table={currentTable}
@@ -3417,7 +3431,7 @@ export function App() {
       {/* Settlement Checkout Modal */}
       {isSettlementOpen && (
         <SettlementModal
-          table={currentTable}
+          table={activeView === "takeaway" ? takeawayCheckoutTable : currentTable}
           menuItems={menuItems}
           onClose={() => setIsSettlementOpen(false)}
           onConfirmPayment={handleConfirmPayment}
