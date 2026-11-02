@@ -684,9 +684,6 @@ export function App() {
     requestLiveInvoiceRecords().then(({ records }) => {
       if (Array.isArray(records) && records.length > 0) {
         setPastOrders((current) => mergeSettledOrders(current, records));
-        try {
-          localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
-        } catch {}
       }
     }).catch(() => {});
   }, []);
@@ -980,9 +977,6 @@ export function App() {
         const { records: liveInvoices } = await requestLiveInvoiceRecords();
         if (Array.isArray(liveInvoices) && liveInvoices.length > 0 && !isCancelled) {
           setPastOrders((current) => mergeSettledOrders(current, liveInvoices));
-          try {
-            localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(liveInvoices));
-          } catch {}
         }
       } catch {}
 
@@ -2985,9 +2979,6 @@ export function App() {
               requestLiveInvoiceRecords().then(({ records }) => {
                 if (Array.isArray(records) && records.length > 0) {
                   setPastOrders((current) => mergeSettledOrders(current, records));
-                  try {
-                    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
-                  } catch {}
                 }
               }).catch(() => {});
             }}
@@ -3447,9 +3438,6 @@ export function App() {
           onRefresh={async (records) => {
             if (Array.isArray(records) && records.length > 0) {
               setPastOrders((current) => mergeSettledOrders(current, records));
-              try {
-                localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(records));
-              } catch {}
             }
           }}
           onReprintReceipt={(order) => {

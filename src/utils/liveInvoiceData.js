@@ -1,6 +1,6 @@
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetOrderHistory } from "../api/orderApi";
-import { dedupeOrders, sortOrdersBySettlementTime } from "./orderDedupe";
+import { dedupeOrders, mergeSettledOrders, sortOrdersBySettlementTime } from "./orderDedupe";
 const valueFrom = (object, ...keys) => {
   for (const key of keys) {
     const value = object?.[key];
@@ -245,13 +245,8 @@ export async function requestLiveInvoiceRecords() {
     }
   } catch {}
 
-  const merged = mergeLiveInvoiceRecords(
-    invoices || [],
-    orders !== null
-      ? orders
-      : (invoices === null ? fallbackOrders : []),
-  );
-
+  const liveRecords = mergeLiveInvoiceRecords(invoices || [], orders || []);
+  const merged = mergeSettledOrders(liveRecords, fallbackOrders);
   const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(merged));
 
   return {
