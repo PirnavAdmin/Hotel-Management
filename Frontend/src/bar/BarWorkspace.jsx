@@ -7364,7 +7364,6 @@ export function BarWorkspace({
   onOrderUpdated,
   onBarOrderItemStatusUpdated,
   onUpdateItemKotStatus = null,
-  onCompleteTableKot = null,
   inventory: sharedInventory = [],
   pastOrders = [],
   restaurantName = "Restaurant",
@@ -9236,7 +9235,6 @@ export function BarWorkspace({
           barDrinks={barDrinks}
           onItemsUpdated={onBarOrderItemStatusUpdated}
           onUpdateItemKotStatus={onUpdateItemKotStatus}
-          onCompleteTableKot={onCompleteTableKot}
         />
       )}
 

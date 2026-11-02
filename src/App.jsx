@@ -35,7 +35,9 @@ import {
   apiSetMenuSpecialStatus,
   normalizeMenuItem,
 } from "./api/menuApi";
+import { apiGetBarDrinks } from "./api/barApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
+import { isDrinkItem } from "./kot/orderRouting";
 import {
   Bell,
   CheckCircle2,
@@ -78,6 +80,25 @@ import {
   autoGenerateInventoryFromRecipe,
   getStandardDishSuggestions,
 } from "./admin/AdminPortal";
+
+const BAR_DRINKS_STORAGE_KEY = "avsr_bar_drinks_menu_v2";
+const BAR_DRINKS_UPDATED_EVENT = "avsr-bar-drinks-updated";
+
+function normalizeBarMenuItem(drink) {
+  const name = drink.drinkName || drink.name || drink.dishName || "";
+  return normalizeMenuItem({
+    ...drink,
+    id: drink.menuItemId ?? drink.id,
+    menuItemId: drink.menuItemId ?? drink.id,
+    name,
+    dishName: name,
+    category: drink.category || "Beverages",
+    price: Number(drink.price ?? drink.sellingPrice ?? 0),
+    isAvailable: drink.isAvailable !== false && drink.isAvailable !== "Unavailable",
+    isBarDrink: true,
+    isBarItem: true,
+  });
+}
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
@@ -462,6 +483,16 @@ export function App() {
     }
     return [];
   });
+  const [barMenuItems, setBarMenuItems] = useState(() => {
+    try {
+      const cachedDrinks = JSON.parse(localStorage.getItem(BAR_DRINKS_STORAGE_KEY) || "[]");
+      return Array.isArray(cachedDrinks) ? cachedDrinks.map(normalizeBarMenuItem) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [barMenuLoading, setBarMenuLoading] = useState(true);
+  const [barMenuLoadError, setBarMenuLoadError] = useState("");
 
   useEffect(() => {
     if (!Array.isArray(menuItems) || menuItems.length === 0) return;
@@ -534,6 +565,16 @@ export function App() {
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
   const [selectedTableId, setSelectedTableId] = useState(null);
+
+  useEffect(() => {
+    const handleBarDrinksUpdated = (event) => {
+      if (!Array.isArray(event.detail)) return;
+      setBarMenuItems(event.detail.map(normalizeBarMenuItem));
+    };
+
+    window.addEventListener(BAR_DRINKS_UPDATED_EVENT, handleBarDrinksUpdated);
+    return () => window.removeEventListener(BAR_DRINKS_UPDATED_EVENT, handleBarDrinksUpdated);
+  }, []);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -612,6 +653,39 @@ export function App() {
         setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: response?.error || response?.data?.message || "Menu items could not be loaded." }));
       }
     }).catch((error) => setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: error?.message || "Menu items could not be loaded." })));
+
+    apiGetBarDrinks().then((response) => {
+      const backendDrinks = [
+        response?.data?.data,
+        response?.data?.drinks,
+        response?.data?.items,
+        response?.data,
+        response?.drinks,
+        response?.items,
+      ].find(Array.isArray);
+      if (!response?.success || !backendDrinks) {
+        setBarMenuLoadError(response?.error || response?.data?.message || "Bar drinks could not be loaded.");
+        setBarMenuLoading(false);
+        return;
+      }
+
+      if (backendDrinks.length === 0) {
+        setBarMenuLoadError("");
+        setBarMenuLoading(false);
+        return;
+      }
+
+      const normalizedDrinks = backendDrinks.map(normalizeBarMenuItem);
+      setBarMenuItems(normalizedDrinks);
+      try {
+        localStorage.setItem(BAR_DRINKS_STORAGE_KEY, JSON.stringify(normalizedDrinks));
+      } catch {}
+      setBarMenuLoadError("");
+      setBarMenuLoading(false);
+    }).catch((error) => {
+      setBarMenuLoadError(error?.message || "Bar drinks could not be loaded.");
+      setBarMenuLoading(false);
+    });
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((response) => {
@@ -1369,13 +1443,17 @@ export function App() {
 
   // Add Item to Table Order
   const handleAddItemToTable = (tableId, menuItem) => {
+    const isBarItem = isDrinkItem(menuItem, null, barMenuItems);
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
         if (String(t.id) !== String(tableId)) return t;
 
         const currentItems = Array.isArray(t.items) ? t.items : [];
-        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        const existingIndex = currentItems.findIndex((i) =>
+          String(i.id) === String(menuItem.id) &&
+          isDrinkItem(i, null, barMenuItems) === isBarItem
+        );
         let newItems;
 
         const specifiedQty =
@@ -1390,6 +1468,11 @@ export function App() {
             idx === existingIndex
               ? {
                   ...item,
+                  category: menuItem.category || item.category,
+                  menuItemId: menuItem.menuItemId ?? menuItem.id,
+                  isBarDrink: isBarItem,
+                  isBarItem,
+                  station: isBarItem ? "bar" : "kitchen",
                   quantity:
                     specifiedQty !== null ? specifiedQty : item.quantity + 1,
                   notes: specifiedNotes !== null ? specifiedNotes : item.notes,
@@ -1403,8 +1486,13 @@ export function App() {
             ...currentItems,
             {
               id: menuItem.id,
+              menuItemId: menuItem.menuItemId ?? menuItem.id,
               name: menuItem.name,
               price: menuItem.price,
+              category: menuItem.category || "",
+              isBarDrink: isBarItem,
+              isBarItem,
+              station: isBarItem ? "bar" : "kitchen",
               quantity:
                 specifiedQty !== null && specifiedQty > 0 ? specifiedQty : 1,
               notes: specifiedNotes !== null ? specifiedNotes : "",
@@ -3032,8 +3120,11 @@ export function App() {
                   table={currentTable}
                   allTables={tables}
                   menuItems={menuItems}
+                  barMenuItems={barMenuItems}
                   menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
                   menuLoadError={sharedRecordLoad.menuError}
+                  barMenuLoading={barMenuLoading}
+                  barMenuLoadError={barMenuLoadError}
                   onSelectTable={setSelectedTableId}
                   onBackToTables={() => setActiveView("tables")}
                   onAddItemToTable={handleAddItemToTable}

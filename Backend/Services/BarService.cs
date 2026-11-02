@@ -1417,7 +1417,7 @@ public class BarService
         const string sql = @"
             SELECT 
                 COALESCE(ko.kot_id, o.order_id) AS kot_id,
-                COALESCE(ko.kot_number, CONCAT('BOT-', o.order_id)) AS kot_number,
+                CONCAT('BOT-', COALESCE(ko.kot_id, o.order_id)) AS kot_number,
                 o.order_id,
                 COALESCE(o.order_number, CONCAT('ORD-', o.order_id)) AS order_number,
                 o.table_id,
@@ -1465,6 +1465,12 @@ public class BarService
                 ElapsedTime = elapsed
             };
         });
+
+        var latestTicketByOrder = tickets
+            .GroupBy(ticket => ticket.OrderId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(ticket => ticket.CreatedAt).First().KotId);
 
         if (tickets.Count == 0)
         {
@@ -1524,11 +1530,15 @@ public class BarService
 
         foreach (var t in tickets)
         {
-            var itemsForTicket = allItems
-                .Where(x => (x.KotId.HasValue && x.KotId.Value == t.KotId) || x.OrderId == t.OrderId)
-                .Select(x => x.Item)
-                .Where(i => i.IsBarItem)
-                .ToList();
+            var isLatestTicket = latestTicketByOrder.TryGetValue(t.OrderId, out var latestTicketId) &&
+                latestTicketId == t.KotId;
+            var itemsForTicket = isLatestTicket
+                ? allItems
+                    .Where(x => x.OrderId == t.OrderId)
+                    .Select(x => x.Item)
+                    .Where(i => i.IsBarItem)
+                    .ToList()
+                : new List<BarKotItemDto>();
 
             t.Items = itemsForTicket;
             t.TotalItemsCount = itemsForTicket.Count;

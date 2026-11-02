@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Hubs;
+using HMS.Services;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -36,18 +37,22 @@ public class KitchenController : ControllerBase
                  o.Status == "billed"))
             .ToListAsync();
 
+        var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
+            _context,
+            orders.SelectMany(order => order.Items).Select(item => item.MenuItemId));
         var tickets = new List<KotTicketDto>();
 
         foreach (var order in orders)
         {
             var batches = order.Items
                 .Where(i =>
-                    i.KotStatus == "Queued" ||
-                    i.KotStatus == "queued" ||
-                    i.KotStatus == "Cooking" ||
-                    i.KotStatus == "cooking" ||
-                    i.KotStatus == "Ready" ||
-                    i.KotStatus == "ready")
+                    !barMenuItemIds.Contains(i.MenuItemId) &&
+                    (i.KotStatus == "Queued" ||
+                     i.KotStatus == "queued" ||
+                     i.KotStatus == "Cooking" ||
+                     i.KotStatus == "cooking" ||
+                     i.KotStatus == "Ready" ||
+                     i.KotStatus == "ready"))
                 .GroupBy(i => i.KotBatch);
 
             foreach (var batch in batches)

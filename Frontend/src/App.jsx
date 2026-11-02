@@ -35,6 +35,7 @@ import {
   apiSetMenuSpecialStatus,
   normalizeMenuItem,
 } from "./api/menuApi";
+import { apiGetBarDrinks } from "./api/barApi";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import {
   Bell,
@@ -462,6 +463,9 @@ export function App() {
     }
     return [];
   });
+  const [barMenuItems, setBarMenuItems] = useState([]);
+  const [barMenuLoading, setBarMenuLoading] = useState(true);
+  const [barMenuLoadError, setBarMenuLoadError] = useState("");
 
   useEffect(() => {
     if (!Array.isArray(menuItems) || menuItems.length === 0) return;
@@ -612,6 +616,31 @@ export function App() {
         setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: response?.error || response?.data?.message || "Menu items could not be loaded." }));
       }
     }).catch((error) => setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: error?.message || "Menu items could not be loaded." })));
+
+    apiGetBarDrinks().then((response) => {
+      const backendDrinks = [
+        response?.data,
+        response?.data?.data,
+        response?.data?.drinks,
+        response?.drinks,
+      ].find(Array.isArray);
+      if (!backendDrinks) {
+        setBarMenuLoadError(response?.error || response?.data?.message || "Bar drinks could not be loaded.");
+        setBarMenuLoading(false);
+        return;
+      }
+
+      setBarMenuItems(backendDrinks.map((drink) => normalizeMenuItem({
+        ...drink,
+        isBarItem: true,
+        isBarDrink: true,
+      })));
+      setBarMenuLoadError("");
+      setBarMenuLoading(false);
+    }).catch((error) => {
+      setBarMenuLoadError(error?.message || "Bar drinks could not be loaded.");
+      setBarMenuLoading(false);
+    });
 
     // 3. Load live staff members from backend API
     apiGetStaff().then((response) => {
@@ -1390,6 +1419,10 @@ export function App() {
             idx === existingIndex
               ? {
                   ...item,
+                  menuItemId: item.menuItemId ?? menuItem.menuItemId ?? menuItem.id,
+                  category: item.category || menuItem.category || "",
+                  isBarItem: Boolean(item.isBarItem || item.isBarDrink || menuItem.isBarItem || menuItem.isBarDrink),
+                  isBarDrink: Boolean(item.isBarDrink || item.isBarItem || menuItem.isBarDrink || menuItem.isBarItem),
                   quantity:
                     specifiedQty !== null ? specifiedQty : item.quantity + 1,
                   notes: specifiedNotes !== null ? specifiedNotes : item.notes,
@@ -1403,8 +1436,13 @@ export function App() {
             ...currentItems,
             {
               id: menuItem.id,
+              menuItemId: menuItem.menuItemId ?? menuItem.id,
               name: menuItem.name,
               price: menuItem.price,
+              category: menuItem.category || "",
+              isBarItem: Boolean(menuItem.isBarItem || menuItem.isBarDrink),
+              isBarDrink: Boolean(menuItem.isBarDrink || menuItem.isBarItem),
+              servingMeasure: menuItem.servingMeasure || menuItem.measure || "",
               quantity:
                 specifiedQty !== null && specifiedQty > 0 ? specifiedQty : 1,
               notes: specifiedNotes !== null ? specifiedNotes : "",
@@ -1647,6 +1685,15 @@ export function App() {
       const unsentItems = (Array.isArray(tbl?.items) ? tbl.items : []).filter(
         (item) => !item.kotSent && !["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase()),
       );
+      const isBarItem = (item) => Boolean(
+        item.isBarItem ||
+        item.isBarDrink ||
+        barMenuItems.some((drink) =>
+          String(drink.menuItemId ?? drink.id ?? "") === String(item.menuItemId ?? item.id ?? ""),
+        ),
+      );
+      const hasKitchenItems = unsentItems.some((item) => !isBarItem(item));
+      const hasBarItems = unsentItems.some(isBarItem);
       if (!unsentItems.length) {
         showToast(`There are no new items to send for ${tableName}.`);
         return;
@@ -1778,9 +1825,15 @@ export function App() {
       } catch {}
       apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch((error) => console.error("Table KOT state sync failed after server dispatch:", error));
 
-      setIsKOTOpen(true);
-      triggerKitchenNotification({ tableId, tableName, type: "order_received", title: "📥 KOT Sent", message: `Order for ${tableName} was saved to the KOT service.` });
-      showToast(`📥 KOT sent and saved for ${tableName}.`);
+      if (hasKitchenItems) {
+        setIsKOTOpen(true);
+        triggerKitchenNotification({ tableId, tableName, type: "order_received", title: "📥 KOT Sent", message: `Food order for ${tableName} was sent to the kitchen.` });
+      }
+      const routes = [
+        hasKitchenItems ? "KOT sent to kitchen" : "",
+        hasBarItems ? "BOT sent to bar" : "",
+      ].filter(Boolean);
+      showToast(`📥 ${routes.join(" and ")} for ${tableName}.`);
     } catch (error) {
       showToast(`KOT dispatch failed for ${tableName}: ${error?.message || "Could not reach the KOT service."}`);
     } finally {
@@ -1792,7 +1845,9 @@ export function App() {
   const handleUpdateItemKotStatus = (tableId, status, itemId = null) => {
     const tbl = tables.find((t) => String(t.id) === String(tableId));
     const itemObj =
-      itemId && tbl && Array.isArray(tbl.items) ? tbl.items.find((i) => String(i.id) === String(itemId)) : null;
+      itemId && tbl && Array.isArray(tbl.items)
+        ? tbl.items.find((i) => String(i.menuItemId ?? i.id) === String(itemId))
+        : null;
     const itemName = itemObj ? itemObj.name : null;
 
     let targetUpdatedTable = null;
@@ -1801,8 +1856,9 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
+          if (i.isBarItem || i.isBarDrink) return i;
           if (itemId) {
-            return String(i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
+            return String(i.menuItemId ?? i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
           // Table-level status change
           if (status === "cooking") {
@@ -1821,9 +1877,10 @@ export function App() {
           }
           return { ...i, kotStatus: status, kotSent: true };
         });
+        const kitchenItems = updatedItems.filter((item) => !item.isBarItem && !item.isBarDrink);
         const allReady =
-          updatedItems.length > 0 &&
-          updatedItems.every(
+          kitchenItems.length > 0 &&
+          kitchenItems.every(
             (i) =>
               i.kotStatus === "ready" ||
               i.kotStatus === "served" ||
@@ -1928,7 +1985,9 @@ export function App() {
   ) => {
     const tbl = tables.find((t) => String(t.id) === String(tableId));
     const itemObj =
-      itemId && tbl && Array.isArray(tbl.items) ? tbl.items.find((i) => String(i.id) === String(itemId)) : null;
+      itemId && tbl && Array.isArray(tbl.items)
+        ? tbl.items.find((i) => String(i.menuItemId ?? i.id) === String(itemId))
+        : null;
     const nowTimeStr =
       completedAt ||
       new Date().toLocaleTimeString([], {
@@ -1943,12 +2002,14 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-          if (itemId && String(i.id) !== String(itemId)) return i;
+          if (i.isBarItem || i.isBarDrink) return i;
+          if (itemId && String(i.menuItemId ?? i.id) !== String(itemId)) return i;
           return { ...i, kotStatus: "ready", kotSent: true };
         });
+        const kitchenItems = updatedItems.filter((item) => !item.isBarItem && !item.isBarDrink);
         const allReady =
-          updatedItems.length > 0 &&
-          updatedItems.every(
+          kitchenItems.length > 0 &&
+          kitchenItems.every(
             (i) =>
               i.kotStatus === "ready" ||
               i.kotStatus === "served" ||
@@ -2584,16 +2645,19 @@ export function App() {
   const handleBarOrderItemStatusUpdated = ({ tableId, orderId, items = [], status }) => {
     const menuIds = new Set(items.map((item) => String(item.menuItemId ?? item.menu_item_id ?? item.menu?.id ?? "")).filter(Boolean));
     const names = new Set(items.map((item) => String(item.name || item.dishName || item.menu?.name || "").trim().toLowerCase()).filter(Boolean));
+    const normalizedStatus = String(status).toLowerCase();
     setTables((previous) => {
       const updated = previous.map((table) => {
         const backendId = table.backendTableId ?? table.tableId ?? table.id;
         if (String(backendId) !== String(tableId)) return table;
+        const tableOrderId = table.backendOrderId ?? table.activeOrderId;
+        if (tableOrderId != null && String(tableOrderId) !== String(orderId)) return table;
         const nextItems = (Array.isArray(table.items) ? table.items : []).map((item) => {
-          if (String(item.orderId ?? "") !== String(orderId)) return item;
-          const menuId = String(item.menuItemId ?? item.menu_item_id ?? "");
+          if (item.orderId != null && String(item.orderId) !== String(orderId)) return item;
+          const menuId = String(item.menuItemId ?? item.menu_item_id ?? item.id ?? "");
           const name = String(item.name || item.dishName || "").trim().toLowerCase();
           if (!menuIds.has(menuId) && !names.has(name)) return item;
-          return { ...item, kotSent: true, kotStatus: status, status: status === "cancelled" ? "cancelled" : item.status };
+          return { ...item, kotSent: true, kotStatus: normalizedStatus, status: normalizedStatus === "cancelled" ? "cancelled" : item.status };
         });
         return { ...table, items: nextItems };
       });
@@ -3032,6 +3096,9 @@ export function App() {
                   table={currentTable}
                   allTables={tables}
                   menuItems={menuItems}
+                  barMenuItems={barMenuItems}
+                  barMenuLoading={barMenuLoading}
+                  barMenuLoadError={barMenuLoadError}
                   menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
                   menuLoadError={sharedRecordLoad.menuError}
                   onSelectTable={setSelectedTableId}
@@ -3356,6 +3423,7 @@ export function App() {
       {isKOTOpen && (
         <KOTModal
           table={currentTable}
+          barMenuItems={barMenuItems}
           restaurantName={restaurantSettings?.restaurantName || "Restaurant"}
           restaurantLogo={restaurantSettings?.logo || ""}
           onClose={() => setIsKOTOpen(false)}

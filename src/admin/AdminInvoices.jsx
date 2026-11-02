@@ -95,6 +95,8 @@ const formatInvoiceTime = (value) => {
 
 
 export function AdminInvoices({
+  pastOrders = [],
+  preferPastOrders = false,
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
@@ -181,7 +183,9 @@ export function AdminInvoices({
     };
   }, []);
 
-  const allOrders = invoiceRecords;
+  const allOrders = preferPastOrders || invoiceLoadError
+    ? pastOrders
+    : invoiceRecords;
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);
@@ -254,22 +258,24 @@ export function AdminInvoices({
     pageStart + itemsPerPage,
   );
 
+  const getInvoiceTotal = (order) =>
+    Number(order.grandTotal ?? order.total ?? order.totalAmount ?? order.paidAmount ?? 0) || 0;
   const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
+    (sum, order) => sum + getInvoiceTotal(order),
     0,
   );
 
   const upiTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "upi")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, order) => sum + getInvoiceTotal(order), 0);
 
   const cashTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "cash")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, order) => sum + getInvoiceTotal(order), 0);
 
   const cardTotal = filteredOrders
     .filter((o) => normalizePaymentMethod(o) === "card")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, order) => sum + getInvoiceTotal(order), 0);
 
   const cashOrdersCount = filteredOrders.filter(
     (o) => normalizePaymentMethod(o) === "cash",

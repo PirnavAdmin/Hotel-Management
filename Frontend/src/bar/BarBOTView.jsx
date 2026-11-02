@@ -61,7 +61,6 @@ export function BarBOTView({
   barDrinks = [],
   onItemsUpdated,
   onUpdateItemKotStatus,
-  onCompleteTableKot,
 }) {
   const [adminBotTableFilter, setAdminBotTableFilter] = useState("all");
   const [isBotTableDropdownOpen, setIsBotTableDropdownOpen] = useState(false);
@@ -371,12 +370,6 @@ export function BarBOTView({
           }
         }
       }
-    }
-
-    if (typeof onCompleteTableKot === "function") {
-      try {
-        onCompleteTableKot(table.id);
-      } catch {}
     }
 
     if (typeof onItemsUpdated === "function") {

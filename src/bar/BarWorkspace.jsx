@@ -7508,6 +7508,7 @@ export function BarWorkspace({
     try {
       localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
     } catch {}
+    window.dispatchEvent(new CustomEvent("avsr-bar-drinks-updated", { detail: barDrinks }));
   }, [barDrinks]);
 
   const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
@@ -9240,7 +9241,7 @@ export function BarWorkspace({
         />
       )}
 
-      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
+      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} preferPastOrders restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 
