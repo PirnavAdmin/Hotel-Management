@@ -1732,59 +1732,7 @@ function globalSyncPlugin() {
           return;
         }
 
-        // Authentication must be handled by the ASP.NET API, never local JSON.
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          res.writeHead(503, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ success: false, error: "Authentication server is unavailable." }));
-        }
-
-        // REST API: /api/v1/auth/login (disabled local mock)
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk) => {
-            body += chunk;
-          });
-          req.on("end", () => {
-            try {
-              const { username, password } = JSON.parse(body);
-              db = loadDb();
-              const users = db.avsr_auth_users_v1 || [];
-              const found = users.find(
-                (u) =>
-                  (u.username?.toLowerCase() === username?.toLowerCase() ||
-                    u.email?.toLowerCase() === username?.toLowerCase()) &&
-                  u.password === password,
-              );
-              if (found) {
-                const userObj = { ...found };
-                if (username && String(username).includes("@")) {
-                  userObj.email = String(username).trim().toLowerCase();
-                }
-                res.writeHead(200, { "Content-Type": "application/json" });
-                return res.end(
-                  JSON.stringify({
-                    success: true,
-                    token: "avsr-local-jwt-token",
-                    user: userObj,
-                  }),
-                );
-              }
-              res.writeHead(401, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({
-                  success: false,
-                  error: "Invalid username or password",
-                }),
-              );
-            } catch (err) {
-              res.writeHead(400, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({ success: false, error: err.message }),
-              );
-            }
-          });
-          return;
-        }
+        // Authentication is forwarded directly to ASP.NET Core API via Vite proxy
 
         // REST API: /api/v1/auth/forgot-password
         if (
@@ -1917,7 +1865,7 @@ export default defineConfig(({ mode }) => {
     env.BACKEND_URL ||
     process.env.VITE_BACKEND_URL ||
     env.VITE_BACKEND_URL ||
-    "http://localhost:5018";
+    "http://127.0.0.1:5018";
 
   let apiBase = env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
   if (!apiBase) {
@@ -1950,11 +1898,42 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
-        "/api": {
+        "^/__backend_api": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/__backend_api/, ""),
+          headers: { "ngrok-skip-browser-warning": "true" },
+          configure: (proxy) => {
+            proxy.on("error", (err, req, res) => {
+              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
+              if (res && !res.headersSent && typeof res.writeHead === "function") {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                  success: false,
+                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                }));
+              }
+            });
+          },
+        },
+        "^/api": {
           target: backendTarget,
           changeOrigin: true,
           secure: false,
           headers: { "ngrok-skip-browser-warning": "true" },
+          configure: (proxy) => {
+            proxy.on("error", (err, req, res) => {
+              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
+              if (res && !res.headersSent && typeof res.writeHead === "function") {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                  success: false,
+                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                }));
+              }
+            });
+          },
         },
         "/uploads": {
           target: backendTarget,

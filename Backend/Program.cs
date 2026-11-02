@@ -11,7 +11,7 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // Ensure default listening on port 5018
-builder.WebHost.UseUrls("http://localhost:5018", "http://0.0.0.0:5018");
+builder.WebHost.UseUrls("http://0.0.0.0:5018", "http://localhost:5018");
 
 // ============================================================
 // DATABASE
