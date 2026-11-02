@@ -150,6 +150,20 @@ export function AdminOverview({
   );
 
   const averageOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
+  const sevenDaySales = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - index));
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const dayOrders = cleanOrders.filter((order) => parseOrderToYMD(order) === key);
+    return {
+      key,
+      label: date.toLocaleDateString("en-IN", { weekday: "short" }),
+      revenue: dayOrders.reduce((sum, order) => sum + (Number(order.grandTotal ?? order.total) || 0), 0),
+      count: dayOrders.length,
+    };
+  });
+  const sevenDayRevenue = sevenDaySales.reduce((sum, day) => sum + day.revenue, 0);
+  const sevenDayOrderCount = sevenDaySales.reduce((sum, day) => sum + day.count, 0);
+  const maxSevenDayRevenue = Math.max(1, ...sevenDaySales.map((day) => day.revenue));
 
   if (
     (sharedRecordLoad.tables === "loading" && tables.length === 0) ||
@@ -160,8 +174,14 @@ export function AdminOverview({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <style>{`
+        @media (max-width: 1180px) { .admin-overview-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
+        @media (max-width: 820px) { .admin-overview-sales { grid-template-columns: minmax(0, 1fr) !important; } .admin-overview-week-summary { border-left: 0 !important; border-top: 1px solid var(--border-subtle); padding: .75rem 0 0 !important; } }
+        @media (max-width: 560px) { .admin-overview-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+      `}</style>
       {/* 1. Overview Header Banner */}
       <div
+        className="admin-overview-kpis"
         style={{
           background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)",
           border: "1px solid rgba(245, 158, 11, 0.25)",
@@ -650,6 +670,50 @@ export function AdminOverview({
           </div>
         </div>
       </div>
+
+      {/* 2.5 Sales trend */}
+      <section
+        className="admin-overview-sales"
+        aria-label="Seven day sales performance"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.7fr) minmax(220px, 0.8fr)",
+          gap: "1rem",
+          alignItems: "stretch",
+          padding: "1rem 1.1rem",
+          border: "1px solid var(--border-card)",
+          borderRadius: "12px",
+          background: "var(--bg-card)",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: ".75rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
+            <div>
+              <h3 style={{ margin: 0, color: "var(--text-main)", fontSize: ".95rem", fontWeight: 800 }}>Sales performance</h3>
+              <p style={{ margin: ".2rem 0 0", color: "var(--text-muted)", fontSize: ".72rem" }}>Settled revenue over the last seven days</p>
+            </div>
+            <span style={{ padding: ".25rem .55rem", borderRadius: 20, background: "rgba(245,158,11,.12)", color: "var(--accent-amber-light)", fontSize: ".68rem", fontWeight: 700 }}>7 day view</span>
+          </div>
+          <div style={{ height: 118, display: "grid", gridTemplateColumns: "repeat(7, minmax(0,1fr))", alignItems: "end", gap: ".6rem", padding: ".2rem .1rem 0", borderBottom: "1px solid var(--border-subtle)" }}>
+            {sevenDaySales.map((day) => {
+              const barHeight = day.revenue > 0 ? Math.max(8, (day.revenue / maxSevenDayRevenue) * 88) : 4;
+              return (
+                <div key={day.key} title={`${day.label}: ${formatCurrency(day.revenue)} · ${day.count} bills`} style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: ".35rem", minWidth: 0 }}>
+                  <span style={{ width: "min(100%, 34px)", height: `${barHeight}px`, minHeight: 4, borderRadius: "6px 6px 2px 2px", background: day.revenue > 0 ? "linear-gradient(180deg, #fbbf24, #ea580c)" : "var(--bg-tertiary)", boxShadow: day.revenue > 0 ? "0 3px 10px rgba(234,88,12,.18)" : "none", transition: "height .2s ease" }} />
+                  <span style={{ color: "var(--text-muted)", fontSize: ".65rem", paddingBottom: ".3rem" }}>{day.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="admin-overview-week-summary" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: ".8rem", padding: ".2rem .25rem .2rem .9rem", borderLeft: "1px solid var(--border-subtle)" }}>
+          <div><div style={{ color: "var(--text-muted)", fontSize: ".7rem", fontWeight: 700 }}>7 DAY REVENUE</div><strong style={{ display: "block", marginTop: ".2rem", color: "var(--accent-amber)", fontSize: "1.3rem", lineHeight: 1.15 }}>{formatCurrency(sevenDayRevenue)}</strong></div>
+          <div style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
+            <div><div style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>Bills</div><strong style={{ color: "var(--text-main)", fontSize: ".9rem" }}>{sevenDayOrderCount}</strong></div>
+            <div><div style={{ color: "var(--text-muted)", fontSize: ".68rem" }}>Daily average</div><strong style={{ color: "var(--text-main)", fontSize: ".9rem" }}>{formatCurrency(sevenDayRevenue / 7)}</strong></div>
+          </div>
+        </div>
+      </section>
 
       {/* 3. Two Column Grid: Floor Tables Monitor & Signature Dishes */}
       <div
