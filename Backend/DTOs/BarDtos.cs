@@ -113,7 +113,8 @@ public class BarDrinkDto
     public string? Image => ImageUrl;
     public bool IsBarItem { get; set; } = true;
     public bool IsBarDrink => true;
-    public bool IsVeg => DrinkType != "Alcoholic";
+    public string DietaryType => DrinkType?.Equals("Alcoholic", StringComparison.OrdinalIgnoreCase) == true ? "Veg" : "Non-Veg";
+    public bool IsVeg => DrinkType?.Equals("Alcoholic", StringComparison.OrdinalIgnoreCase) == true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

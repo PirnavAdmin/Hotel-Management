@@ -3267,8 +3267,8 @@ function BarDrinksMenu({
       drinkName: itemForm.name.trim(),
       category: finalCategory,
       price: parseFloat(itemForm.price || 0),
-      isVeg: Boolean(itemForm.isVeg),
-      dietaryType: itemForm.drinkType === "Non-Alcoholic" ? "VEG" : "NON-VEG",
+      isVeg: (itemForm.drinkType === "Alcoholic" || isAlcoholicCategory(finalCategory, itemForm.drinkType, itemForm.abv)),
+      dietaryType: (itemForm.drinkType === "Alcoholic" || isAlcoholicCategory(finalCategory, itemForm.drinkType, itemForm.abv)) ? "Veg" : "Non-Veg",
       isChefSpecial: isSpecial,
       isChefsSpecial: isSpecial,
       isSpecial: isSpecial,
@@ -4233,7 +4233,7 @@ function BarDrinksMenu({
                 )}
               </div>
 
-              {/* Row 2, Col 1: Drink Type */}
+              {/* Row 2, Col 1: Drink Type & Auto-assigned Dietary Type */}
               <div>
                 <label
                   style={{
@@ -4244,29 +4244,49 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Drink Type
+                  Drink Type & Dietary Type <span style={{ color: "#ea580c" }}>*</span>
                 </label>
-                <select
-                  value={itemForm.drinkType}
-                  onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value })}
-                  style={{
-                    width: "100%",
-                    height: "38px",
-                    boxSizing: "border-box",
-                    background: "var(--bg-tertiary)",
-                    border: "1.5px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0 0.85rem",
-                    color: "var(--text-main)",
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <option value="Alcoholic">Alcoholic</option>
-                  <option value="Non-Alcoholic">Non-Alcoholic</option>
-                </select>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <select
+                    value={itemForm.drinkType}
+                    onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value })}
+                    style={{
+                      flex: 1,
+                      height: "38px",
+                      boxSizing: "border-box",
+                      background: "var(--bg-tertiary)",
+                      border: "1.5px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      padding: "0 0.85rem",
+                      color: "var(--text-main)",
+                      fontWeight: 600,
+                      fontSize: "0.9rem",
+                      outline: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="Alcoholic">Alcoholic</option>
+                    <option value="Non-Alcoholic">Non-Alcoholic</option>
+                  </select>
+                  <div
+                    title="Dietary type automatically assigned based on Drink Type"
+                    style={{
+                      height: "38px",
+                      padding: "0 10px",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      fontWeight: 700,
+                      fontSize: "0.78rem",
+                      whiteSpace: "nowrap",
+                      background: itemForm.drinkType === "Alcoholic" ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                      border: itemForm.drinkType === "Alcoholic" ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(239, 68, 68, 0.35)",
+                      color: itemForm.drinkType === "Alcoholic" ? "var(--success)" : "var(--danger)",
+                    }}
+                  >
+                    {itemForm.drinkType === "Alcoholic" ? "Veg 🟢" : "Non-Veg 🔴"}
+                  </div>
+                </div>
               </div>
 
               {/* Row 2, Col 2: Alcohol Content (ABV %) */}
@@ -7522,13 +7542,68 @@ export function BarWorkspace({
     loadBarDrinks();
   }, [loadBarDrinks]);
 
+  // Requirement 2: Automatic synchronization between Dine Menu and Drinks Menu
+  useEffect(() => {
+    if (!Array.isArray(menuItems) || menuItems.length === 0) return;
+    const drinksFromMenu = menuItems
+      .filter((m) => isDrinkCategory(m.category, m))
+      .map((m) => {
+        const isAlc = isAlcoholicCategory(m.category, m.drinkType, m.alcoholPct ?? m.abv);
+        const drinkType = m.drinkType || (isAlc ? "Alcoholic" : "Non-Alcoholic");
+        const dietary = getDrinkDietaryType(drinkType, m.category, m.alcoholPct ?? m.abv);
+        return {
+          ...m,
+          id: m.id ?? m.menuItemId,
+          menuItemId: m.menuItemId ?? m.id,
+          name: m.name ?? m.dishName ?? m.drinkName ?? "",
+          dishName: m.name ?? m.dishName ?? m.drinkName ?? "",
+          drinkName: m.drinkName ?? m.name ?? m.dishName ?? "",
+          category: m.category || "Cocktails",
+          price: Number(m.price ?? 0),
+          sellingPrice: Number(m.price ?? 0),
+          drinkType: drinkType,
+          dietaryType: dietary,
+          isVeg: drinkType === "Alcoholic",
+          alcoholContent: Number(m.alcoholPct ?? m.abv ?? (drinkType === "Alcoholic" ? 40 : 0)),
+          abv: Number(m.alcoholPct ?? m.abv ?? (drinkType === "Alcoholic" ? 40 : 0)),
+          measure: m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"),
+          servingMeasure: m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"),
+          isBarDrink: true,
+          isBarItem: true,
+        };
+      });
+
+    if (drinksFromMenu.length === 0) return;
+
+    setBarDrinks((prev) => {
+      let changed = false;
+      const next = [...prev];
+      drinksFromMenu.forEach((drink) => {
+        const existingIdx = next.findIndex(
+          (d) =>
+            String(d.id) === String(drink.id) ||
+            String(d.menuItemId) === String(drink.menuItemId) ||
+            (d.name && drink.name && d.name.trim().toLowerCase() === drink.name.trim().toLowerCase())
+        );
+        if (existingIdx >= 0) {
+          next[existingIdx] = { ...next[existingIdx], ...drink };
+          changed = true;
+        } else {
+          next.unshift(drink);
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [menuItems]);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_BAR_DRINKS, JSON.stringify(barDrinks));
     } catch {}
   }, [barDrinks]);
 
-  const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
+const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
 
   // Dedicated bar staff state - loaded live from Backend API (no mock data)
   const [barStaff, setBarStaff] = useState(() => {
@@ -7690,15 +7765,7 @@ export function BarWorkspace({
     return true;
   };
 
-  // If mojito was previously pushed to Dine menuItems, remove it from dine
-  useEffect(() => {
-    const mojitoInDine = (Array.isArray(menuItems) ? menuItems : []).find(
-      (m) => String(m.name || m.dishName || "").trim().toLowerCase() === "mojito" || m.isBarDrink
-    );
-    if (mojitoInDine?.id && onDeleteMenuItem) {
-      onDeleteMenuItem(mojitoInDine.id);
-    }
-  }, [menuItems, onDeleteMenuItem]);
+  // Mojito auto-removal removed to preserve Dine-Bar drink synchronization
 
   const handleAddDrink = async (newDrink) => {
     const item = {
@@ -7711,6 +7778,18 @@ export function BarWorkspace({
     // Optimistic UI update
     setBarDrinks((prev) => [item, ...prev]);
     setToast?.(`Drink "${item.name}" added to Bar Drinks Menu.`);
+    // Ensure synchronized with Dine Menu
+    if (onAddMenuItem) {
+      try {
+        const alc = isAlcoholicCategory(item.category, item.drinkType, item.abv);
+        onAddMenuItem({
+          ...item,
+          isBarItem: true,
+          dietaryType: alc ? "Veg" : "Non-Veg",
+          isVeg: alc,
+        });
+      } catch {}
+    }
 
     // Persist to backend
     try {

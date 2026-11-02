@@ -24,6 +24,22 @@ public class BarService
         _logger = logger;
     }
 
+    private static readonly string[] NonDrinkCats = new[]
+    {
+        "biryani", "curries", "curry", "starters", "starter", "desserts", "dessert",
+        "rice", "breads", "bread", "roti", "naan", "tandoori", "tandoor", "chinese",
+        "south indian", "north indian", "snacks", "main course", "soups", "soup", "salads", "salad"
+    };
+
+    private static readonly string[] DrinkCategoryKeywords = new[]
+    {
+        "beverage", "beverages", "drink", "drinks", "cocktail", "cocktails", "mocktail", "mocktails",
+        "juice", "juices", "soft drink", "soft drinks", "softdrink", "soda", "sodas", "tea", "coffee",
+        "tea & coffee", "tea and coffee", "hot beverage", "cold beverage", "alcoholic", "alcohol",
+        "beer", "beers", "whiskey", "whisky", "vodka", "vodka & gin", "gin", "rum", "rum & brandy",
+        "brandy", "wine", "wine & champagne", "champagne", "tequila", "liqueur", "liquor", "spirits", "shots"
+    };
+
     #region Screen 1: Bar Overview
 
     public async Task<BarOverviewDto> GetBarOverviewAsync(long? branchId = null)
@@ -32,27 +48,14 @@ public class BarService
 
         try
         {
-            // 1. Drinks Catalog counts & Signature Drinks
-            var barDrinks = await _context.MenuItems
-                .Where(m => m.DeletedAt == null && (m.IsBarItem ||
-                    m.Category.ToLower() == "beverages" ||
-                    m.Category.ToLower() == "cocktails" ||
-                    m.Category.ToLower() == "mocktails" ||
-                    m.Category.ToLower() == "beer" ||
-                    m.Category.ToLower() == "beers" ||
-                    m.Category.ToLower() == "wine" ||
-                    m.Category.ToLower() == "spirits" ||
-                    m.Category.ToLower() == "whiskey" ||
-                    m.DishName.ToLower().Contains("mojito")))
-                .ToListAsync();
+            // 1. Drinks Catalog counts & Signature Drinks - drinks only (food excluded)
+            var allItems = await _context.MenuItems.Where(m => m.DeletedAt == null).ToListAsync();
+            var barDrinks = allItems
+                .Where(m => !DrinkCategoryHelper.IsFoodCategory(m.Category) && DrinkCategoryHelper.IsDrinkCategory(m.Category, m.DrinkType, m.IsBarItem))
+                .ToList();
 
             overview.TotalDrinks = barDrinks.Count;
-            overview.AlcoholicDrinksCount = barDrinks.Count(d => d.DrinkType == "Alcoholic" || d.AlcoholPct > 0 || (d.DietaryType != null && d.DietaryType.ToLower().Contains("non-veg")));
-            if (overview.AlcoholicDrinksCount == 0 && barDrinks.Count > 0)
-            {
-                var alcCats = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "cocktails", "beers", "whiskey", "vodka & gin", "rum & brandy", "wine & champagne", "shots & shooters" };
-                overview.AlcoholicDrinksCount = barDrinks.Count(d => alcCats.Contains(d.Category));
-            }
+            overview.AlcoholicDrinksCount = barDrinks.Count(d => DrinkCategoryHelper.IsAlcoholicCategory(d.Category, d.DrinkType, d.AlcoholPct));
             overview.NonAlcoholicDrinksCount = Math.Max(0, overview.TotalDrinks - overview.AlcoholicDrinksCount);
 
             overview.SignatureDrinks = barDrinks
@@ -316,23 +319,12 @@ public class BarService
             }
         }
 
-        var query = _context.MenuItems
-            .Where(m => m.DeletedAt == null && (m.IsBarItem ||
-                m.Category.ToLower() == "beverages" ||
-                m.Category.ToLower() == "cocktails" ||
-                m.Category.ToLower() == "mocktails" ||
-                m.Category.ToLower() == "beer" ||
-                m.Category.ToLower() == "beers" ||
-                m.Category.ToLower() == "wine" ||
-                m.Category.ToLower() == "spirits" ||
-                m.Category.ToLower() == "whiskey" ||
-                m.DishName.ToLower().Contains("juice") ||
-                m.DishName.ToLower().Contains("shake") ||
-                m.DishName.ToLower().Contains("lassi") ||
-                m.DishName.ToLower().Contains("soda") ||
-                m.DishName.ToLower().Contains("beer") ||
-                m.DishName.ToLower().Contains("wine") ||
-                m.DishName.ToLower().Contains("mojito")));
+        var allItems = await _context.MenuItems.Where(m => m.DeletedAt == null).ToListAsync();
+        var drinkList = allItems
+            .Where(m => !DrinkCategoryHelper.IsFoodCategory(m.Category) && DrinkCategoryHelper.IsDrinkCategory(m.Category, m.DrinkType, m.IsBarItem))
+            .ToList();
+
+        IEnumerable<MenuItem> query = drinkList;
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -364,9 +356,7 @@ public class BarService
             query = query.Where(m => m.Price <= maxPrice.Value);
         }
 
-        var items = await query
-            .OrderBy(m => m.DishName)
-            .ToListAsync();
+        var items = query.OrderBy(m => m.DishName).ToList();
 
         return items.Select(MapDrinkFromEntity).ToList();
     }
@@ -405,7 +395,7 @@ public class BarService
 
         string drinkType = !string.IsNullOrWhiteSpace(dto.DrinkType)
             ? dto.DrinkType.Trim()
-            : (IsAlcoholicCategory(category) ? "Alcoholic" : "Non-Alcoholic");
+            : (DrinkCategoryHelper.IsAlcoholicCategory(category, null, dto.AlcoholContent ?? dto.Abv) ? "Alcoholic" : "Non-Alcoholic");
 
         decimal abv = dto.AlcoholContent ?? dto.Abv ?? (drinkType == "Alcoholic" ? 40.0m : 0.0m);
         bool isSpecial = dto.IsSpecial ?? dto.IsBartenderSpecial ?? dto.IsChefsSpecial ?? false;
@@ -416,6 +406,33 @@ public class BarService
 
         string? desc = dto.Description ?? dto.ShortDescription;
         string? image = dto.ImageUrl ?? dto.Image;
+        string dietaryType = drinkType == "Alcoholic" ? "Veg" : "Non-Veg";
+
+        // Requirement 6: Prevent duplicate records by matching name (case-insensitive)
+        var existing = await _context.MenuItems
+            .FirstOrDefaultAsync(m => m.DeletedAt == null && m.DishName.ToLower() == name.ToLower());
+
+        if (existing != null)
+        {
+            _logger.LogInformation("Drink '{Name}' already exists (ID: {Id}). Synchronizing to prevent duplicate.", name, existing.MenuItemId);
+            existing.DishName = name;
+            existing.Category = category;
+            existing.Price = price;
+            existing.ServingMeasure = measure;
+            existing.DrinkType = drinkType;
+            existing.AlcoholPct = abv;
+            existing.IsBarItem = true;
+            existing.IsAvailable = isAvail;
+            existing.IsChefsSpecial = isSpecial;
+            existing.PrepTimeMinutes = prepMins;
+            existing.DietaryType = dietaryType;
+            if (!string.IsNullOrWhiteSpace(desc)) existing.ShortDescription = desc.Trim();
+            if (!string.IsNullOrWhiteSpace(image)) existing.ImageUrl = image.Trim();
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return MapDrinkFromEntity(existing);
+        }
 
         var entity = new MenuItem
         {
@@ -429,7 +446,7 @@ public class BarService
             IsAvailable = isAvail,
             IsChefsSpecial = isSpecial,
             PrepTimeMinutes = prepMins,
-            DietaryType = drinkType == "Alcoholic" ? "Non-Veg" : "Veg",
+            DietaryType = dietaryType,
             ShortDescription = desc?.Trim(),
             ImageUrl = image?.Trim(),
             CreatedAt = DateTime.UtcNow,
@@ -439,8 +456,8 @@ public class BarService
         _context.MenuItems.Add(entity);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Bar drink created: ID={Id}, Name={Name}, Category={Category}, Price={Price}, Special={Special}",
-            entity.MenuItemId, entity.DishName, entity.Category, entity.Price, entity.IsChefsSpecial);
+        _logger.LogInformation("Bar drink created: ID={Id}, Name={Name}, Category={Category}, Price={Price}, DietaryType={DietaryType}",
+            entity.MenuItemId, entity.DishName, entity.Category, entity.Price, entity.DietaryType);
 
         return MapDrinkFromEntity(entity);
     }
@@ -512,6 +529,11 @@ public class BarService
             item.ImageUrl = image.Trim();
 
         item.IsBarItem = true;
+        string effectiveDrinkType = !string.IsNullOrWhiteSpace(item.DrinkType)
+            ? item.DrinkType
+            : (DrinkCategoryHelper.IsAlcoholicCategory(item.Category, null, item.AlcoholPct) ? "Alcoholic" : "Non-Alcoholic");
+        item.DrinkType = effectiveDrinkType;
+        item.DietaryType = effectiveDrinkType == "Alcoholic" ? "Veg" : "Non-Veg";
         item.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();

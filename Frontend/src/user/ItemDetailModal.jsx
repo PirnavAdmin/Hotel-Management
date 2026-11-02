@@ -14,6 +14,7 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { sounds } from "../utils/audio";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 const PRESET_NOTES = [
   "Extra Spicy 🌶️",
@@ -224,12 +225,12 @@ export function ItemDetailModal({
                 backdropFilter: "blur(6px)",
                 padding: "3px 8px",
                 borderRadius: "6px",
-                border: item.isVeg
+                border: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg)
                   ? "1px solid rgba(16, 185, 129, 0.4)"
                   : "1px solid rgba(239, 68, 68, 0.4)",
                 fontSize: "0.7rem",
                 fontWeight: 700,
-                color: item.isVeg ? "#34d399" : "#f87171",
+                color: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "#34d399" : "#f87171",
                 letterSpacing: "0.5px",
               }}
             >
@@ -238,10 +239,10 @@ export function ItemDetailModal({
                   width: "6px",
                   height: "6px",
                   borderRadius: "50%",
-                  backgroundColor: item.isVeg ? "#10b981" : "#ef4444",
+                  backgroundColor: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "#10b981" : "#ef4444",
                 }}
               />
-              {item.isVeg ? "VEG" : "NON-VEG"}
+              {(item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "VEG" : "NON-VEG"}
             </div>
 
             {/* Chef Special Badge */}

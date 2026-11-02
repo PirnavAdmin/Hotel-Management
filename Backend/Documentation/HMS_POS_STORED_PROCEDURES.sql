@@ -230,7 +230,8 @@ CREATE PROCEDURE `sp_GetMenuItems`(
 BEGIN
     SELECT menu_item_id, dish_name, category, price, dietary_type, spice_level,
            prep_time_minutes, short_description, image_url, is_chefs_special, is_available,
-           created_at, updated_at
+           created_at, updated_at,
+           serving_measure, drink_type, alcohol_pct, is_bar_item
     FROM `menu_items`
     WHERE deleted_at IS NULL
       AND (p_search IS NULL OR p_search = '' OR LOWER(dish_name) LIKE CONCAT('%', LOWER(p_search), '%') OR LOWER(category) LIKE CONCAT('%', LOWER(p_search), '%'))
@@ -244,7 +245,8 @@ CREATE PROCEDURE `sp_GetMenuItemById`(IN p_menu_item_id BIGINT)
 BEGIN
     SELECT menu_item_id, dish_name, category, price, dietary_type, spice_level,
            prep_time_minutes, short_description, image_url, is_chefs_special, is_available,
-           created_at, updated_at
+           created_at, updated_at,
+           serving_measure, drink_type, alcohol_pct, is_bar_item
     FROM `menu_items`
     WHERE menu_item_id = p_menu_item_id AND deleted_at IS NULL;
 END;

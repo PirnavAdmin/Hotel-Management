@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -23,10 +24,9 @@ public class MenuItem
     [Column("price", TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
 
-    [Required]
     [MaxLength(20)]
     [Column("dietary_type")]
-    public string DietaryType { get; set; } = "Non-Veg"; // "Veg", "Non-Veg", "Egg"
+    public string? DietaryType { get; set; } = "Non-Veg"; // "Veg", "Non-Veg", "N/A"
 
     [Column("spice_level")]
     public int SpiceLevel { get; set; } = 0; // 0 to 3
