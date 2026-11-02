@@ -6,7 +6,8 @@ import {
 , MinusCircle, PackagePlus } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
-import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
+import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
@@ -6367,10 +6368,10 @@ function BarStaffView({
       <style>{`
         .staff-filter-toolbar {
           display: grid;
-          grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
           align-items: end;
-          gap: 10px;
-          padding: 0.65rem;
+          gap: 0.5rem;
+          padding: 0.65rem 0.85rem;
           margin-bottom: 0.5rem;
           background: var(--bg-secondary);
           border-radius: 8px;
@@ -6378,13 +6379,15 @@ function BarStaffView({
         .staff-filter-toolbar .menu-filter-field { min-width: 0; }
         .staff-filter-toolbar .staff-filter-search { flex: initial; }
         .staff-filter-toolbar .staff-filter-count {
-          min-width: max-content;
-          padding: 0 0.25rem 0.6rem;
+          min-width: 0;
+          padding: 0 0 0.45rem;
           color: var(--text-dim);
           font-size: 0.74rem;
           font-weight: 600;
           white-space: nowrap;
-          text-align: right;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         @media (max-width: 1100px) {
           .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -6398,7 +6401,7 @@ function BarStaffView({
         }
         .staff-table-grid {
           display: grid;
-          grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
           gap: 0.5rem;
         }
         .staff-table-grid > * { min-width: 0; }
@@ -6611,12 +6614,6 @@ function BarStaffView({
                 </select>
               </label>
 
-              {/* Col 3: Phone / Contact */}
-              <label className="menu-filter-field" htmlFor="bar-staff-filter-contact">
-                <span>Phone / Contact</span>
-                <input id="bar-staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
-              </label>
-
               {/* Col 4: Shift Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-shift">
                 <span>Shift</span>
@@ -6742,10 +6739,9 @@ function BarStaffView({
             >
               <div>Staff Name</div>
               <div>Role / Designation</div>
-              <div>Phone / Contact</div>
               <div>Shift</div>
               <div>Table Assignment</div>
-              <div style={{ textAlign: "right" }}>Actions</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
             </div>
 
             {/* Empty State */}
@@ -6904,18 +6900,6 @@ function BarStaffView({
                     {personRole}
                   </div>
 
-                  {/* Col 3: Phone */}
-                  <div
-                    style={{
-                      color: "var(--text-muted)",
-                      fontSize: "0.84rem",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {person.phone || "—"}
-                  </div>
-
                   {/* Col 4: Shift */}
                   <div
                     style={{
@@ -6973,7 +6957,7 @@ function BarStaffView({
                   </div>
 
                   {/* Col 6: Actions */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                     <button
                       type="button"
                       onClick={() => handleOpenStaffModal(person)}
@@ -7171,41 +7155,6 @@ function BarStaffView({
                 required
                 allowCustom
                 onSaveCustomOption={saveCustomRole}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Contact Phone
-              </label>
-              <input
-                type="text"
-                placeholder="+91 98450 12345"
-                value={staffForm.phone}
-                onChange={(e) =>
-                  setStaffForm({ ...staffForm, phone: e.target.value })
-                }
-                style={{
-                  width: "100%",
-                  height: "38px",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                }}
               />
             </div>
 
@@ -8330,7 +8279,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
   const listConfig = {
     "bar-drinks": { title: "Drinks Menu", description: "Beverage items from the shared restaurant menu.", rows: drinks, kind: "drink", columns: ["Drink Name", "Category", "Serving / Measure", "Price", "Availability", "Actions"] },
     "bar-tables": { title: "Bar Tables", description: "The shared hotel table records and complete food-and-drink orders.", rows: tables, kind: "table", columns: ["Table #", "Area", "Chairs / Capacity", "Assigned Server", "Status", "Guests", "Current Order", "Order Amount", "Actions"] },
-    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Phone / Contact", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
+    "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
 
   const filterChoices = route === "bar-drinks" ? ["all", ...new Set([...BAR_CATEGORIES, ...drinks.map((drink) => drink.category).filter(Boolean)])] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
@@ -9308,7 +9257,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
         />
       )}
 
-      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
+      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} preferPastOrders restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
 

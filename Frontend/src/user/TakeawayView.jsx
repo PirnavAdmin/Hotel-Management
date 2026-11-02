@@ -1,11 +1,15 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Search, ShoppingBag, Plus, Minus } from "lucide-react";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { apiDispatchTakeawayOrder, apiGetTakeawayOrders, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
 
-export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout }) {
+export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, orderPlacedSignal = 0 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [cart, setCart] = useState({});
+  const [takeawayOrders, setTakeawayOrders] = useState([]);
+  const [orderNotice, setOrderNotice] = useState("");
+  const [dispatchingOrderId, setDispatchingOrderId] = useState(null);
   const categories = useMemo(() => [...new Set((Array.isArray(menuItems) ? menuItems : []).map((item) => item.category).filter(Boolean))], [menuItems]);
   const items = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -24,6 +28,52 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout }
   const count = Object.values(cart).reduce((sum, line) => sum + line.quantity, 0);
   const total = Object.values(cart).reduce((sum, line) => sum + Number(line.item.price || 0) * line.quantity, 0);
 
+  const refreshTakeawayOrders = async () => {
+    const result = await apiGetTakeawayOrders();
+    if (!result?.success || !Array.isArray(result.data)) {
+      setOrderNotice(result?.error || "Could not load takeaway orders from the server.");
+      return;
+    }
+    setOrderNotice("");
+    setTakeawayOrders(result.data);
+  };
+
+  useEffect(() => {
+    refreshTakeawayOrders();
+    const intervalId = window.setInterval(refreshTakeawayOrders, 5000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (orderPlacedSignal > 0) {
+      setCart({});
+      refreshTakeawayOrders();
+    }
+  }, [orderPlacedSignal]);
+
+  const handleDispatch = async (orderId) => {
+    setDispatchingOrderId(orderId);
+    const result = await apiDispatchTakeawayOrder(orderId);
+    if (!result?.success) {
+      setOrderNotice(result?.error || "Could not dispatch this takeaway order.");
+    } else {
+      setOrderNotice("Takeaway order dispatched.");
+      await refreshTakeawayOrders();
+    }
+    setDispatchingOrderId(null);
+  };
+
+  const handleRetryKitchenSend = async (orderId) => {
+    setDispatchingOrderId(orderId);
+    const result = await apiSendTakeawayOrderToKitchen(orderId);
+    if (!result?.success) setOrderNotice(result?.error || "Could not send this order to the kitchen.");
+    else {
+      setOrderNotice("Takeaway order sent to the kitchen.");
+      await refreshTakeawayOrders();
+    }
+    setDispatchingOrderId(null);
+  };
+
   return (
     <section className="takeaway-section" style={{ padding: "1.25rem 2rem", color: "var(--text-main)", minHeight: "calc(100vh - 130px)" }}>
       <style>{`
@@ -37,6 +87,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout }
         .takeaway-add-button, .takeaway-qty-button { display: inline-flex; align-items: center; justify-content: center; gap: .2rem; min-height: 27px; padding: .25rem .45rem; border: 1px solid rgba(245,158,11,.45); border-radius: 6px; background: linear-gradient(135deg,#f59e0b,#ea580c); color: #111827; font-size: .76rem; font-weight: 800; cursor: pointer; }
         .takeaway-qty-button { width: 26px; min-height: 26px; padding: 0; background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
         .takeaway-order-panel { position: sticky; top: 100px; box-sizing: border-box; width: 100%; min-width: 0; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-secondary); }
+        .takeaway-kitchen-order { margin-top: .65rem; padding: .65rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-tertiary); }
         @media (max-width: 900px) { .takeaway-layout { grid-template-columns: minmax(0, 1fr); } .takeaway-order-panel { position: static; } }
         @media (max-width: 600px) { .takeaway-section { padding: 1rem !important; } }
       `}</style>
@@ -67,7 +118,23 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout }
         <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: ".8rem", paddingTop: ".7rem", display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><strong>₹{total.toFixed(2)}</strong></div>
         <div style={{ marginTop: ".45rem", display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}><span>GST (5%)</span><span>₹{(total * .05).toFixed(2)}</span></div>
         <div style={{ marginTop: ".55rem", display: "flex", justifyContent: "space-between", fontSize: "1.1rem" }}><strong>Total</strong><strong style={{ color: "var(--accent-amber-light)" }}>₹{Math.round(total * 1.05).toFixed(2)}</strong></div>
-        <button disabled={!count} onClick={() => onCheckout?.(Object.values(cart).map(({ item, quantity }) => ({ ...item, quantity })))} style={{ width: "100%", marginTop: ".9rem", padding: ".75rem", border: 0, borderRadius: 9, background: count ? "var(--accent-amber)" : "var(--bg-tertiary)", color: count ? "#111" : "var(--text-muted)", fontWeight: 800, cursor: count ? "pointer" : "not-allowed" }}>Create Invoice &amp; Checkout</button>
+        <button disabled={!count} onClick={() => onCheckout?.(Object.values(cart).map(({ item, quantity }) => ({ ...item, quantity })))} style={{ width: "100%", marginTop: ".9rem", padding: ".75rem", border: 0, borderRadius: 9, background: count ? "var(--accent-amber)" : "var(--bg-tertiary)", color: count ? "#111" : "var(--text-muted)", fontWeight: 800, cursor: count ? "pointer" : "not-allowed" }}>Pay &amp; Send to Kitchen</button>
+        <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: "1rem", paddingTop: ".8rem" }}>
+          <h3 style={{ margin: "0 0 .5rem" }}>Paid Takeaway Orders</h3>
+          {orderNotice && <p role="status" style={{ color: "var(--text-muted)", fontSize: ".85rem" }}>{orderNotice}</p>}
+          {!takeawayOrders.length && !orderNotice && <p style={{ color: "var(--text-muted)", fontSize: ".9rem" }}>No active takeaway orders.</p>}
+          {takeawayOrders.map((order) => {
+            const orderItems = Array.isArray(order.items) ? order.items : [];
+            const allReady = orderItems.length > 0 && orderItems.every((item) => ["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase()));
+            const kotNotSent = orderItems.some((item) => !item.kotId);
+            return <div className="takeaway-kitchen-order" key={order.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: ".5rem" }}><strong>Order #{order.id}</strong><strong style={{ color: allReady ? "#10b981" : "var(--accent-amber-light)" }}>{allReady ? "Ready" : "In kitchen"}</strong></div>
+              <div style={{ color: "var(--text-muted)", fontSize: ".85rem", margin: ".35rem 0" }}>{orderItems.map((item) => `${item.name} × ${item.quantity}`).join(", ")}</div>
+              {kotNotSent && <button disabled={dispatchingOrderId === order.id} onClick={() => handleRetryKitchenSend(order.id)} style={{ width: "100%", marginBottom: ".4rem", padding: ".45rem", border: "1px solid var(--border-subtle)", borderRadius: 6, background: "var(--bg-secondary)", color: "var(--text-main)", fontWeight: 700 }}>{dispatchingOrderId === order.id ? "Sending…" : "Retry Send to Kitchen"}</button>}
+              <button disabled={!allReady || dispatchingOrderId === order.id} onClick={() => handleDispatch(order.id)} style={{ width: "100%", padding: ".45rem", border: 0, borderRadius: 6, background: allReady ? "#10b981" : "var(--bg-secondary)", color: allReady ? "#062b20" : "var(--text-muted)", fontWeight: 750, cursor: allReady ? "pointer" : "not-allowed" }}>{dispatchingOrderId === order.id ? "Dispatching…" : "Mark Items Dispatched"}</button>
+            </div>;
+          })}
+        </div>
       </aside>
       </div>
     </section>
