@@ -69,6 +69,7 @@ import {
 import { apiAdjustStock } from "./api/inventoryApi";
 import { API_BASE_URL } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
+import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { useAppDialog } from "./common/DialogContext";
@@ -125,7 +126,6 @@ const isRogueName = (name) => {
   return (
     lower.includes("live verification") ||
     lower.includes("table final") ||
-    lower.includes("table 20") ||
     lower === "verification" ||
     lower === "test" ||
     lower.startsWith("pat") ||
@@ -135,16 +135,7 @@ const isRogueName = (name) => {
 };
 
 const parseTableNumber = (table) => {
-  const rawName = String(table.tableName || table.name || "").trim();
-  const nameMatch = rawName.match(/^(?:table|t)\s*(\d+)$/i);
-  if (nameMatch) {
-    return parseInt(nameMatch[1], 10);
-  }
-  const rawId = Number(table.id ?? table.tableId);
-  if (Number.isFinite(rawId) && rawId > 0) {
-    return rawId;
-  }
-  return null;
+  return getTableSortNumber(table);
 };
 
 const mergeIncomingTables = (incomingTables, deletedTableIds) => {
@@ -300,7 +291,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       }
       return table;
     })
-    .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    .sort(compareTablesNaturally);
 };
 
 const getDeletedTableIds = () => {

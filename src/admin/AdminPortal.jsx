@@ -38,6 +38,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
@@ -679,7 +680,7 @@ export function AdminPortal({
       tableStatus === normalizeTableFilterText(tableFilters.status);
 
     return matchesSearch && matchesStatus;
-  }).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }).sort(compareTablesNaturally);
 
   const [tableSortField, setTableSortField] = useState("id");
   const [tableSortDirection, setTableSortDirection] = useState("asc");
@@ -698,15 +699,17 @@ export function AdminPortal({
     return [...filteredTables].sort((a, b) => {
       let aVal = a[tableSortField];
       let bVal = b[tableSortField];
-      if (tableSortField === "id") {
-        aVal = Number(a.id || 0);
-        bVal = Number(b.id || 0);
+      if (tableSortField === "id" || tableSortField === "name") {
+        const aNum = getTableSortNumber(a);
+        const bNum = getTableSortNumber(b);
+        if (aNum !== bNum) {
+          return tableSortDirection === "asc" ? aNum - bNum : bNum - aNum;
+        }
+        aVal = String(a.name || a.tableName || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || b.tableName || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "capacity") {
         aVal = Number(a.capacity || 0);
         bVal = Number(b.capacity || 0);
-      } else if (tableSortField === "name") {
-        aVal = String(a.name || `Table ${a.id || ""}`).toLowerCase();
-        bVal = String(b.name || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "area") {
         aVal = String(a.section || "").toLowerCase();
         bVal = String(b.section || "").toLowerCase();
@@ -1472,9 +1475,15 @@ export function AdminPortal({
     }
 
     if (editingTable) {
+      const parsedNum = parseInt(String(tableForm.name || "").replace(/\D/g, ""), 10);
+      const targetNum = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : getTableSortNumber(editingTable);
+      const formattedName = targetNum > 0 ? `Table-${targetNum}` : (tableForm.name || `Table-${editingTable.id}`);
       onUpdateTable({
         ...editingTable,
-        name: tableForm.name,
+        id: targetNum > 0 ? targetNum : editingTable.id,
+        name: formattedName,
+        tableName: formattedName,
+        tableNumber: formattedName,
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 2,
         server: assignedServer,
@@ -3118,7 +3127,7 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                   >
-                                    <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
+                                    <span>T{getTableSortNumber(tbl) || (tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id)}</span>
                                   </div>
                                   <span
                                     style={{

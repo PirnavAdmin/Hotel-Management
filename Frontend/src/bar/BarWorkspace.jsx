@@ -9,6 +9,7 @@ import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDele
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 
 import { formatCurrency } from "../utils/formatCurrency";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonTable } from "../common/Skeletons";
 import { BarBOTView, BarKOTView } from "./BarBOTView";
@@ -4852,9 +4853,14 @@ function BarTablesView({
     return [...filteredTables].sort((a, b) => {
       let aVal = a[tableSortField];
       let bVal = b[tableSortField];
-      if (tableSortField === "id") {
-        aVal = Number(a.id || 0);
-        bVal = Number(b.id || 0);
+      if (tableSortField === "id" || tableSortField === "name") {
+        const aNum = getTableSortNumber(a);
+        const bNum = getTableSortNumber(b);
+        if (aNum !== bNum) {
+          return tableSortDirection === "asc" ? aNum - bNum : bNum - aNum;
+        }
+        aVal = String(a.name || a.tableName || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || b.tableName || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "capacity") {
         aVal = Number(a.capacity || 0);
         bVal = Number(b.capacity || 0);
