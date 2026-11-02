@@ -3026,6 +3026,7 @@ function BarDrinksMenu({
   onSetMenuAvailability,
   setToast,
 }) {
+  const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [extraCategories, setExtraCategories] = useState([]);
   const [extraMeasures, setExtraMeasures] = useState([]);
 
@@ -3313,13 +3314,19 @@ function BarDrinksMenu({
   };
 
   const handleDeleteItem = (item) => {
-    if (!window.confirm('Are you sure you want to delete "' + item.name + '" from the drinks menu?')) return;
-    console.info("[Bar Drinks] Deleting drink item:", item.id);
-    if (onDeleteDrink) {
-      onDeleteDrink(item.id);
-    } else if (onDeleteMenuItem) {
-      onDeleteMenuItem(item.id);
-    }
+    requestDelete({
+      title: "Delete Menu Item?",
+      message: `Are you sure you want to delete "${item.name}" from the drinks menu? This action cannot be undone.`,
+      confirmLabel: "Yes, Delete",
+      onConfirm: () => {
+        console.info("[Bar Drinks] Deleting drink item:", item.id);
+        if (onDeleteDrink) {
+          onDeleteDrink(item.id);
+        } else if (onDeleteMenuItem) {
+          onDeleteMenuItem(item.id);
+        }
+      },
+    });
   };
 
   return (
@@ -4649,6 +4656,18 @@ function BarDrinksMenu({
           </form>
         </div>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        icon={confirmState.icon}
+        onConfirm={confirmState.onConfirm}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

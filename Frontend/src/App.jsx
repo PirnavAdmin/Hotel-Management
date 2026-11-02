@@ -35,6 +35,7 @@ import {
   apiSetMenuSpecialStatus,
   normalizeMenuItem,
 } from "./api/menuApi";
+import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import {
   Bell,
@@ -458,13 +459,8 @@ export function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Strictly exclude bar-specific drinks (e.g. mojito or isBarDrink) from Dine menu items
-          const dineItems = parsed.filter(
-            (item) =>
-              !item.isBarDrink &&
-              !item.isBarItem &&
-              String(item.name || "").trim().toLowerCase() !== "mojito"
-          );
+          // Strictly exclude bar-specific drinks from Dine menu items
+          const dineItems = parsed.filter((item) => !isDrinkItem(item));
           if (dineItems.length === 0) return MENU_ITEMS;
           if (dineItems.length !== parsed.length) {
             try {
@@ -607,12 +603,7 @@ export function App() {
           localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
         } catch {}
         const normalizedMenu = backendMenu
-          .filter(
-            (item) =>
-              !item.isBarDrink &&
-              !item.isBarItem &&
-              String(item.dishName || item.name || "").trim().toLowerCase() !== "mojito"
-          )
+          .filter((item) => !isDrinkItem(item))
           .map((item) => {
           const previous = localMenu.find((saved) =>
             String(saved.id) === String(item.menuItemId ?? item.id) ||
@@ -1001,7 +992,7 @@ export function App() {
         if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
           setMenuItems((prev) => {
             if (prev && prev.length > 0) return prev;
-            const normalizedMenu = incomingMenu.map(normalizeMenuItem);
+            const normalizedMenu = incomingMenu.filter((item) => !isDrinkItem(item)).map(normalizeMenuItem);
             try {
               localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
             } catch {}
@@ -1080,7 +1071,7 @@ export function App() {
             } catch {}
             setMenuItems((prev) => {
               const currentList = prev && prev.length > 0 ? prev : savedMenuForRecipes;
-              const normalizedMenu = incomingMenu.map((m) => {
+              const normalizedMenu = incomingMenu.filter((m) => !isDrinkItem(m)).map((m) => {
                 const existing = currentList.find(
                   (item) =>
                     String(item.id) === String(m.menuItemId || m.id) ||

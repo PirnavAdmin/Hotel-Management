@@ -1725,6 +1725,7 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
+import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonMenuCard } from "../common/Skeletons";
 
@@ -1799,6 +1800,9 @@ export function TableDetailView({
     const normalizedQuery = query.replace(/biriyani/g, "biryani");
 
     return (Array.isArray(menuItems) ? menuItems : []).filter((item) => {
+      // Exclude bar drink items from Dine In table ordering
+      if (isDrinkItem(item)) return false;
+
       const matchCat =
         selectedCategory === "all" || item.category === selectedCategory;
 
@@ -2812,7 +2816,7 @@ export function TableDetailView({
               padding: "0.5rem",
             }}
           >
-            {[{ id: "all", name: "All Items", icon: "Utensils" }, ...Array.from(new Map((menuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: "Utensils" }])).values())].map((category) => {
+            {[{ id: "all", name: "All Items", icon: "Utensils" }, ...Array.from(new Map((menuItems || []).filter((item) => !isDrinkItem(item) && item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: "Utensils" }])).values())].map((category) => {
               const isSelected = selectedCategory === category.id;
               const IconComp = CATEGORY_ICONS[category.icon] || Utensils;
 

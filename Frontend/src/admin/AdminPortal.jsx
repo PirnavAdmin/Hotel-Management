@@ -49,7 +49,7 @@ import {
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
-import { isDrinkItem } from "../kot/orderRouting";
+import { isDrinkItem, isBeverageCategory } from "../kot/orderRouting";
 import { INITIAL_STAFF } from "../data/initialStaff";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
@@ -597,6 +597,7 @@ export function AdminPortal({
 
   const [searchFilter, setSearchFilter] = useState("");
   const emptyMenuFilters = {
+    section: "dine",
     category: "",
     dietary: "",
     availability: "",
@@ -1128,11 +1129,20 @@ export function AdminPortal({
       { value: "tandoor-kebabs", label: "Tandoori & Kebabs" },
       { value: "fast-food", label: "Burgers, Pizza & Fast Food" },
       { value: "breads", label: "Naan & Roti" },
-      { value: "beverages", label: "Beverages & Coffee" },
       { value: "desserts", label: "Desserts & Sweets" },
-      { value: "cocktails", label: "Cocktails" },
-      { value: "mocktails", label: "Mocktails" },
     ];
+    if (menuFilters.section === "bar" || menuFilters.section === "all") {
+      standardCategories.push(
+        { value: "cocktails", label: "Cocktails" },
+        { value: "mocktails", label: "Mocktails" },
+        { value: "beverages", label: "Beverages & Coffee" },
+        { value: "beers", label: "Beers & Ciders" },
+        { value: "whiskey", label: "Whiskey & Scotch" },
+        { value: "vodka-gin", label: "Vodka & Gin" },
+        { value: "rum-brandy", label: "Rum & Brandy" },
+        { value: "wine", label: "Wine & Champagne" }
+      );
+    }
 
     standardCategories.forEach((cat) => {
       map.set(cat.value.toLowerCase(), cat);
@@ -1170,9 +1180,13 @@ export function AdminPortal({
 
     // Add any genuine custom categories from menuItems
     (menuItems || []).forEach((item) => {
+      const isDrink = isDrinkItem(item);
+      if (menuFilters.section === "dine" && isDrink) return;
+      if (menuFilters.section === "bar" && !isDrink) return;
       const cat = item.category || item.categoryName;
       if (!cat || typeof cat !== "string") return;
       const trimmed = cat.trim();
+      if (menuFilters.section === "dine" && isBeverageCategory(trimmed)) return;
       const lower = trimmed.toLowerCase();
       if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
         const canonicalKey = lower === "curries" ? "mains" : lower;
@@ -1622,6 +1636,16 @@ export function AdminPortal({
 
   // Filtered menu items
   const filteredItems = menuItems.filter((item) => {
+    const isDrink = isDrinkItem(item);
+    if (menuFilters.section === "bar") {
+      if (!isDrink) return false;
+    } else if (menuFilters.section === "all") {
+      // show both
+    } else {
+      // Default: "dine" -> only food/dine items
+      if (isDrink) return false;
+    }
+
     const query = searchFilter.trim().toLowerCase();
     return (
       [item.name, item.description, item.category].some((value) =>
@@ -1993,6 +2017,15 @@ export function AdminPortal({
                       </label>
                       {[
                         {
+                          key: "section",
+                          label: "Section",
+                          options: [
+                            { value: "dine", label: "Dine In (Food)" },
+                            { value: "bar", label: "Bar (Drinks)" },
+                            { value: "all", label: "All Items" },
+                          ],
+                        },
+                        {
                           key: "category",
                           label: "Category",
                           options: allCategoryOptions,
@@ -2030,7 +2063,7 @@ export function AdminPortal({
                               updateMenuFilter(key, event.target.value)
                             }
                           >
-                            <option value="">All</option>
+                            {key !== "section" && <option value="">All</option>}
                             {options.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
