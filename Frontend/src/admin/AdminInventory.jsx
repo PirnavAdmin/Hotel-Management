@@ -21,7 +21,7 @@ import {
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
-import { API_BASE_URL } from "../api/apiConfig";
+import { API_HTTP_BASE } from "../api/apiConfig";
 import {
   apiGetInventory,
   apiCreateInventoryItem,
@@ -803,7 +803,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     });
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
-      fetch(`${API_BASE_URL}/api/sync`, {
+      fetch(`${API_HTTP_BASE}/api/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

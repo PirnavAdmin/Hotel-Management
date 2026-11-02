@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiClient } from "./apiConfig";
+import { API_BASE_URL, API_HTTP_BASE, apiClient } from "./apiConfig";
 import { getMenuItemImage } from "../utils/menuImageHelper";
 import {
   isDrinkCategory,
@@ -150,7 +150,7 @@ export async function apiUploadMenuImage(file) {
       : null;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/menu-items/upload-image`, {
+    const response = await fetch(`${API_HTTP_BASE}/api/v1/menu-items/upload-image`, {
       method: "POST",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

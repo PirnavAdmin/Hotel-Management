@@ -74,7 +74,7 @@ import {
   apiSettleOrder,
 } from "./api/orderApi";
 import { apiAdjustStock } from "./api/inventoryApi";
-import { API_BASE_URL } from "./api/apiConfig";
+import { API_BASE_URL, API_HTTP_BASE } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
@@ -349,7 +349,7 @@ export function App() {
       } catch {}
       if (!data && API_BASE_URL) {
         try {
-          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
+          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
             headers: { "ngrok-skip-browser-warning": "true" },
           });
           if (res.ok) data = await res.json();
@@ -375,7 +375,7 @@ export function App() {
       localEvents.onmessage = handleSettingsMsg;
     } catch {}
 
-    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+    if (!import.meta.env.DEV && API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
       try {
         remoteEvents = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
         remoteEvents.onmessage = handleSettingsMsg;
@@ -832,8 +832,8 @@ export function App() {
       }).catch(() => {});
 
       // 2. Also sync to remote backend API if configured and different from host
-      if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
-        fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/sync`, {
+      if (API_HTTP_BASE && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+        fetch(`${API_HTTP_BASE}/api/sync`, {
           method: "POST",
           headers,
           body: syncBody,
@@ -969,7 +969,7 @@ export function App() {
       } catch {}
       if (!data && API_BASE_URL) {
         try {
-          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
+          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
             headers: { "ngrok-skip-browser-warning": "true" },
           });
           if (res.ok) data = await res.json();
@@ -1193,7 +1193,7 @@ export function App() {
       localEs.onmessage = handleSseMessage;
     } catch {}
 
-    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+    if (!import.meta.env.DEV && API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
       try {
         remoteEs = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
         remoteEs.onmessage = handleSseMessage;
