@@ -250,7 +250,8 @@ export function dedupeOrders(orders = []) {
   const validOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
     if (!order || typeof order !== "object") return false;
     const status = String(order.status || order.Status || "").toLowerCase();
-    return status !== "active" && status !== "dining" && status !== "vacant";
+    return status !== "active" && status !== "dining" && status !== "vacant" &&
+      status !== "void" && status !== "cancelled";
   });
 
   for (const rawOrder of validOrders) {
@@ -275,7 +276,7 @@ export function dedupeOrders(orders = []) {
       grandTotal: orderGrandTotal,
       total: orderGrandTotal,
       totalAmount: orderGrandTotal,
-      paidAmount: Number(rawOrder.paidAmount) || orderGrandTotal,
+      paidAmount: Number(rawOrder.paidAmount ?? rawOrder.amountPaid ?? rawOrder.AmountPaid ?? orderGrandTotal) || 0,
       status: "Settled",
       Status: "Settled",
     };
