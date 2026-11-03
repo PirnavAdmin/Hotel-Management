@@ -62,6 +62,7 @@ export function BarBOTView({
   onItemsUpdated,
   onUpdateItemKotStatus,
   onCompleteTableKot,
+  embedded = false,
 }) {
   const [adminBotTableFilter, setAdminBotTableFilter] = useState("all");
   const [isBotTableDropdownOpen, setIsBotTableDropdownOpen] = useState(false);
@@ -454,11 +455,16 @@ export function BarBOTView({
               padding: "1.5rem",
               overflowY: "auto",
             }
-          : {}
+          : {
+              width: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+              padding: embedded ? 0 : "0.5rem 0.75rem 1rem",
+            }
       }
     >
       {/* 1. Header Row (Matching Dine KOT Dispatch) */}
-      <div
+      {!embedded && <div
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -544,7 +550,7 @@ export function BarBOTView({
             <span>{isFullScreen ? "Close Full Screen" : "Open Full Screen BOT Screen"}</span>
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* 2. Table Filter Bar with Dropdown (Exact Match to Dine KOT) */}
       <div
@@ -1038,11 +1044,14 @@ export function BarBOTView({
             display: "grid",
             gridTemplateColumns:
               adminBotTableFilter !== "all"
-                ? "minmax(200px, 320px)"
-                : "repeat(auto-fill, minmax(170px, 1fr))",
+                ? "minmax(0, 390px)"
+                : "repeat(auto-fill, minmax(min(100%, 320px), 390px))",
             gap: "0.85rem",
-            justifyContent: adminBotTableFilter !== "all" ? "center" : "stretch",
+            justifyContent: "start",
             alignItems: "stretch",
+            alignContent: "start",
+            width: "100%",
+            boxSizing: "border-box",
           }}
         >
           {botDisplayTables.map((tbl) => {

@@ -4112,8 +4112,23 @@ export function AdminPortal({
                         </p>
                       </div>
 
-                      {onOpenKOTView && (
-                        <button
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 10 }}>
+                        <div role="tablist" aria-label="Admin order ticket stations" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 4, border: "1px solid var(--border-subtle)", borderRadius: 10, background: "var(--bg-secondary)" }}>
+                          {[{ id: "kitchen", label: "Kitchen KOT" }, { id: "bar", label: "Bar BOT" }].map((station) => (
+                            <button
+                              key={station.id}
+                              type="button"
+                              role="tab"
+                              aria-selected={adminKotStation === station.id}
+                              onClick={() => setAdminKotStation(station.id)}
+                              style={{ minHeight: 34, padding: "0 13px", borderRadius: 7, border: `1px solid ${adminKotStation === station.id ? "#f59e0b" : "transparent"}`, background: adminKotStation === station.id ? "rgba(245,158,11,.16)" : "transparent", color: adminKotStation === station.id ? "var(--accent-amber-light)" : "var(--text-main)", font: "inherit", fontWeight: 750, whiteSpace: "nowrap", cursor: "pointer" }}
+                            >
+                              {station.label}
+                            </button>
+                          ))}
+                        </div>
+                        {onOpenKOTView && (
+                          <button
                           onClick={() => {
                             onClose();
                             onOpenKOTView();
@@ -4134,33 +4149,22 @@ export function AdminPortal({
                           }}
                         >
                           <ExternalLink size={15} />
-                          <span>Open Full Screen KOT Screen</span>
+                          <span>Open Full Screen {adminKotStation === "bar" ? "BOT" : "KOT"} Screen</span>
                         </button>
-                      )}
-                    </div>
-
-                    <div role="tablist" aria-label="Admin order ticket stations" style={{ display: "flex", gap: 8, marginBottom: "1rem" }}>
-                      {[{ id: "kitchen", label: "Kitchen KOT" }, { id: "bar", label: "Bar BOT" }].map((station) => (
-                        <button
-                          key={station.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={adminKotStation === station.id}
-                          onClick={() => setAdminKotStation(station.id)}
-                          style={{ minHeight: 36, padding: "0 14px", borderRadius: 8, border: `1px solid ${adminKotStation === station.id ? "#f59e0b" : "var(--border-subtle)"}`, background: adminKotStation === station.id ? "rgba(245,158,11,.16)" : "var(--bg-secondary)", color: adminKotStation === station.id ? "var(--accent-amber-light)" : "var(--text-main)", font: "inherit", fontWeight: 750, cursor: "pointer" }}
-                        >
-                          {station.label}
-                        </button>
-                      ))}
+                        )}
+                      </div>
                     </div>
 
                     {adminKotStation === "bar" ? (
-                      <BarBOTView
-                        menuItems={menuItems}
-                        tables={tables}
-                        staffList={staffList}
-                        onUpdateItemKotStatus={onUpdateItemKotStatus}
-                      />
+                      <div style={{ width: "100%", minWidth: 0, boxSizing: "border-box", padding: "0.25rem 0.15rem 0.75rem" }}>
+                        <BarBOTView
+                          embedded
+                          menuItems={menuItems}
+                          tables={tables}
+                          staffList={staffList}
+                          onUpdateItemKotStatus={onUpdateItemKotStatus}
+                        />
+                      </div>
                     ) : (
                     <>
                     {/* Table Filter Bar with Dropdown matching TableDetailView */}
