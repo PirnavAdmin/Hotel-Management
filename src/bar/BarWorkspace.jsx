@@ -4320,7 +4320,7 @@ function BarDrinksMenu({
                 )}
               </div>
 
-              {/* Row 2, Col 1: Drink Type & Auto-assigned Dietary Type */}
+              {/* Row 2, Col 1: Drink Type */}
               <div>
                 <label
                   style={{
@@ -4331,49 +4331,29 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Drink Type & Dietary Type <span style={{ color: "#ea580c" }}>*</span>
+                  Drink Type <span style={{ color: "#ea580c" }}>*</span>
                 </label>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <select
-                    value={itemForm.drinkType}
-                    onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value })}
-                    style={{
-                      flex: 1,
-                      height: "38px",
-                      boxSizing: "border-box",
-                      background: "var(--bg-tertiary)",
-                      border: "1.5px solid var(--border-subtle)",
-                      borderRadius: "8px",
-                      padding: "0 0.85rem",
-                      color: "var(--text-main)",
-                      fontWeight: 600,
-                      fontSize: "0.9rem",
-                      outline: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <option value="Alcoholic">Alcoholic</option>
-                    <option value="Non-Alcoholic">Non-Alcoholic</option>
-                  </select>
-                  <div
-                    title="Dietary type automatically assigned based on Drink Type"
-                    style={{
-                      height: "38px",
-                      padding: "0 10px",
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      fontWeight: 700,
-                      fontSize: "0.78rem",
-                      whiteSpace: "nowrap",
-                      background: itemForm.drinkType === "Alcoholic" ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                      border: itemForm.drinkType === "Alcoholic" ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(239, 68, 68, 0.35)",
-                      color: itemForm.drinkType === "Alcoholic" ? "var(--success)" : "var(--danger)",
-                    }}
-                  >
-                    {itemForm.drinkType === "Alcoholic" ? "Veg 🟢" : "Non-Veg 🔴"}
-                  </div>
-                </div>
+                <select
+                  value={itemForm.drinkType}
+                  onChange={(e) => setItemForm({ ...itemForm, drinkType: e.target.value })}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="Alcoholic">Alcoholic</option>
+                  <option value="Non-Alcoholic">Non-Alcoholic</option>
+                </select>
               </div>
 
               {/* Row 2, Col 2: Alcohol Content (ABV %) */}
@@ -4603,8 +4583,20 @@ function BarDrinksMenu({
               </div>
 
               {/* Row 4, Col 2: Bartender's Special */}
-              <div style={{ display: "flex", alignItems: "center", height: "100%", paddingTop: "20px" }}>
-                <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.84rem", fontWeight: 700, color: "var(--text-main)" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", height: "100%" }}>
+                <label
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    height: "38px",
+                    cursor: "pointer",
+                    fontSize: "0.86rem",
+                    fontWeight: 700,
+                    color: Boolean(itemForm.isChefSpecial) ? "#f59e0b" : "var(--text-main)",
+                    userSelect: "none",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={Boolean(itemForm.isChefSpecial)}

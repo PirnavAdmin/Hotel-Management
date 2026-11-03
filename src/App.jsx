@@ -16,9 +16,10 @@ import {
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
 import { TakeawayView } from "./user/TakeawayView";
+import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
-import { setSession, logoutUser } from "./utils/auth";
+import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
 import {
   apiGetTables,
   apiCreateTable,
@@ -344,17 +345,11 @@ export function App() {
     const loadInitialSettings = async () => {
       let data = null;
       try {
-        const res = await fetch("/api/state");
+        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+        });
         if (res.ok) data = await res.json();
       } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
       if (data && active) {
         applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
       }
@@ -539,6 +534,7 @@ export function App() {
 
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
+  const [activeKotStation, setActiveKotStation] = useState("kitchen");
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
   const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
@@ -707,15 +703,55 @@ export function App() {
     }
   };
 
-  const [posSession, setPosSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_POS),
+  const [posSession, setPosSession] = useState(null);
+  const [kotSession, setKotSession] = useState(null);
+  const [adminSession, setAdminSession] = useState(null);
+  const [authRestorePending, setAuthRestorePending] = useState(() =>
+    [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
-  const [kotSession, setKotSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_KOT),
-  );
-  const [adminSession, setAdminSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_ADMIN),
-  );
+
+  // A saved browser session is only a hint. Revalidate it with the API before
+  // restoring an authenticated workspace so a server outage cannot look like
+  // a successful login on this device.
+  useEffect(() => {
+    const savedSessions = {
+      pos: loadRouteSession(SESSION_KEY_POS),
+      kot: loadRouteSession(SESSION_KEY_KOT),
+      admin: loadRouteSession(SESSION_KEY_ADMIN),
+    };
+    if (!savedSessions.pos && !savedSessions.kot && !savedSessions.admin) {
+      setAuthRestorePending(false);
+      return;
+    }
+
+    let active = true;
+    fetchCurrentAuthUser()
+      .then(({ success }) => {
+        if (!active) return;
+        if (!success) {
+          logoutUser();
+          setPosSession(null);
+          setKotSession(null);
+          setAdminSession(null);
+          return;
+        }
+        setPosSession(savedSessions.pos);
+        setKotSession(savedSessions.kot);
+        setAdminSession(savedSessions.admin);
+      })
+      .catch(() => {
+        if (!active) return;
+        logoutUser();
+        setPosSession(null);
+        setKotSession(null);
+        setAdminSession(null);
+      })
+      .finally(() => {
+        if (active) setAuthRestorePending(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   const saveRouteSession = (key, session) => {
     try {
@@ -824,21 +860,18 @@ export function App() {
         "ngrok-skip-browser-warning": "true",
       };
 
-      // 1. Primary sync to the same-origin host server (instant LAN / multi-device SSE broadcast)
-      fetch("/api/sync", {
+      // Persist through the shared API first. In Vite development, relay the
+      // accepted update locally for instant LAN screen refreshes as well.
+      fetch(`${API_HTTP_BASE}/api/sync`, {
         method: "POST",
         headers,
         body: syncBody,
+      }).then((response) => {
+        if (import.meta.env.DEV && response.ok) {
+          return fetch("/api/sync", { method: "POST", headers, body: syncBody });
+        }
+        return undefined;
       }).catch(() => {});
-
-      // 2. Also sync to remote backend API if configured and different from host
-      if (API_HTTP_BASE && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
-        fetch(`${API_HTTP_BASE}/api/sync`, {
-          method: "POST",
-          headers,
-          body: syncBody,
-        }).catch(() => {});
-      }
     } catch {}
   };
 
@@ -964,17 +997,11 @@ export function App() {
     const fetchInitialDbState = async () => {
       let data = null;
       try {
-        const res = await fetch("/api/state");
+        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+        });
         if (res.ok) data = await res.json();
       } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
       // Load live backend invoices into pastOrders so all panels display identical billing records
       try {
         const { records: liveInvoices } = await requestLiveInvoiceRecords();
@@ -1852,7 +1879,7 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-          if (i.isBarItem || i.isBarDrink) return i;
+          if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
           if (itemId) {
             return String(i.menuItemId ?? i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
@@ -2249,6 +2276,7 @@ export function App() {
     };
 
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
+    let dineInBackendTableVacated = false;
     if (isTakeawayOrder) {
       const createResult = await apiCreatePaidTakeawayOrder({
         orderType: "Takeaway",
@@ -2290,6 +2318,79 @@ export function App() {
       const kotResult = await apiSendTakeawayOrderToKitchen(backendOrderId);
       if (!kotResult?.success) {
         showToast(`Payment saved for takeaway order #${backendOrderId}, but kitchen dispatch failed: ${kotResult?.error || "Please contact the kitchen."}`);
+      }
+    } else {
+      // Do not create a local invoice or vacate the table until the shared API
+      // confirms that the order and payment were saved.
+      try {
+        const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
+        const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
+        const currentResult = await apiGetOrderForTable(backendTableId);
+        let orderData = currentResult?.success
+          ? (currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data)
+          : null;
+        if (!currentResult?.success && currentResult?.status !== 404) {
+          throw new Error(currentResult?.error || "Could not load the shared table order.");
+        }
+        let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        const itemsToPersist = billableItems.map((item) => ({
+          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          notes: item.notes || "",
+        }));
+        const unsavedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
+        if (!orderData) {
+          const createResult = await apiCreateOrder({
+            tableId: backendTableId,
+            tableName: settlementData.tableName,
+            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+            serverName: settlementData.server || "Server",
+            guests: enrichedSettlement.guests,
+            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+            serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+            tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
+            status: "Active",
+            items: itemsToPersist,
+          });
+          if (!createResult?.success) throw new Error(createResult?.error || "Could not save the table order.");
+          orderData = createResult.data?.data ?? createResult.data;
+          backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        } else if (unsavedItems.length > 0) {
+          const addResult = await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
+            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+            name: item.name || item.dishName,
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })));
+          if (!addResult?.success) throw new Error(addResult?.error || "Could not save the latest table items.");
+        }
+        if (!backendOrderId) throw new Error("The order API did not return an order ID.");
+        const settleResult = await apiSettleOrder(backendOrderId, {
+          discountPercent: settlementData.discountPercent,
+          serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+          tipAmount: settlementData.tipAmount,
+          paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: enrichedSettlement.invoiceNo,
+        });
+        if (!settleResult?.success || settleResult.data?.success === false) {
+          throw new Error(settleResult?.error || settleResult.data?.message || "The server did not confirm payment.");
+        }
+        enrichedSettlement.backendOrderId = backendOrderId;
+        enrichedSettlement.billingSessionId = String(backendOrderId);
+
+        const vacateResult = await apiVacateTable(backendTableId);
+        if (!vacateResult?.success || vacateResult.data?.success === false) {
+          showToast(`Payment saved as order #${backendOrderId}; table is still occupied because vacate failed: ${vacateResult?.error || vacateResult.data?.message || "server rejected the request"}`);
+        } else {
+          dineInBackendTableVacated = true;
+        }
+      } catch (error) {
+        const errorMessage = `Payment was not completed in the shared system: ${error?.message || "Could not reach the backend."}`;
+        showToast(errorMessage);
+        return errorMessage;
       }
     }
 
@@ -2422,84 +2523,12 @@ export function App() {
       );
       pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
-    void (async () => {
-      try {
-        if (String(settlementData.tableId) === "TAKEAWAY") return;
-        const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
-        const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
-        const currentResult = await apiGetOrderForTable(backendTableId);
-        if (!currentResult?.success) throw new Error(currentResult?.error || "Could not load the shared order for settlement.");
-        let orderData = currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data;
-        let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
-        const itemsToPersist = enrichedSettlement.items.map((item) => ({
-          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          id: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          name: item.name || item.dishName,
-          dishName: item.name || item.dishName,
-          price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-          quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-          notes: item.notes || "",
-        }));
-        const notYetPersistedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
-        if (orderData && notYetPersistedItems.length > 0) {
-          const addResult = await apiAddOrderItems(backendOrderId, notYetPersistedItems.map((item) => ({
-            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-            id: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-            name: item.name || item.dishName,
-            dishName: item.name || item.dishName,
-            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-            notes: item.notes || "",
-          })));
-          if (!addResult?.success) throw new Error(addResult?.error || "Could not add all table items to the shared order.");
-        }
-        if (!orderData) {
-          const createResult = await apiCreateOrder({
-            tableId: backendTableId,
-            tableName: settlementData.tableName,
-            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
-            serverName: settlementData.server || "Server",
-            guests: enrichedSettlement.guests,
-            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
-            serviceChargeEnabled: false,
-            tipAmount: 0,
-            status: "Active",
-            items: itemsToPersist,
-          });
-          if (!createResult?.success) throw new Error(createResult?.error || "Could not save order items before settlement.");
-          orderData = createResult.data?.data ?? createResult.data ?? orderData;
-          backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
-        }
-        if (!backendOrderId) throw new Error("The shared order API did not return an order ID.");
-        const settleResult = await apiSettleOrder(backendOrderId, {
-          discountPercent: settlementData.discountPercent,
-          serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
-          tipAmount: settlementData.tipAmount,
-          paymentMethod: enrichedSettlement.paymentMethod,
-          invoiceNumber: enrichedSettlement.invoiceNo,
-        });
-        if (!settleResult?.success) throw new Error(settleResult?.error || "The server did not confirm settlement.");
-        // Link the local receipt to the backend order session so a later
-        // history sync recognizes the same sale instead of counting it twice.
-        setPastOrders((current) => {
-          return dedupeOrders(current.map((order) =>
-            order.id === enrichedSettlement.id ||
-            (enrichedSettlement.invoiceNo && order.invoiceNo === enrichedSettlement.invoiceNo &&
-              String(order.tableId ?? order.tableName) === String(enrichedSettlement.tableId ?? enrichedSettlement.tableName))
-              ? { ...order, backendOrderId, billingSessionId: String(backendOrderId) }
-              : order,
-          ));
-        });
-      } catch (error) {
-        console.warn("Backend order settlement failed; local settlement retained:", error);
-      }
-    })();
-
     const updatedTables = tables.map((t) => {
       const isTarget =
         String(t.id) === String(settlementData.tableId) ||
         t.name === settlementData.tableName;
       if (!isTarget) return t;
+      if (!isTakeawayOrder && !dineInBackendTableVacated) return t;
       return {
         ...t,
         status: "vacant",
@@ -2537,20 +2566,15 @@ export function App() {
       window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: cleanTables }));
     } catch {}
 
-    try {
-      const targetApiId = tableObj?.backendTableId || tableObj?.id || settlementData.tableId;
-      if (targetApiId && String(settlementData.tableId) !== "TAKEAWAY") {
-        apiVacateTable(targetApiId).catch(() => {});
-        apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
-      }
-    } catch {}
 
     setIsSettlementOpen(false);
     setSelectedTableId(null);
     setActiveView(isTakeawayOrder ? "takeaway" : "tables");
     if (isTakeawayOrder) setTakeawayOrderRefreshToken((current) => current + 1);
     showToast(
-      `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
+      !isTakeawayOrder && !dineInBackendTableVacated
+        ? `Payment saved for ${settlementData.tableName}; please vacate the table from the floor view.`
+        : `Bill settled for ${settlementData.tableName} via ${settlementData.paymentMethod.toUpperCase()}.`,
     );
 
     setReprintReceiptData({
@@ -3006,6 +3030,14 @@ export function App() {
     showToast("Data reset. Add your restaurant tables, menu, and staff to get started.");
   };
 
+  if (authRestorePending) {
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#080d18", color: "#d6deeb" }}>
+        Verifying your session with the server…
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -3057,26 +3089,52 @@ export function App() {
           (kotSession &&
           (kotSession.role === "kot" || kotSession.role === "admin") ? (
             <ErrorBoundary>
-              <KitchenKOTView
-                tables={tables}
-                pastOrders={pastOrders}
-                menuItems={menuItems}
-                currentTheme={theme}
-                onChangeTheme={setTheme}
-                onBackToFloor={() => {
-                  setActiveView("tables");
-                  navigate("/");
-                }}
-                onUpdateItemKotStatus={handleUpdateItemKotStatus}
-                onCompleteTableKot={handleCompleteTableKot}
-                onOpenTableOrder={(tableId) => {
-                  setSelectedTableId(tableId);
-                  setActiveView("order");
-                  navigate("/");
-                }}
-                currentSession={kotSession}
-                onLogout={handleKotLogout}
-              />
+              <>
+                <div role="tablist" aria-label="Kitchen and bar order tickets" style={{ display: "flex", gap: 8, padding: "10px 20px", background: "var(--bg-primary)", borderBottom: "1px solid var(--border-subtle, #243044)" }}>
+                  {[{ id: "kitchen", label: "Kitchen KOT" }, { id: "bar", label: "Bar BOT" }].map((station) => (
+                    <button
+                      key={station.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeKotStation === station.id}
+                      onClick={() => setActiveKotStation(station.id)}
+                      style={{ minHeight: 38, padding: "0 16px", borderRadius: 9, border: `1px solid ${activeKotStation === station.id ? "#f59e0b" : "var(--border-subtle, #243044)"}`, background: activeKotStation === station.id ? "rgba(245, 158, 11, .16)" : "var(--bg-secondary, #111b2b)", color: activeKotStation === station.id ? "#fbbf24" : "var(--text-main, #dbe4f0)", font: "inherit", fontWeight: 750, cursor: "pointer" }}
+                    >
+                      {station.label}
+                    </button>
+                  ))}
+                </div>
+                {activeKotStation === "bar" ? (
+                  <BarBOTView
+                    tables={tables}
+                    menuItems={menuItems}
+                    staffList={staffList}
+                    barDrinks={barMenuItems}
+                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                  />
+                ) : (
+                  <KitchenKOTView
+                    tables={tables}
+                    pastOrders={pastOrders}
+                    menuItems={menuItems}
+                    currentTheme={theme}
+                    onChangeTheme={setTheme}
+                    onBackToFloor={() => {
+                      setActiveView("tables");
+                      navigate("/");
+                    }}
+                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                    onCompleteTableKot={handleCompleteTableKot}
+                    onOpenTableOrder={(tableId) => {
+                      setSelectedTableId(tableId);
+                      setActiveView("order");
+                      navigate("/");
+                    }}
+                    currentSession={kotSession}
+                    onLogout={handleKotLogout}
+                  />
+                )}
+              </>
             </ErrorBoundary>
           ) : (
             <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />

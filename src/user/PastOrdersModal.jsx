@@ -91,13 +91,14 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
   useEffect(() => {
     handleRefresh();
     const handleUpdate = () => handleRefresh();
+    const handleStorage = (event) => {
+      if (event.key === "gourmet_pos_past_orders_v2_inr") handleRefresh();
+    };
     window.addEventListener("avsr-invoices-updated", handleUpdate);
-    window.addEventListener("storage", (e) => {
-      if (e.key === "gourmet_pos_past_orders_v2_inr") handleRefresh();
-    });
+    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("avsr-invoices-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 

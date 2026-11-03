@@ -107,7 +107,8 @@ export function AdminInvoices({
   const [invoiceLoadError, setInvoiceLoadError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  // Match the POS settled-invoices view: both screens open on today's sales.
+  const [dateFilter, setDateFilter] = useState("daily");
   const [selectedDate, setSelectedDate] = useState(() => localDateInputValue());
   const [selectedWeek, setSelectedWeek] = useState(() => ({
     from: localWeekStartValue(),
@@ -171,28 +172,26 @@ export function AdminInvoices({
     const handleUpdate = () => {
       if (active) fetchInvoices();
     };
+    const handleStorage = (event) => {
+      if (event.key === "gourmet_pos_past_orders_v2_inr" && active) fetchInvoices();
+    };
 
     window.addEventListener("avsr-invoices-updated", handleUpdate);
-    window.addEventListener("storage", (e) => {
-      if (e.key === "gourmet_pos_past_orders_v2_inr" && active) {
-        fetchInvoices();
-      }
-    });
+    window.addEventListener("storage", handleStorage);
 
     return () => {
       active = false;
       window.removeEventListener("avsr-invoices-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
-  // Include locally synchronized POS settlements alongside live API invoices.
-  // Takeaway checkouts are saved to the shared POS invoice history and may not
-  // have a table-backed API order record, so choosing only API data hid them here.
+  // Both Admin and POS use requestLiveInvoiceRecords(), which combines backend
+  // invoices/orders with the shared local cache and deduplicates the result.
+  // Do not append App's pastOrders snapshot again here: it can contain stale or
+  // differently numbered copies of invoices already returned by that loader.
   const allOrders = dedupeOrders(
-    preferPastOrders || invoiceLoadError
-      ? pastOrders
-      : [...pastOrders, ...invoiceRecords],
+    preferPastOrders || invoiceLoadError ? pastOrders : invoiceRecords,
   );
 
   const openDiscountEditor = (order) => {
@@ -1006,6 +1005,8 @@ export function AdminInvoices({
           <table
             style={{
               width: "100%",
+              minWidth: "1200px",
+              tableLayout: "fixed",
               borderCollapse: "collapse",
               textAlign: "left",
               fontSize: "0.85rem",
@@ -1021,13 +1022,13 @@ export function AdminInvoices({
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.85rem 1rem" }}>Invoice No</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Table & Waiter</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Date & Time</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Items Summary</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Payment Mode</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Grand Total</th>
-                <th style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
+                <th style={{ width: 170, padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Invoice No</th>
+                <th style={{ width: 150, padding: "0.85rem 1rem" }}>Table & Waiter</th>
+                <th style={{ width: 155, padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Date & Time</th>
+                <th style={{ width: 250, padding: "0.85rem 1rem" }}>Items Summary</th>
+                <th style={{ width: 135, padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Payment Mode</th>
+                <th style={{ width: 140, padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>Grand Total</th>
+                <th style={{ width: 200, padding: "0.85rem 1rem", textAlign: "center", whiteSpace: "nowrap" }}>
                   Action
                 </th>
               </tr>
@@ -1057,7 +1058,7 @@ export function AdminInvoices({
                     }
                   >
                     {/* Invoice No */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "1rem", whiteSpace: "nowrap" }}>
                       <span
                         style={{
                           fontFamily: "monospace",

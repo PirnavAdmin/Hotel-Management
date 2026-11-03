@@ -18,7 +18,7 @@ import { Header, LoginPage, ErrorBoundary } from "./common";
 import { TakeawayView } from "./user/TakeawayView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
-import { setSession, logoutUser } from "./utils/auth";
+import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
 import {
   apiGetTables,
   apiCreateTable,
@@ -344,17 +344,11 @@ export function App() {
     const loadInitialSettings = async () => {
       let data = null;
       try {
-        const res = await fetch("/api/state");
+        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+        });
         if (res.ok) data = await res.json();
       } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
       if (data && active) {
         applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
       }
@@ -707,15 +701,55 @@ export function App() {
     }
   };
 
-  const [posSession, setPosSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_POS),
+  const [posSession, setPosSession] = useState(null);
+  const [kotSession, setKotSession] = useState(null);
+  const [adminSession, setAdminSession] = useState(null);
+  const [authRestorePending, setAuthRestorePending] = useState(() =>
+    [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
-  const [kotSession, setKotSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_KOT),
-  );
-  const [adminSession, setAdminSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_ADMIN),
-  );
+
+  // A saved browser session is only a hint. Revalidate it with the API before
+  // restoring an authenticated workspace so a server outage cannot look like
+  // a successful login on this device.
+  useEffect(() => {
+    const savedSessions = {
+      pos: loadRouteSession(SESSION_KEY_POS),
+      kot: loadRouteSession(SESSION_KEY_KOT),
+      admin: loadRouteSession(SESSION_KEY_ADMIN),
+    };
+    if (!savedSessions.pos && !savedSessions.kot && !savedSessions.admin) {
+      setAuthRestorePending(false);
+      return;
+    }
+
+    let active = true;
+    fetchCurrentAuthUser()
+      .then(({ success }) => {
+        if (!active) return;
+        if (!success) {
+          logoutUser();
+          setPosSession(null);
+          setKotSession(null);
+          setAdminSession(null);
+          return;
+        }
+        setPosSession(savedSessions.pos);
+        setKotSession(savedSessions.kot);
+        setAdminSession(savedSessions.admin);
+      })
+      .catch(() => {
+        if (!active) return;
+        logoutUser();
+        setPosSession(null);
+        setKotSession(null);
+        setAdminSession(null);
+      })
+      .finally(() => {
+        if (active) setAuthRestorePending(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   const saveRouteSession = (key, session) => {
     try {
@@ -824,21 +858,18 @@ export function App() {
         "ngrok-skip-browser-warning": "true",
       };
 
-      // 1. Primary sync to the same-origin host server (instant LAN / multi-device SSE broadcast)
-      fetch("/api/sync", {
+      // Persist through the shared API first. In Vite development, relay the
+      // accepted update locally for instant LAN screen refreshes as well.
+      fetch(`${API_HTTP_BASE}/api/sync`, {
         method: "POST",
         headers,
         body: syncBody,
+      }).then((response) => {
+        if (import.meta.env.DEV && response.ok) {
+          return fetch("/api/sync", { method: "POST", headers, body: syncBody });
+        }
+        return undefined;
       }).catch(() => {});
-
-      // 2. Also sync to remote backend API if configured and different from host
-      if (API_HTTP_BASE && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
-        fetch(`${API_HTTP_BASE}/api/sync`, {
-          method: "POST",
-          headers,
-          body: syncBody,
-        }).catch(() => {});
-      }
     } catch {}
   };
 
@@ -964,17 +995,11 @@ export function App() {
     const fetchInitialDbState = async () => {
       let data = null;
       try {
-        const res = await fetch("/api/state");
+        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+        });
         if (res.ok) data = await res.json();
       } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
       // Load live backend invoices into pastOrders so all panels display identical billing records
       try {
         const { records: liveInvoices } = await requestLiveInvoiceRecords();
@@ -3005,6 +3030,14 @@ export function App() {
     });
     showToast("Data reset. Add your restaurant tables, menu, and staff to get started.");
   };
+
+  if (authRestorePending) {
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#080d18", color: "#d6deeb" }}>
+        Verifying your session with the server…
+      </div>
+    );
+  }
 
   return (
     <div
