@@ -11,6 +11,7 @@ try {
 }
 
 const env = loadEnv("development", process.cwd(), "");
+const backendApiTarget = (env.VITE_API_BASE_URL || "http://127.0.0.1:5018").trim().replace(/\/+$/, "");
 
 const getBusinessDateStr = (dateObj = new Date()) => {
   const d = new Date(dateObj);
@@ -218,7 +219,7 @@ function globalSyncPlugin() {
             server.middlewares.use((req, res, next) => {
         const requestUrl = req.url || "/";
         if (requestUrl.startsWith("/__backend_api/")) {
-          const targetUrl = `http://127.0.0.1:5018${requestUrl.slice("/__backend_api".length)}`;
+          const targetUrl = `${backendApiTarget}${requestUrl.slice("/__backend_api".length)}`;
           const requestChunks = [];
           req.on("data", (chunk) => requestChunks.push(chunk));
           req.on("end", async () => {
