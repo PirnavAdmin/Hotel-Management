@@ -818,21 +818,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 onBlur={e => e.target.style.borderColor = username ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
               />
             </Fld>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', alignSelf: 'flex-start', margin: '0.1rem 0 0.55rem', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 650, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={e => {
-                  const checked = e.target.checked;
-                  setRememberMe(checked);
-                  if (!checked) {
-                    try { localStorage.removeItem(REMEMBERED_LOGIN_KEY); } catch {}
-                  }
-                }}
-                style={{ accentColor: cfg.accent, width: 14, height: 14, margin: 0, cursor: 'pointer' }}
-              />
-              Remember me
-            </label>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.24rem' }}>
                 <label style={{ fontSize: '0.64rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -857,6 +842,21 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
               </div>
             </div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', alignSelf: 'flex-start', margin: '0.35rem 0 0.55rem', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 650, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => {
+                  const checked = e.target.checked;
+                  setRememberMe(checked);
+                  if (!checked) {
+                    try { localStorage.removeItem(REMEMBERED_LOGIN_KEY); } catch {}
+                  }
+                }}
+                style={{ accentColor: cfg.accent, width: 14, height: 14, margin: 0, cursor: 'pointer' }}
+              />
+              Remember me
+            </label>
 
             <div className="bhanu-recovery">                <button
                   type="button"
