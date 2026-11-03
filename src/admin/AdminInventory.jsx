@@ -21,7 +21,7 @@ import {
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
-import { API_BASE_URL } from "../api/apiConfig";
+import { API_HTTP_BASE } from "../api/apiConfig";
 import {
   apiGetInventory,
   apiCreateInventoryItem,
@@ -803,7 +803,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     });
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
-      fetch(`${API_BASE_URL}/api/sync`, {
+      fetch(`${API_HTTP_BASE}/api/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2237,6 +2237,25 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         >
                           <Pencil size={11} />
                           <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustStock(item.id, -5)}
+                          style={{
+                            background: "var(--surface-tint)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            color: "var(--text-main)",
+                            borderRadius: "6px",
+                            padding: "3px 7px",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                          title="Quick consume -5 units"
+                        >
+                          -5
                         </button>
                         <button
                           type="button"

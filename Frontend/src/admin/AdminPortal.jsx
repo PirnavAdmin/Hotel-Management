@@ -60,7 +60,7 @@ import { AdminSettings } from "./AdminSettings";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
-import { API_BASE_URL, openOptionalEventStream } from "../api/apiConfig";
+import { API_BASE_URL, API_HTTP_BASE, openOptionalEventStream } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -402,7 +402,7 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
         new CustomEvent("avsr-inventory-updated", { detail: updatedInventory })
       );
       try {
-        fetch(`${API_BASE_URL}/api/sync`, {
+        fetch(`${API_HTTP_BASE}/api/sync`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -839,7 +839,7 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
-    fetch(`${API_BASE_URL}/api/state`, {
+    fetch(`${API_HTTP_BASE}/api/state`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -871,7 +871,7 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
-    const response = await fetch(`${API_BASE_URL}/api/sync`, {
+    const response = await fetch(`${API_HTTP_BASE}/api/sync`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -2193,29 +2193,73 @@ export function AdminPortal({
                                               : "var(--text-dim)",
                                             fontSize: "0.92rem",
                                             lineHeight: 1.3,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
                                           }}
                                         >
-                                          <span>{item.name}</span>
-                                          {Boolean(
-                                            item.isChefSpecial ||
-                                            item.isChefsSpecial ||
-                                            item.isSpecial,
-                                          ) && (
-                                            <Star
-                                              size={14}
-                                              fill="#f59e0b"
-                                              color="#f59e0b"
-                                              title="Chef's Special"
-                                              style={{
-                                                flexShrink: 0,
-                                                filter:
-                                                  "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
-                                              }}
-                                            />
-                                          )}
+                                          {(() => {
+                                            const isSpecial = Boolean(
+                                              item.isChefSpecial ||
+                                              item.isChefsSpecial ||
+                                              item.isSpecial
+                                            );
+                                            if (!isSpecial) {
+                                              return <span>{item.name}</span>;
+                                            }
+                                            const words = String(item.name || "").trim().split(/\s+/);
+                                            if (words.length <= 1) {
+                                              return (
+                                                <span
+                                                  style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    whiteSpace: "nowrap",
+                                                  }}
+                                                >
+                                                  <span>{item.name}</span>
+                                                  <Star
+                                                    size={14}
+                                                    fill="#f59e0b"
+                                                    color="#f59e0b"
+                                                    title="Chef's Special"
+                                                    style={{
+                                                      flexShrink: 0,
+                                                      filter:
+                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                    }}
+                                                  />
+                                                </span>
+                                              );
+                                            }
+                                            const lastWord = words.pop();
+                                            const leadingText = words.join(" ");
+                                            return (
+                                              <span>
+                                                {leadingText}{" "}
+                                                <span
+                                                  style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    whiteSpace: "nowrap",
+                                                    verticalAlign: "middle",
+                                                  }}
+                                                >
+                                                  <span>{lastWord}</span>
+                                                  <Star
+                                                    size={14}
+                                                    fill="#f59e0b"
+                                                    color="#f59e0b"
+                                                    title="Chef's Special"
+                                                    style={{
+                                                      flexShrink: 0,
+                                                      filter:
+                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                    }}
+                                                  />
+                                                </span>
+                                              </span>
+                                            );
+                                          })()}
                                         </div>
                                         <div
                                           style={{
@@ -3356,10 +3400,10 @@ export function AdminPortal({
                     <style>{`
                       .staff-filter-toolbar {
                         display: grid;
-                        grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(112px, 1fr)) auto;
+                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
                         align-items: end;
-                        gap: 10px;
-                        padding: 0.65rem;
+                        gap: 0.5rem;
+                        padding: 0.65rem 0.85rem;
                         margin-bottom: 0.5rem;
                         background: var(--bg-secondary);
                         border-radius: 8px;
@@ -3367,13 +3411,15 @@ export function AdminPortal({
                       .staff-filter-toolbar .menu-filter-field { min-width: 0; }
                       .staff-filter-toolbar .staff-filter-search { flex: initial; }
                       .staff-filter-toolbar .staff-filter-count {
-                        min-width: max-content;
-                        padding: 0 0.25rem 0.6rem;
+                        min-width: 0;
+                        padding: 0 0 0.45rem;
                         color: var(--text-dim);
                         font-size: 0.74rem;
                         font-weight: 600;
                         white-space: nowrap;
-                        text-align: right;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
                       }
                       @media (max-width: 1100px) {
                         .staff-filter-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -3387,7 +3433,7 @@ export function AdminPortal({
                       }
                       .staff-table-grid {
                         display: grid;
-                        grid-template-columns: minmax(150px, 1.4fr) minmax(120px, 1.1fr) minmax(125px, 1.1fr) minmax(155px, 1.5fr) minmax(120px, 0.9fr) minmax(150px, 1.2fr);
+                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
                         gap: 0.5rem;
                       }
                       .staff-table-grid > * { min-width: 0; }
@@ -3596,12 +3642,6 @@ export function AdminPortal({
                               </select>
                             </label>
 
-                            {/* Col 3: Phone / Contact (display-only column; filtering behavior unchanged) */}
-                            <label className="menu-filter-field" htmlFor="staff-filter-contact">
-                              <span>Phone / Contact</span>
-                              <input id="staff-filter-contact" type="text" aria-label="Phone / Contact filter unavailable" disabled />
-                            </label>
-
                             {/* Col 4: Shift Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-shift">
                               <span>Shift</span>
@@ -3727,10 +3767,9 @@ export function AdminPortal({
                           >
                             <div>Staff Name</div>
                             <div>Role / Designation</div>
-                            <div>Phone / Contact</div>
                             <div>Shift</div>
                             <div>Table Assignment</div>
-                            <div style={{ textAlign: "right" }}>Actions</div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
                           </div>
 
                           {/* Empty State */}
@@ -3880,18 +3919,6 @@ export function AdminPortal({
                                   {personRole}
                                 </div>
 
-                                {/* Col 3: Phone */}
-                                <div
-                                  style={{
-                                    color: "var(--text-muted)",
-                                    fontSize: "0.84rem",
-                                    fontWeight: 500,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {person.phone || "—"}
-                                </div>
-
                                 {/* Col 4: Shift (Full Description without truncation) */}
                                 <div
                                   style={{
@@ -3949,7 +3976,7 @@ export function AdminPortal({
                                 </div>
 
                                 {/* Col 6: Actions (Edit Staff + Delete button matching Image 2) */}
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                                   {/* Edit Staff button */}
                                   <button
                                     type="button"
@@ -5661,40 +5688,6 @@ export function AdminPortal({
                   fontSize: "0.88rem",
                   outline: "none",
                   resize: "vertical",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Employee ID
-              </label>
-              <input
-                type="text"
-                readOnly
-                value={
-                  editingStaff
-                    ? `EMP-${String(editingStaff.staffId ?? editingStaff.id).padStart(5, "0")}`
-                    : "Assigned automatically on save"
-                }
-                style={{
-                  width: "100%",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0.65rem 0.85rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
                 }}
               />
             </div>

@@ -1,6 +1,8 @@
 using System.Text;
 using HMS.Data;
 using HMS.Services;
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -139,7 +141,25 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:5173")
+                .SetIsOriginAllowed(origin =>
+                {
+                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+                        uri.Scheme != "http" || uri.Port is not (5173 or 5174))
+                    {
+                        return false;
+                    }
+
+                    if (uri.IsLoopback) return true;
+                    if (!IPAddress.TryParse(uri.Host, out var address) || address.AddressFamily != AddressFamily.InterNetwork)
+                    {
+                        return false;
+                    }
+
+                    var bytes = address.GetAddressBytes();
+                    return bytes[0] == 10 ||
+                           (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                           (bytes[0] == 192 && bytes[1] == 168);
+                })
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()
