@@ -843,7 +843,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
               </div>
             </div>
             <div className="bhanu-login-options">
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 650, cursor: 'pointer' }}>
+              <label className="bhanu-remember-label">
                 <input
                   type="checkbox"
                   checked={rememberMe}
@@ -854,7 +854,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                       try { localStorage.removeItem(REMEMBERED_LOGIN_KEY); } catch {}
                     }
                   }}
-                  style={{ accentColor: cfg.accent, display: 'inline-block', width: 14, height: 14, minWidth: 14, padding: 0, margin: 0, cursor: 'pointer', borderRadius: 3 }}
+                  style={{ accentColor: cfg.accent }}
                 />
                 Remember me
               </label>
