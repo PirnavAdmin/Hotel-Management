@@ -1,20 +1,15 @@
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "https://chapter-catnip-evaluator.ngrok-free.dev";
 
-// In Vite development, point every LAN client at the API on the same host
-// serving the frontend, instead of allowing separate .env tunnel URLs to split data.
-export const API_BASE_URL = (
-  import.meta.env.DEV && typeof window !== "undefined" && window.location.hostname
-    ? `${window.location.protocol}//${window.location.hostname}:5018`
-    : configuredApiBase
-).trim().replace(/\/$/, "");
+// Keep the configured API address consistent for every device. Development
+// requests use the same-origin Vite proxy below, which forwards to this URL.
+export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
 
 // In development all browser-to-API traffic stays same-origin. The Vite
 // server forwards it to the backend on the POS host, including LAN clients.
 export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : API_BASE_URL;
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
-// The Vite dev server provides its own same-origin SSE endpoint for local
-// cross-tab/device synchronization. Production can use the configured API.
+// Keep development SSE on Vite for LAN state broadcasts; production uses the API.
 const EVENTS_URL = import.meta.env.DEV
   ? "/api/events"
   : `${API_BASE_URL.replace(/\/$/, "")}/api/events`;

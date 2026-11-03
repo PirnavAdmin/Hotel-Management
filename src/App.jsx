@@ -344,17 +344,11 @@ export function App() {
     const loadInitialSettings = async () => {
       let data = null;
       try {
-        const res = await fetch("/api/state");
+        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+        });
         if (res.ok) data = await res.json();
       } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
       if (data && active) {
         applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
       }
@@ -864,21 +858,18 @@ export function App() {
         "ngrok-skip-browser-warning": "true",
       };
 
-      // 1. Primary sync to the same-origin host server (instant LAN / multi-device SSE broadcast)
-      fetch("/api/sync", {
+      // Persist through the shared API first. In Vite development, relay the
+      // accepted update locally for instant LAN screen refreshes as well.
+      fetch(`${API_HTTP_BASE}/api/sync`, {
         method: "POST",
         headers,
         body: syncBody,
+      }).then((response) => {
+        if (import.meta.env.DEV && response.ok) {
+          return fetch("/api/sync", { method: "POST", headers, body: syncBody });
+        }
+        return undefined;
       }).catch(() => {});
-
-      // 2. Also sync to remote backend API if configured and different from host
-      if (API_HTTP_BASE && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
-        fetch(`${API_HTTP_BASE}/api/sync`, {
-          method: "POST",
-          headers,
-          body: syncBody,
-        }).catch(() => {});
-      }
     } catch {}
   };
 
@@ -1004,17 +995,11 @@ export function App() {
     const fetchInitialDbState = async () => {
       let data = null;
       try {
-        const res = await fetch("/api/state");
+        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+        });
         if (res.ok) data = await res.json();
       } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
       // Load live backend invoices into pastOrders so all panels display identical billing records
       try {
         const { records: liveInvoices } = await requestLiveInvoiceRecords();
