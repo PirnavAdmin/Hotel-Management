@@ -501,8 +501,108 @@ public class OrdersController : ControllerBase
 
 
     // ============================================================
-    // UPDATE ORDER ITEMS
+    // ADD / UPDATE ORDER ITEMS
     // ============================================================
+
+    [HttpPost("{id:long}/items")]
+    public async Task<IActionResult> AddOrderItems(
+        long id,
+        [FromBody] UpdateOrderItemsRequest request)
+    {
+        if (request?.Items == null || request.Items.Count == 0)
+        {
+            return BadRequest(new { success = false, message = "At least one order item is required." });
+        }
+
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id && o.IsActive && !o.IsDeleted);
+
+        if (order == null)
+        {
+            return NotFound(new { success = false, message = "Active order not found." });
+        }
+
+        if (string.Equals(order.Status, "Settled", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            return Conflict(new { success = false, message = "Items cannot be added to a settled or closed order." });
+        }
+
+        foreach (var itemInput in request.Items)
+        {
+            if (itemInput.Quantity <= 0) continue;
+
+            var menuItemId = itemInput.MenuItemId ?? 0;
+            if (menuItemId <= 0 && !string.IsNullOrWhiteSpace(itemInput.Name))
+            {
+                try
+                {
+                    menuItemId = await _spService.ExecuteSqlScalarAsync<long?>(
+                        "SELECT menu_item_id FROM menu_items WHERE dish_name = @dname LIMIT 1;",
+                        new Dictionary<string, object?> { { "dname", itemInput.Name.Trim() } }) ?? 0;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not resolve menu item {ItemName} while adding items to order {OrderId}.", itemInput.Name, id);
+                }
+            }
+
+            if (menuItemId <= 0)
+            {
+                return BadRequest(new { success = false, message = $"A valid menu item ID is required for '{itemInput.Name}'." });
+            }
+
+            var queuedItem = order.Items.FirstOrDefault(existing =>
+                existing.MenuItemId == menuItemId &&
+                existing.VariantId == itemInput.VariantId &&
+                existing.IsActive && !existing.IsDeleted &&
+                (string.Equals(existing.KotStatus, "Queued", StringComparison.OrdinalIgnoreCase)) &&
+                (!existing.KotId.HasValue || existing.KotId.Value == 0));
+
+            if (queuedItem != null)
+            {
+                queuedItem.Quantity += itemInput.Quantity;
+                queuedItem.TotalPrice = queuedItem.Price * queuedItem.Quantity;
+                queuedItem.Notes = itemInput.Notes ?? queuedItem.Notes;
+                queuedItem.UpdatedAt = DateTime.UtcNow;
+                continue;
+            }
+
+            order.Items.Add(new OrderItem
+            {
+                OrderId = order.Id,
+                MenuItemId = menuItemId,
+                VariantId = itemInput.VariantId,
+                Name = itemInput.Name,
+                Price = itemInput.Price,
+                Quantity = itemInput.Quantity,
+                TotalPrice = itemInput.Price * itemInput.Quantity,
+                Notes = itemInput.Notes,
+                KotStatus = "Queued",
+                KotBatch = 1,
+                KotId = null,
+                IsActive = true,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        RecalculateTotals(order);
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        await _hubContext.Clients.Group("floor").SendAsync("OrderUpdated", new
+        {
+            orderId = order.Id,
+            tableId = order.TableId,
+            items = order.Items.Select(MapToOrderItemDto).ToList(),
+            grandTotal = order.GrandTotal,
+        });
+
+        return Ok(MapToOrderDto(order));
+    }
 
     [HttpPut("{id}/items")]
     public async Task<IActionResult> UpdateOrderItems(

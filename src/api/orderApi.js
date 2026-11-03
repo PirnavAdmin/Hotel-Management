@@ -59,13 +59,6 @@ export async function apiUpdateOrderItems(orderId, items) {
   });
 }
 
-export async function apiUpdateOrderItem(orderId, itemId, updates) {
-  return await apiClient(`/api/v1/orders/${orderId}/items/${itemId}`, {
-    method: "PATCH",
-    body: JSON.stringify(updates),
-  });
-}
-
 export async function apiRemoveOrderItem(orderId, itemId) {
   return await apiClient(`/api/v1/orders/${orderId}/items/${itemId}`, {
     method: "DELETE",
