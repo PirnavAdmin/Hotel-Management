@@ -1,15 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Search, ShoppingBag, Plus, Minus } from "lucide-react";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
-import { apiDispatchTakeawayOrder, apiGetTakeawayOrders, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
+import {
+  apiCancelTakeawayOrder,
+  apiDispatchTakeawayOrder,
+  apiGetTakeawayOrder,
+  apiGetTakeawayOrderBillSummary,
+  apiGetTakeawayOrderHistory,
+  apiGetTakeawayOrderReceipt,
+  apiGetTakeawayOrders,
+  apiSendTakeawayOrderToKitchen,
+} from "../api/orderApi";
 
-export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, orderPlacedSignal = 0 }) {
+export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, onShowReceipt, orderPlacedSignal = 0 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [cart, setCart] = useState({});
   const [takeawayOrders, setTakeawayOrders] = useState([]);
+  const [takeawayHistory, setTakeawayHistory] = useState([]);
   const [orderNotice, setOrderNotice] = useState("");
   const [dispatchingOrderId, setDispatchingOrderId] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [selectedOrderInfo, setSelectedOrderInfo] = useState(null);
   const categories = useMemo(() => [...new Set((Array.isArray(menuItems) ? menuItems : []).map((item) => item.category).filter(Boolean))], [menuItems]);
   const items = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -31,6 +43,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   const refreshTakeawayOrders = async () => {
     const result = await apiGetTakeawayOrders();
     if (!result?.success || !Array.isArray(result.data)) {
+      setTakeawayOrders([]);
       setOrderNotice(result?.error || "Could not load takeaway orders from the server.");
       return;
     }
@@ -38,8 +51,21 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     setTakeawayOrders(result.data);
   };
 
+  const refreshTakeawayHistory = async () => {
+    setHistoryLoading(true);
+    const result = await apiGetTakeawayOrderHistory();
+    if (!result?.success || !Array.isArray(result.data?.orders)) {
+      setTakeawayHistory([]);
+      setOrderNotice(result?.error || "Could not load takeaway history from the server.");
+    } else {
+      setTakeawayHistory(result.data.orders);
+    }
+    setHistoryLoading(false);
+  };
+
   useEffect(() => {
     refreshTakeawayOrders();
+    refreshTakeawayHistory();
     const intervalId = window.setInterval(refreshTakeawayOrders, 5000);
     return () => window.clearInterval(intervalId);
   }, []);
@@ -48,6 +74,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     if (orderPlacedSignal > 0) {
       setCart({});
       refreshTakeawayOrders();
+      refreshTakeawayHistory();
     }
   }, [orderPlacedSignal]);
 
@@ -74,6 +101,46 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     setDispatchingOrderId(null);
   };
 
+  const handleCancelOrder = async (orderId) => {
+    setDispatchingOrderId(orderId);
+    const result = await apiCancelTakeawayOrder(orderId);
+    if (!result?.success) setOrderNotice(result?.error || "Could not cancel this takeaway order.");
+    else {
+      setOrderNotice("Takeaway order cancelled.");
+      await Promise.all([refreshTakeawayOrders(), refreshTakeawayHistory()]);
+    }
+    setDispatchingOrderId(null);
+  };
+
+  const handleLoadOrderDetails = async (orderId, fallbackOrder) => {
+    setDispatchingOrderId(orderId);
+    const [orderResult, billResult] = await Promise.all([
+      apiGetTakeawayOrder(orderId),
+      apiGetTakeawayOrderBillSummary(orderId),
+    ]);
+    if (!orderResult?.success && !fallbackOrder) {
+      setOrderNotice(orderResult?.error || "Could not load takeaway order details.");
+      setSelectedOrderInfo(null);
+    } else {
+      setSelectedOrderInfo({
+        order: orderResult?.success ? (orderResult.data?.data ?? orderResult.data) : fallbackOrder,
+        bill: billResult?.success ? (billResult.data?.data ?? billResult.data) : null,
+      });
+      setOrderNotice(!orderResult?.success
+        ? "Order loaded from the server queue; the backend order-by-ID route is unavailable."
+        : billResult?.success ? "" : billResult?.error || "Order loaded, but bill summary could not be loaded.");
+    }
+    setDispatchingOrderId(null);
+  };
+
+  const handleShowReceipt = async (orderId) => {
+    setDispatchingOrderId(orderId);
+    const result = await apiGetTakeawayOrderReceipt(orderId);
+    if (!result?.success) setOrderNotice(result?.error || "Could not load takeaway receipt.");
+    else onShowReceipt?.(result.data?.data ?? result.data, orderId);
+    setDispatchingOrderId(null);
+  };
+
   return (
     <section className="takeaway-section" style={{ padding: "1.25rem 2rem", color: "var(--text-main)", minHeight: "calc(100vh - 130px)" }}>
       <style>{`
@@ -88,6 +155,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         .takeaway-qty-button { width: 26px; min-height: 26px; padding: 0; background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
         .takeaway-order-panel { position: sticky; top: 100px; box-sizing: border-box; width: 100%; min-width: 0; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-secondary); }
         .takeaway-kitchen-order { margin-top: .65rem; padding: .65rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-tertiary); }
+        .takeaway-secondary-button { padding: .4rem .35rem; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-secondary); color: var(--text-main); font-size: .75rem; font-weight: 700; cursor: pointer; }
         @media (max-width: 900px) { .takeaway-layout { grid-template-columns: minmax(0, 1fr); } .takeaway-order-panel { position: static; } }
         @media (max-width: 600px) { .takeaway-section { padding: 1rem !important; } }
       `}</style>
@@ -127,11 +195,37 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
             const orderItems = Array.isArray(order.items) ? order.items : [];
             const allReady = orderItems.length > 0 && orderItems.every((item) => ["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase()));
             const kotNotSent = orderItems.some((item) => !item.kotId);
-            return <div className="takeaway-kitchen-order" key={order.id}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: ".5rem" }}><strong>Order #{order.id}</strong><strong style={{ color: allReady ? "#10b981" : "var(--accent-amber-light)" }}>{allReady ? "Ready" : "In kitchen"}</strong></div>
+            const orderId = order.id ?? order.orderId ?? order.Id;
+            return <div className="takeaway-kitchen-order" key={orderId}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: ".5rem" }}><strong>Order #{orderId}</strong><strong style={{ color: allReady ? "#10b981" : "var(--accent-amber-light)" }}>{allReady ? "Ready" : "In kitchen"}</strong></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: ".35rem", marginTop: ".4rem" }}>
+                <button disabled={dispatchingOrderId === orderId} onClick={() => handleLoadOrderDetails(orderId, order)} className="takeaway-secondary-button">Details / Bill</button>
+                <button disabled={dispatchingOrderId === orderId} onClick={() => handleShowReceipt(orderId)} className="takeaway-secondary-button">Receipt</button>
+                <button disabled={dispatchingOrderId === orderId} onClick={() => handleCancelOrder(orderId)} className="takeaway-secondary-button">Cancel</button>
+              </div>
               <div style={{ color: "var(--text-muted)", fontSize: ".85rem", margin: ".35rem 0" }}>{orderItems.map((item) => `${item.name} × ${item.quantity}`).join(", ")}</div>
-              {kotNotSent && <button disabled={dispatchingOrderId === order.id} onClick={() => handleRetryKitchenSend(order.id)} style={{ width: "100%", marginBottom: ".4rem", padding: ".45rem", border: "1px solid var(--border-subtle)", borderRadius: 6, background: "var(--bg-secondary)", color: "var(--text-main)", fontWeight: 700 }}>{dispatchingOrderId === order.id ? "Sending…" : "Retry Send to Kitchen"}</button>}
-              <button disabled={!allReady || dispatchingOrderId === order.id} onClick={() => handleDispatch(order.id)} style={{ width: "100%", padding: ".45rem", border: 0, borderRadius: 6, background: allReady ? "#10b981" : "var(--bg-secondary)", color: allReady ? "#062b20" : "var(--text-muted)", fontWeight: 750, cursor: allReady ? "pointer" : "not-allowed" }}>{dispatchingOrderId === order.id ? "Dispatching…" : "Mark Items Dispatched"}</button>
+              {kotNotSent && <button disabled={dispatchingOrderId === orderId} onClick={() => handleRetryKitchenSend(orderId)} style={{ width: "100%", marginBottom: ".4rem", padding: ".45rem", border: "1px solid var(--border-subtle)", borderRadius: 6, background: "var(--bg-secondary)", color: "var(--text-main)", fontWeight: 700 }}>{dispatchingOrderId === orderId ? "Sending…" : "Retry Send to Kitchen"}</button>}
+              <button disabled={!allReady || dispatchingOrderId === orderId} onClick={() => handleDispatch(orderId)} style={{ width: "100%", padding: ".45rem", border: 0, borderRadius: 6, background: allReady ? "#10b981" : "var(--bg-secondary)", color: allReady ? "#062b20" : "var(--text-muted)", fontWeight: 750, cursor: allReady ? "pointer" : "not-allowed" }}>{dispatchingOrderId === orderId ? "Dispatching…" : "Mark Items Dispatched"}</button>
+            </div>;
+          })}
+        </div>
+        {selectedOrderInfo && <div className="takeaway-kitchen-order" role="region" aria-label="Takeaway order details">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: ".5rem" }}><h4 style={{ margin: 0 }}>Order #{selectedOrderInfo.order?.id ?? selectedOrderInfo.order?.orderId ?? ""}</h4><button className="takeaway-secondary-button" onClick={() => setSelectedOrderInfo(null)}>Close</button></div>
+          {selectedOrderInfo.bill ? <>
+            <div style={{ color: "var(--text-muted)", fontSize: ".85rem", margin: ".45rem 0" }}>{(selectedOrderInfo.bill.items || []).map((item) => `${item.name} × ${item.quantity}`).join(", ")}</div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><strong>₹{Number(selectedOrderInfo.bill.subtotal || 0).toFixed(2)}</strong></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Tax</span><strong>₹{Number(selectedOrderInfo.bill.taxAmount || 0).toFixed(2)}</strong></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Total</span><strong>₹{Number(selectedOrderInfo.bill.grandTotal || 0).toFixed(2)}</strong></div>
+          </> : <p role="status" style={{ color: "var(--text-muted)" }}>Bill summary unavailable.</p>}
+        </div>}
+        <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: ".8rem", paddingTop: ".8rem" }}>
+          <h3 style={{ margin: "0 0 .5rem" }}>Takeaway Order History</h3>
+          {historyLoading ? <p style={{ color: "var(--text-muted)", fontSize: ".9rem" }}>Loading takeaway history…</p> : !takeawayHistory.length ? <p style={{ color: "var(--text-muted)", fontSize: ".9rem" }}>No takeaway orders in history.</p> : takeawayHistory.slice(0, 8).map((order) => {
+            const orderId = order.id ?? order.orderId ?? order.Id;
+            return <div className="takeaway-kitchen-order" key={`history-${orderId}`}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: ".5rem" }}><strong>Order #{orderId}</strong><strong>{order.status ?? order.Status}</strong></div>
+              <div style={{ color: "var(--text-muted)", fontSize: ".85rem", margin: ".3rem 0" }}>{(order.items || []).map((item) => `${item.name} × ${item.quantity}`).join(", ")}</div>
+              <button className="takeaway-secondary-button" disabled={dispatchingOrderId === orderId} onClick={() => handleShowReceipt(orderId)}>Load receipt</button>
             </div>;
           })}
         </div>

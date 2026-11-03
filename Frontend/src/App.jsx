@@ -3137,6 +3137,32 @@ export function App() {
                   menuItems={menuItems}
                   menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
                   orderPlacedSignal={takeawayOrderRefreshToken}
+                  onShowReceipt={(receipt, orderId) => {
+                    const receiptItems = Array.isArray(receipt?.items) ? receipt.items.map((item) => ({
+                      ...item,
+                      name: item.name || item.dishName || "",
+                      quantity: Number(item.quantity ?? item.qty) || 0,
+                      price: Number(item.price ?? item.unitPrice) || 0,
+                    })) : [];
+                    setReprintReceiptData({
+                      id: orderId,
+                      name: receipt?.table || receipt?.tableName || "Takeaway",
+                      section: receipt?.section || "Takeaway",
+                      server: receipt?.server || receipt?.serverName || "",
+                      guests: Number(receipt?.guests) || 1,
+                      items: receiptItems,
+                      subtotal: receipt?.subtotal,
+                      taxAmount: receipt?.taxAmount,
+                      serviceCharge: receipt?.serviceChargePercent,
+                      serviceChargeAmount: receipt?.serviceChargeAmount,
+                      tipAmount: receipt?.tipAmount,
+                      grandTotal: receipt?.grandTotal,
+                      paymentMethod: receipt?.paymentMethod || "",
+                      invoiceNo: receipt?.invoiceNo || receipt?.orderNumber || "",
+                      date: receipt?.date,
+                    });
+                    setIsReceiptOpen(true);
+                  }}
                   onCheckout={(items) => {
                     const orderTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                     setTakeawayCheckoutTable({ id: "TAKEAWAY", name: "Takeaway", section: "Takeaway", server: posSession?.name || "Server", guests: 1, capacity: 1, items, orderTime, discountPercent: 0, serviceCharge: 0 });
