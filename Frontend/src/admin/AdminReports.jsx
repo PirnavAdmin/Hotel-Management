@@ -83,7 +83,15 @@ const normalizeInventoryList = (items) => {
   return Array.from(map.values());
 };
 
-async function requestLiveReportData() {
+async function requestLiveReportData({ refresh = false } = {}) {
+  if (!refresh) {
+    return {
+      records: Array.isArray(pastOrders) ? pastOrders : [],
+      invoiceError: "",
+      inventory: normalizeInventoryList(Array.isArray(inventory) ? inventory : []),
+    };
+  }
+
   const [invoiceResult, inventoryResponse] = await Promise.all([
     requestLiveInvoiceRecords(),
     apiGetInventory(),
@@ -257,35 +265,6 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
       setLiveInventory(normalizeInventoryList(inventory));
     }
   }, [inventory]);
-
-  useEffect(() => {
-    let active = true;
-    if (!liveInventory || liveInventory.length === 0) {
-      apiGetInventory()
-        .then((response) => {
-          if (!active) return;
-          const payload = response?.data ?? response;
-          const rows = Array.isArray(payload)
-            ? payload
-            : Array.isArray(payload?.data)
-              ? payload.data
-              : Array.isArray(payload?.ingredients)
-                ? payload.ingredients
-                : [];
-          if (rows.length > 0) {
-            const normalized = normalizeInventoryList(rows);
-            setLiveInventory(normalized);
-            try {
-              localStorage.setItem('gourmet_pos_inventory_v1', JSON.stringify(normalized));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-    }
-    return () => {
-      active = false;
-    };
-  }, [liveInventory]);
 
   useEffect(() => {
     const handleUpdate = (e) => {
@@ -632,7 +611,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
     setIsFetching(true);
     setInvoiceLoadError("");
     try {
-      applyFetchedData(await requestLiveReportData());
+      applyFetchedData(await requestLiveReportData({ refresh: true }));
     } catch (error) {
       setInvoicesData([]);
       setInvoiceLoadError(error?.message || "Live invoice and report data could not be loaded.");
@@ -642,23 +621,13 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
   };
 
   useEffect(() => {
-    let active = true;
-    requestLiveReportData()
-      .then((data) => {
-        if (active) applyFetchedData(data);
-      })
-      .catch((error) => {
-        if (!active) return;
-        setInvoicesData([]);
-        setInvoiceLoadError(error?.message || "Live invoice and report data could not be loaded.");
-      })
-      .finally(() => {
-        if (active) setIsFetching(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    applyFetchedData({
+      records: Array.isArray(pastOrders) ? pastOrders : [],
+      invoiceError: "",
+      inventory: normalizeInventoryList(Array.isArray(inventory) ? inventory : []),
+    });
+    setIsFetching(false);
+  }, [pastOrders, inventory]);
 
   const getFilterPeriodLabel = () => {
     if (filterPeriod === "today") return `Today (${todayYMD})`;

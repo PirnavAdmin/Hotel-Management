@@ -236,7 +236,7 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
 }
 
 
-export async function requestLiveInvoiceRecords() {
+async function loadLiveInvoiceRecords() {
   const [invoiceResponse, orderResponse] = await Promise.all([
     apiGetInvoices().catch((err) => ({ success: false, error: err?.message })),
     apiGetOrderHistory().catch((err) => ({ success: false, error: err?.message })),
@@ -269,4 +269,16 @@ export async function requestLiveInvoiceRecords() {
       ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
       : "",
   };
+}
+
+let inFlightInvoiceRecordsRequest = null;
+
+/** Share invoice and settled-order loading across dashboard and billing consumers. */
+export function requestLiveInvoiceRecords() {
+  if (!inFlightInvoiceRecordsRequest) {
+    inFlightInvoiceRecordsRequest = loadLiveInvoiceRecords().finally(() => {
+      inFlightInvoiceRecordsRequest = null;
+    });
+  }
+  return inFlightInvoiceRecordsRequest;
 }

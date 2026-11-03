@@ -5350,6 +5350,7 @@ export function AdminPortal({
                   <AdminInventory
                     menuItems={menuItems}
                     onUpdateMenuItem={onUpdateMenuItem}
+                    inventory={inventory}
                   />
                 )}
 

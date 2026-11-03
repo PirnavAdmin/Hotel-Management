@@ -27,7 +27,6 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
-import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
 
@@ -55,14 +54,6 @@ export function AdminOverview({
     } catch {}
     return Array.isArray(pastOrders) && pastOrders.length > 0 ? dedupeOrders(pastOrders) : [];
   });
-  useEffect(() => {
-    let active = true;
-    requestLiveInvoiceRecords().then(({ records }) => {
-      if (active && records.length > 0) setOrdersList(dedupeOrders(records));
-    }).catch(() => {});
-    return () => { active = false; };
-  }, []);
-
   // Track inventory items and low stock
   const [inventoryList, setInventoryList] = useState(() => {
     try {

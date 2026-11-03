@@ -23,7 +23,6 @@ import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteMod
 import { formatCurrency } from "../utils/formatCurrency";
 import { API_HTTP_BASE } from "../api/apiConfig";
 import {
-  apiGetInventory,
   apiCreateInventoryItem,
   apiUpdateInventoryItem,
 } from "../api/inventoryApi";
@@ -464,7 +463,7 @@ export const deduplicateAndNormalizeInventory = (items) => {
   return Array.from(map.values());
 };
 
-export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
+export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sharedInventory = [] }) {
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [inventory, setInventory] = useState(() => {
     try {
@@ -818,17 +817,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   };
 
   useEffect(() => {
-    let active = true;
-    apiGetInventory().then((response) => {
-      const payload = response?.data ?? response;
-      const rows = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload?.ingredients)
-            ? payload.ingredients
-            : [];
-      if (!active || !response?.success || !rows.length) return;
+      const rows = Array.isArray(sharedInventory) ? sharedInventory : [];
+      if (!rows.length) return;
       let saved = [];
       try {
         saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
@@ -873,9 +863,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       ]);
       setInventory(merged);
       try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
-    }).catch(() => {});
-    return () => { active = false; };
-  }, []);
+  }, [sharedInventory]);
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {

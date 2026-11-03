@@ -96,6 +96,19 @@ const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
+let inFlightNetworkStateRequest = null;
+const requestSharedNetworkState = () => {
+  if (!inFlightNetworkStateRequest) {
+    inFlightNetworkStateRequest = fetch(`${API_HTTP_BASE}/api/state`, {
+      headers: { "ngrok-skip-browser-warning": "true" },
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .catch(() => null)
+      .finally(() => { inFlightNetworkStateRequest = null; });
+  }
+  return inFlightNetworkStateRequest;
+};
+
 
 const readRestaurantSettings = () => {
   try {
@@ -342,13 +355,7 @@ export function App() {
       }
     };
     const loadInitialSettings = async () => {
-      let data = null;
-      try {
-        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-          headers: { "ngrok-skip-browser-warning": "true" },
-        });
-        if (res.ok) data = await res.json();
-      } catch {}
+      const data = await requestSharedNetworkState();
       if (data && active) {
         applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
       }
@@ -993,21 +1000,7 @@ export function App() {
 
     // 1. Fetch initial network DB state on startup (same-origin host with fallback)
     const fetchInitialDbState = async () => {
-      let data = null;
-      try {
-        const res = await fetch(`${API_HTTP_BASE}/api/state`, {
-          headers: { "ngrok-skip-browser-warning": "true" },
-        });
-        if (res.ok) data = await res.json();
-      } catch {}
-      // Load live backend invoices into pastOrders so all panels display identical billing records
-      try {
-        const { records: liveInvoices } = await requestLiveInvoiceRecords();
-        if (Array.isArray(liveInvoices) && liveInvoices.length > 0 && !isCancelled) {
-          setPastOrders((current) => mergeSettledOrders(current, liveInvoices));
-        }
-      } catch {}
-
+      const data = await requestSharedNetworkState();
       if (!data || isCancelled) return;
         if (!data) return;
         const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];

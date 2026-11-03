@@ -191,7 +191,12 @@ export function apiClient(endpoint, options = {}) {
   } catch {
     // The request layer still supports environments where storage is blocked.
   }
-  const key = `${API_BASE_URL}${endpoint}|${token}`;
+  const key = JSON.stringify({
+    url: `${API_BASE_URL}${endpoint}`,
+    token,
+    remoteOnly: Boolean(options.remoteOnly),
+    headers: options.headers || {},
+  });
   const existing = inFlightGetRequests.get(key);
   if (existing) return existing;
 
