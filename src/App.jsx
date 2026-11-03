@@ -2274,6 +2274,7 @@ export function App() {
     };
 
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
+    let dineInBackendTableVacated = false;
     if (isTakeawayOrder) {
       const createResult = await apiCreatePaidTakeawayOrder({
         orderType: "Takeaway",
@@ -2315,6 +2316,79 @@ export function App() {
       const kotResult = await apiSendTakeawayOrderToKitchen(backendOrderId);
       if (!kotResult?.success) {
         showToast(`Payment saved for takeaway order #${backendOrderId}, but kitchen dispatch failed: ${kotResult?.error || "Please contact the kitchen."}`);
+      }
+    } else {
+      // Do not create a local invoice or vacate the table until the shared API
+      // confirms that the order and payment were saved.
+      try {
+        const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
+        const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
+        const currentResult = await apiGetOrderForTable(backendTableId);
+        let orderData = currentResult?.success
+          ? (currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data)
+          : null;
+        if (!currentResult?.success && currentResult?.status !== 404) {
+          throw new Error(currentResult?.error || "Could not load the shared table order.");
+        }
+        let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        const itemsToPersist = billableItems.map((item) => ({
+          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          notes: item.notes || "",
+        }));
+        const unsavedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
+        if (!orderData) {
+          const createResult = await apiCreateOrder({
+            tableId: backendTableId,
+            tableName: settlementData.tableName,
+            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+            serverName: settlementData.server || "Server",
+            guests: enrichedSettlement.guests,
+            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+            serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+            tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
+            status: "Active",
+            items: itemsToPersist,
+          });
+          if (!createResult?.success) throw new Error(createResult?.error || "Could not save the table order.");
+          orderData = createResult.data?.data ?? createResult.data;
+          backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        } else if (unsavedItems.length > 0) {
+          const addResult = await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
+            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+            name: item.name || item.dishName,
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })));
+          if (!addResult?.success) throw new Error(addResult?.error || "Could not save the latest table items.");
+        }
+        if (!backendOrderId) throw new Error("The order API did not return an order ID.");
+        const settleResult = await apiSettleOrder(backendOrderId, {
+          discountPercent: settlementData.discountPercent,
+          serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+          tipAmount: settlementData.tipAmount,
+          paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: enrichedSettlement.invoiceNo,
+        });
+        if (!settleResult?.success || settleResult.data?.success === false) {
+          throw new Error(settleResult?.error || settleResult.data?.message || "The server did not confirm payment.");
+        }
+        enrichedSettlement.backendOrderId = backendOrderId;
+        enrichedSettlement.billingSessionId = String(backendOrderId);
+
+        const vacateResult = await apiVacateTable(backendTableId);
+        if (!vacateResult?.success || vacateResult.data?.success === false) {
+          showToast(`Payment saved as order #${backendOrderId}; table is still occupied because vacate failed: ${vacateResult?.error || vacateResult.data?.message || "server rejected the request"}`);
+        } else {
+          dineInBackendTableVacated = true;
+        }
+      } catch (error) {
+        const errorMessage = `Payment was not completed in the shared system: ${error?.message || "Could not reach the backend."}`;
+        showToast(errorMessage);
+        return errorMessage;
       }
     }
 
@@ -2447,84 +2521,12 @@ export function App() {
       );
       pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
-    void (async () => {
-      try {
-        if (String(settlementData.tableId) === "TAKEAWAY") return;
-        const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
-        const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
-        const currentResult = await apiGetOrderForTable(backendTableId);
-        if (!currentResult?.success) throw new Error(currentResult?.error || "Could not load the shared order for settlement.");
-        let orderData = currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data;
-        let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
-        const itemsToPersist = enrichedSettlement.items.map((item) => ({
-          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          id: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          name: item.name || item.dishName,
-          dishName: item.name || item.dishName,
-          price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-          quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-          notes: item.notes || "",
-        }));
-        const notYetPersistedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
-        if (orderData && notYetPersistedItems.length > 0) {
-          const addResult = await apiAddOrderItems(backendOrderId, notYetPersistedItems.map((item) => ({
-            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-            id: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-            name: item.name || item.dishName,
-            dishName: item.name || item.dishName,
-            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-            notes: item.notes || "",
-          })));
-          if (!addResult?.success) throw new Error(addResult?.error || "Could not add all table items to the shared order.");
-        }
-        if (!orderData) {
-          const createResult = await apiCreateOrder({
-            tableId: backendTableId,
-            tableName: settlementData.tableName,
-            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
-            serverName: settlementData.server || "Server",
-            guests: enrichedSettlement.guests,
-            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
-            serviceChargeEnabled: false,
-            tipAmount: 0,
-            status: "Active",
-            items: itemsToPersist,
-          });
-          if (!createResult?.success) throw new Error(createResult?.error || "Could not save order items before settlement.");
-          orderData = createResult.data?.data ?? createResult.data ?? orderData;
-          backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
-        }
-        if (!backendOrderId) throw new Error("The shared order API did not return an order ID.");
-        const settleResult = await apiSettleOrder(backendOrderId, {
-          discountPercent: settlementData.discountPercent,
-          serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
-          tipAmount: settlementData.tipAmount,
-          paymentMethod: enrichedSettlement.paymentMethod,
-          invoiceNumber: enrichedSettlement.invoiceNo,
-        });
-        if (!settleResult?.success) throw new Error(settleResult?.error || "The server did not confirm settlement.");
-        // Link the local receipt to the backend order session so a later
-        // history sync recognizes the same sale instead of counting it twice.
-        setPastOrders((current) => {
-          return dedupeOrders(current.map((order) =>
-            order.id === enrichedSettlement.id ||
-            (enrichedSettlement.invoiceNo && order.invoiceNo === enrichedSettlement.invoiceNo &&
-              String(order.tableId ?? order.tableName) === String(enrichedSettlement.tableId ?? enrichedSettlement.tableName))
-              ? { ...order, backendOrderId, billingSessionId: String(backendOrderId) }
-              : order,
-          ));
-        });
-      } catch (error) {
-        console.warn("Backend order settlement failed; local settlement retained:", error);
-      }
-    })();
-
     const updatedTables = tables.map((t) => {
       const isTarget =
         String(t.id) === String(settlementData.tableId) ||
         t.name === settlementData.tableName;
       if (!isTarget) return t;
+      if (!isTakeawayOrder && !dineInBackendTableVacated) return t;
       return {
         ...t,
         status: "vacant",
@@ -2562,20 +2564,15 @@ export function App() {
       window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: cleanTables }));
     } catch {}
 
-    try {
-      const targetApiId = tableObj?.backendTableId || tableObj?.id || settlementData.tableId;
-      if (targetApiId && String(settlementData.tableId) !== "TAKEAWAY") {
-        apiVacateTable(targetApiId).catch(() => {});
-        apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
-      }
-    } catch {}
 
     setIsSettlementOpen(false);
     setSelectedTableId(null);
     setActiveView(isTakeawayOrder ? "takeaway" : "tables");
     if (isTakeawayOrder) setTakeawayOrderRefreshToken((current) => current + 1);
     showToast(
-      `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
+      !isTakeawayOrder && !dineInBackendTableVacated
+        ? `Payment saved for ${settlementData.tableName}; please vacate the table from the floor view.`
+        : `Bill settled for ${settlementData.tableName} via ${settlementData.paymentMethod.toUpperCase()}.`,
     );
 
     setReprintReceiptData({
