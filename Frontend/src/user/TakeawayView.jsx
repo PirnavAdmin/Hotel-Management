@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, ShoppingBag, Plus, Minus } from "lucide-react";
+import { Search, ShoppingBag, Plus, Minus, History, X } from "lucide-react";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import {
   apiCancelTakeawayOrder,
@@ -21,6 +21,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   const [orderNotice, setOrderNotice] = useState("");
   const [dispatchingOrderId, setDispatchingOrderId] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedOrderInfo, setSelectedOrderInfo] = useState(null);
   const categories = useMemo(() => [...new Set((Array.isArray(menuItems) ? menuItems : []).map((item) => item.category).filter(Boolean))], [menuItems]);
   const items = useMemo(() => {
@@ -156,6 +157,11 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         .takeaway-order-panel { position: sticky; top: 100px; box-sizing: border-box; width: 100%; min-width: 0; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-secondary); }
         .takeaway-kitchen-order { margin-top: .65rem; padding: .65rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-tertiary); }
         .takeaway-secondary-button { padding: .4rem .35rem; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-secondary); color: var(--text-main); font-size: .75rem; font-weight: 700; cursor: pointer; }
+        .takeaway-history-overlay { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,.68); }
+        .takeaway-history-dialog { display: flex; flex-direction: column; width: min(100%, 620px); max-height: min(82vh, 760px); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-secondary); color: var(--text-main); box-shadow: 0 24px 70px rgba(0,0,0,.4); }
+        .takeaway-history-content { overflow-y: auto; padding: .9rem 1rem 1rem; }
+        .takeaway-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; align-items: start; margin-bottom: .6rem; padding: .75rem; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--bg-tertiary); }
+        @media (max-width: 600px) { .takeaway-history-overlay { padding: .5rem; } .takeaway-history-dialog { max-height: 90vh; border-radius: 11px; } .takeaway-history-row { grid-template-columns: minmax(0, 1fr); } }
         @media (max-width: 900px) { .takeaway-layout { grid-template-columns: minmax(0, 1fr); } .takeaway-order-panel { position: static; } }
         @media (max-width: 600px) { .takeaway-section { padding: 1rem !important; } }
       `}</style>
@@ -187,6 +193,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         <div style={{ marginTop: ".45rem", display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}><span>GST (5%)</span><span>₹{(total * .05).toFixed(2)}</span></div>
         <div style={{ marginTop: ".55rem", display: "flex", justifyContent: "space-between", fontSize: "1.1rem" }}><strong>Total</strong><strong style={{ color: "var(--accent-amber-light)" }}>₹{Math.round(total * 1.05).toFixed(2)}</strong></div>
         <button disabled={!count} onClick={() => onCheckout?.(Object.values(cart).map(({ item, quantity }) => ({ ...item, quantity })))} style={{ width: "100%", marginTop: ".9rem", padding: ".75rem", border: 0, borderRadius: 9, background: count ? "var(--accent-amber)" : "var(--bg-tertiary)", color: count ? "#111" : "var(--text-muted)", fontWeight: 800, cursor: count ? "pointer" : "not-allowed" }}>Pay &amp; Send to Kitchen</button>
+        <button type="button" onClick={() => setHistoryOpen(true)} className="takeaway-secondary-button" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: ".45rem", width: "100%", marginTop: ".65rem", padding: ".6rem .75rem", fontSize: ".85rem" }}><History size={16}/> Order History</button>
         <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: "1rem", paddingTop: ".8rem" }}>
           <h3 style={{ margin: "0 0 .5rem" }}>Paid Takeaway Orders</h3>
           {orderNotice && <p role="status" style={{ color: "var(--text-muted)", fontSize: ".85rem" }}>{orderNotice}</p>}
@@ -218,19 +225,35 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>Total</span><strong>₹{Number(selectedOrderInfo.bill.grandTotal || 0).toFixed(2)}</strong></div>
           </> : <p role="status" style={{ color: "var(--text-muted)" }}>Bill summary unavailable.</p>}
         </div>}
-        <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: ".8rem", paddingTop: ".8rem" }}>
-          <h3 style={{ margin: "0 0 .5rem" }}>Takeaway Order History</h3>
-          {historyLoading ? <p style={{ color: "var(--text-muted)", fontSize: ".9rem" }}>Loading takeaway history…</p> : !takeawayHistory.length ? <p style={{ color: "var(--text-muted)", fontSize: ".9rem" }}>No takeaway orders in history.</p> : takeawayHistory.slice(0, 8).map((order) => {
-            const orderId = order.id ?? order.orderId ?? order.Id;
-            return <div className="takeaway-kitchen-order" key={`history-${orderId}`}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: ".5rem" }}><strong>Order #{orderId}</strong><strong>{order.status ?? order.Status}</strong></div>
-              <div style={{ color: "var(--text-muted)", fontSize: ".85rem", margin: ".3rem 0" }}>{(order.items || []).map((item) => `${item.name} × ${item.quantity}`).join(", ")}</div>
-              <button className="takeaway-secondary-button" disabled={dispatchingOrderId === orderId} onClick={() => handleShowReceipt(orderId)}>Load receipt</button>
-            </div>;
-          })}
-        </div>
       </aside>
       </div>
+      {historyOpen && <div className="takeaway-history-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setHistoryOpen(false); }}>
+        <section className="takeaway-history-dialog" role="dialog" aria-modal="true" aria-labelledby="takeaway-history-title">
+          <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".75rem", padding: "1rem", borderBottom: "1px solid var(--border-subtle)" }}>
+            <div><h3 id="takeaway-history-title" style={{ margin: 0 }}>Takeaway Order History</h3><p style={{ margin: ".25rem 0 0", color: "var(--text-muted)", fontSize: ".85rem" }}>Previous takeaway orders</p></div>
+            <button type="button" className="takeaway-secondary-button" aria-label="Close order history" onClick={() => setHistoryOpen(false)} style={{ display: "inline-flex", padding: ".45rem", alignItems: "center" }}><X size={18}/></button>
+          </header>
+          <div className="takeaway-history-content">
+            {historyLoading ? <p role="status" style={{ color: "var(--text-muted)" }}>Loading takeaway history…</p> : !takeawayHistory.length ? <p style={{ color: "var(--text-muted)" }}>No takeaway orders in history.</p> : takeawayHistory.map((order) => {
+              const orderId = order.id ?? order.orderId ?? order.Id;
+              const orderItems = Array.isArray(order.items) ? order.items : [];
+              const orderTotal = order.grandTotal ?? order.totalAmount ?? order.total ?? order.amount;
+              const orderDate = order.dateTime ?? order.createdAt ?? order.orderDate ?? order.date;
+              return <article className="takeaway-history-row" key={`history-${orderId}`}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: ".45rem" }}><strong>Order #{order.orderNumber ?? orderId}</strong><span style={{ color: "var(--accent-amber-light)", fontSize: ".82rem" }}>{order.status ?? order.Status ?? ""}</span></div>
+                  <div style={{ color: "var(--text-muted)", fontSize: ".85rem", margin: ".35rem 0" }}>{orderItems.map((item) => `${item.name ?? item.dishName ?? "Item"} × ${item.quantity ?? item.qty ?? 0}`).join(", ") || "No item details available"}</div>
+                  {orderDate && <time dateTime={orderDate} style={{ color: "var(--text-muted)", fontSize: ".78rem" }}>{new Date(orderDate).toLocaleString()}</time>}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: ".45rem" }}>
+                  {orderTotal != null && <strong>₹{Number(orderTotal).toFixed(2)}</strong>}
+                  <button className="takeaway-secondary-button" disabled={dispatchingOrderId === orderId} onClick={() => handleShowReceipt(orderId)}>Load Receipt</button>
+                </div>
+              </article>;
+            })}
+          </div>
+        </section>
+      </div>}
     </section>
   );
 }
