@@ -58,6 +58,7 @@ import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
 import { BarWorkspace } from "../bar/BarWorkspace";
+import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { API_BASE_URL, API_HTTP_BASE, openOptionalEventStream } from "../api/apiConfig";
@@ -613,6 +614,7 @@ export function AdminPortal({
     setMenuPage(1);
   };
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
+  const [adminKotStation, setAdminKotStation] = useState("kitchen");
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const [selectedKotModalTable, setSelectedKotModalTable] = useState(null);
@@ -4082,7 +4084,7 @@ export function AdminPortal({
                               color: "var(--text-main)",
                             }}
                           >
-                            Kitchen Order Tickets (KOT) Dispatch
+                            {adminKotStation === "bar" ? "Bar Order Tickets (BOT) Dispatch" : "Kitchen Order Tickets (KOT) Dispatch"}
                           </h3>
                           <span
                             style={{
@@ -4104,8 +4106,9 @@ export function AdminPortal({
                             color: "var(--text-muted)",
                           }}
                         >
-                          Select any table number to inspect orders received
-                          from table and preparation completed status
+                          {adminKotStation === "bar"
+                            ? "View and update beverage orders routed to the bar."
+                            : "Select any table number to inspect food orders received and preparation status."}
                         </p>
                       </div>
 
@@ -4136,6 +4139,30 @@ export function AdminPortal({
                       )}
                     </div>
 
+                    <div role="tablist" aria-label="Admin order ticket stations" style={{ display: "flex", gap: 8, marginBottom: "1rem" }}>
+                      {[{ id: "kitchen", label: "Kitchen KOT" }, { id: "bar", label: "Bar BOT" }].map((station) => (
+                        <button
+                          key={station.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={adminKotStation === station.id}
+                          onClick={() => setAdminKotStation(station.id)}
+                          style={{ minHeight: 36, padding: "0 14px", borderRadius: 8, border: `1px solid ${adminKotStation === station.id ? "#f59e0b" : "var(--border-subtle)"}`, background: adminKotStation === station.id ? "rgba(245,158,11,.16)" : "var(--bg-secondary)", color: adminKotStation === station.id ? "var(--accent-amber-light)" : "var(--text-main)", font: "inherit", fontWeight: 750, cursor: "pointer" }}
+                        >
+                          {station.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {adminKotStation === "bar" ? (
+                      <BarBOTView
+                        menuItems={menuItems}
+                        tables={tables}
+                        staffList={staffList}
+                        onUpdateItemKotStatus={onUpdateItemKotStatus}
+                      />
+                    ) : (
+                    <>
                     {/* Table Filter Bar with Dropdown matching TableDetailView */}
                     <div
                       style={{
@@ -5342,6 +5369,8 @@ export function AdminPortal({
                         </>
                       );
                     })()}
+                    </>
+                    )}
                   </div>
                 )}
 
