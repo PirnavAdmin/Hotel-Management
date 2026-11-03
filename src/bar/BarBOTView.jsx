@@ -324,9 +324,6 @@ export function BarBOTView({
       try {
         onUpdateItemKotStatus(tableId, nextStatus, itemId);
       } catch {}
-      try {
-        onUpdateItemKotStatus(tableId, itemId, nextStatus);
-      } catch {}
     }
 
     if (typeof onItemsUpdated === "function") {
@@ -356,7 +353,8 @@ export function BarBOTView({
 
     // Try atomic table endpoint first
     try {
-      await apiMarkAllBarBotTableReady(table.id);
+      const result = await apiMarkAllBarBotTableReady(table.id);
+      if (!result?.success) throw new Error(result?.error || "Bar BOT could not mark the drinks ready.");
     } catch {
       // Fallback per-item update
       for (const item of items) {
@@ -371,6 +369,15 @@ export function BarBOTView({
           }
         }
       }
+    }
+
+    if (typeof onUpdateItemKotStatus === "function") {
+      items.forEach((item) => {
+        const itemId = item.orderItemId || item.id || item.menuItemId;
+        try {
+          onUpdateItemKotStatus(table.id, "ready", itemId);
+        } catch {}
+      });
     }
 
     if (typeof onCompleteTableKot === "function") {
