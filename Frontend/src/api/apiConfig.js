@@ -1,10 +1,15 @@
-export const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://chapter-catnip-evaluator.ngrok-free.dev"
-).trim().replace(/\/$/, "");
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "https://chapter-catnip-evaluator.ngrok-free.dev";
 
-// The Vite dev server provides its own same-origin SSE endpoint for local
-// cross-tab/device synchronization. Production can use the configured API.
+// Keep the configured API address consistent for every device. Development
+// requests use the same-origin Vite proxy below, which forwards to this URL.
+export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
+
+// In development all browser-to-API traffic stays same-origin. The Vite
+// server forwards it to the backend on the POS host, including LAN clients.
+export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : API_BASE_URL;
+export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+
+// Keep development SSE on Vite for LAN state broadcasts; production uses the API.
 const EVENTS_URL = import.meta.env.DEV
   ? "/api/events"
   : `${API_BASE_URL.replace(/\/$/, "")}/api/events`;
@@ -31,8 +36,8 @@ const DEFAULT_HEADERS = {
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
   const { remoteOnly = false, ...requestOptions } = options;
+  const url = apiUrl(endpoint);
 
   try {
     const token =
@@ -54,7 +59,7 @@ async function performApiRequest(endpoint, options = {}) {
     let res;
     try {
       res = await fetch(url, config);
-      if (!remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+      if (!import.meta.env.DEV && !remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
         try {
           const localRes = await fetch(endpoint, config);
           if (localRes.ok) {
@@ -63,7 +68,7 @@ async function performApiRequest(endpoint, options = {}) {
         } catch {}
       }
     } catch (fetchErr) {
-      if (API_BASE_URL && !remoteOnly) {
+      if (!import.meta.env.DEV && API_BASE_URL && !remoteOnly) {
         console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
         res = await fetch(endpoint, config);
       } else {
@@ -129,7 +134,7 @@ async function performApiRequest(endpoint, options = {}) {
     }
 
     if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
-      if (API_BASE_URL) {
+      if (!import.meta.env.DEV && API_BASE_URL) {
         try {
           const localRes = await fetch(endpoint, config);
           const localText = await localRes.text();

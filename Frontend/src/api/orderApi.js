@@ -8,6 +8,22 @@ export async function apiGetActiveOrders() {
   return await apiClient("/api/v1/orders/active");
 }
 
+export async function apiGetTakeawayOrders() {
+  return await apiClient("/api/v1/orders/takeaway", { remoteOnly: true });
+}
+
+export async function apiDispatchTakeawayOrder(orderId) {
+  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}/dispatch`, { method: "POST", remoteOnly: true });
+}
+
+export async function apiCreatePaidTakeawayOrder(orderData) {
+  return await apiClient("/api/v1/orders", { method: "POST", remoteOnly: true, body: JSON.stringify(orderData) });
+}
+
+export async function apiSendTakeawayOrderToKitchen(orderId) {
+  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}/send-kot`, { method: "POST", remoteOnly: true });
+}
+
 export async function apiGetOrder(id) {
   return await apiClient(`/api/v1/orders/${id}`);
 }
@@ -40,13 +56,6 @@ export async function apiUpdateOrderItems(orderId, items) {
   return await apiClient(`/api/v1/orders/${orderId}/items`, {
     method: "PUT",
     body: JSON.stringify({ items }),
-  });
-}
-
-export async function apiUpdateOrderItem(orderId, itemId, updates) {
-  return await apiClient(`/api/v1/orders/${orderId}/items/${itemId}`, {
-    method: "PATCH",
-    body: JSON.stringify(updates),
   });
 }
 

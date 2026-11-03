@@ -36,19 +36,61 @@ public class OrdersController : ControllerBase
     // GET ACTIVE ORDERS
     // ============================================================
 
+    [HttpGet("takeaway")]
+    public async Task<IActionResult> GetUndispatchedTakeawayOrders()
+    {
+        var orders = await _context.Orders
+            .Include(o => o.Items)
+            .Where(o => o.IsActive && !o.IsDeleted && o.OrderType == "Takeaway" && o.Status == "Settled" &&
+                o.Items.Any(i => i.IsActive && !i.IsDeleted &&
+                    i.KotStatus != "Served" && i.KotStatus != "served" &&
+                    i.KotStatus != "Completed" && i.KotStatus != "completed"))
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+
+        foreach (var order in orders)
+        {
+            await PopulateDisplayFields(order);
+            RecalculateTotals(order);
+        }
+
+        return Ok(orders.Select(MapToOrderDto));
+    }
+
+    [HttpPost("{id:long}/dispatch")]
+    public async Task<IActionResult> DispatchTakeawayOrder(long id)
+    {
+        var order = await _context.Orders.Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id && o.IsActive && !o.IsDeleted && o.OrderType == "Takeaway" && o.Status == "Settled");
+        if (order == null) return NotFound(new { success = false, message = "Takeaway order not found." });
+
+        var kitchenItems = order.Items.Where(i => i.IsActive && !i.IsDeleted).ToList();
+        if (kitchenItems.Count == 0 || kitchenItems.Any(i =>
+            i.KotStatus != "Ready" && i.KotStatus != "ready" &&
+            i.KotStatus != "Served" && i.KotStatus != "served" &&
+            i.KotStatus != "Completed" && i.KotStatus != "completed"))
+        {
+            return Conflict(new { success = false, message = "The kitchen must mark every item ready before dispatch." });
+        }
+
+        foreach (var item in kitchenItems)
+        {
+            item.KotStatus = "Served";
+            item.UpdatedAt = DateTime.UtcNow;
+        }
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return Ok(new { success = true, message = "Takeaway order dispatched.", orderId = order.Id });
+    }
+
     [HttpGet]
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveOrders()
     {
         var orders = await _context.Orders
             .Include(o => o.Items)
-            .Where(o =>
-                o.IsActive &&
-                !o.IsDeleted &&
-                (o.Status == "Active" ||
-                 o.Status == "active" ||
-                 o.Status == "Billed" ||
-                 o.Status == "billed"))
+            .Where(o => o.IsActive && !o.IsDeleted &&
+                (o.Status == "Active" || o.Status == "active" || o.Status == "Billed" || o.Status == "billed"))
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync();
 
@@ -124,8 +166,18 @@ public class OrdersController : ControllerBase
             });
         }
 
-        long resolvedTableId = request.TableId ?? 0;
-        if (resolvedTableId <= 0 && (!string.IsNullOrWhiteSpace(request.TableName) || !string.IsNullOrWhiteSpace(request.TableNumber)))
+        var isTakeaway = string.Equals(request.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase);
+        if (isTakeaway && string.IsNullOrWhiteSpace(request.PaymentMethod))
+        {
+            return BadRequest(new { success = false, message = "Takeaway orders must be paid before sending to the kitchen." });
+        }
+        if (isTakeaway && !string.Equals(request.Status, "Settled", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { success = false, message = "Takeaway orders must be marked paid before sending to the kitchen." });
+        }
+
+        long resolvedTableId = isTakeaway ? 0 : request.TableId ?? 0;
+        if (!isTakeaway && resolvedTableId <= 0 && (!string.IsNullOrWhiteSpace(request.TableName) || !string.IsNullOrWhiteSpace(request.TableNumber)))
         {
             var searchName = !string.IsNullOrWhiteSpace(request.TableNumber) ? request.TableNumber.Trim() : request.TableName!.Trim();
             var matchedTable = await _context.RestaurantTables.FirstOrDefaultAsync(t => (t.TableNumber == searchName || t.TableName == searchName) && t.DeletedAt == null);
@@ -134,7 +186,7 @@ public class OrdersController : ControllerBase
                 resolvedTableId = matchedTable.TableId;
             }
         }
-        if (resolvedTableId <= 0)
+        if (!isTakeaway && resolvedTableId <= 0)
         {
             var firstTable = await _context.RestaurantTables.FirstOrDefaultAsync(t => t.DeletedAt == null);
             resolvedTableId = firstTable?.TableId ?? 1;
@@ -148,13 +200,10 @@ public class OrdersController : ControllerBase
             });
         }
 
-        var table = await _context.DiningTables
-            .FirstOrDefaultAsync(t =>
-                t.Id == resolvedTableId &&
-                t.IsActive &&
-                !t.IsDeleted);
+        DiningTable? table = isTakeaway ? null : await _context.DiningTables
+            .FirstOrDefaultAsync(t => t.Id == resolvedTableId && t.IsActive && !t.IsDeleted);
 
-        if (table == null)
+        if (table == null && !isTakeaway)
         {
             var restTable = await _context.RestaurantTables
                 .FirstOrDefaultAsync(t => t.TableId == resolvedTableId && t.DeletedAt == null);
@@ -199,11 +248,8 @@ public class OrdersController : ControllerBase
             }
         }
 
-        var section = await _context.DiningSections
-            .FirstOrDefaultAsync(s =>
-                s.Id == table.SectionId &&
-                s.IsActive &&
-                !s.IsDeleted);
+        var section = table == null ? null : await _context.DiningSections
+            .FirstOrDefaultAsync(s => s.Id == table.SectionId && s.IsActive && !s.IsDeleted);
 
         if (section == null)
         {
@@ -222,14 +268,10 @@ public class OrdersController : ControllerBase
             }
         }
 
-        var order = await _context.Orders
+        var order = isTakeaway ? null : await _context.Orders
             .Include(o => o.Items)
-            .FirstOrDefaultAsync(o =>
-                o.TableId == table.Id &&
-                o.IsActive &&
-                !o.IsDeleted &&
-                (o.Status == "Active" ||
-                 o.Status == "active"));
+            .FirstOrDefaultAsync(o => o.TableId == table!.Id && o.IsActive && !o.IsDeleted &&
+                (o.Status == "Active" || o.Status == "active"));
 
         bool isNewOrder = order == null;
 
@@ -245,9 +287,9 @@ public class OrdersController : ControllerBase
 
                 OutletId = section.OutletId,
 
-                OrderType = "DineIn",
+                OrderType = isTakeaway ? "Takeaway" : "DineIn",
 
-                TableId = table.Id,
+                TableId = table?.Id,
 
                 Guests = request.Guests > 0
                     ? request.Guests
@@ -272,19 +314,22 @@ public class OrdersController : ControllerBase
 
             await _context.SaveChangesAsync();
 
-            table.Status = "occupied";
-            table.UpdatedAt = DateTime.UtcNow;
-
-            var restTableSync = await _context.RestaurantTables.FirstOrDefaultAsync(t => 
-                (t.TableId == table.Id || t.TableNumber == table.Name || t.TableName == table.Name) && t.DeletedAt == null);
-            if (restTableSync != null)
+            if (table != null)
             {
-                restTableSync.Status = "occupied";
-                restTableSync.OccupiedChairs = request.Guests > 0 ? request.Guests : 1;
-                restTableSync.UpdatedAt = DateTime.UtcNow;
-            }
+                table.Status = "occupied";
+                table.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+                var restTableSync = await _context.RestaurantTables.FirstOrDefaultAsync(t =>
+                    (t.TableId == table.Id || t.TableNumber == table.Name || t.TableName == table.Name) && t.DeletedAt == null);
+                if (restTableSync != null)
+                {
+                    restTableSync.Status = "occupied";
+                    restTableSync.OccupiedChairs = request.Guests > 0 ? request.Guests : 1;
+                    restTableSync.UpdatedAt = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+            }
         }
         else
         {
@@ -399,6 +444,7 @@ public class OrdersController : ControllerBase
         {
             order.Status = "Settled";
             order.PaymentMethod = request.PaymentMethod ?? "Cash";
+            order.InvoiceNo = request.InvoiceNumber;
             order.DiscountPercent = request.DiscountPercent;
             order.TipAmount = request.TipAmount;
             order.ServiceChargePercent = request.ServiceChargeEnabled ? 5m : 0m;
@@ -406,16 +452,19 @@ public class OrdersController : ControllerBase
             order.UpdatedAt = DateTime.UtcNow;
             RecalculateTotals(order);
 
-            table.Status = "vacant";
-            table.UpdatedAt = DateTime.UtcNow;
-
-            var restTbl = await _context.RestaurantTables.FirstOrDefaultAsync(t => 
-                (t.TableId == table.Id || t.TableNumber == table.Name || t.TableName == table.Name) && t.DeletedAt == null);
-            if (restTbl != null)
+            if (table != null)
             {
-                restTbl.Status = "available";
-                restTbl.OccupiedChairs = 0;
-                restTbl.UpdatedAt = DateTime.UtcNow;
+                table.Status = "vacant";
+                table.UpdatedAt = DateTime.UtcNow;
+
+                var restTbl = await _context.RestaurantTables.FirstOrDefaultAsync(t =>
+                    (t.TableId == table.Id || t.TableNumber == table.Name || t.TableName == table.Name) && t.DeletedAt == null);
+                if (restTbl != null)
+                {
+                    restTbl.Status = "available";
+                    restTbl.OccupiedChairs = 0;
+                    restTbl.UpdatedAt = DateTime.UtcNow;
+                }
             }
         }
 
@@ -423,7 +472,7 @@ public class OrdersController : ControllerBase
 
         if (isSettling)
         {
-            await EnsureInvoiceCreatedAsync(order, order.PaymentMethod ?? "Cash");
+            await EnsureInvoiceCreatedAsync(order, order.PaymentMethod ?? "Cash", request.InvoiceNumber);
         }
 
         // ========================================================
@@ -452,8 +501,108 @@ public class OrdersController : ControllerBase
 
 
     // ============================================================
-    // UPDATE ORDER ITEMS
+    // ADD / UPDATE ORDER ITEMS
     // ============================================================
+
+    [HttpPost("{id:long}/items")]
+    public async Task<IActionResult> AddOrderItems(
+        long id,
+        [FromBody] UpdateOrderItemsRequest request)
+    {
+        if (request?.Items == null || request.Items.Count == 0)
+        {
+            return BadRequest(new { success = false, message = "At least one order item is required." });
+        }
+
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id && o.IsActive && !o.IsDeleted);
+
+        if (order == null)
+        {
+            return NotFound(new { success = false, message = "Active order not found." });
+        }
+
+        if (string.Equals(order.Status, "Settled", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            return Conflict(new { success = false, message = "Items cannot be added to a settled or closed order." });
+        }
+
+        foreach (var itemInput in request.Items)
+        {
+            if (itemInput.Quantity <= 0) continue;
+
+            var menuItemId = itemInput.MenuItemId ?? 0;
+            if (menuItemId <= 0 && !string.IsNullOrWhiteSpace(itemInput.Name))
+            {
+                try
+                {
+                    menuItemId = await _spService.ExecuteSqlScalarAsync<long?>(
+                        "SELECT menu_item_id FROM menu_items WHERE dish_name = @dname LIMIT 1;",
+                        new Dictionary<string, object?> { { "dname", itemInput.Name.Trim() } }) ?? 0;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not resolve menu item {ItemName} while adding items to order {OrderId}.", itemInput.Name, id);
+                }
+            }
+
+            if (menuItemId <= 0)
+            {
+                return BadRequest(new { success = false, message = $"A valid menu item ID is required for '{itemInput.Name}'." });
+            }
+
+            var queuedItem = order.Items.FirstOrDefault(existing =>
+                existing.MenuItemId == menuItemId &&
+                existing.VariantId == itemInput.VariantId &&
+                existing.IsActive && !existing.IsDeleted &&
+                (string.Equals(existing.KotStatus, "Queued", StringComparison.OrdinalIgnoreCase)) &&
+                (!existing.KotId.HasValue || existing.KotId.Value == 0));
+
+            if (queuedItem != null)
+            {
+                queuedItem.Quantity += itemInput.Quantity;
+                queuedItem.TotalPrice = queuedItem.Price * queuedItem.Quantity;
+                queuedItem.Notes = itemInput.Notes ?? queuedItem.Notes;
+                queuedItem.UpdatedAt = DateTime.UtcNow;
+                continue;
+            }
+
+            order.Items.Add(new OrderItem
+            {
+                OrderId = order.Id,
+                MenuItemId = menuItemId,
+                VariantId = itemInput.VariantId,
+                Name = itemInput.Name,
+                Price = itemInput.Price,
+                Quantity = itemInput.Quantity,
+                TotalPrice = itemInput.Price * itemInput.Quantity,
+                Notes = itemInput.Notes,
+                KotStatus = "Queued",
+                KotBatch = 1,
+                KotId = null,
+                IsActive = true,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        RecalculateTotals(order);
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        await _hubContext.Clients.Group("floor").SendAsync("OrderUpdated", new
+        {
+            orderId = order.Id,
+            tableId = order.TableId,
+            items = order.Items.Select(MapToOrderItemDto).ToList(),
+            grandTotal = order.GrandTotal,
+        });
+
+        return Ok(MapToOrderDto(order));
+    }
 
     [HttpPut("{id}/items")]
     public async Task<IActionResult> UpdateOrderItems(
@@ -883,6 +1032,11 @@ public class OrdersController : ControllerBase
                         });
             }
         }
+        else if (string.Equals(order.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase))
+        {
+            order.TableName = "Takeaway";
+            order.Section = "Takeaway";
+        }
 
         return Ok(new
         {
@@ -1214,6 +1368,11 @@ public class OrdersController : ControllerBase
                 }
             }
         }
+        else if (string.Equals(order.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase))
+        {
+            order.TableName = "Takeaway";
+            order.Section = "Takeaway";
+        }
 
         // --------------------------------------------------------
         // WAITER / SERVER
@@ -1283,6 +1442,8 @@ public class OrdersController : ControllerBase
         {
             Id =
                 order.Id,
+
+            OrderType = order.OrderType,
 
             TableId =
                 order.TableId ?? 0,
@@ -1360,6 +1521,8 @@ public class OrdersController : ControllerBase
         {
             Id =
                 item.Id,
+
+            KotId = item.KotId,
 
             OrderId =
                 item.OrderId,
