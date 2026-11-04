@@ -73,7 +73,9 @@ import {
   apiUpdateOrderDiscount,
   apiSettleOrder,
 } from "./api/orderApi";
-import { apiAdjustStock } from "./api/inventoryApi";
+import {
+  apiAdjustStock,
+} from "./api/inventoryApi";
 import { API_BASE_URL, API_HTTP_BASE } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
@@ -93,8 +95,69 @@ const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
+const STORAGE_KEY_SALARY_PAYMENTS = "gourmet_pos_salary_payments_v1";
+const STORAGE_KEY_INVENTORY_PURCHASES = "gourmet_pos_inventory_purchases_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+
+const readStoredArray = (key) => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const normalizeSalaryPayment = (payment) => ({
+  ...payment,
+  id: payment.id ?? payment.paymentId,
+  staffId: payment.staffId ?? payment.staffID,
+  staffName: payment.staffName || payment.name || "",
+  amount: Number(payment.amount) || 0,
+  paidOn: String(payment.paidOn || payment.paymentDate || "").slice(0, 10),
+  salaryPeriod: payment.salaryPeriod || payment.payPeriod || "",
+  paymentMethod: payment.paymentMethod || payment.method || "Bank Transfer",
+  notes: payment.notes || "",
+});
+
+const normalizeInventoryPurchase = (purchase) => ({
+  ...purchase,
+  id: purchase.id ?? purchase.purchaseId,
+  itemId: purchase.itemId ?? purchase.inventoryId,
+  name: purchase.name || purchase.itemName || "",
+  department: String(purchase.department || "dine").toLowerCase(),
+  quantity: Number(purchase.quantity) || 0,
+  unitCost: Number(purchase.unitCost) || 0,
+  totalCost: Number(purchase.totalCost) || (Number(purchase.quantity) || 0) * (Number(purchase.unitCost) || 0),
+  purchaseDate: String(purchase.purchaseDate || "").slice(0, 10),
+});
+
+const mergeSalaryPayments = (current, incoming) => {
+  const rows = new Map();
+  [...(Array.isArray(current) ? current : []), ...(Array.isArray(incoming) ? incoming : [])]
+    .map(normalizeSalaryPayment)
+    .forEach((payment) => {
+      const identity = payment.id != null
+        ? `id:${payment.id}`
+        : `${payment.staffId}|${payment.paidOn}|${payment.salaryPeriod}|${payment.amount}|${payment.paymentMethod}|${payment.notes}`;
+      rows.set(identity, { ...rows.get(identity), ...payment });
+    });
+  return Array.from(rows.values());
+};
+
+const mergeInventoryPurchases = (current, incoming) => {
+  const rows = new Map();
+  [...(Array.isArray(current) ? current : []), ...(Array.isArray(incoming) ? incoming : [])]
+    .map(normalizeInventoryPurchase)
+    .forEach((purchase) => {
+      const identity = purchase.id != null
+        ? `id:${purchase.id}`
+        : `${purchase.itemId}|${purchase.purchaseDate}|${purchase.quantity}|${purchase.unitCost}|${purchase.supplier}`;
+      rows.set(identity, { ...rows.get(identity), ...purchase });
+    });
+  return Array.from(rows.values());
+};
 
 let inFlightNetworkStateRequest = null;
 const requestSharedNetworkState = () => {
@@ -523,6 +586,12 @@ export function App() {
     }
     return [];
   });
+  const [salaryPayments, setSalaryPayments] = useState(() =>
+    readStoredArray(STORAGE_KEY_SALARY_PAYMENTS).map(normalizeSalaryPayment),
+  );
+  const [inventoryPurchases, setInventoryPurchases] = useState(() =>
+    readStoredArray(STORAGE_KEY_INVENTORY_PURCHASES).map(normalizeInventoryPurchase),
+  );
 
   // Past settled orders history in Rupees
   const [pastOrders, setPastOrders] = useState(() => {
@@ -658,10 +727,15 @@ export function App() {
             ? response.staff
             : null;
       if (Array.isArray(backendStaff) && backendStaff.length > 0) {
+        const locallySavedStaff = readStoredArray(STORAGE_KEY_STAFF);
         const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
+          ...(locallySavedStaff.find((person) =>
+            String(person.backendStaffId ?? person.id ?? person.staffId) === String(s.staffId ?? s.id),
+          ) || {}),
           ...s,
           id: s.staffId ?? s.id,
           staffId: s.staffId ?? s.id,
+          backendStaffId: s.staffId ?? s.id,
           name: s.fullName || s.name,
           fullName: s.fullName || s.name,
           role: s.roleTitle || s.role || "Waiter",
@@ -982,6 +1056,32 @@ export function App() {
 
   useEffect(() => {
     try {
+      const paymentsJson = JSON.stringify(salaryPayments);
+      if (localStorage.getItem(STORAGE_KEY_SALARY_PAYMENTS) !== paymentsJson) {
+        localStorage.setItem(STORAGE_KEY_SALARY_PAYMENTS, paymentsJson);
+        pushGlobalSync({ [STORAGE_KEY_SALARY_PAYMENTS]: salaryPayments });
+        broadcastSync("SYNC_SALARY_PAYMENTS", salaryPayments);
+      }
+    } catch (error) {
+      console.error("[Payroll] Failed to save salary payment history:", error);
+    }
+  }, [salaryPayments]);
+
+  useEffect(() => {
+    try {
+      const purchasesJson = JSON.stringify(inventoryPurchases);
+      if (localStorage.getItem(STORAGE_KEY_INVENTORY_PURCHASES) !== purchasesJson) {
+        localStorage.setItem(STORAGE_KEY_INVENTORY_PURCHASES, purchasesJson);
+        pushGlobalSync({ [STORAGE_KEY_INVENTORY_PURCHASES]: inventoryPurchases });
+        broadcastSync("SYNC_INVENTORY_PURCHASES", inventoryPurchases);
+      }
+    } catch (error) {
+      console.error("[Inventory] Failed to save purchase history:", error);
+    }
+  }, [inventoryPurchases]);
+
+  useEffect(() => {
+    try {
       const ordersJson = JSON.stringify(pastOrders);
       if (localStorage.getItem(STORAGE_KEY_ORDERS) !== ordersJson) {
         localStorage.setItem(STORAGE_KEY_ORDERS, ordersJson);
@@ -1037,11 +1137,13 @@ export function App() {
         if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
           const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
             id: s.staffId ?? s.id,
+            backendStaffId: s.backendStaffId,
             name: s.fullName || s.name,
             role: s.roleTitle || s.role || "Waiter",
             phone: s.phone || "",
             email: s.email || "",
             shift: s.shift || "Full Day",
+            monthlySalary: Number(s.monthlySalary) || 0,
             status: s.isActive === false ? "inactive" : "active",
           })));
           setStaffList(normalizedStaff);
@@ -1068,6 +1170,14 @@ export function App() {
             localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
             window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
           } catch {}
+        }
+        const incomingSalaryPayments = data[STORAGE_KEY_SALARY_PAYMENTS];
+        if (Array.isArray(incomingSalaryPayments)) {
+          setSalaryPayments((current) => mergeSalaryPayments(current, incomingSalaryPayments));
+        }
+        const incomingInventoryPurchases = data[STORAGE_KEY_INVENTORY_PURCHASES];
+        if (Array.isArray(incomingInventoryPurchases)) {
+          setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingInventoryPurchases));
         }
     };
     fetchInitialDbState();
@@ -1163,11 +1273,13 @@ export function App() {
           if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
             const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
               id: s.staffId || s.id,
+              backendStaffId: s.backendStaffId,
               name: s.fullName || s.name,
               role: s.roleTitle || s.role || "Waiter",
               phone: s.phone || "",
               email: s.email || "",
               shift: s.shift || "Full Day",
+              monthlySalary: Number(s.monthlySalary) || 0,
               status: s.isActive === false ? "inactive" : "active",
             })));
             setStaffList(normalizedStaff);
@@ -1184,6 +1296,14 @@ export function App() {
               localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
               window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
             } catch {}
+          }
+          const incomingSalaryPayments = payload[STORAGE_KEY_SALARY_PAYMENTS];
+          if (Array.isArray(incomingSalaryPayments)) {
+            setSalaryPayments((current) => mergeSalaryPayments(current, incomingSalaryPayments));
+          }
+          const incomingInventoryPurchases = payload[STORAGE_KEY_INVENTORY_PURCHASES];
+          if (Array.isArray(incomingInventoryPurchases)) {
+            setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingInventoryPurchases));
           }
           if (payload["avsr_auth_users_v1"]) {
             try {
@@ -1269,6 +1389,20 @@ export function App() {
             window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
           }
         } catch {}
+      } else if (e.key === STORAGE_KEY_SALARY_PAYMENTS) {
+        try {
+          const incomingPayments = JSON.parse(e.newValue);
+          if (Array.isArray(incomingPayments)) {
+            setSalaryPayments((current) => mergeSalaryPayments(current, incomingPayments));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_INVENTORY_PURCHASES) {
+        try {
+          const incomingPurchases = JSON.parse(e.newValue);
+          if (Array.isArray(incomingPurchases)) {
+            setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingPurchases));
+          }
+        } catch {}
       } else if (e.key === RESTAURANT_SETTINGS_KEY) {
         try {
           const incomingSettings = JSON.parse(e.newValue);
@@ -1318,6 +1452,10 @@ export function App() {
           } else if (type === "SYNC_STAFF" && Array.isArray(payload) && payload.length > 0) {
             const deduped = dedupeStaff(payload);
             setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          } else if (type === "SYNC_SALARY_PAYMENTS" && Array.isArray(payload)) {
+            setSalaryPayments((current) => mergeSalaryPayments(current, payload));
+          } else if (type === "SYNC_INVENTORY_PURCHASES" && Array.isArray(payload)) {
+            setInventoryPurchases((current) => mergeInventoryPurchases(current, payload));
           } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
             setDeletedTableIds(payload);
             setTables((prev) => prev.filter((t) => !payload.map(String).includes(String(t.id))));
@@ -1370,6 +1508,15 @@ export function App() {
           }
         }
       } catch {}
+
+      const localSalaryPayments = readStoredArray(STORAGE_KEY_SALARY_PAYMENTS);
+      setSalaryPayments((current) => localSalaryPayments.length
+        ? mergeSalaryPayments(current, localSalaryPayments)
+        : []);
+      const localInventoryPurchases = readStoredArray(STORAGE_KEY_INVENTORY_PURCHASES);
+      setInventoryPurchases((current) => localInventoryPurchases.length
+        ? mergeInventoryPurchases(current, localInventoryPurchases)
+        : []);
 
       try {
         const rawDel = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
@@ -2883,12 +3030,14 @@ export function App() {
       ...(created || {}),
       id: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
       staffId: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      backendStaffId: created?.staffId ?? created?.id ?? null,
       name: created?.fullName || created?.name || newPerson.name || "Staff",
       fullName: created?.fullName || created?.name || newPerson.name || "Staff",
       role: created?.roleTitle || created?.role || newPerson.role || "Waiter",
       roleTitle: created?.roleTitle || created?.role || newPerson.role || "Waiter",
       phone: newPerson.phone || created?.phone || "",
       shift: newPerson.shift || created?.shift || "Morning Shift (10 AM - 4 PM)",
+      monthlySalary: Number(created?.monthlySalary ?? newPerson.monthlySalary) || 0,
       isActive: true,
       avatarInitial: (newPerson.name || "S").charAt(0).toUpperCase(),
     };
@@ -2915,16 +3064,18 @@ export function App() {
       oldPerson?.name || oldPerson?.fullName || oldPerson?.FullName;
     const newName = updatedPerson.name || updatedPerson.fullName;
 
-    try {
-      await apiUpdateStaff(personId, {
-        name: newName,
-        fullName: newName,
-        role: updatedPerson.role || updatedPerson.roleTitle || "Waiter",
-        phone: updatedPerson.phone || "",
-        email: updatedPerson.email || "",
-        shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
-      });
-    } catch {}
+    if (oldPerson?.backendStaffId != null) {
+      try {
+        await apiUpdateStaff(oldPerson.backendStaffId, {
+          name: newName,
+          fullName: newName,
+          role: updatedPerson.role || updatedPerson.roleTitle || "Waiter",
+          phone: updatedPerson.phone || "",
+          email: updatedPerson.email || "",
+          shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
+        });
+      } catch {}
+    }
 
     setStaffList((prev) => {
       const nextStaff = prev.map((p) =>
@@ -2972,9 +3123,11 @@ export function App() {
       assignedServerId: null,
     })));
 
-    try {
-      await apiDeleteStaff(personId);
-    } catch {}
+    if (person?.backendStaffId != null) {
+      try {
+        await apiDeleteStaff(person.backendStaffId);
+      } catch {}
+    }
 
     setStaffList((prev) => {
       const nextStaff = prev.filter((p) => String(p.id ?? p.staffId) !== String(personId));
@@ -2988,10 +3141,54 @@ export function App() {
     showToast(`🗑️ Removed "${personName}"`);
   };
 
+  const handleRecordSalaryPayment = async (payment) => {
+    const amount = Number(payment.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast("Enter a salary payment amount greater than zero.");
+      return false;
+    }
+
+    const normalizedPayment = normalizeSalaryPayment({
+      ...payment,
+      id: payment.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      amount,
+      paidOn: payment.paidOn,
+      salaryPeriod: payment.salaryPeriod,
+      paymentMethod: payment.paymentMethod,
+      notes: payment.notes || "",
+    });
+    setSalaryPayments((current) => mergeSalaryPayments(current, [normalizedPayment]));
+    showToast(`Salary payment recorded for ${normalizedPayment.staffName}.`);
+    return true;
+  };
+
+  const handleRecordInventoryPurchase = async (purchase) => {
+    const quantity = Number(purchase.quantity);
+    const unitCost = Number(purchase.unitCost);
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitCost) || unitCost < 0) {
+      showToast("Inventory purchase needs a valid quantity and unit cost.");
+      return false;
+    }
+
+    const now = new Date();
+    const record = {
+      ...purchase,
+      id: purchase.id || `purchase-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      quantity,
+      unitCost,
+      totalCost: Number((quantity * unitCost).toFixed(2)),
+      purchaseDate: purchase.purchaseDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    };
+
+    const savedRecord = normalizeInventoryPurchase(record);
+    setInventoryPurchases((current) => mergeInventoryPurchases(current, [savedRecord]));
+    return true;
+  };
+
   // Reset to default initial state
   const handleResetData = async () => {
     const confirmed = await confirmDialog(
-      "Reset locally saved tables, menu, staff, inventory, and order history? Active orders will be cleared.",
+      "Reset POS setup and order history? Salary payments and dated inventory purchase records are retained for accounting. Active orders will be cleared.",
       {
         title: "Reset all data?",
         confirmText: "Yes, Reset Data",
@@ -3018,7 +3215,7 @@ export function App() {
       [STORAGE_KEY_ORDERS]: [],
       [STORAGE_KEY_INVENTORY]: [],
     });
-    showToast("Data reset. Add your restaurant tables, menu, and staff to get started.");
+    showToast("POS setup reset. Salary and inventory purchase history was retained.");
   };
 
   if (authRestorePending) {
@@ -3118,6 +3315,10 @@ export function App() {
               onUpdateTable={handleUpdateTable}
               onDeleteTable={handleDeleteTable}
               staffList={staffList}
+              salaryPayments={salaryPayments}
+              inventoryPurchases={inventoryPurchases}
+              onRecordSalaryPayment={handleRecordSalaryPayment}
+              onRecordInventoryPurchase={handleRecordInventoryPurchase}
               onAddStaff={handleAddStaff}
               onUpdateStaff={handleUpdateStaff}
               onDeleteStaff={handleDeleteStaff}
@@ -3477,6 +3678,10 @@ export function App() {
           onUpdateTable={handleUpdateTable}
           onDeleteTable={handleDeleteTable}
           staffList={staffList}
+          salaryPayments={salaryPayments}
+          inventoryPurchases={inventoryPurchases}
+          onRecordSalaryPayment={handleRecordSalaryPayment}
+          onRecordInventoryPurchase={handleRecordInventoryPurchase}
           onAddStaff={handleAddStaff}
           onUpdateStaff={handleUpdateStaff}
           onDeleteStaff={handleDeleteStaff}

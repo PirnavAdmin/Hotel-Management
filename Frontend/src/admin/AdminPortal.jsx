@@ -33,6 +33,7 @@ import {
   Package,
   FileText,
   BarChart3,
+  Banknote,
   Settings,
   Sparkles,
   Boxes,
@@ -437,10 +438,14 @@ export function AdminPortal({
   onBarOrderUpdated,
   onBarOrderItemStatusUpdated,
   staffList,
+  salaryPayments = [],
+  inventoryPurchases = [],
   sharedRecordLoad,
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
+  onRecordSalaryPayment,
+  onRecordInventoryPurchase,
   onOpenKOTView,
   onUpdateItemKotStatus,
   onCompleteTableKot,
@@ -1293,6 +1298,16 @@ export function AdminPortal({
     role: "",
     phone: "",
     shift: "",
+    monthlySalary: "0",
+  });
+  const [salaryPaymentStaff, setSalaryPaymentStaff] = useState(null);
+  const [salaryPaymentSaving, setSalaryPaymentSaving] = useState(false);
+  const [salaryPaymentForm, setSalaryPaymentForm] = useState({
+    amount: "",
+    paidOn: "",
+    salaryPeriod: "",
+    paymentMethod: "Bank Transfer",
+    notes: "",
   });
 
   // Open item modal for Add or Edit
@@ -1528,6 +1543,7 @@ export function AdminPortal({
         role: personRole,
         phone: person.phone || "",
         shift: person.shift || "",
+        monthlySalary: String(Number(person.monthlySalary) || 0),
       });
     } else {
       setEditingStaff(null);
@@ -1536,6 +1552,7 @@ export function AdminPortal({
         role: "",
         phone: "",
         shift: "",
+        monthlySalary: "0",
       });
     }
     setIsStaffModalOpen(true);
@@ -1562,6 +1579,7 @@ export function AdminPortal({
           role: staffForm.role,
           phone: staffForm.phone,
           shift: staffForm.shift,
+          monthlySalary: Number(staffForm.monthlySalary) || 0,
         });
       }
     } else {
@@ -1570,6 +1588,7 @@ export function AdminPortal({
         role: staffForm.role,
         phone: staffForm.phone,
         shift: staffForm.shift,
+        monthlySalary: Number(staffForm.monthlySalary) || 0,
       });
     }
     if (saved === false) return;
@@ -1580,8 +1599,39 @@ export function AdminPortal({
       role: "",
       phone: "",
       shift: "",
+      monthlySalary: "0",
     });
     setIsStaffModalOpen(false);
+  };
+
+  const handleOpenSalaryPaymentModal = (person) => {
+    const now = new Date();
+    const paidOn = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    setSalaryPaymentStaff(person);
+    setSalaryPaymentForm({
+      amount: String(Number(person.monthlySalary) || 0),
+      paidOn,
+      salaryPeriod: paidOn.slice(0, 7),
+      paymentMethod: "Bank Transfer",
+      notes: "",
+    });
+  };
+
+  const handleSaveSalaryPayment = async (event) => {
+    event.preventDefault();
+    if (!salaryPaymentStaff || !onRecordSalaryPayment || salaryPaymentSaving) return;
+    setSalaryPaymentSaving(true);
+    try {
+      const saved = await onRecordSalaryPayment({
+        staffId: salaryPaymentStaff.id ?? salaryPaymentStaff.staffId,
+        staffName: salaryPaymentStaff.name || salaryPaymentStaff.fullName || "Staff",
+        ...salaryPaymentForm,
+        amount: Number(salaryPaymentForm.amount),
+      });
+      if (saved !== false) setSalaryPaymentStaff(null);
+    } finally {
+      setSalaryPaymentSaving(false);
+    }
   };
 
   const handleSyncPosUsers = async () => {
@@ -1786,6 +1836,8 @@ export function AdminPortal({
                 onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                 tables={tables}
                 staffList={staffList}
+                salaryPayments={salaryPayments}
+                inventoryPurchases={inventoryPurchases}
                 sharedRecordLoad={sharedRecordLoad}
                 onAddTable={onAddTable}
                 onUpdateTable={onUpdateTable}
@@ -1795,6 +1847,7 @@ export function AdminPortal({
                 onAddStaff={onAddStaff}
                 onUpdateStaff={onUpdateStaff}
                 onDeleteStaff={onDeleteStaff}
+                onRecordInventoryPurchase={onRecordInventoryPurchase}
                 onUpdateItemKotStatus={onUpdateItemKotStatus}
                 onCompleteTableKot={onCompleteTableKot}
               />
@@ -3433,7 +3486,7 @@ export function AdminPortal({
                       }
                       .staff-table-grid {
                         display: grid;
-                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
+                        grid-template-columns: minmax(160px, 1.8fr) minmax(110px, 1.2fr) minmax(140px, 1.5fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(135px, 170px);
                         gap: 0.5rem;
                       }
                       .staff-table-grid > * { min-width: 0; }
@@ -3768,6 +3821,7 @@ export function AdminPortal({
                             <div>Staff Name</div>
                             <div>Role / Designation</div>
                             <div>Shift</div>
+                            <div>Monthly Salary</div>
                             <div>Table Assignment</div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
                           </div>
@@ -3932,6 +3986,17 @@ export function AdminPortal({
                                   {person.shift || "General Shift"}
                                 </div>
 
+                                <div
+                                  style={{
+                                    color: "var(--text-main)",
+                                    fontSize: "0.82rem",
+                                    fontWeight: 700,
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {formatCurrency(Number(person.monthlySalary) || 0)} / month
+                                </div>
+
                                 {/* Col 5: Status Pill (Matching Image 2 status pill) */}
                                 <div>
                                   <div
@@ -3975,8 +4040,31 @@ export function AdminPortal({
                                   </div>
                                 </div>
 
-                                {/* Col 6: Actions (Edit Staff + Delete button matching Image 2) */}
+                                {/* Staff payroll and profile actions */}
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSalaryPaymentModal(person)}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "0.25rem",
+                                      padding: "0.35rem 0.45rem",
+                                      background: "rgba(16, 185, 129, 0.08)",
+                                      color: "var(--success)",
+                                      border: "1px solid rgba(16, 185, 129, 0.35)",
+                                      borderRadius: "6px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                    }}
+                                    title={`Record a salary payment for ${personName}`}
+                                    aria-label={`Record salary payment for ${personName}`}
+                                  >
+                                    <Banknote size={13} />
+                                    Pay
+                                  </button>
                                   {/* Edit Staff button */}
                                   <button
                                     type="button"
@@ -5354,6 +5442,7 @@ export function AdminPortal({
                     menuItems={menuItems}
                     onUpdateMenuItem={onUpdateMenuItem}
                     inventory={inventory}
+                    onRecordInventoryPurchase={onRecordInventoryPurchase}
                   />
                 )}
 
@@ -5374,6 +5463,9 @@ export function AdminPortal({
                     menuItems={menuItems}
                     restaurantSettings={restaurantSettings}
                     inventory={inventory}
+                    staffList={staffList}
+                    salaryPayments={salaryPayments}
+                    inventoryPurchases={inventoryPurchases}
                   />
                 )}
 
@@ -6661,6 +6753,46 @@ export function AdminPortal({
               />
             </div>
 
+            <div>
+              <label
+                htmlFor="staff-monthly-salary"
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Monthly Salary (INR)
+              </label>
+              <input
+                id="staff-monthly-salary"
+                type="number"
+                min="0"
+                max="99999999"
+                step="0.01"
+                value={staffForm.monthlySalary}
+                onChange={(e) =>
+                  setStaffForm({ ...staffForm, monthlySalary: e.target.value })
+                }
+                placeholder="0.00"
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
             <div
               style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}
             >
@@ -6701,6 +6833,112 @@ export function AdminPortal({
                 }}
               >
                 {editingStaff ? "Save Changes" : "Add Person"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {salaryPaymentStaff && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 190,
+            padding: "1rem",
+            background: "var(--modal-overlay)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <form
+            onSubmit={handleSaveSalaryPayment}
+            style={{
+              width: "100%",
+              maxWidth: "430px",
+              padding: "1.1rem",
+              borderRadius: "14px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              boxShadow: "var(--shadow-lg)",
+              display: "grid",
+              gap: "0.75rem",
+            }}
+          >
+            <div>
+              <h3 style={{ margin: 0, color: "var(--text-main)", fontSize: "1rem" }}>
+                Record salary payment
+              </h3>
+              <p style={{ margin: "0.25rem 0 0", color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                {salaryPaymentStaff.name || salaryPaymentStaff.fullName || "Staff"} · {formatCurrency(Number(salaryPaymentStaff.monthlySalary) || 0)} monthly salary
+              </p>
+            </div>
+            <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+              PAYMENT AMOUNT (INR)
+              <input
+                autoFocus
+                required
+                type="number"
+                min="0.01"
+                max="99999999"
+                step="0.01"
+                value={salaryPaymentForm.amount}
+                onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, amount: event.target.value })}
+                style={{ height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.82rem" }}
+              />
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+              <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+                PAYMENT DATE
+                <input
+                  required
+                  type="date"
+                  value={salaryPaymentForm.paidOn}
+                  onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, paidOn: event.target.value })}
+                  style={{ height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.8rem" }}
+                />
+              </label>
+              <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+                SALARY FOR
+                <input
+                  required
+                  type="month"
+                  value={salaryPaymentForm.salaryPeriod}
+                  onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, salaryPeriod: event.target.value })}
+                  style={{ height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.8rem" }}
+                />
+              </label>
+            </div>
+            <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+              PAYMENT METHOD
+              <select
+                value={salaryPaymentForm.paymentMethod}
+                onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, paymentMethod: event.target.value })}
+                style={{ height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.8rem" }}
+              >
+                <option>Bank Transfer</option>
+                <option>UPI</option>
+                <option>Cash</option>
+                <option>Cheque</option>
+              </select>
+            </label>
+            <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+              NOTE (OPTIONAL)
+              <input
+                maxLength={255}
+                value={salaryPaymentForm.notes}
+                onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, notes: event.target.value })}
+                placeholder="Installment, advance, or other note"
+                style={{ height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.82rem" }}
+              />
+            </label>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.2rem" }}>
+              <button type="button" onClick={() => setSalaryPaymentStaff(null)} style={{ height: "36px", padding: "0 0.85rem", border: "1px solid var(--border-card)", borderRadius: "8px", color: "var(--text-main)", background: "var(--bg-tertiary)", fontWeight: 700, fontSize: "0.76rem", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button type="submit" disabled={salaryPaymentSaving} style={{ height: "36px", padding: "0 0.9rem", border: 0, borderRadius: "8px", color: "#fff", background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 800, fontSize: "0.76rem", cursor: salaryPaymentSaving ? "wait" : "pointer", opacity: salaryPaymentSaving ? 0.7 : 1 }}>
+                {salaryPaymentSaving ? "Recording..." : "Record Payment"}
               </button>
             </div>
           </form>

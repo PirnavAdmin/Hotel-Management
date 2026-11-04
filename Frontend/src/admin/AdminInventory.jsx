@@ -463,7 +463,7 @@ export const deduplicateAndNormalizeInventory = (items) => {
   return Array.from(map.values());
 };
 
-export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sharedInventory = [] }) {
+export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sharedInventory = [], onRecordInventoryPurchase }) {
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [inventory, setInventory] = useState(() => {
     try {
@@ -705,7 +705,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
   const [recipeDraft, setRecipeDraft] = useState([]);
   const [recipeError, setRecipeError] = useState("");
   const [restockItem, setRestockItem] = useState(null);
+  const [restockSaving, setRestockSaving] = useState(false);
   const [restockAmount, setRestockAmount] = useState("");
+  const [restockUnitCost, setRestockUnitCost] = useState("");
   const [restockSupplier, setRestockSupplier] = useState("");
   const [consumeItem, setConsumeItem] = useState(null);
   const [consumeAmount, setConsumeAmount] = useState("");
@@ -985,30 +987,52 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
     setRecipeError("");
   };
 
-  const receiveStock = (event) => {
+  const receiveStock = async (event) => {
     event.preventDefault();
     const amount = Number(restockAmount);
-    if (!restockItem || !Number.isFinite(amount) || amount <= 0) return;
-    const restockedDate = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-    const updated = inventory.map((item) =>
-      item.id === restockItem.id
-        ? {
-            ...item,
-            stock: Number((Number(item.stock || 0) + amount).toFixed(3)),
-            totalRestocked: Number(item.totalRestocked || 0) + amount,
-            lastRestocked: restockedDate,
-            supplier: restockSupplier.trim() || item.supplier,
-          }
-        : item,
-    );
-    saveInventory(updated);
-    setRestockItem(null);
-    setRestockAmount("");
-    setRestockSupplier("");
+    const unitCost = Number(restockUnitCost);
+    if (!restockItem || restockSaving || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(unitCost) || unitCost < 0) return;
+    setRestockSaving(true);
+    try {
+      const restockedDate = new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const date = new Date();
+      const updated = inventory.map((item) =>
+        item.id === restockItem.id
+          ? {
+              ...item,
+              stock: Number((Number(item.stock || 0) + amount).toFixed(3)),
+              totalRestocked: Number(item.totalRestocked || 0) + amount,
+              lastRestocked: restockedDate,
+              supplier: restockSupplier.trim() || item.supplier,
+              mrp: unitCost,
+              unitCost,
+            }
+          : item,
+      );
+      saveInventory(updated);
+      await onRecordInventoryPurchase?.({
+        itemId: restockItem.id,
+        name: restockItem.name,
+        category: restockItem.category,
+        subcategory: restockItem.subcategory,
+        supplier: restockSupplier.trim() || restockItem.supplier,
+        quantity: amount,
+        unit: restockItem.unit,
+        unitCost,
+        department: "dine",
+        purchaseDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      });
+      setRestockItem(null);
+      setRestockAmount("");
+      setRestockUnitCost("");
+      setRestockSupplier("");
+    } finally {
+      setRestockSaving(false);
+    }
   };
 
   const handleRecordUsage = (event) => {
@@ -2277,6 +2301,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                           onClick={() => {
                             setRestockItem(item);
                             setRestockAmount("");
+                            setRestockUnitCost(String(Number(item.mrp ?? item.unitCost) || 0));
                             setRestockSupplier(
                               item.supplier === "Supplier not set"
                                 ? ""
@@ -3199,6 +3224,41 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 marginBottom: "0.35rem",
               }}
             >
+              PURCHASE COST PER {restockItem.unit} (INR)
+            </label>
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={restockUnitCost}
+              onChange={(event) => setRestockUnitCost(event.target.value)}
+              placeholder="Enter unit purchase cost"
+              style={{
+                width: "100%",
+                height: "38px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                marginBottom: "0.7rem",
+              }}
+            />
+            <div style={{ color: "var(--text-muted)", fontSize: "0.74rem", marginBottom: "0.7rem" }}>
+              Purchase total: <strong style={{ color: "var(--text-main)" }}>{formatCurrency((Number(restockAmount) || 0) * (Number(restockUnitCost) || 0))}</strong>
+            </div>
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
               SUPPLIER
             </label>
             <div style={{ marginBottom: "0.9rem" }}>
@@ -3221,6 +3281,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
             >
               <button
                 type="button"
+                disabled={restockSaving}
                 onClick={() => setRestockItem(null)}
                 style={{
                   height: "36px",
@@ -3238,6 +3299,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
               </button>
               <button
                 type="submit"
+                disabled={restockSaving}
                 style={{
                   height: "36px",
                   padding: "0 0.9rem",
@@ -3247,10 +3309,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   background: "linear-gradient(135deg, #059669, #10b981)",
                   fontWeight: 800,
                   fontSize: "0.76rem",
-                  cursor: "pointer",
+                  cursor: restockSaving ? "wait" : "pointer",
+                  opacity: restockSaving ? 0.7 : 1,
                 }}
               >
-                Save Received Stock
+                {restockSaving ? "Recording..." : "Save Received Stock"}
               </button>
             </div>
           </form>

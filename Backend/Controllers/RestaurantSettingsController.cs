@@ -11,6 +11,7 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/restaurant-settings")]
 [Route("api/restaurant-settings")]
+[Tags("Admin", "RestaurantSettings")]
 public class RestaurantSettingsController : ControllerBase
 {
     private readonly RestaurantSettingsService _settingsService;

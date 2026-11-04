@@ -51,6 +51,8 @@ public class KitchenController : ControllerBase
             var batches = order.Items
                 .Where(i =>
                     !barMenuItemIds.Contains(i.MenuItemId) &&
+                    (i.BotId == null || i.BotId == 0) &&
+                    !OrderItemRouting.IsBarItem(i.Name) &&
                     (i.KotStatus == "Queued" ||
                      i.KotStatus == "queued" ||
                      i.KotStatus == "Cooking" ||
@@ -106,6 +108,12 @@ public class KitchenController : ControllerBase
                             Id = i.Id,
 
                             OrderId = i.OrderId,
+
+                            KotId = i.KotId,
+
+                            BotId = i.BotId,
+
+                            IsBarItem = false,
 
                             MenuItemId = i.MenuItemId,
 
@@ -228,9 +236,16 @@ public class KitchenController : ControllerBase
             });
         }
 
+        var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
+            _context,
+            order.Items.Select(item => item.MenuItemId));
+
         var itemsToUpdate = order.Items
             .Where(i =>
                 (i.KotBatch == batch || batch == 0) &&
+                !barMenuItemIds.Contains(i.MenuItemId) &&
+                (i.BotId == null || i.BotId == 0) &&
+                !OrderItemRouting.IsBarItem(i.Name) &&
                 (i.KotStatus == "Queued" ||
                  i.KotStatus == "queued" ||
                  i.KotStatus == "Cooking" ||
@@ -291,9 +306,16 @@ public class KitchenController : ControllerBase
             });
         }
 
+        var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
+            _context,
+            order.Items.Select(item => item.MenuItemId));
+
         var itemsToUpdate = order.Items
             .Where(i =>
                 (i.KotBatch == batch || batch == 0) &&
+                !barMenuItemIds.Contains(i.MenuItemId) &&
+                (i.BotId == null || i.BotId == 0) &&
+                !OrderItemRouting.IsBarItem(i.Name) &&
                 i.KotStatus != "served")
             .ToList();
 

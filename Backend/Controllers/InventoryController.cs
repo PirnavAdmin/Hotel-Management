@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using HMS.Data;
+using HMS.DTOs;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -19,11 +22,13 @@ namespace HMS.Controllers;
 public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly InventoryService _inventoryService;
     private readonly ILogger<InventoryController> _logger;
 
-    public InventoryController(SpService spService, ILogger<InventoryController> logger)
+    public InventoryController(SpService spService, InventoryService inventoryService, ILogger<InventoryController> logger)
     {
         _spService = spService;
+        _inventoryService = inventoryService;
         _logger = logger;
     }
 
@@ -158,63 +163,87 @@ public class InventoryController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new ingredient in MySQL.
+    /// Creates or batch-processes inventory ingredients (both Food and Bar items) in MySQL.
+    /// Supports single item object, JSON array [ ... ], or wrapped batch { items: [ ... ] }.
     /// </summary>
     [AllowAnonymous]
     [HttpPost]
     [HttpPost("ingredients")]
-    public async Task<IActionResult> CreateIngredient([FromBody] CreateIngredientRequest request)
+    [HttpPost("batch")]
+    [HttpPost("bulk")]
+    public async Task<IActionResult> CreateIngredient([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.Name))
-        {
-            return BadRequest(new { success = false, message = "Ingredient Name is required." });
-        }
-
         try
         {
-            _logger.LogInformation("Creating new ingredient: {Name}, Stock: {Stock}, Unit: {Unit}", request.Name, request.Stock, request.Unit);
-
-            var parameters = new Dictionary<string, object?>
+            var items = _inventoryService.ParseJsonPayload(body);
+            if (items.Count == 0)
             {
-                { "p_name", request.Name.Trim() },
-                { "p_category", string.IsNullOrWhiteSpace(request.Category) ? "General" : request.Category.Trim() },
-                { "p_subcategory", request.Subcategory?.Trim() ?? string.Empty },
-                { "p_supplier", string.IsNullOrWhiteSpace(request.Supplier) ? "Local Supplier" : request.Supplier.Trim() },
-                { "p_unit", string.IsNullOrWhiteSpace(request.Unit) ? "KG" : request.Unit.Trim().ToUpper() },
-                { "p_current_stock", request.Stock },
-                { "p_minimum_threshold", request.MinThreshold > 0 ? request.MinThreshold : 5.00m },
-                { "p_unit_cost", request.UnitCost > 0 ? request.UnitCost : (request.Mrp ?? 0.00m) },
-                { "p_mrp", request.Mrp }
-            };
+                return BadRequest(new { success = false, message = "Ingredient Name is required or no valid items found." });
+            }
 
-            long id = await _spService.ExecuteScalarAsync<long>("sp_CreateIngredient", parameters);
-
-            var created = new Ingredient
+            // Check if single item failed basic validation
+            if (items.Count == 1)
             {
-                IngredientId = id,
-                Name = request.Name.Trim(),
-                Category = string.IsNullOrWhiteSpace(request.Category) ? "General" : request.Category.Trim(),
-                Subcategory = request.Subcategory?.Trim() ?? string.Empty,
-                Supplier = string.IsNullOrWhiteSpace(request.Supplier) ? "Local Supplier" : request.Supplier.Trim(),
-                Unit = string.IsNullOrWhiteSpace(request.Unit) ? "KG" : request.Unit.Trim().ToUpper(),
-                CurrentStock = request.Stock,
-                MinimumThreshold = request.MinThreshold > 0 ? request.MinThreshold : 5.00m,
-                UnitCost = request.UnitCost > 0 ? request.UnitCost : (request.Mrp ?? 0.00m),
-                Mrp = request.Mrp,
-                UpdatedAt = DateTime.UtcNow,
-                IsActive = true
-            };
+                var (isValid, valErr) = _inventoryService.ValidateItem(items[0], 0);
+                if (!isValid)
+                {
+                    return BadRequest(new { success = false, message = valErr });
+                }
+            }
 
-            return CreatedAtAction(nameof(GetIngredientById), new { id }, new
+            var result = await _inventoryService.ProcessInventorySubmissionAsync(items, atomic ?? false);
+
+            if (!result.Success && result.Items.Count == 0)
             {
-                success = true,
-                message = "Ingredient added to inventory successfully.",
-                data = created
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+            }
+
+            // Single item creation: return 201 CreatedAtAction for backwards compatibility
+            if (items.Count == 1 && result.Items.Count == 1)
+            {
+                var first = result.Items[0];
+                return CreatedAtAction(nameof(GetIngredientById), new { id = first.Id }, new
+                {
+                    success = true,
+                    message = first.Action == "updated"
+                        ? $"Ingredient '{first.Name}' stock updated in inventory successfully."
+                        : $"Ingredient '{first.Name}' added to inventory successfully.",
+                    classification = first.Classification,
+                    isBarItem = first.IsBarItem,
+                    data = first,
+                    totalReceived = 1,
+                    insertedCount = result.InsertedCount,
+                    updatedCount = result.UpdatedCount,
+                    failedCount = result.FailedCount,
+                    items = result.Items,
+                    errors = result.Errors
+                });
+            }
+
+            // Batch creation: return 200 OK with full summary
+            return Ok(new
+            {
+                success = result.Success,
+                message = result.Message,
+                totalReceived = result.TotalReceived,
+                insertedCount = result.InsertedCount,
+                updatedCount = result.UpdatedCount,
+                failedCount = result.FailedCount,
+                foodCount = result.FoodCount,
+                barCount = result.BarCount,
+                items = result.Items,
+                errors = result.Errors,
+                data = result.Items
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create ingredient: {Name}", request.Name);
+            _logger.LogError(ex, "Failed to create ingredient(s).");
             return StatusCode(500, new { success = false, message = "Failed to add ingredient: " + ex.Message });
         }
     }
@@ -225,42 +254,38 @@ public class InventoryController : ControllerBase
     [AllowAnonymous]
     [HttpPut("{id:long}")]
     [HttpPut("ingredients/{id:long}")]
-    public async Task<IActionResult> UpdateIngredient(long id, [FromBody] UpdateIngredientRequest request)
+    public async Task<IActionResult> UpdateIngredient(long id, [FromBody] JsonElement body)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.Name))
-        {
-            return BadRequest(new { success = false, message = "Ingredient Name is required." });
-        }
-
         try
         {
-            _logger.LogInformation("Updating ingredient {IngredientId}: {Name}", id, request.Name);
-
-            var parameters = new Dictionary<string, object?>
+            var items = _inventoryService.ParseJsonPayload(body);
+            if (items.Count == 0 || string.IsNullOrWhiteSpace(items[0].Name))
             {
-                { "p_id", id },
-                { "p_name", request.Name.Trim() },
-                { "p_category", string.IsNullOrWhiteSpace(request.Category) ? "General" : request.Category.Trim() },
-                { "p_subcategory", request.Subcategory?.Trim() ?? string.Empty },
-                { "p_supplier", string.IsNullOrWhiteSpace(request.Supplier) ? "Local Supplier" : request.Supplier.Trim() },
-                { "p_unit", string.IsNullOrWhiteSpace(request.Unit) ? "KG" : request.Unit.Trim().ToUpper() },
-                { "p_current_stock", request.Stock },
-                { "p_minimum_threshold", request.MinThreshold > 0 ? request.MinThreshold : 5.00m },
-                { "p_unit_cost", request.UnitCost > 0 ? request.UnitCost : (request.Mrp ?? 0.00m) },
-                { "p_mrp", request.Mrp }
-            };
+                return BadRequest(new { success = false, message = "Ingredient Name is required." });
+            }
 
-            await _spService.ExecuteNonQueryAsync("sp_UpdateIngredient", parameters);
+            var item = items[0];
+            item.Id = id;
 
-            var updatedList = await _spService.ExecuteQueryAsync("sp_GetIngredientById", MapIngredientFromReader, new Dictionary<string, object?> { { "p_id", id } });
-            var updated = updatedList.FirstOrDefault();
-
-            return Ok(new
+            var (isValid, error) = _inventoryService.ValidateItem(item, 0);
+            if (!isValid)
             {
-                success = true,
-                message = "Ingredient updated successfully.",
-                data = updated
-            });
+                return BadRequest(new { success = false, message = error });
+            }
+
+            var result = await _inventoryService.ProcessInventorySubmissionAsync(new List<InventoryItemInputDto> { item }, atomic: true);
+
+            if (result.Items.Count > 0)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "Ingredient updated successfully.",
+                    data = result.Items[0]
+                });
+            }
+
+            return StatusCode(500, new { success = false, message = result.Message });
         }
         catch (Exception ex)
         {
