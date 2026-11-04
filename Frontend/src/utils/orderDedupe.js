@@ -1,31 +1,5 @@
 const normalize = (value) => String(value ?? "").trim().toLocaleLowerCase();
 
-const EXCLUDED_SALE_STATUSES = new Set([
-  "active", "dining", "vacant", "pending", "unpaid", "open", "processing",
-  "cancelled", "canceled", "void", "voided", "deleted", "refunded",
-]);
-const SETTLED_SALE_STATUSES = new Set(["settled", "paid"]);
-
-export const isSettledSaleRecord = (record) => {
-  if (!record || typeof record !== "object") return false;
-  const status = normalize(record.status ?? record.Status ?? record.invoiceStatus ?? record.InvoiceStatus);
-  if (EXCLUDED_SALE_STATUSES.has(status)) return false;
-  if (SETTLED_SALE_STATUSES.has(status)) return true;
-  return record.isPaid === true || record.IsPaid === true ||
-    record.isSettled === true || record.IsSettled === true;
-};
-
-export const isSettledInvoiceRecord = (invoice) => {
-  if (!invoice || typeof invoice !== "object") return false;
-  const status = normalize(invoice.status ?? invoice.Status ?? invoice.invoiceStatus ?? invoice.InvoiceStatus);
-  const paymentStatus = normalize(invoice.paymentStatus ?? invoice.PaymentStatus);
-  if (EXCLUDED_SALE_STATUSES.has(status) || EXCLUDED_SALE_STATUSES.has(paymentStatus)) return false;
-  if (SETTLED_SALE_STATUSES.has(status) || SETTLED_SALE_STATUSES.has(paymentStatus)) return true;
-  const total = Number(invoice.totalAmount ?? invoice.TotalAmount ?? invoice.grandTotal ?? invoice.GrandTotal ?? 0);
-  const paid = Number(invoice.paidAmount ?? invoice.PaidAmount ?? invoice.amountPaid ?? invoice.AmountPaid ?? 0);
-  return total > 0 && paid >= total;
-};
-
 export function parseOrderToYMD(order) {
   if (!order) return "";
   const months = {
@@ -193,7 +167,11 @@ export const sortOrdersBySettlementTime = (orders = []) =>
 
 export const mergeSettledOrders = (...sources) => {
   const settledOnly = sources.flatMap((orders) =>
-    (Array.isArray(orders) ? orders : []).filter(isSettledSaleRecord),
+    (Array.isArray(orders) ? orders : []).filter((order) => {
+      if (!order || typeof order !== "object") return false;
+      const status = String(order.status || order.Status || "").toLowerCase();
+      return status !== "active" && status !== "dining" && status !== "vacant";
+    }),
   );
   const merged = sortOrdersBySettlementTime(dedupeOrders(settledOnly));
   const current = sources[0];
@@ -269,7 +247,12 @@ export function dedupeOrders(orders = []) {
   const result = [];
   const indexByIdentity = new Map();
 
-  const validOrders = (Array.isArray(orders) ? orders : []).filter(isSettledSaleRecord);
+  const validOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
+    if (!order || typeof order !== "object") return false;
+    const status = String(order.status || order.Status || "").toLowerCase();
+    return status !== "active" && status !== "dining" && status !== "vacant" &&
+      status !== "void" && status !== "cancelled";
+  });
 
   for (const rawOrder of validOrders) {
     if (!rawOrder || typeof rawOrder !== "object") continue;
@@ -293,7 +276,7 @@ export function dedupeOrders(orders = []) {
       grandTotal: orderGrandTotal,
       total: orderGrandTotal,
       totalAmount: orderGrandTotal,
-      paidAmount: Number(rawOrder.paidAmount) || orderGrandTotal,
+      paidAmount: Number(rawOrder.paidAmount ?? rawOrder.amountPaid ?? rawOrder.AmountPaid ?? orderGrandTotal) || 0,
       status: "Settled",
       Status: "Settled",
     };

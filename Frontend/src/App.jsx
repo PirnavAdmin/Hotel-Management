@@ -16,7 +16,6 @@ import {
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
 import { TakeawayView } from "./user/TakeawayView";
-import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
@@ -42,7 +41,6 @@ import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
 import { MENU_ITEMS } from "./data/menuData";
-import { INITIAL_STAFF } from "./data/initialStaff";
 import {
   Bell,
   CheckCircle2,
@@ -137,9 +135,6 @@ const dedupeStaff = (staff) => {
       ...person,
       id: Number.isFinite(id) && id > 0 ? id : person.id,
       name: person.name || person.fullName || previous.name || "Staff",
-      fullName: person.fullName || person.name || previous.fullName || previous.name || "Staff",
-      salary: person.salary !== undefined && person.salary !== null ? Number(person.salary) : Number(previous.salary || 0),
-      section: person.section || previous.section || "Dine & Bar",
     });
   });
   return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
@@ -526,7 +521,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return INITIAL_STAFF;
+    return [];
   });
 
   // Past settled orders history in Rupees
@@ -545,7 +540,6 @@ export function App() {
 
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
-  const [activeKotStation, setActiveKotStation] = useState("kitchen");
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
   const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
@@ -672,8 +666,6 @@ export function App() {
           fullName: s.fullName || s.name,
           role: s.roleTitle || s.role || "Waiter",
           roleTitle: s.roleTitle || s.role || "Waiter",
-          salary: Number(s.salary ?? 0),
-          section: s.section || "Dine & Bar",
         })));
         setStaffList(uniqueStaff);
         try {
@@ -1878,7 +1870,7 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-          if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
+          if (i.isBarItem || i.isBarDrink) return i;
           if (itemId) {
             return String(i.menuItemId ?? i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
@@ -2900,8 +2892,6 @@ export function App() {
       roleTitle: created?.roleTitle || created?.role || newPerson.role || "Waiter",
       phone: newPerson.phone || created?.phone || "",
       shift: newPerson.shift || created?.shift || "Morning Shift (10 AM - 4 PM)",
-      salary: Number(newPerson.salary !== undefined ? newPerson.salary : (created?.salary || 0)),
-      section: newPerson.section || created?.section || "Dine & Bar",
       isActive: true,
       avatarInitial: (newPerson.name || "S").charAt(0).toUpperCase(),
     };
@@ -2936,8 +2926,6 @@ export function App() {
         phone: updatedPerson.phone || "",
         email: updatedPerson.email || "",
         shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
-        salary: Number(updatedPerson.salary !== undefined ? updatedPerson.salary : 0),
-        section: updatedPerson.section || "Dine & Bar",
       });
     } catch {}
 
@@ -3095,32 +3083,26 @@ export function App() {
           (kotSession &&
           (kotSession.role === "kot" || kotSession.role === "admin") ? (
             <ErrorBoundary>
-              <>
-                <div role="tablist" aria-label="Kitchen and bar order tickets" style={{ display: "flex", gap: 8, padding: "10px 20px", background: "var(--bg-primary)", borderBottom: "1px solid var(--border-subtle, #243044)" }}>
-                  {[{ id: "kitchen", label: "Kitchen KOT" }, { id: "bar", label: "Bar BOT" }].map((station) => (
-                    <button key={station.id} type="button" role="tab" aria-selected={activeKotStation === station.id} onClick={() => setActiveKotStation(station.id)} style={{ minHeight: 38, padding: "0 16px", borderRadius: 9, border: `1px solid ${activeKotStation === station.id ? "#f59e0b" : "var(--border-subtle, #243044)"}`, background: activeKotStation === station.id ? "rgba(245, 158, 11, .16)" : "var(--bg-secondary, #111b2b)", color: activeKotStation === station.id ? "#fbbf24" : "var(--text-main, #dbe4f0)", font: "inherit", fontWeight: 750, cursor: "pointer" }}>
-                      {station.label}
-                    </button>
-                  ))}
-                </div>
-                {activeKotStation === "bar" ? (
-                  <BarBOTView tables={tables} menuItems={menuItems} staffList={staffList} barDrinks={barMenuItems} onUpdateItemKotStatus={handleUpdateItemKotStatus} />
-                ) : (
-                  <KitchenKOTView
-                    tables={tables}
-                    pastOrders={pastOrders}
-                    menuItems={menuItems}
-                    currentTheme={theme}
-                    onChangeTheme={setTheme}
-                    onBackToFloor={() => { setActiveView("tables"); navigate("/"); }}
-                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
-                    onCompleteTableKot={handleCompleteTableKot}
-                    onOpenTableOrder={(tableId) => { setSelectedTableId(tableId); setActiveView("order"); navigate("/"); }}
-                    currentSession={kotSession}
-                    onLogout={handleKotLogout}
-                  />
-                )}
-              </>
+              <KitchenKOTView
+                tables={tables}
+                pastOrders={pastOrders}
+                menuItems={menuItems}
+                currentTheme={theme}
+                onChangeTheme={setTheme}
+                onBackToFloor={() => {
+                  setActiveView("tables");
+                  navigate("/");
+                }}
+                onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                onCompleteTableKot={handleCompleteTableKot}
+                onOpenTableOrder={(tableId) => {
+                  setSelectedTableId(tableId);
+                  setActiveView("order");
+                  navigate("/");
+                }}
+                currentSession={kotSession}
+                onLogout={handleKotLogout}
+              />
             </ErrorBoundary>
           ) : (
             <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />

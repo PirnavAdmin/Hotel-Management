@@ -54,14 +54,6 @@ const formatCleanTableName = (name, id) => {
   return `Table ${num}`;
 };
 
-const normalizeTableLabel = (value) => {
-  const label = String(value ?? "").trim().toLowerCase()
-    .replace(/^table\s*[-–—]?\s*/i, "")
-    .replace(/^t\s*[-–—]?\s*/i, "")
-    .replace(/\s+/g, "");
-  return /^\d+$/.test(label) ? String(Number(label)) : label;
-};
-
 export function KitchenKOTView({
   tables = [],
   pastOrders = [],
@@ -395,27 +387,18 @@ export function KitchenKOTView({
   const activeTickets = persistedKitchenTickets.map((ticket) => {
     const orderId = ticket.orderId ?? ticket.ticketId;
     const backendTableId = ticket.tableId ?? orderId;
-    const ticketName = ticket.tableName || ticket.TableName || "";
-    const localTable = tables.find((table) => {
-      const idMatches = [table.backendTableId, table.tableId, table.id]
-        .filter((id) => id !== undefined && id !== null)
-        .some((id) => String(id) === String(backendTableId));
-      const ticketLabel = normalizeTableLabel(ticketName);
-      const tableLabels = [table.name, table.tableName, table.tableNumber]
-        .map(normalizeTableLabel)
-        .filter(Boolean);
-      return idMatches || (ticketLabel && tableLabels.includes(ticketLabel));
-    });
+    const localTable = tables.find((table) =>
+      String(table.backendTableId ?? table.id) === String(backendTableId),
+    );
     const tableId = localTable?.id ?? backendTableId;
     const batch = Number(ticket.kotBatch) || 1;
-    const orderType = ticket.orderType || ticket.OrderType || "DineIn";
     return {
       id: tableId,
       backendTableId,
       backendOrderId: orderId,
-      orderType,
+      orderType: ticket.orderType || ticket.OrderType || "DineIn",
       kotBatch: batch,
-      name: localTable?.name || ticketName || `Table ${tableId}`,
+      name: ticket.tableName || `Table ${tableId}`,
       section: ticket.section || ticket.sectionArea || "Main Hall",
       server: ticket.serverName || "Server",
       orderTime: ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt,
@@ -435,14 +418,7 @@ export function KitchenKOTView({
         kotBatch: Number(item.kotBatch) || batch,
       })),
     };
-  }).filter((ticket) => {
-    if (ticket.items.length === 0) return false;
-    // Never invent/render a table card for an API order whose table no longer
-    // exists in the restaurant's configured floor plan. Takeaway has no table.
-    const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway";
-    return isTakeaway || tables.length === 0 ||
-      tables.some((table) => String(table.id) === String(ticket.id));
-  });
+  }).filter((ticket) => ticket.items.length > 0);
 
   // Combined List: Only Active Orders from POS
   const allKitchenTickets = activeTickets.sort((a, b) => {

@@ -46,11 +46,6 @@ public class CreateStaffDto : IValidatableObject
         set => _shift = value;
     }
 
-    public decimal Salary { get; set; } = 0;
-
-    [MaxLength(50)]
-    public string Section { get; set; } = "Dine & Bar";
-
     public bool IsActive { get; set; } = true;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -112,11 +107,6 @@ public class UpdateStaffDto : IValidatableObject
         set => _shift = value;
     }
 
-    public decimal Salary { get; set; } = 0;
-
-    [MaxLength(50)]
-    public string Section { get; set; } = "Dine & Bar";
-
     public bool IsActive { get; set; } = true;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -152,10 +142,6 @@ public class StaffResponseDto
     public string Phone { get; set; } = string.Empty;
 
     public string Shift { get; set; } = string.Empty;
-
-    public decimal Salary { get; set; } = 0;
-
-    public string Section { get; set; } = "Dine & Bar";
 
     public bool IsActive { get; set; }
 

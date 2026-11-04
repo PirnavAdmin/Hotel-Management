@@ -66,7 +66,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const sgst = taxAmount / 2;
   
   const serviceChargePercent = Number(table.serviceCharge) || 5;
-  const serviceChargeAmount = table.serviceChargeAmount !== undefined && table.serviceChargeAmount !== null && Number.isFinite(Number(table.serviceChargeAmount))
+  const serviceChargeAmount = table.serviceChargeAmount !== undefined && Number(table.serviceChargeAmount) > 0
     ? Number(table.serviceChargeAmount)
     : (table.serviceCharge ? (taxableAmount * (serviceChargePercent / 100)) : 0);
   
@@ -77,9 +77,6 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const invoiceNumber = table.invoiceNo || getNextInvoiceNumber();
   const currentDate = table.date || getTodayDateString();
   const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
-  const displayTableName = table.name || table.tableName || table.tableNumber || (table.id != null ? `Table ${table.id}` : "Takeaway / Direct");
-  const displaySection = table.section || table.sectionArea || table.area || "Dine-In";
-  const displayServer = table.server || table.serverName || table.assignedServer || "Staff";
   const tableCapacity = Number(table.capacity) || 0;
   const guestCount =
     (Number(table.guests) > 0 ? Number(table.guests) : null) ??
@@ -294,9 +291,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
             {/* Bill Meta Grid */}
             <div style={{ borderBottom: '1px dashed #000000', paddingBottom: '0.45rem', marginBottom: '0.45rem', fontSize: '0.72rem', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, auto)', gap: '4px 10px' }}>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Table: <strong>{displayTableName} ({displaySection})</strong></span>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Table: <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></span>
               <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Inv: <strong>{invoiceNumber}</strong></span>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Server: <strong>{displayServer}</strong></span>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Server: <strong>{table.server || 'Staff'}</strong></span>
               <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Guests: <strong>{guestCount}</strong></span>
               <span>Date: <strong>{currentDate}</strong></span>
               {orderTime && <span style={{ textAlign: 'right' }}>Order: <strong>{orderTime}</strong></span>}
@@ -496,8 +493,8 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
             {/* Table / Order Meta Strip */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '0.85rem', fontSize: '0.78rem' }}>
-              <div><span style={{ color: '#64748b' }}>Table:</span> <strong>{displayTableName} ({displaySection})</strong></div>
-              <div><span style={{ color: '#64748b' }}>Server:</span> <strong>{displayServer}</strong></div>
+              <div><span style={{ color: '#64748b' }}>Table:</span> <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></div>
+              <div><span style={{ color: '#64748b' }}>Server:</span> <strong>{table.server || 'Staff'}</strong></div>
               <div><span style={{ color: '#64748b' }}>Guests:</span> <strong>{guestCount} Persons</strong></div>
               <div>
                 <span style={{ color: '#64748b' }}>Payment Status:</span>{' '}

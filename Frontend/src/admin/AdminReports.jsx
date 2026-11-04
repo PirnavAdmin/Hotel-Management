@@ -1,7 +1,6 @@
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Users,
   BarChart3, Wine,
   TrendingUp,
   TrendingDown,
@@ -38,7 +37,6 @@ import {
   parseOrderToYMD,
 } from '../utils/orderDedupe';
 import { deduplicateAndNormalizeInventory } from './AdminInventory';
-import { INITIAL_STAFF } from "../data/initialStaff";
 
 const normalizeInventoryList = (items) => {
   if (!Array.isArray(items)) return [];
@@ -118,7 +116,7 @@ async function requestLiveReportData({ refresh = false } = {}) {
   };
 }
 
-export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [], staffList = [] }) {
+export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
   const isBarMode = mode === "bar";
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -237,32 +235,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
   const [ordersPage, setOrdersPage] = useState(1);
   const [invPage, setInvPage] = useState(1);
 
-  // Staff state & expenditure synchronization
-  const [reportStaffList, setReportStaffList] = useState(() => {
-    if (Array.isArray(staffList) && staffList.length > 0) return staffList;
-    try {
-      const saved = localStorage.getItem('gourmet_pos_staff_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return INITIAL_STAFF;
-  });
-
-  useEffect(() => {
-    if (Array.isArray(staffList) && staffList.length > 0) {
-      setReportStaffList(staffList);
-    }
-  }, [staffList]);
-
-  // Expenditure Sub-Tab Navigation: 'overall' | 'inventory' | 'salary'
-  const [expSubTab, setExpSubTab] = useState('overall');
-  const [staffSearch, setStaffSearch] = useState('');
-  const [staffSectionFilter, setStaffSectionFilter] = useState('all');
-  const [staffPage, setStaffPage] = useState(1);
-
-    // Reset pagination on search / filter updates
+  // Reset pagination on search / filter updates
   useEffect(() => {
     setOrdersPage(1);
   }, [incomeSearch, filterPeriod, startDate, endDate]);
@@ -569,48 +542,9 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
     }).length;
   }, [inventoryItems]);
 
-  // ================= PROFIT & LOSS & SALARY FORMULAS =================
-  const totalMonthlyStaffSalary = useMemo(() => {
-    return (reportStaffList || [])
-      .filter((s) => s.isActive !== false)
-      .reduce((acc, s) => acc + (Number(s.salary) || 0), 0);
-  }, [reportStaffList]);
-
-  const totalStaffSalary = useMemo(() => {
-    const monthly = totalMonthlyStaffSalary;
-    if (filterPeriod === "today" || filterPeriod === "yesterday" || filterPeriod === "single_date") {
-      return Math.round(monthly / 30);
-    }
-    if (filterPeriod === "this_week" || filterPeriod === "week" || filterPeriod === "last_week") {
-      return Math.round((monthly / 30) * 7);
-    }
-    if (filterPeriod === "this_quarter" || filterPeriod === "last_quarter") {
-      return monthly * 3;
-    }
-    if (filterPeriod === "this_year" || filterPeriod === "last_year") {
-      return monthly * 12;
-    }
-    if (filterPeriod === "custom" && startDate && endDate) {
-      const d1 = new Date(startDate);
-      const d2 = new Date(endDate);
-      const diffTime = Math.abs(d2 - d1);
-      const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
-      return Math.round((monthly / 30) * diffDays);
-    }
-    return monthly;
-  }, [totalMonthlyStaffSalary, filterPeriod, startDate, endDate]);
-
-  const effectiveInventoryExpenditure = useMemo(() => {
-    if (totalInventoryPurchaseCost > 0) return totalInventoryPurchaseCost;
-    return totalInventoryCost || 0;
-  }, [totalInventoryPurchaseCost, totalInventoryCost]);
-
-  const effectiveSalaryExpenditure = totalStaffSalary;
-
-  const totalCombinedExpenditure = effectiveInventoryExpenditure + effectiveSalaryExpenditure;
-
+  // ================= PROFIT & LOSS FORMULAS =================
   const plIncome = totalRevenue;
-  const plExpenditure = effectiveInventoryExpenditure + totalDiscount + effectiveSalaryExpenditure;
+  const plExpenditure = totalInventoryPurchaseCost + totalDiscount;
   const costOfGoodsSold = totalIngredientUsageCost;
   const plNet = plIncome - plExpenditure;
   const isProfit = plNet >= 0;
@@ -758,9 +692,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
       lines.push(`"Bill Discounts Given","${totalDiscount.toFixed(2)}","Promotions & reductions"`);
       lines.push(`"Net Operating Revenue","${netRevenueAfterDiscount.toFixed(2)}","Sales adjusted for discounts"`);
       lines.push(`"Total Inventory Stock Valuation","${totalInventoryCost.toFixed(2)}","${inventoryItems.length} items evaluated at unit cost"`);
-      lines.push(`"Inventory Expenditure","${effectiveInventoryExpenditure.toFixed(2)}","Inventory stock & purchases"`);
-      lines.push(`"Staff Salaries Expenditure","${effectiveSalaryExpenditure.toFixed(2)}","Staff personnel salaries across Dine & Bar"`);
-      lines.push(`"Total Operating Expenditure","${plExpenditure.toFixed(2)}","Inventory + Staff Salaries + Discounts"`);
+      lines.push(`"Total Operating Expenditure","${plExpenditure.toFixed(2)}","Inventory restock/purchase cost + Discounts"`);
       lines.push(`"Ingredient Usage Cost / COGS","${costOfGoodsSold.toFixed(2)}","Tracked quantity used multiplied by ingredient unit cost"`);
       lines.push(`"Net Operating ${isProfit ? "Profit" : "Loss"}","${(isProfit ? "+" : "-") + Math.abs(plNet).toFixed(2)}","Operating Margin: ${profitMarginPercent}%"`);
       lines.push(``);
@@ -1149,7 +1081,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                 {formatCurrency(plExpenditure)}
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                Inv: {formatCurrency(effectiveInventoryExpenditure)} · Salary: {formatCurrency(effectiveSalaryExpenditure)} · Disc: {formatCurrency(totalDiscount)}
+                Stock: {formatCurrency(totalInventoryCost)} · Disc: {formatCurrency(totalDiscount)}
               </div>
             </div>
 
@@ -1761,17 +1693,6 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                         -{formatCurrency(totalDiscount)}
                       </td>
                     </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: '#f59e0b', fontWeight: 600 }}>
-                        Staff Salaries (Dine &amp; Bar Personnel)
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        Monthly salary allocation for {reportStaffList.length} staff members across dine and bar sections
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                        -{formatCurrency(effectiveSalaryExpenditure)}
-                      </td>
-                    </tr>
                     <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-subtle)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
                         Total Operating Expenditure
@@ -2073,1136 +1994,297 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
           )}
 
           {/* ========================================================================= */}
-          {/* TAB 4: DETAILED EXPENDITURE & INVENTORY (MATCHING IMAGE 4 DESIGN)*/}
+          {/* TAB 4: DETAILED EXPENDITURE & INVENTORY (PAGINATED - SINGLE PAGE VIEWPORT)*/}
           {/* ========================================================================= */}
-          {activeTab === 'expenditure' && (() => {
-            // Sample purchases log matching Image 4
-            const inventoryPurchases = [
-              { id: 1, date: "02 Oct 2026", item: "Vegetables (Mixed)", category: "Produce", supplier: "Green Basket", amount: 18500 },
-              { id: 2, date: "05 Oct 2026", item: "Chicken & Meat", category: "Poultry & Meat", supplier: "Metro Cash & Carry", amount: 72000 },
-              { id: 3, date: "09 Oct 2026", item: "Dairy Products", category: "Dairy & Cheeses", supplier: "Amul Distributors", amount: 24800 },
-              { id: 4, date: "15 Oct 2026", item: "Spices & Seasonings", category: "Spices & Seasonings", supplier: "Sri Lakshmi Traders", amount: 12600 },
-              { id: 5, date: "20 Oct 2026", item: "Grains & Rice", category: "Grains & Rice", supplier: "Annapurna Wholesale", amount: 48000 },
-            ];
-
-            // Filtered staff list for salary tab
-            const filteredStaff = (reportStaffList || []).filter((s) => {
-              const name = String(s.name || s.fullName || '').toLowerCase();
-              const role = String(s.role || s.roleTitle || '').toLowerCase();
-              const sec = String(s.section || 'Dine & Bar').toLowerCase();
-              if (staffSearch && !name.includes(staffSearch.toLowerCase()) && !role.includes(staffSearch.toLowerCase())) {
-                return false;
-              }
-              if (staffSectionFilter !== 'all' && sec !== staffSectionFilter.toLowerCase()) {
-                return false;
-              }
-              return true;
-            });
-
-            // Trend chart data (5 months)
-            const trendMonths = [
-              { month: "Jun", inventory: Math.round(effectiveInventoryExpenditure * 0.75), salary: Math.round(effectiveSalaryExpenditure * 0.95), total: formatCurrency(Math.round(effectiveInventoryExpenditure * 0.75 + effectiveSalaryExpenditure * 0.95)), height: 60 },
-              { month: "Jul", inventory: Math.round(effectiveInventoryExpenditure * 0.8), salary: Math.round(effectiveSalaryExpenditure * 0.98), total: formatCurrency(Math.round(effectiveInventoryExpenditure * 0.8 + effectiveSalaryExpenditure * 0.98)), height: 68 },
-              { month: "Aug", inventory: Math.round(effectiveInventoryExpenditure * 0.88), salary: effectiveSalaryExpenditure, total: formatCurrency(Math.round(effectiveInventoryExpenditure * 0.88 + effectiveSalaryExpenditure)), height: 75 },
-              { month: "Sep", inventory: Math.round(effectiveInventoryExpenditure * 0.92), salary: effectiveSalaryExpenditure, total: formatCurrency(Math.round(effectiveInventoryExpenditure * 0.92 + effectiveSalaryExpenditure)), height: 82 },
-              { month: "Oct", inventory: effectiveInventoryExpenditure, salary: effectiveSalaryExpenditure, total: formatCurrency(totalCombinedExpenditure), height: 92 },
-            ];
-
-            const invPct = totalCombinedExpenditure > 0 ? Math.round((effectiveInventoryExpenditure / totalCombinedExpenditure) * 100) : 0;
-            const salPct = totalCombinedExpenditure > 0 ? 100 - invPct : 0;
-
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <style>{`
-                  .exp-kpi-row {
-                    display: grid;
-                    grid-template-columns: 1fr auto 1fr auto 1fr;
-                    align-items: center;
-                    gap: 0.65rem;
-                  }
-                  .exp-split-row {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 0.85rem;
-                  }
-                  .exp-charts-row {
-                    display: grid;
-                    grid-template-columns: 1.15fr 0.85fr;
-                    gap: 0.85rem;
-                  }
-                  @media (max-width: 900px) {
-                    .exp-kpi-row { grid-template-columns: 1fr !important; }
-                    .exp-kpi-operator { display: none !important; }
-                    .exp-split-row { grid-template-columns: 1fr !important; }
-                    .exp-charts-row { grid-template-columns: 1fr !important; }
-                  }
-                `}</style>
-
-                {/* Subtitle / Header row matching Image 4 */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <div
-                      style={{
-                        width: '34px',
-                        height: '34px',
-                        borderRadius: '8px',
-                        background: 'rgba(245, 158, 11, 0.15)',
-                        border: '1px solid rgba(245, 158, 11, 0.35)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#f59e0b',
-                      }}
-                    >
-                      <Boxes size={18} />
-                    </div>
-                    <div>
-                      <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
-                        Reports - Expenditure
-                      </h2>
-                      <p style={{ margin: '1px 0 0 0', fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                        Track and analyze all expenses including Inventory (Purchase/Consumption) and Staff Salaries
-                      </p>
-                    </div>
+          {activeTab === 'expenditure' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              
+              {/* 4 Mini Inventory Status Chips */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+                    {inventoryItems.length} {isBarMode ? "Bar Items" : "Ingredients"}
                   </div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Stock Valuation</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
+                    {formatCurrency(totalInventoryCost)}
+                  </div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Low Stock Alert</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
+                    {lowStockCount} Items
+                  </div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Out of Stock</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626', marginTop: '2px' }}>
+                    {outOfStockCount} Items
+                  </div>
+                </div>
+              </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <div
+              {/* Filter and Search Bar for Inventory */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.65rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '9px',
+                      padding: '0.38rem 0.75rem',
+                      gap: '0.45rem',
+                      width: '240px',
+                      maxWidth: '100%',
+                    }}
+                  >
+                    <Search size={14} color='var(--text-muted)' />
+                    <input
+                      type='text'
+                      placeholder='Filter by item or supplier...'
+                      value={invSearch}
+                      onChange={(e) => setInvSearch(e.target.value)}
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        background: 'var(--bg-tertiary)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: '8px',
-                        padding: '0.35rem 0.75rem',
-                        fontSize: '0.75rem',
-                        color: 'var(--text-main)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      <Calendar size={13} color="#f59e0b" />
-                      <span>{filterPeriod === 'month' || filterPeriod === 'this_month' ? '01 Oct 2026 - 31 Oct 2026' : (startDate && endDate ? `${startDate} - ${endDate}` : '01 Oct 2026 - 31 Oct 2026')}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleExportCSV}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        background: '#ea580c',
+                        background: 'transparent',
                         border: 'none',
-                        borderRadius: '8px',
-                        padding: '0.38rem 0.85rem',
-                        color: '#ffffff',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)',
+                        outline: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '0.78rem',
+                        width: '100%',
                       }}
-                    >
-                      <Download size={13} />
-                      <span>Export</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Top 3 Connected Summary Cards (Matching Image 4) */}
-                <div className="exp-kpi-row">
-                  {/* Card 1: Inventory Expenditure */}
-                  <div
-                    style={{
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
-                      borderRadius: '10px',
-                      padding: '0.75rem 0.95rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '9px',
-                        background: 'rgba(245, 158, 11, 0.15)',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#f59e0b',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Boxes size={22} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-                        Inventory Expenditure
-                      </div>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                        {formatCurrency(effectiveInventoryExpenditure)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Math Operator: + */}
-                  <div
-                    className="exp-kpi-operator"
-                    style={{
-                      fontSize: '1.3rem',
-                      fontWeight: 900,
-                      color: 'var(--text-dim)',
-                      textAlign: 'center',
-                      userSelect: 'none',
-                    }}
-                  >
-                    +
-                  </div>
-
-                  {/* Card 2: Staff Salary Expenditure */}
-                  <div
-                    style={{
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
-                      borderRadius: '10px',
-                      padding: '0.75rem 0.95rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '9px',
-                        background: 'rgba(245, 158, 11, 0.15)',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#f59e0b',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Users size={22} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-                        Staff Salary Expenditure
-                      </div>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                        {formatCurrency(effectiveSalaryExpenditure)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Math Operator: = */}
-                  <div
-                    className="exp-kpi-operator"
-                    style={{
-                      fontSize: '1.3rem',
-                      fontWeight: 900,
-                      color: 'var(--text-dim)',
-                      textAlign: 'center',
-                      userSelect: 'none',
-                    }}
-                  >
-                    =
-                  </div>
-
-                  {/* Card 3: Total Expenditure */}
-                  <div
-                    style={{
-                      background: 'rgba(147, 51, 234, 0.1)',
-                      border: '1.5px solid rgba(168, 85, 247, 0.45)',
-                      borderRadius: '10px',
-                      padding: '0.75rem 0.95rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '9px',
-                        background: 'rgba(168, 85, 247, 0.22)',
-                        border: '1px solid rgba(168, 85, 247, 0.45)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#c084fc',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Receipt size={22} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: '#c084fc', fontWeight: 700 }}>
-                        Total Expenditure
-                      </div>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f3e8ff', marginTop: '2px' }}>
-                        {formatCurrency(totalCombinedExpenditure)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sub-navigation tabs (Matching Image 4) */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.2rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setExpSubTab('inventory')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.45rem 1rem',
-                      borderRadius: '8px',
-                      border: expSubTab === 'inventory' ? '1px solid #ea580c' : '1px solid var(--border-subtle)',
-                      background: expSubTab === 'inventory' ? '#ea580c' : 'var(--bg-tertiary)',
-                      color: expSubTab === 'inventory' ? '#ffffff' : 'var(--text-muted)',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <Boxes size={14} />
-                    <span>Inventory Expenditure</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setExpSubTab('salary')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.45rem 1rem',
-                      borderRadius: '8px',
-                      border: expSubTab === 'salary' ? '1px solid #ea580c' : '1px solid var(--border-subtle)',
-                      background: expSubTab === 'salary' ? '#ea580c' : 'var(--bg-tertiary)',
-                      color: expSubTab === 'salary' ? '#ffffff' : 'var(--text-muted)',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <Users size={14} />
-                    <span>Staff Salary Expenditure</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setExpSubTab('overall')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.45rem 1rem',
-                      borderRadius: '8px',
-                      border: expSubTab === 'overall' ? '1px solid #ea580c' : '1px solid var(--border-subtle)',
-                      background: expSubTab === 'overall' ? '#ea580c' : 'var(--bg-tertiary)',
-                      color: expSubTab === 'overall' ? '#ffffff' : 'var(--text-muted)',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <PieChart size={14} />
-                    <span>Overall Expenditure</span>
-                  </button>
-                </div>
-
-                {/* VIEW 1: OVERALL VIEW (Side-by-side Tables + Charts, Exactly as Image 4) */}
-                {expSubTab === 'overall' && (
-                  <>
-                    {/* Split Row: Inventory Purchases on Left, Staff Salaries on Right */}
-                    <div className="exp-split-row">
-                      {/* Left Card: Inventory Expenditure */}
-                      <div
-                        style={{
-                          background: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: '10px',
-                          padding: '0.85rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                        }}
+                    />
+                    {invSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setInvSearch('')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: '0.75rem', padding: 0 }}
                       >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <Boxes size={18} color="#f59e0b" />
-                              <div>
-                                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                  Inventory Expenditure
-                                </div>
-                                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
-                                  Expenses on ingredients, stock and purchases
-                                </div>
-                              </div>
-                            </div>
-                            <div
-                              style={{
-                                background: 'rgba(245, 158, 11, 0.12)',
-                                border: '1px solid rgba(245, 158, 11, 0.3)',
-                                borderRadius: '6px',
-                                padding: '0.2rem 0.55rem',
-                                fontSize: '0.72rem',
-                                fontWeight: 800,
-                                color: '#f59e0b',
-                              }}
-                            >
-                              Total: {formatCurrency(effectiveInventoryExpenditure)}
-                            </div>
-                          </div>
-
-                          {/* Inventory Table */}
-                          <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-                              <thead>
-                                <tr style={{ borderBottom: '1.5px solid var(--border-subtle)', color: 'var(--text-dim)', textAlign: 'left' }}>
-                                  <th style={{ padding: '6px 8px' }}>#</th>
-                                  <th style={{ padding: '6px 8px' }}>Purchase Date</th>
-                                  <th style={{ padding: '6px 8px' }}>Item / Category</th>
-                                  <th style={{ padding: '6px 8px' }}>Supplier</th>
-                                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>Amount</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {inventoryPurchases.map((p, idx) => (
-                                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-main)' }}>
-                                    <td style={{ padding: '6px 8px', color: 'var(--text-dim)' }}>{idx + 1}</td>
-                                    <td style={{ padding: '6px 8px' }}>{p.date}</td>
-                                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>{p.item}</td>
-                                    <td style={{ padding: '6px 8px', color: 'var(--text-muted)' }}>{p.supplier}</td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>
-                                      {formatCurrency(p.amount)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
-                        <div style={{ textAlign: 'right', marginTop: '0.65rem', paddingTop: '0.45rem', borderTop: '1px solid var(--border-subtle)' }}>
-                          <button
-                            type="button"
-                            onClick={() => setExpSubTab('inventory')}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#f59e0b',
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <span>View All Purchases</span>
-                            <ArrowRight size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Right Card: Staff Salary Expenditure */}
-                      <div
-                        style={{
-                          background: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: '10px',
-                          padding: '0.85rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <Users size={18} color="#f59e0b" />
-                              <div>
-                                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                  Staff Salary Expenditure
-                                </div>
-                                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
-                                  Monthly salary paid to restaurant staff (Dine &amp; Bar)
-                                </div>
-                              </div>
-                            </div>
-                            <div
-                              style={{
-                                background: 'rgba(245, 158, 11, 0.12)',
-                                border: '1px solid rgba(245, 158, 11, 0.3)',
-                                borderRadius: '6px',
-                                padding: '0.2rem 0.55rem',
-                                fontSize: '0.72rem',
-                                fontWeight: 800,
-                                color: '#f59e0b',
-                              }}
-                            >
-                              Total: {formatCurrency(effectiveSalaryExpenditure)}
-                            </div>
-                          </div>
-
-                          {/* Staff Table */}
-                          <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-                              <thead>
-                                <tr style={{ borderBottom: '1.5px solid var(--border-subtle)', color: 'var(--text-dim)', textAlign: 'left' }}>
-                                  <th style={{ padding: '6px 8px' }}>#</th>
-                                  <th style={{ padding: '6px 8px' }}>Staff Name</th>
-                                  <th style={{ padding: '6px 8px' }}>Role / Designation</th>
-                                  <th style={{ padding: '6px 8px' }}>Section</th>
-                                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>Salary (₹)</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(reportStaffList || []).slice(0, 5).map((st, idx) => (
-                                  <tr key={st.id ?? st.staffId ?? idx} style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-main)' }}>
-                                    <td style={{ padding: '6px 8px', color: 'var(--text-dim)' }}>{idx + 1}</td>
-                                    <td style={{ padding: '6px 8px', fontWeight: 700 }}>{st.name || st.fullName}</td>
-                                    <td style={{ padding: '6px 8px', color: 'var(--text-muted)' }}>{st.role || st.roleTitle || 'Staff'}</td>
-                                    <td style={{ padding: '6px 8px' }}>
-                                      <span
-                                        style={{
-                                          display: 'inline-block',
-                                          padding: '0.15rem 0.45rem',
-                                          borderRadius: '4px',
-                                          fontSize: '0.68rem',
-                                          fontWeight: 700,
-                                          background:
-                                            (st.section || 'Dine & Bar') === 'Bar'
-                                              ? 'rgba(168, 85, 247, 0.15)'
-                                              : (st.section || 'Dine & Bar') === 'Dine'
-                                              ? 'rgba(59, 130, 246, 0.15)'
-                                              : 'rgba(245, 158, 11, 0.15)',
-                                          color:
-                                            (st.section || 'Dine & Bar') === 'Bar'
-                                              ? '#c084fc'
-                                              : (st.section || 'Dine & Bar') === 'Dine'
-                                              ? '#60a5fa'
-                                              : '#f59e0b',
-                                          border:
-                                            (st.section || 'Dine & Bar') === 'Bar'
-                                              ? '1px solid rgba(168, 85, 247, 0.3)'
-                                              : (st.section || 'Dine & Bar') === 'Dine'
-                                              ? '1px solid rgba(59, 130, 246, 0.3)'
-                                              : '1px solid rgba(245, 158, 11, 0.3)',
-                                        }}
-                                      >
-                                        {st.section || 'Dine & Bar'}
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>
-                                      {formatCurrency(Number(st.salary || 0))}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
-                        <div style={{ textAlign: 'right', marginTop: '0.65rem', paddingTop: '0.45rem', borderTop: '1px solid var(--border-subtle)' }}>
-                          <button
-                            type="button"
-                            onClick={() => setExpSubTab('salary')}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#f59e0b',
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <span>View All Staff Salaries</span>
-                            <ArrowRight size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Row of 2 Cards: Stacked Bar Chart & Donut Chart (Matching Image 4) */}
-                    <div className="exp-charts-row">
-                      {/* Left Chart: Monthly Expenditure Trend */}
-                      <div
-                        style={{
-                          background: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: '10px',
-                          padding: '0.85rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <TrendingUp size={15} color="#f59e0b" />
-                            <span>Monthly Expenditure Trend</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.68rem', color: 'var(--text-dim)' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#a855f7' }} />
-                              Salary Expenditure
-                            </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#f59e0b' }} />
-                              Inventory Expenditure
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Visual Stacked Bar Chart */}
-                        <div style={{ display: 'flex', height: '150px', alignItems: 'flex-end', gap: '1.25rem', padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                          {trendMonths.map((m) => {
-                            const totalVal = m.inventory + m.salary;
-                            const invPortion = Math.round((m.inventory / totalVal) * m.height);
-                            const salPortion = Math.round((m.salary / totalVal) * m.height);
-
-                            return (
-                              <div key={m.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
-                                  {m.total}
-                                </span>
-                                <div style={{ width: '38px', display: 'flex', flexDirection: 'column', borderRadius: '5px', overflow: 'hidden' }}>
-                                  {/* Top purple bar: Salary */}
-                                  <div
-                                    title={`Salary: ${formatCurrency(m.salary)}`}
-                                    style={{
-                                      height: `${salPortion}px`,
-                                      background: '#a855f7',
-                                      transition: 'height 0.3s ease',
-                                    }}
-                                  />
-                                  {/* Bottom orange bar: Inventory */}
-                                  <div
-                                    title={`Inventory: ${formatCurrency(m.inventory)}`}
-                                    style={{
-                                      height: `${invPortion}px`,
-                                      background: '#f59e0b',
-                                      transition: 'height 0.3s ease',
-                                    }}
-                                  />
-                                </div>
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 600, marginTop: '6px' }}>
-                                  {m.month}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Right Chart: Expenditure Breakdown Donut (Matching Image 4) */}
-                      <div
-                        style={{
-                          background: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: '10px',
-                          padding: '0.85rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                          <PieChart size={15} color="#f59e0b" />
-                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                            Expenditure Breakdown (Oct 2026)
-                          </div>
-                        </div>
-
-                        {/* Donut Chart + Legend */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', padding: '0.5rem 0' }}>
-                          {/* SVG Donut */}
-                          <div style={{ position: 'relative', width: '130px', height: '130px', flexShrink: 0 }}>
-                            <svg width="130" height="130" viewBox="0 0 100 100">
-                              {/* Background circle */}
-                              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--bg-tertiary)" strokeWidth="16" />
-                              {/* Inventory arc (orange) */}
-                              <circle
-                                cx="50"
-                                cy="50"
-                                r="38"
-                                fill="none"
-                                stroke="#f59e0b"
-                                strokeWidth="16"
-                                strokeDasharray={`${invPct * 2.38} ${100 * 2.38}`}
-                                strokeDashoffset="0"
-                                transform="rotate(-90 50 50)"
-                              />
-                              {/* Salary arc (purple) */}
-                              <circle
-                                cx="50"
-                                cy="50"
-                                r="38"
-                                fill="none"
-                                stroke="#a855f7"
-                                strokeWidth="16"
-                                strokeDasharray={`${salPct * 2.38} ${100 * 2.38}`}
-                                strokeDashoffset={`-${invPct * 2.38}`}
-                                transform="rotate(-90 50 50)"
-                              />
-                            </svg>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                textAlign: 'center',
-                              }}
-                            >
-                              <div style={{ fontSize: '0.78rem', fontWeight: 900, color: 'var(--text-main)', lineHeight: 1.1 }}>
-                                {formatCurrency(totalCombinedExpenditure)}
-                              </div>
-                              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-                                Total
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Donut Legend */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#f59e0b', flexShrink: 0 }} />
-                              <div>
-                                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Inventory</div>
-                                <div style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                  {formatCurrency(effectiveInventoryExpenditure)} ({invPct}%)
-                                </div>
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#a855f7', flexShrink: 0 }} />
-                              <div>
-                                <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Staff Salary</div>
-                                <div style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                  {formatCurrency(effectiveSalaryExpenditure)} ({salPct}%)
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* VIEW 2: DETAILED INVENTORY VIEW */}
-                {expSubTab === 'inventory' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {/* 4 Mini Inventory Status Chips */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                          {inventoryItems.length} {isBarMode ? "Bar Items" : "Ingredients"}
-                        </div>
-                      </div>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Stock Valuation</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
-                          {formatCurrency(totalInventoryCost)}
-                        </div>
-                      </div>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Low Stock Alert</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
-                          {lowStockCount} Items
-                        </div>
-                      </div>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Out of Stock</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626', marginTop: '2px' }}>
-                          {outOfStockCount} Items
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Filter and Search Bar for Inventory */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: '9px',
-                            padding: '0.38rem 0.75rem',
-                            gap: '0.45rem',
-                            width: '240px',
-                            maxWidth: '100%',
-                          }}
-                        >
-                          <Search size={14} color='var(--text-muted)' />
-                          <input
-                            type='text'
-                            placeholder='Filter by item or supplier...'
-                            value={invSearch}
-                            onChange={(e) => setInvSearch(e.target.value)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              outline: 'none',
-                              color: 'var(--text-main)',
-                              fontSize: '0.78rem',
-                              width: '100%',
-                            }}
-                          />
-                          {invSearch && (
-                            <button
-                              type="button"
-                              onClick={() => setInvSearch('')}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: '0.75rem', padding: 0 }}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-
-                        <select
-                          value={invCategoryFilter}
-                          onChange={(e) => setInvCategoryFilter(e.target.value)}
-                          style={{
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-main)',
-                            borderRadius: '9px',
-                            padding: '0.4rem 0.75rem',
-                            fontSize: '0.76rem',
-                            fontWeight: 600,
-                            outline: 'none',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <option value='all'>All Categories ({inventoryItems.length})</option>
-                          {inventoryCategories.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-                        Showing {searchedInventory.length} items · Page {invPage} of {totalInvPages}
-                      </div>
-                    </div>
-
-                    {/* Inventory Table */}
-                    <div style={{ overflowX: 'auto', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-                        <thead>
-                          <tr style={{ background: 'var(--bg-tertiary)', borderBottom: '1.5px solid var(--border-subtle)', color: 'var(--text-dim)', textAlign: 'left' }}>
-                            <th style={{ padding: '8px 10px' }}>#</th>
-                            <th style={{ padding: '8px 10px' }}>Ingredient / Item</th>
-                            <th style={{ padding: '8px 10px' }}>Category</th>
-                            <th style={{ padding: '8px 10px' }}>Supplier</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'center' }}>Stock</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'center' }}>Threshold</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'right' }}>Unit Cost</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'right' }}>Valuation</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'center' }}>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {paginatedInventory.map((item, idx) => {
-                            const stockNum = Number(item.stock ?? 0);
-                            const threshNum = Number(item.minThreshold ?? 0);
-                            const unitCost = Number(item.mrp ?? item.unitCost ?? 0);
-                            const itemValuation = stockNum * unitCost;
-                            const isOut = stockNum <= 0;
-                            const isLow = !isOut && stockNum <= threshNum;
-
-                            return (
-                              <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-main)' }}>
-                                <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{(invPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
-                                <td style={{ padding: '8px 10px', fontWeight: 700 }}>{item.name || item.ingredientName}</td>
-                                <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>{item.category || 'General'}</td>
-                                <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{item.supplier || 'Metro Cash & Carry Wholesale'}</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 800, color: isOut ? '#dc2626' : isLow ? '#f59e0b' : 'var(--text-main)' }}>
-                                  {stockNum} {item.unit || 'KG'}
-                                </td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--text-dim)' }}>
-                                  {threshNum} {item.unit || 'KG'}
-                                </td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right' }}>{formatCurrency(unitCost)}</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(itemValuation)}</td>
-                                <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                                  <span
-                                    style={{
-                                      display: 'inline-block',
-                                      padding: '0.15rem 0.5rem',
-                                      borderRadius: '4px',
-                                      fontSize: '0.68rem',
-                                      fontWeight: 800,
-                                      background: isOut ? 'rgba(239, 68, 68, 0.12)' : isLow ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                                      color: isOut ? '#dc2626' : isLow ? '#f59e0b' : '#10b981',
-                                      border: isOut ? '1px solid rgba(239, 68, 68, 0.3)' : isLow ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
-                                    }}
-                                  >
-                                    ● {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Pagination */}
-                    {totalInvPages > 1 && (
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setInvPage((p) => Math.max(1, p - 1))}
-                          disabled={invPage === 1}
-                          style={{
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: '6px',
-                            padding: '0.3rem 0.6rem',
-                            color: invPage === 1 ? 'var(--text-dim)' : 'var(--text-main)',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            cursor: invPage === 1 ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          Previous
-                        </button>
-                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          Page {invPage} of {totalInvPages}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setInvPage((p) => Math.min(totalInvPages, p + 1))}
-                          disabled={invPage === totalInvPages}
-                          style={{
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: '6px',
-                            padding: '0.3rem 0.6rem',
-                            color: invPage === totalInvPages ? 'var(--text-dim)' : 'var(--text-main)',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            cursor: invPage === totalInvPages ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          Next
-                        </button>
-                      </div>
+                        ✕
+                      </button>
                     )}
                   </div>
-                )}
 
-                {/* VIEW 3: DETAILED STAFF SALARY VIEW */}
-                {expSubTab === 'salary' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {/* 4 Staff Salary Status Chips */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Staff Count</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                          {(reportStaffList || []).length} Personnel
-                        </div>
-                      </div>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Monthly Payroll</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
-                          {formatCurrency(effectiveSalaryExpenditure)}
-                        </div>
-                      </div>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Average Salary / Person</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
-                          {formatCurrency(reportStaffList.length ? Math.round(effectiveSalaryExpenditure / reportStaffList.length) : 0)}
-                        </div>
-                      </div>
-                      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Shared Sections</div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#c084fc', marginTop: '4px' }}>
-                          Both: {(reportStaffList || []).filter((s) => (s.section || 'Dine & Bar') === 'Dine & Bar').length} · Dine: {(reportStaffList || []).filter((s) => s.section === 'Dine').length} · Bar: {(reportStaffList || []).filter((s) => s.section === 'Bar').length}
-                        </div>
-                      </div>
-                    </div>
+                  {/* Category Dropdown Filter */}
+                  <select
+                    value={invCategoryFilter}
+                    onChange={(e) => setInvCategoryFilter(e.target.value)}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '9px',
+                      padding: '0.38rem 0.75rem',
+                      color: 'var(--text-main)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value='all'>All Categories ({inventoryItems.length})</option>
+                    {inventoryCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                    {/* Filter and Search Bar for Staff */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: '9px',
-                            padding: '0.38rem 0.75rem',
-                            gap: '0.45rem',
-                            width: '240px',
-                            maxWidth: '100%',
-                          }}
-                        >
-                          <Search size={14} color='var(--text-muted)' />
-                          <input
-                            type='text'
-                            placeholder='Filter by staff name or role...'
-                            value={staffSearch}
-                            onChange={(e) => setStaffSearch(e.target.value)}
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Showing <strong style={{ color: 'var(--text-main)' }}>{searchedInventory.length}</strong> items · Page {invPage} of {totalInvPages}
+                </div>
+              </div>
+
+              {/* Paginated Inventory Table */}
+              <div
+                style={{
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '11px',
+                  overflowX: 'auto',
+                  background: 'var(--bg-tertiary)',
+                }}
+              >
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', width: '35px' }}>#</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Ingredient / Item</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Category</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Supplier</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Stock</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>Threshold</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Unit Cost</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Valuation</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)', minWidth: '110px', whiteSpace: 'nowrap' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedInventory.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          No inventory ingredients found matching the filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedInventory.map((item, idx) => {
+                        const stock = Number(item.stock ?? 0);
+                        const mrp = Number(item.mrp ?? item.unitCost ?? 0);
+                        const totalCost = stock > 0 && mrp > 0 ? stock * mrp : 0;
+                        const min = Number(item.minThreshold ?? 0);
+                        const isOut = stock <= 0;
+                        const isLow = !isOut && stock <= min;
+                        const globalIndex = (invPage - 1) * ITEMS_PER_PAGE + idx + 1;
+
+                        return (
+                          <tr
+                            key={item.id || idx}
                             style={{
-                              background: 'transparent',
-                              border: 'none',
-                              outline: 'none',
-                              color: 'var(--text-main)',
-                              fontSize: '0.78rem',
-                              width: '100%',
+                              borderBottom: '1px solid var(--border-subtle)',
+                              background: idx % 2 === 0 ? 'transparent' : 'rgba(var(--surface-rgb),0.02)',
                             }}
-                          />
-                          {staffSearch && (
-                            <button
-                              type="button"
-                              onClick={() => setStaffSearch('')}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: '0.75rem', padding: 0 }}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-
-                        <select
-                          value={staffSectionFilter}
-                          onChange={(e) => setStaffSectionFilter(e.target.value)}
-                          style={{
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-main)',
-                            borderRadius: '9px',
-                            padding: '0.4rem 0.75rem',
-                            fontSize: '0.76rem',
-                            fontWeight: 600,
-                            outline: 'none',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <option value='all'>All Sections ({(reportStaffList || []).length})</option>
-                          <option value='dine & bar'>Dine &amp; Bar (Shared)</option>
-                          <option value='dine'>Dine In Only</option>
-                          <option value='bar'>Bar Only</option>
-                        </select>
-                      </div>
-
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 600 }}>
-                        Showing {filteredStaff.length} staff members
-                      </div>
-                    </div>
-
-                    {/* Staff Table */}
-                    <div style={{ overflowX: 'auto', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-                        <thead>
-                          <tr style={{ background: 'var(--bg-tertiary)', borderBottom: '1.5px solid var(--border-subtle)', color: 'var(--text-dim)', textAlign: 'left' }}>
-                            <th style={{ padding: '8px 10px' }}>#</th>
-                            <th style={{ padding: '8px 10px' }}>Staff Name</th>
-                            <th style={{ padding: '8px 10px' }}>Role / Designation</th>
-                            <th style={{ padding: '8px 10px' }}>Section</th>
-                            <th style={{ padding: '8px 10px' }}>Shift</th>
-                            <th style={{ padding: '8px 10px' }}>Contact Phone</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'right' }}>Monthly Salary</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'center' }}>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredStaff.map((person, idx) => (
-                            <tr key={person.id ?? person.staffId ?? idx} style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-main)' }}>
-                              <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{idx + 1}</td>
-                              <td style={{ padding: '8px 10px', fontWeight: 700 }}>{person.name || person.fullName}</td>
-                              <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>{person.role || person.roleTitle || 'Staff'}</td>
-                              <td style={{ padding: '8px 10px' }}>
+                          >
+                            <td style={{ padding: '7px 10px', color: 'var(--text-dim)', fontSize: '0.72rem' }}>{globalIndex}</td>
+                            <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text-main)' }}>
+                              {item.name || 'Unnamed Item'}
+                            </td>
+                            <td style={{ padding: '7px 10px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                              {item.category || 'General'}
+                            </td>
+                            <td style={{ padding: '7px 10px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                              {item.supplier || 'Local Supplier'}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--text-main)' }}>
+                              {stock} {item.unit || ''}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                              {min} {item.unit || ''}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>
+                              {formatCurrency(mrp)}
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800, color: totalCost > 0 ? 'var(--danger)' : 'var(--text-dim)' }}>
+                              {formatCurrency(totalCost)}
+                            </td>
+                            <td style={{ padding: '7px 12px', textAlign: 'center', minWidth: '110px', whiteSpace: 'nowrap' }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '5px',
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  background: isOut
+                                    ? 'rgba(239, 68, 68, 0.14)'
+                                    : isLow
+                                    ? 'rgba(245, 158, 11, 0.14)'
+                                    : 'rgba(16, 185, 129, 0.14)',
+                                  color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--success)',
+                                  border: `1px solid ${
+                                    isOut
+                                      ? 'rgba(239, 68, 68, 0.35)'
+                                      : isLow
+                                      ? 'rgba(245, 158, 11, 0.35)'
+                                      : 'rgba(16, 185, 129, 0.35)'
+                                  }`,
+                                }}
+                              >
                                 <span
                                   style={{
-                                    display: 'inline-block',
-                                    padding: '0.18rem 0.5rem',
-                                    borderRadius: '5px',
-                                    fontSize: '0.68rem',
-                                    fontWeight: 700,
-                                    background:
-                                      (person.section || 'Dine & Bar') === 'Bar'
-                                        ? 'rgba(168, 85, 247, 0.15)'
-                                        : (person.section || 'Dine & Bar') === 'Dine'
-                                        ? 'rgba(59, 130, 246, 0.15)'
-                                        : 'rgba(245, 158, 11, 0.15)',
-                                    color:
-                                      (person.section || 'Dine & Bar') === 'Bar'
-                                        ? '#c084fc'
-                                        : (person.section || 'Dine & Bar') === 'Dine'
-                                        ? '#60a5fa'
-                                        : '#f59e0b',
-                                    border:
-                                      (person.section || 'Dine & Bar') === 'Bar'
-                                        ? '1px solid rgba(168, 85, 247, 0.3)'
-                                        : (person.section || 'Dine & Bar') === 'Dine'
-                                        ? '1px solid rgba(59, 130, 246, 0.3)'
-                                        : '1px solid rgba(245, 158, 11, 0.3)',
+                                    width: '5px',
+                                    height: '5px',
+                                    borderRadius: '50%',
+                                    background: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
                                   }}
-                                >
-                                  {person.section || 'Dine & Bar'}
-                                </span>
-                              </td>
-                              <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{person.shift || 'General Shift'}</td>
-                              <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{person.phone || '+91 98450 00000'}</td>
-                              <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: 'var(--text-main)' }}>
-                                {formatCurrency(Number(person.salary || 0))}
-                              </td>
-                              <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                                <span style={{ display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800, background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                                  ● Active
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr style={{ background: 'var(--bg-tertiary)', borderTop: '1.5px solid var(--border-subtle)' }}>
-                            <td colSpan={6} style={{ padding: '8px 10px', fontWeight: 800, color: 'var(--text-main)', fontSize: '0.78rem' }}>
-                              TOTAL RESTAURANT STAFF PAYROLL (DINE &amp; BAR COMBINED)
+                                />
+                                {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
+                              </span>
                             </td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 900, color: '#f59e0b', fontSize: '0.92rem' }}>
-                              {formatCurrency(effectiveSalaryExpenditure)}
-                            </td>
-                            <td style={{ padding: '8px 10px' }} />
                           </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                        );
+                      })
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: 'var(--bg-secondary)', borderTop: '1.5px solid var(--border-subtle)' }}>
+                      <td colSpan={7} style={{ padding: '8px 10px', fontWeight: 800, color: 'var(--text-main)', fontSize: '0.76rem' }}>
+                        TOTAL EXPENDITURE VALUATION (INVENTORY + DISCOUNTS)
+                      </td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 900, color: 'var(--danger)', fontSize: '0.88rem' }}>
+                        {formatCurrency(plExpenditure)}
+                      </td>
+                      <td style={{ padding: '8px 10px' }} />
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-            );
-          })()}
+
+              {/* Pagination Bar for Inventory */}
+              {totalInvPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setInvPage((p) => Math.max(1, p - 1))}
+                    disabled={invPage === 1}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '0.3rem 0.6rem',
+                      color: invPage === 1 ? 'var(--text-dim)' : 'var(--text-main)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: invPage === 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <ChevronLeft size={13} />
+                    <span>Previous</span>
+                  </button>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, padding: '0 6px' }}>
+                    Page {invPage} of {totalInvPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setInvPage((p) => Math.min(totalInvPages, p + 1))}
+                    disabled={invPage === totalInvPages}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '0.3rem 0.6rem',
+                      color: invPage === totalInvPages ? 'var(--text-dim)' : 'var(--text-main)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: invPage === totalInvPages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </div>

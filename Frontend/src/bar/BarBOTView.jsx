@@ -61,8 +61,6 @@ export function BarBOTView({
   barDrinks = [],
   onItemsUpdated,
   onUpdateItemKotStatus,
-  onCompleteTableKot,
-  embedded = false,
 }) {
   const [adminBotTableFilter, setAdminBotTableFilter] = useState("all");
   const [isBotTableDropdownOpen, setIsBotTableDropdownOpen] = useState(false);
@@ -325,6 +323,9 @@ export function BarBOTView({
       try {
         onUpdateItemKotStatus(tableId, nextStatus, itemId);
       } catch {}
+      try {
+        onUpdateItemKotStatus(tableId, itemId, nextStatus);
+      } catch {}
     }
 
     if (typeof onItemsUpdated === "function") {
@@ -354,8 +355,7 @@ export function BarBOTView({
 
     // Try atomic table endpoint first
     try {
-      const result = await apiMarkAllBarBotTableReady(table.id);
-      if (!result?.success) throw new Error(result?.error || "Bar BOT could not mark the drinks ready.");
+      await apiMarkAllBarBotTableReady(table.id);
     } catch {
       // Fallback per-item update
       for (const item of items) {
@@ -370,21 +370,6 @@ export function BarBOTView({
           }
         }
       }
-    }
-
-    if (typeof onUpdateItemKotStatus === "function") {
-      items.forEach((item) => {
-        const itemId = item.orderItemId || item.id || item.menuItemId;
-        try {
-          onUpdateItemKotStatus(table.id, "ready", itemId);
-        } catch {}
-      });
-    }
-
-    if (typeof onCompleteTableKot === "function") {
-      try {
-        onCompleteTableKot(table.id);
-      } catch {}
     }
 
     if (typeof onItemsUpdated === "function") {
@@ -455,16 +440,11 @@ export function BarBOTView({
               padding: "1.5rem",
               overflowY: "auto",
             }
-          : {
-              width: "100%",
-              minWidth: 0,
-              boxSizing: "border-box",
-              padding: embedded ? 0 : "0.5rem 0.75rem 1rem",
-            }
+          : {}
       }
     >
       {/* 1. Header Row (Matching Dine KOT Dispatch) */}
-      {!embedded && <div
+      <div
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -550,7 +530,7 @@ export function BarBOTView({
             <span>{isFullScreen ? "Close Full Screen" : "Open Full Screen BOT Screen"}</span>
           </button>
         </div>
-      </div>}
+      </div>
 
       {/* 2. Table Filter Bar with Dropdown (Exact Match to Dine KOT) */}
       <div
@@ -1044,14 +1024,11 @@ export function BarBOTView({
             display: "grid",
             gridTemplateColumns:
               adminBotTableFilter !== "all"
-                ? "minmax(0, 390px)"
-                : "repeat(auto-fill, minmax(min(100%, 320px), 390px))",
+                ? "minmax(200px, 320px)"
+                : "repeat(auto-fill, minmax(170px, 1fr))",
             gap: "0.85rem",
-            justifyContent: "start",
+            justifyContent: adminBotTableFilter !== "all" ? "center" : "stretch",
             alignItems: "stretch",
-            alignContent: "start",
-            width: "100%",
-            boxSizing: "border-box",
           }}
         >
           {botDisplayTables.map((tbl) => {
