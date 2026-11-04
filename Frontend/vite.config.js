@@ -11,7 +11,7 @@ try {
 }
 
 const env = loadEnv("development", process.cwd(), "");
-const backendApiTarget = (env.VITE_API_BASE_URL || "http://127.0.0.1:5018").trim().replace(/\/+$/, "");
+const backendApiTarget = (env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
 
 const getBusinessDateStr = (dateObj = new Date()) => {
   const d = new Date(dateObj);
@@ -162,19 +162,7 @@ const sendOtpEmail = async (email, otp, fullName = "Admin") => {
 function globalSyncPlugin() {
   let sseClients = [];
   const getDataFile = () => {
-    const candidates = [
-      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
-      path.resolve(process.cwd(), "..", "server-db.json"),
-      path.resolve(process.cwd(), "server-db.json"),
-      path.resolve(process.cwd(), "POS", "server-db.json"),
-      path.resolve(process.cwd(), "Frontend", "server-db.json"),
-      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\server-db.json",
-      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\Frontend\\server-db.json",
-    ];
-    for (const c of candidates) {
-      if (fs.existsSync(c)) return c;
-    }
-    return path.resolve(process.cwd(), "server-db.json");
+    return path.resolve(import.meta.dirname || process.cwd(), "server-db.json");
   };
 
   const loadDb = () => {
@@ -193,12 +181,6 @@ function globalSyncPlugin() {
     try {
       const file = getDataFile();
       fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-      const altFile = file.includes("Frontend")
-        ? path.resolve(file, "..", "..", "server-db.json")
-        : path.resolve(file, "..", "Frontend", "server-db.json");
-      if (fs.existsSync(altFile) && altFile !== file) {
-        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
-      }
     } catch {}
   };
 
@@ -1943,17 +1925,7 @@ function globalSyncPlugin() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
-  let apiBase = env.VITE_API_BASE_URL;
-  if (!apiBase) {
-    try {
-      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
-      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
-      if (match) apiBase = match[0].replace(/\/$/, "");
-    } catch {}
-  }
-  if (!apiBase) {
-    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
-  }
+  const apiBase = (env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
 
   return {
     plugins: [react(), globalSyncPlugin()],
