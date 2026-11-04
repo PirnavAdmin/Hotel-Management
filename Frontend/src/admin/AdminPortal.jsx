@@ -1470,7 +1470,7 @@ export function AdminPortal({
       onAddStaff({
         name: assignedServer,
         role: newServerRole.trim(),
-        phone: "",
+        phone: "+91 98450 00000",
         shift: "",
       });
     }
@@ -1566,7 +1566,7 @@ export function AdminPortal({
           ...editingStaff,
           name: staffForm.name.trim(),
           role: staffForm.role,
-          phone: staffForm.phone,
+          phone: staffForm.phone || "+91 98450 00000",
           shift: staffForm.shift,
           salary: Number(staffForm.salary || 0),
           section: staffForm.section || "Dine & Bar",
@@ -1576,7 +1576,7 @@ export function AdminPortal({
       saved = await onAddStaff({
         name: staffForm.name.trim(),
         role: staffForm.role,
-        phone: staffForm.phone,
+        phone: staffForm.phone || "+91 98450 00000",
         shift: staffForm.shift,
         salary: Number(staffForm.salary || 0),
         section: staffForm.section || "Dine & Bar",
@@ -1618,7 +1618,7 @@ export function AdminPortal({
           await onAddStaff({
             name: uName,
             role: "Floor Staff / POS",
-            phone: u.mobile || u.phone || "",
+            phone: u.mobile || u.phone || "+91 98450 00000",
             shift: "Morning Shift (10 AM - 4 PM)",
           });
         }
@@ -4164,13 +4164,13 @@ export function AdminPortal({
                             color: "var(--text-muted)",
                           }}
                         >
-                          Select any table number to inspect orders received
-                          from table and preparation completed status
+                          Select any table number to inspect food orders received and preparation status.
                         </p>
                       </div>
 
-                      {onOpenKOTView && (
-                        <button
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 10 }}>
+                        {onOpenKOTView && (
+                          <button
                           onClick={() => {
                             onClose();
                             onOpenKOTView();
@@ -4193,9 +4193,11 @@ export function AdminPortal({
                           <ExternalLink size={15} />
                           <span>Open Full Screen KOT Screen</span>
                         </button>
-                      )}
+                        )}
+                      </div>
                     </div>
 
+                    <>
                     {/* Table Filter Bar with Dropdown matching TableDetailView */}
                     <div
                       style={{
@@ -5402,6 +5404,7 @@ export function AdminPortal({
                         </>
                       );
                     })()}
+                    </>
                   </div>
                 )}
 

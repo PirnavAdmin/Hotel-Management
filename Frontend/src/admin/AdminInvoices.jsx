@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FileText,
   Search,
@@ -118,7 +118,7 @@ export function AdminInvoices({
   onUpdateInvoiceDiscount = null,
 }) {
   const [invoiceRecords, setInvoiceRecords] = useState([]);
-  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
   const [isRefreshingInvoices, setIsRefreshingInvoices] = useState(false);
   const [invoiceLoadError, setInvoiceLoadError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -162,6 +162,39 @@ export function AdminInvoices({
       setIsRefreshingInvoices(false);
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    const fetchInvoices = () => {
+      requestLiveInvoiceRecords()
+        .then(({ records, error }) => {
+          if (!active) return;
+          setInvoiceRecords(records);
+          setInvoiceLoadError(error);
+        })
+        .catch((error) => {
+          if (!active) return;
+          setInvoiceLoadError(error?.message || "Live invoices could not be loaded.");
+          setInvoiceRecords([]);
+        })
+        .finally(() => {
+          if (active) setIsLoadingInvoices(false);
+        });
+    };
+
+    fetchInvoices();
+    const handleUpdate = () => { if (active) fetchInvoices(); };
+    const handleStorage = (event) => {
+      if (event.key === "gourmet_pos_past_orders_v2_inr" && active) fetchInvoices();
+    };
+    window.addEventListener("avsr-invoices-updated", handleUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      active = false;
+      window.removeEventListener("avsr-invoices-updated", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   // Include locally synchronized POS settlements alongside live API invoices.
   // Takeaway checkouts are saved to the shared POS invoice history and may not

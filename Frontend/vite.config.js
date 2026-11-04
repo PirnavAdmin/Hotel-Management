@@ -162,8 +162,8 @@ const sendOtpEmail = async (email, otp, fullName = "Admin") => {
 function globalSyncPlugin() {
   let sseClients = [];
   const getDataFile = () => {
-    // Both Vite app roots share the repository root development database.
-    return path.resolve(import.meta.dirname || process.cwd(), "server-db.json");
+    // Vite commands run from Frontend/, which owns this runtime database.
+    return path.resolve(process.cwd(), "server-db.json");
   };
 
   const loadDb = () => {

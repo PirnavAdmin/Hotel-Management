@@ -1876,7 +1876,7 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-          if (i.isBarItem || i.isBarDrink) return i;
+          if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
           if (itemId) {
             return String(i.menuItemId ?? i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
@@ -3099,17 +3099,10 @@ export function App() {
                 menuItems={menuItems}
                 currentTheme={theme}
                 onChangeTheme={setTheme}
-                onBackToFloor={() => {
-                  setActiveView("tables");
-                  navigate("/");
-                }}
+                onBackToFloor={() => { setActiveView("tables"); navigate("/"); }}
                 onUpdateItemKotStatus={handleUpdateItemKotStatus}
                 onCompleteTableKot={handleCompleteTableKot}
-                onOpenTableOrder={(tableId) => {
-                  setSelectedTableId(tableId);
-                  setActiveView("order");
-                  navigate("/");
-                }}
+                onOpenTableOrder={(tableId) => { setSelectedTableId(tableId); setActiveView("order"); navigate("/"); }}
                 currentSession={kotSession}
                 onLogout={handleKotLogout}
               />
