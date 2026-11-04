@@ -33,15 +33,12 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))",
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
         if (!isOccupied && !isSelected) {
           e.currentTarget.style.transform = "translateY(-6px) scale(1.06)";
-          e.currentTarget.style.filter =
-            "drop-shadow(0 0 20px rgba(16, 185, 129, 0.95)) drop-shadow(0 10px 18px rgba(0,0,0,0.3))";
+          e.currentTarget.style.filter = "drop-shadow(0 6px 12px rgba(16, 185, 129, 0.4)) drop-shadow(0 3px 6px rgba(0,0,0,0.12))";
         }
       }}
       onMouseLeave={(e) => {
@@ -50,9 +47,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))";
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
       <svg width="60" height="80" viewBox="0 0 60 80" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -215,15 +210,12 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))",
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
         if (!isOccupied && !isSelected) {
           e.currentTarget.style.transform = "translateY(-6px) scale(1.06)";
-          e.currentTarget.style.filter =
-            "drop-shadow(0 0 20px rgba(16, 185, 129, 0.95)) drop-shadow(0 10px 18px rgba(0,0,0,0.3))";
+          e.currentTarget.style.filter = "drop-shadow(0 6px 12px rgba(16, 185, 129, 0.4)) drop-shadow(0 3px 6px rgba(0,0,0,0.12))";
         }
       }}
       onMouseLeave={(e) => {
@@ -232,9 +224,7 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))";
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
       <svg width="66" height="96" viewBox="0 0 66 96" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -387,15 +377,12 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))",
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
         if (!isOccupied && !isSelected) {
           e.currentTarget.style.transform = "translateY(-6px) scale(1.06)";
-          e.currentTarget.style.filter =
-            "drop-shadow(0 0 20px rgba(16, 185, 129, 0.95)) drop-shadow(0 10px 18px rgba(0,0,0,0.3))";
+          e.currentTarget.style.filter = "drop-shadow(0 6px 12px rgba(16, 185, 129, 0.4)) drop-shadow(0 3px 6px rgba(0,0,0,0.12))";
         }
       }}
       onMouseLeave={(e) => {
@@ -404,9 +391,7 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))";
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
       <svg
@@ -657,6 +642,236 @@ export function DynamicDiningTableComponent({ width, height, topCount, bottomCou
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+export function DiningRoomBackground() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        borderRadius: "16px",
+        pointerEvents: "none",
+        zIndex: 0,
+      }}
+    >
+      {/* 1. Upper Cream Wall (0% to 32%) */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "32%",
+          background: "#f7f4ea",
+        }}
+      />
+
+      {/* 2. Middle Mint/Sage Green Wainscot Strip (32% to 58%) */}
+      <div
+        style={{
+          position: "absolute",
+          top: "32%",
+          left: 0,
+          right: 0,
+          height: "26%",
+          background: "#d4e5df",
+          borderTop: "2px solid #c7dcd6",
+        }}
+      />
+
+      {/* 3. Bottom Wooden Floor (58% to 100%) */}
+      <div
+        style={{
+          position: "absolute",
+          top: "58%",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "#deb887",
+          borderTop: "2px solid #cfab7c",
+        }}
+      >
+        {/* Floor Plank Division Lines */}
+        <div
+          style={{
+            position: "absolute",
+            top: "36%",
+            left: 0,
+            right: 0,
+            height: "1px",
+            background: "rgba(180, 140, 95, 0.4)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: "70%",
+            left: 0,
+            right: 0,
+            height: "1px",
+            background: "rgba(180, 140, 95, 0.4)",
+          }}
+        />
+      </div>
+
+      {/* Left Window */}
+      <div
+        style={{
+          position: "absolute",
+          top: "16px",
+          left: "4%",
+          width: "82px",
+          height: "70px",
+          background: "#ffffff",
+          border: "4px solid #d3e4f2",
+          borderRadius: "4px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr",
+          gap: "4px",
+          padding: "3px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+      </div>
+
+      {/* Right Window */}
+      <div
+        style={{
+          position: "absolute",
+          top: "16px",
+          right: "4%",
+          width: "82px",
+          height: "70px",
+          background: "#ffffff",
+          border: "4px solid #d3e4f2",
+          borderRadius: "4px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr",
+          gap: "4px",
+          padding: "3px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+      </div>
+
+      {/* 3 Pendant Ceiling Lamps - Positioned neatly at top above chairs */}
+      {[31, 50, 69].map((xPct, idx) => (
+        <div
+          key={idx}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: `${xPct}%`,
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          {/* Short hanging cord so lamp remains high above chairs */}
+          <div
+            style={{
+              width: "2px",
+              height: "18px",
+              background: "#6e5847",
+            }}
+          />
+          {/* Amber Cone Lampshade */}
+          <div
+            style={{
+              width: "44px",
+              height: "22px",
+              background: "linear-gradient(180deg, #f7b733 0%, #ea9010 100%)",
+              clipPath: "polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%)",
+              boxShadow: "0 3px 6px rgba(234, 144, 16, 0.4)",
+            }}
+          />
+          {/* Gentle downward glow that terminates comfortably before chairs */}
+          <div
+            style={{
+              width: "70px",
+              height: "50px",
+              marginTop: "-1px",
+              background:
+                "linear-gradient(180deg, rgba(247, 183, 51, 0.28) 0%, rgba(247, 183, 51, 0) 100%)",
+              clipPath: "polygon(22% 0%, 78% 0%, 100% 100%, 0% 100%)",
+              filter: "blur(2px)",
+            }}
+          />
+        </div>
+      ))}
+
+      {/* Potted Plant on Bottom Left Floor */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "18px",
+          left: "3.5%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ position: "relative", width: "36px", height: "36px" }}>
+          <div
+            style={{
+              position: "absolute",
+              bottom: "2px",
+              left: "4px",
+              width: "16px",
+              height: "26px",
+              borderRadius: "50%",
+              background: "#3e8c56",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "4px",
+              left: "10px",
+              width: "16px",
+              height: "30px",
+              borderRadius: "50%",
+              background: "#4da066",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "2px",
+              right: "4px",
+              width: "16px",
+              height: "26px",
+              borderRadius: "50%",
+              background: "#3e8c56",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            width: "28px",
+            height: "18px",
+            background: "#c36c46",
+            borderRadius: "2px",
+            clipPath: "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -1172,14 +1387,10 @@ export function SelectSeatsModal({
           <div
             style={{
               flex: 1.5,
-              background: isLight
-                ? "radial-gradient(circle at 50% 50%, #fbf8f2 0%, #f1eae0 100%)"
-                : "radial-gradient(circle at 50% 50%, #151e2f 0%, #090e18 100%)",
+              background: "#f7f4ea",
               borderRadius: "16px",
-              border: isLight ? "1px solid #e5dccf" : "1px solid rgba(var(--surface-rgb),0.08)",
-              boxShadow: isLight
-                ? "inset 0 0 35px rgba(220, 205, 185, 0.45)"
-                : "inset 0 0 45px rgba(0, 0, 0, 0.65)",
+              border: "1.5px solid #dcd3c3",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)",
               padding: "1.75rem 1rem",
               display: "flex",
               flexDirection: "column",
@@ -1187,53 +1398,11 @@ export function SelectSeatsModal({
               justifyContent: "center",
               position: "relative",
               minHeight: "410px",
-              overflow: "auto",
+              overflow: "hidden",
             }}
           >
-            {/* Atmospheric Background Accents from Image 1 */}
-            <div
-              style={{
-                position: "absolute",
-                top: "22px",
-                left: "20%",
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                background: "#d96b34",
-                opacity: isLight ? 0.75 : 0.35,
-                filter: "blur(1px)",
-                pointerEvents: "none",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                top: "28px",
-                right: "20%",
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                background: "#dc7f48",
-                opacity: isLight ? 0.75 : 0.35,
-                filter: "blur(1px)",
-                pointerEvents: "none",
-              }}
-            />
-
-            {/* Ground Oval Glow / Rug from Image 1 */}
-            <div
-              style={{
-                position: "absolute",
-                width: `${dynamicTableWidth + 160}px`,
-                height: "320px",
-                borderRadius: "50%",
-                background: isLight
-                  ? "radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(243, 230, 212, 0.65) 60%, transparent 75%)"
-                  : "radial-gradient(ellipse at 50% 50%, rgba(246, 239, 227, 0.08) 0%, rgba(246, 239, 227, 0.02) 60%, transparent 75%)",
-                pointerEvents: "none",
-                transition: "width 0.35s ease",
-              }}
-            />
+            {/* Dining Room Background matching Image 1 */}
+            <DiningRoomBackground />
 
             {/* Interactive Dynamic Dining Cluster */}
             <div

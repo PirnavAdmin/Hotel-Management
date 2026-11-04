@@ -18,6 +18,13 @@
  *   or window.enablePosLogging() / window.disablePosLogging().
  */
 
+export const API_LOGGING_CONFIG = Object.freeze({
+  enabled: import.meta.env.VITE_API_LOGGING_ENABLED !== "false",
+  includeRequestData: import.meta.env.VITE_API_LOGGING_INCLUDE_REQUEST_DATA !== "false",
+  includeResponseData: import.meta.env.VITE_API_LOGGING_INCLUDE_RESPONSE_DATA !== "false",
+  maxDataChars: 12000,
+});
+
 const SENSITIVE_KEYS = new Set([
   "password",
   "newpassword",
@@ -47,6 +54,27 @@ const SENSITIVE_KEYS = new Set([
   "access_token",
   "refresh_token",
   "bearer",
+  "email",
+  "phone",
+  "phonenumber",
+  "mobile",
+  "name",
+  "customer",
+  "contact",
+  "fullname",
+  "firstname",
+  "lastname",
+  "customername",
+  "username",
+  "address",
+  "dateofbirth",
+  "dob",
+  "nationalid",
+  "aadhaar",
+  "pan",
+  "emailaddress",
+  "contactnumber",
+  "emergencycontact",
 ]);
 
 const SENSITIVE_HEADERS = new Set([
@@ -55,7 +83,77 @@ const SENSITIVE_HEADERS = new Set([
   "set-cookie",
   "x-api-key",
   "x-auth-token",
+  "x-access-token",
+  "x-refresh-token",
 ]);
+
+const normalizeSensitiveKey = (key) => String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
+const isSensitiveKey = (key) => {
+  const normalized = normalizeSensitiveKey(key);
+  return SENSITIVE_KEYS.has(normalized) ||
+    normalized.endsWith("password") ||
+    normalized.endsWith("token") ||
+    normalized.endsWith("secret") ||
+    normalized.endsWith("email") ||
+    normalized.endsWith("phone") ||
+    normalized.endsWith("mobile");
+};
+
+export function isApiLoggingEnabled() {
+  if (typeof window !== "undefined") {
+    if (typeof window.__API_LOGGING_ENABLED__ === "boolean") return window.__API_LOGGING_ENABLED__;
+    try {
+      const stored = window.localStorage?.getItem("API_LOGGING_ENABLED");
+      if (stored === "true" || stored === "1") return true;
+      if (stored === "false" || stored === "0") return false;
+    } catch {}
+  }
+  return API_LOGGING_CONFIG.enabled;
+}
+
+function safeApiLogData(value, include = true) {
+  if (!include || value === undefined) return undefined;
+  if (typeof value === "string" && value.length > API_LOGGING_CONFIG.maxDataChars) {
+    return "[omitted; " + value.length + " characters]";
+  }
+  if (value && typeof value === "object" &&
+      !(typeof FormData !== "undefined" && value instanceof FormData) &&
+      !(typeof URLSearchParams !== "undefined" && value instanceof URLSearchParams)) {
+    try {
+      const rawSize = JSON.stringify(value)?.length || 0;
+      if (rawSize > API_LOGGING_CONFIG.maxDataChars) return "[omitted; " + rawSize + " characters]";
+    } catch {}
+  }
+  const parsed = typeof value === "string" ? safeParseJson(value) : value;
+  const redacted = typeof parsed === "string" ? redactText(parsed) : redactSensitiveData(parsed);
+  let serialized;
+  try {
+    serialized = typeof redacted === "string" ? redacted : JSON.stringify(redacted);
+  } catch {
+    serialized = String(redacted);
+  }
+  if (serialized.length <= API_LOGGING_CONFIG.maxDataChars) return redacted;
+  return serialized.slice(0, API_LOGGING_CONFIG.maxDataChars) + "… [truncated; " + serialized.length + " characters]";
+}
+
+function redactUrl(url) {
+  try {
+    const parsed = new URL(String(url), typeof location !== "undefined" ? location.origin : "http://localhost");
+    parsed.searchParams.forEach((value, key) => {
+      parsed.searchParams.set(key, isSensitiveKey(key) ? "[REDACTED]" : redactText(value));
+    });
+    return parsed.href;
+  } catch {
+    return String(url || "").replace(/([?&](?:token|access_token|refresh_token|password|email|phone|mobile|otp)=)[^&]*/gi, "$1[REDACTED]");
+  }
+}
+
+function redactText(value) {
+  return String(value ?? "")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]")
+    .replace(/\b(?:\+?\d[\d ()-]{7,}\d)\b/g, "[REDACTED_PHONE]")
+    .replace(/((?:password|token|secret|authorization|otp|email|phone|mobile)\s*[:=]\s*)[^,;\s&]+/gi, "$1[REDACTED]");
+}
 
 /** Check if debugging/logging is enabled */
 export function isLoggingEnabled() {
@@ -77,6 +175,7 @@ if (typeof window !== "undefined") {
       window.localStorage?.setItem("DEBUG_LOGGING", "true");
     } catch {}
     window.__ENABLE_LOGS__ = true;
+    window.__API_LOGGING_ENABLED__ = true;
     console.log("%c[LOGGER] POS Debug Logging ENABLED across the application.", "color: #10b981; font-weight: bold; font-size: 1.1em;");
   };
   window.disablePosLogging = () => {
@@ -84,7 +183,18 @@ if (typeof window !== "undefined") {
       window.localStorage?.setItem("DEBUG_LOGGING", "false");
     } catch {}
     window.__ENABLE_LOGS__ = false;
+    window.__API_LOGGING_ENABLED__ = false;
     console.log("%c[LOGGER] POS Debug Logging DISABLED.", "color: #ef4444; font-weight: bold; font-size: 1.1em;");
+  };
+  window.enableApiLogging = () => {
+    try { window.localStorage?.setItem("API_LOGGING_ENABLED", "true"); } catch {}
+    window.__API_LOGGING_ENABLED__ = true;
+    console.info("[LOGGER] API logging enabled.");
+  };
+  window.disableApiLogging = () => {
+    try { window.localStorage?.setItem("API_LOGGING_ENABLED", "false"); } catch {}
+    window.__API_LOGGING_ENABLED__ = false;
+    console.info("[LOGGER] API logging disabled.");
   };
 }
 
@@ -105,10 +215,10 @@ export function redactSensitiveData(data, seen = new WeakSet()) {
   if (typeof FormData !== "undefined" && data instanceof FormData) {
     const redactedForm = {};
     for (const [key, val] of data.entries()) {
-      if (SENSITIVE_KEYS.has(key.toLowerCase())) {
+      if (isSensitiveKey(key)) {
         redactedForm[key] = "[REDACTED]";
       } else if (val instanceof File) {
-        redactedForm[key] = `[File: ${val.name} (${val.size} bytes, ${val.type})]`;
+        redactedForm[key] = `[File upload (${val.size} bytes, ${val.type})]`;
       } else {
         redactedForm[key] = val;
       }
@@ -120,15 +230,14 @@ export function redactSensitiveData(data, seen = new WeakSet()) {
   if (typeof URLSearchParams !== "undefined" && data instanceof URLSearchParams) {
     const redactedParams = {};
     for (const [key, val] of data.entries()) {
-      redactedParams[key] = SENSITIVE_KEYS.has(key.toLowerCase()) ? "[REDACTED]" : val;
+      redactedParams[key] = isSensitiveKey(key) ? "[REDACTED]" : redactText(val);
     }
     return redactedParams;
   }
 
   const redacted = {};
   for (const key of Object.keys(data)) {
-    const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEYS.has(lowerKey)) {
+    if (isSensitiveKey(key)) {
       redacted[key] = "[REDACTED]";
     } else {
       redacted[key] = redactSensitiveData(data[key], seen);
@@ -144,13 +253,13 @@ export function redactHeaders(headers) {
   try {
     if (typeof Headers !== "undefined" && headers instanceof Headers) {
       headers.forEach((value, key) => {
-        clean[key] = SENSITIVE_HEADERS.has(key.toLowerCase()) ? "[REDACTED]" : value;
+        clean[key] = SENSITIVE_HEADERS.has(key.toLowerCase()) || isSensitiveKey(key) ? "[REDACTED]" : value;
       });
       return clean;
     }
     if (typeof headers === "object") {
       for (const [key, value] of Object.entries(headers)) {
-        clean[key] = SENSITIVE_HEADERS.has(key.toLowerCase()) ? "[REDACTED]" : value;
+        clean[key] = SENSITIVE_HEADERS.has(key.toLowerCase()) || isSensitiveKey(key) ? "[REDACTED]" : redactText(value);
       }
       return clean;
     }
@@ -176,7 +285,7 @@ function safeParseJson(str) {
 
 /** Log outgoing API Request */
 export function logApiRequest({ method = "GET", url, headers, body, params, requestId, timestamp }) {
-  if (!isLoggingEnabled()) return;
+  if (!isApiLoggingEnabled()) return;
   try {
     const timeStr = timestamp || new Date().toLocaleTimeString();
     const cleanMethod = String(method).toUpperCase();
@@ -184,10 +293,11 @@ export function logApiRequest({ method = "GET", url, headers, body, params, requ
     let cleanBody = body;
     if (typeof body === "string") {
       const parsed = safeParseJson(body);
-      cleanBody = redactSensitiveData(parsed);
+      cleanBody = safeApiLogData(parsed, API_LOGGING_CONFIG.includeRequestData);
     } else if (body) {
-      cleanBody = redactSensitiveData(body);
+      cleanBody = safeApiLogData(body, API_LOGGING_CONFIG.includeRequestData);
     }
+    const cleanUrl = redactUrl(url);
 
     const badgeStyle = "background: #1e3a8a; color: #60a5fa; font-weight: 800; padding: 2px 6px; border-radius: 4px;";
     const methodStyle = "color: #38bdf8; font-weight: 900;";
@@ -195,15 +305,15 @@ export function logApiRequest({ method = "GET", url, headers, body, params, requ
     const metaStyle = "color: #94a3b8; font-weight: normal; font-size: 0.9em;";
 
     console.groupCollapsed(
-      `%c[API REQUEST]%c ${cleanMethod} %c${url} %c(${timeStr})`,
+      `%c[API REQUEST]%c ${cleanMethod} %c${cleanUrl} %c(${timeStr})`,
       badgeStyle,
       methodStyle,
       urlStyle,
       metaStyle
     );
 
-    console.log("%cEndpoint:", "color: #94a3b8; font-weight: bold;", url);
-    console.log("%cMethod:", "color: #94a3b8; font-weight: bold;", cleanMethod);
+    console.info("%cAPI:", "color: #94a3b8; font-weight: bold;", cleanUrl);
+    console.info("%cMethod:", "color: #94a3b8; font-weight: bold;", cleanMethod);
     console.log("%cTimestamp:", "color: #94a3b8; font-weight: bold;", new Date().toISOString());
     if (requestId) {
       console.log("%cRequest ID:", "color: #94a3b8; font-weight: bold;", requestId);
@@ -225,8 +335,8 @@ export function logApiRequest({ method = "GET", url, headers, body, params, requ
 }
 
 /** Log incoming API Response */
-export function logApiResponse({ method = "GET", url, status = 200, data, durationMs, requestId, timestamp }) {
-  if (!isLoggingEnabled()) return;
+export function logApiResponse({ method = "GET", url, status = 200, statusText = "", message = "", data, durationMs, requestId, timestamp }) {
+  if (!isApiLoggingEnabled()) return;
   try {
     const timeStr = timestamp || new Date().toLocaleTimeString();
     const cleanMethod = String(method).toUpperCase();
@@ -240,10 +350,11 @@ export function logApiResponse({ method = "GET", url, status = 200, data, durati
     const durationStyle = "color: #fbbf24; font-weight: 700;";
     const metaStyle = "color: #94a3b8; font-weight: normal; font-size: 0.9em;";
 
-    const cleanData = redactSensitiveData(data);
+    const cleanData = safeApiLogData(data, API_LOGGING_CONFIG.includeResponseData);
+    const cleanUrl = redactUrl(url);
 
     console.groupCollapsed(
-      `%c[API RESPONSE]%c ${status} %c${cleanMethod} ${url} %c${durationMs != null ? `${durationMs}ms` : ""} %c(${timeStr})`,
+      `%c[API RESPONSE]%c ${status} %c${cleanMethod} ${cleanUrl} %c${durationMs != null ? `${durationMs}ms` : ""} %c(${timeStr})`,
       badgeStyle,
       statusStyle,
       urlStyle,
@@ -251,8 +362,9 @@ export function logApiResponse({ method = "GET", url, status = 200, data, durati
       metaStyle
     );
 
-    console.log("%cStatus Code:", "color: #94a3b8; font-weight: bold;", status);
-    console.log("%cDuration:", "color: #94a3b8; font-weight: bold;", `${durationMs}ms`);
+    console.info("%cStatus Code:", "color: #94a3b8; font-weight: bold;", status);
+    console.info("%cMessage:", "color: #94a3b8; font-weight: bold;", redactText(message || statusText || "Success"));
+    console.info("%cDuration:", "color: #94a3b8; font-weight: bold;", `${durationMs}ms`);
     console.log("%cTimestamp:", "color: #94a3b8; font-weight: bold;", new Date().toISOString());
     if (requestId) {
       console.log("%cRequest ID:", "color: #94a3b8; font-weight: bold;", requestId);
@@ -268,8 +380,8 @@ export function logApiResponse({ method = "GET", url, status = 200, data, durati
 }
 
 /** Log API Error or Failed Request */
-export function logApiError({ method = "GET", url, status, error, durationMs, requestId, rawResponse, stack, timestamp }) {
-  if (!isLoggingEnabled()) return;
+export function logApiError({ method = "GET", url, status, error, durationMs, requestId, rawResponse, body, networkDetails, stack, timestamp }) {
+  if (!isApiLoggingEnabled()) return;
   try {
     const timeStr = timestamp || new Date().toLocaleTimeString();
     const cleanMethod = String(method).toUpperCase();
@@ -280,10 +392,15 @@ export function logApiError({ method = "GET", url, status, error, durationMs, re
     const urlStyle = "color: #fca5a5; font-weight: 600;";
     const metaStyle = "color: #cbd5e1; font-weight: normal; font-size: 0.9em;";
 
-    const cleanError = typeof error === "object" ? redactSensitiveData(error) : error;
+    const cleanError = error instanceof Error
+      ? redactText(error.message)
+      : safeApiLogData(error, true);
+    const cleanBody = safeApiLogData(body, API_LOGGING_CONFIG.includeRequestData);
+    const cleanResponse = safeApiLogData(rawResponse, API_LOGGING_CONFIG.includeResponseData);
+    const cleanUrl = redactUrl(url);
 
     console.groupCollapsed(
-      `%c[API ERROR]%c ${displayStatus} %c${cleanMethod} ${url} %c(${timeStr})`,
+      `%c[API ERROR]%c ${displayStatus} %c${cleanMethod} ${cleanUrl} %c(${timeStr})`,
       badgeStyle,
       statusStyle,
       urlStyle,
@@ -295,13 +412,20 @@ export function logApiError({ method = "GET", url, status, error, durationMs, re
     if (durationMs != null) {
       console.log("%cDuration:", "color: #94a3b8; font-weight: bold;", `${durationMs}ms`);
     }
-    console.log("%cEndpoint:", "color: #94a3b8; font-weight: bold;", url);
+    console.warn("%cMessage:", "color: #94a3b8; font-weight: bold;", cleanError);
+    console.log("%cEndpoint:", "color: #94a3b8; font-weight: bold;", cleanUrl);
     console.log("%cTimestamp:", "color: #94a3b8; font-weight: bold;", new Date().toISOString());
     if (requestId) {
       console.log("%cRequest ID:", "color: #94a3b8; font-weight: bold;", requestId);
     }
-    if (rawResponse) {
-      console.log("%cRaw Error Response:", "color: #94a3b8; font-weight: bold;", rawResponse);
+    if (cleanResponse !== undefined && cleanResponse !== null) {
+      console.log("%cBackend Error Response (Redacted):", "color: #94a3b8; font-weight: bold;", cleanResponse);
+    }
+    if (cleanBody !== undefined && cleanBody !== null) {
+      console.log("%cRequest Payload (Redacted):", "color: #94a3b8; font-weight: bold;", cleanBody);
+    }
+    if (networkDetails) {
+      console.log("%cNetwork Details:", "color: #94a3b8; font-weight: bold;", safeApiLogData(networkDetails));
     }
     if (stack) {
       console.log("%cStack Trace:", "color: #94a3b8; font-weight: bold;", stack);
@@ -438,6 +562,54 @@ export function logAppError(source, error, errorInfo = null) {
 // -------------------------------------------------------------
 
 let isInterceptorInstalled = false;
+let isEventSourceInterceptorInstalled = false;
+
+export function installGlobalEventSourceInterceptor() {
+  if (typeof window === "undefined" || !window.EventSource) return;
+  if (isEventSourceInterceptorInstalled || window.EventSource.__apiLoggingInterceptor === true) return;
+  isEventSourceInterceptorInstalled = true;
+
+  const NativeEventSource = window.EventSource;
+  window.EventSource = new Proxy(NativeEventSource, {
+    construct(target, args) {
+      const [url] = args;
+      const startedAt = performance.now();
+      const requestId = "sse_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
+      if (isApiLoggingEnabled()) {
+        logApiRequest({ method: "GET", url, requestId, timestamp: new Date().toISOString() });
+      }
+      const source = Reflect.construct(target, args, target);
+      let connectionLogged = false;
+      source.addEventListener("open", () => {
+        if (connectionLogged) return;
+        connectionLogged = true;
+        logApiResponse({
+          method: "GET",
+          url,
+          status: 200,
+          statusText: "Connected",
+          message: "Event stream connected",
+          durationMs: Math.round(performance.now() - startedAt),
+          requestId,
+        });
+      }, { once: true });
+      source.addEventListener("error", () => {
+        if (connectionLogged) return;
+        connectionLogged = true;
+        logApiError({
+          method: "GET",
+          url,
+          status: "EVENT_STREAM_ERROR",
+          error: "Event stream connection failed",
+          durationMs: Math.round(performance.now() - startedAt),
+          requestId,
+        });
+      }, { once: true });
+      return source;
+    },
+  });
+  window.EventSource.__apiLoggingInterceptor = true;
+}
 
 /**
  * Transparently wraps window.fetch so that every HTTP call across all components,
@@ -445,7 +617,7 @@ let isInterceptorInstalled = false;
  */
 export function installGlobalFetchInterceptor() {
   if (typeof window === "undefined" || !window.fetch) return;
-  if (isInterceptorInstalled) return;
+  if (isInterceptorInstalled || window.fetch.__apiLoggingInterceptor === true) return;
   isInterceptorInstalled = true;
 
   const originalFetch = window.fetch;
@@ -453,7 +625,7 @@ export function installGlobalFetchInterceptor() {
   window.fetch = async function interceptedFetch(input, init = {}) {
     const startTime = performance.now();
     const requestId = `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-    const timestamp = new Date().toLocaleTimeString();
+    const timestamp = new Date().toISOString();
 
     // Determine target URL and HTTP method
     let url = typeof input === "string" ? input : (input instanceof Request ? input.url : String(input));
@@ -469,12 +641,29 @@ export function installGlobalFetchInterceptor() {
     let headers = init?.headers || (input instanceof Request ? input.headers : {});
 
     // Extract body
-    let body = init?.body || (input instanceof Request ? input.body : null);
+    let body = init?.body ?? null;
+    if (body == null && input instanceof Request && input.body) {
+      try {
+        const requestCopy = input.clone();
+        const contentType = requestCopy.headers.get("content-type") || "";
+        if (contentType.includes("application/json") || contentType.includes("text/")) {
+          body = await requestCopy.text();
+        } else {
+          body = `[${contentType || "Request body"} omitted]`;
+        }
+      } catch {
+        body = "[Request body unavailable]";
+      }
+    }
 
     // Check if this request is already handled by custom manual logger flag
-    const skipLogging = init?.headers?.["x-skip-logging"] || (headers instanceof Headers && headers.get("x-skip-logging"));
+    const skipLogging = Boolean(
+      init?.headers?.["x-skip-logging"] ||
+      init?.headers?.["X-Skip-Logging"] ||
+      (headers instanceof Headers && headers.get("x-skip-logging"))
+    );
 
-    if (!skipLogging && isLoggingEnabled()) {
+    if (!skipLogging && isApiLoggingEnabled()) {
       logApiRequest({
         method,
         url,
@@ -489,7 +678,7 @@ export function installGlobalFetchInterceptor() {
       const response = await originalFetch.apply(this, arguments);
       const durationMs = Math.round(performance.now() - startTime);
 
-      if (!skipLogging && isLoggingEnabled()) {
+      if (!skipLogging && isApiLoggingEnabled()) {
         // Clone response to safely inspect body without locking the stream for caller
         try {
           const clone = response.clone();
@@ -498,11 +687,13 @@ export function installGlobalFetchInterceptor() {
           if (contentType.includes("application/json") || contentType.includes("text/")) {
             clone.text().then((text) => {
               const data = safeParseJson(text);
-              if (response.ok) {
+              if (response.ok && data?.success !== false) {
                 logApiResponse({
                   method,
                   url,
                   status: response.status,
+                  statusText: response.statusText,
+                  message: data?.message || data?.data?.message || response.statusText || "Success",
                   data,
                   durationMs,
                   requestId,
@@ -513,18 +704,19 @@ export function installGlobalFetchInterceptor() {
                   method,
                   url,
                   status: response.status,
-                  error: data?.message || data?.error || data || response.statusText,
+                  error: data?.message || data?.error || data || response.statusText || "API request failed",
                   durationMs,
                   requestId,
-                  rawResponse: text,
+                  rawResponse: data ?? text,
+                  body,
                   timestamp: new Date().toLocaleTimeString(),
                 });
               }
             }).catch(() => {
               if (response.ok) {
-                logApiResponse({ method, url, status: response.status, durationMs, requestId });
+                logApiResponse({ method, url, status: response.status, statusText: response.statusText, durationMs, requestId });
               } else {
-                logApiError({ method, url, status: response.status, error: response.statusText, durationMs, requestId });
+                logApiError({ method, url, status: response.status, error: response.statusText, durationMs, requestId, body });
               }
             });
           } else {
@@ -534,6 +726,7 @@ export function installGlobalFetchInterceptor() {
                 method,
                 url,
                 status: response.status,
+                statusText: response.statusText,
                 data: `[Binary/Blob: ${contentType || "unknown"}]`,
                 durationMs,
                 requestId,
@@ -543,17 +736,19 @@ export function installGlobalFetchInterceptor() {
                 method,
                 url,
                 status: response.status,
-                error: `HTTP Error ${response.status} ${response.statusText}`,
+                error: `HTTP Error ${response.status} ${redactText(response.statusText)}`,
                 durationMs,
                 requestId,
+                rawResponse: undefined,
+                body,
               });
             }
           }
         } catch {
           if (response.ok) {
-            logApiResponse({ method, url, status: response.status, durationMs, requestId });
+            logApiResponse({ method, url, status: response.status, statusText: response.statusText, durationMs, requestId });
           } else {
-            logApiError({ method, url, status: response.status, error: response.statusText, durationMs, requestId });
+            logApiError({ method, url, status: response.status, error: response.statusText, durationMs, requestId, body });
           }
         }
       }
@@ -561,21 +756,27 @@ export function installGlobalFetchInterceptor() {
       return response;
     } catch (networkError) {
       const durationMs = Math.round(performance.now() - startTime);
-      if (!skipLogging && isLoggingEnabled()) {
+      if (!skipLogging && isApiLoggingEnabled()) {
         logApiError({
           method,
           url,
-          status: "NETWORK_ERROR",
+          status: networkError?.name === "AbortError" ? "ABORTED_OR_TIMEOUT" : "NETWORK_ERROR",
           error: networkError.message || "Failed to fetch / Connection refused",
           durationMs,
           requestId,
-          stack: networkError.stack,
+          body,
+          networkDetails: {
+            name: networkError?.name,
+            message: networkError?.message,
+            cause: networkError?.cause?.message,
+          },
           timestamp: new Date().toLocaleTimeString(),
         });
       }
       throw networkError;
     }
   };
+  window.fetch.__apiLoggingInterceptor = true;
 }
 
 // -------------------------------------------------------------
@@ -605,6 +806,8 @@ export function installGlobalErrorHandlers() {
 }
 
 export default {
+  API_LOGGING_CONFIG,
+  isApiLoggingEnabled,
   isLoggingEnabled,
   redactSensitiveData,
   redactHeaders,
@@ -617,5 +820,6 @@ export default {
   logAppState,
   logAppError,
   installGlobalFetchInterceptor,
+  installGlobalEventSourceInterceptor,
   installGlobalErrorHandlers,
 };

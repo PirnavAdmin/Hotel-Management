@@ -1,31 +1,31 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FileText,
   Search,
   Calendar,
-  CheckCircle2,
   Eye,
   Pencil,
   Save,
   X,
-  Printer,
-  CreditCard,
   Smartphone,
   Banknote,
-  Receipt,
+  CreditCard,
   ChevronLeft,
   ChevronRight,
   IndianRupee,
-  TrendingUp,
+  RefreshCw,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ReceiptModal } from "../user/ReceiptModal";
+import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
-  sortOrdersBySettlementTime,
   normalizePaymentMethod,
   parseOrderToYMD,
 } from "../utils/orderDedupe";
+import {
+  requestLiveInvoiceRecords,
+} from "../utils/liveInvoiceData";
 
 const localDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
@@ -49,6 +49,27 @@ const localWeekEndValue = (date = new Date()) => {
 };
 
 const invoiceDateKey = (order) => parseOrderToYMD(order);
+const getInvoicePaymentMethod = (order) => {
+  const latestPayment = Array.isArray(order?.payments)
+    ? order.payments[order.payments.length - 1]
+    : null;
+  return (
+    order?.paymentMethod ||
+    order?.PaymentMethod ||
+    order?.paymentMode ||
+    order?.PaymentMode ||
+    order?.paymentType ||
+    latestPayment?.paymentMode ||
+    latestPayment?.PaymentMode ||
+    latestPayment?.mode ||
+    latestPayment?.Mode ||
+    ""
+  );
+};
+const getInvoicePaymentMode = (order) => {
+  const method = getInvoicePaymentMethod(order);
+  return method ? normalizePaymentMethod(method) : "unknown";
+};
 
 const invoiceDisplayDate = (order) => {
   const dateKey = invoiceDateKey(order);
@@ -84,19 +105,22 @@ const formatInvoiceTime = (value) => {
   }
   const parsed = new Date(text);
   return Number.isNaN(parsed.getTime())
-    ? text || "12:00 PM"
+    ? text || "—"
     : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 
+
 export function AdminInvoices({
   pastOrders = [],
+  preferPastOrders = false,
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
 }) {
-  const allOrders = sortOrdersBySettlementTime(
-      dedupeOrders(Array.isArray(pastOrders) ? pastOrders : []),
-  );
+  const [invoiceRecords, setInvoiceRecords] = useState([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
+  const [isRefreshingInvoices, setIsRefreshingInvoices] = useState(false);
+  const [invoiceLoadError, setInvoiceLoadError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
@@ -121,6 +145,68 @@ export function AdminInvoices({
   const [discountDraft, setDiscountDraft] = useState("0");
   const [editError, setEditError] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const refreshInvoices = async () => {
+    setIsLoadingInvoices(true);
+    setIsRefreshingInvoices(true);
+    setInvoiceLoadError("");
+    try {
+      const { records, error } = await requestLiveInvoiceRecords();
+      setInvoiceRecords(records);
+      setInvoiceLoadError(error);
+    } catch (error) {
+      setInvoiceLoadError(error?.message || "Live invoices could not be loaded.");
+      setInvoiceRecords([]);
+    } finally {
+      setIsLoadingInvoices(false);
+      setIsRefreshingInvoices(false);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    const fetchInvoices = () => {
+      requestLiveInvoiceRecords()
+        .then(({ records, error }) => {
+          if (!active) return;
+          setInvoiceRecords(records);
+          setInvoiceLoadError(error);
+        })
+        .catch((error) => {
+          if (!active) return;
+          setInvoiceLoadError(error?.message || "Live invoices could not be loaded.");
+          setInvoiceRecords([]);
+        })
+        .finally(() => {
+          if (active) setIsLoadingInvoices(false);
+        });
+    };
+
+    fetchInvoices();
+    const handleUpdate = () => {
+      if (active) fetchInvoices();
+    };
+    const handleStorage = (event) => {
+      if (event.key === "gourmet_pos_past_orders_v2_inr" && active) fetchInvoices();
+    };
+
+    window.addEventListener("avsr-invoices-updated", handleUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      active = false;
+      window.removeEventListener("avsr-invoices-updated", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
+  // Include locally synchronized POS settlements alongside live API invoices.
+  // Takeaway checkouts are saved to the shared POS invoice history and may not
+  // have a table-backed API order record, so choosing only API data hid them here.
+  const allOrders = dedupeOrders(
+    preferPastOrders || invoiceLoadError
+      ? pastOrders
+      : [...pastOrders, ...invoiceRecords],
+  );
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);
@@ -171,13 +257,14 @@ export function AdminInvoices({
         (!customFromDate || orderDate >= customFromDate) &&
         (!customToDate || orderDate <= customToDate));
     const matchesPayment = paymentFilter === "all" ||
-      normalizePaymentMethod(order) === paymentFilter;
+      getInvoicePaymentMode(order) === paymentFilter;
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
-      (order.invoiceNo || "").toLowerCase().includes(query) ||
-      (order.tableName || "").toLowerCase().includes(query) ||
-      (order.server || "").toLowerCase().includes(query);
+      String(order.invoiceNo || "").toLowerCase().includes(query) ||
+      String(order.id ?? "").toLowerCase().includes(query) ||
+      String(order.tableName || "").toLowerCase().includes(query) ||
+      String(order.server || "").toLowerCase().includes(query);
 
     return matchesDate && matchesPayment && matchesSearch;
   });
@@ -194,32 +281,24 @@ export function AdminInvoices({
   );
 
   const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0),
+    (sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
     0,
   );
 
   const upiTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o) === "upi")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
+    .filter((o) => getInvoicePaymentMode(o) === "upi")
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cashTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o) === "cash")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
-
-  const cardTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o) === "card")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? 0) || 0), 0);
+    .filter((o) => getInvoicePaymentMode(o) === "cash")
+    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
 
   const cashOrdersCount = filteredOrders.filter(
-    (o) => normalizePaymentMethod(o) === "cash",
+    (o) => getInvoicePaymentMode(o) === "cash",
   ).length;
 
   const upiOrdersCount = filteredOrders.filter(
-    (o) => normalizePaymentMethod(o) === "upi",
-  ).length;
-
-  const cardOrdersCount = filteredOrders.filter(
-    (o) => normalizePaymentMethod(o) === "card",
+    (o) => getInvoicePaymentMode(o) === "upi",
   ).length;
 
   return (
@@ -304,56 +383,71 @@ export function AdminInvoices({
             </div>
           </div>
 
-          {/* Right Controls: Search */}
-          <div
-            style={{
-              position: "relative",
-              width: "280px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <Search
-              size={16}
-              color="var(--text-dim)"
+          {/* Right Controls: Search and live refresh */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div
               style={{
-                position: "absolute",
-                left: "12px",
-                pointerEvents: "none",
+                position: "relative",
+                width: "280px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
               }}
-            />
-            <input
-              type="text"
-              placeholder="Search invoice #, table, waiter..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              style={{
-                width: "100%",
-                height: "100%",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-card)",
-                borderRadius: "9px",
-                padding: "0 12px 0 36px",
-                color: "var(--text-main)",
-                fontSize: "0.82rem",
-                outline: "none",
-              }}
-            />
+            >
+              <Search
+                size={16}
+                color="var(--text-dim)"
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search invoice #, table, waiter..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "9px",
+                  padding: "0 12px 0 36px",
+                  color: "var(--text-main)",
+                  fontSize: "0.82rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+            <button type="button" onClick={refreshInvoices} disabled={isLoadingInvoices} aria-label="Refresh live invoices" title="Refresh live invoices" style={{ height: "40px", display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0 0.75rem", borderRadius: "9px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", cursor: isLoadingInvoices ? "wait" : "pointer" }}>
+              <RefreshCw size={14} style={{ animation: isRefreshingInvoices ? "spin 1s linear infinite" : "none" }} />
+              Refresh
+            </button>
           </div>
         </div>
+
+        {invoiceLoadError && (
+          <div role="alert" style={{ padding: "0.7rem 0.9rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", background: "rgba(239, 68, 68, 0.08)", color: "var(--danger)", fontSize: "0.8rem" }}>
+            {invoiceLoadError}
+          </div>
+        )}
+        {isLoadingInvoices && invoiceRecords.length === 0 && (
+          <div style={{ marginBottom: "1rem" }}>
+            <SkeletonDashboard cards={3} />
+            <SkeletonTable rows={5} columns={6} />
+          </div>
+        )}
 
         {/* Invoices Overview Summary Bar (Total Revenue & Total Invoices List) */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              cardTotal > 0
-                ? "repeat(auto-fit, minmax(200px, 1fr))"
-                : "repeat(auto-fit, minmax(215px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             gap: "0.75rem",
             marginBottom: "1.1rem",
           }}
@@ -726,97 +820,6 @@ export function AdminInvoices({
               <Smartphone size={18} color="var(--info)" />
             </div>
           </div>
-
-          {/* Card 5: Card Revenue (if any) */}
-          {cardTotal > 0 && (
-            <div
-              onClick={() => {
-                setPaymentFilter(paymentFilter === "card" ? "all" : "card");
-                setCurrentPage(1);
-              }}
-              style={{
-                background:
-                  paymentFilter === "card"
-                    ? "rgba(192, 132, 252, 0.12)"
-                    : "var(--bg-tertiary)",
-                border:
-                  paymentFilter === "card"
-                    ? "1px solid #c084fc"
-                    : "1px solid var(--border-subtle)",
-                borderRadius: "12px",
-                padding: "0.85rem 1rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                boxShadow:
-                  paymentFilter === "card"
-                    ? "0 2px 10px rgba(192, 132, 252, 0.22)"
-                    : "none",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.borderColor = "var(--accent-purple)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.borderColor =
-                  paymentFilter === "card" ? "#c084fc" : "var(--border-subtle)";
-              }}
-              title="Click to filter by Card payments"
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.68rem",
-                    color: "var(--text-muted)",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Card Collected
-                </div>
-                <div
-                  style={{
-                    fontSize: "1.35rem",
-                    fontWeight: 800,
-                    color: "var(--accent-purple)",
-                    marginTop: "2px",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {formatCurrency(cardTotal)}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.68rem",
-                    color: "var(--text-dim)",
-                    marginTop: "3px",
-                  }}
-                >
-                  {cardOrdersCount}{" "}
-                  {cardOrdersCount === 1 ? "card invoice" : "card invoices"}
-                </div>
-              </div>
-              <div
-                style={{
-                  width: "38px",
-                  height: "38px",
-                  borderRadius: "10px",
-                  background: "rgba(192, 132, 252, 0.15)",
-                  border: "1px solid rgba(192, 132, 252, 0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <CreditCard size={18} color="var(--accent-purple)" />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Invoice date filters */}
@@ -936,7 +939,7 @@ export function AdminInvoices({
         >
           {/* Payment Method Filter Pills */}
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            {["all", "upi", "cash", "card"].map((mode) => (
+            {["all", "upi", "cash"].map((mode) => (
               <button
                 key={mode}
                 onClick={() => {
@@ -992,14 +995,7 @@ export function AdminInvoices({
                 {formatCurrency(cashTotal)}
               </strong>
             </span>
-            {cardTotal > 0 && (
-              <span>
-                Card:{" "}
-                <strong style={{ color: "var(--accent-purple)" }}>
-                  {formatCurrency(cardTotal)}
-                </strong>
-              </span>
-            )}
+
           </div>
         </div>
 
@@ -1043,7 +1039,9 @@ export function AdminInvoices({
             <tbody>
               {paginatedOrders.map((order, idx) => {
                 const orderIndex = pageStart + idx;
-                const pMode = normalizePaymentMethod(order);
+                const paymentMethod = getInvoicePaymentMethod(order);
+                const paymentLabel = paymentMethod ? String(paymentMethod).trim() : "—";
+                const pMode = paymentMethod ? normalizePaymentMethod(paymentMethod) : "unknown";
                 const itemCount = (order.items || []).reduce(
                   (sum, i) => sum + Number(i.quantity || 1),
                   0,
@@ -1051,7 +1049,7 @@ export function AdminInvoices({
 
                 return (
                   <tr
-                    key={order.invoiceNo || orderIndex}
+                    key={order.id ?? order.orderId ?? order.invoiceId ?? order.invoiceNo ?? orderIndex}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
                       transition: "background 0.15s ease",
@@ -1074,14 +1072,14 @@ export function AdminInvoices({
                           fontSize: "0.88rem",
                         }}
                       >
-                        {order.invoiceNo || `INV-${1000 + orderIndex}`}
+                        {order.invoiceNo || (order.id != null ? `Order #${order.id}` : "—")}
                       </span>
                     </td>
 
                     {/* Table & Server */}
                     <td style={{ padding: "1rem" }}>
                       <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
-                        {order.tableName || `Table ${order.tableId || 1}`}
+                        {order.tableName || (order.tableId != null ? `Table ${order.tableId}` : "—")}
                       </div>
                       <div
                         style={{
@@ -1090,7 +1088,7 @@ export function AdminInvoices({
                           marginTop: "2px",
                         }}
                       >
-                        Waiter: {order.server || "Staff"}
+                        Waiter: {order.server || "—"}
                       </div>
                     </td>
 
@@ -1123,7 +1121,7 @@ export function AdminInvoices({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {(order.items || []).map((i) => i.name).join(", ")}
+                        {(order.items || []).map((i) => i.name).filter(Boolean).join(", ") || "—"}
                       </div>
                     </td>
 
@@ -1145,14 +1143,14 @@ export function AdminInvoices({
                           }}
                         >
                           <Smartphone size={11} />
-                          UPI
+                          {paymentLabel}
                         </span>
-                      ) : pMode === "card" ? (
+                      )  : (
                         <span
                           style={{
-                            background: "rgba(168, 85, 247, 0.12)",
-                            border: "1px solid rgba(168, 85, 247, 0.3)",
-                            color: "var(--accent-purple)",
+                            background: pMode === "card" ? "rgba(99, 102, 241, 0.12)" : "rgba(16, 185, 129, 0.12)",
+                            border: pMode === "card" ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid rgba(16, 185, 129, 0.3)",
+                            color: pMode === "card" ? "var(--accent-indigo)" : "var(--success)",
                             borderRadius: "20px",
                             padding: "3px 10px",
                             fontSize: "0.72rem",
@@ -1162,26 +1160,8 @@ export function AdminInvoices({
                             gap: "5px",
                           }}
                         >
-                          <CreditCard size={11} />
-                          Card
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            background: "rgba(16, 185, 129, 0.12)",
-                            border: "1px solid rgba(16, 185, 129, 0.3)",
-                            color: "var(--success)",
-                            borderRadius: "20px",
-                            padding: "3px 10px",
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                          }}
-                        >
-                          <Banknote size={11} />
-                          Cash
+                          {pMode === "card" ? <CreditCard size={11} /> : pMode === "cash" ? <Banknote size={11} /> : null}
+                          {paymentLabel}
                         </span>
                       )}
                     </td>
@@ -1195,7 +1175,7 @@ export function AdminInvoices({
                         fontSize: "0.95rem",
                       }}
                     >
-                      {formatCurrency(order.grandTotal)}
+                      {formatCurrency(order.grandTotal ?? order.totalAmount ?? order.total ?? 0)}
                     </td>
 
                     {/* Action */}
@@ -1475,7 +1455,7 @@ export function AdminInvoices({
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Edit invoice discount</h3>
                 <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                  {editingInvoice.invoiceNo || `Order #${editingInvoice.id}`}
+                  {editingInvoice.invoiceNo || (editingInvoice.id != null ? `Order #${editingInvoice.id}` : "—")}
                 </div>
               </div>
               <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -1486,7 +1466,7 @@ export function AdminInvoices({
               {(Array.isArray(editingInvoice.items) ? editingInvoice.items : []).map((item, index) => {
                 const quantity = Number(item.quantity ?? item.qty) || 1;
                 const unitPrice = Number(item.price ?? item.unitPrice) || 0;
-                return <div key={item.id ?? `${item.name || item.dishName}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", padding: "0.32rem 0", color: "var(--text-main)", fontSize: "0.75rem" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{item.name || item.dishName || "Item"} × {quantity} · {formatCurrency(unitPrice)}</span><strong style={{ whiteSpace: "nowrap" }}>{formatCurrency(quantity * unitPrice)}</strong></div>;
+                return <div key={item.id ?? `${item.name || item.dishName}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", padding: "0.32rem 0", color: "var(--text-main)", fontSize: "0.75rem" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{item.name || item.dishName || "—"} × {quantity} · {formatCurrency(unitPrice)}</span><strong style={{ whiteSpace: "nowrap" }}>{formatCurrency(quantity * unitPrice)}</strong></div>;
               })}
               <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border-card)", marginTop: "0.35rem", paddingTop: "0.45rem", fontSize: "0.75rem", fontWeight: 800 }}><span>Items subtotal</span><span>{formatCurrency((Array.isArray(editingInvoice.items) ? editingInvoice.items : []).reduce((sum, item) => sum + (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity ?? item.qty) || 1), 0))}</span></div>
             </div>

@@ -2,16 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Banknote, 
-  CreditCard, 
-  QrCode, 
+QrCode, 
   CheckCircle2, 
   Receipt,
   Calendar,
   Clock,
   Users,
   Building2,
-  Wallet,
-  Zap,
+Zap,
   ShieldCheck,
   ArrowLeft
 } from 'lucide-react';
@@ -19,18 +17,17 @@ import { sounds } from '../utils/audio';
 import { logFormSubmission, logUserAction } from '../utils/logger';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
-import paymentQrImage from '../assets/payment-qr.png';
 
 export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment }) {
-  // 'upi' | 'cash' | 'card' | 'wallet'
+  // 'upi' | 'cash'
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [cashTendered, setCashTendered] = useState("0.00");
   const [isDecimalMode, setIsDecimalMode] = useState(false);
   const [decimalDigits, setDecimalDigits] = useState("");
   const isAllSelectedRef = useRef(false);
   const cashInputRef = useRef(null);
-  const [selectedWallet, setSelectedWallet] = useState('paytm');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingError, setProcessingError] = useState("");
 
   const [currentTheme, setCurrentTheme] = useState(() => {
     return (
@@ -94,10 +91,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         }
       }
     } catch {}
-    return {
-      configuredQrs: [{ id: "default", label: "Main Counter UPI", image: paymentQrImage, active: true }],
-      initialIndex: 0,
-    };
+    return { configuredQrs: [], initialIndex: 0 };
   };
 
   const [qrConfig, setQrConfig] = useState(() => getQrConfig());
@@ -119,6 +113,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
   const configuredQrs = qrConfig.configuredQrs;
   const activeQr = configuredQrs[selectedQrIndex] || configuredQrs[0];
+  const upiUnavailable = paymentMethod === "upi" && !activeQr?.image;
 
   const handleSelectQr = (idx) => {
     setSelectedQrIndex(idx);
@@ -174,15 +169,17 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
   const handleSettle = () => {
     if (hasInvalidItems) return;
+    setProcessingError("");
     setIsProcessing(true);
     sounds.playSuccess();
 
-    setTimeout(() => {
-      onConfirmPayment({
+    setTimeout(async () => {
+      try {
+        const result = await onConfirmPayment({
         tableId: table.id,
         tableName: table.name,
         section: table.section,
-        server: table.server || 'Srija Chepuri',
+        server: table.server || "",
         guests:
           (Number(table.guests) > 0 ? Number(table.guests) : null) ??
           (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
@@ -214,7 +211,19 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         date: getTodayDateString(),
         settledDate: getBusinessDayStart().toISOString().slice(0, 10),
         invoiceNo: getNextInvoiceNumber()
-      });
+        });
+        if (result === false) {
+          setProcessingError("Payment was not completed. Please correct the order and try again.");
+          setIsProcessing(false);
+        } else if (typeof result === "string") {
+          setProcessingError(result);
+          setIsProcessing(false);
+        }
+      } catch (error) {
+        console.error("Payment confirmation failed", error);
+        setProcessingError(error?.message || "Could not reach the server. Check the connection and try again.");
+        setIsProcessing(false);
+      }
     }, 450);
   };
 
@@ -566,7 +575,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           </div>
         </div>
 
-        {/* Select Payment Mode 4-Tab Bar */}
+        {/* Select Payment Mode 2-Tab Bar */}
         <div>
           <div style={{
             display: 'flex',
@@ -577,20 +586,18 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             fontWeight: 700,
             color: 'var(--text-main, #cbd5e1)'
           }}>
-            <CreditCard size={15} color="var(--text-dim, #94a3b8)" />
+            <Banknote size={15} color="var(--text-dim, #94a3b8)" />
             <span>Select Payment Mode</span>
           </div>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '0.65rem'
           }}>
             {[
-              { id: 'upi', label: 'UPI / QR Tap', icon: QrCode },
-              { id: 'cash', label: 'Cash Tender', icon: Banknote },
-              { id: 'card', label: 'Credit / Debit Card', icon: CreditCard },
-              { id: 'wallet', label: 'Wallet', icon: Wallet }
+              { id: 'upi', label: 'UPI / Dynamic QR', icon: QrCode },
+              { id: 'cash', label: 'Cash Tender', icon: Banknote }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = paymentMethod === tab.id;
@@ -633,8 +640,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderLeft: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 0 4px' }} />
               <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderRight: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 4px 0' }} />
 
-              {/* Real Payment QR */}
-              <div style={{
+              {activeQr?.image ? <div style={{
                 background: 'var(--bg-card)',
                 padding: '6px',
                 borderRadius: '10px',
@@ -644,7 +650,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 boxShadow: isLight ? '0 4px 15px rgba(0,0,0,0.12)' : '0 4px 20px rgba(0,0,0,0.5)'
               }}>
                 <img
-                  src={activeQr?.image || paymentQrImage}
+                  src={activeQr.image}
                   alt={activeQr?.label || "Scan to Pay"}
                   style={{
                     width: '115px',
@@ -654,7 +660,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                     display: 'block'
                   }}
                 />
-              </div>
+              </div> : <div role="status" style={{ width: 115, height: 115, display: 'grid', placeItems: 'center', padding: '8px', boxSizing: 'border-box', border: '1px dashed var(--border-card)', borderRadius: '10px', color: 'var(--text-dim)', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700 }}>No UPI QR configured</div>}
             </div>
 
             {/* Scan & Pay Instructions & Brand Badges */}
@@ -663,7 +669,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Zap size={16} color="var(--accent-amber, #f59e0b)" fill="var(--accent-amber, #f59e0b)" />
                   <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
-                    Scan & Pay
+                    {activeQr?.image ? 'Scan & Pay' : 'UPI payment unavailable'}
                   </span>
                 </div>
                 <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-amber, #f59e0b)' }}>
@@ -674,7 +680,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               {/* Configured QR Label */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-dim, #cbd5e1)', fontWeight: 600 }}>
-                  {activeQr?.label || "UPI / QR to Pay"}
+                  {activeQr?.label || "Add a real UPI QR in Settings to accept UPI payments."}
                 </span>
               </div>
 
@@ -910,97 +916,6 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           </div>
         )}
 
-        {paymentMethod === 'card' && (
-          <div style={{
-            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
-            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '14px',
-            padding: '1.4rem',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.6rem'
-          }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-amber, #f59e0b)'
-            }}>
-              <CreditCard size={26} />
-            </div>
-            <div style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
-              Tap or Insert Card on POS Terminal
-            </div>
-            <p style={{ fontSize: '0.76rem', color: 'var(--text-dim, #94a3b8)', maxWidth: '320px', margin: 0 }}>
-              Supports Visa, MasterCard, RuPay, Maestro & Contactless Tap
-            </p>
-          </div>
-        )}
-
-        {paymentMethod === 'wallet' && (
-          <div style={{
-            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
-            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '14px',
-            padding: '1.25rem 1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600 }}>
-              Choose Digital Wallet:
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem' }}>
-              {[
-                { id: 'gpay', name: 'Google Pay', icon: '🟢' },
-                { id: 'paytm', name: 'Paytm Wallet', icon: '💳' },
-                { id: 'phonepe', name: 'PhonePe Wallet', icon: '🟣' },
-                { id: 'amazon', name: 'Amazon Pay', icon: '📦' }
-              ].map(w => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => setSelectedWallet(w.id)}
-                  style={{
-                    padding: '0.65rem',
-                    borderRadius: '8px',
-                    background: selectedWallet === w.id
-                      ? isLight
-                        ? 'rgba(217, 119, 6, 0.16)'
-                        : 'rgba(245, 158, 11, 0.2)'
-                      : isLight
-                      ? '#ffffff'
-                      : 'rgba(255, 255, 255, 0.04)',
-                    border: selectedWallet === w.id
-                      ? '1.5px solid var(--accent-amber, #f59e0b)'
-                      : isLight
-                      ? '1px solid #cbd5e1'
-                      : '1px solid rgba(255, 255, 255, 0.08)',
-                    color: selectedWallet === w.id ? 'var(--accent-amber, #f59e0b)' : 'var(--text-main, #ffffff)',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span>{w.icon}</span>
-                  <span>{w.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Footer Action Buttons */}
         <div style={{
           display: 'flex',
@@ -1036,12 +951,18 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             <span>Cancel</span>
           </button>
 
+          {processingError && (
+            <div role="alert" style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(248, 113, 113, .45)", background: "rgba(127, 29, 29, .25)", color: "#fecaca", fontSize: 13, lineHeight: 1.45 }}>
+              {processingError}
+            </div>
+          )}
+
           {/* Confirm & Vacate Table Button (Vibrant Orange-Amber Gradient) */}
           <button
             type="button"
             onClick={handleSettle}
-            disabled={hasInvalidItems || isProcessing}
-            title={hasInvalidItems ? "Remove or correct unnamed/invalid items before settling" : "Settle bill"}
+            disabled={hasInvalidItems || isProcessing || upiUnavailable}
+            title={hasInvalidItems ? "Remove or correct unnamed/invalid items before settling" : upiUnavailable ? "Configure a real UPI QR or select Cash" : "Settle bill"}
             style={{
               flex: 2,
               height: '46px',
@@ -1055,8 +976,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
-              cursor: isProcessing || hasInvalidItems ? 'not-allowed' : 'pointer',
-              opacity: hasInvalidItems ? 0.55 : 1,
+              cursor: isProcessing || hasInvalidItems || upiUnavailable ? 'not-allowed' : 'pointer',
+              opacity: hasInvalidItems || upiUnavailable ? 0.55 : 1,
               boxShadow: '0 6px 20px rgba(234, 88, 12, 0.4)',
               transition: 'all 0.18s ease'
             }}

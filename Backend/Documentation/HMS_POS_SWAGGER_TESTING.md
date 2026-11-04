@@ -136,6 +136,26 @@ This document provides step-by-step testing instructions, HTTP methods, required
   "notes": "Extra spicy, no onions"
 }
 ```
+
+#### E. Add Items to an Existing Active Order
+- **HTTP Method**: `POST`
+- **Endpoints**: `/api/Orders/{id}/items` OR `/api/v1/orders/{id}/items`
+- **Valid Sample Request JSON**:
+```json
+{
+  "items": [
+    {
+      "menuItemId": 1,
+      "name": "Paneer Butter Masala",
+      "price": 260.00,
+      "quantity": 1,
+      "notes": "Less spicy"
+    }
+  ]
+}
+```
+- **Expected Status Code**: `200 OK`; items are added to the active order as queued kitchen items.
+- **Failure Status Codes**: `400 Bad Request` for an empty list or missing menu item ID; `404 Not Found` if the active order does not exist; `409 Conflict` if the order is closed.
 - **Expected Status Code**: `200 OK`
 - **Sample Response JSON**:
 ```json

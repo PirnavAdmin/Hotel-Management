@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, ChevronDown, ShieldCheck, Mail, Phone, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { apiGetUsers } from '../api/userApi';
 import './ProfileDropdown.css';
 
 export function ProfileDropdown({ 
@@ -12,6 +13,7 @@ export function ProfileDropdown({
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
   const [coords, setCoords] = useState(null);
+  const [resolvedRegisteredEmail, setResolvedRegisteredEmail] = useState('');
 
   // Close when clicking outside
   useEffect(() => {
@@ -62,7 +64,88 @@ export function ProfileDropdown({
 
   // Extract user details or fallbacks
   const displayName = currentSession?.name || currentSession?.username || 'User';
-  const email = currentSession?.email || '';
+  let cachedRegisteredEmail = '';
+  try {
+    const managedUsers = JSON.parse(localStorage.getItem('avsr_auth_users_v1') || '[]');
+    if (Array.isArray(managedUsers)) {
+      const sessionId = String(currentSession?.userId || currentSession?.id || '');
+      const sessionUsername = String(currentSession?.username || '').trim().toLowerCase();
+      const sessionName = String(currentSession?.name || '').trim().toLowerCase();
+      const sessionEmail = String(
+        currentSession?.loginIdentifier && String(currentSession.loginIdentifier).includes('@')
+          ? currentSession.loginIdentifier
+          : ''
+      ).trim().toLowerCase();
+      const registeredUser = managedUsers.find((user) => {
+        const userId = String(user?.id || user?.Id || user?.userId || user?.UserId || '');
+        const username = String(user?.username || user?.Username || '').trim().toLowerCase();
+        const name = String(user?.name || user?.FullName || user?.fullName || '').trim().toLowerCase();
+        const managedEmail = String(
+          user?.email || user?.Email || user?.emailAddress || user?.EmailAddress || ''
+        ).trim().toLowerCase();
+        return (sessionId && userId && sessionId === userId) ||
+          (sessionUsername && username && sessionUsername === username) ||
+          (sessionName && name && sessionName === name) ||
+          (sessionEmail && managedEmail && sessionEmail === managedEmail);
+      });
+      cachedRegisteredEmail = String(
+        registeredUser?.email || registeredUser?.Email ||
+        registeredUser?.emailAddress || registeredUser?.EmailAddress || ''
+      ).trim();
+    }
+  } catch {}
+
+  useEffect(() => {
+    let active = true;
+    setResolvedRegisteredEmail('');
+    const resolveRegisteredEmail = async () => {
+      try {
+        const result = await apiGetUsers();
+        if (!result?.success || !active) return;
+
+        const extractUsers = (value, depth = 0) => {
+          if (Array.isArray(value)) return value;
+          if (!value || typeof value !== 'object' || depth > 5) return [];
+          for (const key of ['users', 'Users', '$values', 'data', 'Data', 'items', 'Items']) {
+            const users = extractUsers(value[key], depth + 1);
+            if (users.length) return users;
+          }
+          return [];
+        };
+
+        const users = extractUsers(result.data);
+        const sessionId = String(currentSession?.userId || currentSession?.id || '');
+        const sessionUsername = String(currentSession?.username || '').trim().toLowerCase();
+        const sessionName = String(currentSession?.name || '').trim().toLowerCase();
+        const registeredUser = users.find((user) => {
+          const userId = String(user?.id || user?.Id || user?.userId || user?.UserId || '');
+          const username = String(user?.username || user?.Username || '').trim().toLowerCase();
+          const name = String(
+            user?.name || user?.FullName || user?.fullName || user?.Name || ''
+          ).trim().toLowerCase();
+          return (sessionId && userId && sessionId === userId) ||
+            (sessionUsername && username && sessionUsername === username) ||
+            (sessionName && name && sessionName === name);
+        });
+        const email = String(
+          registeredUser?.email || registeredUser?.Email ||
+          registeredUser?.emailAddress || registeredUser?.EmailAddress || ''
+        ).trim();
+        if (email.includes('@')) setResolvedRegisteredEmail(email);
+      } catch {}
+    };
+    resolveRegisteredEmail();
+    return () => { active = false; };
+  }, [
+    currentSession?.id,
+    currentSession?.userId,
+    currentSession?.username,
+    currentSession?.name
+  ]);
+
+  const sessionEmail = String(currentSession?.email || currentSession?.loginEmail || '').trim();
+  const registeredEmail = resolvedRegisteredEmail || cachedRegisteredEmail;
+  const email = registeredEmail.includes('@') ? registeredEmail : sessionEmail;
   const mobile = currentSession?.mobile || '';
   const userRole = currentSession?.role || role || 'pos';
 
@@ -239,9 +322,33 @@ export function ProfileDropdown({
             </div>
 
             {/* Full Display Name */}
-            <div style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>
+            <div style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
               {displayName}
             </div>
+
+            {/* Registered Email in Profile Banner */}
+            {email && (
+              <div 
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--text-muted)',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px',
+                  maxWidth: '100%',
+                  padding: '0 8px',
+                  boxSizing: 'border-box'
+                }}
+                title={`Registered Email: ${email}`}
+              >
+                <Mail size={13} color="var(--accent-amber)" style={{ flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {email}
+                </span>
+              </div>
+            )}
 
             {/* Role Chip */}
             <div style={{

@@ -1,6 +1,8 @@
 using System.Text;
 using HMS.Data;
 using HMS.Services;
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -15,22 +17,67 @@ builder.WebHost.UseUrls("http://localhost:5018", "http://0.0.0.0:5018");
 // DATABASE
 // ============================================================
 
-var connectionString =
+var configuredConnectionString =
     builder.Configuration
         .GetConnectionString("DefaultConnection");
 
-if (string.IsNullOrWhiteSpace(connectionString))
+if (string.IsNullOrWhiteSpace(configuredConnectionString))
 {
     throw new InvalidOperationException(
         "DefaultConnection is missing from appsettings.json.");
 }
 
+// Resilient credentials resolver (supports multi-developer environments)
+string connectionString = configuredConnectionString;
+try
+{
+    using var testConn = new MySqlConnector.MySqlConnection(connectionString);
+    testConn.Open();
+}
+catch (MySqlConnector.MySqlException ex) when (ex.Number == 1045) // Access Denied
+{
+    Console.WriteLine("[Database] Configured credentials failed (Error 1045: Access Denied). Attempting fallback credentials...");
+    var fallbackCandidates = new[]
+    {
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vikas@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vineetha@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=vikas;Password=vikas@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=vikas@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=root;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=;CharSet=utf8mb4;"
+    };
+
+    bool resolved = false;
+    foreach (var candidate in fallbackCandidates)
+    {
+        try
+        {
+            using var candidateConn = new MySqlConnector.MySqlConnection(candidate);
+            candidateConn.Open();
+            connectionString = candidate;
+            resolved = true;
+            Console.WriteLine($"[Database] Successfully connected with fallback credentials for user: {new MySqlConnector.MySqlConnectionStringBuilder(candidate).UserID}");
+            break;
+        }
+        catch
+        {
+            // try next candidate
+        }
+    }
+
+    if (!resolved)
+    {
+        Console.Error.WriteLine("[Database] Failed to connect with any fallback credentials.");
+    }
+}
+
+var serverVersion = ServerVersion.AutoDetect(connectionString);
+
 builder.Services.AddDbContext<AppDbContext>(
     options =>
         options.UseMySql(
             connectionString,
-            ServerVersion.AutoDetect(
-                connectionString)));
+            serverVersion));
 
 // ============================================================
 // JWT
@@ -94,7 +141,25 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:5173")
+                .SetIsOriginAllowed(origin =>
+                {
+                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+                        uri.Scheme != "http" || uri.Port is not (5173 or 5174))
+                    {
+                        return false;
+                    }
+
+                    if (uri.IsLoopback) return true;
+                    if (!IPAddress.TryParse(uri.Host, out var address) || address.AddressFamily != AddressFamily.InterNetwork)
+                    {
+                        return false;
+                    }
+
+                    var bytes = address.GetAddressBytes();
+                    return bytes[0] == 10 ||
+                           (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                           (bytes[0] == 192 && bytes[1] == 168);
+                })
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()

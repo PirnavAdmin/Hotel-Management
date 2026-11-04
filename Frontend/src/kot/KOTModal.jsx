@@ -2,11 +2,19 @@ import React from 'react';
 import { ChefHat, X, Printer } from 'lucide-react';
 import { printSurface } from '../utils/printSurface';
 
-export function KOTModal({ table, onClose, restaurantName = "Restaurant", restaurantLogo = "" }) {
+export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "Restaurant", restaurantLogo = "" }) {
   if (!table) return null;
 
+  const barMenuIds = new Set(
+    barMenuItems.map((item) => String(item.menuItemId ?? item.id ?? "")).filter(Boolean),
+  );
+  const kitchenItems = (Array.isArray(table.items) ? table.items : []).filter((item) => {
+    const menuItemId = String(item.menuItemId ?? item.menu_item_id ?? item.id ?? "");
+    return !item.isBarItem && !item.isBarDrink && !barMenuIds.has(menuItemId);
+  });
+
   const handlePrint = () => {
-    if (!Array.isArray(table.items) || table.items.length === 0) {
+    if (kitchenItems.length === 0) {
       window.alert("Cannot print an empty KOT ticket.");
       return;
     }
@@ -133,7 +141,7 @@ export function KOTModal({ table, onClose, restaurantName = "Restaurant", restau
               <span>ITEM & SPECIAL NOTES</span>
             </div>
 
-            {(table.items || []).map((item, idx) => (
+            {kitchenItems.map((item, idx) => (
               <div key={idx} style={{
                 display: 'grid',
                 gridTemplateColumns: '46px 1fr',

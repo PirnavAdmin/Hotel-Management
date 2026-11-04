@@ -115,22 +115,22 @@ public class InvoicesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceRequest request)
     {
-        if (request == null || request.OrderId <= 0)
+        if (request == null || request.OrderId <= 0 || request.Subtotal <= 0)
         {
-            return BadRequest(new { success = false, message = "Valid Order ID is required." });
+            return BadRequest(new { success = false, message = "Valid Order ID and positive subtotal are required." });
         }
 
         try
         {
             _logger.LogInformation("Creating invoice for Order ID {OrderId} via SP", request.OrderId);
 
-            var subtotal = request.Subtotal > 0 ? request.Subtotal : 100.00m;
+            var subtotal = request.Subtotal;
             var taxableAmount = request.TaxableAmount > 0 ? request.TaxableAmount : (subtotal - request.DiscountAmount);
-            if (taxableAmount < 0) taxableAmount = subtotal;
+            taxableAmount = Math.Max(0, taxableAmount);
 
             var invoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
-            var taxAmount = request.TaxAmount >= 0 ? request.TaxAmount : (subtotal * 0.05m);
-            var totalAmount = subtotal + taxAmount - request.DiscountAmount;
+            var taxAmount = request.TaxAmount >= 0 ? request.TaxAmount : (taxableAmount * 0.05m);
+            var totalAmount = Math.Max(0, subtotal + taxAmount - request.DiscountAmount);
 
             var parameters = new Dictionary<string, object?>
             {
@@ -668,4 +668,3 @@ public class UpdateInvoiceStatusRequest
 {
     public string Status { get; set; } = "PAID";
 }
-

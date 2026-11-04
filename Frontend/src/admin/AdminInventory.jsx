@@ -16,13 +16,13 @@ import {
   X,
   PackagePlus,
   MinusCircle,
+  IndianRupee,
 } from "lucide-react";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
-import { API_BASE_URL } from "../api/apiConfig";
+import { API_HTTP_BASE } from "../api/apiConfig";
 import {
-  apiGetInventory,
   apiCreateInventoryItem,
   apiUpdateInventoryItem,
 } from "../api/inventoryApi";
@@ -463,7 +463,7 @@ export const deduplicateAndNormalizeInventory = (items) => {
   return Array.from(map.values());
 };
 
-export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
+export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sharedInventory = [] }) {
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [inventory, setInventory] = useState(() => {
     try {
@@ -780,14 +780,29 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     normalized.forEach((item) => {
       const backendId = Number(item.id);
       if (!Number.isFinite(backendId) || backendId <= 0) {
-        apiCreateInventoryItem(item).catch(() => {});
+        apiCreateInventoryItem(item)
+          .then((res) => {
+            const newId = res?.data?.ingredientId || res?.data?.id || res?.data?.data?.ingredientId;
+            if (newId) {
+              setInventory((prev) => {
+                const next = prev.map((it) => (it.id === item.id ? { ...it, id: newId } : it));
+                try {
+                  localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(next));
+                } catch {}
+                return next;
+              });
+            }
+          })
+          .catch((err) => console.error("[Inventory] Failed to create ingredient:", err));
       } else {
-        apiUpdateInventoryItem(backendId, item).catch(() => {});
+        apiUpdateInventoryItem(backendId, item).catch((err) =>
+          console.error("[Inventory] Failed to update ingredient:", err),
+        );
       }
     });
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
-      fetch(`${API_BASE_URL}/api/sync`, {
+      fetch(`${API_HTTP_BASE}/api/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -802,17 +817,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   };
 
   useEffect(() => {
-    let active = true;
-    apiGetInventory().then((response) => {
-      const payload = response?.data ?? response;
-      const rows = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload?.ingredients)
-            ? payload.ingredients
-            : [];
-      if (!active || !response?.success || !rows.length) return;
+      const rows = Array.isArray(sharedInventory) ? sharedInventory : [];
+      if (!rows.length) return;
       let saved = [];
       try {
         saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
@@ -857,9 +863,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       ]);
       setInventory(merged);
       try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
-    }).catch(() => {});
-    return () => { active = false; };
-  }, []);
+  }, [sharedInventory]);
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
@@ -1088,6 +1092,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         "Supplier",
         "Available Quantity",
         "Unit",
+        "Total Stock Value (₹)",
         "Quantity Used (tracked)",
         "Quantity Restocked (tracked)",
         "Low Stock Threshold",
@@ -1101,6 +1106,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         item.supplier,
         item.stock,
         item.unit,
+        ((Number(item.stock) || 0) * (Number(item.mrp) || 0)).toFixed(2),
         Number(item.totalUsed || 0),
         Number(item.totalRestocked || 0),
         item.minThreshold,
@@ -1330,6 +1336,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     (item) => item.stock > item.minThreshold,
   ).length;
   const outOfStockCount = inventory.filter((item) => item.stock <= 0).length;
+  const totalStockExpenditure = useMemo(() => {
+    return inventory.reduce((acc, item) => {
+      const stock = Number(item.stock) || 0;
+      const unitCost = Number(item.mrp ?? item.unitCost ?? 0);
+      return acc + (stock > 0 ? stock * unitCost : 0);
+    }, 0);
+  }, [inventory]);
 
   const filtered = inventory.filter((item) => {
     const matchesCategory =
@@ -1341,6 +1354,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       selectedStatus === "all" ||
+      (selectedStatus === "expenditure" && item.stock > 0) ||
       (selectedStatus === "in-stock" && item.stock > item.minThreshold) ||
       (selectedStatus === "low-stock" &&
         item.stock > 0 &&
@@ -1673,7 +1687,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
             gap: "0.6rem",
             marginBottom: "0.9rem",
           }}
@@ -1685,6 +1699,13 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               status: "all",
               color: "var(--info)",
               icon: Package,
+            },
+            {
+              label: "Stock Expenditure",
+              value: formatCurrency(totalStockExpenditure),
+              status: "expenditure",
+              color: "#f59e0b",
+              icon: IndianRupee,
             },
             {
               label: "In Stock",
@@ -1746,17 +1767,37 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               >
                 <Icon size={17} />
               </div>
-              <div>
+              <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
                 <div
                   style={{
                     color: "var(--text-muted)",
                     fontSize: "0.72rem",
                     fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   {label}
                 </div>
-                <div style={{ color, fontSize: "1rem", fontWeight: 800 }}>
+                <div
+                  title={String(value)}
+                  style={{
+                    color,
+                    fontSize:
+                      typeof value === "string" && value.length > 11
+                        ? "0.82rem"
+                        : typeof value === "string" && value.length > 8
+                          ? "0.9rem"
+                          : "1.05rem",
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    lineHeight: "1.25",
+                    marginTop: "2px",
+                  }}
+                >
                   {value}
                 </div>
               </div>
@@ -1892,6 +1933,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 <th style={{ padding: "0.55rem 0.65rem" }}>Category</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>MRP</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>In-Stock</th>
+                <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>Stock Value</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Used</th>
                 <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Threshold</th>
                 <th style={{ padding: "0.55rem 0.6rem", textAlign: "center" }}>Status</th>
@@ -2011,6 +2053,43 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                       >
                         {item.stock} {item.unit}
                       </div>
+                    </td>
+
+                    {/* Stock Value / Expenditure */}
+                    <td
+                      style={{
+                        padding: "0.55rem 0.5rem",
+                        whiteSpace: "nowrap",
+                        textAlign: "right",
+                      }}
+                    >
+                      {(() => {
+                        const stockVal =
+                          (Number(item.stock) || 0) * (Number(item.mrp) || 0);
+                        if (stockVal <= 0) {
+                          return (
+                            <span
+                              style={{
+                                color: "var(--text-dim)",
+                                fontSize: "0.78rem",
+                              }}
+                            >
+                              ₹0.00
+                            </span>
+                          );
+                        }
+                        return (
+                          <span
+                            style={{
+                              color: "#f59e0b",
+                              fontWeight: 800,
+                              fontSize: "0.82rem",
+                            }}
+                          >
+                            {formatCurrency(stockVal)}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Used since recipe tracking started */}
@@ -3288,6 +3367,25 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   }}
                 />
               </div>
+
+              {Number(newItem.mrp) > 0 && Number(newItem.stock) > 0 && (
+                <div
+                  style={{
+                    padding: "0.45rem 0.75rem",
+                    borderRadius: "8px",
+                    background: "rgba(245, 158, 11, 0.1)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    fontSize: "0.76rem",
+                    color: "var(--accent-amber-light)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>Stock Holding Expenditure:</span>
+                  <strong>{formatCurrency(Number(newItem.stock) * Number(newItem.mrp))}</strong>
+                </div>
+              )}
 
               <div>
                 <label

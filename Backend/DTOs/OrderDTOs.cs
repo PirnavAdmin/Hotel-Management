@@ -1,9 +1,15 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace HMS.DTOs;
 
 public class CreateOrderRequest
 {
+    public string? OrderType { get; set; }
+
+    [MaxLength(50)]
+    public string? InvoiceNumber { get; set; }
+
     [JsonConverter(typeof(FlexibleNullableLongConverter))]
     public long? TableId { get; set; }
 
@@ -93,11 +99,16 @@ public class SettleOrderRequest
     public decimal TipAmount { get; set; }
 
     public string? PaymentMethod { get; set; }
+
+    [MaxLength(50)]
+    public string? InvoiceNumber { get; set; }
 }
 
 public class OrderDto
 {
     public long Id { get; set; }
+
+    public string OrderType { get; set; } = "DineIn";
 
     public long TableId { get; set; }
 
@@ -143,6 +154,8 @@ public class OrderDto
 public class OrderItemDto
 {
     public long Id { get; set; }
+
+    public long? KotId { get; set; }
 
     public long OrderId { get; set; }
 

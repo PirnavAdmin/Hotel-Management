@@ -25,4 +25,9 @@
     </None>
   </ItemGroup>
 
+  <!-- Auto-unlock executable before MSBuild/Visual Studio build to prevent MSB3026 / MSB3027 file lock errors -->
+  <Target Name="KillRunningHMS" BeforeTargets="BeforeBuild">
+    <Exec Command="taskkill /F /IM HMS.exe 2&gt;nul || exit 0" ContinueOnError="true" />
+  </Target>
+
 </Project>

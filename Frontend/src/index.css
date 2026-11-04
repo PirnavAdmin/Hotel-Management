@@ -1,3 +1,7 @@
+/* Suppress default browser password reveal and clear buttons (Microsoft Edge & IE) */
+input::-ms-reveal { display: none !important; width: 0 !important; height: 0 !important; pointer-events: none !important; }
+input::-ms-clear { display: none !important; width: 0 !important; height: 0 !important; pointer-events: none !important; }
+
 :root,
 [data-theme="royal-saffron"] {
   color-scheme: dark;
