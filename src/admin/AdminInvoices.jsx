@@ -7,28 +7,23 @@ import {
   Pencil,
   Save,
   X,
-Smartphone,
+  Smartphone,
   Banknote,
+  CreditCard,
   ChevronLeft,
   ChevronRight,
   IndianRupee,
   RefreshCw,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { apiGetInvoices } from "../api/invoiceApi";
-import { apiGetOrderHistory } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
-  sortOrdersBySettlementTime,
   normalizePaymentMethod,
   parseOrderToYMD,
 } from "../utils/orderDedupe";
 import {
-  extractInvoiceRecords,
-  extractSettledOrderRecords,
-  mergeLiveInvoiceRecords,
   requestLiveInvoiceRecords,
 } from "../utils/liveInvoiceData";
 
@@ -54,6 +49,27 @@ const localWeekEndValue = (date = new Date()) => {
 };
 
 const invoiceDateKey = (order) => parseOrderToYMD(order);
+const getInvoicePaymentMethod = (order) => {
+  const latestPayment = Array.isArray(order?.payments)
+    ? order.payments[order.payments.length - 1]
+    : null;
+  return (
+    order?.paymentMethod ||
+    order?.PaymentMethod ||
+    order?.paymentMode ||
+    order?.PaymentMode ||
+    order?.paymentType ||
+    latestPayment?.paymentMode ||
+    latestPayment?.PaymentMode ||
+    latestPayment?.mode ||
+    latestPayment?.Mode ||
+    ""
+  );
+};
+const getInvoicePaymentMode = (order) => {
+  const method = getInvoicePaymentMethod(order);
+  return method ? normalizePaymentMethod(method) : "unknown";
+};
 
 const invoiceDisplayDate = (order) => {
   const dateKey = invoiceDateKey(order);
@@ -89,7 +105,7 @@ const formatInvoiceTime = (value) => {
   }
   const parsed = new Date(text);
   return Number.isNaN(parsed.getTime())
-    ? text || "12:00 PM"
+    ? text || "—"
     : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 
@@ -243,13 +259,14 @@ export function AdminInvoices({
         (!customFromDate || orderDate >= customFromDate) &&
         (!customToDate || orderDate <= customToDate));
     const matchesPayment = paymentFilter === "all" ||
-      normalizePaymentMethod(order) === paymentFilter;
+      getInvoicePaymentMode(order) === paymentFilter;
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
-      (order.invoiceNo || "").toLowerCase().includes(query) ||
-      (order.tableName || "").toLowerCase().includes(query) ||
-      (order.server || "").toLowerCase().includes(query);
+      String(order.invoiceNo || "").toLowerCase().includes(query) ||
+      String(order.id ?? "").toLowerCase().includes(query) ||
+      String(order.tableName || "").toLowerCase().includes(query) ||
+      String(order.server || "").toLowerCase().includes(query);
 
     return matchesDate && matchesPayment && matchesSearch;
   });
@@ -273,27 +290,19 @@ export function AdminInvoices({
   );
 
   const upiTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o) === "upi")
+    .filter((o) => getInvoicePaymentMode(o) === "upi")
     .reduce((sum, order) => sum + getInvoiceTotal(order), 0);
 
   const cashTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o) === "cash")
-    .reduce((sum, order) => sum + getInvoiceTotal(order), 0);
-
-  const cardTotal = filteredOrders
-    .filter((o) => normalizePaymentMethod(o) === "card")
+    .filter((o) => getInvoicePaymentMode(o) === "cash")
     .reduce((sum, order) => sum + getInvoiceTotal(order), 0);
 
   const cashOrdersCount = filteredOrders.filter(
-    (o) => normalizePaymentMethod(o) === "cash",
+    (o) => getInvoicePaymentMode(o) === "cash",
   ).length;
 
   const upiOrdersCount = filteredOrders.filter(
-    (o) => normalizePaymentMethod(o) === "upi",
-  ).length;
-
-  const cardOrdersCount = filteredOrders.filter(
-    (o) => normalizePaymentMethod(o) === "card",
+    (o) => getInvoicePaymentMode(o) === "upi",
   ).length;
 
   return (
@@ -1036,7 +1045,9 @@ export function AdminInvoices({
             <tbody>
               {paginatedOrders.map((order, idx) => {
                 const orderIndex = pageStart + idx;
-                const pMode = normalizePaymentMethod(order);
+                const paymentMethod = getInvoicePaymentMethod(order);
+                const paymentLabel = paymentMethod ? String(paymentMethod).trim() : "—";
+                const pMode = paymentMethod ? normalizePaymentMethod(paymentMethod) : "unknown";
                 const itemCount = (order.items || []).reduce(
                   (sum, i) => sum + Number(i.quantity || 1),
                   0,
@@ -1044,7 +1055,7 @@ export function AdminInvoices({
 
                 return (
                   <tr
-                    key={order.invoiceNo || orderIndex}
+                    key={order.id ?? order.orderId ?? order.invoiceId ?? order.invoiceNo ?? orderIndex}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
                       transition: "background 0.15s ease",
@@ -1067,14 +1078,14 @@ export function AdminInvoices({
                           fontSize: "0.88rem",
                         }}
                       >
-                        {order.invoiceNo || `INV-${String(orderIndex + 1).padStart(3, "0")}`}
+                        {order.invoiceNo || (order.id != null ? `Order #${order.id}` : "—")}
                       </span>
                     </td>
 
                     {/* Table & Server */}
                     <td style={{ padding: "1rem" }}>
                       <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
-                        {order.tableName || `Table ${order.tableId || 1}`}
+                        {order.tableName || (order.tableId != null ? `Table ${order.tableId}` : "—")}
                       </div>
                       <div
                         style={{
@@ -1083,7 +1094,7 @@ export function AdminInvoices({
                           marginTop: "2px",
                         }}
                       >
-                        Waiter: {order.server || "Staff"}
+                        Waiter: {order.server || "—"}
                       </div>
                     </td>
 
@@ -1116,7 +1127,7 @@ export function AdminInvoices({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {(order.items || []).map((i) => i.name).join(", ")}
+                        {(order.items || []).map((i) => i.name).filter(Boolean).join(", ") || "—"}
                       </div>
                     </td>
 
@@ -1138,14 +1149,14 @@ export function AdminInvoices({
                           }}
                         >
                           <Smartphone size={11} />
-                          UPI
+                          {paymentLabel}
                         </span>
                       )  : (
                         <span
                           style={{
-                            background: "rgba(16, 185, 129, 0.12)",
-                            border: "1px solid rgba(16, 185, 129, 0.3)",
-                            color: "var(--success)",
+                            background: pMode === "card" ? "rgba(99, 102, 241, 0.12)" : "rgba(16, 185, 129, 0.12)",
+                            border: pMode === "card" ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid rgba(16, 185, 129, 0.3)",
+                            color: pMode === "card" ? "var(--accent-indigo)" : "var(--success)",
                             borderRadius: "20px",
                             padding: "3px 10px",
                             fontSize: "0.72rem",
@@ -1155,8 +1166,8 @@ export function AdminInvoices({
                             gap: "5px",
                           }}
                         >
-                          <Banknote size={11} />
-                          Cash
+                          {pMode === "card" ? <CreditCard size={11} /> : pMode === "cash" ? <Banknote size={11} /> : null}
+                          {paymentLabel}
                         </span>
                       )}
                     </td>
@@ -1450,7 +1461,7 @@ export function AdminInvoices({
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Edit invoice discount</h3>
                 <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                  {editingInvoice.invoiceNo || `Order #${editingInvoice.id}`}
+                  {editingInvoice.invoiceNo || (editingInvoice.id != null ? `Order #${editingInvoice.id}` : "—")}
                 </div>
               </div>
               <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
@@ -1461,7 +1472,7 @@ export function AdminInvoices({
               {(Array.isArray(editingInvoice.items) ? editingInvoice.items : []).map((item, index) => {
                 const quantity = Number(item.quantity ?? item.qty) || 1;
                 const unitPrice = Number(item.price ?? item.unitPrice) || 0;
-                return <div key={item.id ?? `${item.name || item.dishName}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", padding: "0.32rem 0", color: "var(--text-main)", fontSize: "0.75rem" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{item.name || item.dishName || "Item"} × {quantity} · {formatCurrency(unitPrice)}</span><strong style={{ whiteSpace: "nowrap" }}>{formatCurrency(quantity * unitPrice)}</strong></div>;
+                return <div key={item.id ?? `${item.name || item.dishName}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", padding: "0.32rem 0", color: "var(--text-main)", fontSize: "0.75rem" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{item.name || item.dishName || "—"} × {quantity} · {formatCurrency(unitPrice)}</span><strong style={{ whiteSpace: "nowrap" }}>{formatCurrency(quantity * unitPrice)}</strong></div>;
               })}
               <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border-card)", marginTop: "0.35rem", paddingTop: "0.45rem", fontSize: "0.75rem", fontWeight: 800 }}><span>Items subtotal</span><span>{formatCurrency((Array.isArray(editingInvoice.items) ? editingInvoice.items : []).reduce((sum, item) => sum + (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity ?? item.qty) || 1), 0))}</span></div>
             </div>

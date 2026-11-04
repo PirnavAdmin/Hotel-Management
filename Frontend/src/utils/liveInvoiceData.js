@@ -12,7 +12,7 @@ const valueFrom = (object, ...keys) => {
 const normalizeItems = (items) =>
   (Array.isArray(items) ? items : []).map((item) => ({
     ...item,
-    name: valueFrom(item, "name", "Name", "dishName", "DishName") || "Item",
+    name: valueFrom(item, "name", "Name", "dishName", "DishName") || "",
     quantity: Number(valueFrom(item, "quantity", "Quantity", "qty", "Qty")) || 1,
     price: Number(valueFrom(item, "price", "Price", "unitPrice", "UnitPrice")) || 0,
   }));
@@ -66,7 +66,10 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const items = normalizeItems(
     invoiceItems?.length ? invoiceItems : orderItems,
   );
-  const payments = valueFrom(invoice, "payments", "Payments") || [];
+  const payments =
+    valueFrom(invoice, "payments", "Payments") ??
+    valueFrom(order, "payments", "Payments") ??
+    [];
   const latestPayment = payments[payments.length - 1];
 
   const rawOrderTotal = valueFrom(order, "grandTotal", "GrandTotal", "totalAmount", "TotalAmount", "total", "Total");
@@ -92,8 +95,7 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   ) || 0;
   const taxAmount = Number(
     valueFrom(invoice, "taxAmount", "TaxAmount") ??
-      valueFrom(order, "taxAmount", "TaxAmount") ??
-      Math.round(taxableAmount * 0.05),
+      valueFrom(order, "taxAmount", "TaxAmount"),
   ) || 0;
 
   const rawTotal = Number(rawInvoiceTotal ?? rawOrderTotal) || 0;
@@ -120,8 +122,7 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const paymentMethod =
     valueFrom(latestPayment, "paymentMode", "PaymentMode", "mode", "Mode") ??
     valueFrom(invoice, "paymentMethod", "PaymentMethod") ??
-    valueFrom(order, "paymentMethod", "PaymentMethod") ??
-    "Cash";
+    valueFrom(order, "paymentMethod", "PaymentMethod");
   const normalizedStatus = String(valueFrom(invoice, "status", "Status") || "").toLowerCase();
   const isVoidInvoice = normalizedStatus === "void" || normalizedStatus === "cancelled";
 
@@ -136,7 +137,7 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     if (!isNaN(num) && num > 0 && num < 1000) {
       invoiceNumber = `INV-${String(num).padStart(3, "0")}`;
     } else {
-      invoiceNumber = "INV-001";
+      invoiceNumber = rawId == null ? "" : `Order #${rawId}`;
     }
   }
 
@@ -151,12 +152,12 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     tableName:
       valueFrom(order, "tableName", "TableName") ??
       valueFrom(invoice, "tableName", "TableName") ??
-      "Takeaway / Direct",
+      "",
     tableId: valueFrom(order, "tableId", "TableId"),
     server:
       valueFrom(order, "server", "serverName", "ServerName") ??
       valueFrom(invoice, "serverName", "ServerName") ??
-      "Staff",
+      "",
     date: createdAt,
     createdAt,
     settledAt:
