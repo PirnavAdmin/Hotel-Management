@@ -10,10 +10,12 @@ namespace HMS.Services;
 public class StaffService
 {
     private readonly SpService _spService;
+    private readonly AppDbContext _context;
 
-    public StaffService(SpService spService)
+    public StaffService(SpService spService, AppDbContext context)
     {
         _spService = spService;
+        _context = context;
     }
 
     public async Task<List<StaffResponseDto>> GetStaffListAsync()
@@ -36,6 +38,8 @@ public class StaffService
             { "p_role_title", dto.RoleTitle.Trim() },
             { "p_phone", dto.Phone.Trim() },
             { "p_shift", dto.Shift.Trim() },
+            { "p_salary", dto.Salary },
+            { "p_section", dto.Section.Trim() },
             { "p_is_active", dto.IsActive ? 1 : 0 }
         };
 
@@ -72,6 +76,22 @@ public class StaffService
         return true;
     }
 
+    private static decimal SafeGetSalary(DbDataReader reader)
+    {
+        try {
+            var ord = reader.GetOrdinal("salary");
+            return reader.IsDBNull(ord) ? 0 : Convert.ToDecimal(reader.GetValue(ord));
+        } catch { return 0; }
+    }
+
+    private static string SafeGetSection(DbDataReader reader)
+    {
+        try {
+            var ord = reader.GetOrdinal("section");
+            return reader.IsDBNull(ord) ? "Dine & Bar" : reader.GetString(ord);
+        } catch { return "Dine & Bar"; }
+    }
+
     private static StaffResponseDto MapFromReader(DbDataReader reader)
     {
         var fullName = reader.GetString(reader.GetOrdinal("full_name"));
@@ -85,6 +105,8 @@ public class StaffService
             RoleTitle = reader.GetString(reader.GetOrdinal("role_title")),
             Phone = reader.GetString(reader.GetOrdinal("phone")),
             Shift = reader.GetString(reader.GetOrdinal("shift")),
+            Salary = SafeGetSalary(reader),
+            Section = SafeGetSection(reader),
             IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
             AssignedTablesCount = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("assigned_tables_count"))),
             AvatarInitial = initial,

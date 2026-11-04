@@ -1,4 +1,4 @@
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "https://chapter-catnip-evaluator.ngrok-free.dev";
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 
 // Keep the configured API address consistent for every device. Development
 // requests use the same-origin Vite proxy below, which forwards to this URL.
