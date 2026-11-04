@@ -5,16 +5,15 @@ import React, { useState, useEffect, useRef, useId } from 'react';
 import {
   ChefHat, Lock, User, Eye, EyeOff,
   Utensils, MonitorCheck, ShieldCheck,
-  UserPlus, LogIn, CheckCircle, Mail,
-  Phone, Send, RefreshCw, ArrowLeft,
+  LogIn, CheckCircle, Mail,
+  RefreshCw, ArrowLeft,
   Settings, Printer, TrendingUp, Heart, Sparkles, KeyRound
 } from 'lucide-react';
-import { loginUser, createUser, registerUser, updateUserPassword, getUsers } from '../utils/auth';
-import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '../api/authApi';
+import { loginUser } from '../utils/auth';
+import { apiForgotPassword, apiResetPassword } from '../api/authApi';
 
 /**
- * LoginPage — role-specific login/register screen.
- * Register (admin only) includes: Name, Username, Mobile, Email + OTP, Password.
+ * LoginPage — role-specific sign-in screen.
  */
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 const REMEMBERED_LOGIN_KEY = "avsr_remembered_login_v1";
@@ -76,7 +75,7 @@ const HEADLINE_ITEMS = [
 
 export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Restaurant', restaurantLogo = '', logo = '', currentTheme = 'royal-saffron', onChangeTheme }) {
   const [currentRole, setCurrentRole] = useState(role);
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [mode, setMode] = useState('login'); // 'login' | 'forgot'
 
   // Dynamic restaurant name and tagline from Settings / localStorage / prop
   const [currentRestaurantName, setCurrentRestaurantName] = useState(() =>
@@ -143,22 +142,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
     return () => clearTimeout(timer);
   }, []);
 
-  // Register — step 1: info
-  const [regName,    setRegName]    = useState('');
-  const [regUser,    setRegUser]    = useState('');
-  const [regMobile,  setRegMobile]  = useState('');
-  const [regEmail,   setRegEmail]   = useState('');
-  const [regPass,    setRegPass]    = useState('');
-  const [regConfirm, setRegConfirm] = useState('');
-  const [showRegPw,  setShowRegPw]  = useState(false);
-  const [showRegConfirm, setShowRegConfirm] = useState(false);
-  const [regOtpStep, setRegOtpStep] = useState(false);
-  const [regOtp,     setRegOtp]     = useState('');
-  const [regResendTimer, setRegResendTimer] = useState(0);
-  const [regServerOtp, setRegServerOtp] = useState('');
-  const [regIsLiveEmail, setRegIsLiveEmail] = useState(false);
-  const [regPreviewUrl, setRegPreviewUrl] = useState('');
-
   // Forgot Password state
   const [forgotEmail,        setForgotEmail]        = useState('');
   const [forgotOtpStep,      setForgotOtpStep]      = useState(false);
@@ -173,15 +156,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [shake,   setShake]   = useState(false);
-
-  // OTP resend timer countdown
-  useEffect(() => {
-    if (regResendTimer <= 0) return;
-    const interval = setInterval(() => {
-      setRegResendTimer((t) => (t > 0 ? t - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [regResendTimer]);
 
   // ── Role config ───────────────────────────────────────────
   const cfgMap = {
@@ -227,12 +201,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
   const triggerShake = () => { setShake(true); setTimeout(() => setShake(false), 600); };
 
-  const clearRegForm = () => {
-    setRegName(''); setRegUser(''); setRegMobile(''); setRegEmail('');
-    setRegPass(''); setRegConfirm(''); setShowRegPw(false); setShowRegConfirm(false); setRegOtpStep(false); setRegOtp(''); setRegResendTimer(0);
-    setRegServerOtp(''); setRegIsLiveEmail(false); setRegPreviewUrl('');
-  };
-  const clearAll = () => { setError(''); setSuccess(''); setUsername(''); setPassword(''); clearRegForm(); };
+  const clearAll = () => { setError(''); setSuccess(''); setUsername(''); setPassword(''); };
 
   // ── LOGIN ─────────────────────────────────────────────────
   const handleLogin = async (e) => {
@@ -249,225 +218,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       onLoginSuccess(r.session, currentRole);
     }
     else { setError(r.error || 'Login failed.'); triggerShake(); }
-  };
-
-  // ── REGISTRATION INPUT VALIDATOR (RMS_REG_003, RMS_REG_004, RMS_REG_005, RMS_REG_006, RMS_REG_007, RMS_REG_008, RMS_REG_010) ──
-  const validateRegistration = () => {
-    const trimmedName = regName.trim();
-    const trimmedUser = regUser.trim();
-    const cleanMobile = regMobile.replace(/\D/g, '');
-    const trimmedEmail = regEmail.trim();
-
-    // Bug 3: Full Name Validation (RMS_REG_003)
-    if (!trimmedName) {
-      return 'Full name is required.';
-    }
-    if (/\d/.test(trimmedName)) {
-      return 'Full name cannot contain numeric digits (e.g. 1234). Please enter a valid name.';
-    }
-    if (!/^[a-zA-Z\s'-.]{2,50}$/.test(trimmedName) || trimmedName.replace(/[^a-zA-Z]/g, '').length < 2) {
-      return 'Full name must contain alphabetic characters only (e.g. Amrutha Reddy).';
-    }
-
-    // Bug 4: Username Validation (RMS_REG_004)
-    if (!trimmedUser) {
-      return 'Username is required.';
-    }
-    if (/\s/.test(trimmedUser)) {
-      return 'Username cannot contain spaces.';
-    }
-    if (trimmedUser.length < 3 || trimmedUser.length > 20) {
-      return 'Username must be between 3 and 20 characters.';
-    }
-    if (!/^[a-zA-Z0-9_.]{3,20}$/.test(trimmedUser) || !/[a-zA-Z]/.test(trimmedUser)) {
-      return 'Username must contain letters and numbers (optional "." or "_"). Special-character-only values like "^&^&" are rejected.';
-    }
-
-    // Bug 5: Indian Mobile Number Validation (RMS_REG_005)
-    if (!cleanMobile) {
-      return 'Mobile number is required.';
-    }
-    if (cleanMobile.length !== 10) {
-      return 'Please enter a valid 10-digit mobile number.';
-    }
-    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
-      return 'Invalid mobile number. Indian mobile numbers must start with 6, 7, 8, or 9 (numbers starting with 0-5 like 1100000000 are invalid).';
-    }
-
-    // Bug 6: Strict Email Format Validation (RMS_REG_006)
-    if (!trimmedEmail) {
-      return 'Email address is required.';
-    }
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      return 'Please enter a valid email address with a valid domain (e.g., amrutha@gmail.com). Incomplete formats like "name@" are rejected.';
-    }
-
-    // Bug 7: Password Complexity Policy Validation (RMS_REG_007)
-    if (!regPass) {
-      return 'Password is required.';
-    }
-    if (/\s/.test(regPass)) {
-      return 'Password cannot contain spaces.';
-    }
-    if (regPass.length < 8) {
-      return 'Password must be at least 8 characters long.';
-    }
-    if (!/[A-Z]/.test(regPass)) {
-      return 'Password must contain at least one uppercase letter (A-Z).';
-    }
-    if (!/[a-z]/.test(regPass)) {
-      return 'Password must contain at least one lowercase letter (a-z).';
-    }
-    if (!/[0-9]/.test(regPass)) {
-      return 'Password must contain at least one numeric digit (0-9).';
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(regPass)) {
-      return 'Password must contain at least one special character (e.g. @, #, $, %, &).';
-    }
-
-    // Bug 8: Confirm Password Match Validation (RMS_REG_008)
-    if (!regConfirm) {
-      return 'Please confirm your password.';
-    }
-    if (regPass !== regConfirm) {
-      return 'Passwords do not match.';
-    }
-
-    return null; // All valid!
-  };
-
-  // ── REGISTER STEP 1: VALIDATE & SEND OTP VIA NODEMAILER ──
-  const handleStartRegistration = async (e) => {
-    if (e) e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    // Bug 10: Validate all mandatory fields before initiating OTP or registration (RMS_REG_010)
-    const validationError = validateRegistration();
-    if (validationError) {
-      setError(validationError);
-      triggerShake();
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await apiSendOtp(regEmail.trim(), regMobile.replace(/\D/g, "").trim(), regName.trim());
-      setLoading(false);
-      if (res && res.success) {
-        setRegOtpStep(true);
-        setRegResendTimer(30);
-        if (res.otp) setRegServerOtp(String(res.otp));
-        setRegIsLiveEmail(!!res.isLive);
-        setRegPreviewUrl(res.previewUrl || '');
-
-        if (res.isLive) {
-          setSuccess(`📧 Verification code sent to ${regEmail.trim()}! Please check your email inbox.`);
-        } else if (res.otp) {
-          setSuccess(`⚡ Verification code generated: ${res.otp}`);
-        } else {
-          setSuccess(`📧 Verification code sent to ${regEmail.trim()}! Please check your email.`);
-        }
-      } else {
-        setError(res?.error || 'Failed to send verification email. Please try again.');
-        triggerShake();
-      }
-    } catch (err) {
-      setLoading(false);
-      setError(err?.message || 'Error sending email verification code.');
-      triggerShake();
-    }
-  };
-
-  const handleResendRegOtp = async () => {
-    if (regResendTimer > 0) return;
-    setLoading(true);
-    setError('');
-    try {
-      const res = await apiSendOtp(regEmail.trim(), regMobile.trim(), regName.trim());
-      setLoading(false);
-      if (res && res.success) {
-        setRegResendTimer(30);
-        if (res.otp) setRegServerOtp(String(res.otp));
-        setRegIsLiveEmail(!!res.isLive);
-        setRegPreviewUrl(res.previewUrl || '');
-
-        if (res.isLive) {
-          setSuccess(`🔄 Fresh OTP delivered to ${regEmail.trim()}!`);
-        } else if (res.otp) {
-          setSuccess(`🔄 Fresh verification code: ${res.otp}`);
-        } else {
-          setSuccess(`🔄 Fresh OTP sent to ${regEmail.trim()}!`);
-        }
-      } else {
-        setError(res?.error || 'Failed to resend code.');
-        triggerShake();
-      }
-    } catch (err) {
-      setLoading(false);
-      setError(err?.message || 'Error resending verification code.');
-      triggerShake();
-    }
-  };
-
-  // ── REGISTER STEP 2: VERIFY OTP & CREATE ACCOUNT ─────────
-  const handleVerifyAndRegister = async (e) => {
-    if (e) e.preventDefault();
-    setError('');
-    setSuccess('');
-    const enteredCode = regOtp.trim();
-    if (!enteredCode || enteredCode.length < 4) {
-      setError('Please enter the 6-digit verification code sent to your email.');
-      triggerShake();
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const verifyRes = await apiVerifyOtp(regEmail.trim(), enteredCode);
-      if (!verifyRes || !verifyRes.success) {
-        setLoading(false);
-        setError(verifyRes?.error || 'Invalid verification code. Please check your email.');
-        triggerShake();
-        return;
-      }
-
-      // Email verified! Complete account creation
-      const r = await registerUser({
-        Username: regUser.trim(),
-        Email: regEmail.trim(),
-        Phone: regMobile.trim(),
-        FullName: regName.trim(),
-        Password: regPass.trim(),
-        ConfirmPassword: regConfirm.trim(),
-        Role: 'admin'
-      });
-      setLoading(false);
-
-      if (r.success) {
-        setSuccess(`🎉 Email verified! Admin account created for "${regName.trim()}". Logging in...`);
-        setTimeout(async () => {
-          const loginResult = await loginUser(regUser.trim(), regPass.trim(), 'admin');
-          if (loginResult.success) {
-            onLoginSuccess(loginResult.session, 'admin');
-          } else {
-            setSuccess('');
-            setMode('login');
-            setUsername(regUser.trim());
-            setPassword(regPass.trim());
-            clearRegForm();
-          }
-        }, 1000);
-      } else {
-        setError(r.error || 'Registration failed.');
-        triggerShake();
-      }
-    } catch (err) {
-      setLoading(false);
-      setError(err?.message || 'Verification failed.');
-      triggerShake();
-    }
   };
 
   // ── FORGOT PASSWORD HANDLERS ──────────────────────────────
@@ -646,21 +396,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
     }
   };
 
-  // Password strength
-  const pwScore = (() => {
-    let s = 0;
-    if (regPass.length >= 8) s++;
-    if (/[A-Z]/.test(regPass) && /[a-z]/.test(regPass)) s++;
-    if (/[0-9]/.test(regPass)) s++;
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(regPass)) s++;
-    if (regPass.length >= 10) s++;
-    return s;
-  })();
-  const pwColors = ['#ef4444','#f97316','#eab308','#22c55e','#10b981'];
-  const pwLabels = ['Very Weak','Weak','Fair','Strong','Very Strong'];
-  const pwC = pwColors[Math.min(pwScore - 1, 4)] || '#ef4444';
-  const pwL = pwLabels[Math.min(pwScore - 1, 4)] || 'Very Weak';
-
   // Input style
   const inp = (val, extraStyle = {}) => ({
     width: '100%',
@@ -723,7 +458,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
             type="button"
             onClick={() => {
               setCurrentRole(t.id);
-              if (t.id !== 'admin' && mode === 'register') setMode('login');
               setUsername('');
               setPassword('');
               setError('');
@@ -755,7 +489,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       <div className="bhanu-form-content">
         <div className="bhanu-form-heading">
           <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
-            {mode === 'register' ? (regOtpStep ? 'Email Verification' : 'Create Admin Account') : mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
+            {mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
           </h1>
           {mode === 'forgot' && (
             <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600 }}>
@@ -767,26 +501,23 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
         {/* Tab toggle — Admin only */}
         {currentRole === 'admin' && (
           <div className="bhanu-mode-tabs">
-            {[
-              { key: 'login',    label: 'Sign In',  icon: <LogIn size={13} /> },
-              { key: 'register', label: 'Register', icon: <UserPlus size={13} /> }
-            ].map(t => (
-              <button key={t.key} type="button" aria-pressed={mode === t.key}
-                onClick={() => { setMode(t.key); clearAll(); }}
-                style={{
-                  padding: '0.42rem', borderRadius: '8px',
-                  fontSize: '0.78rem', fontWeight: 800,
-                  background: mode === t.key ? cfg.btnBg : 'rgba(255,255,255,0.04)',
-                  color: mode === t.key ? '#fff' : '#475569',
-                  border: mode === t.key ? `1.5px solid ${cfg.accent}` : '1.5px solid rgba(255,255,255,0.08)',
-                  cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
-                  transition: 'all 0.2s', boxShadow: mode === t.key ? cfg.btnShadow : 'none'
-                }}
-              >
-                {t.icon}{t.label}
-              </button>
-            ))}
+            <button
+              type="button"
+              aria-pressed={mode === 'login'}
+              onClick={() => { setMode('login'); clearAll(); }}
+              style={{
+                padding: '0.42rem', borderRadius: '8px',
+                fontSize: '0.78rem', fontWeight: 800,
+                background: mode === 'login' ? cfg.btnBg : 'rgba(255,255,255,0.04)',
+                color: mode === 'login' ? '#fff' : '#475569',
+                border: mode === 'login' ? `1.5px solid ${cfg.accent}` : '1.5px solid rgba(255,255,255,0.08)',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                transition: 'all 0.2s', boxShadow: mode === 'login' ? cfg.btnShadow : 'none'
+              }}
+            >
+              <LogIn size={13} />Admin Sign In
+            </button>
           </div>
         )}
 
@@ -1052,262 +783,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
           </form>
         )}
 
-        {/* ── REGISTER FORM ── */}
-        {mode === 'register' && currentRole === 'admin' && (
-          !regOtpStep ? (
-            <form onSubmit={handleStartRegistration} style={{ padding: '0.55rem 1rem 0.65rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', overflow: 'hidden' }}>
-              {error   && <Err msg={error} />}
-              {success && <Suc msg={success} />}
 
-              <div className="bhanu-registration-grid">
-                {/* ─ Row 1 Left: Full Name */}
-                <Fld label="Full Name *" icon={<User size={13} color="#475569" />} mb="0">
-                  <input type="text" placeholder="e.g. Amrutha Reddy"
-                    value={regName} onChange={e => { setRegName(e.target.value); setError(''); }}
-                    style={inp(regName)}
-                    onFocus={e => e.target.style.borderColor = cfg.accent}
-                    onBlur={e => e.target.style.borderColor = regName ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-                  />
-                </Fld>
-
-                {/* ─ Row 1 Right: Username */}
-                <Fld label="Username *" icon={<User size={13} color="#475569" />} mb="0">
-                  <input type="text" placeholder="e.g. amrutha123"
-                    value={regUser} onChange={e => { setRegUser(e.target.value); setError(''); }}
-                    style={inp(regUser)} autoComplete="username"
-                    onFocus={e => e.target.style.borderColor = cfg.accent}
-                    onBlur={e => e.target.style.borderColor = regUser ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-                  />
-                </Fld>
-
-                {/* ─ Row 2 Left: Mobile Number */}
-                <Fld label="Mobile Number *" icon={<Phone size={13} color="#475569" />} mb="0">
-                  <input type="tel" placeholder="10-digit mobile (starts with 6-9)" maxLength={10}
-                    value={regMobile} onChange={e => { setRegMobile(e.target.value.replace(/\D/g, '')); setError(''); }}
-                    style={inp(regMobile)}
-                    onFocus={e => e.target.style.borderColor = cfg.accent}
-                    onBlur={e => e.target.style.borderColor = regMobile ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-                  />
-                </Fld>
-
-                {/* ─ Row 2 Right: Email */}
-                <Fld label="Email *" icon={<Mail size={13} color="#475569" />} mb="0">
-                  <input type="email" placeholder="e.g. amrutha@gmail.com"
-                    value={regEmail} onChange={e => { setRegEmail(e.target.value); setError(''); }}
-                    style={inp(regEmail)}
-                    onFocus={e => e.target.style.borderColor = cfg.accent}
-                    onBlur={e => e.target.style.borderColor = regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-                  />
-                </Fld>
-
-                {/* ─ Row 3 Left: Password */}
-                <Fld label="Password *" icon={<Lock size={13} color="#475569" />} mb="0">
-                  <div style={{ position: 'relative', width: '100%' }}>
-                    <input
-                      id="reg-password"
-                      aria-label="Password"
-                      type={showRegPw ? 'text' : 'password'}
-                      placeholder="Min 8 chars (e.g. Amrutha@123)"
-                      value={regPass}
-                      onChange={e => { setRegPass(e.target.value); setError(''); }}
-                      style={inp(regPass, { paddingRight: '2.5rem' })}
-                      autoComplete="new-password"
-                      onFocus={e => e.target.style.borderColor = cfg.accent}
-                      onBlur={e => e.target.style.borderColor = regPass ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
-                    />
-                    <PwEye show={showRegPw} toggle={() => setShowRegPw(p => !p)} ariaLabel={showRegPw ? "Hide password" : "Show password"} />
-                  </div>
-                </Fld>
-
-                {/* ─ Row 3 Right: Confirm Password (RMS_REG_009) */}
-                <Fld label="Confirm Password *" icon={<Lock size={13} color="#475569" />} mb="0">
-                  <div style={{ position: 'relative', width: '100%' }}>
-                    <input
-                      id="reg-confirm-password"
-                      aria-label="Confirm Password"
-                      type={showRegConfirm ? 'text' : 'password'}
-                      placeholder="Re-enter password"
-                      value={regConfirm}
-                      onChange={e => { setRegConfirm(e.target.value); setError(''); }}
-                      style={inp(regConfirm, {
-                        paddingRight: '2.5rem',
-                        borderColor: regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
-                      })}
-                      autoComplete="new-password"
-                      onFocus={e => e.target.style.borderColor = cfg.accent}
-                      onBlur={e => e.target.style.borderColor = regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'}
-                    />
-                    <PwEye show={showRegConfirm} toggle={() => setShowRegConfirm(p => !p)} ariaLabel={showRegConfirm ? "Hide confirm password" : "Show confirm password"} />
-                  </div>
-                </Fld></div>
-
-              <div style={{ marginTop: '0.35rem' }}>
-                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Verify Email & Create Account" icon={<Mail size={15} />} />
-              </div>
-
-              <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Already have an account? </span>
-                <button type="button" onClick={() => { setMode('login'); clearAll(); }}
-                  style={{ background: 'none', border: 'none', color: 'var(--accent-amber-light)', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}>
-                  Sign In
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyAndRegister} style={{ padding: '0.2rem 0', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem', justifyContent: 'center' }}>
-              {error   && <Err msg={error} />}
-              {success && <Suc msg={success} />}
-
-              <div style={{ textAlign: 'center', marginBottom: '0.1rem' }}>
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '50%',
-                  background: 'rgba(255,157,0,0.12)', border: '1.5px solid #ff9d00',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 0.35rem', color: '#ff9d00',
-                  boxShadow: '0 0 12px rgba(255,157,0,0.2)'
-                }}>
-                  <Mail size={18} />
-                </div>
-                <h2 style={{ fontSize: '0.92rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 0.2rem' }}>
-                  Verify Your Email Address
-                </h2>
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.35 }}>
-                  We've sent a 6-digit verification code to<br />
-                  <strong style={{ color: '#ff9d00' }}>{regEmail}</strong>
-                </p>
-              </div>
-
-              {/* Visual OTP Card & Autofill helper */}
-              {regServerOtp && (
-                <div style={{
-                  background: regIsLiveEmail ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.12)',
-                  border: `1.5px dashed ${regIsLiveEmail ? '#10b981' : '#f59e0b'}`,
-                  borderRadius: '8px',
-                  padding: '0.45rem 0.65rem',
-                  marginBottom: '0.1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.25rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: regIsLiveEmail ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <KeyRound size={12} color={regIsLiveEmail ? '#10b981' : '#f59e0b'} />
-                      {regIsLiveEmail ? 'LIVE EMAIL DISPATCHED' : 'OTP VERIFICATION CODE'}
-                    </span>
-                    {regOtp === regServerOtp ? (
-                      <span style={{ fontSize: '0.64rem', color: '#10b981', fontWeight: 800, background: 'rgba(16, 185, 129, 0.15)', padding: '2px 5px', borderRadius: '4px' }}>
-                        ✓ Applied
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setRegOtp(regServerOtp); setError(''); }}
-                        style={{
-                          background: 'var(--accent-amber, #f59e0b)',
-                          border: 'none',
-                          color: '#000000',
-                          fontSize: '0.64rem',
-                          fontWeight: 800,
-                          padding: '2px 7px',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Auto-Fill
-                      </button>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.2em', color: 'var(--text-main)', fontFamily: 'monospace' }}>
-                      {regServerOtp}
-                    </span>
-                    {regPreviewUrl && (
-                      <a
-                        href={regPreviewUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          fontSize: '0.66rem',
-                          color: '#38bdf8',
-                          fontWeight: 700,
-                          textDecoration: 'underline'
-                        }}
-                      >
-                        Preview Email ↗
-                      </a>
-                    )}
-                  </div>
-
-                  {!regIsLiveEmail && (
-                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
-                      ⚡ SMTP credentials are not yet configured in .env. Click <strong>Auto-Fill</strong> above to verify immediately.
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <Fld label="ENTER 6-DIGIT EMAIL OTP" icon={<KeyRound size={13} color="#475569" />} mb="0.15rem">
-                <input
-                  id="reg-otp"
-                  type="text"
-                  maxLength={6}
-                  autoFocus
-                  placeholder="• • • • • •"
-                  value={regOtp}
-                  onChange={(e) => {
-                    setRegOtp(e.target.value.replace(/\D/g, ''));
-                    setError('');
-                  }}
-                  style={{
-                    ...inp(regOtp),
-                    textAlign: 'center',
-                    fontSize: '1.15rem',
-                    letterSpacing: '6px',
-                    fontWeight: 900,
-                    color: '#ff9d00',
-                    fontFamily: 'monospace'
-                  }}
-                />
-              </Fld>
-
-              <div style={{ marginTop: '0.15rem' }}>
-                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Verify & Complete Registration" icon={<CheckCircle size={15} />} />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
-                <button
-                  type="button"
-                  onClick={() => { setRegOtpStep(false); setError(''); }}
-                  style={{
-                    background: 'none', border: 'none', color: 'var(--text-muted)',
-                    fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '0.25rem'
-                  }}
-                >
-                  <ArrowLeft size={13} /> Edit Details
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleResendRegOtp}
-                  disabled={regResendTimer > 0 || loading}
-                  style={{
-                    background: 'none', border: 'none',
-                    color: regResendTimer > 0 ? '#64748b' : 'var(--accent-amber-light)',
-                    fontSize: '0.72rem', fontWeight: 800,
-                    cursor: regResendTimer > 0 ? 'not-allowed' : 'pointer',
-                    textDecoration: regResendTimer > 0 ? 'none' : 'underline',
-                    display: 'flex', alignItems: 'center', gap: '0.25rem'
-                  }}
-                >
-                  <RefreshCw size={12} className={loading ? 'spin' : ''} />
-                  {regResendTimer > 0 ? `Resend in ${regResendTimer}s` : 'Resend Code'}
-                </button>
-              </div>
-            </form>
-          )
-        )}
       </div>
 
       </div></section>

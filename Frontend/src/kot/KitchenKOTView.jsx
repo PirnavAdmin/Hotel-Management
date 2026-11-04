@@ -743,10 +743,21 @@ export function KitchenKOTView({
 
         .kot-cards-grid {
           width: 100%;
+          min-width: 0;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+          gap: 0.85rem;
+          align-items: stretch;
+        }
+
+        .kot-cards-grid--single {
+          grid-template-columns: minmax(0, 320px);
+          justify-content: center;
         }
 
         .kot-order-card {
           width: 100%;
+          min-width: 0;
         }
 
         .kot-order-card--compact {
@@ -754,35 +765,56 @@ export function KitchenKOTView({
           min-height: 140px;
           padding: 0.7rem 0.8rem;
           display: grid;
-          grid-template-rows: minmax(48px, auto) 20px 32px;
+          grid-template-rows: minmax(48px, 1fr) auto auto;
           gap: 0.55rem;
-          align-content: start;
+          align-content: stretch;
         }
 
         .kot-compact-header {
           display: grid;
-          grid-template-columns: 56px minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr) max-content;
+          align-items: start;
+          column-gap: 0.55rem;
+          min-width: 0;
+        }
+
+        .kot-compact-leading {
+          display: grid;
+          grid-template-columns: 76px minmax(0, 1fr);
           align-items: center;
-          column-gap: 0.6rem;
+          column-gap: 0.55rem;
           min-width: 0;
         }
 
         .kot-compact-table-badge {
           display: grid;
           place-items: center;
-          width: 56px;
-          height: 42px;
-          padding: 0 0.25rem;
+          width: 76px;
+          min-height: 42px;
+          padding: 0.3rem 0.25rem;
           box-sizing: border-box;
           border-radius: 7px;
           font-size: 0.78rem;
           font-weight: 900;
           line-height: 1.1;
+          flex-shrink: 0;
+          text-align: center;
+          overflow-wrap: normal;
+        }
+
+        .kot-compact-table-badge > span {
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .kot-compact-table-badge small {
-          font-size: 0.48rem;
+          max-width: 100%;
+          font-size: 0.46rem;
           letter-spacing: 0.06em;
+          line-height: 1.1;
+          white-space: nowrap;
         }
 
         .kot-compact-copy {
@@ -801,6 +833,9 @@ export function KitchenKOTView({
         .kot-compact-title {
           font-size: 0.86rem;
           line-height: 1.2;
+          min-width: 0;
+          overflow-wrap: anywhere;
+          word-break: normal;
         }
 
         .kot-compact-order-number {
@@ -814,8 +849,9 @@ export function KitchenKOTView({
           display: inline-flex;
           align-items: center;
           justify-self: end;
+          flex-shrink: 0;
           gap: 0.38rem;
-          min-width: 0;
+          min-width: max-content;
           white-space: nowrap;
           font-size: 0.72rem;
           font-weight: 750;
@@ -836,9 +872,15 @@ export function KitchenKOTView({
           align-items: center;
           gap: 0.6rem;
           min-width: 0;
+          min-height: 20px;
           color: var(--text-muted);
           font-size: 0.72rem;
-          line-height: 1;
+          line-height: 1.2;
+        }
+
+        .kot-compact-meta > :first-child {
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         .kot-compact-meta > :last-child {
@@ -860,18 +902,6 @@ export function KitchenKOTView({
           line-height: 1;
           white-space: nowrap;
           cursor: pointer;
-        }
-
-        @media (max-width: 1200px) {
-          .kot-cards-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-          }
-        }
-
-        @media (max-width: 900px) {
-          .kot-cards-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          }
         }
 
         @media (max-width: 640px) {
@@ -911,7 +941,7 @@ export function KitchenKOTView({
           }
 
           .kot-cards-grid {
-            grid-template-columns: minmax(0, 1fr) !important;
+            grid-template-columns: minmax(0, 1fr);
             gap: 0.75rem !important;
           }
 
@@ -922,21 +952,31 @@ export function KitchenKOTView({
           .kot-order-card--compact {
             min-height: 140px;
             padding: 0.65rem 0.7rem;
-            grid-template-rows: minmax(48px, auto) 20px 32px;
+            grid-template-rows: minmax(48px, 1fr) auto auto;
           }
 
-          .kot-compact-header { grid-template-columns: 50px minmax(0, 1fr) auto; column-gap: 0.4rem; }
-          .kot-compact-table-badge { width: 50px; }
+          .kot-compact-header { column-gap: 0.4rem; }
+          .kot-compact-leading { grid-template-columns: 76px minmax(0, 1fr); column-gap: 0.4rem; }
           .kot-compact-status { gap: 0.3rem; font-size: 0.68rem; }
           .kot-compact-title { font-size: 0.81rem; }
           .kot-compact-order-number { font-size: 0.66rem; }
         }
 
         @media (max-width: 360px) {
-          .kot-order-card--compact { min-height: 154px; grid-template-rows: minmax(60px, auto) 20px 32px; }
-          .kot-compact-header { grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 0.4rem; row-gap: 0.25rem; }
-          .kot-compact-table-badge { grid-row: 1 / span 2; width: 44px; }
-          .kot-compact-status { grid-column: 2; grid-row: 2; justify-self: start; }
+          .kot-order-card--compact { min-height: 154px; }
+          .kot-compact-leading { grid-template-columns: 76px minmax(0, 1fr); }
+        }
+
+        @media (max-width: 520px) {
+          .kot-compact-header {
+            grid-template-columns: minmax(0, 1fr);
+            row-gap: 0.3rem;
+          }
+
+          .kot-compact-status {
+            grid-column: 1;
+            justify-self: end;
+          }
         }
       `}</style>
 
@@ -1696,18 +1736,7 @@ export function KitchenKOTView({
           ) : (
             /* Compact Cards Grid matching Image 2 UI */
             <div
-              className="kot-cards-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  selectedTableFilter !== "all"
-                    ? "minmax(200px, 320px)"
-                    : "repeat(auto-fill, minmax(260px, 1fr))",
-                gap: "0.85rem",
-                alignItems: "stretch",
-                justifyContent:
-                  selectedTableFilter !== "all" ? "center" : "stretch",
-              }}
+              className={`kot-cards-grid${selectedTableFilter !== "all" ? " kot-cards-grid--single" : ""}`}
             >
               {filteredTables.map((tbl) => {
                 const allServed =
@@ -1723,6 +1752,7 @@ export function KitchenKOTView({
                     ? { label: "Preparing", color: "#f97316" }
                     : { label: "Received", color: "#ef4444" };
                 const orderTimeLabel = formatDisplayTime(tbl.orderTime);
+                const isTakeawayOrder = String(tbl.orderType).toLowerCase() === "takeaway";
 
                 return (
                   <article
@@ -1738,15 +1768,17 @@ export function KitchenKOTView({
                     }}
                   >
                     <div className="kot-compact-header">
-                      <span className="kot-compact-table-badge" style={{ background: `${compactStatus.color}1c`, color: compactStatus.color }}>
-                        <small>TABLE</small>
-                        {String(tbl.orderType).toLowerCase() === "takeaway" ? "TAKEAWAY" : formatCleanTableNum(tbl.name, tbl.id)}
-                      </span>
-                      <div className="kot-compact-copy">
-                        <strong className="kot-compact-title">{String(tbl.orderType).toLowerCase() === "takeaway" ? "Takeaway Order" : formatCleanTableName(tbl.name, tbl.id)}</strong>
-                        <span className="kot-compact-order-number">Order #{tbl.backendOrderId ?? tbl.id}</span>
+                      <div className="kot-compact-leading">
+                        <span className="kot-compact-table-badge" style={{ background: `${compactStatus.color}1c`, color: compactStatus.color }}>
+                          <small>{isTakeawayOrder ? "TAKEAWAY" : "TABLE"}</small>
+                          <span>{isTakeawayOrder ? "ORDER" : formatCleanTableNum(tbl.name, tbl.id)}</span>
+                        </span>
+                        <div className="kot-compact-copy">
+                          <strong className="kot-compact-title">{isTakeawayOrder ? "Takeaway Order" : formatCleanTableName(tbl.name, tbl.id)}</strong>
+                          <span className="kot-compact-order-number">Order #{tbl.backendOrderId ?? tbl.id}</span>
+                        </div>
                       </div>
-                      <span className="kot-compact-status" style={{ color: "var(--text-main)" }}>
+                      <span className="kot-compact-status" style={{ color: "var(--kot-status-color)" }}>
                         <span aria-hidden="true" className="kot-compact-status-dot" />
                         {compactStatus.label}
                       </span>

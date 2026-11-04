@@ -266,7 +266,7 @@ html:has(.bhanu-login), body:has(.bhanu-login) {
 .bhanu-login .bhanu-form-heading { padding: 6px 0 10px; text-align: center; }
 .bhanu-login .bhanu-form-heading h1 { margin-bottom: 2px !important; font-size: 18px !important; font-weight: 700 !important; color: var(--text-main) !important; overflow-wrap: anywhere; }
 .bhanu-login .bhanu-form-heading p { color: var(--text-muted) !important; font-size: 11.5px !important; line-height: 1.4; }
-.bhanu-login .bhanu-mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.bhanu-login .bhanu-mode-tabs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin-bottom: 8px; }
 .bhanu-login .bhanu-mode-tabs button { min-width: 0; min-height: 32px; border: 0 !important; border-radius: 7px !important; background: var(--input-bg) !important; color: var(--text-muted) !important; font-size: 11px !important; }
 .bhanu-login .bhanu-mode-tabs button[aria-pressed=true] { background: var(--primary-gradient) !important; color: #fff !important; }
 .bhanu-login .bhanu-login-card form { min-width: 0; padding: 0 !important; overflow: visible !important; }
@@ -279,7 +279,6 @@ html:has(.bhanu-login), body:has(.bhanu-login) {
 .bhanu-login .bhanu-login-card input::placeholder { color: var(--text-muted) !important; opacity: 1; }
 .bhanu-login .bhanu-login-card input:focus { border-color: #ff8a00 !important; box-shadow: 0 0 0 3px rgba(255,138,0,.15) !important; background: var(--input-focus-bg, #ffffff) !important; }
 .bhanu-login .bhanu-login-card input:focus-visible { outline: none; }
-.bhanu-login .bhanu-login-card input#reg-otp { color: #ff9d00 !important; font-family: monospace !important; font-size: 1.15rem !important; letter-spacing: 6px !important; text-align: center !important; font-weight: 900 !important; }
 /* Suppress Edge/IE browser default password reveal and clear icons */
 input::-ms-reveal { display: none !important; width: 0 !important; height: 0 !important; pointer-events: none !important; }
 input::-ms-clear { display: none !important; width: 0 !important; height: 0 !important; pointer-events: none !important; }
@@ -290,7 +289,6 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
 .bhanu-login .bhanu-input-icon, .bhanu-login .bhanu-input-icon svg, .bhanu-login .bhanu-login-card input + button, .bhanu-login .bhanu-signin-form input + button svg, .bhanu-login .bhanu-signin-form div > svg { color: var(--text-muted) !important; }
 .bhanu-login .bhanu-login-card input + button { position: absolute !important; right: 10px !important; top: 50% !important; transform: translateY(-50%) !important; display: flex !important; align-items: center !important; justify-content: center !important; width: 26px !important; height: 26px !important; padding: 0 !important; border: 0 !important; background: transparent !important; color: var(--text-dim) !important; cursor: pointer !important; z-index: 2 !important; box-shadow: none !important; }
 .bhanu-login .bhanu-login-card input + button:hover { color: var(--text-main) !important; }
-.bhanu-login .bhanu-registration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
 .bhanu-login .bhanu-signin-form > div { margin-bottom: 10px !important; }
 .bhanu-login .bhanu-signin-form .bhanu-login-options { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 2px 0 8px !important; min-height: 22px; }
 .bhanu-login .bhanu-login-options .bhanu-remember-label { display: inline-flex; flex: 0 0 auto; align-items: center; column-gap: 10px; white-space: nowrap; line-height: 1.2; color: var(--text-muted); font-size: 11.5px; font-weight: 650; cursor: pointer; }
