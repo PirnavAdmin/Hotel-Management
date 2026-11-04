@@ -29,12 +29,12 @@ Click the **🛡️ Admin** button in the top navigation bar to access:
 
 ## 🚀 Running the Project
 
-```bash
-# 1. Install dependencies
-npm install
+The single frontend application lives in `Frontend/`. Run its scripts from that directory:
 
-# 2. Start local development server
+```bash
+cd Frontend
+npm ci
 npm run dev
 ```
 
-Terminal is live at: `http://localhost:5173/`
+Use `npm run build` and `npm run lint` from `Frontend/` for verification. Copy `Frontend/.env.example` to `Frontend/.env` and set `VITE_API_BASE_URL` for the API host. The ASP.NET Core API remains in `Backend/` and listens on port 5018.
