@@ -1926,17 +1926,7 @@ function globalSyncPlugin() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
-  let apiBase = env.VITE_API_BASE_URL;
-  if (!apiBase) {
-    try {
-      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
-      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
-      if (match) apiBase = match[0].replace(/\/$/, "");
-    } catch {}
-  }
-  if (!apiBase) {
-    apiBase = "https://strengthen-office-php-jake.trycloudflare.com";
-  }
+  const apiBase = (env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
 
   return {
     plugins: [react(), globalSyncPlugin()],
