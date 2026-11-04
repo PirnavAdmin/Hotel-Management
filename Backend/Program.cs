@@ -181,6 +181,7 @@ builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
+builder.Services.AddScoped<InventoryService>();
 builder.Services.AddSignalR();
 
 // ============================================================

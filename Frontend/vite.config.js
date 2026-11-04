@@ -11,7 +11,6 @@ try {
 }
 
 const env = loadEnv("development", process.cwd(), "");
-const backendApiTarget = (env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
 
 const getBusinessDateStr = (dateObj = new Date()) => {
   const d = new Date(dateObj);
@@ -162,7 +161,19 @@ const sendOtpEmail = async (email, otp, fullName = "Admin") => {
 function globalSyncPlugin() {
   let sseClients = [];
   const getDataFile = () => {
-    return path.resolve(import.meta.dirname || process.cwd(), "server-db.json");
+    const candidates = [
+      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
+      path.resolve(process.cwd(), "..", "server-db.json"),
+      path.resolve(process.cwd(), "server-db.json"),
+      path.resolve(process.cwd(), "POS", "server-db.json"),
+      path.resolve(process.cwd(), "Frontend", "server-db.json"),
+      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\server-db.json",
+      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\Frontend\\server-db.json",
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+    return path.resolve(process.cwd(), "server-db.json");
   };
 
   const loadDb = () => {
@@ -181,6 +192,12 @@ function globalSyncPlugin() {
     try {
       const file = getDataFile();
       fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+      const altFile = file.includes("Frontend")
+        ? path.resolve(file, "..", "..", "server-db.json")
+        : path.resolve(file, "..", "Frontend", "server-db.json");
+      if (fs.existsSync(altFile) && altFile !== file) {
+        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
+      }
     } catch {}
   };
 
@@ -199,37 +216,6 @@ function globalSyncPlugin() {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
             server.middlewares.use((req, res, next) => {
-        const requestUrl = req.url || "/";
-        if (requestUrl.startsWith("/__backend_api/")) {
-          const targetUrl = `${backendApiTarget}${requestUrl.slice("/__backend_api".length)}`;
-          const requestChunks = [];
-          req.on("data", (chunk) => requestChunks.push(chunk));
-          req.on("end", async () => {
-            try {
-              const headers = {};
-              if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];
-              if (req.headers.authorization) headers.Authorization = req.headers.authorization;
-              const method = String(req.method || "GET").toUpperCase();
-              const body = Buffer.concat(requestChunks);
-              const upstream = await fetch(targetUrl, {
-                method,
-                headers,
-                ...(method === "GET" || method === "HEAD" ? {} : { body }),
-              });
-              const responseBody = Buffer.from(await upstream.arrayBuffer());
-              res.writeHead(upstream.status, {
-                "Content-Type": upstream.headers.get("content-type") || "application/json",
-                "Cache-Control": "no-store",
-              });
-              return res.end(responseBody);
-            } catch {
-              res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-              return res.end(JSON.stringify({ success: false, error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer." }));
-            }
-          });
-          return;
-        }
-
         // Centralized Backend HTTP Request/Response Logger
         const start = Date.now();
         const method = req.method || "GET";
@@ -1746,59 +1732,7 @@ function globalSyncPlugin() {
           return;
         }
 
-        // Authentication must be handled by the ASP.NET API, never local JSON.
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          res.writeHead(503, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ success: false, error: "Authentication server is unavailable." }));
-        }
-
-        // REST API: /api/v1/auth/login (disabled local mock)
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk) => {
-            body += chunk;
-          });
-          req.on("end", () => {
-            try {
-              const { username, password } = JSON.parse(body);
-              db = loadDb();
-              const users = db.avsr_auth_users_v1 || [];
-              const found = users.find(
-                (u) =>
-                  (u.username?.toLowerCase() === username?.toLowerCase() ||
-                    u.email?.toLowerCase() === username?.toLowerCase()) &&
-                  u.password === password,
-              );
-              if (found) {
-                const userObj = { ...found };
-                if (username && String(username).includes("@")) {
-                  userObj.email = String(username).trim().toLowerCase();
-                }
-                res.writeHead(200, { "Content-Type": "application/json" });
-                return res.end(
-                  JSON.stringify({
-                    success: true,
-                    token: "avsr-local-jwt-token",
-                    user: userObj,
-                  }),
-                );
-              }
-              res.writeHead(401, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({
-                  success: false,
-                  error: "Invalid username or password",
-                }),
-              );
-            } catch (err) {
-              res.writeHead(400, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({ success: false, error: err.message }),
-              );
-            }
-          });
-          return;
-        }
+        // Authentication is forwarded directly to ASP.NET Core API via Vite proxy
 
         // REST API: /api/v1/auth/forgot-password
         if (
@@ -1923,9 +1857,29 @@ function globalSyncPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const env = loadEnv(mode, process.cwd(), "");
 
-  const apiBase = (env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
+  const backendTarget =
+    process.env.BACKEND_URL ||
+    env.BACKEND_URL ||
+    process.env.VITE_BACKEND_URL ||
+    env.VITE_BACKEND_URL ||
+    "http://127.0.0.1:5018";
+
+  let apiBase = env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
+  if (!apiBase) {
+    try {
+      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
+      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
+      if (match) apiBase = match[0].replace(/\/$/, "");
+    } catch {}
+  }
+  if (!apiBase) {
+    apiBase = "";
+  } else {
+    apiBase = apiBase.trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
+  }
 
   return {
     plugins: [react(), globalSyncPlugin()],
@@ -1944,22 +1898,53 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
+        "^/__backend_api": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/__backend_api/, ""),
+          headers: { "ngrok-skip-browser-warning": "true" },
+          configure: (proxy) => {
+            proxy.on("error", (err, req, res) => {
+              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
+              if (res && !res.headersSent && typeof res.writeHead === "function") {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                  success: false,
+                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                }));
+              }
+            });
+          },
+        },
+        "^/api": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
+          configure: (proxy) => {
+            proxy.on("error", (err, req, res) => {
+              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
+              if (res && !res.headersSent && typeof res.writeHead === "function") {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                  success: false,
+                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                }));
+              }
+            });
+          },
+        },
         "/uploads": {
-          target: apiBase,
-          changeOrigin: true,
-          headers: { "ngrok-skip-browser-warning": "true" },
-        },
-        "/api/v1": {
-          target: apiBase,
+          target: backendTarget,
           changeOrigin: true,
           secure: false,
           headers: { "ngrok-skip-browser-warning": "true" },
         },
-        "/api/auth": {
-          target: apiBase,
+        "/swagger": {
+          target: backendTarget,
           changeOrigin: true,
           secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
         },
       },
     },

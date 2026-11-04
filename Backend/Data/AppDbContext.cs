@@ -383,6 +383,7 @@ public class AppDbContext : DbContext
             entity.Property(oi => oi.Id).HasColumnName("order_item_id").ValueGeneratedOnAdd();
             entity.Property(oi => oi.OrderId).HasColumnName("order_id").IsRequired();
             entity.Property(oi => oi.KotId).HasColumnName("kot_id").IsRequired(false);
+            entity.Property(oi => oi.BotId).HasColumnName("bot_id").IsRequired(false);
             entity.Property(oi => oi.MenuItemId).HasColumnName("menu_item_id").IsRequired();
             entity.Property(oi => oi.VariantId).HasColumnName("variant_id");
             entity.Property(oi => oi.Name).HasColumnName("item_name").HasMaxLength(150).IsRequired();

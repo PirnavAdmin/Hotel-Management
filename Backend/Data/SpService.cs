@@ -58,7 +58,8 @@ public class SpService
         using var cmd = CreateCommand(conn, spName, parameters);
         var result = await cmd.ExecuteScalarAsync();
         if (result == null || result == DBNull.Value) return default;
-        return (T)Convert.ChangeType(result, typeof(T));
+        var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        return (T)Convert.ChangeType(result, targetType);
     }
 
     public async Task<List<T>> ExecuteQueryAsync<T>(string spName, Func<DbDataReader, T> mapper, Dictionary<string, object?>? parameters = null)
@@ -152,7 +153,8 @@ public class SpService
         }
         var result = await cmd.ExecuteScalarAsync();
         if (result == null || result == DBNull.Value) return default;
-        return (T)Convert.ChangeType(result, typeof(T));
+        var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        return (T)Convert.ChangeType(result, targetType);
     }
 }
 

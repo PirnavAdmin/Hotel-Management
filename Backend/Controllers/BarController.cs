@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using HMS.DTOs;
 using HMS.Hubs;
@@ -16,15 +17,18 @@ namespace HMS.Controllers;
 public class BarController : ControllerBase
 {
     private readonly BarService _barService;
+    private readonly InventoryService _inventoryService;
     private readonly IHubContext<PosHub> _hubContext;
     private readonly ILogger<BarController> _logger;
 
     public BarController(
         BarService barService,
+        InventoryService inventoryService,
         IHubContext<PosHub> hubContext,
         ILogger<BarController> logger)
     {
         _barService = barService;
+        _inventoryService = inventoryService;
         _hubContext = hubContext;
         _logger = logger;
     }
@@ -1062,27 +1066,72 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Adds a new inventory item (Image 5: Add Inventory Modal).
+    /// Adds a new inventory item or batch of items (Image 5: Add Inventory Modal).
     /// Fields: Item Name *, Category *, Unit *, Stock *, Threshold *, Unit Cost *.
+    /// Supports single item object or JSON array [ ... ].
     /// </summary>
     [AllowAnonymous]
     [HttpPost("inventory")]
-    public async Task<IActionResult> CreateInventoryItem([FromBody] CreateInventoryItemDto dto)
+    [HttpPost("inventory/batch")]
+    public async Task<IActionResult> CreateInventoryItem([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
     {
-        if (string.IsNullOrWhiteSpace(dto.ItemName))
+        var items = _inventoryService.ParseJsonPayload(body);
+        if (items.Count == 0)
         {
             return BadRequest(new { success = false, message = "Item Name is required." });
         }
 
-        var created = await _barService.CreateInventoryItemAsync(dto);
-
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created); } catch { }
-
-        return CreatedAtAction(nameof(GetBarInventoryItemById), new { id = created.ItemId }, new
+        foreach (var item in items)
         {
-            success = true,
-            message = "Inventory item added successfully.",
-            data = created
+            item.IsBarItem = true;
+            if (string.IsNullOrWhiteSpace(item.Category) || item.Category.Equals("General", StringComparison.OrdinalIgnoreCase))
+            {
+                item.Category = "Wine";
+            }
+        }
+
+        if (items.Count == 1)
+        {
+            var (isValid, valErr) = _inventoryService.ValidateItem(items[0], 0);
+            if (!isValid)
+            {
+                return BadRequest(new { success = false, message = valErr });
+            }
+        }
+
+        var result = await _inventoryService.ProcessInventorySubmissionAsync(items, atomic ?? false);
+
+        if (!result.Success && result.Items.Count == 0)
+        {
+            return StatusCode(500, new { success = false, message = result.Message, errors = result.Errors });
+        }
+
+        if (items.Count == 1 && result.Items.Count == 1)
+        {
+            var created = result.Items[0];
+            try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created); } catch { }
+
+            return CreatedAtAction(nameof(GetBarInventoryItemById), new { id = created.Id }, new
+            {
+                success = true,
+                message = created.Action == "updated"
+                    ? $"Inventory item '{created.Name}' stock updated successfully."
+                    : "Inventory item added successfully.",
+                data = created
+            });
+        }
+
+        return Ok(new
+        {
+            success = result.Success,
+            message = result.Message,
+            totalReceived = result.TotalReceived,
+            insertedCount = result.InsertedCount,
+            updatedCount = result.UpdatedCount,
+            failedCount = result.FailedCount,
+            items = result.Items,
+            errors = result.Errors,
+            data = result.Items
         });
     }
 

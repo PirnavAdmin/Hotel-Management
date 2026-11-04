@@ -12,6 +12,7 @@ namespace HMS.Controllers;
 [Route("api/[controller]")]
 [Route("api/v1/reports")]
 [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+[Tags("Admin", "Reports")]
 public class ReportsController : ControllerBase
 {
     private readonly SpService _spService;

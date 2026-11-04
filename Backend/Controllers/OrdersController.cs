@@ -36,6 +36,7 @@ public class OrdersController : ControllerBase
     // GET ACTIVE ORDERS
     // ============================================================
 
+    [Tags("Takeaway", "Orders")]
     [HttpGet("takeaway")]
     public async Task<IActionResult> GetUndispatchedTakeawayOrders()
     {
@@ -58,6 +59,7 @@ public class OrdersController : ControllerBase
         return Ok(orderDtos);
     }
 
+    [Tags("Takeaway", "Orders")]
     [HttpPost("{id:long}/dispatch")]
     public async Task<IActionResult> DispatchTakeawayOrder(long id)
     {
@@ -84,7 +86,7 @@ public class OrdersController : ControllerBase
         return Ok(new { success = true, message = "Takeaway order dispatched.", orderId = order.Id });
     }
 
-    [HttpGet]
+    // =====================================================    [HttpGet]
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveOrders()
     {
@@ -156,6 +158,7 @@ public class OrdersController : ControllerBase
     // ============================================================
 
     [HttpPost]
+    [Tags("Takeaway", "Orders")]
     public async Task<IActionResult> CreateOrAddToOrder(
         [FromBody] CreateOrderRequest request)
     {
@@ -349,6 +352,9 @@ public class OrdersController : ControllerBase
         // ADD / UPDATE ITEMS IN MEMORY
         // ========================================================
 
+        _logger.LogInformation("[Orders] CreateOrAddToOrder processing Order #{OrderId} (Table: {TableId}). Total incoming items: {Count}",
+            order.Id, order.TableId, request.Items.Count);
+
         foreach (var itemInput in request.Items)
         {
             if (itemInput.Quantity <= 0)
@@ -356,32 +362,23 @@ public class OrdersController : ControllerBase
                 continue;
             }
 
-            long menuItemId = itemInput.MenuItemId ?? 0;
-            if (menuItemId <= 0 && !string.IsNullOrWhiteSpace(itemInput.Name))
-            {
-                try
-                {
-                    var resolvedMenuId = await _spService.ExecuteSqlScalarAsync<long?>(
-                        "SELECT menu_item_id FROM menu_items WHERE dish_name = @dname LIMIT 1;",
-                        new Dictionary<string, object?> { { "dname", itemInput.Name.Trim() } });
-                    if (resolvedMenuId.HasValue && resolvedMenuId.Value > 0)
-                    {
-                        menuItemId = resolvedMenuId.Value;
-                    }
-                }
-                catch { }
-            }
-            if (menuItemId <= 0)
-            {
-                menuItemId = 1;
-            }
+            long menuItemId = await OrderItemRouting.ResolveMenuItemIdAsync(
+                _context,
+                itemInput.MenuItemId,
+                itemInput.Name,
+                itemInput.IsBarItem);
+
+            bool isBar = OrderItemRouting.IsBarItem(itemInput.Name, itemInput.Category, itemInput.DrinkType, itemInput.IsBarItem ?? false);
+            _logger.LogInformation("[Orders] Item classified: '{ItemName}' (InputId: {InputId}, Qty: {Qty}) -> ResolvedMenuItemId: {MenuItemId}, Category: {Category}",
+                itemInput.Name, itemInput.MenuItemId, itemInput.Quantity, menuItemId, isBar ? "BAR" : "FOOD");
 
             var existingItem = order.Items.FirstOrDefault(i =>
                 i.MenuItemId == menuItemId &&
                 i.VariantId == itemInput.VariantId &&
                 (i.KotStatus == "Queued" ||
                  i.KotStatus == "queued") &&
-                (i.KotId == null || i.KotId == 0));
+                (i.KotId == null || i.KotId == 0) &&
+                (i.BotId == null || i.BotId == 0));
 
             if (existingItem != null)
             {
@@ -425,6 +422,8 @@ public class OrdersController : ControllerBase
                     KotBatch = 1,
 
                     KotId = null,
+
+                    BotId = null,
 
                     IsActive = true,
 
@@ -502,8 +501,8 @@ public class OrdersController : ControllerBase
 
 
     // ============================================================
-    // ADD / UPDATE ORDER ITEMS
-    // ============================================================
+    // ADD ORDER ITEMS (POST)
+    // =====================================================    // ============================================================
 
     [HttpPost("{id:long}/items")]
     public async Task<IActionResult> AddOrderItems(
@@ -621,6 +620,7 @@ public class OrdersController : ControllerBase
         {
             return NotFound(new
             {
+                success = false,
                 message = "Order not found."
             });
         }
@@ -629,18 +629,56 @@ public class OrdersController : ControllerBase
         {
             return BadRequest(new
             {
+                success = false,
                 message = "Items are required."
             });
         }
 
         foreach (var itemInput in request.Items)
         {
+            long menuItemId = await OrderItemRouting.ResolveMenuItemIdAsync(
+                _context,
+                itemInput.MenuItemId,
+                itemInput.Name,
+                itemInput.IsBarItem);
+
             var existing = order.Items.FirstOrDefault(i =>
-                i.MenuItemId == itemInput.MenuItemId &&
+                (i.MenuItemId == itemInput.MenuItemId || i.MenuItemId == menuItemId) &&
                 i.VariantId == itemInput.VariantId);
 
             if (existing == null)
             {
+                if (itemInput.Quantity > 0)
+                {
+                    decimal price = itemInput.Price;
+                    if (price <= 0)
+                    {
+                        var mi = await _context.MenuItems.FirstOrDefaultAsync(m => m.MenuItemId == menuItemId);
+                        if (mi != null) price = mi.Price;
+                    }
+
+                    var newItem = new OrderItem
+                    {
+                        OrderId = order.Id,
+                        MenuItemId = menuItemId,
+                        VariantId = itemInput.VariantId,
+                        Name = itemInput.Name,
+                        Price = price,
+                        Quantity = itemInput.Quantity,
+                        TotalPrice = price * itemInput.Quantity,
+                        Notes = itemInput.Notes,
+                        KotStatus = "Queued",
+                        KotBatch = 1,
+                        KotId = null,
+                        BotId = null,
+                        IsActive = true,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    order.Items.Add(newItem);
+                    _logger.LogInformation("[Orders] Added item in UpdateOrderItems '{Name}' (MenuItemId: {MenuItemId}, Price: {Price}, Qty: {Qty}) to Order #{OrderId}",
+                        itemInput.Name, menuItemId, price, itemInput.Quantity, order.Id);
+                }
                 continue;
             }
 
@@ -655,20 +693,13 @@ public class OrdersController : ControllerBase
             else
             {
                 existing.Quantity = itemInput.Quantity;
-
-                existing.TotalPrice =
-                    existing.Price *
-                    existing.Quantity;
-
+                existing.TotalPrice = existing.Price * existing.Quantity;
                 existing.Notes = itemInput.Notes;
-
-                existing.UpdatedAt =
-                    DateTime.UtcNow;
+                existing.UpdatedAt = DateTime.UtcNow;
             }
         }
 
         RecalculateTotals(order);
-
         await _context.SaveChangesAsync();
 
         await _hubContext.Clients
@@ -678,17 +709,19 @@ public class OrdersController : ControllerBase
                 new
                 {
                     orderId = order.Id,
-
                     tableId = order.TableId,
-
-                    items = order.Items
-                        .Select(MapToOrderItemDto)
-                        .ToList(),
-
+                    items = order.Items.Select(MapToOrderItemDto).ToList(),
                     grandTotal = order.GrandTotal
                 });
 
-        return Ok(MapToOrderDto(order));
+        return Ok(new
+        {
+            success = true,
+            orderId = order.Id,
+            items = order.Items.Select(MapToOrderItemDto).ToList(),
+            grandTotal = order.GrandTotal,
+            order = MapToOrderDto(order)
+        });
     }
 
 
@@ -779,6 +812,7 @@ public class OrdersController : ControllerBase
         return Ok(new { success = true, message = "Order cancelled/deleted successfully.", data = MapToOrderDto(order) });
     }
 
+    [Tags("Takeaway", "Orders")]
     [HttpPost("{id}/cancel")]
     [HttpPost("/api/v1/orders/{id}/cancel")]
     public async Task<IActionResult> CancelOrder(long id)
@@ -812,62 +846,72 @@ public class OrdersController : ControllerBase
 
         var queuedItems = order.Items
             .Where(i =>
+                i.IsActive && !i.IsDeleted &&
+                (i.KotStatus == "Queued" || i.KotStatus == "queued") &&
                 (i.KotId == null || i.KotId == 0) &&
-                (i.KotStatus == "Queued" ||
-                 i.KotStatus == "queued"))
+                (i.BotId == null || i.BotId == 0))
             .ToList();
 
         if (!queuedItems.Any())
         {
             return BadRequest(new
             {
-                message = "No new queued items to send to kitchen."
+                message = "No new queued items to send to kitchen or bar."
             });
         }
+
+        _logger.LogInformation("[KOT/BOT Dispatch] Received SendKot for Order #{OrderId}. Total queued items: {QueuedCount}",
+            order.Id, queuedItems.Count);
 
         var barItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
             _context,
             queuedItems.Select(item => item.MenuItemId));
-        var kitchenItems = queuedItems
-            .Where(item => !barItemIds.Contains(item.MenuItemId))
+
+        var barItems = queuedItems
+            .Where(item => barItemIds.Contains(item.MenuItemId) || OrderItemRouting.IsBarItem(item.Name))
             .ToList();
 
-        if (!kitchenItems.Any())
+        var kitchenItems = queuedItems
+            .Where(item => !barItemIds.Contains(item.MenuItemId) && !OrderItemRouting.IsBarItem(item.Name))
+            .ToList();
+
+        _logger.LogInformation("[KOT/BOT Dispatch] Classification for Order #{OrderId}: Kitchen items = {KitchenCount}, Bar items = {BarCount}",
+            order.Id, kitchenItems.Count, barItems.Count);
+
+        foreach (var item in kitchenItems)
         {
-            return Ok(new
-            {
-                success = true,
-                message = "Bar items are queued for the Bar BOT; no kitchen items were sent.",
-                botOnly = true,
-                orderId = order.Id
-            });
+            _logger.LogInformation("[KOT/BOT Dispatch] -> Kitchen Item: '{Name}' (MenuItemId: {MenuItemId}, Qty: {Qty})",
+                item.Name, item.MenuItemId, item.Quantity);
+        }
+
+        foreach (var item in barItems)
+        {
+            _logger.LogInformation("[KOT/BOT Dispatch] -> Bar Item: '{Name}' (MenuItemId: {MenuItemId}, Qty: {Qty})",
+                item.Name, item.MenuItemId, item.Quantity);
         }
 
         // ========================================================
-        // GET MAIN KITCHEN
+        // 1. DISPATCH KITCHEN ITEMS (KOT)
         // ========================================================
+        KitchenOrderTicket? kot = null;
+        object? kotData = null;
+        int nextKitchenBatch = 1;
 
-        var station = await _context.KitchenStations
-            .FirstOrDefaultAsync(s =>
-                s.StationId == 1 &&
-                s.IsActive &&
-                !s.IsDeleted);
-
-        if (station == null)
+        if (kitchenItems.Any())
         {
-            return BadRequest(new
+            var station = await _context.KitchenStations
+                .FirstOrDefaultAsync(s =>
+                    s.StationId == 1 &&
+                    s.IsActive &&
+                    !s.IsDeleted);
+
+            if (station == null)
             {
-                message =
-                    "Main Kitchen station was not found."
-            });
-        }
+                station = await _context.KitchenStations
+                    .FirstOrDefaultAsync(s => s.IsActive && !s.IsDeleted);
+            }
 
-        // ========================================================
-        // NEXT BATCH
-        // ========================================================
-
-        int nextBatch =
-            await _context.KitchenOrderTickets
+            nextKitchenBatch = await _context.KitchenOrderTickets
                 .Where(k =>
                     k.OrderId == order.Id &&
                     k.IsActive &&
@@ -875,145 +919,210 @@ public class OrdersController : ControllerBase
                 .Select(k => (int?)k.BatchNumber)
                 .MaxAsync() ?? 0;
 
-        nextBatch++;
+            nextKitchenBatch++;
+
+            string kotNumber = $"KOT-{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+
+            kot = new KitchenOrderTicket
+            {
+                KotNumber = kotNumber,
+                OrderId = order.Id,
+                StationId = station?.StationId ?? 1,
+                BatchNumber = nextKitchenBatch,
+                Status = "Queued",
+                IsActive = true,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.KitchenOrderTickets.Add(kot);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[KOT/BOT Dispatch] Kitchen KOT created: KotId={KotId}, KotNumber={KotNumber}, Batch={Batch}",
+                kot.Id, kot.KotNumber, nextKitchenBatch);
+
+            try
+            {
+                var rawSql = "INSERT INTO kitchen_orders (kot_number, order_id, branch_id, batch_number, status, priority, special_notes, created_at) " +
+                             "VALUES ({0}, {1}, 1, {2}, 'queued', 'normal', {3}, NOW()) " +
+                             "ON DUPLICATE KEY UPDATE status = 'queued'";
+                var note = $"Table: {order.TableName ?? ("Table " + order.TableId)} ({order.Section ?? "Main Hall"})";
+                await _context.Database.ExecuteSqlRawAsync(rawSql, kot.KotNumber, order.Id, nextKitchenBatch, note);
+            }
+            catch { }
+
+            foreach (var item in kitchenItems)
+            {
+                item.KotId = kot.Id;
+                item.KotBatch = nextKitchenBatch;
+                item.KotStatus = "Queued";
+                item.UpdatedAt = DateTime.UtcNow;
+                item.OrderId = order.Id;
+            }
+        }
 
         // ========================================================
-        // CREATE KOT
+        // 2. DISPATCH BAR ITEMS (BOT)
         // ========================================================
+        long? botId = null;
+        string? botNumber = null;
+        object? botData = null;
+        int nextBarBatch = 1;
 
-        string kotNumber =
-            $"KOT-{DateTime.UtcNow:yyyyMMddHHmmssfff}";
-
-        var kot = new KitchenOrderTicket
+        if (barItems.Any())
         {
-            KotNumber = kotNumber,
+            try
+            {
+                var maxBatch = await _spService.ExecuteSqlScalarAsync<int?>(
+                    "SELECT MAX(batch_number) FROM bar_order_tickets WHERE order_id = @oid;",
+                    new Dictionary<string, object?> { { "@oid", order.Id } });
+                nextBarBatch = (maxBatch ?? 0) + 1;
+            }
+            catch
+            {
+                nextBarBatch = 1;
+            }
 
-            OrderId = order.Id,
-
-            StationId = station.StationId,
-
-            BatchNumber = nextBatch,
-
-            Status = "Queued",
-
-            IsActive = true,
-
-            IsDeleted = false,
-
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.KitchenOrderTickets.Add(kot);
-
-        // Save KOT first so MySQL generates kot_id.
-        await _context.SaveChangesAsync();
-
-        try
-        {
-            var rawSql = "INSERT INTO kitchen_orders (kot_number, order_id, branch_id, batch_number, status, priority, special_notes, created_at) " +
-                         "VALUES ({0}, {1}, 1, {2}, 'queued', 'normal', {3}, NOW()) " +
-                         "ON DUPLICATE KEY UPDATE status = 'queued'";
+            botNumber = $"BOT-{DateTime.UtcNow:yyyyMMddHHmmssfff}";
             var note = $"Table: {order.TableName ?? ("Table " + order.TableId)} ({order.Section ?? "Main Hall"})";
-            await _context.Database.ExecuteSqlRawAsync(rawSql, kot.KotNumber, order.Id, nextBatch, note);
-        }
-        catch { }
 
-        // ========================================================
-        // NOW INSERT ORDER ITEMS WITH KOT ID
-        // ========================================================
+            const string insertBotSql = @"
+                INSERT INTO bar_order_tickets (bot_number, order_id, bar_counter_id, batch_number, status, priority, special_notes, created_at)
+                VALUES (@bot_number, @order_id, 1, @batch_number, 'queued', 'normal', @special_notes, NOW());
+                SELECT LAST_INSERT_ID();";
 
-        foreach (var item in kitchenItems)
-        {
-            item.KotId = kot.Id;
+            var generatedBotId = await _spService.ExecuteSqlScalarAsync<ulong?>(
+                insertBotSql,
+                new Dictionary<string, object?>
+                {
+                    { "@bot_number", botNumber },
+                    { "@order_id", order.Id },
+                    { "@batch_number", nextBarBatch },
+                    { "@special_notes", note }
+                });
 
-            item.KotBatch = nextBatch;
+            if (generatedBotId.HasValue && generatedBotId.Value > 0)
+            {
+                botId = (long)generatedBotId.Value;
+            }
+            else
+            {
+                var lookupId = await _spService.ExecuteSqlScalarAsync<long?>(
+                    "SELECT bot_id FROM bar_order_tickets WHERE bot_number = @bnum LIMIT 1;",
+                    new Dictionary<string, object?> { { "@bnum", botNumber } });
+                botId = lookupId ?? order.Id;
+            }
 
-            item.KotStatus = "Queued";
-
-            item.UpdatedAt = DateTime.UtcNow;
-
-            // If this is a newly created item it is currently
-            // tracked as Added.
-            //
-            // Existing items already have an ID and are updated.
-            item.OrderId = order.Id;
+            foreach (var item in barItems)
+            {
+                item.BotId = botId;
+                item.KotBatch = nextBarBatch;
+                item.KotStatus = "Queued";
+                item.UpdatedAt = DateTime.UtcNow;
+                item.OrderId = order.Id;
+            }
+            _logger.LogInformation("[KOT/BOT Dispatch] Bar BOT created: BotId={BotId}, BotNumber={BotNumber}, Batch={Batch}",
+                botId, botNumber, nextBarBatch);
         }
 
         await _context.SaveChangesAsync();
+        _logger.LogInformation("[KOT/BOT Dispatch] Order #{OrderId} KOT/BOT successfully dispatched and saved to database.", order.Id);
+
+        if (barItems.Any() && botId.HasValue)
+        {
+            var barItemDbIds = barItems.Select(b => b.Id).Where(id => id > 0).ToList();
+            if (barItemDbIds.Any())
+            {
+                try
+                {
+                    var inClause = string.Join(",", barItemDbIds);
+                    await _spService.ExecuteSqlNonQueryAsync(
+                        $"UPDATE order_items SET bot_id = {botId.Value} WHERE order_item_id IN ({inClause});");
+                }
+                catch { }
+            }
+        }
 
         // ========================================================
-        // DISPLAY FIELDS
+        // 3. DISPLAY FIELDS & RECALCULATE
         // ========================================================
-
         await PopulateDisplayFields(order);
-
         RecalculateTotals(order);
 
         // ========================================================
-        // KOT SIGNALR DATA
+        // 4. SIGNALR BROADCASTING
         // ========================================================
-
-        var kotData = new
+        if (kot != null)
         {
-            kotId = kot.Id,
+            kotData = new
+            {
+                kotId = kot.Id,
+                kotNumber = kot.KotNumber,
+                orderId = order.Id,
+                orderNumber = order.OrderNumber,
+                tableId = order.TableId,
+                tableName = order.TableName,
+                section = order.Section,
+                serverName = order.ServerName,
+                stationId = kot.StationId,
+                stationName = "Main Kitchen",
+                kotBatch = nextKitchenBatch,
+                status = kot.Status,
+                orderTime = order.CreatedAt,
+                items = kitchenItems.Select(MapToOrderItemDto).ToList()
+            };
 
-            kotNumber = kot.KotNumber,
+            try
+            {
+                await _hubContext.Clients
+                    .Group("kitchen")
+                    .SendAsync("ReceiveNewKOT", kotData);
+            }
+            catch { }
+        }
 
-            orderId = order.Id,
+        if (botId.HasValue)
+        {
+            botData = new
+            {
+                kotId = botId.Value,
+                kotNumber = botNumber,
+                botId = botId.Value,
+                botNumber = botNumber,
+                orderId = order.Id,
+                orderNumber = order.OrderNumber,
+                tableId = order.TableId,
+                tableNumber = order.TableName,
+                tableName = order.TableName,
+                area = order.Section,
+                section = order.Section,
+                serverName = order.ServerName,
+                botBatch = nextBarBatch,
+                status = "queued",
+                priority = "normal",
+                orderTime = order.CreatedAt,
+                items = barItems.Select(MapToOrderItemDto).ToList()
+            };
 
-            orderNumber = order.OrderNumber,
-
-            tableId = order.TableId,
-
-            tableName = order.TableName,
-
-            section = order.Section,
-
-            serverName = order.ServerName,
-
-            stationId = station.StationId,
-
-            stationName = station.StationName,
-
-            kotBatch = nextBatch,
-
-            status = kot.Status,
-
-            orderTime = order.CreatedAt,
-
-            items = kitchenItems
-                .Select(MapToOrderItemDto)
-                .ToList()
-        };
-
-        // ========================================================
-        // SEND TO KITCHEN
-        // ========================================================
-
-        await _hubContext.Clients
-            .Group("kitchen")
-            .SendAsync(
-                "ReceiveNewKOT",
-                kotData);
-
-        // ========================================================
-        // UPDATE FLOOR
-        // ========================================================
+            try
+            {
+                await _hubContext.Clients.Group("bar").SendAsync("ReceiveNewBOT", botData);
+                await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", botData);
+            }
+            catch { }
+        }
 
         if (order.TableId.HasValue)
         {
             var table = await _context.DiningTables
-                .FirstOrDefaultAsync(t =>
-                    t.Id == order.TableId.Value);
+                .FirstOrDefaultAsync(t => t.Id == order.TableId.Value);
 
             if (table != null)
             {
-                var activeKotCount =
-                    order.Items.Count(i =>
-                        i.KotStatus == "Queued" ||
-                        i.KotStatus == "queued" ||
-                        i.KotStatus == "Cooking" ||
-                        i.KotStatus == "cooking");
+                var activeKotCount = order.Items.Count(i =>
+                    i.KotStatus == "Queued" ||
+                    i.KotStatus == "queued" ||
+                    i.KotStatus == "Cooking" ||
+                    i.KotStatus == "cooking");
 
                 await _hubContext.Clients
                     .All
@@ -1022,14 +1131,9 @@ public class OrdersController : ControllerBase
                         new
                         {
                             tableId = table.Id,
-
                             status = table.Status,
-
-                            activeKOTCount =
-                                activeKotCount,
-
-                            orderTotal =
-                                order.GrandTotal
+                            activeKOTCount = activeKotCount,
+                            orderTotal = order.GrandTotal
                         });
             }
         }
@@ -1039,16 +1143,21 @@ public class OrdersController : ControllerBase
             order.Section = "Takeaway";
         }
 
+        string responseMessage = (kot != null && botId.HasValue)
+            ? "Order items separated and routed: KOT sent to kitchen and BOT sent to bar."
+            : (kot != null ? "KOT sent to kitchen successfully." : "BOT sent to bar successfully.");
+
         return Ok(new
         {
-            message =
-                "KOT sent to kitchen successfully.",
-
-            kotId = kot.Id,
-
-            kotNumber = kot.KotNumber,
-
-            kotData
+            message = responseMessage,
+            kotId = kot?.Id,
+            kotNumber = kot?.KotNumber,
+            botId = botId,
+            botNumber = botNumber,
+            kitchenItemsCount = kitchenItems.Count,
+            barItemsCount = barItems.Count,
+            kotData = kotData,
+            botData = botData
         });
     }
 
@@ -1057,6 +1166,7 @@ public class OrdersController : ControllerBase
     // SETTLE ORDER
     // ============================================================
 
+    [Tags("Takeaway", "Orders")]
     [HttpPost("{id}/settle")]
     public async Task<IActionResult> SettleOrder(
         long id,
@@ -1167,6 +1277,7 @@ public class OrdersController : ControllerBase
     // ORDER HISTORY
     // ============================================================
 
+    [Tags("Takeaway", "Orders")]
     [HttpGet("history")]
     public async Task<IActionResult> GetOrderHistory(
         [FromQuery] string? search,
@@ -1232,6 +1343,7 @@ public class OrdersController : ControllerBase
     // RECEIPT
     // ============================================================
 
+    [Tags("Takeaway", "Orders")]
     [HttpGet("{id}/receipt")]
     public async Task<IActionResult> GetReceipt(long id)
     {
@@ -1619,6 +1731,10 @@ public class OrdersController : ControllerBase
 
             KotId = item.KotId,
 
+            BotId = item.BotId,
+
+            IsBarItem = (item.BotId.HasValue && item.BotId.Value > 0) || OrderItemRouting.IsBarItem(item.Name),
+
             OrderId =
                 item.OrderId,
 
@@ -1801,6 +1917,7 @@ public class OrdersController : ControllerBase
     // BILL SUMMARY
     // ============================================================
 
+    [Tags("Takeaway", "Orders")]
     [HttpGet("{id}/bill-summary")]
     public async Task<IActionResult> GetBillSummary(long id)
     {

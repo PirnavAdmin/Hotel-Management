@@ -83,6 +83,9 @@ public class OrderItemInput
     }
 
     public string? Notes { get; set; }
+    public bool? IsBarItem { get; set; }
+    public string? Category { get; set; }
+    public string? DrinkType { get; set; }
 }
 
 public class UpdateOrderItemsRequest
@@ -156,6 +159,10 @@ public class OrderItemDto
     public long Id { get; set; }
 
     public long? KotId { get; set; }
+
+    public long? BotId { get; set; }
+
+    public bool IsBarItem { get; set; }
 
     public long OrderId { get; set; }
 
