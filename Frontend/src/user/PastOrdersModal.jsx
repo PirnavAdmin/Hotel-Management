@@ -95,10 +95,17 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
       setLiveOrdersLoaded(true);
     };
     syncOrders(pastOrders);
-    const handleUpdate = (event) => syncOrders(event.detail);
+    handleRefresh();
+    const handleUpdate = (event) => {
+      syncOrders(event.detail);
+      handleRefresh();
+    };
     const handleStorage = (event) => {
-      if (event.key !== "gourmet_pos_past_orders_v2_inr" || !event.newValue) return;
-      try { syncOrders(JSON.parse(event.newValue)); } catch {}
+      if (event.key !== "gourmet_pos_past_orders_v2_inr") return;
+      if (event.newValue) {
+        try { syncOrders(JSON.parse(event.newValue)); } catch {}
+      }
+      handleRefresh();
     };
     window.addEventListener("avsr-invoices-updated", handleUpdate);
     window.addEventListener("storage", handleStorage);
