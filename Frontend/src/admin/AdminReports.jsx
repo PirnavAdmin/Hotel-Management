@@ -83,6 +83,12 @@ const normalizeInventoryList = (items) => {
   return Array.from(map.values());
 };
 
+const getInventoryPurchaseCost = (purchase) => {
+  const total = Number(purchase.totalCost);
+  if (Number.isFinite(total)) return total;
+  return (Number(purchase.quantity) || 0) * (Number(purchase.unitCost) || 0);
+};
+
 async function requestLiveReportData({ refresh = false } = {}) {
   if (!refresh) {
     return {
@@ -116,7 +122,16 @@ async function requestLiveReportData({ refresh = false } = {}) {
   };
 }
 
-export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], restaurantSettings = {}, inventory = [] }) {
+export function AdminReports({
+  mode = "all",
+  pastOrders = [],
+  menuItems = [],
+  restaurantSettings = {},
+  inventory = [],
+  staffList = [],
+  salaryPayments = [],
+  inventoryPurchases = [],
+}) {
   const isBarMode = mode === "bar";
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -494,6 +509,31 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
     }, 0);
   }, [inventoryItems]);
 
+  const filteredInventoryPurchases = useMemo(() => {
+    return (Array.isArray(inventoryPurchases) ? inventoryPurchases : [])
+      .filter((purchase) => {
+        const purchaseDate = String(purchase.purchaseDate || purchase.paidOn || "").slice(0, 10);
+        const department = String(purchase.department || "dine").toLowerCase();
+        return Boolean(purchaseDate) &&
+          (filterPeriod === "all" || (!startDate || purchaseDate >= startDate) && (!endDate || purchaseDate <= endDate)) &&
+          (!isBarMode || department === "bar");
+      })
+      .sort((a, b) => String(b.purchaseDate || "").localeCompare(String(a.purchaseDate || "")));
+  }, [inventoryPurchases, filterPeriod, startDate, endDate, isBarMode]);
+
+  const filteredSalaryPayments = useMemo(() => {
+    return (Array.isArray(salaryPayments) ? salaryPayments : [])
+      .map((payment) => ({
+        ...payment,
+        amount: Number(payment.amount) || 0,
+        paidOn: String(payment.paidOn || "").slice(0, 10),
+      }))
+      .filter((payment) =>
+        Boolean(payment.paidOn) &&
+        (filterPeriod === "all" || (!startDate || payment.paidOn >= startDate) && (!endDate || payment.paidOn <= endDate)))
+      .sort((a, b) => b.paidOn.localeCompare(a.paidOn));
+  }, [salaryPayments, filterPeriod, startDate, endDate]);
+
   const inventoryCategories = useMemo(() => {
     const set = new Set();
     inventoryItems.forEach((item) => {
@@ -502,13 +542,35 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
     return Array.from(set).sort();
   }, [inventoryItems]);
 
-  const totalInventoryPurchaseCost = useMemo(() => {
-    return inventoryItems.reduce((sum, item) => {
-      const restocked = Number(item.totalRestocked ?? 0);
-      const cost = Number(item.mrp ?? item.unitCost ?? 0);
-      return sum + (restocked > 0 && cost > 0 ? restocked * cost : 0);
-    }, 0);
-  }, [inventoryItems]);
+  const totalInventoryPurchaseCost = useMemo(
+    () => filteredInventoryPurchases.reduce((sum, purchase) => sum + getInventoryPurchaseCost(purchase), 0),
+    [filteredInventoryPurchases],
+  );
+  const dineInventoryPurchaseCost = useMemo(
+    () => filteredInventoryPurchases.reduce(
+      (sum, purchase) => sum + (String(purchase.department || "dine").toLowerCase() === "bar" ? 0 : getInventoryPurchaseCost(purchase)),
+      0,
+    ),
+    [filteredInventoryPurchases],
+  );
+  const barInventoryPurchaseCost = useMemo(
+    () => filteredInventoryPurchases.reduce(
+      (sum, purchase) => sum + (String(purchase.department || "").toLowerCase() === "bar" ? getInventoryPurchaseCost(purchase) : 0),
+      0,
+    ),
+    [filteredInventoryPurchases],
+  );
+  const totalSalaryPaid = useMemo(
+    () => filteredSalaryPayments.reduce((sum, payment) => sum + payment.amount, 0),
+    [filteredSalaryPayments],
+  );
+  const monthlyPayrollBudget = useMemo(
+    () => (Array.isArray(staffList) ? staffList : []).reduce((sum, person) => {
+      const active = person.isActive !== false && String(person.status || "").toLowerCase() !== "inactive";
+      return sum + (active ? Number(person.monthlySalary) || 0 : 0);
+    }, 0),
+    [staffList],
+  );
 
   const totalIngredientUsageCost = useMemo(() => {
     return inventoryItems.reduce((sum, item) => {
@@ -544,7 +606,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
 
   // ================= PROFIT & LOSS FORMULAS =================
   const plIncome = totalRevenue;
-  const plExpenditure = totalInventoryPurchaseCost + totalDiscount;
+  const plExpenditure = totalInventoryPurchaseCost + totalSalaryPaid + totalDiscount;
   const costOfGoodsSold = totalIngredientUsageCost;
   const plNet = plIncome - plExpenditure;
   const isProfit = plNet >= 0;
@@ -710,9 +772,25 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
       lines.push(`"Bill Discounts Given","${totalDiscount.toFixed(2)}","Promotions & reductions"`);
       lines.push(`"Net Operating Revenue","${netRevenueAfterDiscount.toFixed(2)}","Sales adjusted for discounts"`);
       lines.push(`"Total Inventory Stock Valuation","${totalInventoryCost.toFixed(2)}","${inventoryItems.length} items evaluated at unit cost"`);
-      lines.push(`"Total Operating Expenditure","${plExpenditure.toFixed(2)}","Inventory restock/purchase cost + Discounts"`);
+      lines.push(`"Dine Inventory Purchases","${dineInventoryPurchaseCost.toFixed(2)}","Dated purchase receipts in selected period"`);
+      lines.push(`"Bar Inventory Purchases","${barInventoryPurchaseCost.toFixed(2)}","Dated purchase receipts in selected period"`);
+      lines.push(`"Salary Payments","${totalSalaryPaid.toFixed(2)}","${filteredSalaryPayments.length} dated salary payments in selected period"`);
+      lines.push(`"Active Monthly Payroll Budget","${monthlyPayrollBudget.toFixed(2)}","Monthly run-rate; not included in actual paid expenditure"`);
+      lines.push(`"Total Operating Expenditure","${plExpenditure.toFixed(2)}","Tracked inventory purchases + salary payments + bill discounts"`);
       lines.push(`"Ingredient Usage Cost / COGS","${costOfGoodsSold.toFixed(2)}","Tracked quantity used multiplied by ingredient unit cost"`);
       lines.push(`"Net Operating ${isProfit ? "Profit" : "Loss"}","${(isProfit ? "+" : "-") + Math.abs(plNet).toFixed(2)}","Operating Margin: ${profitMarginPercent}%"`);
+      lines.push(``);
+      lines.push(`"INVENTORY PURCHASES IN PERIOD (${filteredInventoryPurchases.length} Purchases)"`);
+      lines.push(`"Date","Department","Item","Supplier","Quantity","Unit","Unit Cost","Total Cost"`);
+      filteredInventoryPurchases.forEach((purchase) => {
+        lines.push(`"${purchase.purchaseDate || ""}","${purchase.department || "dine"}","${purchase.name || ""}","${purchase.supplier || ""}","${Number(purchase.quantity) || 0}","${purchase.unit || ""}","${(Number(purchase.unitCost) || 0).toFixed(2)}","${getInventoryPurchaseCost(purchase).toFixed(2)}"`);
+      });
+      lines.push(``);
+      lines.push(`"SALARY PAYMENTS IN PERIOD (${filteredSalaryPayments.length} Payments)"`);
+      lines.push(`"Date","Salary Period","Staff Member","Payment Method","Amount","Notes"`);
+      filteredSalaryPayments.forEach((payment) => {
+        lines.push(`"${payment.paidOn}","${payment.salaryPeriod || ""}","${payment.staffName || ""}","${payment.paymentMethod || ""}","${payment.amount.toFixed(2)}","${payment.notes || ""}"`);
+      });
       lines.push(``);
       lines.push(`"SETTLED ORDERS IN PERIOD (${filteredOrders.length} Orders)"`);
       lines.push(`"#","Order ID / No.","Date & Time","Table","Payment Method","Subtotal","Tax","Discount","Grand Total"`);
@@ -1099,7 +1177,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                 {formatCurrency(plExpenditure)}
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                Stock: {formatCurrency(totalInventoryCost)} · Disc: {formatCurrency(totalDiscount)}
+                Stock on hand: {formatCurrency(totalInventoryCost)} · Inventory paid: {formatCurrency(totalInventoryPurchaseCost)} · Salaries paid: {formatCurrency(totalSalaryPaid)}
               </div>
             </div>
 
@@ -1676,13 +1754,13 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                     </tr>
                     <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        Current Ingredient &amp; Raw Material Stock Valuation
+                        Current Inventory Stock Valuation
                       </td>
                       <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        {inventoryItems.length} inventory items evaluated at current stock and unit cost
+                        Current stock snapshot; shown for reference, not counted as a period expense
                       </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                        -{formatCurrency(totalInventoryCost)}
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
+                        {formatCurrency(totalInventoryCost)}
                       </td>
                     </tr>
 
@@ -1701,6 +1779,40 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                     ))}
 
                     <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
+                        Dine Inventory Purchases
+                      </td>
+                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                        {filteredInventoryPurchases.filter((purchase) => String(purchase.department || "dine").toLowerCase() !== "bar").length} recorded receipts in the selected period
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                        -{formatCurrency(dineInventoryPurchaseCost)}
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
+                        Bar Inventory Purchases
+                      </td>
+                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                        {filteredInventoryPurchases.filter((purchase) => String(purchase.department || "").toLowerCase() === "bar").length} recorded receipts in the selected period
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                        -{formatCurrency(barInventoryPurchaseCost)}
+                      </td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
+                        Salary Payments
+                      </td>
+                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                        {filteredSalaryPayments.length} dated staff payments; monthly salary run-rate {formatCurrency(monthlyPayrollBudget)}
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                        -{formatCurrency(totalSalaryPaid)}
+                      </td>
+                    </tr>
+
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '7px 12px', paddingLeft: '24px', color: '#f59e0b', fontWeight: 600 }}>
                         Customer Discounts Absorbed
                       </td>
@@ -1716,7 +1828,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                         Total Operating Expenditure
                       </td>
                       <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
-                        Tracked inventory purchases + customer discounts
+                        Recorded inventory purchases + paid salaries + customer discounts
                       </td>
                       <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--danger)', fontSize: '0.88rem' }}>
                         -{formatCurrency(plExpenditure)}
@@ -2017,7 +2129,7 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
           {activeTab === 'expenditure' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               
-              {/* 4 Mini Inventory Status Chips */}
+              {/* Inventory and payroll summary */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
                 <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
@@ -2043,6 +2155,90 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                     {outOfStockCount} Items
                   </div>
                 </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Inventory Purchases (Period)</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
+                    {formatCurrency(totalInventoryPurchaseCost)}
+                  </div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Salary Paid (Period)</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
+                    {formatCurrency(totalSalaryPaid)}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.75rem' }}>
+                <section style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-tertiary)' }}>
+                  <div style={{ padding: '0.7rem 0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <strong style={{ color: 'var(--text-main)', fontSize: '0.82rem' }}>Inventory Purchase Ledger</strong>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '3px' }}>
+                      Dine {formatCurrency(dineInventoryPurchaseCost)} · Bar {formatCurrency(barInventoryPurchaseCost)} · {getFilterPeriodLabel()}
+                    </div>
+                  </div>
+                  <div style={{ maxHeight: '220px', overflow: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: 'var(--text-dim)', background: 'var(--bg-secondary)' }}>
+                          <th style={{ padding: '7px' }}>Date</th>
+                          <th style={{ padding: '7px' }}>Department / Item</th>
+                          <th style={{ padding: '7px', textAlign: 'right' }}>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredInventoryPurchases.slice(0, 8).map((purchase) => (
+                          <tr key={purchase.id} style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-main)' }}>
+                            <td style={{ padding: '7px', whiteSpace: 'nowrap' }}>{purchase.purchaseDate}</td>
+                            <td style={{ padding: '7px' }}>
+                              <strong>{String(purchase.department || "dine").toUpperCase()}</strong> · {purchase.name}
+                              <div style={{ color: 'var(--text-muted)', marginTop: '2px' }}>{purchase.supplier || "Supplier not recorded"}</div>
+                            </td>
+                            <td style={{ padding: '7px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{formatCurrency(getInventoryPurchaseCost(purchase))}</td>
+                          </tr>
+                        ))}
+                        {filteredInventoryPurchases.length === 0 && (
+                          <tr><td colSpan={3} style={{ padding: '12px 8px', color: 'var(--text-muted)', textAlign: 'center' }}>No dated stock receipts in this period. New receipts will be tracked with their purchase cost.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-tertiary)' }}>
+                  <div style={{ padding: '0.7rem 0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <strong style={{ color: 'var(--text-main)', fontSize: '0.82rem' }}>Salary Payment Ledger</strong>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '3px' }}>
+                      Paid {formatCurrency(totalSalaryPaid)} · Monthly payroll budget {formatCurrency(monthlyPayrollBudget)}
+                    </div>
+                  </div>
+                  <div style={{ maxHeight: '220px', overflow: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: 'var(--text-dim)', background: 'var(--bg-secondary)' }}>
+                          <th style={{ padding: '7px' }}>Paid On</th>
+                          <th style={{ padding: '7px' }}>Staff / Salary Month</th>
+                          <th style={{ padding: '7px', textAlign: 'right' }}>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredSalaryPayments.slice(0, 8).map((payment) => (
+                          <tr key={payment.id} style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-main)' }}>
+                            <td style={{ padding: '7px', whiteSpace: 'nowrap' }}>{payment.paidOn}</td>
+                            <td style={{ padding: '7px' }}>
+                              <strong>{payment.staffName || "Staff"}</strong>
+                              <div style={{ color: 'var(--text-muted)', marginTop: '2px' }}>{payment.salaryPeriod} · {payment.paymentMethod}</div>
+                            </td>
+                            <td style={{ padding: '7px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{formatCurrency(payment.amount)}</td>
+                          </tr>
+                        ))}
+                        {filteredSalaryPayments.length === 0 && (
+                          <tr><td colSpan={3} style={{ padding: '12px 8px', color: 'var(--text-muted)', textAlign: 'center' }}>No salary payments recorded in this period.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
               </div>
 
               {/* Filter and Search Bar for Inventory */}
@@ -2240,10 +2436,10 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
                   <tfoot>
                     <tr style={{ background: 'var(--bg-secondary)', borderTop: '1.5px solid var(--border-subtle)' }}>
                       <td colSpan={7} style={{ padding: '8px 10px', fontWeight: 800, color: 'var(--text-main)', fontSize: '0.76rem' }}>
-                        TOTAL EXPENDITURE VALUATION (INVENTORY + DISCOUNTS)
+                        CURRENT INVENTORY STOCK VALUATION
                       </td>
                       <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 900, color: 'var(--danger)', fontSize: '0.88rem' }}>
-                        {formatCurrency(plExpenditure)}
+                        {formatCurrency(totalInventoryCost)}
                       </td>
                       <td style={{ padding: '8px 10px' }} />
                     </tr>

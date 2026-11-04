@@ -243,7 +243,7 @@ export const BAR_SUPPLIERS = [
   "Local Wholesale Bar Supplier",
 ];
 
-function SharedBarInventory({ inventory, loading, error, onRefresh }) {
+function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInventoryPurchase }) {
   const [busy, setBusy] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalBusy, setModalBusy] = useState(false);
@@ -262,6 +262,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const [consumeReason, setConsumeReason] = useState("Bar Usage");
   const [restockItem, setRestockItem] = useState(null);
   const [restockAmount, setRestockAmount] = useState("");
+  const [restockUnitCost, setRestockUnitCost] = useState("");
   const [restockSupplier, setRestockSupplier] = useState("");
   const [customRestockSupplier, setCustomRestockSupplier] = useState(false);
 
@@ -616,7 +617,8 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const handleReceiveStock = async (event) => {
     event?.preventDefault?.();
     const amount = Number(restockAmount);
-    if (!restockItem || !Number.isFinite(amount) || amount <= 0) return;
+    const unitCost = Number(restockUnitCost);
+    if (!restockItem || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(unitCost) || unitCost < 0) return;
     setBusy(true);
     try {
       const targetId = restockItem.id ?? restockItem.ingredientId;
@@ -624,6 +626,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
       const nextStock = Number((currentStock + amount).toFixed(2));
       const nextRestocked = Number((Number(restockItem.totalRestocked || 0) + amount).toFixed(2));
       const supplierToUse = restockSupplier.trim() || restockItem.supplier || "State Beverages Corporation (TSBCL/Govt Depot)";
+      const date = new Date();
 
       await apiAdjustStock({
         ingredientId: targetId,
@@ -646,10 +649,24 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
         localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
       } catch {}
 
+      await onRecordInventoryPurchase?.({
+        itemId: targetId,
+        name: restockItem.name,
+        category: restockItem.category,
+        subcategory: restockItem.subcategory,
+        supplier: supplierToUse,
+        quantity: amount,
+        unit: restockItem.unit || "Bottle",
+        unitCost,
+        department: "bar",
+        purchaseDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      });
+
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
       setRestockItem(null);
       setRestockAmount("");
+      setRestockUnitCost("");
       setRestockSupplier("");
       setCustomRestockSupplier(false);
     } catch (err) {
@@ -1592,6 +1609,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                             onClick={() => {
                               setRestockItem(item);
                               setRestockAmount("");
+                              setRestockUnitCost(String(Number(item.unitCost ?? item.cost ?? item.mrp) || 0));
                               setRestockSupplier(item.supplier || "");
                               setCustomRestockSupplier(false);
                             }}
@@ -2115,6 +2133,42 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 marginBottom: "0.7rem",
               }}
             />
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
+              PURCHASE COST PER {restockItem.unit || "Bottle"} (INR) *
+            </label>
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={restockUnitCost}
+              onChange={(event) => setRestockUnitCost(event.target.value)}
+              placeholder="Enter unit purchase cost"
+              style={{
+                width: "100%",
+                height: "38px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                marginBottom: "0.7rem",
+              }}
+            />
+            <div style={{ color: "var(--text-muted)", fontSize: "0.74rem", marginBottom: "0.7rem" }}>
+              Purchase total: <strong style={{ color: "var(--text-main)" }}>{formatCurrency((Number(restockAmount) || 0) * (Number(restockUnitCost) || 0))}</strong>
+            </div>
 
             <label
               style={{
@@ -7432,6 +7486,9 @@ export function BarWorkspace({
   onCompleteTableKot = null,
   inventory: sharedInventory = [],
   pastOrders = [],
+  salaryPayments = [],
+  inventoryPurchases = [],
+  onRecordInventoryPurchase,
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
@@ -9367,7 +9424,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
 
       {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} preferPastOrders restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
-      {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
+      {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} onRecordInventoryPurchase={onRecordInventoryPurchase} />}
 
       {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError}</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
@@ -9380,6 +9437,9 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
           restaurantSettings={restaurantSettings}
           inventory={inventory}
           pastOrders={barInvoices}
+          staffList={dineStaff}
+          salaryPayments={salaryPayments}
+          inventoryPurchases={inventoryPurchases}
         />
       )}
 
