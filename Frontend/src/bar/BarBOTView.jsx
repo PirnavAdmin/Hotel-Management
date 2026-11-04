@@ -61,6 +61,8 @@ export function BarBOTView({
   barDrinks = [],
   onItemsUpdated,
   onUpdateItemKotStatus,
+  onCompleteTableKot,
+  embedded = false,
 }) {
   const [adminBotTableFilter, setAdminBotTableFilter] = useState("all");
   const [isBotTableDropdownOpen, setIsBotTableDropdownOpen] = useState(false);
@@ -372,6 +374,21 @@ export function BarBOTView({
       }
     }
 
+    if (typeof onUpdateItemKotStatus === "function") {
+      items.forEach((item) => {
+        const itemId = item.orderItemId || item.id || item.menuItemId;
+        try {
+          onUpdateItemKotStatus(table.id, "ready", itemId);
+        } catch {}
+      });
+    }
+
+    if (typeof onCompleteTableKot === "function") {
+      try {
+        onCompleteTableKot(table.id);
+      } catch {}
+    }
+
     if (typeof onItemsUpdated === "function") {
       try {
         onItemsUpdated({
@@ -440,11 +457,16 @@ export function BarBOTView({
               padding: "1.5rem",
               overflowY: "auto",
             }
-          : {}
+          : {
+              width: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+              padding: embedded ? 0 : "0.5rem 0.75rem 1rem",
+            }
       }
     >
       {/* 1. Header Row (Matching Dine KOT Dispatch) */}
-      <div
+      {!embedded && <div
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -530,7 +552,7 @@ export function BarBOTView({
             <span>{isFullScreen ? "Close Full Screen" : "Open Full Screen BOT Screen"}</span>
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* 2. Table Filter Bar with Dropdown (Exact Match to Dine KOT) */}
       <div

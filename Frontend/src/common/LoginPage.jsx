@@ -17,6 +17,11 @@ import { apiForgotPassword, apiResetPassword, apiSendOtp, apiVerifyOtp } from '.
  * Register (admin only) includes: Name, Username, Mobile, Email + OTP, Password.
  */
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+const REMEMBERED_LOGIN_KEY = "avsr_remembered_login_v1";
+
+const getRememberedLogin = () => {
+  try { return localStorage.getItem(REMEMBERED_LOGIN_KEY) || ""; } catch { return ""; }
+};
 
 const getStoredRestaurantSettings = () => {
   try {
@@ -122,20 +127,17 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   }, [restaurantName, restaurantLogo, logo]);
 
   // Login
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(getRememberedLogin);
+  const [rememberMe, setRememberMe] = useState(() => Boolean(getRememberedLogin()));
   const [password, setPassword] = useState('');
   const [showPw, setShowPw]     = useState(false);
 
   // Guarantee clean initial state & prevent browser autofill on load (RMS_LOGIN_001, RMS_LOGIN_002)
   useEffect(() => {
-    setUsername('');
     setPassword('');
     const timer = setTimeout(() => {
-      setUsername('');
       setPassword('');
-      const u = document.getElementById('login-username');
       const p = document.getElementById('login-password');
-      if (u) u.value = '';
       if (p) p.value = '';
     }, 60);
     return () => clearTimeout(timer);
@@ -239,7 +241,13 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
     setLoading(true); setError('');
     const r = await loginUser(username.trim(), password.trim(), currentRole);
     setLoading(false);
-    if (r.success) onLoginSuccess(r.session, currentRole);
+    if (r.success) {
+      try {
+        if (rememberMe) localStorage.setItem(REMEMBERED_LOGIN_KEY, username.trim());
+        else localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+      } catch {}
+      onLoginSuccess(r.session, currentRole);
+    }
     else { setError(r.error || 'Login failed.'); triggerShake(); }
   };
 
@@ -834,8 +842,23 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
               </div>
             </div>
-
-            <div className="bhanu-recovery">                <button
+            <div className="bhanu-login-options">
+              <label className="bhanu-remember-label">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setRememberMe(checked);
+                    if (!checked) {
+                      try { localStorage.removeItem(REMEMBERED_LOGIN_KEY); } catch {}
+                    }
+                  }}
+                  style={{ accentColor: cfg.accent }}
+                />
+                Remember me
+              </label>
+              <div className="bhanu-recovery"><button
                   type="button"
                   onClick={() => {
                     setMode('forgot');
@@ -860,6 +883,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
                 >
                   Forgot Password?
                 </button></div>
+            </div>
             <div style={{ marginTop: '0.65rem' }}>
               <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
             </div>

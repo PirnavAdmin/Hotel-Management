@@ -621,12 +621,30 @@ export function AdminReports({ mode = "all", pastOrders = [], menuItems = [], re
   };
 
   useEffect(() => {
+    let active = true;
+    requestLiveReportData({ refresh: true })
+      .then((data) => {
+        if (active) applyFetchedData(data);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setInvoiceLoadError(error?.message || "Live invoice and report data could not be loaded.");
+      })
+      .finally(() => {
+        if (active) setIsFetching(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     applyFetchedData({
       records: Array.isArray(pastOrders) ? pastOrders : [],
       invoiceError: "",
       inventory: normalizeInventoryList(Array.isArray(inventory) ? inventory : []),
     });
-    setIsFetching(false);
   }, [pastOrders, inventory]);
 
   const getFilterPeriodLabel = () => {
