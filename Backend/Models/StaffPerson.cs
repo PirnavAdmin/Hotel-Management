@@ -30,13 +30,6 @@ public class StaffPerson
     [Column("shift")]
     public string Shift { get; set; } = string.Empty; // e.g. "Morning Shift (10 AM - 4 PM)"
 
-    [Column("salary", TypeName = "decimal(12,2)")]
-    public decimal Salary { get; set; } = 0;
-
-    [MaxLength(50)]
-    [Column("section")]
-    public string Section { get; set; } = "Dine & Bar";
-
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 

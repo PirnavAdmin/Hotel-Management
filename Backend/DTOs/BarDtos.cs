@@ -401,8 +401,6 @@ public class BarStaffDto
     public string AssignedTables { get; set; } = "—"; // e.g. "Table-1, Table-2" or "—"
     public List<long> AssignedTableIds { get; set; } = new();
     public List<AssignableTableDto> AssignedTableDetails { get; set; } = new();
-    public decimal Salary { get; set; } = 0;
-    public string Section { get; set; } = "Dine & Bar";
     public string Status { get; set; } = "active"; // "active", "inactive"
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
@@ -435,10 +433,6 @@ public class CreateBarStaffDto
 
     [MaxLength(50)]
     public string Shift { get; set; } = string.Empty;
-
-    public decimal Salary { get; set; } = 0;
-    [MaxLength(50)]
-    public string Section { get; set; } = "Dine & Bar";
 
     /// <summary>
     /// List of table IDs selected in the 'Assigned Tables' checklist box.
@@ -479,9 +473,6 @@ public class UpdateBarStaffDto
 
     [MaxLength(50)]
     public string? Shift { get; set; }
-    public decimal? Salary { get; set; }
-    [MaxLength(50)]
-    public string? Section { get; set; }
 
     public List<long>? AssignedTableIds { get; set; }
 

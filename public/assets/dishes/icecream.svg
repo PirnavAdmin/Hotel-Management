@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg_ice" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#241429"/>
+      <stop offset="100%" stop-color="#0f0714"/>
+    </linearGradient>
+    <linearGradient id="cone" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="60%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+    <linearGradient id="scoop1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fda4af"/>
+      <stop offset="50%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+    <linearGradient id="scoop2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="60%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="scoop3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbcfe8"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg_ice)"/>
+  <ellipse cx="200" cy="270" rx="90" ry="16" fill="#000000" opacity="0.6"/>
+  <!-- Waffle Cone -->
+  <polygon points="150,170 250,170 200,270" fill="url(#cone)"/>
+  <!-- Cone grid pattern -->
+  <line x1="160" y1="175" x2="210" y2="255" stroke="#78350f" stroke-width="2" opacity="0.5"/>
+  <line x1="180" y1="175" x2="220" y2="235" stroke="#78350f" stroke-width="2" opacity="0.5"/>
+  <line x1="240" y1="175" x2="190" y2="255" stroke="#78350f" stroke-width="2" opacity="0.5"/>
+  <line x1="220" y1="175" x2="180" y2="235" stroke="#78350f" stroke-width="2" opacity="0.5"/>
+  <!-- Bottom Scoop (Vanilla / Mango) -->
+  <circle cx="200" cy="155" r="48" fill="url(#scoop2)"/>
+  <!-- Ripple bottom -->
+  <path d="M 148 165 Q 165 178 185 168 Q 200 178 215 168 Q 235 178 252 165 Z" fill="#ca8a04"/>
+  <!-- Top Scoop (Strawberry / Berry) -->
+  <circle cx="200" cy="115" r="44" fill="url(#scoop1)"/>
+  <!-- Ripple middle -->
+  <path d="M 155 125 Q 175 138 200 128 Q 225 138 245 125 Z" fill="#9f1239"/>
+  <!-- Drips & Cream -->
+  <ellipse cx="190" cy="90" rx="14" ry="8" fill="#ffffff" opacity="0.8"/>
+  <!-- Cherry on Top -->
+  <circle cx="200" cy="65" r="14" fill="#dc2626"/>
+  <path d="M 200 52 Q 212 35 220 28" stroke="#15803d" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Sprinkles -->
+  <rect x="175" y="105" width="8" height="3" rx="1.5" fill="#38bdf8" transform="rotate(25 175 105)"/>
+  <rect x="215" y="110" width="8" height="3" rx="1.5" fill="#a855f7" transform="rotate(-30 215 110)"/>
+  <rect x="195" y="130" width="8" height="3" rx="1.5" fill="#22c55e" transform="rotate(40 195 130)"/>
+  <rect x="180" y="145" width="8" height="3" rx="1.5" fill="#f43f5e" transform="rotate(-15 180 145)"/>
+  <rect x="220" y="140" width="8" height="3" rx="1.5" fill="#ffffff" transform="rotate(60 220 140)"/>
+</svg>

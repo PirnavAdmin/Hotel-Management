@@ -29,12 +29,12 @@ Click the **🛡️ Admin** button in the top navigation bar to access:
 
 ## 🚀 Running the Project
 
-This is the repository's single frontend application. From the repository root:
-
 ```bash
-cd Frontend
-npm ci
+# 1. Install dependencies
+npm install
+
+# 2. Start local development server
 npm run dev
 ```
 
-Run `npm run build` or `npm run lint` from this directory. Configure the backend URL in `.env` using `VITE_API_BASE_URL`. See the root `README.md` for project and backend instructions.
+Terminal is live at: `http://localhost:5173/`

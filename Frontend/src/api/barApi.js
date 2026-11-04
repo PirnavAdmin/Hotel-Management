@@ -404,8 +404,6 @@ export async function apiCreateBarStaff(staffData) {
   const assignedTableIds = Array.isArray(staffData.assignedTableIds) ? staffData.assignedTableIds : [];
   const assignedTables = Array.isArray(staffData.assignedTables) ? staffData.assignedTables : [];
   const isActive = staffData.isActive !== undefined ? Boolean(staffData.isActive) : true;
-  const salary = Number(staffData.salary || 0);
-  const section = staffData.section || 'Dine & Bar';
 
   return await apiClient('/api/v1/bar/staff', {
     method: 'POST',
@@ -420,8 +418,6 @@ export async function apiCreateBarStaff(staffData) {
       assignedTableIds,
       assignedTables,
       isActive,
-      salary,
-      section,
     }),
   });
 }
@@ -454,8 +450,6 @@ export async function apiUpdateBarStaff(id, staffData) {
   if (assignedTableIds !== undefined) payload.assignedTableIds = assignedTableIds;
   if (assignedTables !== undefined) payload.assignedTables = assignedTables;
   if (isActive !== undefined) payload.isActive = Boolean(isActive);
-  if (staffData.salary !== undefined) payload.salary = Number(staffData.salary);
-  if (staffData.section !== undefined) payload.section = String(staffData.section).trim();
 
   return await apiClient(`/api/v1/bar/staff/${encodeURIComponent(id)}`, {
     method: 'PUT',

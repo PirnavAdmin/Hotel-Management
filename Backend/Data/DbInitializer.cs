@@ -329,8 +329,6 @@ public static class DbInitializer
             EnsureColumnExists(conn, "staff_persons", "role_title", "VARCHAR(50) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "phone", "VARCHAR(20) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "shift", "VARCHAR(50) NOT NULL DEFAULT ''");
-            EnsureColumnExists(conn, "staff_persons", "salary", "DECIMAL(12,2) NOT NULL DEFAULT 0.00");
-            EnsureColumnExists(conn, "staff_persons", "section", "VARCHAR(50) NOT NULL DEFAULT 'Dine & Bar'");
             EnsureColumnExists(conn, "staff_persons", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
             EnsureColumnExists(conn, "staff_persons", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "staff_persons", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
@@ -589,8 +587,6 @@ public static class DbInitializer
                 `role_title` VARCHAR(50) NOT NULL,
                 `phone` VARCHAR(20) NOT NULL,
                 `shift` VARCHAR(50) NOT NULL,
-                `salary` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                `section` VARCHAR(50) NOT NULL DEFAULT 'Dine & Bar',
                 `is_active` TINYINT(1) NOT NULL DEFAULT 1,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

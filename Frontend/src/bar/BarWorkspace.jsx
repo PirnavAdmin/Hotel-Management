@@ -7,7 +7,7 @@ import {
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
-
+import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
@@ -49,7 +49,6 @@ import {
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
-import { isDrinkCategory, isAlcoholicCategory, getDrinkDietaryType } from "../utils/drinkCategoryHelper";
 
 
 const PAGE_SIZE = 8;
@@ -3575,7 +3574,8 @@ function BarDrinksMenu({
           }}
           title="Reset drink filters"
         >
-          Clear Filters
+          <RotateCcw size={13} strokeWidth={2.2} />
+          <span>Clear Filters</span>
         </button>
       </div>
 
@@ -6352,8 +6352,6 @@ function BarStaffView({
     role: "",
     phone: "",
     shift: "",
-    salary: "",
-    section: "Dine & Bar",
     assignedTableIds: [],
   });
 
@@ -6376,8 +6374,6 @@ function BarStaffView({
         role: personRole,
         phone: person.phone || "",
         shift: person.shift || "",
-        salary: person.salary !== undefined && person.salary !== null ? String(person.salary) : "",
-        section: person.section || "Dine & Bar",
         assignedTableIds: personTableIds,
       });
     } else {
@@ -6387,8 +6383,6 @@ function BarStaffView({
         role: "",
         phone: "",
         shift: "",
-        salary: "",
-        section: "Dine & Bar",
         assignedTableIds: [],
       });
     }
@@ -6414,8 +6408,6 @@ function BarStaffView({
       roleTitle: staffForm.role,
       phone: staffForm.phone || "+91 98450 00000",
       shift: staffForm.shift,
-      salary: Number(staffForm.salary || 0),
-      section: staffForm.section || "Dine & Bar",
       assignedTableIds: staffForm.assignedTableIds || [],
     };
 
@@ -6440,8 +6432,6 @@ function BarStaffView({
       role: "",
       phone: "",
       shift: "",
-      salary: "",
-      section: "Dine & Bar",
       assignedTableIds: [],
     });
     setIsStaffModalOpen(false);
@@ -6844,9 +6834,7 @@ function BarStaffView({
             >
               <div>Staff Name</div>
               <div>Role / Designation</div>
-              <div>Section</div>
               <div>Shift</div>
-              <div>Monthly Salary</div>
               <div>Table Assignment</div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
             </div>
@@ -7007,39 +6995,6 @@ function BarStaffView({
                     {personRole}
                   </div>
 
-                  {/* Col 3: Section */}
-                  <div>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "0.2rem 0.55rem",
-                        borderRadius: "6px",
-                        fontSize: "0.72rem",
-                        fontWeight: 700,
-                        background:
-                          (person.section || "Dine & Bar") === "Bar"
-                            ? "rgba(168, 85, 247, 0.15)"
-                            : (person.section || "Dine & Bar") === "Dine"
-                            ? "rgba(59, 130, 246, 0.15)"
-                            : "rgba(245, 158, 11, 0.15)",
-                        color:
-                          (person.section || "Dine & Bar") === "Bar"
-                            ? "#c084fc"
-                            : (person.section || "Dine & Bar") === "Dine"
-                            ? "#60a5fa"
-                            : "#f59e0b",
-                        border:
-                          (person.section || "Dine & Bar") === "Bar"
-                            ? "1px solid rgba(168, 85, 247, 0.3)"
-                            : (person.section || "Dine & Bar") === "Dine"
-                            ? "1px solid rgba(59, 130, 246, 0.3)"
-                            : "1px solid rgba(245, 158, 11, 0.3)",
-                      }}
-                    >
-                      {person.section || "Dine & Bar"}
-                    </span>
-                  </div>
-
                   {/* Col 4: Shift */}
                   <div
                     style={{
@@ -7051,19 +7006,6 @@ function BarStaffView({
                     title={person.shift || "General Shift"}
                   >
                     {person.shift || "General Shift"}
-                  </div>
-
-                  {/* Col 5: Monthly Salary */}
-                  <div>
-                    <span
-                      style={{
-                        fontWeight: 800,
-                        color: "var(--text-main)",
-                        fontSize: "0.88rem",
-                      }}
-                    >
-                      {formatCurrency(Number(person.salary || 0))}
-                    </span>
                   </div>
 
                   {/* Col 5: Status Pill */}
@@ -7332,96 +7274,6 @@ function BarStaffView({
                 allowCustom
                 onSaveCustomOption={saveCustomShift}
               />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Section (Dine / Bar Area)
-              </label>
-              <select
-                value={staffForm.section || "Dine & Bar"}
-                onChange={(e) =>
-                  setStaffForm({ ...staffForm, section: e.target.value })
-                }
-                style={{
-                  width: "100%",
-                  height: "38px",
-                  boxSizing: "border-box",
-                  background: "var(--bg-tertiary)",
-                  border: "1.5px solid var(--border-subtle)",
-                  borderRadius: "8px",
-                  padding: "0 0.85rem",
-                  color: "var(--text-main)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  outline: "none",
-                }}
-              >
-                <option value="Dine & Bar">Dine & Bar (Both Sections)</option>
-                <option value="Bar">Bar Only</option>
-                <option value="Dine">Dine In Only</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-main)",
-                  display: "block",
-                  marginBottom: "5px",
-                }}
-              >
-                Monthly Salary (₹) <span style={{ color: "#ea580c" }}>*</span>
-              </label>
-              <div style={{ position: "relative" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-dim)",
-                    fontWeight: 700,
-                    fontSize: "0.95rem",
-                  }}
-                >
-                  ₹
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="500"
-                  required
-                  placeholder="e.g. 20000"
-                  value={staffForm.salary}
-                  onChange={(e) =>
-                    setStaffForm({ ...staffForm, salary: e.target.value })
-                  }
-                  style={{
-                    width: "100%",
-                    height: "38px",
-                    boxSizing: "border-box",
-                    background: "var(--bg-tertiary)",
-                    border: "1.5px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0 0.85rem 0 2rem",
-                    color: "var(--text-main)",
-                    fontWeight: 600,
-                    fontSize: "0.92rem",
-                    outline: "none",
-                  }}
-                />
-              </div>
             </div>
 
             {assignableTables.length > 0 && (
@@ -9528,7 +9380,6 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
           restaurantSettings={restaurantSettings}
           inventory={inventory}
           pastOrders={barInvoices}
-          staffList={effectiveStaffList}
         />
       )}
 

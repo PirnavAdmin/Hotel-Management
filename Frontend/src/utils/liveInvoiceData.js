@@ -1,12 +1,6 @@
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetOrderHistory } from "../api/orderApi";
-import {
-  dedupeOrders,
-  isSettledInvoiceRecord,
-  isSettledSaleRecord,
-  mergeSettledOrders,
-  sortOrdersBySettlementTime,
-} from "./orderDedupe";
+import { dedupeOrders, mergeSettledOrders, sortOrdersBySettlementTime } from "./orderDedupe";
 const valueFrom = (object, ...keys) => {
   for (const key of keys) {
     const value = object?.[key];
@@ -35,7 +29,12 @@ export function extractInvoiceRecords(response) {
   ].find(Array.isArray);
 
   if (!records) return null;
-  return records.filter(isSettledInvoiceRecord);
+  return records.filter((r) => {
+    if (!r || typeof r !== "object") return false;
+    const status = String(r.status || r.Status || "").toLowerCase();
+    return status !== "active" && status !== "dining" && status !== "vacant" &&
+      status !== "void" && status !== "cancelled";
+  });
 }
 
 export function extractSettledOrderRecords(response) {
@@ -50,7 +49,12 @@ export function extractSettledOrderRecords(response) {
   ].find(Array.isArray);
 
   if (!records) return null;
-  return records.filter(isSettledSaleRecord);
+  return records.filter((r) => {
+    if (!r || typeof r !== "object") return false;
+    const status = String(r.status || r.Status || "").toLowerCase();
+    return status !== "active" && status !== "dining" && status !== "vacant" &&
+      status !== "void" && status !== "cancelled";
+  });
 }
 
 export function normalizeInvoiceRecord(invoice, order = null) {
@@ -190,8 +194,18 @@ export function normalizeInvoiceRecord(invoice, order = null) {
 }
 
 export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
-  const settledInvoices = (Array.isArray(invoices) ? invoices : []).filter(isSettledInvoiceRecord);
-  const settledOrders = (Array.isArray(orders) ? orders : []).filter(isSettledSaleRecord);
+  const settledInvoices = (Array.isArray(invoices) ? invoices : []).filter((inv) => {
+    if (!inv || typeof inv !== "object") return false;
+    const s = String(inv.status || inv.Status || "").toLowerCase();
+    return s !== "active" && s !== "dining" && s !== "vacant" &&
+      s !== "void" && s !== "cancelled";
+  });
+  const settledOrders = (Array.isArray(orders) ? orders : []).filter((ord) => {
+    if (!ord || typeof ord !== "object") return false;
+    const s = String(ord.status || ord.Status || "").toLowerCase();
+    return s !== "active" && s !== "dining" && s !== "vacant" &&
+      s !== "void" && s !== "cancelled";
+  });
 
   const ordersById = new Map(
     settledOrders
