@@ -66,7 +66,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const sgst = taxAmount / 2;
   
   const serviceChargePercent = Number(table.serviceCharge) || 5;
-  const serviceChargeAmount = table.serviceChargeAmount !== undefined && Number(table.serviceChargeAmount) > 0
+  const serviceChargeAmount = table.serviceChargeAmount !== undefined && table.serviceChargeAmount !== null && Number.isFinite(Number(table.serviceChargeAmount))
     ? Number(table.serviceChargeAmount)
     : (table.serviceCharge ? (taxableAmount * (serviceChargePercent / 100)) : 0);
   
@@ -77,6 +77,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const invoiceNumber = table.invoiceNo || getNextInvoiceNumber();
   const currentDate = table.date || getTodayDateString();
   const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
+  const displayTableName = table.name || table.tableName || table.tableNumber || (table.id != null ? `Table ${table.id}` : "Takeaway / Direct");
+  const displaySection = table.section || table.sectionArea || table.area || "Dine-In";
+  const displayServer = table.server || table.serverName || table.assignedServer || "Staff";
   const tableCapacity = Number(table.capacity) || 0;
   const guestCount =
     (Number(table.guests) > 0 ? Number(table.guests) : null) ??
@@ -134,7 +137,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
         onClick={(e) => e.stopPropagation()}
         style={{
           background: '#ffffff',
-          color: '#1a1a1a',
+          color: '#0f172a',
           width: '100%',
           maxWidth: printFormat === 'a4' ? '760px' : '400px',
           borderRadius: '12px',
@@ -155,7 +158,8 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.5rem',
-          color: '#ffffff'
+          color: '#ffffff',
+          borderBottom: '1px solid #1e293b'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <Printer size={16} color="#f59e0b" />
@@ -244,6 +248,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
               fontSize: '0.78rem',
               lineHeight: '1.35',
+              background: '#ffffff',
               color: '#000000',
               display: 'flex',
               flexDirection: 'column',
@@ -289,9 +294,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
             {/* Bill Meta Grid */}
             <div style={{ borderBottom: '1px dashed #000000', paddingBottom: '0.45rem', marginBottom: '0.45rem', fontSize: '0.72rem', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, auto)', gap: '4px 10px' }}>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Table: <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></span>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Table: <strong>{displayTableName} ({displaySection})</strong></span>
               <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Inv: <strong>{invoiceNumber}</strong></span>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Server: <strong>{table.server || 'Staff'}</strong></span>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Server: <strong>{displayServer}</strong></span>
               <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Guests: <strong>{guestCount}</strong></span>
               <span>Date: <strong>{currentDate}</strong></span>
               {orderTime && <span style={{ textAlign: 'right' }}>Order: <strong>{orderTime}</strong></span>}
@@ -450,6 +455,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
               fontSize: '0.84rem',
               lineHeight: '1.45',
+              background: '#ffffff',
               color: '#0f172a',
               display: 'flex',
               flexDirection: 'column',
@@ -490,8 +496,8 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
             {/* Table / Order Meta Strip */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '0.85rem', fontSize: '0.78rem' }}>
-              <div><span style={{ color: '#64748b' }}>Table:</span> <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></div>
-              <div><span style={{ color: '#64748b' }}>Server:</span> <strong>{table.server || 'Staff'}</strong></div>
+              <div><span style={{ color: '#64748b' }}>Table:</span> <strong>{displayTableName} ({displaySection})</strong></div>
+              <div><span style={{ color: '#64748b' }}>Server:</span> <strong>{displayServer}</strong></div>
               <div><span style={{ color: '#64748b' }}>Guests:</span> <strong>{guestCount} Persons</strong></div>
               <div>
                 <span style={{ color: '#64748b' }}>Payment Status:</span>{' '}
@@ -536,7 +542,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 </div>
               </div>
 
-              <div style={{ width: '260px', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.8rem' }}>
+              <div style={{ width: '260px', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.8rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0' }}>
                   <span style={{ color: '#64748b' }}>Subtotal:</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{subtotal.toFixed(2)}</span>
@@ -585,9 +591,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
         {/* Action Buttons (no print) */}
         <div className="no-print" style={{
-          padding: '0.5rem 1rem',
-          background: '#f8fafc',
-          borderTop: '1px solid #e2e8f0',
+          padding: '0.65rem 1rem',
+          background: '#0f172a',
+          borderTop: '1px solid #1e293b',
           display: 'flex',
           gap: '0.65rem'
         }}>
@@ -595,14 +601,15 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             onClick={onClose}
             style={{
               flex: 1,
-              padding: '0.48rem',
+              padding: '0.55rem',
               borderRadius: '6px',
-              background: '#e2e8f0',
-              color: '#334155',
+              background: '#334155',
+              color: '#f8fafc',
               fontWeight: 700,
-              fontSize: '0.78rem',
-              border: 'none',
-              cursor: 'pointer'
+              fontSize: '0.82rem',
+              border: '1px solid #475569',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             Close

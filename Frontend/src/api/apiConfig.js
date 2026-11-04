@@ -1,15 +1,45 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "";
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
+
+// Keep the configured API address consistent for every device. Development
+// requests use the same-origin Vite proxy below, which forwards to this URL.
+export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
+
+// In development all browser-to-API traffic stays same-origin. The Vite
+// server forwards it to the backend on the POS host, including LAN clients.
+export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : API_BASE_URL;
+export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+
+// Keep development SSE on Vite for LAN state broadcasts; production uses the API.
+const EVENTS_URL = import.meta.env.DEV
+  ? "/api/events"
+  : `${API_BASE_URL.replace(/\/$/, "")}/api/events`;
+
+export function openOptionalEventStream() {
+  if (typeof EventSource === "undefined") return null;
+
+  try {
+    const stream = new EventSource(EVENTS_URL);
+    // EventSource retries automatically. This stream is an optional UI sync
+    // enhancement, so stop after a failure instead of retrying indefinitely.
+    stream.onerror = () => stream.close();
+    return stream;
+  } catch {
+    return null;
+  }
+}
 
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
   "ngrok-skip-browser-warning": "true",
 };
 
-export async function apiClient(endpoint, options = {}) {
+const inFlightGetRequests = new Map();
+
+async function performApiRequest(endpoint, options = {}) {
+  const { remoteOnly = false, ...requestOptions } = options;
+  const url = apiUrl(endpoint);
+
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
     const token =
       typeof localStorage !== "undefined"
         ? localStorage.getItem("avsr_jwt_token")
@@ -22,15 +52,32 @@ export async function apiClient(endpoint, options = {}) {
     };
 
     const config = {
-      ...options,
+      ...requestOptions,
       headers,
     };
 
-    const res = await fetch(url, config);
+    let res;
+    try {
+      res = await fetch(url, config);
+      if (!import.meta.env.DEV && !remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+        try {
+          const localRes = await fetch(endpoint, config);
+          if (localRes.ok) {
+            res = localRes;
+          }
+        } catch {}
+      }
+    } catch (fetchErr) {
+      if (!import.meta.env.DEV && API_BASE_URL && !remoteOnly) {
+        console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
+        res = await fetch(endpoint, config);
+      } else {
+        throw fetchErr;
+      }
+    }
 
     if (res.status === 401 || res.status === 403) {
-      // Handle unauthorized (maybe logout user)
-      // Optional: dispatch event or clear storage
+      // Handle unauthorized (optional: dispatch event or clear storage)
     }
 
     if (!res.ok) {
@@ -38,7 +85,7 @@ export async function apiClient(endpoint, options = {}) {
       let errorJson;
       try {
         errorJson = JSON.parse(errorText);
-      } catch (e) {
+      } catch {
         // Not JSON
       }
 
@@ -72,8 +119,6 @@ export async function apiClient(endpoint, options = {}) {
         }
       }
 
-      console.error(`[API Error ${res.status}] ${endpoint}:`, errorText);
-
       return {
         success: false,
         error: displayError,
@@ -88,10 +133,76 @@ export async function apiClient(endpoint, options = {}) {
       return { success: true, data: null };
     }
 
-    const data = JSON.parse(text);
-    return { success: true, data };
+    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
+      if (!import.meta.env.DEV && API_BASE_URL) {
+        try {
+          const localRes = await fetch(endpoint, config);
+          const localText = await localRes.text();
+          if (localRes.ok && !localText.trim().startsWith('<') && !localText.includes('ERR_NGROK')) {
+            const data = JSON.parse(localText);
+            return { success: true, data };
+          }
+        } catch {}
+      }
+      const isNgrok = text.includes('ngrok') || text.includes('ERR_NGROK') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
+      const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
+      let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;
+      if (isNgrok) {
+        msg = 'The ngrok backend tunnel is offline or expired. Make sure ngrok and your backend server are running.';
+      } else if (isViteFallback) {
+        msg = `The backend API server is offline or route ${endpoint} is unhandled.`;
+      }
+      return {
+        success: false,
+        error: msg,
+        rawError: text,
+        status: res.status,
+      };
+    }
+
+    try {
+      const data = JSON.parse(text);
+      return { success: true, data };
+    } catch {
+      return {
+        success: false,
+        error: 'Invalid response format: server returned unparseable response.',
+        rawError: text,
+        status: res.status,
+      };
+    }
   } catch (err) {
-    console.error(`[API Error] Failed request to ${endpoint}:`, err);
     return { success: false, error: err.message || "Network error occurred" };
   }
+}
+
+/** Share concurrent identical GETs (including React StrictMode remounts). */
+export function apiClient(endpoint, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET" || options.signal) {
+    return performApiRequest(endpoint, options);
+  }
+
+  let token = "";
+  try {
+    token = typeof localStorage !== "undefined"
+      ? localStorage.getItem("avsr_jwt_token") || ""
+      : "";
+  } catch {
+    // The request layer still supports environments where storage is blocked.
+  }
+  const key = JSON.stringify({
+    url: `${API_BASE_URL}${endpoint}`,
+    token,
+    remoteOnly: Boolean(options.remoteOnly),
+    headers: options.headers || {},
+  });
+  const existing = inFlightGetRequests.get(key);
+  if (existing) return existing;
+
+  const request = performApiRequest(endpoint, options).finally(() => {
+    if (inFlightGetRequests.get(key) === request) inFlightGetRequests.delete(key);
+  });
+  inFlightGetRequests.set(key, request);
+  return request;
 }

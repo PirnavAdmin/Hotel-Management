@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using HMS.Services;
 
 namespace HMS.DTOs;
 
@@ -36,7 +37,7 @@ public class FlexibleSpiceLevelConverter : JsonConverter<int>
 public class CreateMenuItemDto : IValidatableObject
 {
     private string _dishName = string.Empty;
-    private string _dietaryType = "Non-Veg";
+    private string? _dietaryType;
     private string? _shortDescription;
     private string? _imageUrl;
     private bool? _isChefsSpecial;
@@ -62,19 +63,7 @@ public class CreateMenuItemDto : IValidatableObject
 
     public string DietaryType
     {
-        get
-        {
-            if (!string.IsNullOrWhiteSpace(_dietaryType))
-            {
-                var clean = _dietaryType.Trim();
-                if (clean.Contains("🟢") || clean.Equals("veg", StringComparison.OrdinalIgnoreCase) || clean.Equals("pure veg", StringComparison.OrdinalIgnoreCase))
-                    return "Veg";
-                if (clean.Contains("🔴") || clean.Equals("non-veg", StringComparison.OrdinalIgnoreCase) || clean.Equals("non veg", StringComparison.OrdinalIgnoreCase))
-                    return "Non-Veg";
-                return clean.Length > 20 ? clean.Substring(0, 20) : clean;
-            }
-            return IsVeg == true ? "Veg" : "Non-Veg";
-        }
+        get => DrinkCategoryHelper.NormalizeDietaryType(_dietaryType, Category, DrinkType, IsBarItem ?? false, IsVeg, AlcoholPct);
         set => _dietaryType = value;
     }
 
@@ -82,6 +71,19 @@ public class CreateMenuItemDto : IValidatableObject
     /// Property alias for boolean dietary type (supports frontend clients sending 'isVeg').
     /// </summary>
     public bool? IsVeg { get; set; }
+
+    public string? DrinkType { get; set; }
+
+    public decimal? AlcoholPct { get; set; }
+    public decimal? Abv { get => AlcoholPct; set => AlcoholPct = value; }
+    public decimal? AlcoholContent { get => AlcoholPct; set => AlcoholPct = value; }
+
+    public string? ServingMeasure { get; set; }
+    public string? Measure { get => ServingMeasure; set => ServingMeasure = value; }
+    public string? ServingVolume { get => ServingMeasure; set => ServingMeasure = value; }
+
+    public bool? IsBarItem { get; set; }
+    public bool? IsBarDrink { get => IsBarItem; set => IsBarItem = value; }
 
     [JsonConverter(typeof(FlexibleSpiceLevelConverter))]
     [Range(0, 3, ErrorMessage = "Spice level must be between 0 and 3.")]
@@ -171,7 +173,7 @@ public class CreateMenuItemDto : IValidatableObject
 public class UpdateMenuItemDto : IValidatableObject
 {
     private string _dishName = string.Empty;
-    private string _dietaryType = "Non-Veg";
+    private string? _dietaryType;
     private string? _shortDescription;
     private string? _imageUrl;
     private bool? _isChefsSpecial;
@@ -194,23 +196,24 @@ public class UpdateMenuItemDto : IValidatableObject
 
     public string DietaryType
     {
-        get
-        {
-            if (!string.IsNullOrWhiteSpace(_dietaryType))
-            {
-                var clean = _dietaryType.Trim();
-                if (clean.Contains("🟢") || clean.Equals("veg", StringComparison.OrdinalIgnoreCase) || clean.Equals("pure veg", StringComparison.OrdinalIgnoreCase))
-                    return "Veg";
-                if (clean.Contains("🔴") || clean.Equals("non-veg", StringComparison.OrdinalIgnoreCase) || clean.Equals("non veg", StringComparison.OrdinalIgnoreCase))
-                    return "Non-Veg";
-                return clean.Length > 20 ? clean.Substring(0, 20) : clean;
-            }
-            return IsVeg == true ? "Veg" : "Non-Veg";
-        }
+        get => DrinkCategoryHelper.NormalizeDietaryType(_dietaryType, Category, DrinkType, IsBarItem ?? false, IsVeg, AlcoholPct);
         set => _dietaryType = value;
     }
 
     public bool? IsVeg { get; set; }
+
+    public string? DrinkType { get; set; }
+
+    public decimal? AlcoholPct { get; set; }
+    public decimal? Abv { get => AlcoholPct; set => AlcoholPct = value; }
+    public decimal? AlcoholContent { get => AlcoholPct; set => AlcoholPct = value; }
+
+    public string? ServingMeasure { get; set; }
+    public string? Measure { get => ServingMeasure; set => ServingMeasure = value; }
+    public string? ServingVolume { get => ServingMeasure; set => ServingMeasure = value; }
+
+    public bool? IsBarItem { get; set; }
+    public bool? IsBarDrink { get => IsBarItem; set => IsBarItem = value; }
 
     [JsonConverter(typeof(FlexibleSpiceLevelConverter))]
     [Range(0, 3, ErrorMessage = "Spice level must be between 0 and 3.")]
@@ -314,7 +317,17 @@ public class MenuItemResponseDto
 
     public decimal Price { get; set; }
 
-    public string DietaryType { get; set; } = string.Empty;
+    public string DietaryType { get; set; } = "Non-Veg";
+
+    public bool? IsVeg { get; set; }
+
+    public string? DrinkType { get; set; }
+
+    public decimal? AlcoholPct { get; set; }
+
+    public string? ServingMeasure { get; set; }
+
+    public bool IsBarItem { get; set; }
 
     public int SpiceLevel { get; set; }
 

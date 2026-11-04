@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--modal-overlay);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
   animation: app-dialog-fade-in 160ms ease-out;
@@ -56,7 +56,7 @@
   border: 1px solid rgba(239, 68, 68, 0.45);
   border-radius: 50%;
   background: rgba(239, 68, 68, 0.12);
-  color: #ff6969;
+  color: var(--danger);
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.12);
 }
 

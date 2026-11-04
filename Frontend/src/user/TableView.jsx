@@ -1,3 +1,235 @@
+export function DiningRoomBackground() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        borderRadius: "16px",
+        pointerEvents: "none",
+        zIndex: 0,
+      }}
+    >
+      {/* 1. Upper Cream Wall (0% to 34%) */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "34%",
+          background: "#f7f4ea",
+        }}
+      />
+
+      {/* 2. Middle Mint/Sage Green Wainscot Strip (34% to 57%) */}
+      <div
+        style={{
+          position: "absolute",
+          top: "34%",
+          left: 0,
+          right: 0,
+          height: "23%",
+          background: "#d4e5df",
+          borderTop: "2px solid #c7dcd6",
+        }}
+      />
+
+      {/* 3. Bottom Wooden Floor (57% to 100%) */}
+      <div
+        style={{
+          position: "absolute",
+          top: "57%",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "#deb887",
+          borderTop: "2px solid #cfab7c",
+        }}
+      >
+        {/* Floor Plank Division Lines */}
+        <div
+          style={{
+            position: "absolute",
+            top: "36%",
+            left: 0,
+            right: 0,
+            height: "1px",
+            background: "rgba(180, 140, 95, 0.4)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: "70%",
+            left: 0,
+            right: 0,
+            height: "1px",
+            background: "rgba(180, 140, 95, 0.4)",
+          }}
+        />
+      </div>
+
+      {/* Left Window */}
+      <div
+        style={{
+          position: "absolute",
+          top: "22px",
+          left: "5%",
+          width: "84px",
+          height: "72px",
+          background: "#ffffff",
+          border: "4px solid #d3e4f2",
+          borderRadius: "4px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr",
+          gap: "4px",
+          padding: "3px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+      </div>
+
+      {/* Right Window */}
+      <div
+        style={{
+          position: "absolute",
+          top: "22px",
+          right: "5%",
+          width: "84px",
+          height: "72px",
+          background: "#ffffff",
+          border: "4px solid #d3e4f2",
+          borderRadius: "4px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr",
+          gap: "4px",
+          padding: "3px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+        <div style={{ background: "#bcdbf5", borderRadius: "2px" }} />
+      </div>
+
+      {/* 3 Pendant Ceiling Lamps */}
+      {[30, 50, 70].map((xPct, idx) => (
+        <div
+          key={idx}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: `${xPct}%`,
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          {/* Cord */}
+          <div
+            style={{
+              width: "2px",
+              height: "46px",
+              background: "#6e5847",
+            }}
+          />
+          {/* Lampshade */}
+          <div
+            style={{
+              width: "42px",
+              height: "22px",
+              background: "linear-gradient(180deg, #f7b733 0%, #ea9010 100%)",
+              clipPath: "polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%)",
+              boxShadow: "0 3px 6px rgba(234, 144, 16, 0.4)",
+            }}
+          />
+          {/* Warm Light Glow Cone */}
+          <div
+            style={{
+              width: "84px",
+              height: "95px",
+              marginTop: "-1px",
+              background:
+                "linear-gradient(180deg, rgba(247, 183, 51, 0.28) 0%, rgba(247, 183, 51, 0) 100%)",
+              clipPath: "polygon(22% 0%, 78% 0%, 100% 100%, 0% 100%)",
+              filter: "blur(2px)",
+            }}
+          />
+        </div>
+      ))}
+
+      {/* Potted Plant on Bottom Left */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "22px",
+          left: "4%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        {/* Foliage */}
+        <div style={{ position: "relative", width: "36px", height: "36px" }}>
+          <div
+            style={{
+              position: "absolute",
+              bottom: "2px",
+              left: "4px",
+              width: "16px",
+              height: "26px",
+              borderRadius: "50%",
+              background: "#3e8c56",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "4px",
+              left: "10px",
+              width: "16px",
+              height: "30px",
+              borderRadius: "50%",
+              background: "#4da066",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "2px",
+              right: "4px",
+              width: "16px",
+              height: "26px",
+              borderRadius: "50%",
+              background: "#3e8c56",
+            }}
+          />
+        </div>
+        {/* Pot */}
+        <div
+          style={{
+            width: "28px",
+            height: "18px",
+            background: "#c36c46",
+            borderRadius: "2px",
+            clipPath: "polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
@@ -18,6 +250,7 @@ import {
   Check,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import {
   parseTimeToSeconds,
   formatElapsedTimer,
@@ -56,15 +289,12 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))",
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
         if (!isOccupied && !isSelected) {
           e.currentTarget.style.transform = "translateY(-6px) scale(1.06)";
-          e.currentTarget.style.filter =
-            "drop-shadow(0 0 20px rgba(16, 185, 129, 0.95)) drop-shadow(0 10px 18px rgba(0,0,0,0.3))";
+          e.currentTarget.style.filter = "drop-shadow(0 6px 12px rgba(16, 185, 129, 0.4)) drop-shadow(0 3px 6px rgba(0,0,0,0.12))";
         }
       }}
       onMouseLeave={(e) => {
@@ -73,9 +303,7 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))";
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
       <svg width="60" height="80" viewBox="0 0 60 80" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -239,15 +467,12 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))",
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
         if (!isOccupied && !isSelected) {
           e.currentTarget.style.transform = "translateY(-6px) scale(1.06)";
-          e.currentTarget.style.filter =
-            "drop-shadow(0 0 20px rgba(16, 185, 129, 0.95)) drop-shadow(0 10px 18px rgba(0,0,0,0.3))";
+          e.currentTarget.style.filter = "drop-shadow(0 6px 12px rgba(16, 185, 129, 0.4)) drop-shadow(0 3px 6px rgba(0,0,0,0.12))";
         }
       }}
       onMouseLeave={(e) => {
@@ -256,9 +481,7 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))";
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
       <svg width="66" height="96" viewBox="0 0 66 96" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -412,15 +635,12 @@ function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))",
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
         if (!isOccupied && !isSelected) {
           e.currentTarget.style.transform = "translateY(-6px) scale(1.06)";
-          e.currentTarget.style.filter =
-            "drop-shadow(0 0 20px rgba(16, 185, 129, 0.95)) drop-shadow(0 10px 18px rgba(0,0,0,0.3))";
+          e.currentTarget.style.filter = "drop-shadow(0 6px 12px rgba(16, 185, 129, 0.4)) drop-shadow(0 3px 6px rgba(0,0,0,0.12))";
         }
       }}
       onMouseLeave={(e) => {
@@ -429,9 +649,7 @@ function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
           ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
-          : isLight
-          ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.75)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))"
-          : "drop-shadow(0 0 10px rgba(16, 185, 129, 0.65)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))";
+          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
       <svg
@@ -686,7 +904,9 @@ function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isL
   );
 }
 
-export function TableView({ tables, onSelectTable, onUpdateTable }) {
+import { SkeletonCard } from "../common/Skeletons";
+
+export function TableView({ tables, onSelectTable, onUpdateTable, loading = false }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -762,6 +982,12 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     }
     if (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0) {
       setSelectedSeatIds([...table.selectedSeats]);
+    } else if (Number(table.guests) > 0) {
+      const initialIds = [];
+      for (let i = 1; i <= Math.min(Number(table.capacity) || 4, Number(table.guests)); i++) {
+        initialIds.push(`S${i}`);
+      }
+      setSelectedSeatIds(initialIds);
     } else {
       setSelectedSeatIds([]);
     }
@@ -794,6 +1020,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
     } catch (e) {
@@ -819,18 +1046,26 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     const count =
       selectedSeatIds.length > 0
         ? selectedSeatIds.length
-        : selectedSeatTable.guests > 0
-        ? selectedSeatTable.guests
-        : selectedSeatTable.capacity;
+        : Number(selectedSeatTable.guests) > 0
+        ? Number(selectedSeatTable.guests)
+        : Number(selectedSeatTable.capacity) || 2;
 
-    const finalStatus = count > 0 ? "occupied" : selectedSeatTable.status;
+    const hasActiveItems = Array.isArray(selectedSeatTable.items) && selectedSeatTable.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
+    );
+    const finalStatus = hasActiveItems ? "occupied" : "vacant";
+    const finalSeats =
+      selectedSeatIds.length > 0
+        ? [...selectedSeatIds]
+        : Array.from({ length: count }, (_, i) => `S${i + 1}`);
 
     const finalTable = {
       ...selectedSeatTable,
       capacity: selectedSeatTable.capacity,
       seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
       guests: count,
-      selectedSeats: selectedSeatIds,
+      occupiedChairs: count,
+      selectedSeats: finalSeats,
       status: finalStatus,
     };
 
@@ -846,13 +1081,15 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                   capacity: selectedSeatTable.capacity,
                   seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
                   guests: count,
-                  selectedSeats: selectedSeatIds,
+                  occupiedChairs: count,
+                  selectedSeats: finalSeats,
                   status: finalStatus,
                 }
               : t
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
     } catch (e) {
@@ -878,7 +1115,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
     const isSelected = seat.isSelected;
 
     let glowFilter = "drop-shadow(0 8px 16px rgba(0,0,0,0.65))";
-    let pillBorder = "rgba(255, 255, 255, 0.22)";
+    let pillBorder = "rgba(var(--surface-rgb),0.22)";
     let pillBg = "rgba(10, 18, 30, 0.88)";
     let pillColor = "#f1f5f9";
 
@@ -950,9 +1187,9 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           <defs>
             <linearGradient id={`chrome-${seat.defaultId}`} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="35%" stopColor="#cbd5e1" />
+              <stop offset="35%" stopColor="var(--text-muted)" />
               <stop offset="70%" stopColor="#475569" />
-              <stop offset="100%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="var(--text-dim)" />
             </linearGradient>
             <linearGradient id={`leatherSeat-${seat.defaultId}`} x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#373c44" />
@@ -974,10 +1211,10 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
           <line x1="70" y1="70" x2="79" y2="79" stroke={`url(#chrome-${seat.defaultId})`} strokeWidth="3.5" strokeLinecap="round" />
 
           {/* Chrome Glides / Feet */}
-          <circle cx="11" cy="11" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
-          <circle cx="79" cy="11" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
-          <circle cx="11" cy="79" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
-          <circle cx="79" cy="79" r="3.2" fill="#cbd5e1" stroke="#334155" strokeWidth="1" />
+          <circle cx="11" cy="11" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
+          <circle cx="79" cy="11" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
+          <circle cx="11" cy="79" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
+          <circle cx="79" cy="79" r="3.2" fill="var(--text-muted)" stroke="#334155" strokeWidth="1" />
 
           {/* Chrome Side Frames */}
           <path
@@ -1007,7 +1244,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
             height="40"
             rx="8"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.08)"
+            stroke="rgba(var(--surface-rgb),0.08)"
             strokeWidth="1"
           />
 
@@ -1122,7 +1359,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
 
   // Extract distinct table list sorted numerically
   const uniqueTableNumbers = useMemo(() => {
-    return [...tables].sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    return [...tables].sort(compareTablesNaturally);
   }, [tables]);
 
   // Dynamic sections list based on active tables
@@ -1145,8 +1382,10 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         sectionFilter === "all" || t.section === sectionFilter;
 
       // 2. Status Filter
+      const hasActive = Array.isArray(t.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+      const effectiveStatus = hasActive ? (t.status || "occupied") : "vacant";
       const matchesStatus =
-        statusFilter === "all" || t.status === statusFilter;
+        statusFilter === "all" || effectiveStatus === statusFilter;
 
       // 3. Server Dropdown Filter
       const tServer = (t.server || t.waiter || t.assignedServer || "Staff").trim();
@@ -1208,7 +1447,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         matchesTableDropdown &&
         matchesSearch
       );
-    });
+    }).sort(compareTablesNaturally);
   }, [tables, sectionFilter, statusFilter, serverFilter, tableFilter, searchQuery]);
 
   const hasActiveFilters =
@@ -1579,7 +1818,11 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
       </div>
 
       {/* Tables Grid or Empty Filter State */}
-      {filteredTables.length === 0 ? (
+      {loading ? (
+        <div role="status" aria-label="Loading tables" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", margin: "1rem 0" }}>
+          {Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} lines={3} />)}
+        </div>
+      ) : filteredTables.length === 0 ? (
         <div
           style={{
             textAlign: "center",
@@ -1669,6 +1912,9 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
         >
           {filteredTables.map((table) => {
             const items = Array.isArray(table?.items) ? table.items : [];
+            const hasActiveItems = items.some(
+              (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
+            );
             const subtotal = items.reduce(
               (sum, item) =>
                 sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
@@ -1683,17 +1929,19 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
             let statusText = "Vacant";
             let statusBg = "var(--status-vacant-bg)";
 
-            if (table.status === "occupied") {
-              statusColor = "var(--status-occupied)";
-              statusText = "Dining";
-              statusBg = "var(--status-occupied-bg)";
-            } else if (table.status === "billed") {
-              statusColor = "var(--status-billed)";
-              statusText = "Billed";
-              statusBg = "var(--status-billed-bg)";
-            }
+            const isOccupied = hasActiveItems && table.status !== "vacant";
 
-            const isOccupied = table.status !== "vacant";
+            if (isOccupied) {
+              if (table.status === "billed") {
+                statusColor = "var(--status-billed)";
+                statusText = "Billed";
+                statusBg = "var(--status-billed-bg)";
+              } else {
+                statusColor = "var(--status-occupied)";
+                statusText = "Dining";
+                statusBg = "var(--status-occupied-bg)";
+              }
+            }
             const hasCooking =
               isOccupied && items.some((i) => i.kotStatus === "cooking");
             const allReady =
@@ -1802,7 +2050,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           flexShrink: 0,
                         }}
                       >
-                        T{table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id}
+                        T{getTableSortNumber(table) || (table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id)}
                       </span>
                       <h3
                         style={{
@@ -1830,7 +2078,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         height: "9px",
                         borderRadius: "50%",
                         background: statusColor,
-                        boxShadow: `0 0 6px ${statusColor}80`,
+                        boxShadow: `0 0 6px color-mix(in srgb, ${statusColor} 50.20%, transparent)`,
                         display: "inline-block",
                         flexShrink: 0,
                       }}
@@ -1861,7 +2109,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         minWidth: 0,
                       }}
                     >
-                      {table.section}
+                      {table.section && !/^[\\|/\s]+$/.test(table.section.trim()) ? table.section : "Main Hall"}
                     </span>
                     <button
                       type="button"
@@ -1900,8 +2148,8 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       <Armchair size={11} color="#f59e0b" />
                       <span>
                         {table.capacity} Seats ·{" "}
-                        {table.status !== "vacant"
-                          ? `${table.guests || 0} Seated`
+                        {isOccupied && (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0))
+                          ? `${Number(table.guests) || table.selectedSeats.length} Seated`
                           : "0 Seated"}
                       </span>
                     </button>
@@ -1924,7 +2172,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                               .toLowerCase()
                               .includes(searchQuery.trim().toLowerCase()))
                           ? "rgba(245, 158, 11, 0.22)"
-                          : "rgba(255, 255, 255, 0.04)",
+                          : "rgba(var(--surface-rgb),0.04)",
                       border:
                         (serverFilter !== "all" &&
                           (table.server || "Staff").toLowerCase() ===
@@ -1934,7 +2182,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                               .toLowerCase()
                               .includes(searchQuery.trim().toLowerCase()))
                           ? "1px solid var(--accent-amber)"
-                          : "1px solid rgba(255, 255, 255, 0.06)",
+                          : "1px solid rgba(var(--surface-rgb),0.06)",
                       borderRadius: "5px",
                       fontSize: "0.68rem",
                       transition: "all 0.15s ease",
@@ -2038,7 +2286,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                             style={{
                               fontSize: "0.68rem",
                               fontWeight: 800,
-                              color: "#fb923c",
+                              color: "var(--accent-amber-light)",
                               display: "flex",
                               alignItems: "center",
                               gap: "3px",
@@ -2087,7 +2335,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                             style={{
                               fontSize: "0.68rem",
                               fontWeight: 700,
-                              color: "#93c5fd",
+                              color: "var(--info)",
                             }}
                           >
                             📥 Order in Kitchen
@@ -2100,7 +2348,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
 
                 {/* Order Status & Financial Snapshot */}
                 <div>
-                  {table.status !== "vacant" && (
+                  {isOccupied && hasActiveItems && (
                     <div style={{ marginTop: "0.25rem" }}>
                       <div
                         style={{
@@ -2198,7 +2446,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                       borderRadius: "var(--radius-sm)",
                       background:
                         table.status === "vacant"
-                          ? "rgba(255, 255, 255, 0.05)"
+                          ? "rgba(var(--surface-rgb),0.05)"
                           : "linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.12))",
                       color:
                         table.status === "vacant"
@@ -2220,7 +2468,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                   >
                     <Utensils size={12} />
                     <span>
-                      {table.status === "vacant" ? "Take Order" : "Manage Bill"}
+                      {(!isOccupied || !hasActiveItems) ? "Take Order" : "Manage Bill"}
                     </span>
                     <ChevronRight size={12} />
                   </button>
@@ -2499,7 +2747,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                         alignItems: "center",
                         gap: "0.35rem",
                         background: isLight ? "#ffffff" : "#070e1b",
-                        border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255, 255, 255, 0.15)",
+                        border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(var(--surface-rgb),0.15)",
                         borderRadius: "8px",
                         padding: "2px 4px",
                       }}
@@ -2514,7 +2762,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           borderRadius: "6px",
                           background: capacity <= 1 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
                           border: "none",
-                          color: capacity <= 1 ? "#94a3b8" : "var(--accent-amber)",
+                          color: capacity <= 1 ? "var(--text-dim)" : "var(--accent-amber)",
                           fontWeight: 900,
                           fontSize: "1.1rem",
                           cursor: capacity <= 1 ? "not-allowed" : "pointer",
@@ -2546,7 +2794,7 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                           borderRadius: "6px",
                           background: capacity >= 24 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
                           border: "none",
-                          color: capacity >= 24 ? "#94a3b8" : "var(--accent-amber)",
+                          color: capacity >= 24 ? "var(--text-dim)" : "var(--accent-amber)",
                           fontWeight: 900,
                           fontSize: "1.1rem",
                           cursor: capacity >= 24 ? "not-allowed" : "pointer",
@@ -2586,14 +2834,14 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                                 ? "var(--accent-amber)"
                                 : isLight
                                 ? "#f1f5f9"
-                                : "rgba(255, 255, 255, 0.06)",
-                            color: capacity === num ? "#ffffff" : isLight ? "#334155" : "#cbd5e1",
+                                : "rgba(var(--surface-rgb),0.06)",
+                            color: capacity === num ? "#ffffff" : isLight ? "#334155" : "var(--text-muted)",
                             border:
                               capacity === num
                                 ? "1px solid var(--accent-amber)"
                                 : isLight
                                 ? "1px solid #e2e8f0"
-                                : "1px solid rgba(255, 255, 255, 0.1)",
+                                : "1px solid rgba(var(--surface-rgb),0.1)",
                             cursor: "pointer",
                             transition: "all 0.15s ease",
                           }}
@@ -2618,73 +2866,27 @@ export function TableView({ tables, onSelectTable, onUpdateTable }) {
                 }}
               >
                 {/* Left Column: Dynamic Dining Scene matching Image 1 */}
-                <div
-                  style={{
-                    flex: 1.5,
-                    background: isLight
-                      ? "radial-gradient(circle at 50% 50%, #fbf8f2 0%, #f1eae0 100%)"
-                      : "radial-gradient(circle at 50% 50%, #151e2f 0%, #090e18 100%)",
-                    borderRadius: "16px",
-                    border: isLight ? "1px solid #e5dccf" : "1px solid rgba(255, 255, 255, 0.08)",
-                    boxShadow: isLight
-                      ? "inset 0 0 35px rgba(220, 205, 185, 0.45)"
-                      : "inset 0 0 45px rgba(0, 0, 0, 0.65)",
-                    padding: "1.75rem 1rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
-                    minHeight: "410px",
-                    overflow: "auto",
-                  }}
-                >
-                  {/* Atmospheric Background Accents from Image 1 */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "22px",
-                      left: "20%",
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      background: "#d96b34",
-                      opacity: isLight ? 0.75 : 0.35,
-                      filter: "blur(1px)",
-                      pointerEvents: "none",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "28px",
-                      right: "20%",
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      background: "#dc7f48",
-                      opacity: isLight ? 0.75 : 0.35,
-                      filter: "blur(1px)",
-                      pointerEvents: "none",
-                    }}
-                  />
+          <div
+            style={{
+              flex: 1.5,
+              background: "#f7f4ea",
+              borderRadius: "16px",
+              border: "1.5px solid #dcd3c3",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)",
+              padding: "1.75rem 1rem",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+              minHeight: "410px",
+              overflow: "hidden",
+            }}
+          >
+            {/* Dining Room Background matching Image 1 */}
+            <DiningRoomBackground />
 
-                  {/* Ground Oval Glow / Rug from Image 1 */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      width: `${dynamicTableWidth + 160}px`,
-                      height: "320px",
-                      borderRadius: "50%",
-                      background: isLight
-                        ? "radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(243, 230, 212, 0.65) 60%, transparent 75%)"
-                        : "radial-gradient(ellipse at 50% 50%, rgba(246, 239, 227, 0.08) 0%, rgba(246, 239, 227, 0.02) 60%, transparent 75%)",
-                      pointerEvents: "none",
-                      transition: "width 0.35s ease",
-                    }}
-                  />
-
-                  {/* Interactive Dynamic Dining Cluster: Top Chairs + Table (+ Side Chairs) + Bottom Chairs */}
+            {/* Interactive Dynamic Dining Cluster: Top Chairs + Table (+ Side Chairs) + Bottom Chairs */}
                   <div
                     style={{
                       position: "relative",

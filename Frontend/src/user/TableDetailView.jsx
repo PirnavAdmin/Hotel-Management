@@ -1715,6 +1715,7 @@ import {
   Star,
   ChevronDown,
   Filter,
+  LogOut,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
 import { formatCurrency } from "../utils/formatCurrency";
@@ -1724,7 +1725,10 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
+import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import { SkeletonMenuCard } from "../common/Skeletons";
+import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1740,6 +1744,11 @@ export function TableDetailView({
   table,
   allTables,
   menuItems = [],
+  barMenuItems = [],
+  menuLoading = false,
+  barMenuLoading = false,
+  menuLoadError = "",
+  barMenuLoadError = "",
   onSelectTable,
   onBackToTables,
   onAddItemToTable,
@@ -1755,6 +1764,7 @@ export function TableDetailView({
   onOpenTransferModal,
   onClearOrder,
   onOpenKOTView,
+  onShowToast,
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -1762,8 +1772,22 @@ export function TableDetailView({
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+  const activeTable =
+    (Array.isArray(allTables) && table?.id
+      ? allTables.find((t) => String(t.id) === String(table.id))
+      : null) || table || {};
+
+  const activeGuests =
+    (Number(activeTable?.guests) > 0 ? Number(activeTable.guests) : null) ??
+    (Array.isArray(activeTable?.selectedSeats) && activeTable.selectedSeats.length > 0 ? activeTable.selectedSeats.length : null) ??
+    (Number(activeTable?.occupiedChairs) > 0 ? Number(activeTable.occupiedChairs) : null) ??
+    (Number(table?.guests) > 0 ? Number(table.guests) : null) ??
+    (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
+    (Number(table?.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+    0;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [orderMode, setOrderMode] = useState("kitchen");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // all | veg | non-veg | special
   const [searchQuery, setSearchQuery] = useState("");
   const [editingNoteItemId, setEditingNoteItemId] = useState(null);
@@ -1774,13 +1798,21 @@ export function TableDetailView({
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
   const [tableStatusFilter, setTableStatusFilter] = useState("all"); // 'all' | 'vacant' | 'occupied' | 'billed'
   const [isMobileOrderSlipOpen, setIsMobileOrderSlipOpen] = useState(false);
+  const activeMenuItems = orderMode === "bar"
+    ? barMenuItems
+    : menuItems.filter((item) => !isDrinkItem(item));
+  const activeMenuLoading = orderMode === "bar" ? barMenuLoading : menuLoading;
+  const activeMenuLoadError = orderMode === "bar" ? barMenuLoadError : menuLoadError;
+  const barMenuItemIds = new Set(
+    barMenuItems.map((item) => String(item.menuItemId ?? item.id ?? "")).filter(Boolean),
+  );
 
   // Filtered menu items with spelling tolerance for biriyani / biryani
   const filteredMenuItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const normalizedQuery = query.replace(/biriyani/g, "biryani");
 
-    return (Array.isArray(menuItems) ? menuItems : []).filter((item) => {
+    return (Array.isArray(activeMenuItems) ? activeMenuItems : []).filter((item) => {
       const matchCat =
         selectedCategory === "all" || item.category === selectedCategory;
 
@@ -1798,27 +1830,75 @@ export function TableDetailView({
         itemCat.includes(normalizedQuery);
 
       let matchDietary = true;
-      if (dietaryFilter === "veg") matchDietary = item.isVeg;
-      if (dietaryFilter === "non-veg") matchDietary = !item.isVeg;
+      if (dietaryFilter === "veg") matchDietary = (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg === true);
+      if (dietaryFilter === "non-veg") matchDietary = (item.dietaryType?.toUpperCase() === "NON-VEG" || item.isVeg === false);
       if (dietaryFilter === "special") matchDietary = Boolean(item.isChefSpecial || item.isChefsSpecial);
 
       return matchCat && matchSearch && matchDietary;
     });
-  }, [selectedCategory, dietaryFilter, searchQuery, menuItems]);
+  }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems]);
 
   // Financial calculations in Rupees
-  const safeItems = Array.isArray(table?.items) ? table.items : [];
+  const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
+  const propItems = Array.isArray(table?.items) ? table.items : [];
+  const safeItems = activeItems.length > 0 ? activeItems : propItems;
+  const targetTableId = activeTable?.id ?? table?.id;
+
+  // KOT Flow Helpers: Enforce Send KOT first, then Cooking, then Settle enabled
+  const isItemSentToKot = (item) => {
+    if (!item) return false;
+    return Boolean(
+      item.kotSent ||
+      item.kotStatus === "received" ||
+      item.kotStatus === "cooking" ||
+      item.kotStatus === "ready" ||
+      item.kotStatus === "served" ||
+      item.kotStatus === "completed"
+    );
+  };
+
+  const isItemCookedReady = (item) => {
+    if (!item) return false;
+    return (
+      item.kotStatus === "ready" ||
+      item.kotStatus === "served" ||
+      item.kotStatus === "completed"
+    );
+  };
+
+  const isBarMenuItem = (item) => Boolean(
+    isDrinkItem(item, null, barMenuItems) ||
+    item?.isBarItem ||
+    item?.isBarDrink ||
+    barMenuItemIds.has(String(item?.menuItemId ?? item?.id ?? ""))
+  );
+  const hasUnsentItems = safeItems.length > 0 && safeItems.some((i) => !isItemSentToKot(i));
+  const hasUnsentKitchenItems = safeItems.some((item) => !isBarMenuItem(item) && !isItemSentToKot(item));
+  const hasUnsentBarItems = safeItems.some((item) => isBarMenuItem(item) && !isItemSentToKot(item));
+  const dispatchButtonLabel = hasUnsentKitchenItems && hasUnsentBarItems
+    ? "Send KOT + BOT"
+    : hasUnsentBarItems
+      ? "Send BOT"
+      : hasUnsentKitchenItems
+        ? "Send KOT"
+        : "Send Orders";
+  const allItemsSentToKot = safeItems.length > 0 && safeItems.every((i) => isItemSentToKot(i));
+  const allCookingReady = safeItems.length > 0 && safeItems.every((i) => isItemCookedReady(i));
+  const canSettleAndCheckout = safeItems.length > 0 && allItemsSentToKot && allCookingReady;
+
   const subtotal = safeItems.reduce(
     (sum, item) =>
       sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
     0,
   );
-  const discountAmount = (subtotal * (table?.discountPercent || 0)) / 100;
+  const currentDiscountPercent = Number(activeTable?.discountPercent ?? table?.discountPercent ?? 0);
+  const currentServiceCharge = Number(activeTable?.serviceCharge ?? table?.serviceCharge ?? 0);
+  const discountAmount = (subtotal * currentDiscountPercent) / 100;
   const taxableAmount = Math.max(0, subtotal - discountAmount);
   const taxRate = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
   const taxAmount = taxableAmount * taxRate;
-  const serviceChargeAmount = table?.serviceCharge
-    ? taxableAmount * (table.serviceCharge / 100)
+  const serviceChargeAmount = currentServiceCharge
+    ? taxableAmount * (currentServiceCharge / 100)
     : 0;
   const grandTotal = Math.round(
     taxableAmount + taxAmount + serviceChargeAmount,
@@ -1826,17 +1906,17 @@ export function TableDetailView({
 
   // Find quantity of an item already in the table order
   const getItemQuantityInCart = (itemId) => {
-    const found = safeItems.find((i) => i.id === itemId);
+    const found = safeItems.find((i) => String(i.id) === String(itemId));
     return found ? found.quantity : 0;
   };
 
   const handleAddItem = (item) => {
     sounds.playAddItem();
-    onAddItemToTable(table.id, item);
+    onAddItemToTable(targetTableId, item);
   };
 
   const handleSaveNote = (itemId) => {
-    onUpdateItemNotes(table.id, itemId, tempNote.trim());
+    onUpdateItemNotes(targetTableId, itemId, tempNote.trim());
     setEditingNoteItemId(null);
     setTempNote("");
   };
@@ -1846,11 +1926,11 @@ export function TableDetailView({
   };
 
   const handleConfirmItemModal = (customizedItem) => {
-    onAddItemToTable(table.id, customizedItem);
+    onAddItemToTable(targetTableId, customizedItem);
   };
 
   const handleRemoveItemFromModal = (itemId) => {
-    onRemoveItemFromTable(table.id, itemId);
+    onRemoveItemFromTable(targetTableId, itemId);
   };
 
   return (
@@ -2061,7 +2141,7 @@ export function TableDetailView({
           font-size: 0.54rem;
           font-weight: 700;
           color: #fff;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(var(--surface-rgb),0.1);
         }
 
         .pos-menu-chef {
@@ -2231,19 +2311,17 @@ export function TableDetailView({
                     fontSize: "0.72rem",
                     fontWeight: 700,
                     textTransform: "uppercase",
-                    color:
-                      table.status === "vacant"
-                        ? "var(--status-vacant)"
-                        : "var(--status-occupied)",
-                    background:
-                      table.status === "vacant"
-                        ? "var(--status-vacant-bg)"
-                        : "var(--status-occupied-bg)",
+                    color: (safeItems.length > 0 && activeTable.status !== "vacant")
+                      ? "var(--status-occupied)"
+                      : "var(--status-vacant)",
+                    background: (safeItems.length > 0 && activeTable.status !== "vacant")
+                      ? "var(--status-occupied-bg)"
+                      : "var(--status-vacant-bg)",
                     padding: "1px 6px",
                     borderRadius: "4px",
                   }}
                 >
-                  {table.status}
+                  {(safeItems.length > 0 && activeTable.status !== "vacant") ? (activeTable.status || "occupied") : "vacant"}
                 </span>
               </div>
             </div>
@@ -2265,9 +2343,12 @@ export function TableDetailView({
             <Users size={13} color="var(--text-muted)" />
             <span style={{ color: "var(--text-muted)" }}>Guests:</span>
             <button
+              type="button"
               onClick={() => {
-                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
-                onUpdateGuests(table.id, Math.max(1, currentG - 1));
+                const currentG = activeGuests;
+                if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, Math.max(0, currentG - 1));
+                }
               }}
               style={{
                 background: "var(--surface-tint)",
@@ -2278,6 +2359,8 @@ export function TableDetailView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
               }}
             >
               -
@@ -2285,12 +2368,15 @@ export function TableDetailView({
             <span
               style={{ fontWeight: 700, minWidth: "16px", textAlign: "center" }}
             >
-              {Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0)}
+              {activeGuests}
             </span>
             <button
+              type="button"
               onClick={() => {
-                const currentG = Number(table?.guests) || (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : 0);
-                onUpdateGuests(table.id, currentG + 1);
+                const currentG = activeGuests;
+                if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, currentG + 1);
+                }
               }}
               style={{
                 background: "var(--surface-tint)",
@@ -2301,14 +2387,48 @@ export function TableDetailView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
               }}
             >
               +
             </button>
           </div>
 
+          {/* Quick Vacate Table Button */}
+          {(activeTable.status !== "vacant" || activeGuests > 0 || safeItems.length > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onClearOrder) {
+                  onClearOrder(activeTable.id);
+                } else if (onUpdateGuests) {
+                  onUpdateGuests(activeTable.id, 0);
+                }
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                padding: "0.24rem 0.55rem",
+                borderRadius: "var(--radius-sm)",
+                background: "rgba(239, 68, 68, 0.12)",
+                color: "#ef4444",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Clear order and vacate table"
+            >
+              <LogOut size={12} />
+              <span>Vacate</span>
+            </button>
+          )}
+
           {/* Live Table Dining Timer Widget */}
-          {table.orderTime &&
+          {safeItems.length > 0 && table.orderTime &&
             (() => {
               const elapsedSec = parseTimeToSeconds(table.orderTime);
               const elapsedFormatted = formatElapsedTimer(elapsedSec);
@@ -2366,28 +2486,6 @@ export function TableDetailView({
 
         {/* Right Table Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {safeItems.length > 0 && (
-            <button
-              onClick={() => onClearOrder(table.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.35rem",
-                padding: "0.4rem 0.75rem",
-                borderRadius: "var(--radius-sm)",
-                background: "var(--danger-bg)",
-                color: "var(--danger)",
-                border: "1px solid rgba(239, 68, 68, 0.25)",
-                fontSize: "0.78rem",
-                fontWeight: 600,
-              }}
-              title="Void / Clear current items"
-            >
-              <Trash2 size={13} />
-              <span>Void</span>
-            </button>
-          )}
-
           {/* Cart Icon in vacant place */}
           {safeItems.length > 0 && (
             <div
@@ -2743,7 +2841,7 @@ export function TableDetailView({
               padding: "0.5rem",
             }}
           >
-            {[{ id: "all", name: "All Items", icon: "Utensils" }, ...Array.from(new Map((menuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: "Utensils" }])).values())].map((category) => {
+            {[{ id: "all", name: orderMode === "bar" ? "All Drinks" : "All Items", icon: orderMode === "bar" ? "Coffee" : "Utensils" }, ...Array.from(new Map((activeMenuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: orderMode === "bar" ? "Coffee" : "Utensils" }])).values())].map((category) => {
               const isSelected = selectedCategory === category.id;
               const IconComp = CATEGORY_ICONS[category.icon] || Utensils;
 
@@ -2836,6 +2934,55 @@ export function TableDetailView({
               flexShrink: 0,
             }}
           >
+            <div
+              role="group"
+              aria-label="Choose order station"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                flexShrink: 0,
+              }}
+            >
+              {[
+                { id: "kitchen", label: "Kitchen / Food", icon: ChefHat },
+                { id: "bar", label: "Bar / Beverages", icon: Coffee },
+              ].map(({ id, label, icon: Icon }) => {
+                const isActive = orderMode === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      setOrderMode(id);
+                      setSelectedCategory("all");
+                      setDietaryFilter("all");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
+                      minHeight: "36px",
+                      padding: "0.45rem 0.75rem",
+                      borderRadius: "var(--radius-md)",
+                      border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
+                      background: isActive ? "rgba(245, 158, 11, 0.16)" : "var(--bg-primary)",
+                      color: isActive ? "var(--accent-amber-light)" : "var(--text-muted)",
+                      fontSize: "0.8rem",
+                      fontWeight: isActive ? 800 : 650,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Icon size={15} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Search Input */}
             <div
               style={{
@@ -2852,7 +2999,7 @@ export function TableDetailView({
               />
               <input
                 type="text"
-                placeholder="Search Biryani, Chicken 65, Naan, Desserts..."
+                placeholder={orderMode === "bar" ? "Search drinks..." : "Search Biryani, Chicken 65, Naan, Desserts..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -2950,7 +3097,9 @@ export function TableDetailView({
 
           {/* Menu Items Grid - 4 dishes per row */}
           <div className="pos-menu-grid">
-            {filteredMenuItems.length === 0 ? (
+            {activeMenuLoading ? (
+              Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
+            ) : filteredMenuItems.length === 0 ? (
               <div
                 style={{
                   gridColumn: "1 / -1",
@@ -2971,7 +3120,7 @@ export function TableDetailView({
                     fontWeight: 700,
                   }}
                 >
-                  No dishes match "{searchQuery}"
+                  {activeMenuLoadError ? (orderMode === "bar" ? "Bar drinks could not be loaded" : "Menu items could not be loaded") : `${orderMode === "bar" ? "No drinks" : "No dishes"} match "${searchQuery}"`}
                 </h4>
                 <p
                   style={{
@@ -2980,10 +3129,10 @@ export function TableDetailView({
                     color: "var(--text-muted)",
                   }}
                 >
-                  Try searching for "Biryani", "Chicken", "Paneer", "Tandoori"
-                  or click "All Items".
+                  {activeMenuLoadError || (orderMode === "bar" ? 'Try another drink search or select "All Drinks".' : 'Try searching for "Biryani", "Chicken", "Paneer", "Tandoori" or click "All Items".')}
                 </p>
                 <button
+                  className="primary-action-button"
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedCategory("all");
@@ -2999,7 +3148,7 @@ export function TableDetailView({
                     fontSize: "0.82rem",
                   }}
                 >
-                  Show All Dishes
+                  {orderMode === "bar" ? "Show All Drinks" : "Show All Dishes"}
                 </button>
               </div>
             ) : (
@@ -3089,14 +3238,14 @@ export function TableDetailView({
                       <div className="pos-menu-badge">
                         <span
                           style={{
-                            width: "6px",
-                            height: "6px",
-                            borderRadius: "2px",
-                            backgroundColor: item.isVeg ? "#10b981" : "#ef4444",
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "#10b981" : "#ef4444",
                             display: "inline-block",
                           }}
                         />
-                        <span>{item.isVeg ? "VEG" : "NON-VEG"}</span>
+                        <span>{(item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "VEG" : "NON-VEG"}</span>
                       </div>
 
                       {/* Chef Special Badge */}
@@ -3129,7 +3278,7 @@ export function TableDetailView({
                             <div
                               style={{
                                 display: "flex",
-                                color: "#ef4444",
+                                color: "var(--danger)",
                                 flexShrink: 0,
                                 opacity: isAvailable ? 1 : 0.4,
                               }}
@@ -3169,7 +3318,7 @@ export function TableDetailView({
                             style={{
                               fontSize: "0.72rem",
                               fontWeight: 700,
-                              color: "#ef4444",
+                              color: "var(--danger)",
                               background: "rgba(239, 68, 68, 0.12)",
                               border: "1px solid rgba(239, 68, 68, 0.35)",
                               borderRadius: "6px",
@@ -3335,7 +3484,7 @@ export function TableDetailView({
                   whiteSpace: "nowrap",
                 }}
               >
-                #{table.id}0{safeItems.length}
+                #{targetTableId}0{safeItems.length}
               </div>
             </div>
 
@@ -3354,12 +3503,49 @@ export function TableDetailView({
               {/* Live Kitchen Status Banner */}
               {safeItems.length > 0 &&
                 (() => {
-                  const allReady = safeItems.every(
-                    (i) =>
-                      i.kotStatus === "ready" ||
-                      i.kotStatus === "served" ||
-                      i.kotStatus === "completed",
-                  );
+                  if (hasUnsentItems) {
+                    return (
+                      <div
+                        style={{
+                          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(234, 88, 12, 0.08))",
+                          border: "1.5px dashed var(--accent-amber)",
+                          borderRadius: "8px",
+                          padding: "0.55rem 0.8rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <span style={{ fontSize: "1.1rem" }}>📝</span>
+                          <div>
+                            <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--accent-amber-light)" }}>
+                              Order Not Sent to Kitchen Yet
+                            </div>
+                            <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
+                              Click "Send KOT" below to send order to kitchen & start cooking.
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          style={{
+                            background: "rgba(245, 158, 11, 0.2)",
+                            color: "var(--accent-amber-light)",
+                            border: "1px solid rgba(245, 158, 11, 0.4)",
+                            fontSize: "0.65rem",
+                            fontWeight: 800,
+                            padding: "2px 7px",
+                            borderRadius: "10px",
+                          }}
+                        >
+                          KOT REQUIRED
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  const allReady = allCookingReady;
                   const hasCooking = safeItems.some(
                     (i) => i.kotStatus === "cooking",
                   );
@@ -3398,7 +3584,7 @@ export function TableDetailView({
                               style={{
                                 fontSize: "0.78rem",
                                 fontWeight: 900,
-                                color: "var(--success)",
+                                color: "#065F46",
                                 letterSpacing: "0.02em",
                               }}
                             >
@@ -3407,26 +3593,25 @@ export function TableDetailView({
                             <div
                               style={{
                                 fontSize: "0.68rem",
-                                color: "#a7f3d0",
+                                color: "#047857",
                                 fontWeight: 600,
                               }}
                             >
-                              Chef has completed cooking. All dishes prepared
-                              hot.
+                              All dishes cooked & ready. Settle & checkout is enabled!
                             </div>
                           </div>
                         </div>
                         <span
                           style={{
                             background: "#10b981",
-                            color: "#000",
+                            color: "#064E3B",
                             fontSize: "0.65rem",
                             fontWeight: 900,
                             padding: "2px 8px",
                             borderRadius: "12px",
                           }}
                         >
-                          SERVE NOW
+                          READY TO SETTLE
                         </span>
                       </div>
                     );
@@ -3449,7 +3634,7 @@ export function TableDetailView({
                             style={{
                               fontSize: "0.78rem",
                               fontWeight: 900,
-                              color: "#fb923c",
+                              color: "var(--accent-amber-light)",
                               letterSpacing: "0.02em",
                             }}
                           >
@@ -3457,7 +3642,7 @@ export function TableDetailView({
                               ? `CHEF IS COOKING (${readyCount}/${safeItems.length} PREPARED)`
                               : "CHEF IS COOKING ORDER"}
                           </div>
-                          <div style={{ fontSize: '0.68rem', color: '#fed7aa', fontWeight: 600 }}>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--accent-amber-light)', fontWeight: 600 }}>
                             {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
                           </div>
                         </div>
@@ -3554,16 +3739,32 @@ export function TableDetailView({
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                            color: "var(--text-main)",
-                            lineHeight: 1.3,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {item.name}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                          <div
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                              color: "var(--text-main)",
+                              lineHeight: 1.3,
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {item.name}
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "0.56rem",
+                              fontWeight: 800,
+                              padding: "1px 5px",
+                              borderRadius: "999px",
+                              background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
+                              color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
+                              border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {isBarMenuItem(item) ? "Bar" : "Kitchen"}
+                          </span>
                         </div>
                         <div
                           style={{
@@ -3583,37 +3784,82 @@ export function TableDetailView({
                           >
                             {formatCurrency(item.price)} × {item.quantity}
                           </span>
-                          {item.kotStatus && (
-                            <span
-                              style={{
-                                fontSize: "0.6rem",
-                                fontWeight: 800,
-                                padding: "0px 5px",
-                                borderRadius: "3px",
-                                background:
-                                  item.kotStatus === "ready" ||
-                                  item.kotStatus === "served"
-                                    ? "rgba(16, 185, 129, 0.15)"
-                                    : item.kotStatus === "cooking"
-                                      ? "rgba(234, 88, 12, 0.15)"
-                                      : "rgba(245, 158, 11, 0.15)",
-                                color:
-                                  item.kotStatus === "ready" ||
-                                  item.kotStatus === "served"
-                                    ? "#10b981"
-                                    : item.kotStatus === "cooking"
-                                      ? "#ea580c"
-                                      : "#f59e0b",
-                              }}
-                            >
-                              {item.kotStatus === "ready" ||
-                              item.kotStatus === "served"
-                                ? "✓ Ready"
-                                : item.kotStatus === "cooking"
-                                  ? "🔥 Cooking"
-                                  : "📥 KOT"}
-                            </span>
-                          )}
+                          {(() => {
+                            const itemStatus = String(item.kotStatus || "").toLowerCase();
+                            const isReady = itemStatus === "ready" || itemStatus === "served" || itemStatus === "completed";
+                            const isCooking = itemStatus === "cooking" || itemStatus === "mixing";
+                            const isSent = isItemSentToKot(item);
+
+                            if (isReady) {
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                    padding: "1px 5px",
+                                    borderRadius: "3px",
+                                    background: "rgba(16, 185, 129, 0.15)",
+                                    color: "#10b981",
+                                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                                  }}
+                                >
+                                  ✓ Ready
+                                </span>
+                              );
+                            }
+
+                            if (isCooking) {
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                    padding: "1px 5px",
+                                    borderRadius: "3px",
+                                    background: "rgba(234, 88, 12, 0.15)",
+                                    color: "#ea580c",
+                                    border: "1px solid rgba(234, 88, 12, 0.35)",
+                                  }}
+                                >
+                                  🔥 Cooking
+                                </span>
+                              );
+                            }
+
+                            if (isSent) {
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                    padding: "1px 5px",
+                                    borderRadius: "3px",
+                                    background: "rgba(245, 158, 11, 0.15)",
+                                    color: "#f59e0b",
+                                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                                  }}
+                                >
+                                  📥 {isBarMenuItem(item) ? "BOT Sent" : "KOT Sent"}
+                                </span>
+                              );
+                            }
+
+                            return (
+                              <span
+                                style={{
+                                  fontSize: "0.6rem",
+                                  fontWeight: 800,
+                                  padding: "1px 5px",
+                                  borderRadius: "3px",
+                                  background: "rgba(148, 163, 184, 0.12)",
+                                  color: "#94a3b8",
+                                  border: "1px solid rgba(148, 163, 184, 0.25)",
+                                }}
+                              >
+                                📝 Unsent
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                       <span
@@ -3656,7 +3902,7 @@ export function TableDetailView({
                           onClick={() => {
                             sounds.playRemoveItem();
                             onUpdateItemQuantity(
-                              table.id,
+                              targetTableId,
                               item.id,
                               item.quantity - 1,
                             );
@@ -3690,7 +3936,7 @@ export function TableDetailView({
                           onClick={() => {
                             sounds.playAddItem();
                             onUpdateItemQuantity(
-                              table.id,
+                              targetTableId,
                               item.id,
                               item.quantity + 1,
                             );
@@ -3722,7 +3968,7 @@ export function TableDetailView({
                             if (editingNoteItemId === item.id) {
                               // If closed again with empty input, clear the note
                               if (!tempNote.trim() && item.notes) {
-                                onUpdateItemNotes(table.id, item.id, "");
+                                onUpdateItemNotes(targetTableId, item.id, "");
                               }
                               setEditingNoteItemId(null);
                               setTempNote("");
@@ -3753,7 +3999,7 @@ export function TableDetailView({
                         <button
                           onClick={() => {
                             sounds.playRemoveItem();
-                            onRemoveItemFromTable(table.id, item.id);
+                            onRemoveItemFromTable(targetTableId, item.id);
                           }}
                           style={{
                             background: "transparent",
@@ -3828,7 +4074,7 @@ export function TableDetailView({
                           style={{
                             background: "var(--surface-tint)",
                             color: "var(--text-dim)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            border: "1px solid rgba(var(--surface-rgb),0.1)",
                             padding: "0 0.4rem",
                             borderRadius: "4px",
                             fontSize: "0.72rem",
@@ -3897,14 +4143,14 @@ export function TableDetailView({
                   {[0, 5, 10, 15].map((pct) => (
                     <button
                       key={pct}
-                      onClick={() => onUpdateDiscount(table.id, pct)}
+                      onClick={() => onUpdateDiscount(targetTableId, pct)}
                       style={{
                         background:
-                          (table.discountPercent || 0) === pct
+                          currentDiscountPercent === pct
                             ? "var(--accent-amber)"
                             : "var(--bg-tertiary)",
                         color:
-                          (table.discountPercent || 0) === pct
+                          currentDiscountPercent === pct
                             ? "#000000"
                             : "var(--text-muted)",
                         padding: "0px 5px",
@@ -3919,16 +4165,16 @@ export function TableDetailView({
                 </div>
               </div>
 
-              {table.discountPercent > 0 && (
+              {currentDiscountPercent > 0 && (
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     fontSize: "0.72rem",
-                    color: "#10b981",
+                    color: "var(--success)",
                   }}
                 >
-                  <span>Discount ({table.discountPercent}%)</span>
+                  <span>Discount ({currentDiscountPercent}%)</span>
                   <span className="font-mono">
                     -{formatCurrency(discountAmount)}
                   </span>
@@ -3967,9 +4213,9 @@ export function TableDetailView({
                 >
                   <input
                     type="checkbox"
-                    checked={table.serviceCharge > 0}
+                    checked={currentServiceCharge > 0}
                     onChange={(e) =>
-                      onToggleServiceCharge(table.id, e.target.checked ? 5 : 0)
+                      onToggleServiceCharge(targetTableId, e.target.checked ? 5 : 0)
                     }
                     style={{
                       accentColor: "var(--accent-amber)",
@@ -4033,7 +4279,7 @@ export function TableDetailView({
                   }}
                 >
                   <button
-                    onClick={() => onSendKOT(table.id, safeItems)}
+                    onClick={() => onSendKOT(targetTableId, safeItems)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4042,23 +4288,30 @@ export function TableDetailView({
                       gap: "0.3rem",
                       padding: "0.5rem",
                       borderRadius: "6px",
-                      background: "var(--bg-tertiary)",
+                      background: hasUnsentItems
+                        ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                        : "var(--bg-tertiary)",
                       color:
                         safeItems.length === 0
                           ? "var(--text-dim)"
-                          : "var(--text-main)",
-                      border: "1px solid var(--border-subtle)",
+                          : (hasUnsentItems ? "var(--accent-amber-light)" : "var(--text-main)"),
+                      border: hasUnsentItems
+                        ? "1.5px solid var(--accent-amber)"
+                        : "1px solid var(--border-subtle)",
                       fontSize: "0.74rem",
                       fontWeight: 700,
                       cursor:
                         safeItems.length === 0 ? "not-allowed" : "pointer",
+                      boxShadow: hasUnsentItems
+                        ? "0 0 10px rgba(245, 158, 11, 0.3)"
+                        : "none",
                     }}
                   >
                     <ChefHat size={13} color="var(--accent-amber)" />
-                    <span>Send KOT</span>
+                    <span>{hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel}</span>
                   </button>
                   <button
-                    onClick={() => onOpenReceipt(table.id)}
+                    onClick={() => onOpenReceipt(targetTableId)}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -4080,13 +4333,23 @@ export function TableDetailView({
                     }}
                   >
                     <Receipt size={13} color="var(--accent-amber)" />
-                    <span>Print Bill</span>
+                    <span>Generate Bill</span>
                   </button>
                 </div>
 
                 <button
-                  onClick={() => onOpenSettlement(table.id)}
-                  disabled={safeItems.length === 0}
+                  onClick={() => {
+                    if (!canSettleAndCheckout) {
+                      if (hasUnsentItems) {
+                        onShowToast?.(`⚠️ Please ${dispatchButtonLabel} first before settling!`);
+                      } else if (!allCookingReady) {
+                        onShowToast?.("👨‍🍳 Cooking in progress! Settle will unlock once kitchen marks food ready.");
+                      }
+                      return;
+                    }
+                    onOpenSettlement(targetTableId);
+                  }}
+                  disabled={!canSettleAndCheckout}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -4095,22 +4358,34 @@ export function TableDetailView({
                     padding: "0.65rem",
                     borderRadius: "8px",
                     background:
-                      safeItems.length === 0
-                        ? "rgba(245, 158, 11, 0.2)"
-                        : "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                      !canSettleAndCheckout
+                        ? "rgba(100, 116, 139, 0.15)"
+                        : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                     color:
-                      safeItems.length === 0 ? "var(--text-dim)" : "#ffffff",
+                      !canSettleAndCheckout ? "var(--text-dim)" : "#ffffff",
+                    border: !canSettleAndCheckout
+                      ? "1px solid rgba(148, 163, 184, 0.2)"
+                      : "1px solid #10b981",
                     fontSize: "0.82rem",
                     fontWeight: 800,
                     boxShadow:
-                      safeItems.length === 0
+                      !canSettleAndCheckout
                         ? "none"
-                        : "0 3px 10px rgba(245, 158, 11, 0.4)",
-                    cursor: safeItems.length === 0 ? "not-allowed" : "pointer",
+                        : "0 4px 14px rgba(16, 185, 129, 0.4)",
+                    cursor: !canSettleAndCheckout ? "not-allowed" : "pointer",
+                    transition: "all 0.2s ease",
                   }}
                 >
                   <CreditCard size={15} />
-                  <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
+                  <span>
+                    {safeItems.length === 0
+                      ? `Settle & Checkout — ${formatCurrency(0)}`
+                      : hasUnsentItems
+                        ? `🔒 ${dispatchButtonLabel} First to Settle`
+                        : !allCookingReady
+                          ? "👨‍🍳 Cooking in KOT... (Waiting Ready)"
+                          : `✓ Settle & Checkout — ${formatCurrency(grandTotal)}`}
+                  </span>
                 </button>
               </div>
             </div>
@@ -4231,7 +4506,7 @@ export function TableDetailView({
               <button
                 onClick={() => setIsMobileOrderSlipOpen(false)}
                 style={{
-                  background: "rgba(255, 255, 255, 0.1)",
+                  background: "rgba(var(--surface-rgb),0.1)",
                   color: "var(--text-main)",
                   border: "none",
                   borderRadius: "8px",
@@ -4271,14 +4546,29 @@ export function TableDetailView({
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "0.84rem",
-                        fontWeight: 700,
-                        color: "var(--text-main)",
-                      }}
-                    >
-                      {item.name}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                      <div
+                        style={{
+                          fontSize: "0.84rem",
+                          fontWeight: 700,
+                          color: "var(--text-main)",
+                        }}
+                      >
+                        {item.name}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.58rem",
+                          fontWeight: 800,
+                          padding: "1px 6px",
+                          borderRadius: "999px",
+                          background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
+                          color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
+                          border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
+                        }}
+                      >
+                        {isBarMenuItem(item) ? "Bar" : "Kitchen"}
+                      </span>
                     </div>
                     <div
                       style={{
@@ -4300,7 +4590,7 @@ export function TableDetailView({
                     <button
                       onClick={() =>
                         onUpdateItemQuantity(
-                          table.id,
+                          targetTableId,
                           item.id,
                           item.quantity - 1,
                         )
@@ -4332,7 +4622,7 @@ export function TableDetailView({
                     <button
                       onClick={() =>
                         onUpdateItemQuantity(
-                          table.id,
+                          targetTableId,
                           item.id,
                           item.quantity + 1,
                         )
@@ -4414,14 +4704,21 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onSendKOT(table.id, safeItems);
+                    onSendKOT(targetTableId, safeItems);
                   }}
+                  disabled={safeItems.length === 0}
                   style={{
                     padding: "0.55rem",
                     borderRadius: "8px",
-                    background: "var(--bg-primary)",
-                    color: "var(--text-main)",
-                    border: "1px solid var(--border-subtle)",
+                    background: hasUnsentItems
+                      ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                      : "var(--bg-primary)",
+                    color: safeItems.length === 0
+                      ? "var(--text-dim)"
+                      : (hasUnsentItems ? "var(--accent-amber-light)" : "var(--text-main)"),
+                    border: hasUnsentItems
+                      ? "1.5px solid var(--accent-amber)"
+                      : "1px solid var(--border-subtle)",
                     fontWeight: 700,
                     fontSize: "0.78rem",
                     display: "flex",
@@ -4431,13 +4728,14 @@ export function TableDetailView({
                   }}
                 >
                   <ChefHat size={14} color="var(--accent-amber)" />
-                  <span>Send KOT</span>
+                  <span>{hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel}</span>
                 </button>
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onOpenReceipt(table.id);
+                    onOpenReceipt(targetTableId);
                   }}
+                  disabled={safeItems.length === 0}
                   style={{
                     padding: "0.55rem",
                     borderRadius: "8px",
@@ -4453,32 +4751,59 @@ export function TableDetailView({
                   }}
                 >
                   <Receipt size={14} color="var(--accent-amber)" />
-                  <span>Print Bill</span>
+                  <span>Generate Bill</span>
                 </button>
               </div>
 
               <button
                 onClick={() => {
+                  if (!canSettleAndCheckout) {
+                    if (hasUnsentItems) {
+                      onShowToast?.(`⚠️ Please ${dispatchButtonLabel} first before settling!`);
+                    } else if (!allCookingReady) {
+                      onShowToast?.("👨‍🍳 Cooking in progress! Settle will unlock once kitchen marks food ready.");
+                    }
+                    return;
+                  }
                   setIsMobileOrderSlipOpen(false);
-                  onOpenSettlement(table.id);
+                  onOpenSettlement(targetTableId);
                 }}
+                disabled={!canSettleAndCheckout}
                 style={{
                   width: "100%",
                   padding: "0.7rem",
                   borderRadius: "8px",
-                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                  color: "#ffffff",
+                  background:
+                    !canSettleAndCheckout
+                      ? "rgba(100, 116, 139, 0.15)"
+                      : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  color: !canSettleAndCheckout ? "var(--text-dim)" : "#ffffff",
                   fontWeight: 800,
                   fontSize: "0.88rem",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "0.4rem",
-                  boxShadow: "0 4px 14px rgba(245, 158, 11, 0.4)",
+                  border: !canSettleAndCheckout
+                    ? "1px solid rgba(148, 163, 184, 0.2)"
+                    : "1px solid #10b981",
+                  boxShadow:
+                    !canSettleAndCheckout
+                      ? "none"
+                      : "0 4px 14px rgba(16, 185, 129, 0.4)",
+                  cursor: !canSettleAndCheckout ? "not-allowed" : "pointer",
                 }}
               >
                 <CreditCard size={16} />
-                <span>Settle & Checkout — {formatCurrency(grandTotal)}</span>
+                <span>
+                  {safeItems.length === 0
+                    ? `Settle & Checkout — ${formatCurrency(0)}`
+                    : hasUnsentItems
+                      ? `🔒 ${dispatchButtonLabel} First to Settle`
+                      : !allCookingReady
+                        ? "👨‍🍳 Cooking in KOT... (Waiting Ready)"
+                        : `✓ Settle & Checkout — ${formatCurrency(grandTotal)}`}
+                </span>
               </button>
             </div>
           </div>

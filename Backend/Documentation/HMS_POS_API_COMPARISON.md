@@ -29,6 +29,7 @@ This report provides a screen-by-screen API mapping between the **React POS Fron
 | **Menu Categories** | `POST /api/Menu/categories`, `GET /categories` | `/api/v1/menu-items/categories` | **Newly Implemented** |
 | **Menu Items & Availability** | `PATCH /api/Menu/items/{id}/availability` | `/api/Menu/items/{id}/availability` | **Newly Implemented** |
 | **Order Creation** | `POST /api/Orders` | `/api/Orders` | **Preserved** |
+| **Add Items to Active Order** | `POST /api/v1/orders/{id}/items` | `OrdersController` | **Implemented** |
 | **Guest Count Update** | `PATCH /api/Orders/{id}/guests` | `/api/Orders/{id}/guests` | **Newly Implemented** |
 | **Discount Update** | `PATCH /api/Orders/{id}/discount` | `/api/Orders/{id}/discount` | **Newly Implemented** |
 | **Item Notes Update** | `PATCH /api/Orders/{id}/items/{itemId}/notes` | `/api/Orders/{id}/items/{itemId}/notes` | **Newly Implemented** |

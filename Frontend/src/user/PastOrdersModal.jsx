@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   X, Receipt, Search, Eye, Calendar, CalendarDays, CalendarRange,
-  Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw 
+  Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw, RefreshCw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
 import { dedupeOrders, sortOrdersBySettlementTime } from '../utils/orderDedupe';
+import { requestLiveInvoiceRecords } from '../utils/liveInvoiceData';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -66,8 +67,65 @@ const formatUSDateInput = (value) => {
 const compareDatesNewestFirst = (a, b) =>
   (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
 
-export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) {
-  const uniquePastOrders = useMemo(() => dedupeOrders(pastOrders), [pastOrders]);
+export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, onRefresh }) {
+  const [liveOrders, setLiveOrders] = useState([]);
+  const [liveOrdersLoaded, setLiveOrdersLoaded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const { records, error } = await requestLiveInvoiceRecords();
+      if (!error && Array.isArray(records)) {
+        setLiveOrders(records);
+        setLiveOrdersLoaded(true);
+        if (typeof onRefresh === 'function') {
+          onRefresh(records);
+        }
+      }
+    } catch {} finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    const syncOrders = (orders) => {
+      if (!Array.isArray(orders)) return;
+      setLiveOrders(dedupeOrders(orders));
+      setLiveOrdersLoaded(true);
+    };
+    syncOrders(pastOrders);
+    handleRefresh();
+    const handleUpdate = (event) => {
+      syncOrders(event.detail);
+      handleRefresh();
+    };
+    const handleStorage = (event) => {
+      if (event.key !== "gourmet_pos_past_orders_v2_inr") return;
+      if (event.newValue) {
+        try { syncOrders(JSON.parse(event.newValue)); } catch {}
+      }
+      handleRefresh();
+    };
+    window.addEventListener("avsr-invoices-updated", handleUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("avsr-invoices-updated", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [pastOrders]);
+
+  const uniquePastOrders = useMemo(() => {
+    const combined = liveOrdersLoaded
+      ? liveOrders
+      : pastOrders;
+    const settledOnly = combined.filter((o) => {
+      if (!o || typeof o !== "object") return false;
+      const status = String(o.status || o.Status || "").toLowerCase();
+      return status !== "active" && status !== "dining" && status !== "vacant";
+    });
+    return dedupeOrders(settledOnly);
+  }, [pastOrders, liveOrders, liveOrdersLoaded]);
 
 
   // Helper to parse date from order safely
@@ -460,26 +518,50 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
               </span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'var(--surface-tint)',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              padding: '5px',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <X size={16} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              style={{
+                background: 'var(--surface-tint)',
+                border: '1px solid var(--border-subtle)',
+                color: isRefreshing ? 'var(--accent-amber)' : 'var(--text-main)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.35rem 0.65rem',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: isRefreshing ? 'wait' : 'pointer',
+              }}
+              title="Refresh settled invoices from server"
+            >
+              <RotateCcw size={13} style={{ transform: isRefreshing ? 'rotate(180deg)' : 'none', transition: 'transform 0.4s ease' }} />
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'var(--surface-tint)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
+                display: 'flex',
+                padding: '5px',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* View Mode & Filter Navigation Bar */}
         <div style={{
           padding: '0.45rem 1.25rem',
-          background: 'rgba(0, 0, 0, 0.25)',
+          background: 'var(--surface-tint)',
           borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           flexDirection: 'column',
@@ -1150,7 +1232,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt }) 
                   <div
                     key={group.date}
                     style={{
-                      background: 'rgba(0,0,0,0.2)',
+                      background: 'var(--surface-tint)',
                       border: '1px solid var(--border-subtle)',
                       borderRadius: 'var(--radius-md)',
                       overflow: 'hidden'
@@ -1273,7 +1355,7 @@ function OrderCard({ order, onReprintReceipt }) {
       }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+        e.currentTarget.style.background = 'rgba(var(--surface-rgb),0.04)';
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = 'var(--border-subtle)';

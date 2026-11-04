@@ -15,6 +15,8 @@ import {
   BellRing,
   Flame,
   CheckCircle,
+  CheckCircle2,
+  MapPin,
   Sun,
   Moon,
   Trash2,
@@ -23,6 +25,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ProfileDropdown } from './ProfileDropdown';
+import { cleanNotificationText } from '../utils/notificationHelper';
 export function Header({
   tables,
   activeView,
@@ -50,6 +53,7 @@ export function Header({
   const isAdminRoute = location.pathname === "/admin";
 
   const [time, setTime] = useState(new Date());
+  const [serviceMode, setServiceMode] = useState("dine-in");
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const notifRef = useRef(null);
@@ -111,14 +115,20 @@ export function Header({
 
   const safeTables = Array.isArray(tables) ? tables : [];
 
-  const occupiedCount = safeTables.filter((t) => t?.status === "occupied").length;
-  const billedCount = safeTables.filter((t) => t?.status === "billed").length;
-  const vacantCount = safeTables.filter((t) => t?.status === "vacant").length;
+  const isTableActiveDining = (t) => {
+    const hasItems = Array.isArray(t?.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+    return hasItems && t?.status !== "vacant";
+  };
+
+  const occupiedCount = safeTables.filter((t) => isTableActiveDining(t) && t?.status !== "billed").length;
+  const billedCount = safeTables.filter((t) => isTableActiveDining(t) && t?.status === "billed").length;
+  const vacantCount = safeTables.length - occupiedCount - billedCount;
 
   const totalGuests = safeTables
     .reduce((acc, t) => {
-      const g = Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0);
-      return acc + (t?.status !== "vacant" ? g : 0);
+      if (!isTableActiveDining(t)) return acc;
+      const g = Math.max(0, Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0) || Number(t?.occupiedChairs) || 0);
+      return acc + g;
     }, 0);
 
   const totalRunningRevenue = safeTables
@@ -253,7 +263,9 @@ export function Header({
           }}
         >
           <button
+            className={isUserRoute && serviceMode === "dine-in" ? "primary-action-button" : undefined}
             onClick={() => {
+              setServiceMode("dine-in");
               setActiveView("tables");
               navigate("/");
             }}
@@ -264,9 +276,9 @@ export function Header({
               padding: "0.45rem 0.85rem",
               borderRadius: "var(--radius-sm)",
               fontSize: "0.82rem",
-              fontWeight: isUserRoute ? 800 : 600,
-              background: isUserRoute ? "var(--accent-amber)" : "transparent",
-              color: isUserRoute ? "#000000" : "var(--text-muted)",
+              fontWeight: isUserRoute && serviceMode === "dine-in" ? 800 : 600,
+              background: isUserRoute && serviceMode === "dine-in" ? "var(--accent-amber)" : "transparent",
+              color: isUserRoute && serviceMode === "dine-in" ? "#000000" : "var(--text-muted)",
               border: "none",
               cursor: "pointer",
               transition: "all 0.15s ease",
@@ -274,12 +286,43 @@ export function Header({
             title="User Dining Floor & Table Billing (Route: /)"
           >
             <LayoutGrid size={15} />
-            <span>User POS ({tables.length})</span>
+            <span>Dine In</span>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={serviceMode === "takeaway" && isUserRoute}
+            onClick={() => {
+              setServiceMode("takeaway");
+              setActiveView("takeaway");
+              navigate("/");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.45rem 0.85rem",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "0.82rem",
+              fontWeight: isUserRoute && serviceMode === "takeaway" ? 800 : 600,
+              background: isUserRoute && serviceMode === "takeaway" ? "var(--accent-amber)" : "transparent",
+              color: isUserRoute && serviceMode === "takeaway" ? "#000000" : "var(--text-muted)",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="Switch to takeaway orders"
+          >
+            <UtensilsCrossed size={15} />
+            <span>Takeaway</span>
           </button>
 
           {/* Invoices History Button */}
           <button
-            onClick={onOpenPastOrders}
+            onClick={() => {
+              setServiceMode("dine-in");
+              onOpenPastOrders();
+            }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -414,7 +457,7 @@ export function Header({
             {Array.isArray(kitchenNotifications) && kitchenNotifications.some(
               (n) => n.type === "cooking_completed",
             ) ? (
-              <BellRing size={16} color="#10b981" />
+              <BellRing size={16} color="var(--success)" />
             ) : (
               <Bell size={16} />
             )}
@@ -494,7 +537,7 @@ export function Header({
                     style={{
                       fontSize: "0.88rem",
                       fontWeight: 900,
-                      color: "#ffffff",
+                      color: "var(--text-main)",
                       letterSpacing: "-0.01em",
                     }}
                   >
@@ -623,7 +666,7 @@ export function Header({
                             boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
                           }}
                         >
-                          {isCompleted ? "🔔" : "🔥"}
+                          {isCompleted ? <CheckCircle2 size={16} color="#10b981" /> : <Flame size={16} color="#f59e0b" />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div
@@ -639,11 +682,11 @@ export function Header({
                               style={{
                                 fontSize: "0.84rem",
                                 fontWeight: 900,
-                                color: isCompleted ? "#34d399" : "#fb923c",
+                                color: isCompleted ? "var(--success)" : "var(--accent-amber-light)",
                                 letterSpacing: "-0.01em",
                               }}
                             >
-                              {n.title}
+                              {cleanNotificationText(n.title) || (isCompleted ? "Food Ready to Serve" : "Cooking in Progress")}
                             </span>
                             <span
                               style={{
@@ -651,20 +694,24 @@ export function Header({
                                 color: "var(--text-dim)",
                                 fontWeight: 700,
                                 fontFamily: "monospace",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "3px",
                               }}
                             >
-                              {n.timestamp}
+                              <Clock size={10} />
+                              <span>{cleanNotificationText(n.timestamp)}</span>
                             </span>
                           </div>
                           <div
                             style={{
                               fontSize: "0.8rem",
-                              color: "#f1f5f9",
+                              color: "var(--text-main)",
                               lineHeight: 1.35,
                               fontWeight: 500,
                             }}
                           >
-                            {n.message}
+                            {cleanNotificationText(n.message) || (isCompleted ? "All dishes are prepared and ready to serve." : "Order is being prepared in the kitchen.")}
                           </div>
                           {n.tableId && (
                             <div
@@ -682,17 +729,17 @@ export function Header({
                                   background: isCompleted
                                     ? "rgba(16, 185, 129, 0.2)"
                                     : "rgba(245, 158, 11, 0.2)",
-                                  color: isCompleted ? "#34d399" : "#fbbf24",
+                                  color: isCompleted ? "var(--success)" : "var(--accent-amber-light)",
                                   padding: "1px 6px",
                                   borderRadius: "4px",
                                 }}
                               >
-                                📍 {n.tableName || `Table ${n.tableId}`}
+                                <><MapPin size={10} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} /><span>{cleanNotificationText(n.tableName) || (n.tableId ? `Table ${n.tableId}` : "Table")}</span></>
                               </span>
                               <span
                                 style={{
                                   fontSize: "0.68rem",
-                                  color: "#38bdf8",
+                                  color: "var(--info)",
                                   fontWeight: 700,
                                   display: "flex",
                                   alignItems: "center",

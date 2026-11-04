@@ -163,6 +163,22 @@ public class KotOrderResponseDto
 
     public string OrderReceivedFormatted { get; set; } = string.Empty; // e.g. "04:46 PM"
 
+    public string? KotNumber { get; set; }
+
+    public string? OrderType { get; set; }
+
+    public string? TableNumber { get; set; }
+
+    public string? SpecialInstructions { get; set; }
+
+    public int TotalItems { get; set; }
+
+    public int PreparedItems { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
     public List<KotOrderItemResponseDto> Items { get; set; } = new();
 }
 
@@ -179,6 +195,14 @@ public class KotOrderItemResponseDto
     public int Quantity { get; set; }
 
     public string ItemStatus { get; set; } = string.Empty;
+
+    public string? TableName { get; set; }
+
+    public string? SectionArea { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
 }
 
 public class KotSummaryDto
@@ -195,3 +219,32 @@ public class KotSummaryDto
 
     public double AveragePrepTimeMinutes { get; set; }
 }
+
+public class KotScreenFeedDto
+{
+    public KotSummaryDto Summary { get; set; } = new();
+
+    public List<KotOrderResponseDto> Orders { get; set; } = new();
+
+    public int TotalActiveOrders { get; set; }
+
+    public int TotalActiveItems { get; set; }
+
+    public DateTime ServerTimeUtc { get; set; } = DateTime.UtcNow;
+
+    public string ServerTimeFormatted { get; set; } = DateTime.Now.ToString("hh:mm:ss tt");
+}
+
+public class AddKotItemDto
+{
+    [JsonConverter(typeof(FlexibleNullableLongConverter))]
+    public long? MenuItemId { get; set; }
+
+    [Required(ErrorMessage = "Dish Name is required.")]
+    public string DishName { get; set; } = string.Empty;
+
+    public int Quantity { get; set; } = 1;
+
+    public string? ItemStatus { get; set; } = "PENDING";
+}
+

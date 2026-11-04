@@ -41,7 +41,10 @@ export function AdminHeader({
     <header
       className="admin-header no-print"
       style={{
-        padding: "0.85rem 1.75rem",
+        height: "76px",
+        minHeight: "76px",
+        boxSizing: "border-box",
+        padding: "0 1.75rem",
         borderBottom: "1px solid var(--border-subtle)",
         background: "var(--bg-secondary)",
         display: "flex",
@@ -96,6 +99,7 @@ export function AdminHeader({
         >
           <button
             onClick={() => onModeChange?.("dine")}
+            aria-pressed={activeMode === "dine"}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -125,6 +129,7 @@ export function AdminHeader({
 
           <button
             onClick={() => onModeChange?.("bar")}
+            aria-pressed={activeMode === "bar"}
             style={{
               display: "inline-flex",
               alignItems: "center",

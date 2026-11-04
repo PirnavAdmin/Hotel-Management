@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -23,10 +24,9 @@ public class MenuItem
     [Column("price", TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
 
-    [Required]
     [MaxLength(20)]
     [Column("dietary_type")]
-    public string DietaryType { get; set; } = "Non-Veg"; // "Veg", "Non-Veg", "Egg"
+    public string? DietaryType { get; set; } = "Non-Veg"; // "Veg", "Non-Veg", "N/A"
 
     [Column("spice_level")]
     public int SpiceLevel { get; set; } = 0; // 0 to 3
@@ -47,6 +47,20 @@ public class MenuItem
 
     [Column("is_available")]
     public bool IsAvailable { get; set; } = true;
+
+    [MaxLength(50)]
+    [Column("serving_measure")]
+    public string? ServingMeasure { get; set; }
+
+    [MaxLength(30)]
+    [Column("drink_type")]
+    public string? DrinkType { get; set; }
+
+    [Column("alcohol_pct", TypeName = "decimal(5,2)")]
+    public decimal? AlcoholPct { get; set; }
+
+    [Column("is_bar_item")]
+    public bool IsBarItem { get; set; } = false;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

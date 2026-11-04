@@ -1,31 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Banknote, 
-  CreditCard, 
-  QrCode, 
+QrCode, 
   CheckCircle2, 
   Receipt,
   Calendar,
   Clock,
   Users,
   Building2,
-  Wallet,
-  Zap,
+Zap,
   ShieldCheck,
   ArrowLeft
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
+import { logFormSubmission, logUserAction } from '../utils/logger';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
-import paymentQrImage from '../assets/payment-qr.png';
 
 export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment }) {
-  // 'upi' | 'cash' | 'card' | 'wallet'
+  // 'upi' | 'cash'
   const [paymentMethod, setPaymentMethod] = useState('upi');
-  const [cashTendered, setCashTendered] = useState(0);
-  const [selectedWallet, setSelectedWallet] = useState('paytm');
+  const [cashTendered, setCashTendered] = useState("0.00");
+  const [isDecimalMode, setIsDecimalMode] = useState(false);
+  const [decimalDigits, setDecimalDigits] = useState("");
+  const isAllSelectedRef = useRef(false);
+  const cashInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingError, setProcessingError] = useState("");
 
   const [currentTheme, setCurrentTheme] = useState(() => {
     return (
@@ -89,10 +91,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         }
       }
     } catch {}
-    return {
-      configuredQrs: [{ id: "default", label: "Main Counter UPI", image: paymentQrImage, active: true }],
-      initialIndex: 0,
-    };
+    return { configuredQrs: [], initialIndex: 0 };
   };
 
   const [qrConfig, setQrConfig] = useState(() => getQrConfig());
@@ -114,6 +113,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
 
   const configuredQrs = qrConfig.configuredQrs;
   const activeQr = configuredQrs[selectedQrIndex] || configuredQrs[0];
+  const upiUnavailable = paymentMethod === "upi" && !activeQr?.image;
 
   const handleSelectQr = (idx) => {
     setSelectedQrIndex(idx);
@@ -164,20 +164,22 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   const serviceChargeAmount = table?.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0;
   const grandTotal = Math.round(taxableAmount + taxAmount + serviceChargeAmount);
 
-  const effectiveCash = cashTendered || grandTotal;
+  const effectiveCash = (parseFloat(cashTendered) > 0) ? parseFloat(cashTendered) : grandTotal;
   const changeDue = Math.max(0, (parseFloat(effectiveCash) || 0) - grandTotal);
 
   const handleSettle = () => {
     if (hasInvalidItems) return;
+    setProcessingError("");
     setIsProcessing(true);
     sounds.playSuccess();
 
-    setTimeout(() => {
-      onConfirmPayment({
+    setTimeout(async () => {
+      try {
+        const result = await onConfirmPayment({
         tableId: table.id,
         tableName: table.name,
         section: table.section,
-        server: table.server || 'Srija Chepuri',
+        server: table.server || "",
         guests:
           (Number(table.guests) > 0 ? Number(table.guests) : null) ??
           (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
@@ -203,17 +205,142 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         paymentMode: paymentMethod || 'upi',
         PaymentMethod: paymentMethod || 'upi',
         status: 'Settled',
-        cashTendered: paymentMethod === 'cash' ? cashTendered : grandTotal,
+        cashTendered: paymentMethod === 'cash' ? ((parseFloat(cashTendered) > 0) ? parseFloat(cashTendered) : grandTotal) : grandTotal,
         changeDue: paymentMethod === 'cash' ? changeDue : 0,
         settledAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: getTodayDateString(),
         settledDate: getBusinessDayStart().toISOString().slice(0, 10),
         invoiceNo: getNextInvoiceNumber()
-      });
+        });
+        if (result === false) {
+          setProcessingError("Payment was not completed. Please correct the order and try again.");
+          setIsProcessing(false);
+        } else if (typeof result === "string") {
+          setProcessingError(result);
+          setIsProcessing(false);
+        }
+      } catch (error) {
+        console.error("Payment confirmation failed", error);
+        setProcessingError(error?.message || "Could not reach the server. Check the connection and try again.");
+        setIsProcessing(false);
+      }
     }, 450);
   };
 
-  return (
+  const handleQuickCash = (quickVal) => {
+    isAllSelectedRef.current = false;
+    setIsDecimalMode(false);
+    setDecimalDigits("");
+    setCashTendered(Number(quickVal || 0).toFixed(2));
+    if (cashInputRef.current) {
+      cashInputRef.current.focus();
+      cashInputRef.current.select();
+    }
+  };
+
+  const handleCashFocus = (e) => {
+    isAllSelectedRef.current = true;
+    e.target.select();
+  };
+
+  const handleCashKeyDown = (e) => {
+    const key = e.key;
+    if (['Tab', 'Enter', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) {
+      return;
+    }
+    if (e.ctrlKey || e.metaKey) {
+      if (key === 'a' || key === 'A') {
+        isAllSelectedRef.current = true;
+      }
+      return;
+    }
+    if (/^[0-9]$/.test(key)) {
+      e.preventDefault();
+      if (isAllSelectedRef.current) {
+        isAllSelectedRef.current = false;
+        setIsDecimalMode(false);
+        setDecimalDigits("");
+        setCashTendered(`${key}.00`);
+      } else if (isDecimalMode) {
+        if (decimalDigits.length < 2) {
+          const nextDec = decimalDigits + key;
+          setDecimalDigits(nextDec);
+          const [intPart] = String(cashTendered).split('.');
+          setCashTendered(`${intPart || '0'}.${nextDec.padEnd(2, '0')}`);
+        }
+      } else {
+        const [intPart] = String(cashTendered).split('.');
+        const cleanInt = (intPart === '0' || !intPart) ? '' : intPart;
+        if (cleanInt.length < 7) {
+          const nextInt = cleanInt + key;
+          setCashTendered(`${nextInt}.00`);
+        }
+      }
+      return;
+    }
+    if (key === '.' || key === 'Decimal') {
+      e.preventDefault();
+      isAllSelectedRef.current = false;
+      setIsDecimalMode(true);
+      setDecimalDigits("");
+      return;
+    }
+    if (key === 'Backspace') {
+      e.preventDefault();
+      if (isAllSelectedRef.current) {
+        isAllSelectedRef.current = false;
+        setIsDecimalMode(false);
+        setDecimalDigits("");
+        setCashTendered("0.00");
+      } else if (isDecimalMode && decimalDigits.length > 0) {
+        const nextDec = decimalDigits.slice(0, -1);
+        setDecimalDigits(nextDec);
+        const [intPart] = String(cashTendered).split('.');
+        setCashTendered(`${intPart || '0'}.${nextDec.padEnd(2, '0')}`);
+        if (nextDec.length === 0) {
+          setIsDecimalMode(false);
+        }
+      } else {
+        setIsDecimalMode(false);
+        setDecimalDigits("");
+        const [intPart] = String(cashTendered).split('.');
+        const nextInt = intPart ? intPart.slice(0, -1) : "";
+        setCashTendered(nextInt && nextInt.length > 0 ? `${nextInt}.00` : "0.00");
+      }
+      return;
+    }
+    if (key === 'Delete') {
+      e.preventDefault();
+      isAllSelectedRef.current = false;
+      setIsDecimalMode(false);
+      setDecimalDigits("");
+      setCashTendered("0.00");
+      return;
+    }
+  };
+
+  const handleCashChange = (e) => {
+    const raw = e.target.value.replace(/[^0-9.]/g, '');
+    isAllSelectedRef.current = false;
+    if (!raw) {
+      setCashTendered("0.00");
+      setIsDecimalMode(false);
+      setDecimalDigits("");
+      return;
+    }
+    const parts = raw.split('.');
+    const intPart = parts[0] || '0';
+    if (parts.length > 1) {
+      const dec = parts[1].slice(0, 2);
+      setDecimalDigits(dec);
+      setIsDecimalMode(true);
+      setCashTendered(`${parseInt(intPart, 10) || 0}.${dec.padEnd(2, '0')}`);
+    } else {
+      setIsDecimalMode(false);
+      setDecimalDigits("");
+      setCashTendered(`${parseInt(intPart, 10) || 0}.00`);
+    }
+  };  return (
     <div style={{
       position: 'fixed',
       inset: 0,
@@ -237,36 +364,23 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           flex-direction: column;
           align-items: center;
           gap: 0.45rem;
-          font-size: 0.8rem;
-          font-weight: 700;
           cursor: pointer;
-          transition: all 0.18s ease;
+          font-weight: 700;
+          font-size: 0.82rem;
+          transition: all 0.2s ease;
         }
         .payment-tab-btn:hover {
-          background: ${isLight ? 'rgba(217, 119, 6, 0.08)' : 'rgba(245, 158, 11, 0.08)'};
           border-color: var(--accent-amber, #f59e0b);
-          color: ${isLight ? 'var(--text-main, #0f172a)' : '#f8fafc'};
+          color: var(--text-main, #ffffff);
+          transform: translateY(-1px);
         }
         .payment-tab-btn.active {
-          background: ${isLight ? 'linear-gradient(180deg, rgba(217, 119, 6, 0.16) 0%, rgba(217, 119, 6, 0.05) 100%)' : 'linear-gradient(180deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.06) 100%)'};
-          border: 1.5px solid var(--accent-amber, #f59e0b);
-          color: var(--accent-amber, #f59e0b);
-          box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
-        }
-        .payment-tab-btn.active::after {
-          content: '';
-          position: absolute;
-          bottom: -6px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 6px solid transparent;
-          border-right: 6px solid transparent;
-          border-top: 6px solid var(--accent-amber, #f59e0b);
+          border: 1.5px solid var(--accent-amber, #f59e0b) !important;
+          color: var(--accent-amber, #f59e0b) !important;
+          background: ${isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)'} !important;
+          box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
         }
       `}</style>
-
       <div style={{
         background: isLight ? 'var(--bg-secondary, #ffffff)' : 'linear-gradient(180deg, #0f172a 0%, #0b1120 100%)',
         border: isLight ? '1.5px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.1)',
@@ -378,7 +492,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           </button>
         </div>
 
-        {/* Net Amount Due Banner */}
+        {/* Total Amount Due Banner */}
         <div style={{
           background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
           border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
@@ -402,26 +516,27 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               color: 'var(--accent-amber, #f59e0b)',
               flexShrink: 0
             }}>
-              <Wallet size={20} />
+              <Receipt size={22} strokeWidth={2.2} />
             </div>
 
             <div>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600, display: 'block' }}>
-                Net Amount Due
+                Total Amount Due
               </span>
               <span className="font-mono" style={{
                 fontSize: '1.95rem',
                 fontWeight: 900,
-                color: 'var(--accent-amber, #f59e0b)',
+                color: isLight ? '#16a34a' : '#4ade80',
                 lineHeight: 1.1,
-                display: 'block'
+                display: 'block',
+                textShadow: isLight ? 'none' : '0 0 16px rgba(74, 222, 128, 0.28)'
               }}>
                 {formatCurrency(grandTotal)}
               </span>
             </div>
           </div>
 
-          {/* Subtotal & GST breakdown */}
+          {/* Subtotal & GST breakdown (Highlighted in cyan as 2nd image) */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -431,20 +546,28 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
               <span>Subtotal</span>
-              <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
+              <span className="font-mono" style={{ color: isLight ? '#0891b2' : '#22d3ee', fontWeight: 800 }}>
                 {formatCurrency(subtotal)}
               </span>
             </div>
+            {discountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
+                <span>Discount</span>
+                <span className="font-mono" style={{ color: '#f87171', fontWeight: 800 }}>
+                  -{formatCurrency(discountAmount)}
+                </span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
               <span>GST (5%)</span>
-              <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
+              <span className="font-mono" style={{ color: isLight ? '#0891b2' : '#22d3ee', fontWeight: 800 }}>
                 {formatCurrency(taxAmount)}
               </span>
             </div>
             {serviceChargeAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', color: 'var(--text-dim, #94a3b8)' }}>
                 <span>Service (5%)</span>
-                <span className="font-mono" style={{ color: 'var(--text-main, #ffffff)', fontWeight: 700 }}>
+                <span className="font-mono" style={{ color: isLight ? '#0891b2' : '#22d3ee', fontWeight: 800 }}>
                   {formatCurrency(serviceChargeAmount)}
                 </span>
               </div>
@@ -452,7 +575,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           </div>
         </div>
 
-        {/* Select Payment Mode 4-Tab Bar */}
+        {/* Select Payment Mode 2-Tab Bar */}
         <div>
           <div style={{
             display: 'flex',
@@ -463,20 +586,18 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             fontWeight: 700,
             color: 'var(--text-main, #cbd5e1)'
           }}>
-            <CreditCard size={15} color="var(--text-dim, #94a3b8)" />
+            <Banknote size={15} color="var(--text-dim, #94a3b8)" />
             <span>Select Payment Mode</span>
           </div>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '0.65rem'
           }}>
             {[
-              { id: 'upi', label: 'UPI / QR Tap', icon: QrCode },
-              { id: 'cash', label: 'Cash Tender', icon: Banknote },
-              { id: 'card', label: 'Credit / Debit Card', icon: CreditCard },
-              { id: 'wallet', label: 'Wallet', icon: Wallet }
+              { id: 'upi', label: 'UPI / Dynamic QR', icon: QrCode },
+              { id: 'cash', label: 'Cash Tender', icon: Banknote }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = paymentMethod === tab.id;
@@ -519,8 +640,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderLeft: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 0 4px' }} />
               <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderRight: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 4px 0' }} />
 
-              {/* Real Payment QR */}
-              <div style={{
+              {activeQr?.image ? <div style={{
                 background: 'var(--bg-card)',
                 padding: '6px',
                 borderRadius: '10px',
@@ -530,7 +650,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 boxShadow: isLight ? '0 4px 15px rgba(0,0,0,0.12)' : '0 4px 20px rgba(0,0,0,0.5)'
               }}>
                 <img
-                  src={activeQr?.image || paymentQrImage}
+                  src={activeQr.image}
                   alt={activeQr?.label || "Scan to Pay"}
                   style={{
                     width: '115px',
@@ -540,7 +660,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                     display: 'block'
                   }}
                 />
-              </div>
+              </div> : <div role="status" style={{ width: 115, height: 115, display: 'grid', placeItems: 'center', padding: '8px', boxSizing: 'border-box', border: '1px dashed var(--border-card)', borderRadius: '10px', color: 'var(--text-dim)', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700 }}>No UPI QR configured</div>}
             </div>
 
             {/* Scan & Pay Instructions & Brand Badges */}
@@ -549,7 +669,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Zap size={16} color="var(--accent-amber, #f59e0b)" fill="var(--accent-amber, #f59e0b)" />
                   <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
-                    Scan & Pay
+                    {activeQr?.image ? 'Scan & Pay' : 'UPI payment unavailable'}
                   </span>
                 </div>
                 <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-amber, #f59e0b)' }}>
@@ -560,7 +680,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               {/* Configured QR Label */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-dim, #cbd5e1)', fontWeight: 600 }}>
-                  {activeQr?.label || "UPI / QR to Pay"}
+                  {activeQr?.label || "Add a real UPI QR in Settings to accept UPI payments."}
                 </span>
               </div>
 
@@ -607,21 +727,23 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 marginTop: '0.15rem'
               }}>
                 {/* GPay Badge */}
+
                 <div style={{
-                  background: 'var(--bg-card)',
-                  color: '#1e293b',
-                  padding: '3px 9px',
+                  background: '#ffffff',
+                  color: '#1f2937',
+                  padding: '4px 10px',
                   borderRadius: '16px',
-                  fontSize: '0.68rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-                  border: isLight ? '1px solid #e2e8f0' : 'none'
+                  gap: '5px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                  border: '1.5px solid #e2e8f0',
+                  lineHeight: 1
                 }}>
-                  <span style={{ color: '#4285F4', fontWeight: 900 }}>G</span>
-                  <span>Pay</span>
+                  <span style={{ color: '#4285F4', fontWeight: 900, fontSize: '0.85rem' }}>G</span>
+                  <span style={{ color: '#1f2937', fontWeight: 800 }}>Pay</span>
                 </div>
 
                 {/* PhonePe Badge */}
@@ -708,10 +830,14 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 140px', minWidth: '130px' }}>
                 <input
-                  type="number"
-                  step="10"
+                  ref={cashInputRef}
+                  type="text"
+                  inputMode="decimal"
                   value={cashTendered}
-                  onChange={e => setCashTendered(e.target.value)}
+                  onFocus={handleCashFocus}
+                  onKeyDown={handleCashKeyDown}
+                  onChange={handleCashChange}
+                  placeholder="0.00"
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
@@ -721,9 +847,13 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                     padding: '0.55rem 0.8rem',
                     color: 'var(--text-main, #ffffff)',
                     fontSize: '1.15rem',
-                    fontFamily: 'var(--font-mono)',
+                    fontFamily: 'var(--font-mono, monospace)',
                     fontWeight: 800,
-                    outline: 'none'
+                    outline: 'none',
+                    textAlign: 'right',
+                    MozAppearance: 'textfield',
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
                   }}
                 />
               </div>
@@ -733,7 +863,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setCashTendered(quickVal)}
+                    onClick={() => handleQuickCash(quickVal)}
                     style={{
                       flex: '1 1 0px',
                       minWidth: '52px',
@@ -786,96 +916,6 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           </div>
         )}
 
-        {paymentMethod === 'card' && (
-          <div style={{
-            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
-            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '14px',
-            padding: '1.4rem',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.6rem'
-          }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-amber, #f59e0b)'
-            }}>
-              <CreditCard size={26} />
-            </div>
-            <div style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
-              Tap or Insert Card on POS Terminal
-            </div>
-            <p style={{ fontSize: '0.76rem', color: 'var(--text-dim, #94a3b8)', maxWidth: '320px', margin: 0 }}>
-              Supports Visa, MasterCard, RuPay, Maestro & Contactless Tap
-            </p>
-          </div>
-        )}
-
-        {paymentMethod === 'wallet' && (
-          <div style={{
-            background: isLight ? 'var(--bg-tertiary, #f8fafc)' : 'rgba(15, 23, 42, 0.65)',
-            border: isLight ? '1px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '14px',
-            padding: '1.25rem 1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-dim, #94a3b8)', fontWeight: 600 }}>
-              Choose Digital Wallet:
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem' }}>
-              {[
-                { id: 'paytm', name: 'Paytm Wallet', icon: '💳' },
-                { id: 'phonepe', name: 'PhonePe Wallet', icon: '🟣' },
-                { id: 'amazon', name: 'Amazon Pay', icon: '📦' }
-              ].map(w => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => setSelectedWallet(w.id)}
-                  style={{
-                    padding: '0.65rem',
-                    borderRadius: '8px',
-                    background: selectedWallet === w.id
-                      ? isLight
-                        ? 'rgba(217, 119, 6, 0.16)'
-                        : 'rgba(245, 158, 11, 0.2)'
-                      : isLight
-                      ? '#ffffff'
-                      : 'rgba(255, 255, 255, 0.04)',
-                    border: selectedWallet === w.id
-                      ? '1.5px solid var(--accent-amber, #f59e0b)'
-                      : isLight
-                      ? '1px solid #cbd5e1'
-                      : '1px solid rgba(255, 255, 255, 0.08)',
-                    color: selectedWallet === w.id ? 'var(--accent-amber, #f59e0b)' : 'var(--text-main, #ffffff)',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span>{w.icon}</span>
-                  <span>{w.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Footer Action Buttons */}
         <div style={{
           display: 'flex',
@@ -911,12 +951,18 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             <span>Cancel</span>
           </button>
 
+          {processingError && (
+            <div role="alert" style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(248, 113, 113, .45)", background: "rgba(127, 29, 29, .25)", color: "#fecaca", fontSize: 13, lineHeight: 1.45 }}>
+              {processingError}
+            </div>
+          )}
+
           {/* Confirm & Vacate Table Button (Vibrant Orange-Amber Gradient) */}
           <button
             type="button"
             onClick={handleSettle}
-            disabled={hasInvalidItems || isProcessing}
-            title={hasInvalidItems ? "Remove or correct unnamed/invalid items before settling" : "Settle bill"}
+            disabled={hasInvalidItems || isProcessing || upiUnavailable}
+            title={hasInvalidItems ? "Remove or correct unnamed/invalid items before settling" : upiUnavailable ? "Configure a real UPI QR or select Cash" : "Settle bill"}
             style={{
               flex: 2,
               height: '46px',
@@ -930,8 +976,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
-              cursor: isProcessing || hasInvalidItems ? 'not-allowed' : 'pointer',
-              opacity: hasInvalidItems ? 0.55 : 1,
+              cursor: isProcessing || hasInvalidItems || upiUnavailable ? 'not-allowed' : 'pointer',
+              opacity: hasInvalidItems || upiUnavailable ? 0.55 : 1,
               boxShadow: '0 6px 20px rgba(234, 88, 12, 0.4)',
               transition: 'all 0.18s ease'
             }}

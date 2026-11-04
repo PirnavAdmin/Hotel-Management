@@ -44,21 +44,25 @@ export async function apiRegister(regData) {
 
 /**
  * 2. POST /api/v1/auth/send-otp
+ * OTP requests are handled by the configured backend API.
  */
-export async function apiSendOtp(email, phone = '') {
+export async function apiSendOtp(email, phone = '', fullName = '') {
   return await apiClient('/api/v1/auth/send-otp', {
     method: 'POST',
     body: JSON.stringify({ 
       email, 
       Email: email,
       phone,
-      Phone: phone 
+      Phone: phone,
+      fullName,
+      FullName: fullName
     })
   });
 }
 
 /**
  * 3. POST /api/v1/auth/verify-otp
+ * Verifies OTP with the configured backend API.
  */
 export async function apiVerifyOtp(email, otp) {
   return await apiClient('/api/v1/auth/verify-otp', {
@@ -80,6 +84,7 @@ export async function apiVerifyOtp(email, otp) {
 export async function apiLogin(username, password) {
   return await apiClient('/api/v1/auth/login', {
     method: 'POST',
+    remoteOnly: true,
     body: JSON.stringify({ 
       usernameOrEmail: username,
       username: username,
