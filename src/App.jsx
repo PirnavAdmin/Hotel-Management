@@ -16,7 +16,6 @@ import {
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
 import { TakeawayView } from "./user/TakeawayView";
-import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
@@ -534,7 +533,6 @@ export function App() {
 
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
-  const [activeKotStation, setActiveKotStation] = useState("kitchen");
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
   const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
@@ -3089,52 +3087,26 @@ export function App() {
           (kotSession &&
           (kotSession.role === "kot" || kotSession.role === "admin") ? (
             <ErrorBoundary>
-              <>
-                <div role="tablist" aria-label="Kitchen and bar order tickets" style={{ display: "flex", gap: 8, padding: "10px 20px", background: "var(--bg-primary)", borderBottom: "1px solid var(--border-subtle, #243044)" }}>
-                  {[{ id: "kitchen", label: "Kitchen KOT" }, { id: "bar", label: "Bar BOT" }].map((station) => (
-                    <button
-                      key={station.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={activeKotStation === station.id}
-                      onClick={() => setActiveKotStation(station.id)}
-                      style={{ minHeight: 38, padding: "0 16px", borderRadius: 9, border: `1px solid ${activeKotStation === station.id ? "#f59e0b" : "var(--border-subtle, #243044)"}`, background: activeKotStation === station.id ? "rgba(245, 158, 11, .16)" : "var(--bg-secondary, #111b2b)", color: activeKotStation === station.id ? "#fbbf24" : "var(--text-main, #dbe4f0)", font: "inherit", fontWeight: 750, cursor: "pointer" }}
-                    >
-                      {station.label}
-                    </button>
-                  ))}
-                </div>
-                {activeKotStation === "bar" ? (
-                  <BarBOTView
-                    tables={tables}
-                    menuItems={menuItems}
-                    staffList={staffList}
-                    barDrinks={barMenuItems}
-                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
-                  />
-                ) : (
-                  <KitchenKOTView
-                    tables={tables}
-                    pastOrders={pastOrders}
-                    menuItems={menuItems}
-                    currentTheme={theme}
-                    onChangeTheme={setTheme}
-                    onBackToFloor={() => {
-                      setActiveView("tables");
-                      navigate("/");
-                    }}
-                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
-                    onCompleteTableKot={handleCompleteTableKot}
-                    onOpenTableOrder={(tableId) => {
-                      setSelectedTableId(tableId);
-                      setActiveView("order");
-                      navigate("/");
-                    }}
-                    currentSession={kotSession}
-                    onLogout={handleKotLogout}
-                  />
-                )}
-              </>
+              <KitchenKOTView
+                tables={tables}
+                pastOrders={pastOrders}
+                menuItems={menuItems}
+                currentTheme={theme}
+                onChangeTheme={setTheme}
+                onBackToFloor={() => {
+                  setActiveView("tables");
+                  navigate("/");
+                }}
+                onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                onCompleteTableKot={handleCompleteTableKot}
+                onOpenTableOrder={(tableId) => {
+                  setSelectedTableId(tableId);
+                  setActiveView("order");
+                  navigate("/");
+                }}
+                currentSession={kotSession}
+                onLogout={handleKotLogout}
+              />
             </ErrorBoundary>
           ) : (
             <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
