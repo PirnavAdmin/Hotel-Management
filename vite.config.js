@@ -987,17 +987,22 @@ function globalSyncPlugin() {
         }
 
         // REST API: /api/v1/staff (GET)
+        // Shared Bar & Dine Staff: /api/v1/bar/staff
+        if (req.url.startsWith("/api/v1/bar/staff")) {
+          // Re-route to shared staff collection
+          req.url = req.url.replace("/api/v1/bar/staff", "/api/v1/staff");
+        }
+
         if (req.url.startsWith("/api/v1/staff") && req.method === "GET") {
           db = loadDb();
           let staff = db.gourmet_pos_staff_v1;
           if (!Array.isArray(staff) || staff.length === 0) {
             staff = [
-              { staffId: 1, id: 1, fullName: "Rajesh K.", name: "Rajesh K.", roleTitle: "Senior Captain", role: "Senior Captain", phone: "+91 98450 11223", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "R", createdAt: "2026-10-09T04:27:02.068846" },
-              { staffId: 2, id: 2, fullName: "Vikram S.", name: "Vikram S.", roleTitle: "Head Waiter", role: "Head Waiter", phone: "+91 98450 44556", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "V", createdAt: "2026-10-09T04:27:02.069079" },
-              { staffId: 3, id: 3, fullName: "Ananya R.", name: "Ananya R.", roleTitle: "Stewardess", role: "Stewardess", phone: "+91 98450 77889", shift: "Full Day (11 AM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "A", createdAt: "2026-10-09T04:27:02.06908" },
-              { staffId: 4, id: 4, fullName: "Pooja M.", name: "Pooja M.", roleTitle: "Captain", role: "Captain", phone: "+91 98450 99001", shift: "Morning Shift (10 AM - 4 PM)", isActive: true, assignedTablesCount: 1, avatarInitial: "P", createdAt: "2026-10-09T04:27:02.06908" },
-              { staffId: 5, id: 5, fullName: "Suresh N.", name: "Suresh N.", roleTitle: "Server / Waiter", role: "Server / Waiter", phone: "+91 98450 33445", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 3, avatarInitial: "S", createdAt: "2026-10-09T04:27:02.06908" },
-              { staffId: 6, id: 6, fullName: "Karan D.", name: "Karan D.", roleTitle: "VIP Lounge Captain", role: "VIP Lounge Captain", phone: "+91 98450 66778", shift: "Evening Shift (5 PM - 11 PM)", isActive: true, assignedTablesCount: 4, avatarInitial: "K", createdAt: "2026-10-09T04:27:02.069081" }
+              { staffId: 1, id: 1, fullName: "Rajesh K.", name: "Rajesh K.", roleTitle: "Senior Captain", role: "Senior Captain", phone: "+91 98450 11223", shift: "Morning Shift (10 AM - 4 PM)", salary: 30000, section: "Dine & Bar", isActive: true, assignedTablesCount: 3, avatarInitial: "R", createdAt: "2026-10-09T04:27:02.068846" },
+              { staffId: 2, id: 2, fullName: "Meena S.", name: "Meena S.", roleTitle: "Waiter", role: "Waiter", phone: "+91 98450 44556", shift: "Evening Shift (5 PM - 11 PM)", salary: 18000, section: "Dine", isActive: true, assignedTablesCount: 1, avatarInitial: "M", createdAt: "2026-10-09T04:27:02.069079" },
+              { staffId: 3, id: 3, fullName: "Arjun P.", name: "Arjun P.", roleTitle: "Bartender", role: "Bartender", phone: "+91 98450 77889", shift: "Full Day (11 AM - 11 PM)", salary: 20000, section: "Bar", isActive: true, assignedTablesCount: 3, avatarInitial: "A", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 4, id: 4, fullName: "Prakash V.", name: "Prakash V.", roleTitle: "Chef", role: "Chef", phone: "+91 98450 99001", shift: "Morning Shift (10 AM - 4 PM)", salary: 28000, section: "Dine & Bar", isActive: true, assignedTablesCount: 1, avatarInitial: "P", createdAt: "2026-10-09T04:27:02.06908" },
+              { staffId: 5, id: 5, fullName: "Suman R.", name: "Suman R.", roleTitle: "Steward", role: "Steward", phone: "+91 98450 33445", shift: "Evening Shift (5 PM - 11 PM)", salary: 16000, section: "Dine & Bar", isActive: true, assignedTablesCount: 3, avatarInitial: "S", createdAt: "2026-10-09T04:27:02.06908" }
             ];
             db.gourmet_pos_staff_v1 = staff;
             saveDb(db);
@@ -1034,6 +1039,8 @@ function globalSyncPlugin() {
                 phone: payload.phone || "",
                 email: payload.email || "",
                 shift: payload.shift || "Morning Shift (10 AM - 4 PM)",
+                salary: Number(payload.salary || 0),
+                section: payload.section || "Dine & Bar",
                 isActive: true,
                 assignedTablesCount: 0,
                 avatarInitial: (payload.name || payload.fullName || "S").charAt(0).toUpperCase(),
@@ -1076,6 +1083,8 @@ function globalSyncPlugin() {
                     role: payload.role || payload.roleTitle || s.role || s.roleTitle,
                     phone: payload.phone !== undefined ? payload.phone : s.phone,
                     shift: payload.shift !== undefined ? payload.shift : s.shift,
+                    salary: payload.salary !== undefined ? Number(payload.salary) : Number(s.salary || 0),
+                    section: payload.section !== undefined ? payload.section : (s.section || "Dine & Bar"),
                     updatedAt: new Date().toISOString()
                   };
                   return updatedPerson;

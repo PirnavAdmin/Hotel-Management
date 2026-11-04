@@ -41,6 +41,7 @@ import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
 import { MENU_ITEMS } from "./data/menuData";
+import { INITIAL_STAFF } from "./data/initialStaff";
 import {
   Bell,
   CheckCircle2,
@@ -135,6 +136,9 @@ const dedupeStaff = (staff) => {
       ...person,
       id: Number.isFinite(id) && id > 0 ? id : person.id,
       name: person.name || person.fullName || previous.name || "Staff",
+      fullName: person.fullName || person.name || previous.fullName || previous.name || "Staff",
+      salary: person.salary !== undefined && person.salary !== null ? Number(person.salary) : Number(previous.salary || 0),
+      section: person.section || previous.section || "Dine & Bar",
     });
   });
   return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
@@ -521,7 +525,7 @@ export function App() {
     } catch {
       // Fallback
     }
-    return [];
+    return INITIAL_STAFF;
   });
 
   // Past settled orders history in Rupees
@@ -666,6 +670,8 @@ export function App() {
           fullName: s.fullName || s.name,
           role: s.roleTitle || s.role || "Waiter",
           roleTitle: s.roleTitle || s.role || "Waiter",
+          salary: Number(s.salary ?? 0),
+          section: s.section || "Dine & Bar",
         })));
         setStaffList(uniqueStaff);
         try {
@@ -2892,6 +2898,8 @@ export function App() {
       roleTitle: created?.roleTitle || created?.role || newPerson.role || "Waiter",
       phone: newPerson.phone || created?.phone || "",
       shift: newPerson.shift || created?.shift || "Morning Shift (10 AM - 4 PM)",
+      salary: Number(newPerson.salary !== undefined ? newPerson.salary : (created?.salary || 0)),
+      section: newPerson.section || created?.section || "Dine & Bar",
       isActive: true,
       avatarInitial: (newPerson.name || "S").charAt(0).toUpperCase(),
     };
@@ -2926,6 +2934,8 @@ export function App() {
         phone: updatedPerson.phone || "",
         email: updatedPerson.email || "",
         shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
+        salary: Number(updatedPerson.salary !== undefined ? updatedPerson.salary : 0),
+        section: updatedPerson.section || "Dine & Bar",
       });
     } catch {}
 

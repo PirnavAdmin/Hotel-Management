@@ -1177,6 +1177,8 @@ public class BarService
             RoleTitle = dto.JobTitle.Trim(),
             Phone = dto.Phone.Trim(),
             Shift = dto.Shift.Trim(),
+            Salary = dto.Salary,
+            Section = string.IsNullOrWhiteSpace(dto.Section) ? "Dine & Bar" : dto.Section.Trim(),
             IsActive = dto.IsActive ?? true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

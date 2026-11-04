@@ -1295,6 +1295,8 @@ export function AdminPortal({
     role: "",
     phone: "",
     shift: "",
+    salary: "",
+    section: "Dine & Bar",
   });
 
   // Open item modal for Add or Edit
@@ -1530,6 +1532,8 @@ export function AdminPortal({
         role: personRole,
         phone: person.phone || "",
         shift: person.shift || "",
+        salary: person.salary !== undefined && person.salary !== null ? String(person.salary) : "",
+        section: person.section || "Dine & Bar",
       });
     } else {
       setEditingStaff(null);
@@ -1538,6 +1542,8 @@ export function AdminPortal({
         role: "",
         phone: "",
         shift: "",
+        salary: "",
+        section: "Dine & Bar",
       });
     }
     setIsStaffModalOpen(true);
@@ -1564,6 +1570,8 @@ export function AdminPortal({
           role: staffForm.role,
           phone: staffForm.phone || "+91 98450 00000",
           shift: staffForm.shift,
+          salary: Number(staffForm.salary || 0),
+          section: staffForm.section || "Dine & Bar",
         });
       }
     } else {
@@ -1572,6 +1580,8 @@ export function AdminPortal({
         role: staffForm.role,
         phone: staffForm.phone || "+91 98450 00000",
         shift: staffForm.shift,
+        salary: Number(staffForm.salary || 0),
+        section: staffForm.section || "Dine & Bar",
       });
     }
     if (saved === false) return;
@@ -1582,6 +1592,8 @@ export function AdminPortal({
       role: "",
       phone: "",
       shift: "",
+      salary: "",
+      section: "Dine & Bar",
     });
     setIsStaffModalOpen(false);
   };
@@ -3435,7 +3447,7 @@ export function AdminPortal({
                       }
                       .staff-table-grid {
                         display: grid;
-                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
+                        grid-template-columns: minmax(170px, 1.6fr) minmax(120px, 1.1fr) minmax(95px, 0.9fr) minmax(140px, 1.2fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(90px, 110px);
                         gap: 0.5rem;
                       }
                       .staff-table-grid > * { min-width: 0; }
@@ -3769,7 +3781,9 @@ export function AdminPortal({
                           >
                             <div>Staff Name</div>
                             <div>Role / Designation</div>
+                            <div>Section</div>
                             <div>Shift</div>
+                            <div>Monthly Salary</div>
                             <div>Table Assignment</div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
                           </div>
@@ -3921,6 +3935,39 @@ export function AdminPortal({
                                   {personRole}
                                 </div>
 
+                                {/* Col 3: Section */}
+                                <div>
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      padding: "0.2rem 0.55rem",
+                                      borderRadius: "6px",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                      background:
+                                        (person.section || "Dine & Bar") === "Bar"
+                                          ? "rgba(168, 85, 247, 0.15)"
+                                          : (person.section || "Dine & Bar") === "Dine"
+                                          ? "rgba(59, 130, 246, 0.15)"
+                                          : "rgba(245, 158, 11, 0.15)",
+                                      color:
+                                        (person.section || "Dine & Bar") === "Bar"
+                                          ? "#c084fc"
+                                          : (person.section || "Dine & Bar") === "Dine"
+                                          ? "#60a5fa"
+                                          : "#f59e0b",
+                                      border:
+                                        (person.section || "Dine & Bar") === "Bar"
+                                          ? "1px solid rgba(168, 85, 247, 0.3)"
+                                          : (person.section || "Dine & Bar") === "Dine"
+                                          ? "1px solid rgba(59, 130, 246, 0.3)"
+                                          : "1px solid rgba(245, 158, 11, 0.3)",
+                                    }}
+                                  >
+                                    {person.section || "Dine & Bar"}
+                                  </span>
+                                </div>
+
                                 {/* Col 4: Shift (Full Description without truncation) */}
                                 <div
                                   style={{
@@ -3932,6 +3979,19 @@ export function AdminPortal({
                                   title={person.shift || "General Shift"}
                                 >
                                   {person.shift || "General Shift"}
+                                </div>
+
+                                {/* Col 5: Monthly Salary */}
+                                <div>
+                                  <span
+                                    style={{
+                                      fontWeight: 800,
+                                      color: "var(--text-main)",
+                                      fontSize: "0.88rem",
+                                    }}
+                                  >
+                                    {formatCurrency(Number(person.salary || 0))}
+                                  </span>
                                 </div>
 
                                 {/* Col 5: Status Pill (Matching Image 2 status pill) */}
@@ -5403,6 +5463,7 @@ export function AdminPortal({
                     menuItems={menuItems}
                     restaurantSettings={restaurantSettings}
                     inventory={inventory}
+                    staffList={staffList}
                   />
                 )}
 
@@ -6689,6 +6750,96 @@ export function AdminPortal({
                 allowCustom
                 onSaveCustomOption={saveCustomShift}
               />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Section (Dine / Bar Area)
+              </label>
+              <select
+                value={staffForm.section || "Dine & Bar"}
+                onChange={(e) =>
+                  setStaffForm({ ...staffForm, section: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              >
+                <option value="Dine & Bar">Dine & Bar (Both Sections)</option>
+                <option value="Dine">Dine In Only</option>
+                <option value="Bar">Bar Only</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Monthly Salary (₹) <span style={{ color: "#ea580c" }}>*</span>
+              </label>
+              <div style={{ position: "relative" }}>
+                <span
+                  style={{
+                    position: "absolute",
+                    left: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--text-dim)",
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="500"
+                  required
+                  placeholder="e.g. 30000"
+                  value={staffForm.salary}
+                  onChange={(e) =>
+                    setStaffForm({ ...staffForm, salary: e.target.value })
+                  }
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    boxSizing: "border-box",
+                    background: "var(--bg-tertiary)",
+                    border: "1.5px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "0 0.85rem 0 2rem",
+                    color: "var(--text-main)",
+                    fontWeight: 600,
+                    fontSize: "0.92rem",
+                    outline: "none",
+                  }}
+                />
+              </div>
             </div>
 
             <div
