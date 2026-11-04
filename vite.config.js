@@ -1935,7 +1935,7 @@ export default defineConfig(({ mode }) => {
     } catch {}
   }
   if (!apiBase) {
-    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
+    apiBase = "https://strengthen-office-php-jake.trycloudflare.com";
   }
 
   return {
