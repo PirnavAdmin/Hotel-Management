@@ -162,19 +162,8 @@ const sendOtpEmail = async (email, otp, fullName = "Admin") => {
 function globalSyncPlugin() {
   let sseClients = [];
   const getDataFile = () => {
-    const candidates = [
-      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
-      path.resolve(process.cwd(), "..", "server-db.json"),
-      path.resolve(process.cwd(), "server-db.json"),
-      path.resolve(process.cwd(), "POS", "server-db.json"),
-      path.resolve(process.cwd(), "Frontend", "server-db.json"),
-      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\server-db.json",
-      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\Frontend\\server-db.json",
-    ];
-    for (const c of candidates) {
-      if (fs.existsSync(c)) return c;
-    }
-    return path.resolve(process.cwd(), "server-db.json");
+    // Both Vite app roots share the repository root development database.
+    return path.resolve(import.meta.dirname || process.cwd(), "server-db.json");
   };
 
   const loadDb = () => {
@@ -193,12 +182,6 @@ function globalSyncPlugin() {
     try {
       const file = getDataFile();
       fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-      const altFile = file.includes("Frontend")
-        ? path.resolve(file, "..", "..", "server-db.json")
-        : path.resolve(file, "..", "Frontend", "server-db.json");
-      if (fs.existsSync(altFile) && altFile !== file) {
-        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
-      }
     } catch {}
   };
 
@@ -1961,7 +1944,7 @@ export default defineConfig(({ mode }) => {
     } catch {}
   }
   if (!apiBase) {
-    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
+    apiBase = "https://strengthen-office-php-jake.trycloudflare.com";
   }
 
   return {
