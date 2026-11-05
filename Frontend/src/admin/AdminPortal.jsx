@@ -5501,7 +5501,6 @@ export function AdminPortal({
                 {/* ================= TAB 6: INVOICES ================= */}
                 {activeTab === "invoices" && (
                   <AdminInvoices
-                    pastOrders={pastOrders}
                     restaurantName={restaurantName}
                     restaurantSettings={restaurantSettings}
                     onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}

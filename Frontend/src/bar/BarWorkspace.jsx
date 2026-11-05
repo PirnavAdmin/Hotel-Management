@@ -7960,7 +7960,7 @@ export function BarWorkspace({
     return apiBarOrders;
   }, [apiBarOrders]);
   const inventoryRows = useMemo(() => inventory.filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name)), [inventory]);
-  const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter((order) => {
+  const isBarInvoice = useCallback((order) => {
     const allItems = Array.isArray(order.items) ? order.items : [];
     return allItems.some((item) => {
       const name = item.name || item.dishName || item.menuItemName || "";
@@ -7968,7 +7968,8 @@ export function BarWorkspace({
         String(candidate.name || "").trim().toLowerCase() === String(name).trim().toLowerCase());
       return isBeverageCategory(menuItem?.category ?? menuItem?.categoryName ?? item.category ?? item.categoryName ?? item.subcategory ?? name);
     });
-  }), [pastOrders, menuItems, menuLookup]);
+  }, [menuItems, menuLookup]);
+  const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter(isBarInvoice), [pastOrders, isBarInvoice]);
 
   const staffIdOf = (person) => person?.staffId ?? person?.id;
   const staffNameOf = (person) => person?.fullName || person?.name || person?.FullName || "";
@@ -9364,7 +9365,7 @@ export function BarWorkspace({
         />
       )}
 
-      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} preferPastOrders restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
+      {route === "bar-invoices" && <AdminInvoices invoiceFilter={isBarInvoice} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} onRecordInventoryPurchase={onRecordInventoryPurchase} />}
 

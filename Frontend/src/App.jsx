@@ -3765,7 +3765,6 @@ export function App() {
       {/* Past Orders & Invoices Modal */}
       {isPastOrdersOpen && (
         <PastOrdersModal
-          pastOrders={pastOrders}
           onClose={() => setIsPastOrdersOpen(false)}
           onRefresh={async (records) => {
             if (Array.isArray(records) && records.length > 0) {
