@@ -22,6 +22,7 @@ Smartphone,
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   PieChart,
   Layers,
   Percent,
@@ -227,6 +228,23 @@ export function AdminReports({
   };
 
   const [showAllDishes, setShowAllDishes] = useState(false);
+  const [isCornerDateOpen, setIsCornerDateOpen] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const cornerDateRef = useRef(null);
+  const exportMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (cornerDateRef.current && !cornerDateRef.current.contains(e.target)) {
+        setIsCornerDateOpen(false);
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -458,6 +476,15 @@ export function AdminReports({
       ? Number(order.paidAmount ?? order.grandTotal ?? order.totalAmount ?? order.total ?? 0) || 0
       : 0;
   };
+
+  const dineInRevenue = filteredOrders
+    .filter((o) => {
+      const t = String(o.table || o.tableName || '').toLowerCase();
+      return t.includes('table') || (t && !t.includes('takeaway') && !t.includes('delivery'));
+    })
+    .reduce((s, o) => s + (Number(o.grandTotal ?? o.total) || 0), 0);
+
+  const takeawayRevenue = Math.max(0, totalRevenue - dineInRevenue);
 
   const paymentStats = {
     upi: filteredOrders.reduce(
@@ -735,6 +762,347 @@ export function AdminReports({
     return "All Time";
   };
 
+  const formatPrettyDate = (ymd) => {
+    if (!ymd || typeof ymd !== 'string') return '';
+    const parts = ymd.split('-');
+    if (parts.length !== 3) return ymd;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const y = parts[0];
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parts[2].padStart(2, '0');
+    return `${d}-${months[m] || parts[1]}-${y}`;
+  };
+
+  const formatDottedDate = (ymd) => {
+    if (!ymd || typeof ymd !== 'string') return '';
+    const parts = ymd.split('-');
+    if (parts.length !== 3) return ymd;
+    return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
+  };
+
+  const getCornerDateLabel = () => {
+    if (filterPeriod === 'today') return formatPrettyDate(todayYMD);
+    if (filterPeriod === 'yesterday') return formatPrettyDate(yesterdayYMD);
+    if (filterPeriod === 'single_date') return formatPrettyDate(startDate || todayYMD);
+    if (filterPeriod === 'this_week') return `${formatPrettyDate(thisWeekStartYMD)} to ${formatPrettyDate(todayYMD)}`;
+    if (filterPeriod === 'week') return `${formatPrettyDate(sevenDaysYMD)} to ${formatPrettyDate(todayYMD)}`;
+    if (filterPeriod === 'last_week') return `${formatPrettyDate(lastWeekStartYMD)} to ${formatPrettyDate(lastWeekEndYMD)}`;
+    if (filterPeriod === 'this_month' || filterPeriod === 'month') return `${formatPrettyDate(thisMonthStartYMD)} to ${formatPrettyDate(thisMonthEndYMD)}`;
+    if (filterPeriod === 'last_month') return `${formatPrettyDate(lastMonthStartYMD)} to ${formatPrettyDate(lastMonthEndYMD)}`;
+    if (filterPeriod === 'this_quarter') return `${formatPrettyDate(currentQStartYMD)} to ${formatPrettyDate(currentQEndYMD)}`;
+    if (filterPeriod === 'last_quarter') return `${formatPrettyDate(lastQStartYMD)} to ${formatPrettyDate(lastQEndYMD)}`;
+    if (filterPeriod === 'this_year') return `${formatPrettyDate(thisYearStartYMD)} to ${formatPrettyDate(thisYearEndYMD)}`;
+    if (filterPeriod === 'last_year') return `${formatPrettyDate(lastYearStartYMD)} to ${formatPrettyDate(lastYearEndYMD)}`;
+    if (filterPeriod === 'custom') {
+      if (startDate && endDate) {
+        return startDate === endDate ? formatPrettyDate(startDate) : `${formatPrettyDate(startDate)} to ${formatPrettyDate(endDate)}`;
+      }
+      if (startDate) return `From ${formatPrettyDate(startDate)}`;
+      if (endDate) return `Until ${formatPrettyDate(endDate)}`;
+      return 'Custom Dates';
+    }
+    return 'All Time';
+  };
+
+  const getExcelPeriodDateText = () => {
+    if (filterPeriod === 'today') return formatDottedDate(todayYMD);
+    if (filterPeriod === 'yesterday') return formatDottedDate(yesterdayYMD);
+    if (filterPeriod === 'single_date') return formatDottedDate(startDate || todayYMD);
+    if (filterPeriod === 'this_week') return `${formatDottedDate(thisWeekStartYMD)} - ${formatDottedDate(todayYMD)}`;
+    if (filterPeriod === 'week') return `${formatDottedDate(sevenDaysYMD)} - ${formatDottedDate(todayYMD)}`;
+    if (filterPeriod === 'last_week') return `${formatDottedDate(lastWeekStartYMD)} - ${formatDottedDate(lastWeekEndYMD)}`;
+    if (filterPeriod === 'this_month' || filterPeriod === 'month') return `${formatDottedDate(thisMonthStartYMD)} - ${formatDottedDate(thisMonthEndYMD)}`;
+    if (filterPeriod === 'last_month') return `${formatDottedDate(lastMonthStartYMD)} - ${formatDottedDate(lastMonthEndYMD)}`;
+    if (filterPeriod === 'this_quarter') return `${formatDottedDate(currentQStartYMD)} - ${formatDottedDate(currentQEndYMD)}`;
+    if (filterPeriod === 'last_quarter') return `${formatDottedDate(lastQStartYMD)} - ${formatDottedDate(lastQEndYMD)}`;
+    if (filterPeriod === 'this_year') return `${formatDottedDate(thisYearStartYMD)} - ${formatDottedDate(thisYearEndYMD)}`;
+    if (filterPeriod === 'last_year') return `${formatDottedDate(lastYearStartYMD)} - ${formatDottedDate(lastYearEndYMD)}`;
+    if (filterPeriod === 'custom') {
+      if (startDate && endDate) {
+        return startDate === endDate ? formatDottedDate(startDate) : `${formatDottedDate(startDate)} - ${formatDottedDate(endDate)}`;
+      }
+      if (startDate) return `From ${formatDottedDate(startDate)}`;
+      if (endDate) return `Until ${formatDottedDate(endDate)}`;
+      return 'Custom Period';
+    }
+    return formatDottedDate(todayYMD);
+  };
+
+  const handleExportExcel = () => {
+    try {
+      const periodLabel = getFilterPeriodLabel();
+      const safePeriodName = filterPeriod.replace(/[^a-zA-Z0-9]/g, '_');
+      const activePeriodDates = getActiveDateRangeText();
+
+      // Dynamic category breakdown rows from actual hotel POS inventory
+      const categoryRowsHtml = (inventoryCategoryBreakdown || []).map(([cat, val], idx) => `
+        <tr style="font-size: 10pt;">
+          <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">${idx + 2}</td>
+          <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; font-weight: 500;">↳ ${cat} Stock Cost</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Category inventory valuation</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Ingredient Stock</td>
+          <td style="border: 1px solid #000000;"></td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; mso-number-format: '0\\.00';">${val.toFixed(2)}</td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; mso-number-format: '0\\.00';">-${val.toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      // Dine purchases in period
+      const dinePurchasesHtml = dineInventoryPurchaseCost > 0 ? `
+        <tr style="font-size: 10pt;">
+          <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">•</td>
+          <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; font-weight: 600;">↳ Dine Inventory Purchases</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">${filteredInventoryPurchases.filter(p => String(p.department || 'dine').toLowerCase() !== 'bar').length} recorded receipts in period</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Dine Supplies</td>
+          <td style="border: 1px solid #000000;"></td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; font-weight: 600; mso-number-format: '0\\.00';">${dineInventoryPurchaseCost.toFixed(2)}</td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; font-weight: 600; mso-number-format: '0\\.00';">-${dineInventoryPurchaseCost.toFixed(2)}</td>
+        </tr>
+      ` : '';
+
+      // Bar purchases in period
+      const barPurchasesHtml = barInventoryPurchaseCost > 0 ? `
+        <tr style="font-size: 10pt;">
+          <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">•</td>
+          <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; font-weight: 600;">↳ Bar Inventory Purchases</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">${filteredInventoryPurchases.filter(p => String(p.department || '').toLowerCase() === 'bar').length} recorded receipts in period</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Bar Supplies</td>
+          <td style="border: 1px solid #000000;"></td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; font-weight: 600; mso-number-format: '0\\.00';">${barInventoryPurchaseCost.toFixed(2)}</td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; font-weight: 600; mso-number-format: '0\\.00';">-${barInventoryPurchaseCost.toFixed(2)}</td>
+        </tr>
+      ` : '';
+
+      // Salary in period
+      const salaryHtml = totalSalaryPaid > 0 ? `
+        <tr style="font-size: 10pt;">
+          <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">•</td>
+          <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; font-weight: 600;">↳ Staff Salary Payments</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">${filteredSalaryPayments.length} staff payments recorded in period</td>
+          <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Payroll</td>
+          <td style="border: 1px solid #000000;"></td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; font-weight: 600; mso-number-format: '0\\.00';">${totalSalaryPaid.toFixed(2)}</td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; font-weight: 600; mso-number-format: '0\\.00';">-${totalSalaryPaid.toFixed(2)}</td>
+        </tr>
+      ` : '';
+
+      const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Profit and loss statement</x:Name>
+                  <x:WorksheetOptions>
+                    <x:DisplayGridlines/>
+                    <x:Print><x:ValidPrinterInfo/></x:Print>
+                  </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <style>
+            body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background: #ffffff; color: #000000; }
+            table { border-collapse: collapse; width: 100%; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10.5pt; }
+            .banner { background-color: #D9EAD3 !important; font-size: 15pt; font-weight: bold; text-align: center; color: #1E4620; padding: 10px; border: 1px solid #000000; }
+            .header-cell { background-color: #D9EAD3 !important; border: 1px solid #000000; font-weight: bold; font-size: 10.5pt; text-align: center; padding: 7px 6px; }
+            .section-revenue { background-color: #E2EFDA !important; font-weight: bold; font-size: 11pt; padding: 7px 10px; border: 1px solid #000000; color: #166534; }
+            .section-expenditure { background-color: #FCE4D6 !important; font-weight: bold; font-size: 11pt; padding: 7px 10px; border: 1px solid #000000; color: #991b1b; }
+            .balance-row td { background-color: #D9EAD3 !important; border: 1px solid #000000; font-weight: bold; padding: 7px 8px; }
+            .total-row td { border: 1px solid #000000; font-weight: bold; padding: 7px 8px; font-size: 11pt; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <colgroup>
+              <col style="width: 45px;" />
+              <col style="width: 270px;" />
+              <col style="width: 310px;" />
+              <col style="width: 170px;" />
+              <col style="width: 135px;" />
+              <col style="width: 135px;" />
+              <col style="width: 145px;" />
+            </colgroup>
+            <tbody>
+              <!-- Title Banner matching Ledger Reconciliation pattern -->
+              <tr>
+                <td colspan="7" class="banner">Profit &amp; Loss Statement (Revenue vs Expenditure)</td>
+              </tr>
+
+              <!-- Company & Header Info Block matching pattern -->
+              <tr>
+                <td colspan="4" style="font-size: 10pt; font-weight: bold; padding: 6px 6px 2px 6px;">Company Name: <span style="font-weight: normal;">AVSR FOOD COURT (Fine Dining &amp; POS)</span></td>
+                <td colspan="3" style="font-size: 10pt; font-weight: bold; padding: 6px 6px 2px 6px;">Email ID: <span style="font-weight: normal;">admin@avsrfoodcourt.com</span></td>
+              </tr>
+              <tr>
+                <td colspan="4" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Address: <span style="font-weight: normal;">Food Court Campus, Main Road</span></td>
+                <td colspan="3" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Department: <span style="font-weight: normal;">${isBarMode ? "Bar &amp; Beverages" : "Fine Dining &amp; Food Court"}</span></td>
+              </tr>
+              <tr>
+                <td colspan="4" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Phone No.: <span style="font-weight: normal;">+91 98765 43210</span></td>
+                <td colspan="3" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Created By: <span style="font-weight: normal;">Admin</span></td>
+              </tr>
+              <tr>
+                <td colspan="7" style="font-size: 10pt; font-weight: bold; padding: 2px 6px 12px 6px;">Time Period / Date: <span style="font-weight: normal;">${periodLabel} (${activePeriodDates})</span></td>
+              </tr>
+
+              <!-- Table Headers matching pattern -->
+              <tr style="background-color: #D9EAD3;">
+                <th class="header-cell">#</th>
+                <th class="header-cell">Accounting Head</th>
+                <th class="header-cell">Operational Context / Breakdown</th>
+                <th class="header-cell">Department / Scope</th>
+                <th class="header-cell">Revenue / Inflow (₹)</th>
+                <th class="header-cell">Expenditure (₹)</th>
+                <th class="header-cell">Net Balance (₹)</th>
+              </tr>
+
+              <!-- 1. OPERATING REVENUE (INCOME) -->
+              <tr>
+                <td colspan="7" class="section-revenue">1. OPERATING REVENUE (INCOME)</td>
+              </tr>
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">1</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: #166534;">${isBarMode ? "Gross Settled Bar Sales" : "Gross Settled Dining Sales"}</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; color: #374151;">Revenue from ${filteredOrders.length} customer orders</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Direct Customer Sales</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #166534; mso-number-format: '0\\.00';">${totalRevenue.toFixed(2)}</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #166534; mso-number-format: '0\\.00';">+${totalRevenue.toFixed(2)}</td>
+              </tr>
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">2</td>
+                <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; color: #374151;">↳ ${isBarMode ? "Beverage" : "Food &amp; Beverage"} Net Sales</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Bill total minus GST &amp; service charge</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Kitchen / F&amp;B</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; mso-number-format: '0\\.00';">${grossFoodSales.toFixed(2)}</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="border: 1px solid #000000;"></td>
+              </tr>
+              ${dineInRevenue > 0 ? `
+                <tr style="font-size: 10pt;">
+                  <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">3</td>
+                  <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; color: #374151;">↳ Dine-In Customer Sales</td>
+                  <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">In-restaurant table dining settlements</td>
+                  <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Table Dining</td>
+                  <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; mso-number-format: '0\\.00';">${dineInRevenue.toFixed(2)}</td>
+                  <td style="border: 1px solid #000000;"></td>
+                  <td style="border: 1px solid #000000;"></td>
+                </tr>
+              ` : ''}
+              ${takeawayRevenue > 0 ? `
+                <tr style="font-size: 10pt;">
+                  <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">4</td>
+                  <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; color: #374151;">↳ Takeaway &amp; Parcel Sales</td>
+                  <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Direct counter &amp; parcel takeaway settlements</td>
+                  <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Takeaway Counter</td>
+                  <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; mso-number-format: '0\\.00';">${takeawayRevenue.toFixed(2)}</td>
+                  <td style="border: 1px solid #000000;"></td>
+                  <td style="border: 1px solid #000000;"></td>
+                </tr>
+              ` : ''}
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">5</td>
+                <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; color: #374151;">↳ GST &amp; Direct Taxes Collected</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Tax liability collected from invoices</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Tax Compliance</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; mso-number-format: '0\\.00';">${totalTax.toFixed(2)}</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="border: 1px solid #000000;"></td>
+              </tr>
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">6</td>
+                <td style="border: 1px solid #000000; padding: 5px 12px 5px 24px; color: #374151;">↳ Service Charges Collected</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Customer dining service fees</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Dining Service</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; mso-number-format: '0\\.00';">${totalService.toFixed(2)}</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="border: 1px solid #000000;"></td>
+              </tr>
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">7</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: #b45309;">Less: Bill Discounts Given</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Promotions &amp; customer reductions</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Bill Reductions</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+              </tr>
+              <!-- Revenue Subtotal Row matching pattern -->
+              <tr class="balance-row" style="font-size: 10.5pt;">
+                <td colspan="4" style="background-color: #D9EAD3; border: 1px solid #000000; text-align: left; padding: 7px 8px;">Total Net Operating Revenue (Adjusted for discounts)</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; color: #166534; padding: 7px 10px; mso-number-format: '0\\.00';">${netRevenueAfterDiscount.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000;"></td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; color: #166534; padding: 7px 10px; mso-number-format: '0\\.00';">+${netRevenueAfterDiscount.toFixed(2)}</td>
+              </tr>
+
+              <!-- 2. OPERATING EXPENDITURE & INVENTORY -->
+              <tr>
+                <td colspan="7" class="section-expenditure">2. OPERATING EXPENDITURE &amp; INVENTORY</td>
+              </tr>
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">1</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: #000000;">Current Ingredient Stock Valuation</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; color: #374151;">${inventoryItems.length} items evaluated at unit cost</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Inventory Asset</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b91c1c; mso-number-format: '0\\.00';">${totalInventoryCost.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; color: #b91c1c; mso-number-format: '0\\.00';">-${totalInventoryCost.toFixed(2)}</td>
+              </tr>
+              ${categoryRowsHtml}
+              ${dinePurchasesHtml}
+              ${barPurchasesHtml}
+              ${salaryHtml}
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">•</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: #b45309;">Customer Discounts Absorbed</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Promotional reductions absorbed on settled bills</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Operating Cost</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+              </tr>
+              <!-- Expenditure Subtotal Row matching pattern -->
+              <tr class="balance-row" style="font-size: 10.5pt;">
+                <td colspan="4" style="background-color: #FCE4D6; border: 1px solid #000000; text-align: left; padding: 7px 8px; font-weight: bold;">Total Operating Expenditure (Stock + period purchases + discounts)</td>
+                <td style="background-color: #FCE4D6; border: 1px solid #000000;"></td>
+                <td style="background-color: #FCE4D6; border: 1px solid #000000; text-align: right; font-weight: bold; color: #b91c1c; padding: 7px 10px; mso-number-format: '0\\.00';">${plExpenditure.toFixed(2)}</td>
+                <td style="background-color: #FCE4D6; border: 1px solid #000000; text-align: right; font-weight: bold; color: #b91c1c; padding: 7px 10px; mso-number-format: '0\\.00';">-${plExpenditure.toFixed(2)}</td>
+              </tr>
+
+              <!-- NET OPERATING PROFIT / LOSS SUMMARY ROW -->
+              <tr class="total-row" style="background-color: #D9EAD3;">
+                <td colspan="4" style="background-color: #D9EAD3; border: 1px solid #000000; border-bottom: 3px double #000000; text-align: center; padding: 9px 8px; font-size: 11.5pt;">NET OPERATING PROFIT / (LOSS) &nbsp;·&nbsp; ${profitMarginPercent}% Operating Margin</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; border-bottom: 3px double #000000; text-align: right; font-weight: bold; padding: 9px 10px; color: #166534; mso-number-format: '0\\.00';">${netRevenueAfterDiscount.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; border-bottom: 3px double #000000; text-align: right; font-weight: bold; padding: 9px 10px; color: #b91c1c; mso-number-format: '0\\.00';">${plExpenditure.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; border-bottom: 3px double #000000; text-align: right; font-weight: bold; padding: 9px 10px; font-size: 12pt; color: ${isProfit ? '#166534' : '#b91c1c'}; mso-number-format: '0\\.00';">${isProfit ? '+' : '-'}${Math.abs(plNet).toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Profit_and_Loss_Statement_${safePeriodName}_${todayYMD}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export Excel error:', err);
+    }
+  };
+
   const getActiveDateRangeText = () => {
     if (filterPeriod === "today") return todayYMD;
     if (filterPeriod === "yesterday") return yesterdayYMD;
@@ -754,6 +1122,503 @@ export function AdminReports({
       if (endDate) return `Until ${endDate}`;
     }
     return "All Time History";
+  };
+
+    const handleExportExpenditureReconciliationExcel = () => {
+    try {
+      const periodLabel = getFilterPeriodLabel();
+      const safePeriodName = filterPeriod.replace(/[^a-zA-Z0-9]/g, "_");
+
+      const inStockItems = searchedInventory.filter((it) => Number(it.stock ?? 0) > Number(it.minThreshold ?? 0)).length;
+      const lowStockItems = searchedInventory.filter((it) => {
+        const s = Number(it.stock ?? 0);
+        const th = Number(it.minThreshold ?? 0);
+        return s > 0 && s <= th;
+      }).length;
+      const outOfStockItems = searchedInventory.filter((it) => Number(it.stock ?? 0) <= 0).length;
+
+      let totalValuationSum = 0;
+
+      const rowsHtml = searchedInventory.map((item, idx) => {
+        const stock = Number(item.stock ?? 0);
+        const mrp = Number(item.mrp ?? item.unitCost ?? 0);
+        const val = stock * mrp;
+        const min = Number(item.minThreshold ?? 0);
+        const unit = item.unit || 'units';
+        totalValuationSum += val;
+
+        const status = stock <= 0 ? "Out of Stock" : (stock <= min ? "Low Stock" : "In Stock");
+        const statusColor = stock <= 0 ? "#ef4444" : (stock <= min ? "#f59e0b" : "#10b981");
+
+        return `
+          <tr style="font-size: 10pt;">
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">${idx + 1}</td>
+            <td style="border: 1px solid #000000; text-align: left; padding: 5px 8px; font-weight: 600;">${(item.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+            <td style="border: 1px solid #000000; text-align: left; padding: 5px 8px;">${item.category || 'General'}</td>
+            <td style="border: 1px solid #000000; text-align: left; padding: 5px 8px;">${(item.supplier || 'Metro Cash & Carry Wholesale').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: bold; color: ${stock <= 0 ? '#ef4444' : '#000000'};">${stock} ${unit}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">${min} ${unit}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; mso-number-format: '0\\.00';">${mrp.toFixed(2)}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; font-weight: bold; color: ${val > 0 ? '#b91c1c' : '#000000'}; mso-number-format: '0\\.00';">${val.toFixed(2)}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: bold; color: ${statusColor};">${status}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Optional Purchases in period
+      const purchasesRowsHtml = (filteredInventoryPurchases || []).slice(0, 30).map((p, idx) => `
+        <tr style="font-size: 9.5pt;">
+          <td style="border: 1px solid #000000; text-align: center; padding: 4px;">${idx + 1}</td>
+          <td style="border: 1px solid #000000; text-align: left; padding: 4px 6px;">${p.purchaseDate || ''}</td>
+          <td style="border: 1px solid #000000; text-align: left; padding: 4px 6px;">${String(p.department || 'dine').toUpperCase()}</td>
+          <td style="border: 1px solid #000000; text-align: left; padding: 4px 6px;">${(p.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+          <td style="border: 1px solid #000000; text-align: left; padding: 4px 6px;">${(p.supplier || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+          <td style="border: 1px solid #000000; text-align: center; padding: 4px;">${Number(p.quantity) || 0} ${p.unit || ''}</td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 4px 6px; mso-number-format: '0\\.00';">${(Number(p.unitCost) || 0).toFixed(2)}</td>
+          <td style="border: 1px solid #000000; text-align: right; padding: 4px 6px; font-weight: bold; color: #b91c1c; mso-number-format: '0\\.00';">${getInventoryPurchaseCost(p).toFixed(2)}</td>
+          <td style="border: 1px solid #000000; text-align: center; padding: 4px; font-weight: 600; color: #10b981;">Receipt Verified</td>
+        </tr>
+      `).join('');
+
+      const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Expenditure & Stock Ledger</x:Name>
+                  <x:WorksheetOptions>
+                    <x:DisplayGridlines/>
+                    <x:Print><x:ValidPrinterInfo/></x:Print>
+                  </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <style>
+            body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background: #ffffff; color: #000000; }
+            table { border-collapse: collapse; width: 100%; font-family: Calibri, 'Segoe UI', Arial, sans-serif; }
+            .banner { background-color: #D9EAD3 !important; font-size: 15pt; font-weight: bold; text-align: center; color: #1E4620; padding: 10px; border: 1px solid #000000; }
+            .header-cell { background-color: #D9EAD3 !important; border: 1px solid #000000; font-weight: bold; font-size: 10.5pt; text-align: center; padding: 7px 6px; }
+            .balance-row td { background-color: #D9EAD3 !important; border: 1px solid #000000; font-weight: bold; padding: 6px 8px; }
+            .total-row td { border: 1px solid #000000; font-weight: bold; padding: 6px 8px; font-size: 10.5pt; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <colgroup>
+              <col style="width: 45px;" />
+              <col style="width: 250px;" />
+              <col style="width: 170px;" />
+              <col style="width: 220px;" />
+              <col style="width: 95px;" />
+              <col style="width: 95px;" />
+              <col style="width: 95px;" />
+              <col style="width: 120px;" />
+              <col style="width: 110px;" />
+            </colgroup>
+            <tbody>
+              <!-- Title Banner matching Ledger Reconciliation pattern -->
+              <tr>
+                <td colspan="9" class="banner">Expenditure &amp; Inventory Stock Valuation</td>
+              </tr>
+              
+              <!-- Company & Header Info Block matching pattern -->
+              <tr>
+                <td colspan="5" style="font-size: 10pt; font-weight: bold; padding: 6px 6px 2px 6px;">Company Name: <span style="font-weight: normal;">AVSR FOOD COURT (Fine Dining &amp; POS)</span></td>
+                <td colspan="4" style="font-size: 10pt; font-weight: bold; padding: 6px 6px 2px 6px;">Email ID: <span style="font-weight: normal;">admin@avsrfoodcourt.com</span></td>
+              </tr>
+              <tr>
+                <td colspan="9" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Address: <span style="font-weight: normal;">Food Court Campus, Main Road</span></td>
+              </tr>
+              <tr>
+                <td colspan="5" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Phone No.: <span style="font-weight: normal;">+91 98765 43210</span></td>
+                <td colspan="4" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Created By: <span style="font-weight: normal;">Admin</span></td>
+              </tr>
+              <tr>
+                <td colspan="9" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Department / Category: <span style="font-weight: normal;">${invCategoryFilter === 'all' ? `All Categories (${searchedInventory.length} Tracked Items)` : invCategoryFilter}</span></td>
+              </tr>
+              <tr>
+                <td colspan="9" style="font-size: 10pt; font-weight: bold; padding: 2px 6px 12px 6px;">Time Period / Date: <span style="font-weight: normal;">${periodLabel} (${getActiveDateRangeText()})</span></td>
+              </tr>
+
+              <!-- Table Headers matching pattern -->
+              <tr style="background-color: #D9EAD3;">
+                <th class="header-cell">#</th>
+                <th class="header-cell">Ingredient / Item</th>
+                <th class="header-cell">Category</th>
+                <th class="header-cell">Supplier</th>
+                <th class="header-cell">Stock</th>
+                <th class="header-cell">Threshold</th>
+                <th class="header-cell">Unit Cost</th>
+                <th class="header-cell">Valuation</th>
+                <th class="header-cell">Status</th>
+              </tr>
+
+              <!-- Opening Summary Row matching pattern -->
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center;"></td>
+                <td colspan="3" style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold; padding: 6px 8px;">Total Tracked Items: ${searchedInventory.length}</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold;">${inStockItems} In Stock</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold;">${lowStockItems} Low</td>
+                <td style="border: 1px solid #000000;"></td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 6px 8px; color: #b91c1c; mso-number-format: '0\\.00';">${totalValuationSum.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold; color: #10b981;">Active</td>
+              </tr>
+
+              <!-- Data Rows -->
+              ${rowsHtml}
+
+              <!-- Closing Balance Row matching pattern -->
+              <tr class="balance-row" style="font-size: 10.5pt;">
+                <td colspan="7" style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold; padding: 7px 8px;">CURRENT INVENTORY STOCK VALUATION</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; color: #b91c1c; mso-number-format: '0\\.00';">${totalValuationSum.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold; color: #10b981;">Verified</td>
+              </tr>
+
+              <!-- Total Row matching pattern -->
+              <tr class="total-row">
+                <td colspan="4" style="border: 1px solid #000000; text-align: center; padding: 7px 8px; font-weight: bold;">Total Stock Summary</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold;">${inStockItems} OK</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold; color: #f59e0b;">${lowStockItems} Low</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold; color: #ef4444;">${outOfStockItems} Out</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #b91c1c; mso-number-format: '0\\.00';">${totalValuationSum.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000;"></td>
+              </tr>
+
+              ${purchasesRowsHtml ? `
+                <tr><td colspan="9" style="height: 20px;"></td></tr>
+                <tr>
+                  <td colspan="9" class="banner" style="font-size: 13pt;">Dated Inventory Purchases in Selected Period (${periodLabel})</td>
+                </tr>
+                <tr style="background-color: #D9EAD3;">
+                  <th class="header-cell">#</th>
+                  <th class="header-cell">Date</th>
+                  <th class="header-cell">Department</th>
+                  <th class="header-cell">Item Name</th>
+                  <th class="header-cell">Supplier</th>
+                  <th class="header-cell">Quantity</th>
+                  <th class="header-cell">Unit Cost</th>
+                  <th class="header-cell">Purchase Total</th>
+                  <th class="header-cell">Audit Status</th>
+                </tr>
+                ${purchasesRowsHtml}
+                <tr class="balance-row">
+                  <td colspan="7" style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold;">TOTAL PERIOD INVENTORY PURCHASES</td>
+                  <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; color: #b91c1c; mso-number-format: '0\\.00';">${totalInventoryPurchaseCost.toFixed(2)}</td>
+                  <td style="background-color: #D9EAD3; border: 1px solid #000000;"></td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Expenditure_Stock_Valuation_${safePeriodName}_${todayYMD}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export expenditure reconciliation error:', err);
+    }
+  };
+
+  const handleExportInventoryCSV = () => {
+    try {
+      const lines = [];
+      lines.push(`"${isBarMode ? "BAR INVENTORY & STOCK VALUATION" : "DINING INVENTORY & STOCK VALUATION"}"`);
+      lines.push(`"Generated At:","${new Date().toLocaleString("en-IN")}"`);
+      lines.push(`"Total Items:","${searchedInventory.length}"`);
+      lines.push(`"Total Valuation:","${totalInventoryCost.toFixed(2)}"`);
+      lines.push(``);
+      lines.push(`"#","Ingredient / Item","Category","Supplier","Current Stock","Unit","Min Threshold","Unit Cost (INR)","Total Valuation (INR)","Stock Status"`);
+
+      searchedInventory.forEach((it, idx) => {
+        const stock = Number(it.stock ?? 0);
+        const mrp = Number(it.mrp ?? it.unitCost ?? 0);
+        const val = stock * mrp;
+        const min = Number(it.minThreshold ?? 0);
+        const status = stock <= 0 ? "Out of Stock" : (stock <= min ? "Low Stock" : "In Stock");
+        lines.push(`"${idx + 1}","${(it.name || '').replace(/"/g, '""')}","${it.category || ''}","${(it.supplier || '').replace(/"/g, '""')}","${stock}","${it.unit || ''}","${min}","${mrp.toFixed(2)}","${val.toFixed(2)}","${status}"`);
+      });
+
+      const totalVal = searchedInventory.reduce((s, it) => s + (Number(it.stock ?? 0) * Number(it.mrp ?? it.unitCost ?? 0)), 0);
+      lines.push(``);
+      lines.push(`"TOTAL SUMMARY","","","","","","","","${totalVal.toFixed(2)}",""`);
+
+      const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(lines.join("\n"));
+      const link = document.createElement("a");
+      link.setAttribute("href", csvContent);
+      link.setAttribute("download", `Inventory_Stock_Valuation_${todayYMD}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export inventory CSV error:", err);
+    }
+  };
+
+  const handleExportLedgerReconciliationExcel = () => {
+    try {
+      const periodLabel = getFilterPeriodLabel();
+      const safePeriodName = filterPeriod.replace(/[^a-zA-Z0-9]/g, "_");
+      const activePeriodDates = getActiveDateRangeText();
+
+      let runningBalance = 0;
+      let totalTaxSum = 0;
+      let totalDiscSum = 0;
+      let totalDebitSum = 0;
+      let totalCreditSum = 0;
+
+      const rowsHtml = searchedOrders.map((ord, idx) => {
+        const id = ord.orderNumber || ord.id || `#${idx + 1}`;
+        const dateRaw = ord.settledAt || ord.timestamp || ord.date || todayYMD;
+        let formattedDate = "";
+        try {
+          const d = new Date(dateRaw);
+          if (!isNaN(d.getTime())) {
+            const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${timeStr}`;
+          } else {
+            formattedDate = String(dateRaw).slice(0, 16);
+          }
+        } catch {
+          formattedDate = String(dateRaw).slice(0, 16);
+        }
+
+        const tbl = ord.table || ord.tableName || "Takeaway";
+        const pay = normalizePaymentMethod(ord).toUpperCase();
+        const items = (ord.items || [])
+          .map((it) => `${it.quantity || 1}x ${it.name || 'Dish'}`)
+          .join(', ') || 'Dishes';
+
+        const grand = Number(ord.grandTotal ?? ord.total) || 0;
+        const tax = Number(ord.taxAmount) || 0;
+        const discount = Number(ord.discountAmount) || 0;
+        
+        // Debit = Settled gross sales; Credit = Bill discounts
+        const debit = grand;
+        const credit = discount > 0 ? discount : 0;
+        const drOrCr = debit >= credit ? "Dr" : "Cr";
+        
+        runningBalance += (debit - credit);
+        totalTaxSum += tax;
+        totalDiscSum += discount;
+        totalDebitSum += debit;
+        totalCreditSum += credit;
+
+        return `
+          <tr style="font-size: 10pt;">
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">${idx + 1}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: bold; color: #166534;">${id}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">${formattedDate}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: 600;">${tbl}</td>
+            <td style="border: 1px solid #000000; text-align: left; padding: 5px 8px;">${items.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: 600; color: #2563eb;">${pay}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: #10b981; mso-number-format: '0\\.00';">${tax.toFixed(2)}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: #b45309; mso-number-format: '0\\.00';">${discount.toFixed(2)}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; font-weight: bold; color: #166534; mso-number-format: '0\\.00';">${debit.toFixed(2)}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: #b45309; mso-number-format: '0\\.00';">${credit > 0 ? credit.toFixed(2) : '-'}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: 600;">${drOrCr}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; font-weight: bold; mso-number-format: '0\\.00';">${runningBalance.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Detailed Income Ledger</x:Name>
+                  <x:WorksheetOptions>
+                    <x:DisplayGridlines/>
+                    <x:Print><x:ValidPrinterInfo/></x:Print>
+                  </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <style>
+            body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background: #ffffff; color: #000000; }
+            table { border-collapse: collapse; width: 100%; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10.5pt; }
+            .banner { background-color: #D9EAD3 !important; font-size: 15pt; font-weight: bold; text-align: center; color: #1E4620; padding: 10px; border: 1px solid #000000; }
+            .header-cell { background-color: #D9EAD3 !important; border: 1px solid #000000; font-weight: bold; font-size: 10.5pt; text-align: center; padding: 7px 6px; }
+            .balance-row td { background-color: #D9EAD3 !important; border: 1px solid #000000; font-weight: bold; padding: 7px 8px; }
+            .total-row td { border: 1px solid #000000; font-weight: bold; padding: 7px 8px; font-size: 11pt; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <colgroup>
+              <col style="width: 40px;" />
+              <col style="width: 75px;" />
+              <col style="width: 145px;" />
+              <col style="width: 95px;" />
+              <col style="width: 320px;" />
+              <col style="width: 85px;" />
+              <col style="width: 90px;" />
+              <col style="width: 90px;" />
+              <col style="width: 120px;" />
+              <col style="width: 100px;" />
+              <col style="width: 65px;" />
+              <col style="width: 130px;" />
+            </colgroup>
+            <tbody>
+              <!-- Title Banner matching Ledger Reconciliation pattern -->
+              <tr>
+                <td colspan="12" class="banner">Ledger Reconciliation (Detailed Income &amp; Settled Orders)</td>
+              </tr>
+
+              <!-- Company & Client Info Block matching pattern -->
+              <tr>
+                <td colspan="7" style="font-size: 10pt; font-weight: bold; padding: 6px 6px 2px 6px;">Company Name: <span style="font-weight: normal;">AVSR FOOD COURT (Fine Dining &amp; POS)</span></td>
+                <td colspan="5" style="font-size: 10pt; font-weight: bold; padding: 6px 6px 2px 6px;">Email ID: <span style="font-weight: normal;">admin@avsrfoodcourt.com</span></td>
+              </tr>
+              <tr>
+                <td colspan="7" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Address: <span style="font-weight: normal;">Food Court Campus, Main Road</span></td>
+                <td colspan="5" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Scope: <span style="font-weight: normal;">Settled Dining &amp; Takeaway Tickets</span></td>
+              </tr>
+              <tr>
+                <td colspan="7" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Phone No.: <span style="font-weight: normal;">+91 98765 43210</span></td>
+                <td colspan="5" style="font-size: 10pt; font-weight: bold; padding: 2px 6px;">Created By: <span style="font-weight: normal;">Admin</span></td>
+              </tr>
+              <tr>
+                <td colspan="12" style="font-size: 10pt; font-weight: bold; padding: 2px 6px 12px 6px;">Time Period / Date: <span style="font-weight: normal;">${periodLabel} (${activePeriodDates})</span></td>
+              </tr>
+
+              <!-- Table Headers matching pattern -->
+              <tr style="background-color: #D9EAD3;">
+                <th class="header-cell">#</th>
+                <th class="header-cell">Order ID</th>
+                <th class="header-cell">Date &amp; Time</th>
+                <th class="header-cell">Table</th>
+                <th class="header-cell">Items Summary (Dishes &amp; Drinks)</th>
+                <th class="header-cell">Payment</th>
+                <th class="header-cell">Tax (₹)</th>
+                <th class="header-cell">Discount (₹)</th>
+                <th class="header-cell">Debit / Amount (₹)</th>
+                <th class="header-cell">Credit / Reductions (₹)</th>
+                <th class="header-cell">Dr or Cr</th>
+                <th class="header-cell">Closing Balance (₹)</th>
+              </tr>
+
+              <!-- Opening Balance Row matching pattern -->
+              <tr style="font-size: 10pt;">
+                <td style="border: 1px solid #000000; text-align: center;"></td>
+                <td colspan="7" style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold; padding: 6px 8px;">Opening Balance (Settled Orders: ${searchedOrders.length} tickets)</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 6px 8px; font-weight: bold;">0.00</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 6px 8px;">0.00</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold;">-</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 6px 8px; mso-number-format: '0\\.00';">0.00</td>
+              </tr>
+
+              <!-- Data Rows -->
+              ${rowsHtml}
+
+              <!-- Closing Balance Row matching pattern -->
+              <tr class="balance-row" style="font-size: 10.5pt;">
+                <td colspan="8" style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold; padding: 7px 8px;">CLOSING LEDGER BALANCE (NET SETTLED VALUE)</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; color: #166534; mso-number-format: '0\\.00';">${totalDebitSum.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; color: #b45309; mso-number-format: '0\\.00';">${totalCreditSum.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold;">Dr</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; font-size: 11pt; color: #166534; mso-number-format: '0\\.00';">${runningBalance.toFixed(2)}</td>
+              </tr>
+
+              <!-- Total Row matching pattern -->
+              <tr class="total-row">
+                <td colspan="6" style="border: 1px solid #000000; text-align: center; padding: 7px 8px; font-weight: bold;">TOTAL SUMMARY (${searchedOrders.length} TICKETS)</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #10b981; mso-number-format: '0\\.00';">${totalTaxSum.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">${totalDiscSum.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #166534; mso-number-format: '0\\.00';">${totalDebitSum.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">${totalCreditSum.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold;">Dr</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; font-size: 11pt; color: #166534; mso-number-format: '0\\.00';">${runningBalance.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Detailed_Income_Ledger_${safePeriodName}_${todayYMD}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export ledger reconciliation error:', err);
+    }
+  };
+
+  const handleExportOrdersCSV = () => {
+    try {
+      const lines = [];
+      lines.push(`"${isBarMode ? "BAR SETTLED ORDERS & INCOME LEDGER" : "DINING SETTLED ORDERS & INCOME LEDGER"}"`);
+      lines.push(`"Period:","${getFilterPeriodLabel()}"`);
+      lines.push(`"Date Range:","${getActiveDateRangeText()}"`);
+      lines.push(`"Total Orders:","${searchedOrders.length}"`);
+      lines.push(`"Generated At:","${new Date().toLocaleString("en-IN")}"`);
+      lines.push(``);
+      lines.push(`"#","Order ID / No.","Settled Date & Time","Table","Items Summary","Payment Method","Subtotal (INR)","Tax (INR)","Discount (INR)","Total Amount (INR)"`);
+
+      searchedOrders.forEach((ord, idx) => {
+        const id = ord.orderNumber || ord.id || `ord-${idx + 1}`;
+        const dt = ord.settledAt || ord.timestamp || ord.date || "";
+        const tbl = ord.table || ord.tableName || "Takeaway";
+        const pay = normalizePaymentMethod(ord).toUpperCase();
+        const itemsSummary = (ord.items || [])
+          .map((it) => `${it.quantity || 1}x ${it.name || 'Item'}`)
+          .join('; ') || 'Order Items';
+        const sub = Number(ord.subtotal || (ord.grandTotal - (ord.taxAmount || 0))) || 0;
+        const tax = Number(ord.taxAmount) || 0;
+        const disc = Number(ord.discountAmount) || 0;
+        const grand = Number(ord.grandTotal ?? ord.total) || 0;
+        lines.push(`"${idx + 1}","${id}","${dt}","${tbl}","${itemsSummary.replace(/"/g, '""')}","${pay}","${sub.toFixed(2)}","${tax.toFixed(2)}","${disc.toFixed(2)}","${grand.toFixed(2)}"`);
+      });
+
+      const totalSub = searchedOrders.reduce((s, o) => s + (Number(o.subtotal || (o.grandTotal - (o.taxAmount || 0))) || 0), 0);
+      const totalTaxSum = searchedOrders.reduce((s, o) => s + (Number(o.taxAmount) || 0), 0);
+      const totalDiscSum = searchedOrders.reduce((s, o) => s + (Number(o.discountAmount) || 0), 0);
+      const totalGrandSum = searchedOrders.reduce((s, o) => s + (Number(o.grandTotal || o.total) || 0), 0);
+
+      lines.push(``);
+      lines.push(`"TOTAL SUMMARY (${searchedOrders.length} TICKETS)","","","","","","${totalSub.toFixed(2)}","${totalTaxSum.toFixed(2)}","${totalDiscSum.toFixed(2)}","${totalGrandSum.toFixed(2)}"`);
+
+      const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(lines.join("\n"));
+      const link = document.createElement("a");
+      const safePeriodName = filterPeriod.replace(/[^a-zA-Z0-9]/g, "_");
+      link.setAttribute("href", csvContent);
+      link.setAttribute("download", `Detailed_Income_Ledger_${safePeriodName}_${todayYMD}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export orders CSV error:", err);
+    }
   };
 
   const handleExportCSV = () => {
@@ -1602,6 +2467,304 @@ export function AdminReports({
           {activeTab === 'statement' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               
+              {/* Corner Row: Date Filter Dropdown + Export CSV / Excel Button (Matching Image 1) */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  flexWrap: 'wrap',
+                  marginBottom: '0.15rem',
+                }}
+              >
+                {/* Date Filter Dropdown (e.g. 01-Nov-2026 to 30-Nov-2026 ⌵) */}
+                <div style={{ position: 'relative' }} ref={cornerDateRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsCornerDateOpen((prev) => !prev)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      background: 'var(--bg-tertiary)',
+                      border: filterPeriod === 'custom' || filterPeriod === 'single_date' ? '1.5px solid var(--accent-amber)' : '1px solid var(--border-subtle)',
+                      borderRadius: '9px',
+                      padding: '0.38rem 0.75rem',
+                      color: 'var(--text-main)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Click to select date or filter period"
+                  >
+                    <Calendar size={13} color="#f59e0b" />
+                    <span>{getCornerDateLabel()}</span>
+                    <ChevronDown size={13} color="var(--text-muted)" style={{ transform: isCornerDateOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                  </button>
+
+                  {/* Dropdown Menu Popover */}
+                  {isCornerDateOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        right: 0,
+                        zIndex: 9999,
+                        minWidth: '280px',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '12px',
+                        padding: '0.75rem',
+                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Reporting Period Filter
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                        {[
+                          { id: 'today', label: 'Today' },
+                          { id: 'yesterday', label: 'Yesterday' },
+                          { id: 'single_date', label: 'Particular Date' },
+                          { id: 'this_week', label: 'This Week' },
+                          { id: 'week', label: 'Last 7 Days' },
+                          { id: 'last_week', label: 'Last Week' },
+                          { id: 'this_month', label: 'This Month' },
+                          { id: 'last_month', label: 'Last Month' },
+                          { id: 'this_quarter', label: 'This Quarter' },
+                          { id: 'this_year', label: 'This Year' },
+                          { id: 'all', label: 'All Time' },
+                          { id: 'custom', label: 'Custom Range' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              handleSelectPeriod(opt.id);
+                              if (opt.id !== 'single_date' && opt.id !== 'custom') {
+                                setIsCornerDateOpen(false);
+                              }
+                            }}
+                            style={{
+                              padding: '0.35rem 0.55rem',
+                              borderRadius: '6px',
+                              border: filterPeriod === opt.id ? '1px solid var(--accent-amber)' : '1px solid transparent',
+                              background: filterPeriod === opt.id ? 'rgba(245, 158, 11, 0.18)' : 'var(--bg-tertiary)',
+                              color: filterPeriod === opt.id ? '#f59e0b' : 'var(--text-main)',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Particular Date Input */}
+                      {filterPeriod === 'single_date' && (
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.5rem', marginTop: '4px' }}>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '4px' }}>
+                            Pick Particular Date:
+                          </div>
+                          <input
+                            type="date"
+                            value={startDate || todayYMD}
+                            max={todayYMD}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setStartDate(val);
+                              setEndDate(val);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '0.35rem 0.5rem',
+                              background: 'var(--bg-tertiary)',
+                              border: '1px solid var(--border-subtle)',
+                              borderRadius: '6px',
+                              color: 'var(--text-main)',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Custom Range Inputs */}
+                      {filterPeriod === 'custom' && (
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.5rem', marginTop: '4px' }}>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '4px' }}>
+                            Pick Custom Dates:
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <input
+                              type="date"
+                              value={startDate}
+                              max={endDate || todayYMD}
+                              onChange={(e) => setStartDate(e.target.value)}
+                              style={{
+                                width: '50%',
+                                padding: '0.35rem 0.4rem',
+                                background: 'var(--bg-tertiary)',
+                                border: '1px solid var(--border-subtle)',
+                                borderRadius: '6px',
+                                color: 'var(--text-main)',
+                                fontSize: '0.73rem',
+                                fontWeight: 600,
+                                boxSizing: 'border-box',
+                              }}
+                            />
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>to</span>
+                            <input
+                              type="date"
+                              value={endDate}
+                              min={startDate || undefined}
+                              max={todayYMD}
+                              onChange={(e) => setEndDate(e.target.value)}
+                              style={{
+                                width: '50%',
+                                padding: '0.35rem 0.4rem',
+                                background: 'var(--bg-tertiary)',
+                                border: '1px solid var(--border-subtle)',
+                                borderRadius: '6px',
+                                color: 'var(--text-main)',
+                                fontSize: '0.73rem',
+                                fontWeight: 600,
+                                boxSizing: 'border-box',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setIsCornerDateOpen(false)}
+                        style={{
+                          marginTop: '4px',
+                          padding: '0.4rem',
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                          border: 'none',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Apply Date Filter
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Export Button (Matching Image 1 [Export CSV] button) */}
+                <div style={{ position: 'relative' }} ref={exportMenuRef}>
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      borderRadius: '9px',
+                      padding: '0.38rem 0.85rem',
+                      color: 'var(--success)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Export neat Profit & Loss Excel sheet (Template as Image 3)"
+                  >
+                    <Download size={13} />
+                    <span>Export CSV</span>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); setIsExportMenuOpen((prev) => !prev); }}
+                      style={{ display: 'flex', alignItems: 'center', paddingLeft: '4px', borderLeft: '1px solid rgba(16, 185, 129, 0.3)', cursor: 'pointer' }}
+                      title="More export options"
+                    >
+                      <ChevronDown size={11} />
+                    </span>
+                  </button>
+
+                  {isExportMenuOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        right: 0,
+                        zIndex: 9999,
+                        minWidth: '220px',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '10px',
+                        padding: '0.45rem',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '3px',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => { handleExportExcel(); setIsExportMenuOpen(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '0.45rem 0.65rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: 'rgba(16, 185, 129, 0.1)',
+                          color: 'var(--success)',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <FileSpreadsheet size={14} />
+                        <span>Export Excel Sheet (.xls)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { handleExportCSV(); setIsExportMenuOpen(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '0.45rem 0.65rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--text-main)',
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <Download size={14} />
+                        <span>Export CSV File (.csv)</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Visual Balance Bar */}
               <div
                 style={{
@@ -1656,213 +2819,407 @@ export function AdminReports({
                 </div>
               </div>
 
-              {/* Formal Accounting Table */}
+              {/* Side by Side Two Column Template (Matching Image 1 with Active Internal Scroll on Both Cards) */}
               <div
                 style={{
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '11px',
-                  overflow: 'hidden',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+                  gap: '1rem',
+                  alignItems: 'stretch',
                 }}
               >
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                  <thead>
-                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Accounting Head / Description</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)' }}>Operational Context</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* SECTION 1: REVENUE */}
-                    <tr style={{ background: 'rgba(16, 185, 129, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td colSpan={3} style={{ padding: '7px 12px', fontWeight: 800, color: 'var(--success)', fontSize: '0.82rem' }}>
-                        1. OPERATING REVENUE (INCOME)
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        {isBarMode ? "Gross Settled Bar Sales" : "Gross Settled Dining Sales"}
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        Revenue from {filteredOrders.length} customer orders
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>
-                        +{formatCurrency(totalRevenue)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
-                        ↳ {isBarMode ? "Beverage" : "Food & Beverage"} Net Sales
-                      </td>
-                      <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
-                        Bill total minus GST &amp; service charge
-                      </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
-                        {formatCurrency(grossFoodSales)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
-                        ↳ GST &amp; Direct Taxes Collected
-                      </td>
-                      <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
-                        Tax liability collected from invoices
-                      </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--info)' }}>
-                        {formatCurrency(totalTax)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '6px 12px', paddingLeft: '24px', color: 'var(--text-muted)' }}>
-                        ↳ Service Charges Collected
-                      </td>
-                      <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
-                        Customer dining service fees
-                      </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--info)' }}>
-                        {formatCurrency(totalService)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: '#f59e0b', fontWeight: 600 }}>
-                        Less: Bill Discounts Given
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        Promotions &amp; customer reductions
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
-                        -{formatCurrency(totalDiscount)}
-                      </td>
-                    </tr>
-                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
+                {/* 1. OPERATING REVENUE (INCOME) CARD */}
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {/* Header Strip - Fixed at top */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '9px 14px',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, color: 'var(--success)', fontSize: '0.82rem', letterSpacing: '0.02em' }}>
+                      1. OPERATING REVENUE (INCOME)
+                    </span>
+                    <span style={{ fontWeight: 800, color: 'var(--success)', fontSize: '0.84rem' }}>
+                      +{formatCurrency(totalRevenue)}
+                    </span>
+                  </div>
+
+                  {/* Internal Scrollable Table Content */}
+                  <div
+                    style={{
+                      height: '185px',
+                      maxHeight: '185px',
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(16, 185, 129, 0.4) rgba(0, 0, 0, 0.2)',
+                    }}
+                  >
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                      <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
+                        <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <th style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>Accounting Head</th>
+                          <th style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>Operational Context</th>
+                          <th style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>Amount (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '7px 12px', color: 'var(--text-main)', fontWeight: 600 }}>
+                            {isBarMode ? "Gross Settled Bar Sales" : "Gross Settled Dining Sales"}
+                          </td>
+                          <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                            Revenue from {filteredOrders.length} customer orders
+                          </td>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>
+                            +{formatCurrency(totalRevenue)}
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-muted)' }}>
+                            ↳ {isBarMode ? "Beverage" : "Food & Beverage"} Net Sales
+                          </td>
+                          <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                            Bill total minus GST &amp; service charge
+                          </td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                            {formatCurrency(grossFoodSales)}
+                          </td>
+                        </tr>
+                        {dineInRevenue > 0 && (
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-muted)' }}>
+                              ↳ Dine-In Customer Sales
+                            </td>
+                            <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                              In-restaurant table dining settlements
+                            </td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                              {formatCurrency(dineInRevenue)}
+                            </td>
+                          </tr>
+                        )}
+                        {takeawayRevenue > 0 && (
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-muted)' }}>
+                              ↳ Takeaway &amp; Parcel Sales
+                            </td>
+                            <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                              Direct counter &amp; takeaway settlements
+                            </td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                              {formatCurrency(takeawayRevenue)}
+                            </td>
+                          </tr>
+                        )}
+                        {paymentStats.upi > 0 && (
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-muted)' }}>
+                              ↳ UPI / Digital Channel
+                            </td>
+                            <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                              Settled via QR / payment gateways
+                            </td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', color: '#38bdf8' }}>
+                              {formatCurrency(paymentStats.upi)}
+                            </td>
+                          </tr>
+                        )}
+                        {paymentStats.cash > 0 && (
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-muted)' }}>
+                              ↳ Cash Register Channel
+                            </td>
+                            <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                              Settled via physical cash register
+                            </td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', color: '#10b981' }}>
+                              {formatCurrency(paymentStats.cash)}
+                            </td>
+                          </tr>
+                        )}
+                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-muted)' }}>
+                            ↳ GST &amp; Direct Taxes Collected
+                          </td>
+                          <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                            Tax liability collected from invoices
+                          </td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--info)' }}>
+                            {formatCurrency(totalTax)}
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-muted)' }}>
+                            ↳ Service Charges Collected
+                          </td>
+                          <td style={{ padding: '6px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+                            Customer dining service fees
+                          </td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--info)' }}>
+                            {formatCurrency(totalService)}
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '7px 12px', color: '#f59e0b', fontWeight: 600 }}>
+                            Less: Bill Discounts Given
+                          </td>
+                          <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                            Promotions &amp; customer reductions
+                          </td>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                            -{formatCurrency(totalDiscount)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Left Footer Row - Fixed at bottom */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '9px 14px',
+                      background: 'var(--bg-secondary)',
+                      borderTop: '1px solid var(--border-subtle)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.78rem' }}>
                         Total Net Operating Revenue
-                      </td>
-                      <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
-                        Total revenue adjusted for discounts
-                      </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--success)', fontSize: '0.88rem' }}>
-                        {formatCurrency(netRevenueAfterDiscount)}
-                      </td>
-                    </tr>
+                      </div>
+                      <div style={{ fontSize: '0.71rem', color: 'var(--text-dim)' }}>
+                        Adjusted for discounts
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 800, color: 'var(--success)', fontSize: '0.9rem' }}>
+                      {formatCurrency(netRevenueAfterDiscount)}
+                    </div>
+                  </div>
+                </div>
 
-                    {/* SECTION 2: EXPENDITURE */}
-                    <tr style={{ background: 'rgba(239, 68, 68, 0.05)', borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td colSpan={3} style={{ padding: '7px 12px', fontWeight: 800, color: 'var(--danger)', fontSize: '0.82rem' }}>
-                        2. OPERATING EXPENDITURE &amp; INVENTORY
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        Current Inventory Stock Valuation
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        Current stock snapshot; shown for reference, not counted as a period expense
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
-                        {formatCurrency(totalInventoryCost)}
-                      </td>
-                    </tr>
+                {/* 2. OPERATING EXPENDITURE & INVENTORY CARD */}
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {/* Header Strip - Fixed at top */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '9px 14px',
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, color: 'var(--danger)', fontSize: '0.82rem', letterSpacing: '0.02em' }}>
+                      2. OPERATING EXPENDITURE &amp; INVENTORY
+                    </span>
+                    <span style={{ fontWeight: 800, color: 'var(--danger)', fontSize: '0.84rem' }}>
+                      -{formatCurrency(plExpenditure)}
+                    </span>
+                  </div>
 
-                    {inventoryCategoryBreakdown.slice(0, 4).map(([cat, val]) => (
-                      <tr key={cat} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                        <td style={{ padding: '5px 12px', paddingLeft: '34px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
-                          ↳ {cat} Stock Cost
-                        </td>
-                        <td style={{ padding: '5px 12px', color: 'var(--text-dim)', fontSize: '0.72rem' }}>
-                          Category inventory valuation
-                        </td>
-                        <td style={{ padding: '5px 12px', textAlign: 'right', color: 'var(--text-dim)', fontSize: '0.74rem' }}>
-                          {formatCurrency(val)}
-                        </td>
-                      </tr>
-                    ))}
+                  {/* Internal Scrollable Table Content */}
+                  <div
+                    style={{
+                      height: '185px',
+                      maxHeight: '185px',
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(239, 68, 68, 0.4) rgba(0, 0, 0, 0.2)',
+                    }}
+                  >
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                      <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
+                        <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <th style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>Accounting Head</th>
+                          <th style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>Operational Context</th>
+                          <th style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '7px 12px', color: 'var(--text-main)', fontWeight: 600 }}>
+                            Current Ingredient Stock Valuation
+                          </td>
+                          <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                            {inventoryItems.length} items at unit cost
+                          </td>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
+                            -{formatCurrency(totalInventoryCost)}
+                          </td>
+                        </tr>
 
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        Dine Inventory Purchases
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        {filteredInventoryPurchases.filter((purchase) => String(purchase.department || "dine").toLowerCase() !== "bar").length} recorded receipts in the selected period
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                        -{formatCurrency(dineInventoryPurchaseCost)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        Bar Inventory Purchases
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        {filteredInventoryPurchases.filter((purchase) => String(purchase.department || "").toLowerCase() === "bar").length} recorded receipts in the selected period
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                        -{formatCurrency(barInventoryPurchaseCost)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: 'var(--text-main)', fontWeight: 600 }}>
-                        Salary Payments
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        {filteredSalaryPayments.length} dated staff payments; monthly salary run-rate {formatCurrency(monthlyPayrollBudget)}
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                        -{formatCurrency(totalSalaryPaid)}
-                      </td>
-                    </tr>
+                        {/* All dynamic inventory categories scrollable internally */}
+                        {inventoryCategoryBreakdown.map(([cat, val]) => (
+                          <tr key={cat} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '5px 12px', paddingLeft: '22px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                              ↳ {cat} Stock Cost
+                            </td>
+                            <td style={{ padding: '5px 12px', color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                              Category inventory valuation
+                            </td>
+                            <td style={{ padding: '5px 12px', textAlign: 'right', color: 'var(--text-dim)', fontSize: '0.74rem' }}>
+                              {formatCurrency(val)}
+                            </td>
+                          </tr>
+                        ))}
 
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '7px 12px', paddingLeft: '24px', color: '#f59e0b', fontWeight: 600 }}>
-                        Customer Discounts Absorbed
-                      </td>
-                      <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
-                        Promotional price reductions on settled bills
-                      </td>
-                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
-                        -{formatCurrency(totalDiscount)}
-                      </td>
-                    </tr>
-                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--text-main)' }}>
+                        {dineInventoryPurchaseCost > 0 && (
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-main)', fontWeight: 600 }}>
+                              ↳ Dine Inventory Purchases
+                            </td>
+                            <td style={{ padding: '6px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                              {filteredInventoryPurchases.filter((p) => String(p.department || "dine").toLowerCase() !== "bar").length} recorded receipts in period
+                            </td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                              -{formatCurrency(dineInventoryPurchaseCost)}
+                            </td>
+                          </tr>
+                        )}
+
+                        {barInventoryPurchaseCost > 0 && (
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-main)', fontWeight: 600 }}>
+                              ↳ Bar Inventory Purchases
+                            </td>
+                            <td style={{ padding: '6px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                              {filteredInventoryPurchases.filter((p) => String(p.department || "").toLowerCase() === "bar").length} recorded receipts in period
+                            </td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                              -{formatCurrency(barInventoryPurchaseCost)}
+                            </td>
+                          </tr>
+                        )}
+
+                        {totalSalaryPaid > 0 && (
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '6px 12px', paddingLeft: '22px', color: 'var(--text-main)', fontWeight: 600 }}>
+                              ↳ Staff Salary Payments
+                            </td>
+                            <td style={{ padding: '6px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                              {filteredSalaryPayments.length} dated staff payments
+                            </td>
+                            <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                              -{formatCurrency(totalSalaryPaid)}
+                            </td>
+                          </tr>
+                        )}
+
+                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '7px 12px', color: '#f59e0b', fontWeight: 600 }}>
+                            Customer Discounts Absorbed
+                          </td>
+                          <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                            Promotional reductions on bills
+                          </td>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                            -{formatCurrency(totalDiscount)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Right Footer Row - Fixed at bottom */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '9px 14px',
+                      background: 'var(--bg-secondary)',
+                      borderTop: '1px solid var(--border-subtle)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.78rem' }}>
                         Total Operating Expenditure
-                      </td>
-                      <td style={{ padding: '8px 12px', color: 'var(--text-dim)', fontSize: '0.73rem' }}>
-                        Recorded inventory purchases + paid salaries + customer discounts
-                      </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--danger)', fontSize: '0.88rem' }}>
-                        -{formatCurrency(plExpenditure)}
-                      </td>
-                    </tr>
+                      </div>
+                      <div style={{ fontSize: '0.71rem', color: 'var(--text-dim)' }}>
+                        Stock + discounts
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 800, color: 'var(--danger)', fontSize: '0.9rem' }}>
+                      -{formatCurrency(plExpenditure)}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                    {/* SECTION 3: NET BOTTOM LINE */}
-                    <tr
-                      style={{
-                        background: isProfit ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                        borderTop: `2px solid ${isProfit ? '#10b981' : '#ef4444'}`,
-                      }}
-                    >
-                      <td style={{ padding: '10px 12px', fontWeight: 900, fontSize: '0.92rem', color: isProfit ? 'var(--success)' : 'var(--danger)' }}>
-                        {isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING LOSS'}
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-main)', fontSize: '0.76rem', fontWeight: 600 }}>
-                        Total Income − Total Expenditure ({profitMarginPercent}% Operating Margin)
-                      </td>
-                      <td
-                        style={{
-                          padding: '10px 12px',
-                          textAlign: 'right',
-                          fontWeight: 900,
-                          fontSize: '1.15rem',
-                          color: isProfit ? 'var(--success)' : 'var(--danger)',
-                        }}
-                      >
-                        {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              {/* Full-width NET OPERATING PROFIT Banner Underneath (Matching Image 1) */}
+              <div
+                style={{
+                  background: isProfit ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                  border: `1.5px solid ${isProfit ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+                  borderRadius: '12px',
+                  padding: '1rem 1.35rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  boxShadow: isProfit ? '0 4px 15px rgba(16, 185, 129, 0.12)' : '0 4px 15px rgba(239, 68, 68, 0.12)',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 900,
+                      color: isProfit ? 'var(--success)' : 'var(--danger)',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING LOSS'}
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 600 }}>
+                    Total Income − Total Expenditure ({profitMarginPercent}% Operating Margin)
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: '1.45rem',
+                    fontWeight: 900,
+                    color: isProfit ? 'var(--success)' : 'var(--danger)',
+                  }}
+                >
+                  {isProfit ? '+' : '-'}{formatCurrency(Math.abs(plNet))}
+                </div>
               </div>
 
             </div>
@@ -1922,8 +3279,35 @@ export function AdminReports({
                   )}
                 </div>
 
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Showing <strong style={{ color: 'var(--text-main)' }}>{searchedOrders.length}</strong> of {filteredOrders.length} settled tickets · Page {ordersPage} of {totalOrdersPages}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Showing <strong style={{ color: 'var(--text-main)' }}>{searchedOrders.length}</strong> of {filteredOrders.length} settled tickets · Page {ordersPage} of {totalOrdersPages}
+                  </div>
+
+                  {/* Export CSV Button (Matching Image 1 & 2) */}
+                  <button
+                    type="button"
+                    onClick={handleExportLedgerReconciliationExcel}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1.5px solid #10b981',
+                      borderRadius: '10px',
+                      padding: '0.38rem 0.85rem',
+                      color: '#ffffff',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.2)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Export settled tickets to CSV"
+                  >
+                    <Download size={14} color="#10b981" />
+                    <span>Export CSV</span>
+                  </button>
                 </div>
               </div>
 
@@ -2372,8 +3756,35 @@ export function AdminReports({
                   </select>
                 </div>
 
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Showing <strong style={{ color: 'var(--text-main)' }}>{searchedInventory.length}</strong> items · Page {invPage} of {totalInvPages}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Showing <strong style={{ color: 'var(--text-main)' }}>{searchedInventory.length}</strong> items · Page {invPage} of {totalInvPages}
+                  </div>
+
+                  {/* Export CSV Button (Matching Image 1 & 2) */}
+                  <button
+                    type="button"
+                    onClick={handleExportExpenditureReconciliationExcel}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1.5px solid #10b981',
+                      borderRadius: '10px',
+                      padding: '0.38rem 0.85rem',
+                      color: '#ffffff',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.2)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Export inventory valuation to CSV"
+                  >
+                    <Download size={14} color="#10b981" />
+                    <span>Export CSV</span>
+                  </button>
                 </div>
               </div>
 
