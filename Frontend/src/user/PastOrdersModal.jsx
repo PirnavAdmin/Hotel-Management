@@ -67,65 +67,40 @@ const formatUSDateInput = (value) => {
 const compareDatesNewestFirst = (a, b) =>
   (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
 
-export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, onRefresh }) {
+export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
   const [liveOrders, setLiveOrders] = useState([]);
-  const [liveOrdersLoaded, setLiveOrdersLoaded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [liveOrdersError, setLiveOrdersError] = useState("");
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       const { records, error } = await requestLiveInvoiceRecords();
-      if (!error && Array.isArray(records)) {
-        setLiveOrders(records);
-        setLiveOrdersLoaded(true);
-        if (typeof onRefresh === 'function') {
-          onRefresh(records);
-        }
+      setLiveOrders(Array.isArray(records) ? records : []);
+      setLiveOrdersError(error || "");
+      if (Array.isArray(records) && typeof onRefresh === 'function') {
+        onRefresh(records);
       }
-    } catch {} finally {
+    } catch (error) {
+      setLiveOrders([]);
+      setLiveOrdersError(error?.message || "Live invoices could not be loaded.");
+    } finally {
       setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    const syncOrders = (orders) => {
-      if (!Array.isArray(orders)) return;
-      setLiveOrders(dedupeOrders(orders));
-      setLiveOrdersLoaded(true);
-    };
-    syncOrders(pastOrders);
     handleRefresh();
-    const handleUpdate = (event) => {
-      syncOrders(event.detail);
-      handleRefresh();
-    };
-    const handleStorage = (event) => {
-      if (event.key !== "gourmet_pos_past_orders_v2_inr") return;
-      if (event.newValue) {
-        try { syncOrders(JSON.parse(event.newValue)); } catch {}
-      }
-      handleRefresh();
-    };
+    const handleUpdate = () => handleRefresh();
     window.addEventListener("avsr-invoices-updated", handleUpdate);
-    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("avsr-invoices-updated", handleUpdate);
-      window.removeEventListener("storage", handleStorage);
     };
-  }, [pastOrders]);
+  }, []);
 
   const uniquePastOrders = useMemo(() => {
-    const combined = liveOrdersLoaded
-      ? liveOrders
-      : pastOrders;
-    const settledOnly = combined.filter((o) => {
-      if (!o || typeof o !== "object") return false;
-      const status = String(o.status || o.Status || "").toLowerCase();
-      return status !== "active" && status !== "dining" && status !== "vacant";
-    });
-    return dedupeOrders(settledOnly);
-  }, [pastOrders, liveOrders, liveOrdersLoaded]);
+    return dedupeOrders(liveOrders);
+  }, [liveOrders]);
 
 
   // Helper to parse date from order safely
@@ -557,6 +532,11 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
             </button>
           </div>
         </div>
+        {liveOrdersError && (
+          <div role="alert" style={{ padding: "0.65rem 1rem", color: "var(--danger)", borderBottom: "1px solid var(--border-subtle)", fontSize: "0.8rem" }}>
+            {liveOrdersError}
+          </div>
+        )}
 
         {/* View Mode & Filter Navigation Bar */}
         <div style={{

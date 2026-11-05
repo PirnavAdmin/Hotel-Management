@@ -24,7 +24,8 @@ import {
   apiMarkAllBarBotTableReady,
   apiGetBarDrinks,
 } from "../api/barApi";
-import { apiGetActiveKitchenTickets, apiUpdateKitchenItemStatus } from "../api/kitchenApi";
+import { apiGetActiveOrders } from "../api/orderApi";
+import { apiUpdateKitchenItemStatus } from "../api/kitchenApi";
 import {
   createMenuItemLookup,
   findMenuItem,
@@ -112,8 +113,9 @@ export function BarBOTView({
     apiGetBarBotFilterOptions()
       .then((res) => {
         if (!isMounted) return;
-        if (res?.success && res.data) {
-          setBotFilterOptions(res.data);
+        const payload = res?.data?.data ?? res?.data;
+        if (res?.success && payload?.success !== false && payload) {
+          setBotFilterOptions(payload);
         }
       })
       .catch(() => {});
@@ -127,30 +129,70 @@ export function BarBOTView({
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      // 1. Try dedicated Bar BOT endpoint first
-      const botRes = await apiGetBarBotTickets();
-      if (botRes?.success && (Array.isArray(botRes.data) || Array.isArray(botRes.tickets))) {
-        const rows = botRes.data || botRes.tickets;
+      let botRes;
+      try {
+        botRes = await apiGetBarBotTickets();
+      } catch (botError) {
+        console.warn("[BarBOTView] BOT feed unavailable; loading active POS orders:", botError?.message);
+      }
+      const botPayload = botRes?.data;
+      const botRows = Array.isArray(botPayload)
+        ? botPayload
+        : Array.isArray(botPayload?.data)
+        ? botPayload.data
+        : Array.isArray(botPayload?.tickets)
+        ? botPayload.tickets
+        : Array.isArray(botRes?.tickets)
+        ? botRes.tickets
+        : null;
+
+      if (botRes?.success && botPayload?.success !== false && botRows) {
+        const rows = botRows;
         setBackendTickets(rows);
         setError("");
       } else {
-        // 2. Fallback to active kitchen tickets
-        const res = await apiGetActiveKitchenTickets();
-        if (res?.success && Array.isArray(res.data)) {
-          setBackendTickets(res.data);
-          setError("");
+        const ordersRes = await apiGetActiveOrders();
+        const ordersPayload = ordersRes?.data;
+        const orders = Array.isArray(ordersPayload)
+          ? ordersPayload
+          : Array.isArray(ordersPayload?.data)
+          ? ordersPayload.data
+          : Array.isArray(ordersPayload?.orders)
+          ? ordersPayload.orders
+          : null;
+        if (!ordersRes?.success || ordersPayload?.success === false || !orders) {
+          throw new Error(ordersRes?.error || ordersPayload?.message || "Live POS orders could not be loaded.");
         }
+        setBackendTickets(
+          orders.map((order) => ({
+            ...order,
+            ticketId: order.ticketId ?? order.orderId ?? order.id,
+            tableId: order.tableId ?? order.TableId,
+            tableName: order.tableName ?? order.tableNumber,
+            serverName: order.serverName ?? order.waiterName ?? order.server,
+            orderTime: order.orderTime ?? order.createdAt,
+            items: Array.isArray(order.items)
+              ? order.items
+              : Array.isArray(order.orderItems)
+              ? order.orderItems
+              : [],
+          }))
+        );
+        setError("");
       }
 
-      // Fetch live KPI summary metrics
       try {
         const summaryRes = await apiGetBarBotSummary();
-        if (summaryRes?.success && summaryRes.data) {
-          setBotSummary(summaryRes.data);
+        const summary = summaryRes?.data?.data ?? summaryRes?.data;
+        if (summaryRes?.success && summary?.success !== false && summary) {
+          setBotSummary(summary);
         }
-      } catch {}
+      } catch (summaryError) {
+        console.warn("[BarBOTView] Could not refresh BOT summary:", summaryError?.message);
+      }
     } catch (err) {
-      // Backend error - non blocking
+      setError(err?.message || "Live POS orders could not be loaded.");
+      console.warn("[BarBOTView] Could not refresh live BOT tickets:", err?.message);
     } finally {
       inFlightRef.current = false;
       setLoading(false);
@@ -555,6 +597,11 @@ export function BarBOTView({
       </div>}
 
       {/* 2. Table Filter Bar with Dropdown (Exact Match to Dine KOT) */}
+      {error && (
+        <div role="alert" style={{ color: "#fca5a5", marginBottom: "0.75rem" }}>
+          {error}
+        </div>
+      )}
       <div
         style={{
           background: "var(--bg-primary, #0b1120)",

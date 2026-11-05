@@ -111,8 +111,7 @@ const formatInvoiceTime = (value) => {
 
 
 export function AdminInvoices({
-  pastOrders = [],
-  preferPastOrders = false,
+  invoiceFilter = null,
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
@@ -199,13 +198,8 @@ export function AdminInvoices({
     };
   }, []);
 
-  // Include locally synchronized POS settlements alongside live API invoices.
-  // Takeaway checkouts are saved to the shared POS invoice history and may not
-  // have a table-backed API order record, so choosing only API data hid them here.
-  const allOrders = dedupeOrders(
-    preferPastOrders || invoiceLoadError
-      ? pastOrders
-      : [...pastOrders, ...invoiceRecords],
+  const allOrders = dedupeOrders(invoiceRecords).filter(
+    (order) => typeof invoiceFilter !== "function" || invoiceFilter(order),
   );
 
   const openDiscountEditor = (order) => {

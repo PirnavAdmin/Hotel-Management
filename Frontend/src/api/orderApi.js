@@ -168,7 +168,13 @@ export async function apiGetOrderHistory({ orderType, remoteOnly = false } = {})
       { remoteOnly },
     );
     const pageOrders = pageResponse?.data?.orders;
-    if (!pageResponse?.success || !Array.isArray(pageOrders)) break;
+    if (!pageResponse?.success || !Array.isArray(pageOrders)) {
+      return {
+        ...firstResponse,
+        success: false,
+        error: pageResponse?.error || `Unable to load order history page ${page}.`,
+      };
+    }
     orders.push(...pageOrders);
   }
 
