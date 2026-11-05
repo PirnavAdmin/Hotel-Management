@@ -213,6 +213,10 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         .takeaway-order-panel { position: sticky; top: 100px; box-sizing: border-box; width: 100%; min-width: 0; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-secondary); }
         .takeaway-kitchen-order { margin-top: .65rem; padding: .65rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-tertiary); }
         .takeaway-secondary-button { padding: .4rem .35rem; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-secondary); color: var(--text-main); font-size: .75rem; font-weight: 700; cursor: pointer; }
+        .takeaway-page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .takeaway-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; }
+        .takeaway-header-actions .takeaway-secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 38px; padding: .55rem .75rem; font-size: .85rem; white-space: nowrap; }
+        @media (max-width: 600px) { .takeaway-page-header { align-items: flex-start; } .takeaway-header-actions { width: 100%; justify-content: flex-start; } .takeaway-header-actions .takeaway-secondary-button { flex: 1 1 auto; } }
         .takeaway-history-overlay { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,.68); }
         .takeaway-history-dialog { display: flex; flex-direction: column; width: min(100%, 620px); max-height: min(82vh, 760px); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-secondary); color: var(--text-main); box-shadow: 0 24px 70px rgba(0,0,0,.4); }
         .takeaway-history-content { overflow-y: auto; padding: .9rem 1rem 1rem; }
@@ -223,8 +227,12 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         @media (max-width: 900px) { .takeaway-layout { grid-template-columns: minmax(0, 1fr); } .takeaway-order-panel { position: static; } }
         @media (max-width: 600px) { .takeaway-section { padding: 1rem !important; } }
       `}</style>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+      <div className="takeaway-page-header">
         <div><h2 style={{ margin: 0, fontSize: "1.5rem" }}>Takeaway Menu</h2><p style={{ margin: "0.3rem 0 0", color: "var(--text-muted)" }}>Choose items for a takeaway order.</p></div>
+        <div className="takeaway-header-actions">
+          <button type="button" onClick={() => setHistoryOpen(true)} className="takeaway-secondary-button"><History size={16}/> Order History</button>
+          <button type="button" onClick={() => setPaidOrdersOpen(true)} className="takeaway-secondary-button"><ClipboardList size={16}/> Paid Takeaway Orders{takeawayOrders.length > 0 && <span style={{ color: "var(--accent-amber-light)" }}>({takeawayOrders.length})</span>}</button>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: ".5rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: ".6rem .8rem" }}><ShoppingBag size={18}/><strong>{count} items</strong><span style={{ color: "var(--accent-amber-light)" }}>₹{total.toFixed(2)}</span></div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: ".65rem", flexWrap: "wrap", marginBottom: "1rem" }}>
@@ -251,8 +259,6 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         <div style={{ marginTop: ".45rem", display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}><span>GST (5%)</span><span>₹{(total * .05).toFixed(2)}</span></div>
         <div style={{ marginTop: ".55rem", display: "flex", justifyContent: "space-between", fontSize: "1.1rem" }}><strong>Total</strong><strong style={{ color: "var(--accent-amber-light)" }}>₹{Math.round(total * 1.05).toFixed(2)}</strong></div>
         <button disabled={!count} onClick={() => onCheckout?.(Object.values(cart).map(({ item, quantity }) => ({ ...item, quantity })))} style={{ width: "100%", marginTop: ".9rem", padding: ".75rem", border: 0, borderRadius: 9, background: count ? "var(--accent-amber)" : "var(--bg-tertiary)", color: count ? "#111" : "var(--text-muted)", fontWeight: 800, cursor: count ? "pointer" : "not-allowed" }}>Pay &amp; Send to Kitchen</button>
-        <button type="button" onClick={() => setHistoryOpen(true)} className="takeaway-secondary-button" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: ".45rem", width: "100%", marginTop: ".65rem", padding: ".6rem .75rem", fontSize: ".85rem" }}><History size={16}/> Order History</button>
-        <button type="button" onClick={() => setPaidOrdersOpen(true)} className="takeaway-secondary-button" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: ".45rem", width: "100%", marginTop: ".65rem", padding: ".6rem .75rem", fontSize: ".85rem" }}><ClipboardList size={16}/> Paid Takeaway Orders{takeawayOrders.length > 0 && <span style={{ color: "var(--accent-amber-light)" }}>({takeawayOrders.length})</span>}</button>
         {orderNotice && <p role="status" style={{ color: "var(--text-muted)", fontSize: ".85rem", margin: ".45rem 0 0" }}>{orderNotice}</p>}
         {selectedOrderInfo && <div className="takeaway-kitchen-order" role="region" aria-label="Takeaway order details">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: ".5rem" }}><h4 style={{ margin: 0 }}>Order #{selectedOrderInfo.order?.id ?? selectedOrderInfo.order?.orderId ?? ""}</h4><button className="takeaway-secondary-button" onClick={() => setSelectedOrderInfo(null)}>Close</button></div>
