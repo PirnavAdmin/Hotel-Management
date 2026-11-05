@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "node:url";
 let nodemailer = null;
 try {
   const nmMod = await import("nodemailer");
@@ -10,7 +11,8 @@ try {
   nodemailer = null;
 }
 
-const env = loadEnv("development", process.cwd(), "");
+const FRONTEND_ROOT = path.dirname(fileURLToPath(import.meta.url));
+const WORKSPACE_ROOT = path.resolve(FRONTEND_ROOT, "..");
 
 const getBusinessDateStr = (dateObj = new Date()) => {
   const d = new Date(dateObj);
@@ -1857,16 +1859,12 @@ function globalSyncPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+  const env = {
+    ...loadEnv(mode, WORKSPACE_ROOT, ""),
+    ...loadEnv(mode, FRONTEND_ROOT, ""),
+  };
 
   let apiBase = env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
-  if (!apiBase) {
-    try {
-      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
-      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
-      if (match) apiBase = match[0].replace(/\/$/, "");
-    } catch {}
-  }
   if (!apiBase) {
     apiBase = "";
   } else {

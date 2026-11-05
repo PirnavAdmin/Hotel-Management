@@ -906,7 +906,7 @@ function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isL
 
 import { SkeletonCard } from "../common/Skeletons";
 
-export function TableView({ tables, onSelectTable, onUpdateTable, loading = false }) {
+export function TableView({ tables, onSelectTable, onUpdateTable, loading = false, loadError = "" }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -1518,6 +1518,22 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
             bills in <strong>Rupees (₹)</strong>.
           </p>
         </div>
+
+        {loadError && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: "1rem",
+              padding: "0.75rem 1rem",
+              border: "1px solid rgba(239, 68, 68, 0.35)",
+              borderRadius: "8px",
+              background: "rgba(239, 68, 68, 0.08)",
+              color: "var(--danger)",
+            }}
+          >
+            Live tables and active orders could not be verified. {loadError}
+          </div>
+        )}
 
         {/* Search & Status Filters */}
         <div

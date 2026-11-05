@@ -64,6 +64,7 @@ import {
 } from "./api/staffApi";
 import {
   apiGetOrderHistory,
+  apiGetActiveOrders,
   apiGetOrderForTable,
   apiCreateOrder,
   apiAddOrderItems,
@@ -80,7 +81,7 @@ import { API_BASE_URL, API_HTTP_BASE } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
-import { getTodayDateString } from "./utils/invoiceCounter";
+import { getBusinessDayKey, getTodayDateString } from "./utils/invoiceCounter";
 import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
@@ -107,6 +108,95 @@ const readStoredArray = (key) => {
   } catch {
     return [];
   }
+};
+
+const mergeCurrentBusinessDayOrders = (tables, orders) => {
+  const today = getBusinessDayKey(new Date());
+  const orderByTableId = new Map();
+  const orderByTableNumber = new Map();
+
+  (Array.isArray(orders) ? orders : []).forEach((order) => {
+    const status = String(order?.status || order?.Status || "").toLowerCase();
+    const orderType = String(order?.orderType || order?.OrderType || "").toLowerCase();
+    const createdAt = order?.createdAt || order?.CreatedAt || order?.orderTimestamp;
+    if (
+      !order ||
+      !["active", "billed"].includes(status) ||
+      orderType === "takeaway" ||
+      !createdAt ||
+      getBusinessDayKey(createdAt) !== today
+    ) {
+      return;
+    }
+
+    const tableId = order.tableId ?? order.TableId;
+    const tableNumber = parseTableNumber({
+      tableNumber: order.tableNumber ?? order.TableNumber,
+      tableName: order.tableName ?? order.TableName,
+      name: order.tableName ?? order.TableName,
+    });
+    if (Number(tableId) > 0 && !orderByTableId.has(String(tableId))) {
+      orderByTableId.set(String(tableId), order);
+    }
+    if (tableNumber > 0 && !orderByTableNumber.has(String(tableNumber))) {
+      orderByTableNumber.set(String(tableNumber), order);
+    }
+  });
+
+  return tables.map((table) => {
+    const order =
+      orderByTableId.get(String(table.backendTableId ?? table.tableId ?? "")) ||
+      orderByTableNumber.get(String(parseTableNumber(table) || ""));
+    if (!order) return table;
+
+    const orderItems = Array.isArray(order.items)
+      ? order.items
+      : Array.isArray(order.Items)
+      ? order.Items
+      : [];
+    const items = orderItems
+      .filter((item) => {
+        const status = String(item?.status || item?.Status || "").toLowerCase();
+        const kotStatus = String(item?.kotStatus || item?.KotStatus || "").toLowerCase();
+        return status !== "cancelled" && status !== "canceled" && kotStatus !== "cancelled" && kotStatus !== "canceled";
+      })
+      .map((item) => ({
+        ...item,
+        id: item.id ?? item.Id,
+        orderItemId: item.orderItemId ?? item.id ?? item.Id,
+        menuItemId: item.menuItemId ?? item.MenuItemId,
+        name: item.name ?? item.Name ?? item.dishName ?? item.DishName ?? "Order Item",
+        dishName: item.dishName ?? item.DishName ?? item.name ?? item.Name ?? "Order Item",
+        price: Number(item.price ?? item.Price) || 0,
+        quantity: Number(item.quantity ?? item.Quantity) || 1,
+        notes: item.notes ?? item.Notes ?? "",
+        status: "active",
+        kotStatus: String(item.kotStatus ?? item.KotStatus ?? "queued").toLowerCase(),
+        orderId: item.orderId ?? item.OrderId ?? order.id ?? order.Id,
+      }));
+
+    if (items.length === 0) return table;
+    const orderStatus = String(order.status ?? order.Status).toLowerCase();
+    const guests = Number(order.guests ?? order.Guests) || 0;
+    const createdAt = order.createdAt ?? order.CreatedAt;
+    return {
+      ...table,
+      status: orderStatus === "billed" ? "billed" : "occupied",
+      guests,
+      occupiedChairs: guests,
+      selectedSeats: [],
+      items,
+      activeOrderId: order.id ?? order.Id,
+      orderTime: createdAt,
+      orderTimestamp: new Date(createdAt).getTime() || null,
+      subtotal: Number(order.subtotal ?? order.Subtotal) || 0,
+      discountPercent: Number(order.discountPercent ?? order.DiscountPercent) || 0,
+      discountAmount: Number(order.discountAmount ?? order.DiscountAmount) || 0,
+      taxAmount: Number(order.taxAmount ?? order.TaxAmount) || 0,
+      serviceChargeAmount: Number(order.serviceChargeAmount ?? order.ServiceChargeAmount) || 0,
+      grandTotal: Number(order.grandTotal ?? order.GrandTotal) || 0,
+    };
+  });
 };
 
 const normalizeSalaryPayment = (payment) => ({
@@ -242,7 +332,37 @@ const parseTableNumber = (table) => {
   return getTableSortNumber(table);
 };
 
-const mergeIncomingTables = (incomingTables, deletedTableIds) => {
+const clearCachedTableOrder = (table) => ({
+  ...table,
+  status: ["reserved", "cleaning", "inactive"].includes(
+    String(table.status || "").toLowerCase(),
+  )
+    ? table.status
+    : "vacant",
+  guests: 0,
+  occupiedChairs: 0,
+  selectedSeats: [],
+  items: [],
+  orderTime: null,
+  orderTimestamp: null,
+  occupiedSince: null,
+  activeOrderId: null,
+  cookingStartedAt: null,
+  completedAt: null,
+  completedDuration: null,
+  discountPercent: 0,
+  discountAmount: 0,
+  subtotal: 0,
+  taxAmount: 0,
+  serviceChargeAmount: 0,
+  grandTotal: 0,
+});
+
+const mergeIncomingTables = (
+  incomingTables,
+  deletedTableIds,
+  { preserveCachedOrders = true } = {},
+) => {
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
     : [];
@@ -254,7 +374,10 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
     if (rawSaved) {
       const parsedSaved = JSON.parse(rawSaved);
       if (Array.isArray(parsedSaved)) {
-        parsedSaved.forEach((st) => {
+        parsedSaved.forEach((savedTable) => {
+          const st = preserveCachedOrders
+            ? savedTable
+            : clearCachedTableOrder(savedTable);
           if (st && st.id && !deletedIds.includes(String(st.id))) {
             const num = parseTableNumber(st) || Number(st.id);
             if (num) {
@@ -297,7 +420,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       const hasActiveItems =
         (Array.isArray(table.items) && table.items.length > 0)
           ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
-          : (Array.isArray(existing.items) && existing.items.length > 0
+          : (preserveCachedOrders && Array.isArray(existing.items) && existing.items.length > 0
               ? existing.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
               : false);
 
@@ -315,13 +438,13 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         : (Number(table.guests) > 0 ? Number(table.guests) : null) ??
           (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
           (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
-          (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
+          (preserveCachedOrders && Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
           0;
 
       const resolvedItems =
         (Array.isArray(table.items) && table.items.length > 0)
           ? table.items
-          : (Array.isArray(existing.items) && existing.items.length > 0
+          : (preserveCachedOrders && Array.isArray(existing.items) && existing.items.length > 0
               ? existing.items
               : (Array.isArray(table.items) ? table.items : []));
 
@@ -346,20 +469,20 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
           ? []
           : (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0
               ? table.selectedSeats
-              : (Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
+              : (preserveCachedOrders && Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
         items: isFinalVacant ? [] : resolvedItems,
-        orderTime: isFinalVacant ? null : (table.orderTime ?? existing.orderTime ?? null),
-        orderTimestamp: isFinalVacant ? null : (table.orderTimestamp ?? existing.orderTimestamp ?? null),
-        cookingStartedAt: isFinalVacant ? null : (table.cookingStartedAt ?? existing.cookingStartedAt ?? null),
-        completedAt: isFinalVacant ? null : (table.completedAt ?? existing.completedAt ?? null),
-        completedDuration: isFinalVacant ? null : (table.completedDuration ?? existing.completedDuration ?? null),
+        orderTime: isFinalVacant ? null : (table.orderTime ?? (preserveCachedOrders ? existing.orderTime : null) ?? null),
+        orderTimestamp: isFinalVacant ? null : (table.orderTimestamp ?? (preserveCachedOrders ? existing.orderTimestamp : null) ?? null),
+        cookingStartedAt: isFinalVacant ? null : (table.cookingStartedAt ?? (preserveCachedOrders ? existing.cookingStartedAt : null) ?? null),
+        completedAt: isFinalVacant ? null : (table.completedAt ?? (preserveCachedOrders ? existing.completedAt : null) ?? null),
+        completedDuration: isFinalVacant ? null : (table.completedDuration ?? (preserveCachedOrders ? existing.completedDuration : null) ?? null),
         discountPercent: Number(
-          table.discountPercent ?? existing.discountPercent ?? 0,
+          table.discountPercent ?? (preserveCachedOrders ? existing.discountPercent : 0) ?? 0,
         ),
         serviceCharge: Number(
           table.serviceCharge ?? existing.serviceCharge ?? 5,
         ),
-        occupiedSince: isFinalVacant ? null : (table.occupiedSince || existing.occupiedSince || null),
+        occupiedSince: isFinalVacant ? null : (table.occupiedSince || (preserveCachedOrders ? existing.occupiedSince : null) || null),
       };
 
       tablesById.set(targetId, normalized);
@@ -498,15 +621,7 @@ export function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return mergeIncomingTables(parsed, delList)
-            .map((t) => {
-              const safeItems = Array.isArray(t.items) ? t.items : [];
-              const hasActiveItems = safeItems.some(i => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
-              if (!hasActiveItems && t.status === "occupied") {
-                return { ...t, status: "vacant", guests: 0, occupiedChairs: 0, selectedSeats: [], items: [] };
-              }
-              return { ...t, items: safeItems };
-            })
+          return mergeIncomingTables(parsed, delList, { preserveCachedOrders: false })
             .filter((t) => !isDeleted(t.id));
         }
       }
@@ -515,6 +630,8 @@ export function App() {
     }
     return [];
   });
+  const [tablesReadyForSync, setTablesReadyForSync] = useState(false);
+  const replaceCachedTableOrdersRef = useRef(false);
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
     staff: "loading",
@@ -644,32 +761,61 @@ export function App() {
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
-    apiGetTables().then((response) => {
-      const backendTables = Array.isArray(response)
-        ? response
-        : response?.success && Array.isArray(response.data)
-          ? response.data
-          : response?.success && Array.isArray(response.tables)
-            ? response.tables
-        : response?.success && Array.isArray(response.data?.tables)
-          ? response.data.tables
-        : response?.success && Array.isArray(response.data?.data)
-          ? response.data.data
-          : null;
-      if (Array.isArray(backendTables)) {
-        const merged = mergeIncomingTables(
+    const loadLiveTables = async () => {
+      try {
+        const response = await apiGetTables();
+        const backendTables = Array.isArray(response)
+          ? response
+          : response?.success && Array.isArray(response.data)
+            ? response.data
+            : response?.success && Array.isArray(response.tables)
+              ? response.tables
+              : response?.success && Array.isArray(response.data?.tables)
+                ? response.data.tables
+                : response?.success && Array.isArray(response.data?.data)
+                  ? response.data.data
+                  : null;
+        if (!Array.isArray(backendTables)) {
+          throw new Error(response?.error || response?.data?.message || "Table records could not be loaded.");
+        }
+
+        const tableDefinitions = mergeIncomingTables(
           backendTables,
           getDeletedTableIds(),
+          { preserveCachedOrders: false },
         );
+        const ordersResponse = await apiGetActiveOrders();
+        const activeOrders = ordersResponse?.success && Array.isArray(ordersResponse.data)
+          ? ordersResponse.data
+          : ordersResponse?.success && Array.isArray(ordersResponse.data?.orders)
+            ? ordersResponse.data.orders
+            : null;
+        if (!activeOrders) {
+          throw new Error(
+            ordersResponse?.error ||
+            ordersResponse?.data?.message ||
+            "Active POS orders could not be loaded.",
+          );
+        }
+
+        const merged = mergeCurrentBusinessDayOrders(tableDefinitions, activeOrders);
+        replaceCachedTableOrdersRef.current = true;
         setTables(merged);
-        try {
-          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(merged));
-        } catch {}
         setSharedRecordLoad((state) => ({ ...state, tables: "ready", tableError: "" }));
-      } else {
-        setSharedRecordLoad((state) => ({ ...state, tables: "error", tableError: response?.error || response?.data?.message || "Table records could not be loaded." }));
+        setTablesReadyForSync(true);
+      } catch (error) {
+        const cleanCachedTables = mergeIncomingTables(
+          [],
+          getDeletedTableIds(),
+          { preserveCachedOrders: false },
+        );
+        replaceCachedTableOrdersRef.current = true;
+        setTables(cleanCachedTables);
+        setSharedRecordLoad((state) => ({ ...state, tables: "error", tableError: error?.message || "Table records could not be loaded." }));
+        setTablesReadyForSync(true);
       }
-    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, tables: "error", tableError: error?.message || "Table records could not be loaded." })));
+    };
+    loadLiveTables();
 
     // 2. Load live menu items from backend API
     apiGetMenuItems().then((response) => {
@@ -1042,6 +1188,7 @@ export function App() {
 
   // Sync to LocalStorage & Global Network DB
   useEffect(() => {
+    if (!tablesReadyForSync) return;
     try {
       const isDeleted = (id) =>
         (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
@@ -1050,9 +1197,11 @@ export function App() {
       const cleanTables = mergeIncomingTables(
         Array.isArray(tables) ? tables : [],
         deletedTableIds,
+        { preserveCachedOrders: !replaceCachedTableOrdersRef.current },
       )
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
+      replaceCachedTableOrdersRef.current = false;
       const cleanJson = JSON.stringify(cleanTables);
       if (localStorage.getItem(STORAGE_KEY_TABLES) !== cleanJson) {
         localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
@@ -1060,7 +1209,7 @@ export function App() {
         broadcastSync("SYNC_TABLES", cleanTables);
       }
     } catch {}
-  }, [tables, deletedTableIds]);
+  }, [tables, deletedTableIds, tablesReadyForSync]);
 
   useEffect(() => {
     try {
@@ -3376,7 +3525,8 @@ export function App() {
               {activeView === "tables" && (
                 <TableView
                   tables={tables}
-                  loading={sharedRecordLoad.tables === "loading" && tables.length === 0}
+                  loading={sharedRecordLoad.tables === "loading"}
+                  loadError={sharedRecordLoad.tableError}
                   onSelectTable={handleSelectTable}
                   onUpdateTable={handleUpdateTable}
                 />
