@@ -211,6 +211,15 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         .takeaway-add-button, .takeaway-qty-button { display: inline-flex; align-items: center; justify-content: center; gap: .2rem; min-height: 27px; padding: .25rem .45rem; border: 1px solid rgba(245,158,11,.45); border-radius: 6px; background: linear-gradient(135deg,#f59e0b,#ea580c); color: #111827; font-size: .76rem; font-weight: 800; cursor: pointer; }
         .takeaway-qty-button { width: 26px; min-height: 26px; padding: 0; background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
         .takeaway-order-panel { position: sticky; top: 100px; box-sizing: border-box; width: 100%; min-width: 0; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-secondary); }
+        .takeaway-cart-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem .6rem; align-items: start; border-bottom: 1px solid var(--border-subtle); padding-bottom: .65rem; }
+        .takeaway-cart-line-details { min-width: 0; overflow-wrap: anywhere; }
+        .takeaway-cart-line-controls { grid-column: 1; display: inline-flex; align-items: center; justify-self: start; gap: .35rem; min-height: 26px; padding: .1rem .25rem; border: 1px solid #e2e8f0; border-radius: 7px; background: #fff; color: #172033; }
+        .takeaway-cart-line-controls button { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 20px; padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
+        .takeaway-cart-line-controls button:first-child { color: #172033; }
+        .takeaway-cart-line-controls button:last-child { color: #ea7b00; }
+        .takeaway-cart-line-controls button:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
+        .takeaway-cart-line-quantity { min-width: 1ch; color: #172033; font-size: .82rem; font-weight: 800; text-align: center; }
+        .takeaway-cart-line-subtotal { grid-column: 2; grid-row: 2; align-self: center; white-space: nowrap; }
         .takeaway-kitchen-order { margin-top: .65rem; padding: .65rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-tertiary); }
         .takeaway-secondary-button { padding: .4rem .35rem; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-secondary); color: var(--text-main); font-size: .75rem; font-weight: 700; cursor: pointer; }
         .takeaway-page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
@@ -253,7 +262,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
       <aside className="takeaway-order-panel">
         <h3 style={{ margin: "0 0 .8rem" }}>Takeaway Order</h3>
         {!count ? <p style={{ color: "var(--text-muted)" }}>Add menu items to start an order.</p> : <div style={{ display: "grid", gap: ".7rem", maxHeight: "45vh", overflowY: "auto" }}>
-          {Object.values(cart).map(({ item, quantity }) => <div key={item.id} style={{ display: "flex", justifyContent: "space-between", gap: ".5rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: ".55rem" }}><div><strong>{item.name}</strong><div style={{ color: "var(--text-muted)", fontSize: ".85rem" }}>₹{Number(item.price || 0).toFixed(2)} × {quantity}</div></div><span>₹{(Number(item.price || 0) * quantity).toFixed(2)}</span></div>)}
+          {Object.values(cart).map(({ item, quantity }) => <div key={item.id} className="takeaway-cart-line"><div className="takeaway-cart-line-details"><strong>{item.name}</strong><div style={{ color: "var(--text-muted)", fontSize: ".85rem" }}>₹{Number(item.price || 0).toFixed(2)} each</div></div><div className="takeaway-cart-line-controls" aria-label={`Quantity for ${item.name}`}><button type="button" aria-label={`Remove one ${item.name}`} onClick={() => changeQty(item, -1)}><Minus size={12}/></button><span className="takeaway-cart-line-quantity" aria-live="polite">{quantity}</span><button type="button" aria-label={`Add one ${item.name}`} onClick={() => changeQty(item, 1)}><Plus size={12}/></button></div><span className="takeaway-cart-line-subtotal">₹{(Number(item.price || 0) * quantity).toFixed(2)}</span></div>)}
         </div>}
         <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: ".8rem", paddingTop: ".7rem", display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><strong>₹{total.toFixed(2)}</strong></div>
         <div style={{ marginTop: ".45rem", display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}><span>GST (5%)</span><span>₹{(total * .05).toFixed(2)}</span></div>
