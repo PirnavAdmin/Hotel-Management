@@ -859,6 +859,13 @@ public class BarController : ControllerBase
     [HttpPatch("bot/{id:long}/status")]
     public async Task<IActionResult> UpdateBarKotStatus(long id, [FromBody] UpdateBarKotStatusDto dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.Status) ||
+            !new[] { "queued", "preparing", "cooking", "mixing", "ready", "served", "cancelled" }
+                .Contains(dto.Status.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { success = false, message = "Status must be queued, preparing, cooking, mixing, ready, served, or cancelled." });
+        }
+
         var updated = await _barService.UpdateBarKotStatusAsync(id, dto.Status);
         if (updated == null)
         {
@@ -934,6 +941,13 @@ public class BarController : ControllerBase
     [HttpPatch("bot/items/{orderItemId:long}/status")]
     public async Task<IActionResult> UpdateBarKotItemStatus(long orderItemId, [FromBody] UpdateBarKotItemStatusDto dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.Status) ||
+            !new[] { "queued", "preparing", "cooking", "mixing", "ready", "served", "cancelled" }
+                .Contains(dto.Status.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { success = false, message = "Status must be queued, preparing, cooking, mixing, ready, served, or cancelled." });
+        }
+
         var updated = await _barService.UpdateBarKotItemStatusAsync(orderItemId, dto.Status);
         if (updated == null)
         {
@@ -1416,4 +1430,3 @@ public class BarController : ControllerBase
 
     #endregion
 }
-

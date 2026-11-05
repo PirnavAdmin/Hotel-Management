@@ -53,6 +53,10 @@ public class AppDbContext : DbContext
 
     public DbSet<Ingredient> Ingredients { get; set; }
 
+    public DbSet<SalaryPayment> SalaryPayments { get; set; }
+
+    public DbSet<InventoryPurchase> InventoryPurchases { get; set; }
+
     public DbSet<Supplier> Suppliers { get; set; }
 
     public DbSet<PurchaseOrder> PurchaseOrders { get; set; }

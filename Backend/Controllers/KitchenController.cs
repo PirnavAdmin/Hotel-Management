@@ -36,20 +36,46 @@ public class KitchenController : ControllerBase
                  o.Status == "Billed" ||
                  o.Status == "billed" ||
                  (o.OrderType == "Takeaway" && o.Status == "Settled" &&
-                  o.Items.Any(i => i.KotStatus == "Queued" || i.KotStatus == "queued" ||
+                  o.Items.Any(i => i.IsActive && !i.IsDeleted && i.KotId.HasValue && i.KotId.Value > 0 &&
+                                   (i.KotStatus == "Queued" || i.KotStatus == "queued" ||
                                    i.KotStatus == "Cooking" || i.KotStatus == "cooking" ||
-                                   i.KotStatus == "Ready" || i.KotStatus == "ready"))))
+                                   i.KotStatus == "Ready" || i.KotStatus == "ready")))) &&
+                o.Items.Any(i =>
+                    i.IsActive &&
+                    !i.IsDeleted &&
+                    i.KotId.HasValue &&
+                    i.KotId.Value > 0 &&
+                    (i.KotStatus == "Queued" ||
+                     i.KotStatus == "queued" ||
+                     i.KotStatus == "Cooking" ||
+                     i.KotStatus == "cooking" ||
+                     i.KotStatus == "Ready" ||
+                     i.KotStatus == "ready")))
             .ToListAsync();
 
         var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
             _context,
             orders.SelectMany(order => order.Items).Select(item => item.MenuItemId));
+        var kotIds = orders
+            .SelectMany(order => order.Items)
+            .Where(item => item.KotId.HasValue && item.KotId.Value > 0)
+            .Select(item => item.KotId!.Value)
+            .Distinct()
+            .ToList();
+        var kotCreatedAt = await _context.KitchenOrderTickets
+            .AsNoTracking()
+            .Where(ticket => kotIds.Contains(ticket.Id) && ticket.IsActive && !ticket.IsDeleted)
+            .ToDictionaryAsync(ticket => ticket.Id, ticket => ticket.CreatedAt);
         var tickets = new List<KotTicketDto>();
 
         foreach (var order in orders)
         {
             var batches = order.Items
                 .Where(i =>
+                    i.IsActive &&
+                    !i.IsDeleted &&
+                    i.KotId.HasValue &&
+                    i.KotId.Value > 0 &&
                     !barMenuItemIds.Contains(i.MenuItemId) &&
                     (i.BotId == null || i.BotId == 0) &&
                     !OrderItemRouting.IsBarItem(i.Name) &&
@@ -64,6 +90,12 @@ public class KitchenController : ControllerBase
             foreach (var batch in batches)
             {
                 var batchItems = batch.ToList();
+                var batchKotId = batchItems.First().KotId;
+                var orderTime = batchItems.Min(item => item.CreatedAt);
+                if (batchKotId.HasValue && kotCreatedAt.TryGetValue(batchKotId.Value, out var createdAt))
+                {
+                    orderTime = createdAt;
+                }
 
                 string overallStatus = "ready";
 
@@ -98,7 +130,7 @@ public class KitchenController : ControllerBase
 
                     KotBatch = batch.Key,
 
-                    OrderTime = order.CreatedAt,
+                    OrderTime = orderTime,
 
                     TicketStatus = overallStatus,
 
@@ -149,32 +181,30 @@ public class KitchenController : ControllerBase
             return BadRequest(new { success = false, message = "Status string is required." });
         }
 
+        var cleanStatus = request.Status.Trim().ToLowerInvariant();
+        if (cleanStatus is not ("queued" or "cooking" or "ready"))
+        {
+            return BadRequest(new { success = false, message = "Status must be queued, cooking, or ready." });
+        }
+
         try
         {
             var item = await _context.OrderItems
                 .Include(i => i.Order)
-                .FirstOrDefaultAsync(i => i.Id == itemId);
+                .FirstOrDefaultAsync(i =>
+                    i.Id == itemId &&
+                    i.IsActive &&
+                    !i.IsDeleted &&
+                    i.KotId.HasValue &&
+                    i.KotId.Value > 0 &&
+                    (i.BotId == null || i.BotId == 0));
 
             if (item == null)
             {
                 return NotFound(new { success = false, message = "Order item not found." });
             }
 
-            var cleanStatus = request.Status.Trim();
-            if (cleanStatus.Equals("PREPARATION COMPLETED", StringComparison.OrdinalIgnoreCase) || cleanStatus.Equals("READY", StringComparison.OrdinalIgnoreCase))
-            {
-                cleanStatus = "ready";
-            }
-            else if (cleanStatus.Equals("COOKING", StringComparison.OrdinalIgnoreCase) || cleanStatus.Equals("IN PREPARATION", StringComparison.OrdinalIgnoreCase) || cleanStatus.Equals("IN PREP", StringComparison.OrdinalIgnoreCase))
-            {
-                cleanStatus = "cooking";
-            }
-            else if (cleanStatus.Length > 20)
-            {
-                cleanStatus = cleanStatus.Substring(0, 20);
-            }
-
-            item.KotStatus = cleanStatus.ToLowerInvariant();
+            item.KotStatus = cleanStatus;
             item.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -242,6 +272,10 @@ public class KitchenController : ControllerBase
 
         var itemsToUpdate = order.Items
             .Where(i =>
+                i.IsActive &&
+                !i.IsDeleted &&
+                i.KotId.HasValue &&
+                i.KotId.Value > 0 &&
                 (i.KotBatch == batch || batch == 0) &&
                 !barMenuItemIds.Contains(i.MenuItemId) &&
                 (i.BotId == null || i.BotId == 0) &&
@@ -312,11 +346,18 @@ public class KitchenController : ControllerBase
 
         var itemsToUpdate = order.Items
             .Where(i =>
+                i.IsActive &&
+                !i.IsDeleted &&
+                i.KotId.HasValue &&
+                i.KotId.Value > 0 &&
                 (i.KotBatch == batch || batch == 0) &&
                 !barMenuItemIds.Contains(i.MenuItemId) &&
                 (i.BotId == null || i.BotId == 0) &&
                 !OrderItemRouting.IsBarItem(i.Name) &&
-                i.KotStatus != "served")
+                (i.KotStatus == "Queued" ||
+                 i.KotStatus == "queued" ||
+                 i.KotStatus == "Cooking" ||
+                 i.KotStatus == "cooking"))
             .ToList();
 
         foreach (var item in itemsToUpdate)

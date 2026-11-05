@@ -166,6 +166,37 @@ public static class DbInitializer
             SafeExecuteSql(conn, "ALTER DATABASE DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET collation_connection = utf8mb4_unicode_ci;");
+            SafeExecuteSql(conn, @"
+                CREATE TABLE IF NOT EXISTS `salary_payments` (
+                    `payment_id` BIGINT NOT NULL AUTO_INCREMENT,
+                    `staff_id` BIGINT NULL,
+                    `staff_name` VARCHAR(100) NOT NULL,
+                    `amount` DECIMAL(18,2) NOT NULL,
+                    `paid_on` DATE NOT NULL,
+                    `salary_period` CHAR(7) NOT NULL,
+                    `payment_method` VARCHAR(40) NOT NULL,
+                    `notes` VARCHAR(255) NULL,
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`payment_id`),
+                    INDEX `ix_salary_payments_staff_paid_on` (`staff_id`, `paid_on`)
+                ) ENGINE=InnoDB;");
+            SafeExecuteSql(conn, @"
+                CREATE TABLE IF NOT EXISTS `inventory_purchase_records` (
+                    `purchase_id` BIGINT NOT NULL AUTO_INCREMENT,
+                    `item_id` BIGINT NULL,
+                    `name` VARCHAR(100) NOT NULL,
+                    `category` VARCHAR(100) NOT NULL DEFAULT '',
+                    `subcategory` VARCHAR(100) NOT NULL DEFAULT '',
+                    `supplier` VARCHAR(150) NOT NULL DEFAULT '',
+                    `quantity` DECIMAL(18,3) NOT NULL,
+                    `unit` VARCHAR(50) NOT NULL,
+                    `unit_cost` DECIMAL(18,2) NOT NULL,
+                    `department` VARCHAR(10) NOT NULL DEFAULT 'dine',
+                    `purchase_date` DATE NOT NULL,
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`purchase_id`),
+                    INDEX `ix_inventory_purchase_records_department_date` (`department`, `purchase_date`)
+                ) ENGINE=InnoDB;");
 
             using (var cmd = conn.CreateCommand())
             {

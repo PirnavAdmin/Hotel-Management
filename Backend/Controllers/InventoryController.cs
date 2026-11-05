@@ -114,7 +114,11 @@ public class InventoryController : ControllerBase
         try
         {
             _logger.LogInformation("Retrieving low stock ingredient alerts.");
-            var lowStock = await _spService.ExecuteQueryAsync("sp_GetLowStockIngredients", MapIngredientFromReader);
+            var ingredients = await _spService.ExecuteQueryAsync("sp_GetIngredients", MapIngredientFromReader);
+            var lowStock = ingredients
+                .Where(ingredient => ingredient.CurrentStock <= ingredient.MinimumThreshold)
+                .OrderBy(ingredient => ingredient.CurrentStock)
+                .ToList();
 
             return Ok(new
             {
@@ -273,7 +277,19 @@ public class InventoryController : ControllerBase
                 return BadRequest(new { success = false, message = error });
             }
 
-            var result = await _inventoryService.ProcessInventorySubmissionAsync(new List<InventoryItemInputDto> { item }, atomic: true);
+            var existing = await _spService.ExecuteQueryAsync(
+                "sp_GetIngredientById",
+                MapIngredientFromReader,
+                new Dictionary<string, object?> { { "p_id", id } });
+            if (existing.Count == 0)
+            {
+                return NotFound(new { success = false, message = $"Ingredient with ID {id} was not found." });
+            }
+
+            var result = await _inventoryService.ProcessInventorySubmissionAsync(
+                new List<InventoryItemInputDto> { item },
+                atomic: true,
+                replaceStockOnExisting: true);
 
             if (result.Items.Count > 0)
             {
@@ -334,9 +350,31 @@ public class InventoryController : ControllerBase
         {
             return BadRequest(new { success = false, message = "Valid Ingredient ID and non-zero Quantity change are required." });
         }
+        if (request.Reason?.Length > 255)
+        {
+            return BadRequest(new { success = false, message = "Stock adjustment reason cannot exceed 255 characters." });
+        }
 
         try
         {
+            var currentItems = await _spService.ExecuteQueryAsync(
+                "sp_GetIngredientById",
+                MapIngredientFromReader,
+                new Dictionary<string, object?> { { "p_id", request.IngredientId } });
+            var currentItem = currentItems.FirstOrDefault();
+            if (currentItem == null)
+            {
+                return NotFound(new { success = false, message = $"Ingredient {request.IngredientId} was not found." });
+            }
+            if (request.QuantityChange < -currentItem.CurrentStock)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Cannot consume more than the {currentItem.CurrentStock} {currentItem.Unit} currently in stock."
+                });
+            }
+
             _logger.LogInformation("Adjusting stock for Ingredient {IngredientId} by {QuantityChange}. Reason: {Reason}",
                 request.IngredientId, request.QuantityChange, request.Reason);
 

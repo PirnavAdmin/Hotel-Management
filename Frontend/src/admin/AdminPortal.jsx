@@ -480,6 +480,7 @@ export function AdminPortal({
     } catch {}
     return [];
   });
+  const [inventoryApiError, setInventoryApiError] = useState("");
 
   useEffect(() => {
     if (Array.isArray(propInventory) && propInventory.length > 0) {
@@ -488,29 +489,36 @@ export function AdminPortal({
   }, [propInventory]);
 
   useEffect(() => {
-    if (!inventory || inventory.length === 0) {
-      apiGetInventory()
-        .then((res) => {
-          const payload = res?.data ?? res;
-          const rows = Array.isArray(payload)
-            ? payload
-            : Array.isArray(payload?.data)
-              ? payload.data
-              : Array.isArray(payload?.ingredients)
-                ? payload.ingredients
-                : [];
-          if (rows.length > 0) {
-            setInventory(rows);
-            try {
-              localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(rows));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-    }
-
+    let cancelled = false;
+    const loadInventory = async () => {
+      try {
+        const response = await apiGetInventory();
+        const payload = response?.data;
+        const rows = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.ingredients)
+              ? payload.ingredients
+              : null;
+        if (!response?.success || !rows) {
+          throw new Error(response?.error || "Inventory API returned an invalid response.");
+        }
+        if (cancelled) return;
+        setInventory(rows);
+        setInventoryApiError("");
+        try {
+          localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(rows));
+        } catch {}
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Admin Inventory] Failed to load inventory from the API:", error);
+        setInventoryApiError(error?.message || "Inventory API request failed.");
+      }
+    };
+    loadInventory();
     const handleInvUpdated = (e) => {
-      if (Array.isArray(e.detail) && e.detail.length > 0) {
+      if (Array.isArray(e.detail)) {
         setInventory(e.detail);
       }
     };
@@ -518,7 +526,7 @@ export function AdminPortal({
       if (e.key === "gourmet_pos_inventory_v1" && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setInventory(parsed);
           }
         } catch {}
@@ -527,10 +535,11 @@ export function AdminPortal({
     window.addEventListener("avsr-inventory-updated", handleInvUpdated);
     window.addEventListener("storage", handleStorage);
     return () => {
+      cancelled = true;
       window.removeEventListener("avsr-inventory-updated", handleInvUpdated);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [inventory]);
+  }, []);
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
 
   // Toggle between Dine (Restaurant) and Bar mode
@@ -5494,8 +5503,9 @@ export function AdminPortal({
                     menuItems={menuItems}
                     onUpdateMenuItem={onUpdateMenuItem}
                     inventory={inventory}
-                    onRecordInventoryPurchase={onRecordInventoryPurchase}
-                  />
+                     inventoryApiError={inventoryApiError}
+                     onRecordInventoryPurchase={onRecordInventoryPurchase}
+                   />
                 )}
 
                 {/* ================= TAB 6: INVOICES ================= */}

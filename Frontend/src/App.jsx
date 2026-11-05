@@ -76,7 +76,10 @@ import {
 } from "./api/orderApi";
 import {
   apiAdjustStock,
+  apiCreateInventoryPurchase,
+  apiGetInventoryPurchases,
 } from "./api/inventoryApi";
+import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymentApi";
 import { API_BASE_URL, API_HTTP_BASE } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
@@ -361,7 +364,7 @@ const clearCachedTableOrder = (table) => ({
 const mergeIncomingTables = (
   incomingTables,
   deletedTableIds,
-  { preserveCachedOrders = true } = {},
+  { preserveCachedOrders = true, preserveCachedDefinitions = true } = {},
 ) => {
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
@@ -369,26 +372,28 @@ const mergeIncomingTables = (
   const tablesById = new Map();
 
   // Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
-  try {
-    const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
-    if (rawSaved) {
-      const parsedSaved = JSON.parse(rawSaved);
-      if (Array.isArray(parsedSaved)) {
-        parsedSaved.forEach((savedTable) => {
-          const st = preserveCachedOrders
-            ? savedTable
-            : clearCachedTableOrder(savedTable);
-          if (st && st.id && !deletedIds.includes(String(st.id))) {
-            const num = parseTableNumber(st) || Number(st.id);
-            if (num) {
-              const existingDef = tablesById.get(num) || {};
-              tablesById.set(num, { ...existingDef, ...st });
+  if (preserveCachedDefinitions) {
+    try {
+      const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
+      if (rawSaved) {
+        const parsedSaved = JSON.parse(rawSaved);
+        if (Array.isArray(parsedSaved)) {
+          parsedSaved.forEach((savedTable) => {
+            const st = preserveCachedOrders
+              ? savedTable
+              : clearCachedTableOrder(savedTable);
+            if (st && st.id && !deletedIds.includes(String(st.id))) {
+              const num = parseTableNumber(st) || Number(st.id);
+              if (num) {
+                const existingDef = tablesById.get(num) || {};
+                tablesById.set(num, { ...existingDef, ...st });
+              }
             }
-          }
-        });
+          });
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   // 2. Overlay incoming live tables from server or localStorage
   if (Array.isArray(incomingTables)) {
@@ -724,12 +729,12 @@ export function App() {
     }
     return [];
   });
-  const [salaryPayments, setSalaryPayments] = useState(() =>
-    readStoredArray(STORAGE_KEY_SALARY_PAYMENTS).map(normalizeSalaryPayment),
-  );
-  const [inventoryPurchases, setInventoryPurchases] = useState(() =>
-    readStoredArray(STORAGE_KEY_INVENTORY_PURCHASES).map(normalizeInventoryPurchase),
-  );
+  const [salaryPayments, setSalaryPayments] = useState([]);
+  const salaryPaymentsApiLoadedRef = useRef(false);
+  const [salaryPaymentsApiLoaded, setSalaryPaymentsApiLoaded] = useState(false);
+  const [inventoryPurchases, setInventoryPurchases] = useState([]);
+  const inventoryPurchasesApiLoadedRef = useRef(false);
+  const [inventoryPurchasesApiLoaded, setInventoryPurchasesApiLoaded] = useState(false);
 
   // Past settled orders history in Rupees
   const [pastOrders, setPastOrders] = useState(() => {
@@ -782,7 +787,7 @@ export function App() {
         const tableDefinitions = mergeIncomingTables(
           backendTables,
           getDeletedTableIds(),
-          { preserveCachedOrders: false },
+          { preserveCachedOrders: false, preserveCachedDefinitions: false },
         );
         const ordersResponse = await apiGetActiveOrders();
         const activeOrders = ordersResponse?.success && Array.isArray(ordersResponse.data)
@@ -942,6 +947,38 @@ export function App() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadInventoryPurchases = async () => {
+      try {
+        const response = await apiGetInventoryPurchases();
+        const rows = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.data?.data)
+            ? response.data.data
+            : null;
+        if (!response?.success || !rows) {
+          throw new Error(response?.error || "Inventory purchase records could not be loaded.");
+        }
+        if (cancelled) return;
+        inventoryPurchasesApiLoadedRef.current = true;
+        setInventoryPurchasesApiLoaded(true);
+        setInventoryPurchases(rows.map(normalizeInventoryPurchase));
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Inventory] Failed to load purchase records from the API:", error);
+        inventoryPurchasesApiLoadedRef.current = true;
+        setInventoryPurchasesApiLoaded(true);
+        setInventoryPurchases([]);
+        showToast(`Inventory purchase history is unavailable: ${error?.message || "API request failed."}`);
+      }
+    };
+    loadInventoryPurchases();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ── Authentication sessions per route ────────────────────────────────
   // Each route has its own session key so POS, KOT and Admin can be
   // open simultaneously on different browser tabs/screens.
@@ -1084,6 +1121,38 @@ export function App() {
     }, 2800);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadSalaryPayments = async () => {
+      try {
+        const response = await apiGetSalaryPayments();
+        const rows = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.data?.data)
+            ? response.data.data
+            : null;
+        if (!response?.success || !rows) {
+          throw new Error(response?.error || "Salary payment records could not be loaded.");
+        }
+        if (cancelled) return;
+        salaryPaymentsApiLoadedRef.current = true;
+        setSalaryPaymentsApiLoaded(true);
+        setSalaryPayments(rows.map(normalizeSalaryPayment));
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Payroll] Failed to load salary payments from the API:", error);
+        salaryPaymentsApiLoadedRef.current = true;
+        setSalaryPaymentsApiLoaded(true);
+        setSalaryPayments([]);
+        showToast(`Salary history is unavailable: ${error?.message || "API request failed."}`);
+      }
+    };
+    loadSalaryPayments();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ── Kitchen Real-Time Notifications System ───────────────────
   const STORAGE_KEY_KITCHEN_NOTIFICATIONS = "avsr_kitchen_notifications";
   const STORAGE_KEY_LATEST_ALERT = "avsr_latest_kitchen_alert";
@@ -1197,7 +1266,10 @@ export function App() {
       const cleanTables = mergeIncomingTables(
         Array.isArray(tables) ? tables : [],
         deletedTableIds,
-        { preserveCachedOrders: !replaceCachedTableOrdersRef.current },
+        {
+          preserveCachedOrders: !replaceCachedTableOrdersRef.current,
+          preserveCachedDefinitions: !replaceCachedTableOrdersRef.current,
+        },
       )
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
@@ -1212,6 +1284,7 @@ export function App() {
   }, [tables, deletedTableIds, tablesReadyForSync]);
 
   useEffect(() => {
+    if (sharedRecordLoad.menu === "loading") return;
     try {
       const menuJson = JSON.stringify(menuItems);
       if (localStorage.getItem(STORAGE_KEY_MENU) !== menuJson) {
@@ -1220,7 +1293,7 @@ export function App() {
         broadcastSync("SYNC_MENU", menuItems);
       }
     } catch {}
-  }, [menuItems]);
+  }, [menuItems, sharedRecordLoad.menu]);
 
   useEffect(() => {
     try {
@@ -1234,6 +1307,7 @@ export function App() {
   }, [staffList]);
 
   useEffect(() => {
+    if (!salaryPaymentsApiLoaded) return;
     try {
       const paymentsJson = JSON.stringify(salaryPayments);
       if (localStorage.getItem(STORAGE_KEY_SALARY_PAYMENTS) !== paymentsJson) {
@@ -1244,9 +1318,10 @@ export function App() {
     } catch (error) {
       console.error("[Payroll] Failed to save salary payment history:", error);
     }
-  }, [salaryPayments]);
+  }, [salaryPayments, salaryPaymentsApiLoaded]);
 
   useEffect(() => {
+    if (!inventoryPurchasesApiLoaded) return;
     try {
       const purchasesJson = JSON.stringify(inventoryPurchases);
       if (localStorage.getItem(STORAGE_KEY_INVENTORY_PURCHASES) !== purchasesJson) {
@@ -1257,7 +1332,7 @@ export function App() {
     } catch (error) {
       console.error("[Inventory] Failed to save purchase history:", error);
     }
-  }, [inventoryPurchases]);
+  }, [inventoryPurchases, inventoryPurchasesApiLoaded]);
 
   useEffect(() => {
     try {
@@ -1352,11 +1427,11 @@ export function App() {
           } catch {}
         }
         const incomingSalaryPayments = data[STORAGE_KEY_SALARY_PAYMENTS];
-        if (Array.isArray(incomingSalaryPayments)) {
+        if (!salaryPaymentsApiLoadedRef.current && Array.isArray(incomingSalaryPayments)) {
           setSalaryPayments((current) => mergeSalaryPayments(current, incomingSalaryPayments));
         }
         const incomingInventoryPurchases = data[STORAGE_KEY_INVENTORY_PURCHASES];
-        if (Array.isArray(incomingInventoryPurchases)) {
+        if (!inventoryPurchasesApiLoadedRef.current && Array.isArray(incomingInventoryPurchases)) {
           setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingInventoryPurchases));
         }
     };
@@ -1479,11 +1554,11 @@ export function App() {
             } catch {}
           }
           const incomingSalaryPayments = payload[STORAGE_KEY_SALARY_PAYMENTS];
-          if (Array.isArray(incomingSalaryPayments)) {
+          if (!salaryPaymentsApiLoadedRef.current && Array.isArray(incomingSalaryPayments)) {
             setSalaryPayments((current) => mergeSalaryPayments(current, incomingSalaryPayments));
           }
           const incomingInventoryPurchases = payload[STORAGE_KEY_INVENTORY_PURCHASES];
-          if (Array.isArray(incomingInventoryPurchases)) {
+          if (!inventoryPurchasesApiLoadedRef.current && Array.isArray(incomingInventoryPurchases)) {
             setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingInventoryPurchases));
           }
           if (payload["avsr_auth_users_v1"]) {
@@ -1573,11 +1648,11 @@ export function App() {
       } else if (e.key === STORAGE_KEY_SALARY_PAYMENTS) {
         try {
           const incomingPayments = JSON.parse(e.newValue);
-          if (Array.isArray(incomingPayments)) {
+          if (!salaryPaymentsApiLoadedRef.current && Array.isArray(incomingPayments)) {
             setSalaryPayments((current) => mergeSalaryPayments(current, incomingPayments));
           }
         } catch {}
-      } else if (e.key === STORAGE_KEY_INVENTORY_PURCHASES) {
+      } else if (e.key === STORAGE_KEY_INVENTORY_PURCHASES && !inventoryPurchasesApiLoadedRef.current) {
         try {
           const incomingPurchases = JSON.parse(e.newValue);
           if (Array.isArray(incomingPurchases)) {
@@ -1633,9 +1708,9 @@ export function App() {
           } else if (type === "SYNC_STAFF" && Array.isArray(payload) && payload.length > 0) {
             const deduped = dedupeStaff(payload);
             setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
-          } else if (type === "SYNC_SALARY_PAYMENTS" && Array.isArray(payload)) {
+          } else if (type === "SYNC_SALARY_PAYMENTS" && !salaryPaymentsApiLoadedRef.current && Array.isArray(payload)) {
             setSalaryPayments((current) => mergeSalaryPayments(current, payload));
-          } else if (type === "SYNC_INVENTORY_PURCHASES" && Array.isArray(payload)) {
+          } else if (type === "SYNC_INVENTORY_PURCHASES" && !inventoryPurchasesApiLoadedRef.current && Array.isArray(payload)) {
             setInventoryPurchases((current) => mergeInventoryPurchases(current, payload));
           } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
             setDeletedTableIds(payload);
@@ -1690,14 +1765,18 @@ export function App() {
         }
       } catch {}
 
-      const localSalaryPayments = readStoredArray(STORAGE_KEY_SALARY_PAYMENTS);
-      setSalaryPayments((current) => localSalaryPayments.length
-        ? mergeSalaryPayments(current, localSalaryPayments)
-        : []);
-      const localInventoryPurchases = readStoredArray(STORAGE_KEY_INVENTORY_PURCHASES);
-      setInventoryPurchases((current) => localInventoryPurchases.length
-        ? mergeInventoryPurchases(current, localInventoryPurchases)
-        : []);
+      if (!salaryPaymentsApiLoadedRef.current) {
+        const localSalaryPayments = readStoredArray(STORAGE_KEY_SALARY_PAYMENTS);
+        setSalaryPayments((current) => localSalaryPayments.length
+          ? mergeSalaryPayments(current, localSalaryPayments)
+          : []);
+      }
+      if (!inventoryPurchasesApiLoadedRef.current) {
+        const localInventoryPurchases = readStoredArray(STORAGE_KEY_INVENTORY_PURCHASES);
+        setInventoryPurchases((current) => localInventoryPurchases.length
+          ? mergeInventoryPurchases(current, localInventoryPurchases)
+          : []);
+      }
 
       try {
         const rawDel = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
@@ -3324,20 +3403,53 @@ export function App() {
 
   const handleRecordSalaryPayment = async (payment) => {
     const amount = Number(payment.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      showToast("Enter a salary payment amount greater than zero.");
+    const staffName = String(payment.staffName || "").trim();
+    const paidOn = String(payment.paidOn || "");
+    const salaryPeriod = String(payment.salaryPeriod || "");
+    const paymentMethod = String(payment.paymentMethod || "").trim();
+    if (!staffName || staffName.length > 100) {
+      showToast("Enter a valid staff name (up to 100 characters).");
+      return false;
+    }
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 99999999.99) {
+      showToast("Enter a salary payment amount between ₹0.01 and ₹99,999,999.99.");
+      return false;
+    }
+    const paidOnParts = /^\d{4}-\d{2}-\d{2}$/.test(paidOn)
+      ? paidOn.split("-").map(Number)
+      : null;
+    const paidOnDate = paidOnParts
+      ? new Date(paidOnParts[0], paidOnParts[1] - 1, paidOnParts[2])
+      : null;
+    if (
+      !paidOnDate ||
+      paidOnDate.getFullYear() !== paidOnParts[0] ||
+      paidOnDate.getMonth() !== paidOnParts[1] - 1 ||
+      paidOnDate.getDate() !== paidOnParts[2]
+    ) {
+      showToast("Select a valid payment date.");
+      return false;
+    }
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(salaryPeriod)) {
+      showToast("Select a valid salary month.");
+      return false;
+    }
+    if (!["Bank Transfer", "UPI", "Cash", "Cheque"].includes(paymentMethod)) {
+      showToast("Select a supported salary payment method.");
+      return false;
+    }
+    if (String(payment.notes || "").length > 255) {
+      showToast("Salary payment notes cannot exceed 255 characters.");
       return false;
     }
 
-    const normalizedPayment = normalizeSalaryPayment({
-      ...payment,
-      id: payment.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      amount,
-      paidOn: payment.paidOn,
-      salaryPeriod: payment.salaryPeriod,
-      paymentMethod: payment.paymentMethod,
-      notes: payment.notes || "",
-    });
+    const response = await apiCreateSalaryPayment({ ...payment, staffName, amount, paidOn, salaryPeriod, paymentMethod });
+    const savedPayment = response?.data?.data ?? response?.data;
+    if (!response?.success || !savedPayment || typeof savedPayment !== "object") {
+      showToast(`Salary payment was not saved: ${response?.error || "The server returned an invalid response."}`);
+      return false;
+    }
+    const normalizedPayment = normalizeSalaryPayment(savedPayment);
     setSalaryPayments((current) => mergeSalaryPayments(current, [normalizedPayment]));
     showToast(`Salary payment recorded for ${normalizedPayment.staffName}.`);
     return true;
@@ -3346,22 +3458,40 @@ export function App() {
   const handleRecordInventoryPurchase = async (purchase) => {
     const quantity = Number(purchase.quantity);
     const unitCost = Number(purchase.unitCost);
-    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitCost) || unitCost < 0) {
-      showToast("Inventory purchase needs a valid quantity and unit cost.");
+    const name = String(purchase.name || "").trim();
+    const unit = String(purchase.unit || "").trim();
+    const department = String(purchase.department || "dine").trim().toLowerCase();
+    if (!name || name.length > 100 || !unit || unit.length > 50) {
+      showToast("Inventory purchase needs a valid item name and unit.");
+      return false;
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 999999999 || !Number.isFinite(unitCost) || unitCost < 0) {
+      showToast("Inventory purchase needs a valid quantity and non-negative unit cost.");
+      return false;
+    }
+    if (!["bar", "dine"].includes(department)) {
+      showToast("Inventory purchase department must be Bar or Dine.");
       return false;
     }
 
     const now = new Date();
     const record = {
       ...purchase,
-      id: purchase.id || `purchase-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
       quantity,
       unitCost,
+      department,
       totalCost: Number((quantity * unitCost).toFixed(2)),
       purchaseDate: purchase.purchaseDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
     };
 
-    const savedRecord = normalizeInventoryPurchase(record);
+    const response = await apiCreateInventoryPurchase(record);
+    const savedPurchase = response?.data?.data ?? response?.data;
+    if (!response?.success || !savedPurchase || typeof savedPurchase !== "object") {
+      showToast(`Inventory purchase was not recorded: ${response?.error || "The server returned an invalid response."}`);
+      return false;
+    }
+    const savedRecord = normalizeInventoryPurchase(savedPurchase);
     setInventoryPurchases((current) => mergeInventoryPurchases(current, [savedRecord]));
     return true;
   };

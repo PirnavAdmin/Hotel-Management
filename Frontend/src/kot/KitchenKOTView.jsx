@@ -42,6 +42,7 @@ import {
   getTimerUrgencyColor,
   formatDisplayTime,
 } from "../utils/timer";
+import { getBusinessDayKey } from "../utils/invoiceCounter";
 
 const formatCleanTableNum = (name, id) => {
   if (!name) return String(id ?? "");
@@ -396,6 +397,14 @@ export function KitchenKOTView({
     const orderId = ticket.orderId ?? ticket.ticketId;
     const backendTableId = ticket.tableId ?? orderId;
     const ticketName = ticket.tableName || ticket.TableName || "";
+    const orderTime = ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt;
+    const parsedOrderTime = orderTime ? Date.parse(orderTime) : NaN;
+    if (
+      !Number.isFinite(parsedOrderTime) ||
+      getBusinessDayKey(new Date(parsedOrderTime)) !== getBusinessDayKey(currentTime)
+    ) {
+      return null;
+    }
     const localTable = tables.find((table) => {
       const idMatches = [table.backendTableId, table.tableId, table.id]
         .filter((id) => id !== undefined && id !== null)
@@ -418,14 +427,18 @@ export function KitchenKOTView({
       name: localTable?.name || ticketName || `Table ${tableId}`,
       section: ticket.section || ticket.sectionArea || "Main Hall",
       server: ticket.serverName || "Server",
-      orderTime: ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt,
+      orderTime,
       priority: ticket.priority || "normal",
       uniqueKey: `active-${orderId}-${batch}`,
-      isPaid: String(ticket.orderType || ticket.OrderType || "").toLowerCase() === "takeaway",
+      isPaid: false,
       ticketType: "active",
       items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
         const isDrink = isDrinkItem(item, menuLookup);
-        return isBarStation ? isDrink : !isDrink;
+        const status = String(item?.kotStatus || item?.itemStatus || "").toLowerCase();
+        return (
+          (isBarStation ? isDrink : !isDrink) &&
+          !["ready", "served", "completed", "cancelled", "canceled"].includes(status)
+        );
       }).map((item) => ({
         ...item,
         id: item.id ?? item.orderItemId,
@@ -436,7 +449,7 @@ export function KitchenKOTView({
       })),
     };
   }).filter((ticket) => {
-    if (ticket.items.length === 0) return false;
+    if (!ticket || ticket.items.length === 0) return false;
     // Never invent/render a table card for an API order whose table no longer
     // exists in the restaurant's configured floor plan. Takeaway has no table.
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway";
@@ -521,13 +534,11 @@ export function KitchenKOTView({
     // 3. Status filter
     if (statusFilter !== "all") {
       const items = Array.isArray(t?.items) ? t.items : [];
-      const allCompleted = items.length > 0 && items.every(isItemCompleted);
       const hasCooking = items.some(isItemCooking);
       const hasReceived = items.some(isItemReceived);
 
       if (statusFilter === "pending" && !hasReceived) return false;
       if (statusFilter === "cooking" && !hasCooking) return false;
-      if (statusFilter === "completed" && !allCompleted) return false;
     }
 
     return true;
@@ -541,10 +552,6 @@ export function KitchenKOTView({
   const cookingOrdersCount = allKitchenTickets.filter(
     (t) => Array.isArray(t?.items) && t.items.some(isItemCooking),
   ).length;
-  const completedOrdersCount = allKitchenTickets.filter(
-    (t) => Array.isArray(t?.items) && t.items.length > 0 && t.items.every(isItemCompleted),
-  ).length;
-
   // Auto-switch to "Received" tab when a new KOT arrives
   const prevPendingRef = useRef(pendingOrdersCount);
   useEffect(() => {
@@ -1078,8 +1085,7 @@ export function KitchenKOTView({
                     marginTop: "2px",
                   }}
                 >
-                  Live Kitchen Order Tickets • Table orders & preparation
-                  completed queue
+                  Live Kitchen Order Tickets • Active POS orders awaiting preparation
                 </p>
               </div>
             </div>
@@ -1252,15 +1258,6 @@ export function KitchenKOTView({
                   badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(234, 88, 12, 0.25)",
                   badgeBorder: "rgba(234, 88, 12, 0.5)",
-                },
-                {
-                  id: "completed",
-                  label: "Completed",
-                  count: completedOrdersCount,
-                  dot: "#10b981",
-                  badgeColor: "var(--success)",
-                  badgeBg: "rgba(16, 185, 129, 0.25)",
-                  badgeBorder: "rgba(16, 185, 129, 0.5)",
                 },
               ].map((tab) => (
                 <button

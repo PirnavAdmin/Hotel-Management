@@ -463,7 +463,7 @@ export const deduplicateAndNormalizeInventory = (items) => {
   return Array.from(map.values());
 };
 
-export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sharedInventory = [], onRecordInventoryPurchase }) {
+export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sharedInventory = [], inventoryApiError = "", onRecordInventoryPurchase }) {
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [inventory, setInventory] = useState(() => {
     try {
@@ -706,6 +706,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
   const [recipeError, setRecipeError] = useState("");
   const [restockItem, setRestockItem] = useState(null);
   const [restockSaving, setRestockSaving] = useState(false);
+  const [inventoryWriteError, setInventoryWriteError] = useState("");
+  const [inventoryValidationError, setInventoryValidationError] = useState("");
   const [restockAmount, setRestockAmount] = useState("");
   const [restockUnitCost, setRestockUnitCost] = useState("");
   const [restockSupplier, setRestockSupplier] = useState("");
@@ -779,29 +781,45 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
   const saveInventory = (updated) => {
     const normalized = deduplicateAndNormalizeInventory(updated);
     setInventory(normalized);
-    normalized.forEach((item) => {
+    const pendingWrites = normalized.map(async (item) => {
       const backendId = Number(item.id);
       if (!Number.isFinite(backendId) || backendId <= 0) {
-        apiCreateInventoryItem(item)
-          .then((res) => {
-            const newId = res?.data?.ingredientId || res?.data?.id || res?.data?.data?.ingredientId;
-            if (newId) {
-              setInventory((prev) => {
-                const next = prev.map((it) => (it.id === item.id ? { ...it, id: newId } : it));
-                try {
-                  localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(next));
-                } catch {}
-                return next;
-              });
-            }
-          })
-          .catch((err) => console.error("[Inventory] Failed to create ingredient:", err));
+        const response = await apiCreateInventoryItem(item);
+        if (!response?.success) {
+          throw new Error(response?.error || `Could not create "${item.name}" in the inventory API.`);
+        }
+        const created = response.data?.data ?? response.data;
+        const newId = created?.ingredientId ?? created?.id ?? created?.Id;
+        if (!newId) {
+          throw new Error(`The inventory API did not return an ID for "${item.name}".`);
+        }
+        return { ...item, id: String(newId) };
       } else {
-        apiUpdateInventoryItem(backendId, item).catch((err) =>
-          console.error("[Inventory] Failed to update ingredient:", err),
-        );
+        const response = await apiUpdateInventoryItem(backendId, item);
+        if (!response?.success) {
+          throw new Error(response?.error || `Could not update "${item.name}" in the inventory API.`);
+        }
+        return item;
       }
     });
+    const writePromise = Promise.all(pendingWrites)
+      .then((savedRows) => {
+        const savedInventory = deduplicateAndNormalizeInventory(savedRows);
+        setInventory(savedInventory);
+        try {
+          localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(savedInventory));
+        } catch {}
+        window.dispatchEvent(
+          new CustomEvent("avsr-inventory-updated", { detail: savedInventory }),
+        );
+        setInventoryWriteError("");
+        return true;
+      })
+      .catch((error) => {
+        console.error("[Inventory] One or more inventory writes failed:", error);
+        setInventoryWriteError(error?.message || "One or more inventory records failed to sync.");
+        return false;
+      });
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
       fetch(`${API_HTTP_BASE}/api/sync`, {
@@ -816,11 +834,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
         new CustomEvent("avsr-inventory-updated", { detail: normalized }),
       );
     } catch {}
+    return writePromise;
   };
 
   useEffect(() => {
       const rows = Array.isArray(sharedInventory) ? sharedInventory : [];
-      if (!rows.length) return;
       let saved = [];
       try {
         saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
@@ -858,11 +876,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
             mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
           };
         });
-      const remoteIds = new Set(remote.map((item) => String(item.id)));
-      const merged = deduplicateAndNormalizeInventory([
-        ...remote,
-        ...(Array.isArray(saved) ? saved.filter((item) => !remoteIds.has(String(item.id))) : []),
-      ]);
+      const merged = deduplicateAndNormalizeInventory(remote);
       setInventory(merged);
       try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
   }, [sharedInventory]);
@@ -1013,8 +1027,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
             }
           : item,
       );
-      saveInventory(updated);
-      await onRecordInventoryPurchase?.({
+      if (!(await saveInventory(updated))) return;
+      const purchaseSaved = await onRecordInventoryPurchase?.({
         itemId: restockItem.id,
         name: restockItem.name,
         category: restockItem.category,
@@ -1026,6 +1040,10 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
         department: "dine",
         purchaseDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
       });
+      if (purchaseSaved === false) {
+        setInventoryWriteError("Stock was updated, but its purchase record was not saved.");
+        return;
+      }
       setRestockItem(null);
       setRestockAmount("");
       setRestockUnitCost("");
@@ -1040,6 +1058,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
     const amount = Number(consumeAmount);
     if (!consumeItem || !Number.isFinite(amount) || amount <= 0) return;
     const currentStock = Number(consumeItem.stock || 0);
+    if (amount > currentStock) {
+      setInventoryValidationError("Usage quantity cannot exceed the available stock.");
+      return;
+    }
+    setInventoryValidationError("");
     const nextStock = Math.max(0, Number((currentStock - amount).toFixed(3)));
     const updated = inventory.map((item) =>
       item.id === consumeItem.id
@@ -1295,7 +1318,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
       title: "Remove Inventory Item?",
       message: `Are you sure you want to remove "${itemName}" from restaurant inventory? This action cannot be undone.`,
       confirmLabel: "Yes, Remove",
-      onConfirm: () => {
+      onConfirm: async () => {
         // 1. Collect all local and backend IDs associated with this item
         const idsToDelete = Array.from(
           new Set([String(id), ...(item?.associatedIds || []).map(String)]),
@@ -1323,29 +1346,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
         saveInventory(remaining);
 
         // 4. Call backend API to permanently delete from remote database
-        idsToDelete.forEach((backendId) => {
-          if (
+        const backendIds = idsToDelete.filter(
+          (backendId) =>
             backendId &&
             !backendId.startsWith("inv-") &&
-            !backendId.startsWith("recipe-")
-          ) {
-            void apiDeleteIngredient(backendId)
-              .then((result) => {
-                if (!result?.success) {
-                  console.error(
-                    `[Inventory] Failed to delete ingredient ${backendId}:`,
-                    result?.error || "Unknown API error",
-                  );
-                }
-              })
-              .catch((error) => {
-                console.error(
-                  `[Inventory] Failed to delete ingredient ${backendId}:`,
-                  error instanceof Error ? error.message : error,
-                );
-              });
-          }
-        });
+            !backendId.startsWith("recipe-"),
+        );
+        const deleteResults = await Promise.all(
+          backendIds.map((backendId) => apiDeleteIngredient(backendId)),
+        );
+        const failedDelete = deleteResults.find((result) => !result?.success);
+        if (failedDelete) {
+          const error = failedDelete.error || "The server rejected the inventory delete.";
+          console.error("[Inventory] Failed to delete ingredient:", error);
+          setInventoryWriteError(error);
+        }
       },
     });
   };
@@ -1407,6 +1422,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {inventoryApiError && (
+        <div role="alert" style={{ color: "#b91c1c", background: "#fef2f2", padding: "0.75rem 1rem", borderRadius: "0.5rem" }}>
+          Inventory API is unavailable. Showing the last cached inventory; changes may not sync until the server is available. {inventoryApiError}
+        </div>
+      )}
+      {inventoryWriteError && (
+        <div role="alert" style={{ color: "#b91c1c", background: "#fef2f2", padding: "0.75rem 1rem", borderRadius: "0.5rem" }}>
+          Inventory operation failed or did not fully sync: {inventoryWriteError}
+        </div>
+      )}
+      {inventoryValidationError && (
+        <div role="alert" style={{ color: "#b91c1c", background: "#fef2f2", padding: "0.75rem 1rem", borderRadius: "0.5rem" }}>
+          {inventoryValidationError}
+        </div>
+      )}
       {/* Outer Card Matching Design */}
       <div
         style={{

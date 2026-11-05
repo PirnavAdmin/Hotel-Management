@@ -486,22 +486,43 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
     setModalError("");
 
     try {
+      const numericFields = [
+        ["Stock", formData.stock],
+        ["Minimum stock", formData.minThreshold],
+        ["Unit cost", formData.unitCost],
+        ["Selling price", formData.sellingPrice],
+      ];
+      for (const [label, rawValue] of numericFields) {
+        const value = Number(rawValue);
+        if (rawValue === "" || !Number.isFinite(value) || value < 0) {
+          throw new Error(`${label} must be a valid non-negative number.`);
+        }
+      }
+      const abv = formData.abv === "" ? null : Number(formData.abv);
+      if (abv !== null && (!Number.isFinite(abv) || abv < 0 || abv > 100)) {
+        throw new Error("Alcohol content must be between 0 and 100%.");
+      }
+      const volumeMl = formData.volumeMl === "" ? null : Number(formData.volumeMl);
+      if (volumeMl !== null && (!Number.isFinite(volumeMl) || volumeMl <= 0)) {
+        throw new Error("Volume must be greater than zero.");
+      }
+
       const payload = {
         name: String(formData.name).trim(),
         category: String(formData.category).trim() || "Beverages & Bar",
         subcategory: String(formData.subcategory).trim(),
         brand: String(formData.brand).trim(),
         unit: String(formData.unit).trim() || "Bottle",
-        volumeMl: formData.volumeMl ? Number(formData.volumeMl) : null,
-        abv: formData.abv ? Number(formData.abv) : null,
-        stock: Number(formData.stock) || 0,
-        currentStock: Number(formData.stock) || 0,
-        minThreshold: Number(formData.minThreshold) || 5,
-        minimumThreshold: Number(formData.minThreshold) || 5,
-        unitCost: Number(formData.unitCost) || 0,
-        cost: Number(formData.unitCost) || 0,
-        sellingPrice: Number(formData.sellingPrice) || 0,
-        mrp: Number(formData.sellingPrice) || Number(formData.unitCost) || 0,
+        volumeMl,
+        abv,
+        stock: Number(formData.stock),
+        currentStock: Number(formData.stock),
+        minThreshold: Number(formData.minThreshold),
+        minimumThreshold: Number(formData.minThreshold),
+        unitCost: Number(formData.unitCost),
+        cost: Number(formData.unitCost),
+        sellingPrice: Number(formData.sellingPrice),
+        mrp: Number(formData.sellingPrice),
         storageLocation: String(formData.storageLocation).trim() || "Front Bar Display Shelf",
         supplier: String(formData.supplier).trim() || "State Beverages Corporation (TSBCL/Govt Depot)",
         updatedAt: new Date().toISOString(),
@@ -536,30 +557,15 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
       const targetId = item.id ?? item.ingredientId;
       const currentStock = Number(item.stock ?? item.currentStock ?? 0);
       const nextStock = Math.max(0, Number((currentStock + delta).toFixed(2)));
-      const adjustedAmount = Math.abs(nextStock - currentStock);
-      const nextUsed = Number((Number(item.totalUsed || 0) + (delta < 0 ? adjustedAmount : 0)).toFixed(2));
-      const nextRestocked = Number((Number(item.totalRestocked || 0) + (delta > 0 ? adjustedAmount : 0)).toFixed(2));
-
-      await apiAdjustStock({
+      if (!Number.isFinite(delta) || delta === 0 || currentStock + delta < 0) {
+        throw new Error("Stock adjustment must be non-zero and cannot reduce stock below zero.");
+      }
+      const response = await apiAdjustStock({
         ingredientId: targetId,
         quantityChange: delta,
         reason: delta > 0 ? "Shipment Received" : "Quick Consume",
-      }).catch(async () => {
-        await apiUpdateInventoryItem(targetId, {
-          ...item,
-          stock: nextStock,
-          currentStock: nextStock,
-          totalUsed: nextUsed,
-          totalRestocked: nextRestocked,
-        });
       });
-
-      try {
-        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
-        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
-        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed, totalRestocked: nextRestocked } : it));
-        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      if (!response?.success) throw new Error(response?.error || "Stock adjustment was rejected by the inventory API.");
 
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
@@ -574,45 +580,24 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
   const handleRecordUsage = async (event) => {
     event?.preventDefault?.();
     const amount = Number(consumeAmount);
-    if (!consumeItem || !Number.isFinite(amount) || amount <= 0) return;
+    if (!consumeItem || !Number.isFinite(amount) || amount <= 0) {
+      window.alert("Enter a quantity greater than zero.");
+      return;
+    }
+    const currentStock = Number(consumeItem.stock ?? consumeItem.currentStock ?? 0);
+    if (amount > currentStock) {
+      window.alert(`Cannot use ${amount}; only ${currentStock} ${consumeItem.unit || "units"} are in stock.`);
+      return;
+    }
     setBusy(true);
     try {
       const targetId = consumeItem.id ?? consumeItem.ingredientId;
-      const currentStock = Number(consumeItem.stock ?? consumeItem.currentStock ?? 0);
-      const nextStock = Math.max(0, Number((currentStock - amount).toFixed(2)));
-      const nextUsed = Number((Number(consumeItem.totalUsed || 0) + amount).toFixed(2));
-
-      await apiAdjustStock({
+      const response = await apiAdjustStock({
         ingredientId: targetId,
         quantityChange: -amount,
         reason: consumeReason.trim() || "Bar Usage",
-      }).catch(async () => {
-        await apiUpdateInventoryItem(targetId, {
-          ...consumeItem,
-          stock: nextStock,
-          currentStock: nextStock,
-          totalUsed: nextUsed,
-        });
       });
-
-      try {
-        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
-        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
-        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed } : it));
-        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
-
-        const ledger = JSON.parse(localStorage.getItem("gourmet_pos_inventory_deductions_v1") || "[]");
-        ledger.unshift({
-          id: `usage-${Date.now()}`,
-          itemId: targetId,
-          itemName: consumeItem.name,
-          quantity: amount,
-          unit: consumeItem.unit || "Bottle",
-          reason: consumeReason.trim() || "Bar Usage",
-          timestamp: new Date().toISOString(),
-        });
-        localStorage.setItem("gourmet_pos_inventory_deductions_v1", JSON.stringify(ledger.slice(0, 500)));
-      } catch {}
+      if (!response?.success) throw new Error(response?.error || "Stock usage was rejected by the inventory API.");
 
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
@@ -631,38 +616,24 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
     event?.preventDefault?.();
     const amount = Number(restockAmount);
     const unitCost = Number(restockUnitCost);
-    if (!restockItem || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(unitCost) || unitCost < 0) return;
+    if (!restockItem || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(unitCost) || unitCost < 0) {
+      window.alert("Enter a received quantity greater than zero and a valid non-negative unit cost.");
+      return;
+    }
     setBusy(true);
     try {
       const targetId = restockItem.id ?? restockItem.ingredientId;
-      const currentStock = Number(restockItem.stock ?? restockItem.currentStock ?? 0);
-      const nextStock = Number((currentStock + amount).toFixed(2));
-      const nextRestocked = Number((Number(restockItem.totalRestocked || 0) + amount).toFixed(2));
       const supplierToUse = restockSupplier.trim() || restockItem.supplier || "State Beverages Corporation (TSBCL/Govt Depot)";
       const date = new Date();
 
-      await apiAdjustStock({
+      const response = await apiAdjustStock({
         ingredientId: targetId,
         quantityChange: amount,
         reason: `Shipment Received (${supplierToUse})`,
-      }).catch(async () => {
-        await apiUpdateInventoryItem(targetId, {
-          ...restockItem,
-          stock: nextStock,
-          currentStock: nextStock,
-          totalRestocked: nextRestocked,
-          supplier: supplierToUse,
-        });
       });
+      if (!response?.success) throw new Error(response?.error || "Received stock was rejected by the inventory API.");
 
-      try {
-        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
-        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
-        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalRestocked: nextRestocked, supplier: supplierToUse } : it));
-        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
-
-      await onRecordInventoryPurchase?.({
+      const purchaseSaved = await onRecordInventoryPurchase?.({
         itemId: targetId,
         name: restockItem.name,
         category: restockItem.category,
@@ -674,6 +645,9 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
         department: "bar",
         purchaseDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
       });
+      if (purchaseSaved === false) {
+        throw new Error("Stock was updated, but the purchase history could not be recorded.");
+      }
 
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
@@ -7584,7 +7558,6 @@ export function BarWorkspace({
   onOrderUpdated,
   onBarOrderItemStatusUpdated,
   onUpdateItemKotStatus = null,
-  onCompleteTableKot = null,
   inventory: sharedInventory = [],
   pastOrders = [],
   salaryPayments = [],
@@ -9361,7 +9334,6 @@ export function BarWorkspace({
           barDrinks={barDrinks}
           onItemsUpdated={onBarOrderItemStatusUpdated}
           onUpdateItemKotStatus={onUpdateItemKotStatus}
-          onCompleteTableKot={onCompleteTableKot}
         />
       )}
 
