@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useId } from 'react';
 import {
   ChefHat, Lock, User, Eye, EyeOff,
   Utensils, MonitorCheck, ShieldCheck,
-  LogIn, CheckCircle, Mail,
+  CheckCircle, Mail,
   RefreshCw, ArrowLeft,
   Settings, Printer, TrendingUp, Heart, Sparkles, KeyRound
 } from 'lucide-react';
@@ -201,7 +201,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
   const triggerShake = () => { setShake(true); setTimeout(() => setShake(false), 600); };
 
-  const clearAll = () => { setError(''); setSuccess(''); setUsername(''); setPassword(''); };
 
   // ── LOGIN ─────────────────────────────────────────────────
   const handleLogin = async (e) => {
@@ -499,28 +498,6 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
         </div>
 
         {/* Tab toggle — Admin only */}
-        {currentRole === 'admin' && (
-          <div className="bhanu-mode-tabs">
-            <button
-              type="button"
-              aria-pressed={mode === 'login'}
-              onClick={() => { setMode('login'); clearAll(); }}
-              style={{
-                padding: '0.42rem', borderRadius: '8px',
-                fontSize: '0.78rem', fontWeight: 800,
-                background: mode === 'login' ? cfg.btnBg : 'rgba(255,255,255,0.04)',
-                color: mode === 'login' ? '#fff' : '#475569',
-                border: mode === 'login' ? `1.5px solid ${cfg.accent}` : '1.5px solid rgba(255,255,255,0.08)',
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
-                transition: 'all 0.2s', boxShadow: mode === 'login' ? cfg.btnShadow : 'none'
-              }}
-            >
-              <LogIn size={13} />Admin Sign In
-            </button>
-          </div>
-        )}
-
         {/* ── LOGIN FORM ── */}
         {mode === 'login' && (
           <form
