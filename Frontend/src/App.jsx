@@ -203,6 +203,27 @@ const dedupeStaff = (staff) => {
   return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
+const mergeStaffWithLocalSalaries = (incomingStaff, existingStaff) => {
+  const existing = Array.isArray(existingStaff) ? existingStaff : [];
+  return dedupeStaff((Array.isArray(incomingStaff) ? incomingStaff : []).map((person) => {
+    const incomingIds = [person.staffId, person.backendStaffId, person.id]
+      .filter((id) => id != null)
+      .map(String);
+    const localPerson = existing.find((candidate) =>
+      [candidate.backendStaffId, candidate.staffId, candidate.id]
+        .filter((id) => id != null)
+        .some((id) => incomingIds.includes(String(id))),
+    ) || existing.find((candidate) =>
+      String(candidate.name || candidate.fullName || "").trim().toLowerCase() ===
+        String(person.name || person.fullName || "").trim().toLowerCase(),
+    );
+    const salary = person.monthlySalary == null
+      ? Number(localPerson?.monthlySalary) || 0
+      : Number(person.monthlySalary) || 0;
+    return { ...person, monthlySalary: salary };
+  }));
+};
+
 const isRogueName = (name) => {
   if (!name) return false;
   const lower = String(name).trim().toLowerCase();
@@ -728,29 +749,38 @@ export function App() {
             : null;
       if (Array.isArray(backendStaff) && backendStaff.length > 0) {
         const locallySavedStaff = readStoredArray(STORAGE_KEY_STAFF);
-        const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
-          ...(locallySavedStaff.find((person) =>
-            String(person.backendStaffId ?? person.id ?? person.staffId) === String(s.staffId ?? s.id),
-          ) || {}),
-          ...s,
-          id: s.staffId ?? s.id,
-          staffId: s.staffId ?? s.id,
-          backendStaffId: s.staffId ?? s.id,
-          name: s.fullName || s.name,
-          fullName: s.fullName || s.name,
-          role: s.roleTitle || s.role || "Waiter",
-          roleTitle: s.roleTitle || s.role || "Waiter",
-        })));
+        const uniqueStaff = dedupeStaff(backendStaff.map((s) => {
+          const localSalary = mergeStaffWithLocalSalaries([{
+            id: s.staffId ?? s.id,
+            backendStaffId: s.staffId ?? s.id,
+            name: s.fullName || s.name,
+            monthlySalary: s.monthlySalary,
+          }], locallySavedStaff)[0]?.monthlySalary;
+          return {
+            ...s,
+            id: s.staffId ?? s.id,
+            staffId: s.staffId ?? s.id,
+            backendStaffId: s.staffId ?? s.id,
+            name: s.fullName || s.name,
+            fullName: s.fullName || s.name,
+            role: s.roleTitle || s.role || "Waiter",
+            roleTitle: s.roleTitle || s.role || "Waiter",
+            monthlySalary: localSalary,
+          };
+        }));
         setStaffList(uniqueStaff);
         try {
           localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(uniqueStaff));
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       } else {
-        setStaffList([]);
-        try {
-          localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-        } catch {}
+        const locallySavedStaff = readStoredArray(STORAGE_KEY_STAFF);
+        setStaffList(locallySavedStaff);
+        if (locallySavedStaff.length === 0) {
+          try {
+            localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+          } catch {}
+        }
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       }
     }).catch((error) => {
@@ -1135,17 +1165,18 @@ export function App() {
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
         if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
-          const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
+          const localStaff = readStoredArray(STORAGE_KEY_STAFF);
+          const normalizedStaff = mergeStaffWithLocalSalaries(incomingStaff.map((s) => ({
             id: s.staffId ?? s.id,
-            backendStaffId: s.backendStaffId,
+            backendStaffId: s.backendStaffId ?? s.staffId ?? s.id,
             name: s.fullName || s.name,
             role: s.roleTitle || s.role || "Waiter",
             phone: s.phone || "",
             email: s.email || "",
             shift: s.shift || "Full Day",
-            monthlySalary: Number(s.monthlySalary) || 0,
+            monthlySalary: s.monthlySalary,
             status: s.isActive === false ? "inactive" : "active",
-          })));
+          })), localStaff);
           setStaffList(normalizedStaff);
           try {
             localStorage.setItem(
@@ -1271,17 +1302,18 @@ export function App() {
           }
           const incomingStaff = payload.staff ?? payload[STORAGE_KEY_STAFF];
           if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
-            const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
+            const localStaff = readStoredArray(STORAGE_KEY_STAFF);
+            const normalizedStaff = mergeStaffWithLocalSalaries(incomingStaff.map((s) => ({
               id: s.staffId || s.id,
-              backendStaffId: s.backendStaffId,
+              backendStaffId: s.backendStaffId ?? s.staffId ?? s.id,
               name: s.fullName || s.name,
               role: s.roleTitle || s.role || "Waiter",
               phone: s.phone || "",
               email: s.email || "",
               shift: s.shift || "Full Day",
-              monthlySalary: Number(s.monthlySalary) || 0,
+              monthlySalary: s.monthlySalary,
               status: s.isActive === false ? "inactive" : "active",
-            })));
+            })), localStaff);
             setStaffList(normalizedStaff);
             try {
               localStorage.setItem(

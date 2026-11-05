@@ -239,6 +239,7 @@ export function AdminReports({
   // Single-Page View Mode Tabs
   // 'sales' | 'statement' | 'income' | 'expenditure'
   const [activeTab, setActiveTab] = useState('sales');
+  const [expenditureView, setExpenditureView] = useState('inventory');
 
   // Search & Filter State
   const [incomeSearch, setIncomeSearch] = useState('');
@@ -2128,49 +2129,103 @@ export function AdminReports({
           {/* ========================================================================= */}
           {activeTab === 'expenditure' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              
+              <div
+                role="group"
+                aria-label="Expenditure sections"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: '0.6rem',
+                  padding: '4px',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '11px',
+                  background: 'var(--bg-tertiary)',
+                }}
+              >
+                {[
+                  { id: 'inventory', label: 'Inventory', icon: Boxes },
+                  { id: 'salary', label: 'Salary', icon: Banknote },
+                ].map((view) => {
+                  const Icon = view.icon;
+                  const isSelected = expenditureView === view.id;
+                  return (
+                    <button
+                      key={view.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => setExpenditureView(view.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        minHeight: '42px',
+                        border: 'none',
+                        borderRadius: '8px',
+                        background: isSelected ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'transparent',
+                        color: isSelected ? '#fff' : 'var(--text-muted)',
+                        fontSize: '0.84rem',
+                        fontWeight: 750,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <Icon size={16} />
+                      {view.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Inventory and payroll summary */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
-                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                {expenditureView === 'inventory' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Tracked Items</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
                     {inventoryItems.length} {isBarMode ? "Bar Items" : "Ingredients"}
                   </div>
-                </div>
-                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                </div>}
+                {expenditureView === 'inventory' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Total Stock Valuation</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
                     {formatCurrency(totalInventoryCost)}
                   </div>
-                </div>
-                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                </div>}
+                {expenditureView === 'inventory' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Low Stock Alert</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
                     {lowStockCount} Items
                   </div>
-                </div>
-                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                </div>}
+                {expenditureView === 'inventory' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Out of Stock</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626', marginTop: '2px' }}>
                     {outOfStockCount} Items
                   </div>
-                </div>
-                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
+                </div>}
+                {expenditureView === 'inventory' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Inventory Purchases (Period)</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
                     {formatCurrency(totalInventoryPurchaseCost)}
                   </div>
                 </div>
-                <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Salary Paid (Period)</div>
+                }
+                {expenditureView === 'salary' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.7rem 0.9rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Actual Salary Payments (Period)</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', marginTop: '2px' }}>
                     {formatCurrency(totalSalaryPaid)}
                   </div>
-                </div>
+                </div>}
+                {expenditureView === 'salary' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.7rem 0.9rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Monthly Payroll Budget</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+                    {formatCurrency(monthlyPayrollBudget)}
+                  </div>
+                </div>}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.75rem' }}>
-                <section style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-tertiary)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '0.75rem' }}>
+                {expenditureView === 'inventory' && <section style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-tertiary)' }}>
                   <div style={{ padding: '0.7rem 0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
                     <strong style={{ color: 'var(--text-main)', fontSize: '0.82rem' }}>Inventory Purchase Ledger</strong>
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '3px' }}>
@@ -2203,13 +2258,13 @@ export function AdminReports({
                       </tbody>
                     </table>
                   </div>
-                </section>
+                </section>}
 
-                <section style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-tertiary)' }}>
+                {expenditureView === 'salary' && <section style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-tertiary)' }}>
                   <div style={{ padding: '0.7rem 0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <strong style={{ color: 'var(--text-main)', fontSize: '0.82rem' }}>Salary Payment Ledger</strong>
+                    <strong style={{ color: 'var(--text-main)', fontSize: '0.82rem' }}>Recorded Salary Payments</strong>
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '3px' }}>
-                      Paid {formatCurrency(totalSalaryPaid)} · Monthly payroll budget {formatCurrency(monthlyPayrollBudget)}
+                      Actual payments {formatCurrency(totalSalaryPaid)} · Monthly salary budget {formatCurrency(monthlyPayrollBudget)}
                     </div>
                   </div>
                   <div style={{ maxHeight: '220px', overflow: 'auto' }}>
@@ -2238,9 +2293,10 @@ export function AdminReports({
                       </tbody>
                     </table>
                   </div>
-                </section>
+                </section>}
               </div>
 
+              {expenditureView === 'inventory' && <>
               {/* Filter and Search Bar for Inventory */}
               <div
                 style={{
@@ -2497,6 +2553,7 @@ export function AdminReports({
                   </button>
                 </div>
               )}
+              </>}
             </div>
           )}
 

@@ -1859,14 +1859,6 @@ function globalSyncPlugin() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
-  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
-  const backendTarget =
-    process.env.BACKEND_URL ||
-    env.BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    env.VITE_BACKEND_URL ||
-    "http://127.0.0.1:5018";
-
   let apiBase = env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
   if (!apiBase) {
     try {
@@ -1880,6 +1872,15 @@ export default defineConfig(({ mode }) => {
   } else {
     apiBase = apiBase.trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
   }
+
+  // Target for backend proxying (prioritize explicit env vars, then VITE_API_BASE_URL, fallback to local 5018)
+  const backendTarget =
+    process.env.BACKEND_URL ||
+    env.BACKEND_URL ||
+    process.env.VITE_BACKEND_URL ||
+    env.VITE_BACKEND_URL ||
+    apiBase ||
+    "http://127.0.0.1:5018";
 
   return {
     plugins: [react(), globalSyncPlugin()],
@@ -1911,7 +1912,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                  error: "Cannot reach backend on " + backendTarget + ". Confirm it is running and accessible."
                 }));
               }
             });
@@ -1929,7 +1930,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                  error: "Cannot reach backend on " + backendTarget + ". Confirm it is running and accessible."
                 }));
               }
             });

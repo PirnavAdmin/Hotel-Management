@@ -1309,6 +1309,24 @@ export function AdminPortal({
     paymentMethod: "Bank Transfer",
     notes: "",
   });
+  const currentSalaryPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const getStaffSalaryPaidThisMonth = (person) => {
+    const personName = String(person?.name || person?.fullName || person?.FullName || "").trim().toLowerCase();
+    const personId = person?.id ?? person?.staffId;
+    return salaryPayments.reduce((total, payment) => {
+      const paymentStaffId = payment.staffId ?? payment.staffID;
+      const belongsToStaff = (
+        personId != null &&
+        paymentStaffId != null &&
+        String(paymentStaffId) === String(personId)
+      ) || String(payment.staffName || "").trim().toLowerCase() === personName;
+      return total + (
+        belongsToStaff && String(payment.salaryPeriod || payment.payPeriod || "").slice(0, 7) === currentSalaryPeriod
+          ? Number(payment.amount) || 0
+          : 0
+      );
+    }, 0);
+  };
 
   // Open item modal for Add or Edit
   const handleOpenItemModal = (item = null) => {
@@ -1537,13 +1555,17 @@ export function AdminPortal({
           "",
       );
       const personRole = String(person?.role || person?.roleTitle || "");
+      const monthlySalary = Number(person.monthlySalary) || 0;
+      const salaryForForm = monthlySalary > 0
+        ? monthlySalary
+        : getStaffSalaryPaidThisMonth(person);
       setEditingStaff(person);
       setStaffForm({
         name: personName,
         role: personRole,
         phone: person.phone || "",
         shift: person.shift || "",
-        monthlySalary: String(Number(person.monthlySalary) || 0),
+        monthlySalary: String(salaryForForm),
       });
     } else {
       setEditingStaff(null);
@@ -1644,6 +1666,7 @@ export function AdminPortal({
       const posUsers = (Array.isArray(users) ? users : []).filter(
         (u) => String(u.role || "").toLowerCase() === "pos",
       );
+      let addedCount = 0;
       for (const u of posUsers) {
         const uName = String(u.name || u.fullName || u.username || "").trim();
         if (!uName) continue;
@@ -1653,15 +1676,24 @@ export function AdminPortal({
             uName.toLowerCase(),
         );
         if (!exists && onAddStaff) {
-          await onAddStaff({
+          const added = await onAddStaff({
             name: uName,
             role: "Floor Staff / POS",
             phone: u.mobile || u.phone || "",
             shift: "Morning Shift (10 AM - 4 PM)",
           });
+          if (added !== false) addedCount += 1;
         }
       }
-    } catch {}
+      showToast(addedCount > 0
+        ? `Synced ${addedCount} POS user${addedCount === 1 ? "" : "s"} to staff.`
+        : posUsers.length > 0
+          ? "All POS users are already in the staff list."
+          : "No POS user accounts found to sync.");
+    } catch (error) {
+      console.error("[Staff] Failed to sync POS users:", error);
+      showToast("Could not sync POS users. Check the user list and try again.");
+    }
   };
 
   // Filtered menu items (strictly exclude bar drinks from Dine menu)
@@ -1847,6 +1879,8 @@ export function AdminPortal({
                 onAddStaff={onAddStaff}
                 onUpdateStaff={onUpdateStaff}
                 onDeleteStaff={onDeleteStaff}
+                onOpenSalaryPayment={handleOpenSalaryPaymentModal}
+                onSyncPosUsers={handleSyncPosUsers}
                 onRecordInventoryPurchase={onRecordInventoryPurchase}
                 onUpdateItemKotStatus={onUpdateItemKotStatus}
                 onCompleteTableKot={onCompleteTableKot}
@@ -3486,10 +3520,19 @@ export function AdminPortal({
                       }
                       .staff-table-grid {
                         display: grid;
-                        grid-template-columns: minmax(160px, 1.8fr) minmax(110px, 1.2fr) minmax(140px, 1.5fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(135px, 170px);
+                        grid-template-columns: minmax(150px, 1.6fr) minmax(115px, 1.15fr) minmax(125px, 1.3fr) minmax(135px, 1.1fr) minmax(105px, 1fr) minmax(140px, 1.2fr);
                         gap: 0.5rem;
                       }
                       .staff-table-grid > * { min-width: 0; }
+                      .staff-table-grid .staff-shift-cell {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                      }
+                      .staff-table-grid .staff-salary-cell {
+                        font-variant-numeric: tabular-nums;
+                        white-space: normal;
+                      }
                       @media (max-width: 900px) {
                         .staff-table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
                       }
@@ -3821,7 +3864,7 @@ export function AdminPortal({
                             <div>Staff Name</div>
                             <div>Role / Designation</div>
                             <div>Shift</div>
-                            <div>Monthly Salary</div>
+                            <div title="Configured monthly salary; recorded payments are tracked separately">Monthly Salary</div>
                             <div>Table Assignment</div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
                           </div>
@@ -3901,6 +3944,10 @@ export function AdminPortal({
                             const assignedCount = tables.filter(
                               (t) => (t.server || "").trim().toLowerCase() === personName.trim().toLowerCase(),
                             ).length;
+                            const paidThisMonth = getStaffSalaryPaidThisMonth(person);
+                            const monthlySalary = Number(person.monthlySalary) || 0;
+                            const hasMonthlySalary = monthlySalary > 0;
+                            const displayedSalary = hasMonthlySalary ? monthlySalary : paidThisMonth;
 
                             return (
                               <div
@@ -3975,11 +4022,11 @@ export function AdminPortal({
 
                                 {/* Col 4: Shift (Full Description without truncation) */}
                                 <div
+                                  className="staff-shift-cell"
                                   style={{
                                     color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
-                                    whiteSpace: "nowrap",
                                   }}
                                   title={person.shift || "General Shift"}
                                 >
@@ -3987,14 +4034,19 @@ export function AdminPortal({
                                 </div>
 
                                 <div
+                                  className="staff-salary-cell"
                                   style={{
-                                    color: "var(--text-main)",
+                                    color: hasMonthlySalary ? "var(--text-main)" : paidThisMonth > 0 ? "var(--success)" : "var(--text-dim)",
                                     fontSize: "0.82rem",
                                     fontWeight: 700,
-                                    whiteSpace: "nowrap",
                                   }}
+                                  title={hasMonthlySalary
+                                    ? "Configured monthly salary"
+                                    : paidThisMonth > 0
+                                      ? "Salary paid for this month; set a monthly salary in the staff profile to show the regular amount"
+                                      : "Monthly salary has not been set"}
                                 >
-                                  {formatCurrency(Number(person.monthlySalary) || 0)} / month
+                                  {displayedSalary > 0 ? formatCurrency(displayedSalary) : "—"}
                                 </div>
 
                                 {/* Col 5: Status Pill (Matching Image 2 status pill) */}
@@ -6872,6 +6924,9 @@ export function AdminPortal({
               </h3>
               <p style={{ margin: "0.25rem 0 0", color: "var(--text-muted)", fontSize: "0.78rem" }}>
                 {salaryPaymentStaff.name || salaryPaymentStaff.fullName || "Staff"} · {formatCurrency(Number(salaryPaymentStaff.monthlySalary) || 0)} monthly salary
+              </p>
+              <p style={{ margin: "0.2rem 0 0", color: "var(--text-dim)", fontSize: "0.72rem", lineHeight: 1.4 }}>
+                This records an actual payment. To change the monthly salary shown in the staff list, edit the staff profile.
               </p>
             </div>
             <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>

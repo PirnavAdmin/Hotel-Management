@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
-  Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
+  Banknote, Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
   Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Users, Wine, X, AlertCircle, RotateCcw, CheckCircle2, AlertTriangle, TrendingDown, ChevronDown, Download
 , MinusCircle, PackagePlus } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
@@ -37,12 +37,6 @@ import {
   apiGetBarAvailabilityOptions,
   apiGetBarOverview,
   apiGetBarRecentOrders,
-  apiGetBarStaff,
-  apiGetBarStaffById,
-  apiCreateBarStaff,
-  apiUpdateBarStaff,
-  apiToggleBarStaffStatus,
-  apiDeleteBarStaff,
   apiGetBarStaffFilterOptions,
   apiGetAssignableTables,
 } from "../api/barApi";
@@ -55,6 +49,25 @@ const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
 const BAR_ROLES = ["Bartender", "Head Bartender", "Bar Manager", "Bar Waiter", "Bar Server", "Mixologist", "Bar Assistant"];
 const BAR_SHIFTS = ["Morning (10 AM-4 PM)", "Evening (4 PM-10 PM)", "Night (6 PM-Close)"];
+const getStaffSalaryPaidThisMonth = (person, salaryPayments) => {
+  const date = new Date();
+  const salaryPeriod = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  const personName = String(person?.name || person?.fullName || person?.FullName || "").trim().toLowerCase();
+  const personId = person?.id ?? person?.staffId;
+  return (Array.isArray(salaryPayments) ? salaryPayments : []).reduce((total, payment) => {
+    const paymentStaffId = payment.staffId ?? payment.staffID;
+    const belongsToStaff = (
+      personId != null &&
+      paymentStaffId != null &&
+      String(paymentStaffId) === String(personId)
+    ) || String(payment.staffName || "").trim().toLowerCase() === personName;
+    return total + (
+      belongsToStaff && String(payment.salaryPeriod || payment.payPeriod || "").slice(0, 7) === salaryPeriod
+        ? Number(payment.amount) || 0
+        : 0
+    );
+  }, 0);
+};
 const SETTINGS_DEFAULTS = {
   barName: "Telugu Taste Bar", contact: "+91 80 4567 8900", area: "Ground Floor • East Wing",
   opening: "10:00", closing: "23:30", prepTime: 8, kotPrefix: "BKOT", autoPrint: false,
@@ -6166,11 +6179,12 @@ function BarTablesView({
 function BarStaffView({
   staffList = [],
   tables = [],
+  salaryPayments = [],
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
-  onReloadStaff,
-  loading = false,
+  onOpenSalaryPayment,
+  onSyncPosUsers,
   setToast,
 }) {
   const { requestDelete, confirmState, cancelDelete } = useConfirmDelete();
@@ -6406,6 +6420,7 @@ function BarStaffView({
     role: "",
     phone: "",
     shift: "",
+    monthlySalary: "0",
     assignedTableIds: [],
   });
 
@@ -6422,12 +6437,15 @@ function BarStaffView({
       const personTableIds = Array.isArray(person?.assignedTableIds)
         ? person.assignedTableIds
         : [];
+      const monthlySalary = Number(person.monthlySalary) || 0;
+      const paidThisMonth = getStaffSalaryPaidThisMonth(person, salaryPayments);
       setEditingStaff(person);
       setStaffForm({
         name: personName,
         role: personRole,
         phone: person.phone || "",
         shift: person.shift || "",
+        monthlySalary: String(monthlySalary > 0 ? monthlySalary : paidThisMonth),
         assignedTableIds: personTableIds,
       });
     } else {
@@ -6437,6 +6455,7 @@ function BarStaffView({
         role: "",
         phone: "",
         shift: "",
+        monthlySalary: "0",
         assignedTableIds: [],
       });
     }
@@ -6462,6 +6481,7 @@ function BarStaffView({
       roleTitle: staffForm.role,
       phone: staffForm.phone || "+91 98450 00000",
       shift: staffForm.shift,
+      monthlySalary: Number(staffForm.monthlySalary) || 0,
       assignedTableIds: staffForm.assignedTableIds || [],
     };
 
@@ -6486,6 +6506,7 @@ function BarStaffView({
       role: "",
       phone: "",
       shift: "",
+      monthlySalary: "0",
       assignedTableIds: [],
     });
     setIsStaffModalOpen(false);
@@ -6550,10 +6571,15 @@ function BarStaffView({
         }
         .staff-table-grid {
           display: grid;
-          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
+          grid-template-columns: minmax(150px, 1.6fr) minmax(115px, 1.15fr) minmax(125px, 1.3fr) minmax(125px, 1.1fr) minmax(105px, 1fr) minmax(145px, 170px);
           gap: 0.5rem;
         }
         .staff-table-grid > * { min-width: 0; }
+        .staff-table-grid .staff-shift-cell {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         @media (max-width: 900px) {
           .staff-table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
@@ -6616,6 +6642,7 @@ function BarStaffView({
               }}
             >
               Manage bartenders, bar captains and servers handling bar guests
+              {" "}Shared with Dine staff.
             </p>
           </div>
         </div>
@@ -6623,29 +6650,25 @@ function BarStaffView({
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
           <button
             type="button"
-            onClick={() => {
-              onReloadStaff?.();
-              setToast?.("Staff list refreshed from database.");
-            }}
-            title="Reload staff list from backend database"
+            onClick={onSyncPosUsers}
+            title="Import POS users from Login Management as serving staff"
             style={{
               display: "flex",
               alignItems: "center",
               gap: "0.35rem",
               padding: "0.5rem 0.9rem",
-              background: "var(--bg-secondary)",
-              border: "1px solid var(--border-card)",
-              color: "var(--text-dim)",
+              background: "rgba(59, 130, 246, 0.12)",
+              border: "1px solid rgba(59, 130, 246, 0.35)",
+              color: "#60a5fa",
               borderRadius: "8px",
               fontWeight: 600,
               fontSize: "0.8rem",
               cursor: "pointer",
             }}
           >
-            <RotateCcw size={14} />
-            <span>Refresh</span>
+            <Users size={14} />
+            <span>Sync POS Users</span>
           </button>
-
           <button
             type="button"
             onClick={() => handleOpenStaffModal()}
@@ -6889,6 +6912,7 @@ function BarStaffView({
               <div>Staff Name</div>
               <div>Role / Designation</div>
               <div>Shift</div>
+              <div>Monthly Salary</div>
               <div>Table Assignment</div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
             </div>
@@ -6965,6 +6989,9 @@ function BarStaffView({
                 person?.role || person?.roleTitle || person?.jobTitle || "Staff",
               );
               const personId = person?.id ?? person?.staffId;
+              const monthlySalary = Number(person.monthlySalary) || 0;
+              const paidThisMonth = getStaffSalaryPaidThisMonth(person, salaryPayments);
+              const displayedSalary = monthlySalary > 0 ? monthlySalary : paidThisMonth;
               const assignedCount = (Array.isArray(person?.assignedTableIds) && person.assignedTableIds.length > 0)
                 ? person.assignedTableIds.length
                 : (person?.assignedTables && person.assignedTables !== "—"
@@ -7051,18 +7078,30 @@ function BarStaffView({
 
                   {/* Col 4: Shift */}
                   <div
+                    className="staff-shift-cell"
                     style={{
                       color: "var(--text-muted)",
                       fontSize: "0.84rem",
                       fontWeight: 500,
-                      whiteSpace: "nowrap",
                     }}
                     title={person.shift || "General Shift"}
                   >
                     {person.shift || "General Shift"}
                   </div>
 
-                  {/* Col 5: Status Pill */}
+                  <div
+                    style={{
+                      color: displayedSalary > 0 ? "var(--text-main)" : "var(--text-dim)",
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                    title={monthlySalary > 0 ? "Configured monthly salary" : paidThisMonth > 0 ? "Actual salary payments this month" : "Monthly salary has not been set"}
+                  >
+                    {displayedSalary > 0 ? formatCurrency(displayedSalary) : "—"}
+                  </div>
+
+                  {/* Table assignment status */}
                   <div>
                     <div
                       style={{
@@ -7107,6 +7146,30 @@ function BarStaffView({
 
                   {/* Col 6: Actions */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenSalaryPayment?.(person)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "0.25rem",
+                        padding: "0.35rem 0.45rem",
+                        background: "rgba(16, 185, 129, 0.08)",
+                        color: "var(--success)",
+                        border: "1px solid rgba(16, 185, 129, 0.35)",
+                        borderRadius: "6px",
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={`Record a salary payment for ${personName}`}
+                      aria-label={`Record salary payment for ${personName}`}
+                    >
+                      <Banknote size={13} />
+                      Pay
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleOpenStaffModal(person)}
@@ -7330,6 +7393,44 @@ function BarStaffView({
               />
             </div>
 
+            <div>
+              <label
+                htmlFor="bar-staff-monthly-salary"
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Monthly Salary (INR)
+              </label>
+              <input
+                id="bar-staff-monthly-salary"
+                type="number"
+                min="0"
+                max="99999999"
+                step="0.01"
+                value={staffForm.monthlySalary}
+                onChange={(e) => setStaffForm({ ...staffForm, monthlySalary: e.target.value })}
+                placeholder="0.00"
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
             {assignableTables.length > 0 && (
               <div>
                 <label
@@ -7488,6 +7589,8 @@ export function BarWorkspace({
   pastOrders = [],
   salaryPayments = [],
   inventoryPurchases = [],
+  onOpenSalaryPayment,
+  onSyncPosUsers,
   onRecordInventoryPurchase,
   restaurantName = "Restaurant",
   restaurantSettings = {},
@@ -7688,168 +7791,6 @@ export function BarWorkspace({
     window.dispatchEvent(new CustomEvent("avsr-bar-drinks-updated", { detail: barDrinks }));
   }, [barDrinks]);
 
-const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
-
-  // Dedicated bar staff state - loaded live from Backend API (no mock data)
-  const [barStaff, setBarStaff] = useState(() => {
-    try {
-      localStorage.removeItem("avsr_bar_staff_v1");
-      const saved = localStorage.getItem(STORAGE_KEY_BAR_STAFF);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  });
-  const [barStaffLoading, setBarStaffLoading] = useState(false);
-
-  const loadBarStaff = useCallback(async () => {
-    setBarStaffLoading(true);
-    try {
-      const res = await apiGetBarStaff();
-      const raw = res?.data?.data || res?.data;
-      if (res?.success && Array.isArray(raw)) {
-        const formatted = raw.map((s) => ({
-          ...s,
-          id: s.staffId || s.id,
-          staffId: s.staffId || s.id,
-          name: s.fullName || s.name || "",
-          fullName: s.fullName || s.name || "",
-          role: s.jobTitle || s.role || s.roleTitle || "Staff",
-          jobTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
-          roleTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
-          phone: s.phone || "",
-          shift: s.shift || "General Shift",
-          barArea: s.barArea || "—",
-          assignedTables: s.assignedTables || "—",
-          assignedTableIds: Array.isArray(s.assignedTableIds) ? s.assignedTableIds : [],
-          assignedTableDetails: Array.isArray(s.assignedTableDetails) ? s.assignedTableDetails : [],
-          isActive: s.isActive !== false && s.status !== "inactive",
-          status: s.status || (s.isActive !== false ? "active" : "inactive"),
-        }));
-        setBarStaff(formatted);
-      }
-    } catch (err) {
-      console.warn("[BarWorkspace] apiGetBarStaff offline/fallback:", err?.message);
-    } finally {
-      setBarStaffLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadBarStaff();
-  }, [loadBarStaff]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_BAR_STAFF, JSON.stringify(barStaff));
-    } catch {}
-  }, [barStaff]);
-
-  const handleAddBarStaff = async (newStaff) => {
-    try {
-      const res = await apiCreateBarStaff({
-        fullName: newStaff.name || newStaff.fullName,
-        jobTitle: newStaff.role || newStaff.jobTitle || newStaff.roleTitle,
-        phone: newStaff.phone,
-        shift: newStaff.shift,
-        assignedTableIds: newStaff.assignedTableIds || [],
-        assignedTables: newStaff.assignedTables || [],
-        isActive: true,
-      });
-      const created = res?.data?.data || res?.data;
-      if (created) {
-        const mapped = {
-          ...created,
-          id: created.staffId || created.id,
-          staffId: created.staffId || created.id,
-          name: created.fullName || created.name || newStaff.name,
-          fullName: created.fullName || created.name || newStaff.name,
-          role: created.jobTitle || created.role || created.roleTitle || newStaff.role,
-          jobTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
-          roleTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
-          phone: created.phone || newStaff.phone,
-          shift: created.shift || newStaff.shift,
-          barArea: created.barArea || "—",
-          assignedTables: created.assignedTables || "—",
-          assignedTableIds: created.assignedTableIds || [],
-          assignedTableDetails: created.assignedTableDetails || [],
-          isActive: true,
-          status: "active",
-        };
-        setBarStaff((prev) => [mapped, ...prev.filter((s) => s.id !== mapped.id)]);
-        return mapped;
-      }
-    } catch (err) {
-      console.error("[BarWorkspace] apiCreateBarStaff error:", err);
-      const fallback = {
-        ...newStaff,
-        id: Date.now(),
-        staffId: Date.now(),
-        fullName: newStaff.name,
-        jobTitle: newStaff.role,
-        roleTitle: newStaff.role,
-        isActive: true,
-        status: "active",
-      };
-      setBarStaff((prev) => [fallback, ...prev]);
-      return fallback;
-    }
-  };
-
-  const handleUpdateBarStaff = async (updatedStaff) => {
-    const id = updatedStaff.staffId || updatedStaff.id;
-    try {
-      const res = await apiUpdateBarStaff(id, {
-        fullName: updatedStaff.name || updatedStaff.fullName,
-        jobTitle: updatedStaff.role || updatedStaff.jobTitle || updatedStaff.roleTitle,
-        phone: updatedStaff.phone,
-        shift: updatedStaff.shift,
-        assignedTableIds: updatedStaff.assignedTableIds,
-        assignedTables: updatedStaff.assignedTables,
-        isActive: updatedStaff.isActive,
-      });
-      const updated = res?.data?.data || res?.data;
-      if (updated) {
-        const mapped = {
-          ...updated,
-          id: updated.staffId || updated.id || id,
-          staffId: updated.staffId || updated.id || id,
-          name: updated.fullName || updated.name || updatedStaff.name,
-          fullName: updated.fullName || updated.name || updatedStaff.name,
-          role: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
-          jobTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
-          roleTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
-          phone: updated.phone || updatedStaff.phone,
-          shift: updated.shift || updatedStaff.shift,
-          barArea: updated.barArea || "—",
-          assignedTables: updated.assignedTables || "—",
-          assignedTableIds: updated.assignedTableIds || [],
-          assignedTableDetails: updated.assignedTableDetails || [],
-          isActive: updated.isActive !== false,
-          status: updated.status || "active",
-        };
-        setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? mapped : s)));
-        return mapped;
-      }
-    } catch (err) {
-      console.error("[BarWorkspace] apiUpdateBarStaff error:", err);
-      setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? updatedStaff : s)));
-      return updatedStaff;
-    }
-  };
-
-  const handleDeleteBarStaff = async (staffId) => {
-    try {
-      await apiDeleteBarStaff(staffId);
-    } catch (err) {
-      console.error("[BarWorkspace] apiDeleteBarStaff error:", err);
-    }
-    setBarStaff((prev) => prev.filter((s) => s.id !== staffId && s.staffId !== staffId));
-    return true;
-  };
-
   // Mojito auto-removal removed to preserve Dine-Bar drink synchronization
 
   const handleAddDrink = async (newDrink) => {
@@ -8031,7 +7972,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
 
   const staffIdOf = (person) => person?.staffId ?? person?.id;
   const staffNameOf = (person) => person?.fullName || person?.name || person?.FullName || "";
-  const effectiveStaffList = barStaff.length > 0 ? barStaff : (Array.isArray(dineStaff) ? dineStaff : []);
+  const effectiveStaffList = Array.isArray(dineStaff) ? dineStaff : [];
   const tables = (Array.isArray(dineTables) ? dineTables : []).map((source) => {
     const sourceTableId = source.backendTableId ?? source.tableId ?? source.id;
     const activeOrder = orders.find((order) => String(order.tableId ?? order.TableId) === String(sourceTableId))
@@ -9392,18 +9333,19 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
           onAddTable={onAddTable}
           onUpdateTable={onUpdateTable}
           onDeleteTable={onDeleteTable}
-          onAddStaff={handleAddBarStaff}
+          onAddStaff={onAddStaff}
           setToast={setToast}
         />
       ) : route === "bar-staff" ? (
         <BarStaffView
-          staffList={barStaff}
+          staffList={dineStaff}
           tables={tables}
-          onAddStaff={handleAddBarStaff}
-          onUpdateStaff={handleUpdateBarStaff}
-          onDeleteStaff={handleDeleteBarStaff}
-          onReloadStaff={loadBarStaff}
-          loading={barStaffLoading}
+          salaryPayments={salaryPayments}
+          onAddStaff={onAddStaff}
+          onUpdateStaff={onUpdateStaff}
+          onDeleteStaff={onDeleteStaff}
+          onOpenSalaryPayment={onOpenSalaryPayment}
+          onSyncPosUsers={onSyncPosUsers}
           setToast={setToast}
         />
       ) : (
