@@ -220,7 +220,7 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
     // Zero-downtime offline administrative fallback for pirnav
     if (normUser === 'pirnav' || normUser === 'pirnavadmin' || normUser.includes('pirnav')) {
       const fallbackSession = {
-        userId: 'pirnav-admin-1',
+        userId: 'pirnav',
         username: 'pirnav',
         name: 'pirnav',
         role: 'admin',

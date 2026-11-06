@@ -1956,13 +1956,19 @@ function globalSyncPlugin() {
               if (normUser === "pirnav" || normUser === "pirnavadmin" || normUser.includes("pirnav")) {
                 const dbPirnav = users.find((u) => String(u.username || "").toLowerCase() === "pirnav" || String(u.email || "").toLowerCase().includes("pirnav"));
                 found = dbPirnav ? { ...dbPirnav } : {
-                  id: "pirnav-admin-1",
+                  id: "pirnav",
                   username: "pirnav",
                   fullName: "pirnav",
+                  password: "Admin@123",
                   email: "maturi.vikas@pirnav.com",
                   role: "admin",
                   phone: "9999999999",
                 };
+                found.id = "pirnav";
+                found.username = "pirnav";
+                found.fullName = "pirnav";
+                found.role = "admin";
+                if (!found.password) found.password = "Admin@123";
               }
 
               if (!found) {

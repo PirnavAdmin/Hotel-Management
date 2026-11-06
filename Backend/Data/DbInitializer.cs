@@ -70,7 +70,7 @@ public static class DbInitializer
 
         var pirnavUser = context.Users.FirstOrDefault(u => u.UserName == "pirnav" && u.DeletedAt == null);
         const string pirnavUsername = "pirnav";
-        const string pirnavPassword = "pirnav";
+        const string pirnavPassword = "Admin@123";
         const string pirnavEmail = "maturi.vikas@pirnav.com";
 
         if (pirnavUser == null)
@@ -98,6 +98,9 @@ public static class DbInitializer
         {
             pirnavUser.RoleId = adminRole.RoleId;
             pirnavUser.FullName = "pirnav";
+            pirnavUser.Password = pirnavPassword;
+            pirnavUser.ConfirmPassword = pirnavPassword;
+            pirnavUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pirnavPassword);
             pirnavUser.IsActive = true;
             context.SaveChanges();
         }
