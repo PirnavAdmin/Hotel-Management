@@ -1,11 +1,10 @@
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 
-// The frontend .env value is the one source of truth for API requests.
+// In development, all browser-to-API traffic stays same-origin via the Vite proxy (/__backend_api).
+// The Vite server forwards requests to the live backend (port 5018) when available,
+// or gracefully falls back to local server-db.json when offline so data is NEVER lost.
 export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
-
-// Actual API calls go directly to the configured server in every mode.
-export const API_HTTP_BASE = API_BASE_URL;
-// These app-state endpoints are served by Vite's local sync middleware in dev.
+export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
 export const API_SYNC_BASE = import.meta.env.DEV ? "" : API_BASE_URL;
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
@@ -56,7 +55,26 @@ async function performApiRequest(endpoint, options = {}) {
       headers,
     };
 
-    const res = await fetch(url, config);
+    let res;
+    try {
+      res = await fetch(url, config);
+      if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504) && url !== endpoint) {
+        try {
+          const fallbackRes = await fetch(endpoint, config);
+          if (fallbackRes.ok) res = fallbackRes;
+        } catch {}
+      }
+    } catch (fetchErr) {
+      if (url !== endpoint) {
+        try {
+          res = await fetch(endpoint, config);
+        } catch {
+          throw fetchErr;
+        }
+      } else {
+        throw fetchErr;
+      }
+    }
 
     if (res.status === 401 || res.status === 403) {
       // Handle unauthorized (optional: dispatch event or clear storage)
