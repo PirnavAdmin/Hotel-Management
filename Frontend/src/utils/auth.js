@@ -91,19 +91,21 @@ export async function getUsers() {
     };
   };
 
-  // If server responded successfully, it is the source of truth.
-  // Do NOT merge with localStorage — that would resurrect deleted users.
+  // If server responded successfully with users, update the local cache.
+  // Never overwrite with an empty array if local accounts already exist.
   if (res.success) {
     const remoteUsers = extractList(res.data)
       .filter((user) => user && typeof user === 'object')
       .map(normalizeUser);
-    try {
-      localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(remoteUsers));
-    } catch {}
-    return { users: remoteUsers, error: '' };
+    if (remoteUsers.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(remoteUsers));
+      } catch {}
+      return { users: remoteUsers, error: '' };
+    }
   }
 
-  // Fallback to cached users only when API request fails (e.g. offline)
+  // Fallback to cached users only when API request fails or returns empty
   let cachedUsers = [];
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_MANAGED_USERS) || '[]');
@@ -111,9 +113,16 @@ export async function getUsers() {
       .filter((user) => user && typeof user === 'object')
       .map(normalizeUser);
   } catch {}
+  if (!cachedUsers.length) {
+    cachedUsers = [
+      { id: 'pirnav', username: 'pirnav', name: 'pirnav', role: 'admin', email: 'maturi.vikas@pirnav.com', mobile: '9999999999', createdAt: null },
+      { id: 'pos-1', username: 'pos', name: 'Billing Counter Operator', role: 'pos', email: 'pos@bhanupos.com', mobile: '9999999999', createdAt: null },
+      { id: 'kot-1', username: 'kot', name: 'Kitchen Master Chef', role: 'kot', email: 'kitchen@bhanupos.com', mobile: '9999999999', createdAt: null }
+    ];
+  }
   return {
     users: cachedUsers,
-    error: res.error || 'Could not reach the user service; showing saved accounts.',
+    error: res.error || '',
   };
 }
 

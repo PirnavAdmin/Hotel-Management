@@ -809,13 +809,20 @@ export function App() {
         setSharedRecordLoad((state) => ({ ...state, tables: "ready", tableError: "" }));
         setTablesReadyForSync(true);
       } catch (error) {
-        const cleanCachedTables = mergeIncomingTables(
-          [],
-          getDeletedTableIds(),
-          { preserveCachedOrders: false },
-        );
-        replaceCachedTableOrdersRef.current = true;
-        setTables(cleanCachedTables);
+        let cachedTables = [];
+        try {
+          cachedTables = JSON.parse(localStorage.getItem(STORAGE_KEY_TABLES) || "[]");
+        } catch {}
+        if (Array.isArray(cachedTables) && cachedTables.length > 0) {
+          setTables(cachedTables);
+        } else {
+          const cleanCachedTables = mergeIncomingTables(
+            [],
+            getDeletedTableIds(),
+            { preserveCachedOrders: false },
+          );
+          setTables(cleanCachedTables);
+        }
         setSharedRecordLoad((state) => ({ ...state, tables: "error", tableError: error?.message || "Table records could not be loaded." }));
         setTablesReadyForSync(true);
       }
