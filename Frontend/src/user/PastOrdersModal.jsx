@@ -344,7 +344,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
 
     return sortedKeys.map(dateKey => {
       const orders = sortOrdersBySettlementTime(map[dateKey]);
-      const totalRev = orders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+      const totalRev = orders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0), 0);
       return {
         date: dateKey,
         orders,
@@ -462,7 +462,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
     return sortOrdersBySettlementTime(searchFilteredOrders);
   }, [viewMode, singleDayOrders, monthlyOrders, customRangeOrders, searchFilteredOrders]);
 
-  const totalCollected = activeOrders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+  const totalCollected = activeOrders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0), 0);
   const averageTicket = activeOrders.length ? totalCollected / activeOrders.length : 0;
 
 

@@ -65,13 +65,47 @@ public static class DbInitializer
         }
 
         // ============================================================
-        // FIND ADMIN USER
+        // SEED/ENSURE PIRNAV & ADMIN USERS
         // ============================================================
+
+        var pirnavUser = context.Users.FirstOrDefault(u => u.UserName == "pirnav" && u.DeletedAt == null);
+        const string pirnavUsername = "pirnav";
+        const string pirnavPassword = "pirnav";
+        const string pirnavEmail = "maturi.vikas@pirnav.com";
+
+        if (pirnavUser == null)
+        {
+            pirnavUser = new User
+            {
+                RoleId = adminRole.RoleId,
+                BranchId = null,
+                FullName = "pirnav",
+                UserName = pirnavUsername,
+                Password = pirnavPassword,
+                ConfirmPassword = pirnavPassword,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(pirnavPassword),
+                Email = pirnavEmail,
+                Phone = "9999999999",
+                PinCode = "1234",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            context.Users.Add(pirnavUser);
+            context.SaveChanges();
+        }
+        else
+        {
+            pirnavUser.RoleId = adminRole.RoleId;
+            pirnavUser.FullName = "pirnav";
+            pirnavUser.IsActive = true;
+            context.SaveChanges();
+        }
 
         var adminUser = context.Users.FirstOrDefault(u => u.UserName == "admin" && u.DeletedAt == null);
         const string adminUsername = "admin";
         const string adminPassword = "Admin@123";
-        const string adminEmail = "admin@avsrfoodcourt.com";
+        const string adminEmail = "admin@bhanupos.com";
 
         if (adminUser == null)
         {
@@ -79,7 +113,7 @@ public static class DbInitializer
             {
                 RoleId = adminRole.RoleId,
                 BranchId = null,
-                FullName = "AVULA VENKATA SURESH REDDY",
+                FullName = "pirnav",
                 UserName = adminUsername,
                 Password = adminPassword,
                 ConfirmPassword = adminPassword,
@@ -97,7 +131,7 @@ public static class DbInitializer
         else
         {
             adminUser.RoleId = adminRole.RoleId;
-            adminUser.FullName = "AVULA VENKATA SURESH REDDY";
+            adminUser.FullName = "pirnav";
             adminUser.UserName = adminUsername;
             adminUser.Password = adminPassword;
             adminUser.ConfirmPassword = adminPassword;
@@ -116,12 +150,12 @@ public static class DbInitializer
             {
                 RoleId = adminRole.RoleId,
                 BranchId = null,
-                FullName = "AVULA VENKATA SURESH REDDY (Admin)",
+                FullName = "pirnav",
                 UserName = "admins",
                 Password = adminPassword,
                 ConfirmPassword = adminPassword,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
-                Email = "admins@avsrfoodcourt.com",
+                Email = "admins@bhanupos.com",
                 Phone = "9999999999",
                 PinCode = "1234",
                 IsActive = true,
@@ -134,12 +168,12 @@ public static class DbInitializer
         else
         {
             adminsUser.RoleId = adminRole.RoleId;
-            adminsUser.FullName = "AVULA VENKATA SURESH REDDY (Admin)";
+            adminsUser.FullName = "pirnav";
             adminsUser.UserName = "admins";
             adminsUser.Password = adminPassword;
             adminsUser.ConfirmPassword = adminPassword;
             adminsUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
-            adminsUser.Email = "admins@avsrfoodcourt.com";
+            adminsUser.Email = "admins@bhanupos.com";
             adminsUser.BranchId = null;
             adminsUser.IsActive = true;
             context.SaveChanges();

@@ -1093,111 +1093,64 @@ export function AdminInvoices({
             marginBottom: "1.25rem",
           }}
         >
-          {/* Service & Payment Filter Pills */}
-          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
-            {/* Dining Type Pills */}
-            <div style={{ display: "inline-flex", gap: "0.3rem", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "3px 4px", borderRadius: "20px", border: "1px solid var(--border-subtle)" }}>
-              {[
-                { id: "all", label: "All Types" },
-                { id: "dine_in", label: "🍽️ Dine-In" },
-                { id: "takeaway", label: "🛍️ Takeaway" },
-              ].map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => {
-                    setOrderTypeFilter(id);
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    background:
-                      orderTypeFilter === id
-                        ? id === "takeaway"
-                          ? "rgba(249, 115, 22, 0.2)"
-                          : id === "dine_in"
-                          ? "rgba(99, 102, 241, 0.2)"
-                          : "rgba(245, 158, 11, 0.2)"
-                        : "transparent",
-                    border:
-                      orderTypeFilter === id
-                        ? id === "takeaway"
-                          ? "1px solid #f97316"
-                          : id === "dine_in"
-                          ? "1px solid rgba(99, 102, 241, 0.6)"
-                          : "1px solid var(--accent-amber)"
-                        : "1px solid transparent",
-                    color:
-                      orderTypeFilter === id
-                        ? id === "takeaway"
-                          ? "#f97316"
-                          : id === "dine_in"
-                          ? "var(--accent-indigo)"
-                          : "var(--accent-amber)"
-                        : "var(--text-muted)",
-                    padding: "0.3rem 0.75rem",
-                    borderRadius: "16px",
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    textTransform: "uppercase",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Payment Method Pills */}
-            <div style={{ display: "inline-flex", gap: "0.3rem", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "3px 4px", borderRadius: "20px", border: "1px solid var(--border-subtle)" }}>
-              {[
-                { id: "all", label: "All Payments" },
-                { id: "upi", label: "UPI" },
-                { id: "cash", label: "Cash" },
-              ].map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => {
-                    setPaymentFilter(id);
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    background:
-                      paymentFilter === id
-                        ? id === "upi"
-                          ? "rgba(56, 189, 248, 0.2)"
-                          : id === "cash"
-                          ? "rgba(16, 185, 129, 0.2)"
-                          : "rgba(245, 158, 11, 0.2)"
-                        : "transparent",
-                    border:
-                      paymentFilter === id
-                        ? id === "upi"
-                          ? "1px solid #38bdf8"
-                          : id === "cash"
-                          ? "1px solid var(--success)"
-                          : "1px solid var(--accent-amber)"
-                        : "1px solid transparent",
-                    color:
-                      paymentFilter === id
-                        ? id === "upi"
-                          ? "#38bdf8"
-                          : id === "cash"
-                          ? "var(--success)"
-                          : "var(--accent-amber)"
-                        : "var(--text-muted)",
-                    padding: "0.3rem 0.75rem",
-                    borderRadius: "16px",
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    textTransform: "uppercase",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          {/* Quick Filter Pills (ALL PAYMENTS, UPI, CASH, TAKEAWAY, DINE-IN) */}
+          <div style={{ display: "inline-flex", gap: "0.35rem", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "3px 4px", borderRadius: "20px", border: "1px solid var(--border-subtle)", flexWrap: "wrap" }}>
+            {[
+              { id: "all", label: "ALL PAYMENTS", active: paymentFilter === "all" && orderTypeFilter === "all", onClick: () => { setPaymentFilter("all"); setOrderTypeFilter("all"); setCurrentPage(1); } },
+              { id: "upi", label: "UPI", active: paymentFilter === "upi", onClick: () => { setPaymentFilter("upi"); setOrderTypeFilter("all"); setCurrentPage(1); } },
+              { id: "cash", label: "CASH", active: paymentFilter === "cash", onClick: () => { setPaymentFilter("cash"); setOrderTypeFilter("all"); setCurrentPage(1); } },
+              { id: "takeaway", label: "TAKEAWAY", active: orderTypeFilter === "takeaway", onClick: () => { setOrderTypeFilter("takeaway"); setPaymentFilter("all"); setCurrentPage(1); } },
+              { id: "dine_in", label: "DINE-IN", active: orderTypeFilter === "dine_in", onClick: () => { setOrderTypeFilter("dine_in"); setPaymentFilter("all"); setCurrentPage(1); } },
+            ].map(({ id, label, active, onClick }) => (
+              <button
+                key={id}
+                onClick={onClick}
+                style={{
+                  background: active
+                    ? id === "upi"
+                      ? "rgba(56, 189, 248, 0.2)"
+                      : id === "cash"
+                      ? "rgba(16, 185, 129, 0.2)"
+                      : id === "takeaway"
+                      ? "rgba(249, 115, 22, 0.2)"
+                      : id === "dine_in"
+                      ? "rgba(99, 102, 241, 0.2)"
+                      : "rgba(245, 158, 11, 0.2)"
+                    : "transparent",
+                  border: active
+                    ? id === "upi"
+                      ? "1px solid #38bdf8"
+                      : id === "cash"
+                      ? "1px solid var(--success)"
+                      : id === "takeaway"
+                      ? "1px solid #f97316"
+                      : id === "dine_in"
+                      ? "1px solid rgba(99, 102, 241, 0.6)"
+                      : "1px solid var(--accent-amber)"
+                    : "1px solid transparent",
+                  color: active
+                    ? id === "upi"
+                      ? "#38bdf8"
+                      : id === "cash"
+                      ? "var(--success)"
+                      : id === "takeaway"
+                      ? "#f97316"
+                      : id === "dine_in"
+                      ? "var(--accent-indigo)"
+                      : "var(--accent-amber)"
+                    : "var(--text-muted)",
+                  padding: "0.32rem 0.85rem",
+                  borderRadius: "16px",
+                  fontSize: "0.74rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  letterSpacing: "0.03em",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           <div
@@ -1217,18 +1170,6 @@ export function AdminInvoices({
               </strong>
             </span>
             <span>
-              Dine-In:{" "}
-              <strong style={{ color: "var(--accent-indigo)" }}>
-                {formatCurrency(dineInTotal)}
-              </strong>
-            </span>
-            <span>
-              Takeaway:{" "}
-              <strong style={{ color: "#f97316" }}>
-                {formatCurrency(takeawayTotal)}
-              </strong>
-            </span>
-            <span>
               UPI:{" "}
               <strong style={{ color: "var(--info)" }}>
                 {formatCurrency(upiTotal)}
@@ -1238,6 +1179,18 @@ export function AdminInvoices({
               Cash:{" "}
               <strong style={{ color: "var(--success)" }}>
                 {formatCurrency(cashTotal)}
+              </strong>
+            </span>
+            <span>
+              Takeaway:{" "}
+              <strong style={{ color: "#f97316" }}>
+                {formatCurrency(takeawayTotal)}
+              </strong>
+            </span>
+            <span>
+              Dine-In:{" "}
+              <strong style={{ color: "var(--accent-indigo)" }}>
+                {formatCurrency(dineInTotal)}
               </strong>
             </span>
           </div>
