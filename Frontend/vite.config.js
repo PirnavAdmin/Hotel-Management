@@ -219,78 +219,6 @@ function globalSyncPlugin() {
     configureServer(server) {
             server.middlewares.use((req, res, next) => {
         const requestUrl = req.url || "/";
-        if (requestUrl.startsWith("/__backend_api/")) {
-          const apiPath = requestUrl.slice("/__backend_api".length);
-          const requestChunks = [];
-
-          const forwardRequest = async (body) => {
-            const method = String(req.method || "GET").toUpperCase();
-            const headers = {};
-            const hopByHopHeaders = new Set([
-              "host",
-              "connection",
-              "transfer-encoding",
-              "content-length",
-              "keep-alive",
-              "upgrade",
-              "te",
-              "proxy-authorization",
-              "proxy-authenticate"
-            ]);
-            for (const [key, value] of Object.entries(req.headers)) {
-              if (hopByHopHeaders.has(key.toLowerCase())) continue;
-              headers[key] = value;
-            }
-
-            const targets = [
-              `http://127.0.0.1:5018${apiPath}`,
-              `http://localhost:5018${apiPath}`
-            ];
-
-            let lastError = null;
-            for (const targetUrl of targets) {
-              try {
-                const upstream = await fetch(targetUrl, {
-                  method,
-                  headers,
-                  ...(method === "GET" || method === "HEAD" ? {} : { body, duplex: "half" }),
-                });
-
-                const responseBody = Buffer.from(await upstream.arrayBuffer());
-                const resHeaders = {
-                  "Content-Type": upstream.headers.get("content-type") || "application/json",
-                  "Cache-Control": "no-store",
-                };
-                res.writeHead(upstream.status, resHeaders);
-                return res.end(responseBody);
-              } catch (err) {
-                lastError = err;
-              }
-            }
-
-            console.error(`[Vite Proxy] 503 Service Unavailable: Could not reach backend API at port 5018 (${method} ${requestUrl}). Error: ${lastError?.message} Cause: ${lastError?.cause?.message || lastError?.cause}`);
-            res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-            return res.end(JSON.stringify({
-              success: false,
-              error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer.",
-              details: lastError?.cause?.message || lastError?.cause
-            }));
-          };
-
-          if (req.readableEnded) {
-            forwardRequest(Buffer.concat(requestChunks));
-          } else {
-            req.on("data", (chunk) => requestChunks.push(chunk));
-            req.on("end", () => forwardRequest(Buffer.concat(requestChunks)));
-            req.on("error", (err) => {
-              console.error("[Vite Proxy] Client stream error:", err.message);
-              res.writeHead(500, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ success: false, error: err.message }));
-            });
-          }
-          return;
-        }
-
         // Centralized Backend HTTP Request/Response Logger
         const start = Date.now();
         const method = req.method || "GET";
@@ -1983,26 +1911,9 @@ function globalSyncPlugin() {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "VITE_");
-
-  let apiBase = env.VITE_API_BASE_URL;
-  if (!apiBase) {
-    try {
-      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
-      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
-      if (match) apiBase = match[0].replace(/\/$/, "");
-    } catch {}
-  }
-  if (!apiBase) {
-    apiBase = "https://chapter-catnip-evaluator.ngrok-free.dev";
-  }
-
+export default defineConfig(() => {
   return {
     plugins: [react(), globalSyncPlugin()],
-    define: {
-      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBase),
-    },
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
@@ -2016,31 +1927,6 @@ export default defineConfig(({ mode }) => {
           '**/bin/**',
           '**/obj/**',
         ],
-      },
-      proxy: {
-        "/__backend_api": {
-          target: "http://127.0.0.1:5018",
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/__backend_api/, ""),
-          secure: false,
-        },
-        "/uploads": {
-          target: apiBase,
-          changeOrigin: true,
-          headers: { "ngrok-skip-browser-warning": "true" },
-        },
-        "/api/v1": {
-          target: apiBase,
-          changeOrigin: true,
-          secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
-        },
-        "/api/auth": {
-          target: apiBase,
-          changeOrigin: true,
-          secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
-        },
       },
     },
   };

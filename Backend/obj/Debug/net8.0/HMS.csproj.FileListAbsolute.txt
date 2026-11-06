@@ -1,0 +1,9 @@
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.csproj.AssemblyReference.cache
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.AssemblyInfoInputs.cache
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.AssemblyInfo.cs
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.csproj.CoreCompileInputs.cache
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\ADMIN\Downloads\New folder (2)\Hotel-Management\Backend\obj\Debug\net8.0\HMS.sourcelink.json

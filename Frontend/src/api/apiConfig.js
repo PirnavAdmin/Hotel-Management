@@ -1,12 +1,12 @@
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 
-// Keep the configured API address consistent for every device. Development
-// requests use the same-origin Vite proxy below, which forwards to this URL.
+// The frontend .env value is the one source of truth for API requests.
 export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
 
-// In development all browser-to-API traffic stays same-origin. The Vite
-// server forwards it to the backend on the POS host, including LAN clients.
-export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : API_BASE_URL;
+// Actual API calls go directly to the configured server in every mode.
+export const API_HTTP_BASE = API_BASE_URL;
+// These app-state endpoints are served by Vite's local sync middleware in dev.
+export const API_SYNC_BASE = import.meta.env.DEV ? "" : API_BASE_URL;
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
 // Keep development SSE on Vite for LAN state broadcasts; production uses the API.
@@ -36,7 +36,7 @@ const DEFAULT_HEADERS = {
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const { remoteOnly = false, ...requestOptions } = options;
+  const { remoteOnly: _remoteOnly, ...requestOptions } = options;
   const url = apiUrl(endpoint);
 
   try {
@@ -56,25 +56,7 @@ async function performApiRequest(endpoint, options = {}) {
       headers,
     };
 
-    let res;
-    try {
-      res = await fetch(url, config);
-      if (!import.meta.env.DEV && !remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
-        try {
-          const localRes = await fetch(endpoint, config);
-          if (localRes.ok) {
-            res = localRes;
-          }
-        } catch {}
-      }
-    } catch (fetchErr) {
-      if (!import.meta.env.DEV && API_BASE_URL && !remoteOnly) {
-        console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
-        res = await fetch(endpoint, config);
-      } else {
-        throw fetchErr;
-      }
-    }
+    const res = await fetch(url, config);
 
     if (res.status === 401 || res.status === 403) {
       // Handle unauthorized (optional: dispatch event or clear storage)
@@ -134,16 +116,6 @@ async function performApiRequest(endpoint, options = {}) {
     }
 
     if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
-      if (!import.meta.env.DEV && API_BASE_URL) {
-        try {
-          const localRes = await fetch(endpoint, config);
-          const localText = await localRes.text();
-          if (localRes.ok && !localText.trim().startsWith('<') && !localText.includes('ERR_NGROK')) {
-            const data = JSON.parse(localText);
-            return { success: true, data };
-          }
-        } catch {}
-      }
       const isNgrok = text.includes('ngrok') || text.includes('ERR_NGROK') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
       const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
       let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;

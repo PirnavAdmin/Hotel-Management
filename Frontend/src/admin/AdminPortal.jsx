@@ -61,7 +61,7 @@ import { AdminSettings } from "./AdminSettings";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
-import { API_BASE_URL, API_HTTP_BASE, openOptionalEventStream } from "../api/apiConfig";
+import { API_BASE_URL, API_SYNC_BASE, openOptionalEventStream } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -404,7 +404,7 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
         new CustomEvent("avsr-inventory-updated", { detail: updatedInventory })
       );
       try {
-        fetch(`${API_HTTP_BASE}/api/sync`, {
+        fetch(`${API_SYNC_BASE}/api/sync`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -854,7 +854,7 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
-    fetch(`${API_HTTP_BASE}/api/state`, {
+    fetch(`${API_SYNC_BASE}/api/state`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -886,7 +886,7 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
-    const response = await fetch(`${API_HTTP_BASE}/api/sync`, {
+    const response = await fetch(`${API_SYNC_BASE}/api/sync`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

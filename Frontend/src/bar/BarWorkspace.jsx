@@ -1,5 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Banknote, Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
@@ -8,7 +7,7 @@ import {
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
-import { isDrinkCategory } from "../utils/drinkCategoryHelper";
+import { isAlcoholicCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
@@ -45,8 +44,11 @@ import {
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
-import { BAR_CATEGORIES, mergeBarDrinkCategories } from "./barDrinkCategories";
+import { BAR_CATEGORIES, BAR_DRINK_SUBCATEGORIES, mergeBarDrinkCategories, normalizeBarDrinkCategory } from "./barDrinkCategories";
+import { BAR_INVENTORY_CATEGORIES, isLegacyBarInventoryCategory, normalizeBarInventoryCategory } from "./barInventoryCategories";
+import { BAR_SERVING_MEASURES, mergeBarServingMeasures, normalizeBarServingMeasure } from "./barServingMeasures";
 export { BAR_CATEGORIES } from "./barDrinkCategories";
+export { BAR_SERVING_MEASURES };
 
 
 const PAGE_SIZE = 8;
@@ -84,25 +86,11 @@ const ACCESS_DEFAULTS = Object.fromEntries(ACCESS_ROLES.map((role, index) => [ro
 
 const BAR_DRINK_UNITS = ["Glass", "Bottle", "Can", "Peg", "ml", "Litre"];
 
-export const BAR_SERVING_MEASURES = [
-  "30 ml (Single Peg)",
-  "60 ml (Double Peg)",
-  "90 ml (Large Peg)",
-  "Pint (330 ml)",
-  "Bottle (650 ml)",
-  "Bottle (750 ml)",
-  "Glass (150 ml)",
-  "Glass (250 ml)",
-  "Can (330 ml)",
-  "Can (500 ml)",
-  "Peg (60 ml)",
-  "Pitcher (1500 ml)",
-  "Tower (3000 ml)",
-];
 const FIELD_SETS = {
   drink: [
     ["name", "Drink Name", "text", true],
     ["category", "Category", "category_selector", true],
+    ["subcategory", "Subcategory / Variety", "subcategory_selector", false],
     ["drinkType", "Drink Type", "select", false, ["Alcoholic", "Non-Alcoholic"]],
     ["abv", "Alcohol Content (ABV %)", "number", false],
     ["measure", "Serving Measure / Volume", "measure_selector", false],
@@ -126,103 +114,6 @@ const FIELD_SETS = {
     ["table", "Table / Order Type", "text", true], ["customer", "Customer", "text", true],
     ["items", "Drinks and Quantities", "textarea", true], ["subtotal", "Subtotal", "number", true],
   ],
-};
-
-export const BAR_INVENTORY_CATEGORIES = [
-  {
-    category: "Whiskey & Scotch",
-    subcategories: ["Single Malt Scotch", "Blended Scotch", "Bourbon & American", "Irish Whiskey", "Premium Indian Whisky"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 42.8,
-  },
-  {
-    category: "Vodka & Gin",
-    subcategories: ["Premium Vodka", "Flavored Vodka", "London Dry Gin", "Craft Botanical Gin", "Pink Gin"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 40,
-  },
-  {
-    category: "Rum & Brandy",
-    subcategories: ["White Rum", "Dark / Spiced Rum", "Aged Rum", "Cognac & VSOP", "Premium Brandy"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 42.8,
-  },
-  {
-    category: "Tequila & Mezcal",
-    subcategories: ["Silver / Blanco", "Reposado Tequila", "Añejo Tequila", "Artisanal Mezcal"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 38,
-  },
-  {
-    category: "Beers & Ciders",
-    subcategories: ["Draught Beer Keg", "Premium Lager (Pint 330ml)", "Strong Beer (650ml)", "Craft Wheat Beer", "Apple / Fruit Cider"],
-    defaultUnit: "Bottle (330 ml)",
-    defaultAbv: 5,
-  },
-  {
-    category: "Wine & Champagne",
-    subcategories: ["Red Wine", "White Wine", "Sparkling Wine / Prosecco", "Brut Champagne", "Rosé Wine", "Port Wine"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 12.5,
-  },
-  {
-    category: "Liqueurs & Bitters",
-    subcategories: ["Coffee Liqueur (Kahlúa)", "Irish Cream (Baileys)", "Triple Sec / Orange", "Herbal / Aperitif (Campari)", "Angostura Bitters"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 25,
-  },
-  {
-    category: "Cocktails & Premixes",
-    subcategories: ["Margarita Mix", "Bloody Mary Base", "Sour Mix", "Piña Colada Mix", "Cocktail Concentrates"],
-    defaultUnit: "Bottle (1 L)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Mocktails & Syrups",
-    subcategories: ["Blue Curacao Syrup", "Grenadine Syrup", "Mojito Mint Syrup", "Passion Fruit Puree", "Simple Sugar Syrup"],
-    defaultUnit: "Bottle (1 L)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Soft Drinks, Tonics & Soda",
-    subcategories: ["Club Soda", "Tonic Water", "Ginger Ale", "Cola / Diet Cola", "Lemon Soda (Sprite/Limca)", "Energy Drink (Red Bull)"],
-    defaultUnit: "Can (330 ml)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Juices & Purees",
-    subcategories: ["Cranberry Juice", "Fresh Orange Juice", "Pineapple Juice", "Fresh Lime Juice", "Apple Juice", "Tomato Juice"],
-    defaultUnit: "Tetra Pack (1 L)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Bar Garnishes & Supplies",
-    subcategories: ["Maraschino Cherries", "Cocktail Stuffed Olives", "Margarita Rim Salt", "Cocktail Sugar", "Fresh Lemons & Limes", "Fresh Mint"],
-    defaultUnit: "Jar / Canister",
-    defaultAbv: 0,
-  },
-  {
-    category: "Bar Consumables & Ice",
-    subcategories: ["Clear Ice Blocks / Cubes", "Cocktail Paper Straws", "Stirrers & Cocktail Picks", "Bar Coasters", "Bar Napkins"],
-    defaultUnit: "Pack / Box",
-    defaultAbv: 0,
-  },
-];
-
-const BAR_INVENTORY_SUBCATEGORY_ADDITIONS = {
-  "Whiskey & Scotch": ["Bourbon", "Rye Whiskey"],
-  "Vodka & Gin": ["Flavoured Vodka", "Botanical Gin"],
-  "Rum & Brandy": ["Dark Rum", "Spiced Rum", "Brandy", "Cognac"],
-  "Tequila & Mezcal": ["Blanco", "Reposado", "Añejo", "Mezcal"],
-  "Beers & Ciders": ["Lager", "Ale", "Stout", "Wheat Beer", "Craft Beer", "Cider"],
-  "Wine & Champagne": ["Red Wine", "White Wine", "Rosé", "Sparkling Wine", "Champagne"],
-  "Liqueurs & Bitters": ["Coffee Liqueur", "Orange Liqueur", "Cream Liqueur", "Herbal Liqueur", "Cocktail Bitters"],
-  "Cocktails & Premixes": ["Cocktail Premix", "Ready-to-Drink Cocktails", "Mojito Mix"],
-  "Mocktails & Syrups": ["Fruit Syrups", "Flavoured Syrups", "Mocktail Premixes"],
-  "Soft Drinks, Tonics & Soda": ["Cola", "Soda Water", "Soft Drinks"],
-  "Juices & Purees": ["Fruit Juices", "Fruit Purees", "Citrus Juices", "Concentrates"],
-  "Bar Garnishes & Supplies": ["Mint Leaves", "Lemon", "Lime", "Orange Slices", "Cocktail Cherries"],
-  "Bar Consumables & Ice": ["Ice Cubes", "Crushed Ice", "Straws", "Napkins", "Stirring Sticks"],
 };
 
 export const BAR_INVENTORY_UNITS = [
@@ -294,7 +185,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
 
   const defaultForm = {
     name: "",
-    category: "Whiskey & Scotch",
+    category: "Whiskey",
     subcategory: "",
     brand: "",
     unit: "Bottle (750 ml)",
@@ -347,7 +238,10 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
       ) {
         return false;
       }
-      return isBeverageCategory(item.category ?? item.subcategory ?? item.name);
+      const normalizedCategory = normalizeBarInventoryCategory(item.category, item);
+      const isStandardInventoryCategory = BAR_INVENTORY_CATEGORIES.some((category) => category.category === normalizedCategory);
+      const hasBarMetadata = item.isBarItem === true || item.isBarDrink === true || item.isBeverage === true || Number(item.abv ?? item.alcoholContent ?? 0) > 0;
+      return isStandardInventoryCategory || isLegacyBarInventoryCategory(item.category) || hasBarMetadata || isBeverageCategory(item.category ?? item.subcategory ?? item.name);
     });
   }, [inventory]);
 
@@ -356,7 +250,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
     const set = new Set();
     BAR_INVENTORY_CATEGORIES.forEach((c) => set.add(c.category));
     validBeverages.forEach((item) => {
-      if (item.category) set.add(item.category);
+      if (item.category) set.add(normalizeBarInventoryCategory(item.category, item));
     });
     return Array.from(set);
   }, [validBeverages]);
@@ -373,17 +267,14 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
 
   const inventoryCategoryOptions = useMemo(() => {
     const unique = new Map();
-    const barCategoriesFromInventory = (Array.isArray(inventory) ? inventory : []).filter((item) => {
-      const beverageSignals = item?.isBarItem === true || item?.isBarDrink === true || item?.isBeverage === true || Number(item?.abv ?? item?.alcoholContent ?? 0) > 0;
-      return beverageSignals || isBeverageCategory(item?.category ?? item?.subcategory ?? item?.name);
-    }).map((item) => item?.category);
+    const barCategoriesFromInventory = validBeverages.map((item) => normalizeBarInventoryCategory(item.category, item));
     [...BAR_INVENTORY_CATEGORIES.map((item) => item.category), ...barCategoriesFromInventory]
       .forEach((raw) => {
         const value = String(raw || "").trim();
         if (value && !unique.has(value.toLocaleLowerCase())) unique.set(value.toLocaleLowerCase(), value);
       });
     return Array.from(unique.values());
-  }, [inventory]);
+  }, [validBeverages]);
 
   // Operational KPI metrics (exact formulas matching Dine Inventory)
   const totalItems = validBeverages.length;
@@ -415,13 +306,13 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
         !q ||
         String(item.name || "").toLowerCase().includes(q) ||
         String(item.brand || item.subcategory || "").toLowerCase().includes(q) ||
-        String(item.category || "").toLowerCase().includes(q) ||
+        normalizeBarInventoryCategory(item.category, item).toLowerCase().includes(q) ||
         String(item.storageLocation || "").toLowerCase().includes(q) ||
         String(item.supplier || "").toLowerCase().includes(q);
 
       const matchesCat =
         categoryFilter === "all" ||
-        String(item.category || "").toLowerCase() === categoryFilter.toLowerCase();
+        normalizeBarInventoryCategory(item.category, item).toLowerCase() === categoryFilter.toLowerCase();
 
       const matchesSupplier =
         supplierFilter === "all" ||
@@ -487,9 +378,10 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
 
   const openEditModal = (item) => {
     setEditingItem(item);
+    const normalizedCategory = normalizeBarInventoryCategory(item.category, item);
     setFormData({
       name: item.name || "",
-      category: item.category || "Whiskey & Scotch",
+      category: normalizedCategory || "Vodka",
       subcategory: item.subcategory || "",
       brand: item.brand || "",
       unit: item.unit || "Bottle (750 ml)",
@@ -502,10 +394,9 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
       storageLocation: item.storageLocation || "Front Bar Display Shelf",
       supplier: item.supplier || "State Beverages Corporation (TSBCL/Govt Depot)",
     });
-    setCustomCategory(!inventoryCategoryOptions.some((category) => category.toLocaleLowerCase() === String(item.category || "").trim().toLocaleLowerCase()));
+    setCustomCategory(!inventoryCategoryOptions.some((category) => category.toLocaleLowerCase() === normalizedCategory.toLocaleLowerCase()));
     const knownSubcategories = [
-      ...(BAR_INVENTORY_CATEGORIES.find((category) => category.category === item.category)?.subcategories || []),
-      ...(BAR_INVENTORY_SUBCATEGORY_ADDITIONS[item.category] || []),
+      ...(BAR_INVENTORY_CATEGORIES.find((category) => category.category === normalizedCategory)?.subcategories || []),
     ];
     setCustomSubcategory(Boolean(item.subcategory) && !knownSubcategories.some((subcategory) => subcategory.toLocaleLowerCase() === String(item.subcategory).trim().toLocaleLowerCase()));
     setCustomUnit(false);
@@ -787,7 +678,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
         const status = stock <= 0 ? "Out of Stock" : stock <= threshold ? "Low Stock" : "In Stock";
         return [
           item.name,
-          item.category || "Beverages & Bar",
+          normalizeBarInventoryCategory(item.category, item) || "Other Bar Stock",
           item.subcategory || "",
           item.brand || "",
           item.unit || "Bottle",
@@ -811,8 +702,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
   const currentCategoryObj = BAR_INVENTORY_CATEGORIES.find((c) => c.category === formData.category);
   const currentSubcategories = Array.from(new Map([
     ...(currentCategoryObj?.subcategories || []),
-    ...(BAR_INVENTORY_SUBCATEGORY_ADDITIONS[formData.category] || []),
-    ...(Array.isArray(inventory) ? inventory.filter((item) => String(item?.category || "").trim().toLocaleLowerCase() === String(formData.category || "").trim().toLocaleLowerCase()).map((item) => String(item?.subcategory || "").trim()).filter(Boolean) : []),
+    ...(Array.isArray(inventory) ? inventory.filter((item) => normalizeBarInventoryCategory(item?.category, item).toLocaleLowerCase() === String(formData.category || "").trim().toLocaleLowerCase()).map((item) => String(item?.subcategory || "").trim()).filter(Boolean) : []),
     ...(formData.subcategory ? [String(formData.subcategory).trim()] : []),
   ].filter(Boolean).map((option) => [option.toLocaleLowerCase(), option])).values());
 
@@ -1413,7 +1303,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                           fontWeight: 600,
                         }}
                       >
-                        <div style={{ lineHeight: "1.25" }}>{item.category || "Beverages & Bar"}</div>
+                        <div style={{ lineHeight: "1.25" }}>{normalizeBarInventoryCategory(item.category, item) || "Other Bar Stock"}</div>
                         {displaySubtitle && (
                           <div
                             style={{
@@ -2640,46 +2530,41 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
     ...(kind === "drink" && initial ? {
       isAvailable: initial.isAvailable === false || initial.isAvailable === "Unavailable" ? "Unavailable" : "Available",
       active: initial.active === false || initial.active === "Inactive" ? "Inactive" : "Active",
-      category: initial.category || "Cocktails",
+      category: normalizeBarDrinkCategory(initial.category || "Cocktails", initial),
+      subcategory: initial.subcategory || "",
       drinkType: initial.drinkType || (initial.abv ? "Alcoholic" : "Non-Alcoholic"),
-      measure: initial.measure || "",
+      measure: normalizeBarServingMeasure(initial.measure || initial.servingMeasure || initial.servingVolume || ""),
       abv: initial.abv ?? "",
     } : kind === "drink" ? {
       category: "Cocktails",
+      subcategory: "",
       drinkType: "Alcoholic",
-      measure: "60 ml (Double Peg)",
+      measure: "Double Peg (60 ml)",
       isAvailable: "Available",
       abv: "",
     } : {}),
   }));
 
-  const allKnownCategories = useMemo(() => {
-    const excluded = new Set([
-      "all", "all categories", "all category", "all items", "category", "categories",
-      "beverages", "beverage", "tea & coffee", "tea and coffee", "tea", "coffee",
-      "juices & shakes", "juices and shakes", "shakes", "juices", "soft drinks & soda",
-      "soft drinks", "soda", "food"
-    ]);
-    const list = [...BAR_CATEGORIES];
-    if (Array.isArray(drinks)) {
-      drinks.forEach((d) => {
-        const cat = String(d?.category || "").trim();
-        if (cat && !excluded.has(cat.toLowerCase()) && !list.some((c) => c.toLowerCase() === cat.toLowerCase())) {
-          list.push(cat);
-        }
-      });
-    }
-    return list;
-  }, [drinks]);
+  const allKnownCategories = useMemo(
+    () => mergeBarDrinkCategories([], drinks).map((option) => option.value),
+    [drinks],
+  );
 
   const [isCustomCategory, setIsCustomCategory] = useState(() => {
     if (kind !== "drink" || !initial?.category) return false;
-    return !BAR_CATEGORIES.some((c) => c.toLowerCase() === String(initial.category).toLowerCase());
+    const normalizedCategory = normalizeBarDrinkCategory(initial.category, initial).toLocaleLowerCase();
+    return !BAR_CATEGORIES.some((category) => category.toLocaleLowerCase() === normalizedCategory);
+  });
+
+  const [isCustomSubcategory, setIsCustomSubcategory] = useState(() => {
+    if (kind !== "drink" || !initial?.subcategory) return false;
+    return !(BAR_DRINK_SUBCATEGORIES[normalizeBarDrinkCategory(initial.category, initial)] || []).some((entry) => entry.toLocaleLowerCase() === String(initial.subcategory).trim().toLocaleLowerCase());
   });
 
   const [isCustomMeasure, setIsCustomMeasure] = useState(() => {
-    if (kind !== "drink" || !initial?.measure) return false;
-    return !BAR_SERVING_MEASURES.some((m) => m.toLowerCase() === String(initial.measure).toLowerCase());
+    if (kind !== "drink" || !(initial?.measure || initial?.servingMeasure || initial?.servingVolume)) return false;
+    const initialMeasure = normalizeBarServingMeasure(initial.measure || initial.servingMeasure || initial.servingVolume);
+    return !BAR_SERVING_MEASURES.some((measure) => measure.toLocaleLowerCase() === initialMeasure.toLocaleLowerCase());
   });
 
   const [error, setError] = useState("");
@@ -2719,7 +2604,8 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
       setError("Alcohol Percentage (ABV) must be between 0 and 100.");
       return;
     }
-    const result = await onSave(values);
+    const saveValues = kind === "drink" ? { ...values, measure: normalizeBarServingMeasure(values.measure) } : values;
+    const result = await onSave(saveValues);
     if (result === false) setError("The requested changes were not fully applied. Check the message and try again.");
   };
 
@@ -2736,7 +2622,7 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
           <div className="bar-form-grid">
             {fields.map(([key, label, type = "text", required, options]) => {
               if (kind === "drink" && key === "abv") {
-                const isAlcoholic = values.drinkType === "Alcoholic" || ["Cocktails", "Beers", "Whiskey", "Vodka & Gin", "Rum & Brandy", "Wine & Champagne", "Shots & Shooters"].some((c) => c.toLowerCase() === String(values.category || "").toLowerCase());
+                const isAlcoholic = values.drinkType === "Alcoholic" || isAlcoholicCategory(values.category, values.drinkType, values.abv);
                 if (!isAlcoholic) return null;
               }
 
@@ -2760,44 +2646,48 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
                           style={{ whiteSpace: "nowrap" }}
                           onClick={() => {
                             setIsCustomCategory(false);
-                            set("category", allKnownCategories[0] || "Cocktails");
+                            const category = allKnownCategories[0] || "Cocktails";
+                            set("category", category);
+                            set("subcategory", "");
+                            setIsCustomSubcategory(false);
                           }}
                         >
                           Choose from list
                         </button>
                       </div>
                     ) : (
+                      <SearchableSelect
+                        options={allKnownCategories}
+                        value={values.category ?? ""}
+                        placeholder="Select drink category"
+                        searchPlaceholder="Search drink categories…"
+                        onChange={(value) => {
+                          set("category", value);
+                          set("subcategory", "");
+                          setIsCustomSubcategory(false);
+                        }}
+                        allowCustom
+                        customLabel="+ Custom Category"
+                        onCustom={() => { setIsCustomCategory(true); set("category", ""); set("subcategory", ""); setIsCustomSubcategory(true); }}
+                      />
+                    )
+                  ) : type === "subcategory_selector" ? (
+                    isCustomSubcategory ? (
                       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        <select
-                          required={required}
-                          value={values.category ?? ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__custom__") {
-                              setIsCustomCategory(true);
-                              set("category", "");
-                            } else {
-                              set("category", e.target.value);
-                            }
-                          }}
-                        >
-                          <option value="">Select category</option>
-                          {allKnownCategories.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                          <option value="__custom__">+ Type custom category...</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="bar-button secondary small"
-                          style={{ whiteSpace: "nowrap" }}
-                          onClick={() => {
-                            setIsCustomCategory(true);
-                            set("category", "");
-                          }}
-                        >
-                          + Custom
-                        </button>
+                        <input required={required} type="text" placeholder="Type custom subcategory..." value={values.subcategory ?? ""} onChange={(event) => set("subcategory", event.target.value)} />
+                        <button type="button" className="bar-button secondary small" style={{ whiteSpace: "nowrap" }} onClick={() => { setIsCustomSubcategory(false); set("subcategory", ""); }}>Choose from list</button>
                       </div>
+                    ) : (
+                      <SearchableSelect
+                        options={[...(BAR_DRINK_SUBCATEGORIES[values.category] || []), ...(values.subcategory ? [values.subcategory] : [])]}
+                        value={values.subcategory ?? ""}
+                        placeholder="Select subcategory / variety"
+                        searchPlaceholder="Search subcategories…"
+                        onChange={(value) => set("subcategory", value)}
+                        allowCustom
+                        customLabel="+ Custom Subcategory"
+                        onCustom={() => { setIsCustomSubcategory(true); set("subcategory", ""); }}
+                      />
                     )
                   ) : type === "measure_selector" ? (
                     isCustomMeasure ? (
@@ -2823,23 +2713,19 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
                       </div>
                     ) : (
                       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        <select
-                          value={values.measure ?? ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__custom__") {
-                              setIsCustomMeasure(true);
-                              set("measure", "");
-                            } else {
-                              set("measure", e.target.value);
-                            }
-                          }}
-                        >
-                          <option value="">Select serving measure</option>
-                          {BAR_SERVING_MEASURES.map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                          <option value="__custom__">+ Custom Measure...</option>
-                        </select>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <SearchableSelect
+                            options={mergeBarServingMeasures([], drinks)}
+                            value={values.measure ?? ""}
+                            placeholder="Select serving measure"
+                            searchPlaceholder="Search serving measure..."
+                            emptyMessage="No serving measures found"
+                            onChange={(value) => set("measure", normalizeBarServingMeasure(value))}
+                            allowCustom
+                            customLabel="Custom Measure"
+                            onCustom={() => { setIsCustomMeasure(true); set("measure", ""); }}
+                          />
+                        </div>
                         <button
                           type="button"
                           className="bar-button secondary small"
@@ -2965,166 +2851,6 @@ function getDrinkIcon(name = "", category = "") {
 }
 
 
-function BarDrinkCategoryPicker({ options, value, onSelect, onCustom }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [popoverPosition, setPopoverPosition] = useState(null);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const pickerRef = useRef(null);
-  const popoverRef = useRef(null);
-  const searchRef = useRef(null);
-  const optionRefs = useRef([]);
-  const selectedOption = options.find((option) => option.value.toLowerCase() === String(value || "").trim().toLowerCase());
-  const normalizedQuery = query.trim().toLowerCase();
-  const filteredOptions = normalizedQuery
-    ? options.filter((option) => option.label.toLowerCase().includes(normalizedQuery))
-    : options;
-  const optionCount = filteredOptions.length + 1;
-
-  const closePicker = (returnFocus = false) => {
-    setIsOpen(false);
-    setQuery("");
-    setActiveIndex(-1);
-    setPopoverPosition(null);
-    if (returnFocus) window.requestAnimationFrame(() => pickerRef.current?.querySelector(".bar-category-picker-trigger")?.focus());
-  };
-
-  useLayoutEffect(() => {
-    if (!isOpen) return undefined;
-    const updatePosition = () => {
-      const rect = pickerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const maxHeight = Math.min(300, window.innerHeight - 24);
-      const below = window.innerHeight - rect.bottom - 8;
-      const top = below >= Math.min(230, maxHeight) || rect.top < maxHeight + 16
-        ? rect.bottom + 4
-        : Math.max(8, rect.top - maxHeight - 4);
-      setPopoverPosition({ top, left: Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)), width: rect.width, maxHeight });
-    };
-    updatePosition();
-    const handleOutsidePointer = (event) => {
-      if (!pickerRef.current?.contains(event.target) && !popoverRef.current?.contains(event.target)) closePicker();
-    };
-    document.addEventListener("pointerdown", handleOutsidePointer);
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      document.removeEventListener("pointerdown", handleOutsidePointer);
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) searchRef.current?.focus();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (activeIndex >= 0) optionRefs.current[activeIndex]?.focus();
-  }, [activeIndex]);
-
-  const moveActiveOption = (direction) => {
-    setActiveIndex((current) => (current + direction + optionCount) % optionCount);
-  };
-
-  const chooseOption = (option) => {
-    onSelect(option.value);
-    closePicker();
-  };
-
-  const chooseCustom = () => {
-    onCustom();
-    closePicker();
-  };
-
-  return (
-    <div ref={pickerRef} className="bar-category-picker" onKeyDown={(event) => {
-      if (event.key === "Escape" && isOpen) {
-        event.preventDefault();
-        closePicker();
-      }
-    }}>
-      <button
-        type="button"
-        className="bar-category-picker-trigger"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        onClick={() => {
-          if (isOpen) closePicker();
-          else setIsOpen(true);
-        }}
-      >
-        <span>{selectedOption?.label || value || "Select category"}</span>
-        <ChevronDown size={16} aria-hidden="true" />
-      </button>
-      {isOpen && popoverPosition && createPortal(
-        <div ref={popoverRef} className="bar-category-picker-popover" style={popoverPosition}>
-          <label className="bar-category-picker-search">
-            <Search size={15} aria-hidden="true" />
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              onChange={(event) => { setQuery(event.target.value); setActiveIndex(-1); }}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowDown" && optionCount) { event.preventDefault(); setActiveIndex(0); }
-                if (event.key === "ArrowUp" && optionCount) { event.preventDefault(); setActiveIndex(optionCount - 1); }
-                if (event.key === "Escape") { event.preventDefault(); closePicker(true); }
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  if (activeIndex >= 0 && activeIndex < filteredOptions.length) chooseOption(filteredOptions[activeIndex]);
-                  else if (activeIndex === filteredOptions.length) chooseCustom();
-                  else if (filteredOptions.length === 1) chooseOption(filteredOptions[0]);
-                }
-              }}
-              placeholder="Search categories..."
-              aria-label="Search drink categories"
-              aria-controls="bar-drink-category-options"
-            />
-          </label>
-          <div id="bar-drink-category-options" className="bar-category-picker-options" role="listbox" aria-label="Drink categories">
-            {filteredOptions.map((option, index) => (
-              <button
-                key={option.value}
-                ref={(element) => { optionRefs.current[index] = element; }}
-                type="button"
-                role="option"
-                aria-selected={option.value.toLowerCase() === String(value || "").trim().toLowerCase()}
-                className="bar-category-picker-option"
-                onKeyDown={(event) => {
-                  if (event.key === "ArrowDown") { event.preventDefault(); moveActiveOption(1); }
-                  if (event.key === "ArrowUp") { event.preventDefault(); if (index === 0) searchRef.current?.focus(); else moveActiveOption(-1); }
-                  if (event.key === "Escape") { event.preventDefault(); closePicker(true); }
-                }}
-                onClick={() => chooseOption(option)}
-              >
-                {option.label}
-              </button>
-            ))}
-            {!filteredOptions.length && <p className="bar-category-picker-empty">No Categories Found</p>}
-            <button
-              ref={(element) => { optionRefs.current[filteredOptions.length] = element; }}
-              type="button"
-              role="option"
-              aria-selected="false"
-              className="bar-category-picker-option bar-category-picker-custom-option"
-              onKeyDown={(event) => {
-                if (event.key === "ArrowDown") { event.preventDefault(); moveActiveOption(1); }
-                if (event.key === "ArrowUp") { event.preventDefault(); moveActiveOption(-1); }
-                if (event.key === "Escape") { event.preventDefault(); closePicker(true); }
-              }}
-              onClick={chooseCustom}
-            >
-              + Custom Category
-            </button>
-          </div>
-        </div>,
-        document.body,
-      )}
-    </div>
-  );
-}
-
 function BarDrinksMenu({
   drinks = [],
   onAddDrink,
@@ -3180,19 +2906,22 @@ function BarDrinksMenu({
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [isCustomSubcategory, setIsCustomSubcategory] = useState(false);
   const [isCustomMeasure, setIsCustomMeasure] = useState(false);
   const [itemForm, setItemForm] = useState({
     name: "",
     category: "Cocktails",
+    subcategory: "",
+    customSubcategory: "",
     customCategory: "",
     price: "",
-    drinkType: "Alcoholic",    measure: "Glass (250 ml)",
+    drinkType: "Alcoholic",    measure: "Medium Glass (250 ml)",
     customMeasure: "",
     abv: "",
     isVeg: false,
     isChefSpecial: false,
     prepTime: "15 min",
-    measure: "30 ml (Single Peg)",
+    measure: BAR_SERVING_MEASURES[0],
     customMeasure: "",
     drinkType: "Alcoholic",
     abv: "40",
@@ -3206,21 +2935,7 @@ function BarDrinksMenu({
     [drinks, extraCategories],
   );
 
-  const measureOptions = useMemo(() => {
-    const list = [...BAR_SERVING_MEASURES];
-    extraMeasures.forEach((m) => {
-      if (m && !list.some((existing) => existing.toLowerCase() === m.toLowerCase())) {
-        list.push(m);
-      }
-    });
-    drinks.forEach((d) => {
-      const msr = String(d.measure || d.servingMeasure || "").trim();
-      if (msr && !list.some((m) => m.toLowerCase() === msr.toLowerCase())) {
-        list.push(msr);
-      }
-    });
-    return list;
-  }, [drinks, extraMeasures]);
+  const measureOptions = useMemo(() => mergeBarServingMeasures(extraMeasures, drinks), [drinks, extraMeasures]);
 
   const filteredDrinks = useMemo(() => {
     return drinks.filter((item) => {
@@ -3232,7 +2947,7 @@ function BarDrinksMenu({
         );
       const matchesCategory =
         !menuFilters.category ||
-        String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase();
+        normalizeBarDrinkCategory(item.category, item).toLocaleLowerCase() === normalizeBarDrinkCategory(menuFilters.category).toLocaleLowerCase();
       
       const isItemAlcoholic = item.drinkType
         ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
@@ -3262,15 +2977,17 @@ function BarDrinksMenu({
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
-      const cat = String(item.category || "").trim();
+      const cat = normalizeBarDrinkCategory(item.category, item);
       const isKnownCat = categoryOptions.some((option) => option.value.toLowerCase() === cat.toLowerCase());
       const isCustomCat = !isKnownCat && Boolean(cat);
       setIsCustomCategory(isCustomCat);
+      const subcategory = String(item.subcategory || "").trim();
+      const knownSubcategories = BAR_DRINK_SUBCATEGORIES[cat] || [];
+      const isCustomSubcat = Boolean(subcategory) && !knownSubcategories.some((entry) => entry.toLocaleLowerCase() === subcategory.toLocaleLowerCase());
+      setIsCustomSubcategory(isCustomSubcat);
 
-      const msr = String(item.measure || item.servingMeasure || "").trim();
-      const isKnownMeasure = BAR_SERVING_MEASURES.some(
-        (m) => m.toLowerCase() === msr.toLowerCase()
-      );
+      const msr = normalizeBarServingMeasure(item.measure || item.servingMeasure || item.servingVolume || "");
+      const isKnownMeasure = BAR_SERVING_MEASURES.some((measure) => measure.toLocaleLowerCase() === msr.toLocaleLowerCase());
       const isCustomMsr = !isKnownMeasure && Boolean(msr);
       setIsCustomMeasure(isCustomMsr);
 
@@ -3285,11 +3002,13 @@ function BarDrinksMenu({
         name: item.name || "",
         category: isCustomCat ? "__custom__" : (cat || "Cocktails"),
         customCategory: isCustomCat ? cat : "",
+        subcategory,
+        customSubcategory: isCustomSubcat ? subcategory : "",
         price: item.price !== undefined && item.price !== null ? String(item.price) : "",
         isVeg: Boolean(item.isVeg),
         isChefSpecial: isSpecial,
         prepTime: item.prepTime || "15 min",
-        measure: isCustomMsr ? "__custom__" : (msr || "30 ml (Single Peg)"),
+        measure: isCustomMsr ? "__custom__" : (msr || BAR_SERVING_MEASURES[0]),
         customMeasure: isCustomMsr ? msr : "",
         drinkType: item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic"),
         abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : "",
@@ -3300,16 +3019,19 @@ function BarDrinksMenu({
     } else {
       setEditingItem(null);
       setIsCustomCategory(false);
+      setIsCustomSubcategory(false);
       setIsCustomMeasure(false);
       setItemForm({
         name: "",
         category: "Cocktails",
+        subcategory: "",
+        customSubcategory: "",
         customCategory: "",
         price: "",
         isVeg: false,
         isChefSpecial: false,
         prepTime: "15 min",
-        measure: "30 ml (Single Peg)",
+        measure: BAR_SERVING_MEASURES[0],
         customMeasure: "",
         drinkType: "Alcoholic",
         abv: "40",
@@ -3347,16 +3069,18 @@ function BarDrinksMenu({
       finalCategory = String(itemForm.category || "").trim() || "Cocktails";
     }
 
+    const finalSubcategory = String(isCustomSubcategory ? itemForm.customSubcategory : itemForm.subcategory || "").trim();
+
     // Resolve Serving Measure: custom input or dropdown selection
-    let finalMeasure = "30 ml (Single Peg)";
+    let finalMeasure = BAR_SERVING_MEASURES[0];
     if (isCustomMeasure || itemForm.measure === "__custom__") {
-      finalMeasure = String(itemForm.customMeasure || "").trim();
+      finalMeasure = normalizeBarServingMeasure(itemForm.customMeasure);
       if (!finalMeasure) {
         setToast?.("Please enter a custom serving measure / volume.");
         return;
       }
     } else {
-      finalMeasure = String(itemForm.measure || "").trim() || "30 ml (Single Peg)";
+      finalMeasure = normalizeBarServingMeasure(itemForm.measure || BAR_SERVING_MEASURES[0]);
     }
 
     const isSpecial = Boolean(itemForm.isChefSpecial);
@@ -3368,6 +3092,7 @@ function BarDrinksMenu({
       dishName: itemForm.name.trim(),
       drinkName: itemForm.name.trim(),
       category: finalCategory,
+      subcategory: finalSubcategory,
       price: parseFloat(itemForm.price || 0),
       isVeg: (itemForm.drinkType === "Alcoholic" || isAlcoholicCategory(finalCategory, itemForm.drinkType, itemForm.abv)),
       dietaryType: (itemForm.drinkType === "Alcoholic" || isAlcoholicCategory(finalCategory, itemForm.drinkType, itemForm.abv)) ? "Veg" : "Non-Veg",
@@ -4307,7 +4032,9 @@ function BarDrinksMenu({
                       type="button"
                       onClick={() => {
                         setIsCustomCategory(false);
-                        setItemForm((prev) => ({ ...prev, category: categoryOptions[0]?.value || BAR_CATEGORIES[0] }));
+                        const category = categoryOptions[0]?.value || BAR_CATEGORIES[0];
+                        setIsCustomSubcategory(false);
+                        setItemForm((prev) => ({ ...prev, category, subcategory: "", customSubcategory: "" }));
                       }}
                       style={{
                         height: "38px",
@@ -4326,14 +4053,55 @@ function BarDrinksMenu({
                     </button>
                   </div>
                 ) : (
-                  <BarDrinkCategoryPicker
+                  <SearchableSelect
                     options={categoryOptions}
                     value={itemForm.category}
-                    onSelect={(value) => setItemForm((prev) => ({ ...prev, category: value }))}
+                    placeholder="Select drink category"
+                    searchPlaceholder="Search drink categories…"
+                    onChange={(value) => {
+                      setIsCustomSubcategory(false);
+                      setItemForm((prev) => ({ ...prev, category: value, subcategory: "", customSubcategory: "" }));
+                    }}
+                    allowCustom
+                    customLabel="+ Custom Category"
                     onCustom={() => {
                       setIsCustomCategory(true);
-                      setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "" }));
+                      setIsCustomSubcategory(true);
+                      setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "", subcategory: "", customSubcategory: "" }));
                     }}
+                  />
+                )}
+              </div>
+
+              {/* Row 2, Col 1: Optional category-specific variety */}
+              <div>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
+                  Subcategory / Variety
+                </label>
+                {isCustomSubcategory ? (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      placeholder="Type subcategory / variety..."
+                      value={itemForm.customSubcategory}
+                      onChange={(event) => setItemForm((previous) => ({ ...previous, customSubcategory: event.target.value }))}
+                      style={{ flex: 1, height: "38px", boxSizing: "border-box", background: "var(--bg-tertiary)", border: "1.5px solid var(--border-subtle)", borderRadius: "8px", padding: "0 0.85rem", color: "var(--text-main)", fontSize: "0.88rem", outline: "none" }}
+                    />
+                    <button type="button" className="bar-button secondary small" onClick={() => {
+                      setIsCustomSubcategory(false);
+                      setItemForm((previous) => ({ ...previous, subcategory: "", customSubcategory: "" }));
+                    }}>List</button>
+                  </div>
+                ) : (
+                  <SearchableSelect
+                    options={[...(BAR_DRINK_SUBCATEGORIES[itemForm.category] || []), ...(itemForm.subcategory ? [itemForm.subcategory] : [])]}
+                    value={itemForm.subcategory}
+                    placeholder="Select subcategory / variety"
+                    searchPlaceholder="Search subcategories…"
+                    onChange={(value) => setItemForm((previous) => ({ ...previous, subcategory: value }))}
+                    allowCustom
+                    customLabel="+ Custom Subcategory"
+                    onCustom={() => { setIsCustomSubcategory(true); setItemForm((previous) => ({ ...previous, customSubcategory: "", subcategory: "" })); }}
                   />
                 )}
               </div>
@@ -4470,38 +4238,22 @@ function BarDrinksMenu({
                   </div>
                 ) : (
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <select
-                      value={itemForm.measure}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "__custom__") {
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <SearchableSelect
+                        options={measureOptions}
+                        value={itemForm.measure}
+                        placeholder="Select serving measure"
+                        searchPlaceholder="Search serving measure..."
+                        emptyMessage="No serving measures found"
+                        onChange={(value) => setItemForm((previous) => ({ ...previous, measure: normalizeBarServingMeasure(value) }))}
+                        allowCustom
+                        customLabel="Custom Measure"
+                        onCustom={() => {
                           setIsCustomMeasure(true);
-                          setItemForm((prev) => ({ ...prev, customMeasure: "" }));
-                        } else {
-                          setItemForm((prev) => ({ ...prev, measure: val }));
-                        }
-                      }}
-                      style={{
-                        flex: 1,
-                        height: "38px",
-                        boxSizing: "border-box",
-                        background: "var(--bg-tertiary)",
-                        border: "1.5px solid var(--border-subtle)",
-                        borderRadius: "8px",
-                        padding: "0 0.85rem",
-                        color: "var(--text-main)",
-                        fontWeight: 600,
-                        fontSize: "0.9rem",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="">Select serving measure</option>
-                      {measureOptions.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Measure...</option>
-                    </select>
+                          setItemForm((previous) => ({ ...previous, measure: "__custom__", customMeasure: "" }));
+                        }}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -4698,7 +4450,7 @@ function BarDrinksMenu({
                     }}
                   >
                     <Plus size={15} />
-                    <span>{itemForm.image ? "Change Image" : "+ Choose Image"}</span>
+                    <span>{itemForm.image ? "Change Image" : "Choose Image"}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -7645,9 +7397,9 @@ export function BarWorkspace({
           category: d.category || "Cocktails",
           price: Number(d.price ?? d.sellingPrice ?? 0),
           sellingPrice: Number(d.price ?? d.sellingPrice ?? 0),
-          measure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
-          servingMeasure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
-          servingVolume: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          measure: normalizeBarServingMeasure(d.servingMeasure || d.measure || d.servingVolume || BAR_SERVING_MEASURES[0]),
+          servingMeasure: normalizeBarServingMeasure(d.servingMeasure || d.measure || d.servingVolume || BAR_SERVING_MEASURES[0]),
+          servingVolume: normalizeBarServingMeasure(d.servingMeasure || d.measure || d.servingVolume || BAR_SERVING_MEASURES[0]),
           isAvailable: d.isAvailable !== false && d.isAvailable !== "Unavailable",
           drinkType: d.drinkType || (d.abv || d.alcoholContent ? "Alcoholic" : "Non-Alcoholic"),
           abv: d.abv !== undefined && d.abv !== null ? d.abv : (d.alcoholContent !== undefined ? d.alcoholContent : ""),
@@ -7700,8 +7452,8 @@ export function BarWorkspace({
           isVeg: drinkType === "Alcoholic",
           alcoholContent: Number(m.alcoholPct ?? m.abv ?? (drinkType === "Alcoholic" ? 40 : 0)),
           abv: Number(m.alcoholPct ?? m.abv ?? (drinkType === "Alcoholic" ? 40 : 0)),
-          measure: m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"),
-          servingMeasure: m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"),
+          measure: normalizeBarServingMeasure(m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? BAR_SERVING_MEASURES[0] : "Medium Glass (250 ml)")),
+          servingMeasure: normalizeBarServingMeasure(m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? BAR_SERVING_MEASURES[0] : "Medium Glass (250 ml)")),
           isBarDrink: true,
           isBarItem: true,
         };
@@ -8283,7 +8035,7 @@ export function BarWorkspace({
   }, [inventoryRows]);
 
   const alcoholicDrinksCount = useMemo(() => {
-    return drinks.filter((d) => d.drinkType === "Alcoholic" || ["cocktails", "beers", "whiskey", "vodka & gin", "rum & brandy", "wine & champagne", "shots & shooters"].some((c) => c === String(d.category || "").toLowerCase())).length;
+    return drinks.filter((drink) => isAlcoholicCategory(normalizeBarDrinkCategory(drink.category, drink), drink.drinkType, drink.abv)).length;
   }, [drinks]);
 
   const nonAlcoholicDrinksCount = useMemo(() => {
@@ -8335,12 +8087,12 @@ export function BarWorkspace({
     "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
 
-  const filterChoices = route === "bar-drinks" ? ["all", ...new Set([...BAR_CATEGORIES, ...drinks.map((drink) => drink.category).filter(Boolean)].filter((c) => !["all", "all categories", "beverages", "tea & coffee", "juices & shakes", "soft drinks & soda"].includes(String(c).toLowerCase().trim())))] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
+  const filterChoices = route === "bar-drinks" ? ["all", ...mergeBarDrinkCategories([], drinks).map((option) => option.value)] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
   const listRows = (() => {
     if (!listConfig) return [];
     return listConfig.rows.filter((row) => {
       const matchesQuery = !query.trim() || JSON.stringify(row).toLowerCase().includes(query.trim().toLowerCase());
-      const matchesFilter = route === "bar-drinks" ? (filter === "all" || String(row.category || "").toLowerCase() === filter.toLowerCase()) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice))
+      const matchesFilter = route === "bar-drinks" ? (filter === "all" || normalizeBarDrinkCategory(row.category, row).toLocaleLowerCase() === normalizeBarDrinkCategory(filter).toLocaleLowerCase()) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice))
         : route === "bar-tables" ? (filter === "all" || row.area === filter) && (extraFilter === "all" || row.status === extraFilter) && (capacityFilter === "all" || Number(row.capacity) >= Number(capacityFilter))
         : route === "bar-staff" ? (filter === "all" || row.role === filter) && (extraFilter === "all" || row.shift === extraFilter) && (assignmentFilter === "all" || (Array.isArray(row.tables) && row.tables.includes(assignmentFilter)))
         : true;

@@ -80,7 +80,7 @@ import {
   apiGetInventoryPurchases,
 } from "./api/inventoryApi";
 import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymentApi";
-import { API_BASE_URL, API_HTTP_BASE } from "./api/apiConfig";
+import { API_BASE_URL, API_SYNC_BASE } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
@@ -255,7 +255,7 @@ const mergeInventoryPurchases = (current, incoming) => {
 let inFlightNetworkStateRequest = null;
 const requestSharedNetworkState = () => {
   if (!inFlightNetworkStateRequest) {
-    inFlightNetworkStateRequest = fetch(`${API_HTTP_BASE}/api/state`, {
+    inFlightNetworkStateRequest = fetch(`${API_SYNC_BASE}/api/state`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => response.ok ? response.json() : null)
@@ -1186,15 +1186,10 @@ export function App() {
 
       // Persist through the shared API first. In Vite development, relay the
       // accepted update locally for instant LAN screen refreshes as well.
-      fetch(`${API_HTTP_BASE}/api/sync`, {
+      fetch(`${API_SYNC_BASE}/api/sync`, {
         method: "POST",
         headers,
         body: syncBody,
-      }).then((response) => {
-        if (import.meta.env.DEV && response.ok) {
-          return fetch("/api/sync", { method: "POST", headers, body: syncBody });
-        }
-        return undefined;
       }).catch(() => {});
     } catch {}
   };
