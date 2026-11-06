@@ -1729,6 +1729,7 @@ import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonMenuCard } from "../common/Skeletons";
 import { isDrinkCategory } from "../utils/drinkCategoryHelper";
+import MenuItemVisual from "../common/MenuItemVisual";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1811,14 +1812,18 @@ export function TableDetailView({
   const filteredMenuItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const normalizedQuery = query.replace(/biriyani/g, "biryani");
+    const normalizedSelectedCategory = String(selectedCategory || "all").trim().toLowerCase();
 
     return (Array.isArray(activeMenuItems) ? activeMenuItems : []).filter((item) => {
-      const matchCat =
-        selectedCategory === "all" || item.category === selectedCategory;
+      const itemName = String(item?.name ?? item?.dishName ?? item?.dish_name ?? "");
+      const itemDescription = String(item?.description ?? item?.shortDescription ?? item?.short_description ?? "");
+      const itemCategory = String(item?.category ?? item?.categoryName ?? item?.category_name ?? item?.dishCategory ?? "");
+      const normalizedItemCategory = itemCategory.trim().toLowerCase();
+      const matchCat = normalizedSelectedCategory === "all" || normalizedItemCategory === normalizedSelectedCategory;
 
-      const itemTitle = item.name.toLowerCase();
-      const itemDesc = item.description.toLowerCase();
-      const itemCat = item.category.toLowerCase();
+      const itemTitle = itemName.toLowerCase();
+      const itemDesc = itemDescription.toLowerCase();
+      const itemCat = normalizedItemCategory;
 
       const matchSearch =
         !query ||
@@ -1830,13 +1835,22 @@ export function TableDetailView({
         itemCat.includes(normalizedQuery);
 
       let matchDietary = true;
-      if (dietaryFilter === "veg") matchDietary = (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg === true);
-      if (dietaryFilter === "non-veg") matchDietary = (item.dietaryType?.toUpperCase() === "NON-VEG" || item.isVeg === false);
-      if (dietaryFilter === "special") matchDietary = Boolean(item.isChefSpecial || item.isChefsSpecial);
+      const normalizedDietaryType = String(item?.dietaryType ?? item?.dietary_type ?? "").trim().toUpperCase();
+      if (dietaryFilter === "veg") matchDietary = (normalizedDietaryType === "VEG" || item?.isVeg === true || item?.is_veg === true);
+      if (dietaryFilter === "non-veg") matchDietary = (normalizedDietaryType.includes("NON") || item?.isVeg === false || item?.is_veg === false);
+      if (dietaryFilter === "special") matchDietary = Boolean(item?.isChefSpecial || item?.isChefsSpecial || item?.is_chef_special || item?.isSpecial);
 
       return matchCat && matchSearch && matchDietary;
     });
   }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems]);
+
+  const emptyStateContent = activeMenuLoadError
+    ? {
+        title: orderMode === "bar" ? "Bar drinks could not be loaded" : "Menu items could not be loaded",
+      }
+    : {
+        title: "No Matching Dishes Found",
+      };
 
   // Financial calculations in Rupees
   const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
@@ -2958,6 +2972,7 @@ export function TableDetailView({
                       setOrderMode(id);
                       setSelectedCategory("all");
                       setDietaryFilter("all");
+                      setSearchQuery("");
                     }}
                     style={{
                       display: "flex",
@@ -3120,17 +3135,8 @@ export function TableDetailView({
                     fontWeight: 700,
                   }}
                 >
-                  {activeMenuLoadError ? (orderMode === "bar" ? "Bar drinks could not be loaded" : "Menu items could not be loaded") : `${orderMode === "bar" ? "No drinks" : "No dishes"} match "${searchQuery}"`}
+                  {emptyStateContent.title}
                 </h4>
-                <p
-                  style={{
-                    fontSize: "0.85rem",
-                    marginTop: "0.35rem",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  {activeMenuLoadError || (orderMode === "bar" ? 'Try another drink search or select "All Drinks".' : 'Try searching for "Biryani", "Chicken", "Paneer", "Tandoori" or click "All Items".')}
-                </p>
                 <button
                   className="primary-action-button"
                   onClick={() => {
@@ -3174,19 +3180,21 @@ export function TableDetailView({
                   >
                     {/* Item Image with culinary tags */}
                     <div className="pos-menu-card-image" style={{ position: "relative" }}>
-                      <img
-                        src={getMenuItemImage(item)}
-                        alt={item.name}
-                        loading="lazy"
-                        className="pos-menu-card-image-img"
-                        onError={(e) => handleDishImageError(e, item)}
-                        style={{
-                          filter: isAvailable ? "none" : "grayscale(35%)",
-                        }}
-                      />
+                      {orderMode === "bar" ? <MenuItemVisual item={item} className="pos-menu-card-image-img" style={{ position: "absolute", inset: 0, zIndex: 1, filter: isAvailable ? "none" : "grayscale(35%)" }} /> : (
+                        <img
+                          src={getMenuItemImage(item)}
+                          alt={item.name}
+                          loading="lazy"
+                          className="pos-menu-card-image-img"
+                          onError={(e) => handleDishImageError(e, item)}
+                          style={{
+                            filter: isAvailable ? "none" : "grayscale(35%)",
+                          }}
+                        />
+                      )}
 
                       {/* Fallback Icon when image loading */}
-                      <div
+                      {orderMode !== "bar" && <div
                         style={{
                           position: "absolute",
                           inset: 0,
@@ -3199,7 +3207,7 @@ export function TableDetailView({
                         }}
                       >
                         <Utensils size={36} color="var(--accent-amber)" />
-                      </div>
+                      </div>}
 
                       {/* Unavailable Overlay Badge */}
                       {!isAvailable && (

@@ -73,6 +73,7 @@ import {
   getRelevantLocalFallback,
 } from "../utils/menuImageHelper";
 import { SkeletonTable } from "../common/Skeletons";
+import MenuItemVisual from "../common/MenuItemVisual";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
@@ -2260,14 +2261,13 @@ export function AdminPortal({
                                         gap: "0.75rem",
                                       }}
                                     >
-                                      <img
-                                        src={getMenuItemImage(item)}
-                                        alt={item.name}
-                                        style={{
+                                      {isDrinkItem(item) || isBeverageCategory(item.category) ? (
+                                        <MenuItemVisual
+                                          item={item}
+                                          style={{
                                           width: "52px",
                                           height: "52px",
                                           borderRadius: "10px",
-                                          objectFit: "cover",
                                           border: isAvail
                                             ? "1px solid var(--border-card)"
                                             : "1px solid rgba(239, 68, 68, 0.35)",
@@ -2275,11 +2275,28 @@ export function AdminPortal({
                                           filter: isAvail
                                             ? "none"
                                             : "grayscale(60%)",
-                                        }}
-                                        onError={(e) =>
-                                          handleDishImageError(e, item)
-                                        }
-                                      />
+                                          }}
+                                        />
+                                      ) : (
+                                        <img
+                                          src={getMenuItemImage(item)}
+                                          alt={item.name}
+                                          style={{
+                                            width: "52px",
+                                            height: "52px",
+                                            borderRadius: "10px",
+                                            objectFit: "cover",
+                                            border: isAvail
+                                              ? "1px solid var(--border-card)"
+                                              : "1px solid rgba(239, 68, 68, 0.35)",
+                                            flexShrink: 0,
+                                            filter: isAvail
+                                              ? "none"
+                                              : "grayscale(60%)",
+                                          }}
+                                          onError={(e) => handleDishImageError(e, item)}
+                                        />
+                                      )}
                                       <div style={{ minWidth: 0, flex: 1 }}>
                                         <div
                                           style={{

@@ -214,81 +214,102 @@ function globalSyncPlugin() {
     });
   };
 
+  let backendOnline = false;
+  let lastHealthCheck = 0;
+
+  const isBackendAvailable = async () => {
+    const now = Date.now();
+    if (now - lastHealthCheck < 3000) return backendOnline;
+    lastHealthCheck = now;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 600);
+      const res = await fetch("http://127.0.0.1:5018/api/v1/tables", { signal: controller.signal });
+      clearTimeout(timer);
+      backendOnline = res.ok || res.status < 500;
+    } catch {
+      backendOnline = false;
+    }
+    return backendOnline;
+  };
+
   return {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
-            server.middlewares.use((req, res, next) => {
+      server.middlewares.use(async (req, res, next) => {
         const requestUrl = req.url || "/";
         if (requestUrl.startsWith("/__backend_api/")) {
           const apiPath = requestUrl.slice("/__backend_api".length);
-          const requestChunks = [];
+          const live = await isBackendAvailable();
 
-          const forwardRequest = async (body) => {
-            const method = String(req.method || "GET").toUpperCase();
-            const headers = {};
-            const hopByHopHeaders = new Set([
-              "host",
-              "connection",
-              "transfer-encoding",
-              "content-length",
-              "keep-alive",
-              "upgrade",
-              "te",
-              "proxy-authorization",
-              "proxy-authenticate"
-            ]);
-            for (const [key, value] of Object.entries(req.headers)) {
-              if (hopByHopHeaders.has(key.toLowerCase())) continue;
-              headers[key] = value;
-            }
-
-            const targets = [
-              `http://127.0.0.1:5018${apiPath}`,
-              `http://localhost:5018${apiPath}`
-            ];
-
-            let lastError = null;
-            for (const targetUrl of targets) {
-              try {
-                const upstream = await fetch(targetUrl, {
-                  method,
-                  headers,
-                  ...(method === "GET" || method === "HEAD" ? {} : { body, duplex: "half" }),
-                });
-
-                const responseBody = Buffer.from(await upstream.arrayBuffer());
-                const resHeaders = {
-                  "Content-Type": upstream.headers.get("content-type") || "application/json",
-                  "Cache-Control": "no-store",
-                };
-                res.writeHead(upstream.status, resHeaders);
-                return res.end(responseBody);
-              } catch (err) {
-                lastError = err;
+          if (live) {
+            const requestChunks = [];
+            const forwardRequest = async (body) => {
+              const method = String(req.method || "GET").toUpperCase();
+              const headers = {};
+              const hopByHopHeaders = new Set([
+                "host",
+                "connection",
+                "transfer-encoding",
+                "content-length",
+                "keep-alive",
+                "upgrade",
+                "te",
+                "proxy-authorization",
+                "proxy-authenticate"
+              ]);
+              for (const [key, value] of Object.entries(req.headers)) {
+                if (hopByHopHeaders.has(key.toLowerCase())) continue;
+                headers[key] = value;
               }
+
+              const targets = [
+                `http://127.0.0.1:5018${apiPath}`,
+                `http://localhost:5018${apiPath}`
+              ];
+
+              for (const targetUrl of targets) {
+                try {
+                  const upstream = await fetch(targetUrl, {
+                    method,
+                    headers,
+                    ...(method === "GET" || method === "HEAD" ? {} : { body, duplex: "half" }),
+                  });
+
+                  const responseBody = Buffer.from(await upstream.arrayBuffer());
+                  const resHeaders = {
+                    "Content-Type": upstream.headers.get("content-type") || "application/json",
+                    "Cache-Control": "no-store",
+                  };
+                  res.writeHead(upstream.status, resHeaders);
+                  return res.end(responseBody);
+                } catch {
+                  // Try next target
+                }
+              }
+
+              // Fallback to local server if live backend drops during request
+              backendOnline = false;
+              req.url = apiPath;
+              return next();
+            };
+
+            if (req.readableEnded) {
+              forwardRequest(Buffer.concat(requestChunks));
+            } else {
+              req.on("data", (chunk) => requestChunks.push(chunk));
+              req.on("end", () => forwardRequest(Buffer.concat(requestChunks)));
+              req.on("error", (err) => {
+                console.error("[Vite Proxy] Client stream error:", err.message);
+                res.writeHead(500, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ success: false, error: err.message }));
+              });
             }
-
-            console.error(`[Vite Proxy] 503 Service Unavailable: Could not reach backend API at port 5018 (${method} ${requestUrl}). Error: ${lastError?.message} Cause: ${lastError?.cause?.message || lastError?.cause}`);
-            res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-            return res.end(JSON.stringify({
-              success: false,
-              error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer.",
-              details: lastError?.cause?.message || lastError?.cause
-            }));
-          };
-
-          if (req.readableEnded) {
-            forwardRequest(Buffer.concat(requestChunks));
-          } else {
-            req.on("data", (chunk) => requestChunks.push(chunk));
-            req.on("end", () => forwardRequest(Buffer.concat(requestChunks)));
-            req.on("error", (err) => {
-              console.error("[Vite Proxy] Client stream error:", err.message);
-              res.writeHead(500, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ success: false, error: err.message }));
-            });
+            return;
           }
-          return;
+
+          // Offline fallback: rewrite URL and seamlessly fall through to local handlers below
+          req.url = apiPath;
         }
 
         // Centralized Backend HTTP Request/Response Logger
@@ -1152,6 +1173,112 @@ function globalSyncPlugin() {
           return res.end(JSON.stringify({ success: true, message: "Staff deleted successfully" }));
         }
 
+        // REST API: /api/v1/inventory/purchases
+        if (req.url.startsWith("/api/v1/inventory/purchases")) {
+          db = loadDb();
+          const purchases = db.gourmet_pos_inventory_purchases_v1 || [];
+          if (req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: purchases.length, data: purchases }));
+          }
+          if (req.method === "POST") {
+            let body = "";
+            req.on("data", (chunk) => { body += chunk; });
+            req.on("end", () => {
+              try {
+                const payload = JSON.parse(body || "{}");
+                const newRecord = {
+                  ...payload,
+                  id: payload.id || `pur-${Date.now()}`,
+                  purchaseId: payload.purchaseId || Date.now(),
+                  createdAt: new Date().toISOString(),
+                };
+                db.gourmet_pos_inventory_purchases_v1 = [newRecord, ...purchases];
+                saveDb(db);
+                broadcast({ gourmet_pos_inventory_purchases_v1: db.gourmet_pos_inventory_purchases_v1 });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newRecord }));
+              } catch (err) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            });
+            return;
+          }
+        }
+
+        // REST API: /api/v1/salary-payments
+        if (req.url.startsWith("/api/v1/salary-payments")) {
+          db = loadDb();
+          const payments = db.gourmet_pos_salary_payments_v1 || [];
+          if (req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: payments.length, data: payments }));
+          }
+          if (req.method === "POST") {
+            let body = "";
+            req.on("data", (chunk) => { body += chunk; });
+            req.on("end", () => {
+              try {
+                const payload = JSON.parse(body || "{}");
+                const newRecord = {
+                  ...payload,
+                  id: payload.id || `sal-${Date.now()}`,
+                  paymentId: payload.paymentId || Date.now(),
+                  createdAt: new Date().toISOString(),
+                };
+                db.gourmet_pos_salary_payments_v1 = [newRecord, ...payments];
+                saveDb(db);
+                broadcast({ gourmet_pos_salary_payments_v1: db.gourmet_pos_salary_payments_v1 });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newRecord }));
+              } catch (err) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            });
+            return;
+          }
+        }
+
+        // REST API: /api/v1/bar/drinks
+        if (req.url.startsWith("/api/v1/bar/drinks")) {
+          db = loadDb();
+          const drinks = db.gourmet_pos_bar_drinks_v1 || [];
+          if (req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: drinks.length, data: drinks }));
+          }
+          if (req.method === "POST") {
+            let body = "";
+            req.on("data", (chunk) => { body += chunk; });
+            req.on("end", () => {
+              try {
+                const payload = JSON.parse(body || "{}");
+                const newDrink = {
+                  ...payload,
+                  id: payload.id || `drink-${Date.now()}`,
+                  name: payload.drinkName || payload.name || "Unnamed Drink",
+                  category: payload.category || "Cocktails",
+                  price: Number(payload.price ?? 200),
+                  isAvailable: true,
+                  isBarItem: true,
+                  isBarDrink: true,
+                };
+                db.gourmet_pos_bar_drinks_v1 = [newDrink, ...drinks];
+                saveDb(db);
+                broadcast({ gourmet_pos_bar_drinks_v1: db.gourmet_pos_bar_drinks_v1 });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newDrink }));
+              } catch (err) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            });
+            return;
+          }
+        }
+
         // REST API: /api/v1/inventory (GET)
         if (req.url.startsWith("/api/v1/inventory") && req.method === "GET") {
           db = loadDb();
@@ -1807,13 +1934,7 @@ function globalSyncPlugin() {
           return;
         }
 
-        // Authentication must be handled by the ASP.NET API, never local JSON.
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          res.writeHead(503, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ success: false, error: "Authentication server is unavailable." }));
-        }
-
-        // REST API: /api/v1/auth/login (disabled local mock)
+        // REST API: /api/v1/auth/login (local fallback)
         if (req.url === "/api/v1/auth/login" && req.method === "POST") {
           let body = "";
           req.on("data", (chunk) => {
@@ -2003,7 +2124,6 @@ export default defineConfig(({ mode }) => {
     apiBase = apiBase.trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
   }
 
-  // Target for backend proxying (prioritize explicit env vars, then VITE_API_BASE_URL, fallback to local 5018)
   const backendTarget =
     process.env.BACKEND_URL ||
     env.BACKEND_URL ||

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
   Banknote, Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
@@ -11,7 +12,8 @@ import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import MenuItemVisual from "../common/MenuItemVisual";
+import SearchableSelect from "../common/SearchableSelect";
 import { SkeletonTable } from "../common/Skeletons";
 import { BarBOTView, BarKOTView } from "./BarBOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
@@ -43,6 +45,8 @@ import {
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { BAR_CATEGORIES, mergeBarDrinkCategories } from "./barDrinkCategories";
+export { BAR_CATEGORIES } from "./barDrinkCategories";
 
 
 const PAGE_SIZE = 8;
@@ -79,17 +83,6 @@ const ACCESS_PAGES = ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar Staff", 
 const ACCESS_DEFAULTS = Object.fromEntries(ACCESS_ROLES.map((role, index) => [role, Object.fromEntries(ACCESS_PAGES.map((page) => [page, index === 0 || (index === 1 && page !== "Settings") || (index === 2 && ["Bar Overview", "Drinks Menu", "Bar Tables", "Bar KOT"].includes(page)) || (index === 3 && ["Bar Overview", "Bar Tables", "Bar KOT"].includes(page)) || (index === 4 && ["Bar Overview", "Orders"].includes(page))]))]));
 
 const BAR_DRINK_UNITS = ["Glass", "Bottle", "Can", "Peg", "ml", "Litre"];
-
-export const BAR_CATEGORIES = [
-  "Cocktails",
-  "Mocktails",
-  "Beers",
-  "Whiskey",
-  "Vodka & Gin",
-  "Rum & Brandy",
-  "Wine & Champagne",
-  "Shots & Shooters",
-];
 
 export const BAR_SERVING_MEASURES = [
   "30 ml (Single Peg)",
@@ -216,6 +209,22 @@ export const BAR_INVENTORY_CATEGORIES = [
   },
 ];
 
+const BAR_INVENTORY_SUBCATEGORY_ADDITIONS = {
+  "Whiskey & Scotch": ["Bourbon", "Rye Whiskey"],
+  "Vodka & Gin": ["Flavoured Vodka", "Botanical Gin"],
+  "Rum & Brandy": ["Dark Rum", "Spiced Rum", "Brandy", "Cognac"],
+  "Tequila & Mezcal": ["Blanco", "Reposado", "Añejo", "Mezcal"],
+  "Beers & Ciders": ["Lager", "Ale", "Stout", "Wheat Beer", "Craft Beer", "Cider"],
+  "Wine & Champagne": ["Red Wine", "White Wine", "Rosé", "Sparkling Wine", "Champagne"],
+  "Liqueurs & Bitters": ["Coffee Liqueur", "Orange Liqueur", "Cream Liqueur", "Herbal Liqueur", "Cocktail Bitters"],
+  "Cocktails & Premixes": ["Cocktail Premix", "Ready-to-Drink Cocktails", "Mojito Mix"],
+  "Mocktails & Syrups": ["Fruit Syrups", "Flavoured Syrups", "Mocktail Premixes"],
+  "Soft Drinks, Tonics & Soda": ["Cola", "Soda Water", "Soft Drinks"],
+  "Juices & Purees": ["Fruit Juices", "Fruit Purees", "Citrus Juices", "Concentrates"],
+  "Bar Garnishes & Supplies": ["Mint Leaves", "Lemon", "Lime", "Orange Slices", "Cocktail Cherries"],
+  "Bar Consumables & Ice": ["Ice Cubes", "Crushed Ice", "Straws", "Napkins", "Stirring Sticks"],
+};
+
 export const BAR_INVENTORY_UNITS = [
   "Bottle (750 ml)",
   "Bottle (1000 ml / 1 L)",
@@ -301,6 +310,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
 
   const [formData, setFormData] = useState(defaultForm);
   const [customCategory, setCustomCategory] = useState(false);
+  const [customSubcategory, setCustomSubcategory] = useState(false);
   const [customUnit, setCustomUnit] = useState(false);
   const [customLocation, setCustomLocation] = useState(false);
   const [customSupplier, setCustomSupplier] = useState(false);
@@ -360,6 +370,20 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
     });
     return Array.from(set);
   }, [validBeverages]);
+
+  const inventoryCategoryOptions = useMemo(() => {
+    const unique = new Map();
+    const barCategoriesFromInventory = (Array.isArray(inventory) ? inventory : []).filter((item) => {
+      const beverageSignals = item?.isBarItem === true || item?.isBarDrink === true || item?.isBeverage === true || Number(item?.abv ?? item?.alcoholContent ?? 0) > 0;
+      return beverageSignals || isBeverageCategory(item?.category ?? item?.subcategory ?? item?.name);
+    }).map((item) => item?.category);
+    [...BAR_INVENTORY_CATEGORIES.map((item) => item.category), ...barCategoriesFromInventory]
+      .forEach((raw) => {
+        const value = String(raw || "").trim();
+        if (value && !unique.has(value.toLocaleLowerCase())) unique.set(value.toLocaleLowerCase(), value);
+      });
+    return Array.from(unique.values());
+  }, [inventory]);
 
   // Operational KPI metrics (exact formulas matching Dine Inventory)
   const totalItems = validBeverages.length;
@@ -430,16 +454,21 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
   const handleCategorySelect = (selected) => {
     if (selected === "__custom__") {
       setCustomCategory(true);
+      setCustomSubcategory(true);
       setField("category", "");
       setField("subcategory", "");
     } else {
       setCustomCategory(false);
-      setField("category", selected);
+      const canonical = inventoryCategoryOptions.find((category) => category.toLocaleLowerCase() === String(selected).trim().toLocaleLowerCase()) || selected;
+      setField("category", canonical);
+      setCustomSubcategory(false);
       const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selected);
       if (matched) {
         setField("subcategory", matched.subcategories[0] || "");
         setField("unit", matched.defaultUnit || "Bottle (750 ml)");
         setField("abv", matched.defaultAbv != null ? matched.defaultAbv : 40);
+      } else {
+        setField("subcategory", "");
       }
     }
   };
@@ -448,6 +477,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
     setEditingItem(null);
     setFormData(defaultForm);
     setCustomCategory(false);
+    setCustomSubcategory(false);
     setCustomUnit(false);
     setCustomLocation(false);
     setCustomSupplier(false);
@@ -472,7 +502,12 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
       storageLocation: item.storageLocation || "Front Bar Display Shelf",
       supplier: item.supplier || "State Beverages Corporation (TSBCL/Govt Depot)",
     });
-    setCustomCategory(false);
+    setCustomCategory(!inventoryCategoryOptions.some((category) => category.toLocaleLowerCase() === String(item.category || "").trim().toLocaleLowerCase()));
+    const knownSubcategories = [
+      ...(BAR_INVENTORY_CATEGORIES.find((category) => category.category === item.category)?.subcategories || []),
+      ...(BAR_INVENTORY_SUBCATEGORY_ADDITIONS[item.category] || []),
+    ];
+    setCustomSubcategory(Boolean(item.subcategory) && !knownSubcategories.some((subcategory) => subcategory.toLocaleLowerCase() === String(item.subcategory).trim().toLocaleLowerCase()));
     setCustomUnit(false);
     setCustomLocation(false);
     setCustomSupplier(false);
@@ -507,9 +542,12 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
         throw new Error("Volume must be greater than zero.");
       }
 
+      const enteredCategory = String(formData.category).trim();
+      const existingCategory = inventoryCategoryOptions.find((category) => category.toLocaleLowerCase() === enteredCategory.toLocaleLowerCase());
+      const canonicalCategory = customCategory && existingCategory ? existingCategory : enteredCategory;
       const payload = {
         name: String(formData.name).trim(),
-        category: String(formData.category).trim() || "Beverages & Bar",
+        category: canonicalCategory || "Beverages & Bar",
         subcategory: String(formData.subcategory).trim(),
         brand: String(formData.brand).trim(),
         unit: String(formData.unit).trim() || "Bottle",
@@ -771,7 +809,12 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
 
   // Find subcategories for current category
   const currentCategoryObj = BAR_INVENTORY_CATEGORIES.find((c) => c.category === formData.category);
-  const currentSubcategories = currentCategoryObj?.subcategories || [];
+  const currentSubcategories = Array.from(new Map([
+    ...(currentCategoryObj?.subcategories || []),
+    ...(BAR_INVENTORY_SUBCATEGORY_ADDITIONS[formData.category] || []),
+    ...(Array.isArray(inventory) ? inventory.filter((item) => String(item?.category || "").trim().toLocaleLowerCase() === String(formData.category || "").trim().toLocaleLowerCase()).map((item) => String(item?.subcategory || "").trim()).filter(Boolean) : []),
+    ...(formData.subcategory ? [String(formData.subcategory).trim()] : []),
+  ].filter(Boolean).map((option) => [option.toLocaleLowerCase(), option])).values());
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -2324,11 +2367,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
           role="presentation"
           onMouseDown={(event) => event.target === event.currentTarget && !modalBusy && setModalOpen(false)}
         >
-          <section className="bar-modal" role="dialog" aria-modal="true" style={{ width: "min(840px, 100%)" }}>
+          <section className="bar-modal bar-inventory-modal" role="dialog" aria-modal="true" aria-labelledby="bar-inventory-modal-title">
             <header className="bar-modal-head">
               <div>
                 <span className="bar-kicker">BAR & LIQUOR LEDGER</span>
-                <h2>{editingItem ? `Edit "${editingItem.name}"` : "Add Bar Inventory"}</h2>
+                <h2 id="bar-inventory-modal-title">{editingItem ? `Edit "${editingItem.name}"` : "Add Bar Inventory"}</h2>
               </div>
               <button
                 className="bar-icon-button"
@@ -2341,7 +2384,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
               </button>
             </header>
 
-            <form className="bar-form" onSubmit={saveInventoryItem} style={{ padding: "18px 20px" }}>
+            <form className="bar-form bar-inventory-form" onSubmit={saveInventoryItem}>
               <div className="bar-form-grid">
                 {/* Item Name */}
                 <label className="bar-field wide">
@@ -2358,33 +2401,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 <label className="bar-field">
                   <span>Bar Category *</span>
                   {!customCategory ? (
-                    <select
-                      value={formData.category}
-                      onChange={(e) => handleCategorySelect(e.target.value)}
-                    >
-                      {BAR_INVENTORY_CATEGORIES.map((c) => (
-                        <option key={c.category} value={c.category}>{c.category}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Category…</option>
-                    </select>
+                    <SearchableSelect options={inventoryCategoryOptions} value={formData.category} placeholder="Select bar category" searchPlaceholder="Search bar categories…" onChange={handleCategorySelect} allowCustom customLabel="+ Custom Category" onCustom={() => handleCategorySelect("__custom__")} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        required
-                        placeholder="Type custom category name…"
-                        value={formData.category}
-                        onChange={(e) => setField("category", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomCategory(false);
-                          setField("category", BAR_INVENTORY_CATEGORIES[0].category);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input required placeholder="Type custom category name…" value={formData.category} onChange={(e) => setField("category", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomCategory(false); setField("category", inventoryCategoryOptions[0] || BAR_INVENTORY_CATEGORIES[0].category); }}>Select</button>
                     </div>
                   )}
                 </label>
@@ -2392,24 +2413,15 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 {/* Subcategory / Variety */}
                 <label className="bar-field">
                   <span>Subcategory / Variety</span>
-                  {currentSubcategories.length > 0 && !customCategory ? (
-                    <select
-                      value={formData.subcategory}
-                      onChange={(e) => setField("subcategory", e.target.value)}
-                    >
-                      {currentSubcategories.map((sub) => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))}
-                    </select>
+                  {!customSubcategory ? (
+                    <SearchableSelect options={currentSubcategories} value={formData.subcategory} placeholder="Select subcategory / variety" searchPlaceholder="Search subcategories…" onChange={(value) => setField("subcategory", value)} allowCustom customLabel="+ Custom Subcategory" onCustom={() => setCustomSubcategory(true)} />
                   ) : (
-                    <input
-                      placeholder="e.g. Single Malt, Craft IPA, Blanco, Puree"
-                      value={formData.subcategory}
-                      onChange={(e) => setField("subcategory", e.target.value)}
-                    />
+                    <div className="bar-inventory-custom-field">
+                      <input placeholder="Enter custom subcategory / variety" value={formData.subcategory} onChange={(e) => setField("subcategory", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomSubcategory(false); if (!formData.subcategory && currentSubcategories[0]) setField("subcategory", currentSubcategories[0]); }}>Select</button>
+                    </div>
                   )}
                 </label>
-
                 {/* Brand */}
                 <label className="bar-field">
                   <span>Brand / Label</span>
@@ -2424,48 +2436,20 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 <label className="bar-field">
                   <span>Packaging Unit *</span>
                   {!customUnit ? (
-                    <select
-                      value={formData.unit}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setCustomUnit(true);
-                          setField("unit", "");
-                        } else {
-                          setField("unit", e.target.value);
-                          if (e.target.value.includes("750")) setField("volumeMl", 750);
-                          else if (e.target.value.includes("1 L") || e.target.value.includes("1000")) setField("volumeMl", 1000);
-                          else if (e.target.value.includes("330")) setField("volumeMl", 330);
-                          else if (e.target.value.includes("650")) setField("volumeMl", 650);
-                        }
-                      }}
-                    >
-                      {BAR_INVENTORY_UNITS.map((u) => (
-                        <option key={u} value={u}>{u}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Unit…</option>
-                    </select>
+                    <SearchableSelect options={[...BAR_INVENTORY_UNITS, ...(formData.unit ? [formData.unit] : [])]} value={formData.unit} placeholder="Select packaging unit" searchPlaceholder="Search packaging units…" onChange={(value) => {
+                      setField("unit", value);
+                      if (value.includes("750")) setField("volumeMl", 750);
+                      else if (value.includes("1 L") || value.includes("1000")) setField("volumeMl", 1000);
+                      else if (value.includes("330")) setField("volumeMl", 330);
+                      else if (value.includes("650")) setField("volumeMl", 650);
+                    }} allowCustom customLabel="+ Custom Unit" onCustom={() => { setCustomUnit(true); setField("unit", ""); }} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        required
-                        placeholder="e.g. Case of 12, Barrel 20L"
-                        value={formData.unit}
-                        onChange={(e) => setField("unit", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomUnit(false);
-                          setField("unit", BAR_INVENTORY_UNITS[0]);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input required placeholder="e.g. Case of 12, Barrel 20L" value={formData.unit} onChange={(e) => setField("unit", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomUnit(false); setField("unit", BAR_INVENTORY_UNITS[0]); }}>Select</button>
                     </div>
                   )}
                 </label>
-
                 {/* Bottle Volume (ml) */}
                 <label className="bar-field">
                   <span>Volume / Bottle Size (ml)</span>
@@ -2549,85 +2533,27 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 <label className="bar-field">
                   <span>Storage / Rack Location</span>
                   {!customLocation ? (
-                    <select
-                      value={formData.storageLocation}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setCustomLocation(true);
-                          setField("storageLocation", "");
-                        } else {
-                          setField("storageLocation", e.target.value);
-                        }
-                      }}
-                    >
-                      {BAR_STORAGE_LOCATIONS.map((loc) => (
-                        <option key={loc} value={loc}>{loc}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Location…</option>
-                    </select>
+                    <SearchableSelect options={[...BAR_STORAGE_LOCATIONS, ...(formData.storageLocation ? [formData.storageLocation] : [])]} value={formData.storageLocation} placeholder="Select storage location" searchPlaceholder="Search storage locations…" onChange={(value) => setField("storageLocation", value)} allowCustom customLabel="+ Custom Location" onCustom={() => { setCustomLocation(true); setField("storageLocation", ""); }} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        placeholder="e.g. Cellar Rack B3"
-                        value={formData.storageLocation}
-                        onChange={(e) => setField("storageLocation", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomLocation(false);
-                          setField("storageLocation", BAR_STORAGE_LOCATIONS[0]);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input placeholder="e.g. Cellar Rack B3" value={formData.storageLocation} onChange={(e) => setField("storageLocation", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomLocation(false); setField("storageLocation", BAR_STORAGE_LOCATIONS[0]); }}>Select</button>
                     </div>
                   )}
                 </label>
-
                 {/* Supplier / Distributor */}
                 <label className="bar-field">
                   <span>Supplier / Distributor</span>
                   {!customSupplier ? (
-                    <select
-                      value={formData.supplier}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setCustomSupplier(true);
-                          setField("supplier", "");
-                        } else {
-                          setField("supplier", e.target.value);
-                        }
-                      }}
-                    >
-                      {BAR_SUPPLIERS.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Supplier…</option>
-                    </select>
+                    <SearchableSelect options={[...BAR_SUPPLIERS, ...availableSuppliers, ...(formData.supplier ? [formData.supplier] : [])]} value={formData.supplier} placeholder="Select supplier / distributor" searchPlaceholder="Search suppliers…" onChange={(value) => setField("supplier", value)} allowCustom customLabel="+ Custom Supplier" onCustom={() => { setCustomSupplier(true); setField("supplier", ""); }} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        placeholder="e.g. Local Wine Wholesaler"
-                        value={formData.supplier}
-                        onChange={(e) => setField("supplier", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomSupplier(false);
-                          setField("supplier", BAR_SUPPLIERS[0]);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input placeholder="e.g. Local Wine Wholesaler" value={formData.supplier} onChange={(e) => setField("supplier", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomSupplier(false); setField("supplier", BAR_SUPPLIERS[0]); }}>Select</button>
                     </div>
                   )}
                 </label>
               </div>
-
               {Number(formData.unitCost) > 0 && Number(formData.stock) > 0 && (
                 <div
                   style={{
@@ -2654,7 +2580,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 </div>
               )}
 
-              <footer className="bar-modal-foot" style={{ marginTop: "16px" }}>
+              <footer className="bar-modal-foot">
                 <button
                   className="bar-button secondary"
                   type="button"
@@ -3039,6 +2965,166 @@ function getDrinkIcon(name = "", category = "") {
 }
 
 
+function BarDrinkCategoryPicker({ options, value, onSelect, onCustom }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [popoverPosition, setPopoverPosition] = useState(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const pickerRef = useRef(null);
+  const popoverRef = useRef(null);
+  const searchRef = useRef(null);
+  const optionRefs = useRef([]);
+  const selectedOption = options.find((option) => option.value.toLowerCase() === String(value || "").trim().toLowerCase());
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = normalizedQuery
+    ? options.filter((option) => option.label.toLowerCase().includes(normalizedQuery))
+    : options;
+  const optionCount = filteredOptions.length + 1;
+
+  const closePicker = (returnFocus = false) => {
+    setIsOpen(false);
+    setQuery("");
+    setActiveIndex(-1);
+    setPopoverPosition(null);
+    if (returnFocus) window.requestAnimationFrame(() => pickerRef.current?.querySelector(".bar-category-picker-trigger")?.focus());
+  };
+
+  useLayoutEffect(() => {
+    if (!isOpen) return undefined;
+    const updatePosition = () => {
+      const rect = pickerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const maxHeight = Math.min(300, window.innerHeight - 24);
+      const below = window.innerHeight - rect.bottom - 8;
+      const top = below >= Math.min(230, maxHeight) || rect.top < maxHeight + 16
+        ? rect.bottom + 4
+        : Math.max(8, rect.top - maxHeight - 4);
+      setPopoverPosition({ top, left: Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)), width: rect.width, maxHeight });
+    };
+    updatePosition();
+    const handleOutsidePointer = (event) => {
+      if (!pickerRef.current?.contains(event.target) && !popoverRef.current?.contains(event.target)) closePicker();
+    };
+    document.addEventListener("pointerdown", handleOutsidePointer);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePointer);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) searchRef.current?.focus();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (activeIndex >= 0) optionRefs.current[activeIndex]?.focus();
+  }, [activeIndex]);
+
+  const moveActiveOption = (direction) => {
+    setActiveIndex((current) => (current + direction + optionCount) % optionCount);
+  };
+
+  const chooseOption = (option) => {
+    onSelect(option.value);
+    closePicker();
+  };
+
+  const chooseCustom = () => {
+    onCustom();
+    closePicker();
+  };
+
+  return (
+    <div ref={pickerRef} className="bar-category-picker" onKeyDown={(event) => {
+      if (event.key === "Escape" && isOpen) {
+        event.preventDefault();
+        closePicker();
+      }
+    }}>
+      <button
+        type="button"
+        className="bar-category-picker-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          if (isOpen) closePicker();
+          else setIsOpen(true);
+        }}
+      >
+        <span>{selectedOption?.label || value || "Select category"}</span>
+        <ChevronDown size={16} aria-hidden="true" />
+      </button>
+      {isOpen && popoverPosition && createPortal(
+        <div ref={popoverRef} className="bar-category-picker-popover" style={popoverPosition}>
+          <label className="bar-category-picker-search">
+            <Search size={15} aria-hidden="true" />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(event) => { setQuery(event.target.value); setActiveIndex(-1); }}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown" && optionCount) { event.preventDefault(); setActiveIndex(0); }
+                if (event.key === "ArrowUp" && optionCount) { event.preventDefault(); setActiveIndex(optionCount - 1); }
+                if (event.key === "Escape") { event.preventDefault(); closePicker(true); }
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  if (activeIndex >= 0 && activeIndex < filteredOptions.length) chooseOption(filteredOptions[activeIndex]);
+                  else if (activeIndex === filteredOptions.length) chooseCustom();
+                  else if (filteredOptions.length === 1) chooseOption(filteredOptions[0]);
+                }
+              }}
+              placeholder="Search categories..."
+              aria-label="Search drink categories"
+              aria-controls="bar-drink-category-options"
+            />
+          </label>
+          <div id="bar-drink-category-options" className="bar-category-picker-options" role="listbox" aria-label="Drink categories">
+            {filteredOptions.map((option, index) => (
+              <button
+                key={option.value}
+                ref={(element) => { optionRefs.current[index] = element; }}
+                type="button"
+                role="option"
+                aria-selected={option.value.toLowerCase() === String(value || "").trim().toLowerCase()}
+                className="bar-category-picker-option"
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown") { event.preventDefault(); moveActiveOption(1); }
+                  if (event.key === "ArrowUp") { event.preventDefault(); if (index === 0) searchRef.current?.focus(); else moveActiveOption(-1); }
+                  if (event.key === "Escape") { event.preventDefault(); closePicker(true); }
+                }}
+                onClick={() => chooseOption(option)}
+              >
+                {option.label}
+              </button>
+            ))}
+            {!filteredOptions.length && <p className="bar-category-picker-empty">No Categories Found</p>}
+            <button
+              ref={(element) => { optionRefs.current[filteredOptions.length] = element; }}
+              type="button"
+              role="option"
+              aria-selected="false"
+              className="bar-category-picker-option bar-category-picker-custom-option"
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown") { event.preventDefault(); moveActiveOption(1); }
+                if (event.key === "ArrowUp") { event.preventDefault(); moveActiveOption(-1); }
+                if (event.key === "Escape") { event.preventDefault(); closePicker(true); }
+              }}
+              onClick={chooseCustom}
+            >
+              + Custom Category
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
 function BarDrinksMenu({
   drinks = [],
   onAddDrink,
@@ -3115,69 +3201,10 @@ function BarDrinksMenu({
     isAvailable: "Available",
   });
 
-  const categoryOptions = useMemo(() => {
-    const excluded = new Set([
-      "all",
-      "all categories",
-      "all category",
-      "all items",
-      "category",
-      "categories",
-      "beverages",
-      "beverage",
-      "tea & coffee",
-      "tea and coffee",
-      "tea",
-      "coffee",
-      "juices & shakes",
-      "juices and shakes",
-      "shakes",
-      "juices",
-      "soft drinks & soda",
-      "soft drinks",
-      "soda",
-      "food",
-      "biryani",
-      "curries",
-      "curry",
-      "starters",
-      "starter",
-      "soups",
-      "breads",
-      "rice",
-      "desserts",
-    ]);
-
-    const map = new Map();
-    // 1. Standard bar categories
-    BAR_CATEGORIES.forEach((cat) => {
-      const key = cat.toLowerCase().trim();
-      if (!excluded.has(key)) {
-        map.set(key, { value: cat, label: cat });
-      }
-    });
-
-    // 2. Extra categories from API (filter out non-bar and duplicate entries)
-    (extraCategories || []).forEach((cat) => {
-      if (!cat) return;
-      const key = String(cat).toLowerCase().trim();
-      if (!excluded.has(key) && !map.has(key)) {
-        map.set(key, { value: cat, label: cat });
-      }
-    });
-
-    // 3. Categories from loaded drink items (filter out non-bar entries)
-    (drinks || []).forEach((d) => {
-      const cat = String(d?.category || "").trim();
-      if (!cat) return;
-      const key = cat.toLowerCase();
-      if (!excluded.has(key) && !map.has(key)) {
-        map.set(key, { value: cat, label: cat });
-      }
-    });
-
-    return Array.from(map.values());
-  }, [drinks, extraCategories]);
+  const categoryOptions = useMemo(
+    () => mergeBarDrinkCategories(extraCategories, drinks),
+    [drinks, extraCategories],
+  );
 
   const measureOptions = useMemo(() => {
     const list = [...BAR_SERVING_MEASURES];
@@ -3236,9 +3263,7 @@ function BarDrinksMenu({
     if (item) {
       setEditingItem(item);
       const cat = String(item.category || "").trim();
-      const isKnownCat = BAR_CATEGORIES.some(
-        (c) => c.toLowerCase() === cat.toLowerCase()
-      );
+      const isKnownCat = categoryOptions.some((option) => option.value.toLowerCase() === cat.toLowerCase());
       const isCustomCat = !isKnownCat && Boolean(cat);
       setIsCustomCategory(isCustomCat);
 
@@ -3312,11 +3337,12 @@ function BarDrinksMenu({
     // Resolve Category: custom input or dropdown selection
     let finalCategory = "Cocktails";
     if (isCustomCategory || itemForm.category === "__custom__") {
-      finalCategory = String(itemForm.customCategory || "").trim();
-      if (!finalCategory) {
+      const requestedCategory = String(itemForm.customCategory || "").trim();
+      if (!requestedCategory) {
         setToast?.("Please enter a custom category name.");
         return;
       }
+      finalCategory = categoryOptions.find((option) => option.value.toLocaleLowerCase() === requestedCategory.toLocaleLowerCase())?.value || requestedCategory;
     } else {
       finalCategory = String(itemForm.category || "").trim() || "Cocktails";
     }
@@ -3682,15 +3708,12 @@ function BarDrinksMenu({
                     {/* Drink Name + Thumbnail */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        <img
-                          src={getMenuItemImage(item)}
-                          alt={item.name}
-                          onError={(e) => handleDishImageError(e, item)}
+                        <MenuItemVisual
+                          item={item}
                           style={{
                             width: "48px",
                             height: "48px",
                             borderRadius: "10px",
-                            objectFit: "cover",
                             border: isAvail
                               ? "1px solid var(--border-card)"
                               : "1px solid rgba(239, 68, 68, 0.35)",
@@ -4284,7 +4307,7 @@ function BarDrinksMenu({
                       type="button"
                       onClick={() => {
                         setIsCustomCategory(false);
-                        setItemForm((prev) => ({ ...prev, category: BAR_CATEGORIES[0] }));
+                        setItemForm((prev) => ({ ...prev, category: categoryOptions[0]?.value || BAR_CATEGORIES[0] }));
                       }}
                       style={{
                         height: "38px",
@@ -4303,60 +4326,15 @@ function BarDrinksMenu({
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <select
-                      value={itemForm.category}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "__custom__") {
-                          setIsCustomCategory(true);
-                          setItemForm((prev) => ({ ...prev, customCategory: "" }));
-                        } else {
-                          setItemForm((prev) => ({ ...prev, category: val }));
-                        }
-                      }}
-                      style={{
-                        flex: 1,
-                        height: "38px",
-                        boxSizing: "border-box",
-                        background: "var(--bg-tertiary)",
-                        border: "1.5px solid var(--border-subtle)",
-                        borderRadius: "8px",
-                        padding: "0 0.85rem",
-                        color: "var(--text-main)",
-                        fontWeight: 600,
-                        fontSize: "0.9rem",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {categoryOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Category...</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomCategory(true);
-                        setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "" }));
-                      }}
-                      style={{
-                        height: "38px",
-                        padding: "0 12px",
-                        borderRadius: "8px",
-                        border: "1.5px solid var(--border-subtle)",
-                        background: "var(--bg-tertiary)",
-                        color: "var(--text-main)",
-                        fontWeight: 700,
-                        fontSize: "0.82rem",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      + Custom
-                    </button>
-                  </div>
+                  <BarDrinkCategoryPicker
+                    options={categoryOptions}
+                    value={itemForm.category}
+                    onSelect={(value) => setItemForm((prev) => ({ ...prev, category: value }))}
+                    onCustom={() => {
+                      setIsCustomCategory(true);
+                      setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "" }));
+                    }}
+                  />
                 )}
               </div>
 
@@ -4694,19 +4672,15 @@ function BarDrinksMenu({
                   Choose Image
                 </label>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                  {itemForm.image && (
-                    <img
-                      src={itemForm.image}
-                      alt="Drink preview"
-                      style={{
-                        width: "56px",
-                        height: "56px",
-                        borderRadius: "8px",
-                        objectFit: "cover",
-                        border: "1px solid var(--border-card)",
-                      }}
-                    />
-                  )}
+                  <MenuItemVisual
+                    item={{ ...itemForm, name: itemForm.name || "Beverage", image: itemForm.image }}
+                    style={{
+                      width: "56px",
+                      height: "56px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-card)",
+                    }}
+                  />
                   <label
                     style={{
                       display: "inline-flex",
@@ -9149,11 +9123,9 @@ export function BarWorkspace({
                   onMouseEnter={(event) => { event.currentTarget.style.borderColor = "var(--accent-amber)"; }}
                   onMouseLeave={(event) => { event.currentTarget.style.borderColor = "var(--border-subtle)"; }}
                 >
-                  <img
-                    src={getMenuItemImage(drink)}
-                    alt={drink.name}
-                    style={{ width: "36px", height: "36px", borderRadius: "7px", objectFit: "cover", flexShrink: 0 }}
-                    onError={(event) => handleDishImageError(event, drink)}
+                  <MenuItemVisual
+                    item={drink}
+                    style={{ width: "36px", height: "36px", borderRadius: "7px", flexShrink: 0 }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div

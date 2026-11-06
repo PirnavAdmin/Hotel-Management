@@ -80,7 +80,7 @@ export function normalizeMenuItem(item = {}) {
     name: item.name ?? item.dishName ?? item.dish_name ?? "",
     dishName: item.name ?? item.dishName ?? item.dish_name ?? "",
     drinkName: item.drinkName ?? item.name ?? item.dishName ?? "",
-    category: item.category ?? "",
+    category: item.category ?? item.categoryName ?? item.category_name ?? item.dishCategory ?? "",
     price: Number(item.price) || 0,
     dietaryType: resolvedDietary,
     isVeg: resolvedIsVeg,

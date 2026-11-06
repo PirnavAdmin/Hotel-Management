@@ -14,37 +14,10 @@ public class InventoryPurchase
     [Column("ingredient_id")]
     public long IngredientId { get; set; }
 
-    [NotMapped]
-    public long? ItemId
-    {
-        get => IngredientId;
-        set { if (value.HasValue) IngredientId = value.Value; }
-    }
-
     [Required]
     [MaxLength(150)]
     [Column("item_name")]
     public string ItemName { get; set; } = string.Empty;
-
-    [NotMapped]
-    public string Name
-    {
-        get => ItemName;
-        set => ItemName = value;
-    }
-
-    [MaxLength(100)]
-    [Column("category")]
-    public string Category { get; set; } = string.Empty;
-
-    [MaxLength(100)]
-    [Column("subcategory")]
-    public string Subcategory { get; set; } = string.Empty;
-
-    [MaxLength(50)]
-    [Column("unit")]
-    public string Unit { get; set; } = string.Empty;
-
     [Required]
     [MaxLength(50)]
     [Column("department")]
