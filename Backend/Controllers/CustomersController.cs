@@ -126,7 +126,6 @@ public class CustomersController : ControllerBase
 
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Customers/{id}")]
     public async Task<IActionResult> DeleteCustomer(string id)
     {
         long numericId = 0;

@@ -64,6 +64,8 @@ public class AppDbContext : DbContext
     public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
     public DbSet<RestaurantSetting> RestaurantSettings { get; set; }
     public DbSet<Setting> Settings { get; set; }
+    public DbSet<InventoryPurchase> InventoryPurchases { get; set; }
+    public DbSet<SalaryPayment> SalaryPayments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -419,6 +421,46 @@ public class AppDbContext : DbContext
             entity.Property(s => s.UpdatedAt).HasColumnName("updated_at");
             entity.Property(s => s.CreatedBy).HasColumnName("created_by");
             entity.Property(s => s.UpdatedBy).HasColumnName("updated_by");
+        });
+
+        modelBuilder.Entity<Invoice>(entity =>
+        {
+            entity.ToTable("invoices");
+            entity.HasKey(i => i.InvoiceId);
+            entity.Property(i => i.InvoiceId).HasColumnName("invoice_id").ValueGeneratedOnAdd();
+            entity.Property(i => i.OrderId).HasColumnName("order_id").IsRequired();
+            entity.Property(i => i.InvoiceNumber).HasColumnName("invoice_number").HasMaxLength(50).IsRequired();
+            entity.Property(i => i.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
+            entity.Property(i => i.TaxableAmount).HasColumnName("taxable_amount").HasPrecision(18, 2);
+            entity.Property(i => i.TaxAmount).HasColumnName("tax_amount").HasPrecision(18, 2);
+            entity.Property(i => i.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 2);
+            entity.Property(i => i.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+            entity.Property(i => i.PaidAmount).HasColumnName("paid_amount").HasPrecision(18, 2);
+            entity.Property(i => i.AmountPaid).HasColumnName("amount_paid").HasPrecision(18, 2);
+            entity.Property(i => i.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+            entity.Property(i => i.CreatedAt).HasColumnName("created_at");
+            entity.Property(i => i.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasMany(i => i.Payments)
+                  .WithOne()
+                  .HasForeignKey(p => p.InvoiceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InvoicePayment>(entity =>
+        {
+            entity.ToTable("invoice_payments");
+            entity.HasKey(p => p.PaymentId);
+            entity.Property(p => p.PaymentId).HasColumnName("payment_id").ValueGeneratedOnAdd();
+            entity.Property(p => p.InvoiceId).HasColumnName("invoice_id").IsRequired();
+            entity.Property(p => p.Amount).HasColumnName("amount").HasPrecision(18, 2);
+            entity.Property(p => p.AmountPaid).HasColumnName("amount_paid").HasPrecision(18, 2);
+            entity.Property(p => p.PaymentMode).HasColumnName("payment_mode").HasMaxLength(30).IsRequired();
+            entity.Property(p => p.PaymentMethod).HasColumnName("payment_method").HasMaxLength(20);
+            entity.Property(p => p.TransactionReference).HasColumnName("transaction_reference").HasMaxLength(100);
+            entity.Property(p => p.TxnReference).HasColumnName("txn_reference").HasMaxLength(100);
+            entity.Property(p => p.PaymentStatus).HasColumnName("payment_status").HasMaxLength(20);
+            entity.Property(p => p.PaidAt).HasColumnName("paid_at");
         });
 
         modelBuilder.Entity<KitchenOrderTicket>(entity =>

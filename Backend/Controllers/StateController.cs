@@ -14,7 +14,6 @@ using Microsoft.Extensions.Logging;
 namespace HMS.Controllers;
 
 [ApiController]
-[Route("api")]
 [Route("api/v1")]
 public class StateController : ControllerBase
 {
@@ -49,7 +48,6 @@ public class StateController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("state")]
-    [HttpGet("pos/state")]
     public async Task<IActionResult> GetState()
     {
         try

@@ -8,7 +8,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/auth")]
-[Route("api/Auth")]
 [Tags("Admin", "Auth")]
 public class AuthController : ControllerBase
 {

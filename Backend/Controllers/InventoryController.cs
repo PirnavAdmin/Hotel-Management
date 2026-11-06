@@ -16,9 +16,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory")]
-[Route("api/Inventory")]
-[Route("api/v1/ingredients")]
-[Route("api/Ingredients")]
 public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
@@ -37,7 +34,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet]
-    [HttpGet("ingredients")]
     public async Task<IActionResult> GetIngredients([FromQuery] string? category, [FromQuery] string? search)
     {
         try
@@ -79,7 +75,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("{id:long}")]
-    [HttpGet("ingredients/{id:long}")]
     public async Task<IActionResult> GetIngredientById(long id)
     {
         try
@@ -168,9 +163,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost]
-    [HttpPost("ingredients")]
-    [HttpPost("batch")]
-    [HttpPost("bulk")]
     public async Task<IActionResult> CreateIngredient([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
     {
         try
@@ -253,7 +245,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPut("{id:long}")]
-    [HttpPut("ingredients/{id:long}")]
     public async Task<IActionResult> UpdateIngredient(long id, [FromBody] JsonElement body)
     {
         try
@@ -299,7 +290,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpDelete("{id:long}")]
-    [HttpDelete("ingredients/{id:long}")]
     public async Task<IActionResult> DeleteIngredient(long id)
     {
         try
@@ -327,7 +317,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost("adjust")]
-    [HttpPost("stock-adjustment")]
     public async Task<IActionResult> AdjustStock([FromBody] StockAdjustmentRequest request)
     {
         if (request == null || request.IngredientId <= 0 || request.QuantityChange == 0)
@@ -406,30 +395,144 @@ public class InventoryController : ControllerBase
         }
     }
 
+    public static int GetOrdinalSafe(DbDataReader reader, params string[] columnNames)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            string name = reader.GetName(i);
+            foreach (var col in columnNames)
+            {
+                if (string.Equals(name, col, StringComparison.OrdinalIgnoreCase))
+                {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static string GetStringSafe(DbDataReader reader, string defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            return reader.GetValue(ord)?.ToString() ?? defaultValue;
+        }
+        return defaultValue;
+    }
+
+    private static decimal GetDecimalSafe(DbDataReader reader, decimal defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToDecimal(reader.GetValue(ord));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static decimal? GetNullableDecimalSafe(DbDataReader reader, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToDecimal(reader.GetValue(ord));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static long GetInt64Safe(DbDataReader reader, long defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToInt64(reader.GetValue(ord));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static bool GetBoolSafe(DbDataReader reader, bool defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                object val = reader.GetValue(ord);
+                if (val is bool b) return b;
+                if (val is int i) return i == 1;
+                if (val is sbyte sb) return sb == 1;
+                if (val is short s) return s == 1;
+                if (val is long l) return l == 1;
+                string str = val.ToString()?.Trim() ?? "";
+                if (str == "1" || string.Equals(str, "true", StringComparison.OrdinalIgnoreCase)) return true;
+                if (str == "0" || string.Equals(str, "false", StringComparison.OrdinalIgnoreCase)) return false;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static DateTime GetDateTimeSafe(DbDataReader reader, DateTime defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToDateTime(reader.GetValue(ord));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
     public static Ingredient MapIngredientFromReader(DbDataReader reader)
     {
-        int catOrd = reader.GetOrdinal("category");
-        int subOrd = reader.GetOrdinal("subcategory");
-        int supOrd = reader.GetOrdinal("supplier");
-        int mrpOrd = reader.GetOrdinal("mrp");
-        int codeOrd = reader.GetOrdinal("ingredient_code");
-        int actOrd = reader.GetOrdinal("is_active");
+        string code = GetStringSafe(reader, string.Empty, "ingredient_code", "code");
 
         return new Ingredient
         {
-            IngredientId = reader.GetInt64(reader.GetOrdinal("ingredient_id")),
-            Name = reader.GetString(reader.GetOrdinal("name")),
-            Category = reader.IsDBNull(catOrd) ? "General" : reader.GetString(catOrd),
-            Subcategory = reader.IsDBNull(subOrd) ? string.Empty : reader.GetString(subOrd),
-            Supplier = reader.IsDBNull(supOrd) ? "Local Supplier" : reader.GetString(supOrd),
-            Unit = reader.GetString(reader.GetOrdinal("unit")).ToUpper(),
-            CurrentStock = reader.GetDecimal(reader.GetOrdinal("current_stock")),
-            MinimumThreshold = reader.GetDecimal(reader.GetOrdinal("minimum_threshold")),
-            UnitCost = reader.GetDecimal(reader.GetOrdinal("unit_cost")),
-            Mrp = reader.IsDBNull(mrpOrd) ? null : reader.GetDecimal(mrpOrd),
-            IngredientCode = reader.IsDBNull(codeOrd) ? null : reader.GetString(codeOrd),
-            IsActive = !reader.IsDBNull(actOrd) && (reader.GetInt32(actOrd) == 1 || reader.GetBoolean(actOrd)),
-            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            IngredientId = GetInt64Safe(reader, 0L, "ingredient_id", "id"),
+            Name = GetStringSafe(reader, string.Empty, "name", "ingredient_name"),
+            Category = GetStringSafe(reader, "General", "category"),
+            Subcategory = GetStringSafe(reader, string.Empty, "subcategory", "sub_category"),
+            Supplier = GetStringSafe(reader, "Local Supplier", "supplier"),
+            Unit = GetStringSafe(reader, "KG", "unit").ToUpperInvariant(),
+            CurrentStock = GetDecimalSafe(reader, 0.00m, "current_stock", "stock"),
+            MinimumThreshold = GetDecimalSafe(reader, 5.00m, "minimum_threshold", "min_threshold", "reorder_level"),
+            UnitCost = GetDecimalSafe(reader, 0.00m, "unit_cost", "cost_per_unit"),
+            Mrp = GetNullableDecimalSafe(reader, "mrp"),
+            IngredientCode = string.IsNullOrWhiteSpace(code) ? null : code,
+            IsActive = GetBoolSafe(reader, true, "is_active", "active"),
+            UpdatedAt = GetDateTimeSafe(reader, DateTime.UtcNow, "updated_at")
         };
     }
 }

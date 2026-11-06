@@ -1,5 +1,6 @@
 using System.Text;
 using HMS.Data;
+using HMS.Middleware;
 using HMS.Services;
 using System.Net;
 using System.Net.Sockets;
@@ -77,7 +78,14 @@ builder.Services.AddDbContext<AppDbContext>(
     options =>
         options.UseMySql(
             connectionString,
-            serverVersion));
+            serverVersion,
+            mySqlOptions =>
+            {
+                mySqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(5),
+                    errorNumbersToAdd: null);
+            }));
 
 // ============================================================
 // JWT
@@ -182,6 +190,7 @@ builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
 builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<SalaryService>();
 builder.Services.AddSignalR();
 
 // ============================================================
@@ -198,7 +207,6 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
 
     options.SwaggerDoc(
         "v1",
@@ -303,6 +311,9 @@ if (!Directory.Exists(uploadsDir))
 
 app.UseCors("FrontendPolicy");
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<LegacyApiRewriteMiddleware>();
+
 // Centralized HTTP Request / Response Logging Middleware
 app.Use(async (context, next) =>
 {
@@ -345,6 +356,8 @@ app.Use(async (context, next) =>
 
 
 
+
+app.UseRouting();
 
 app.UseStaticFiles();
 

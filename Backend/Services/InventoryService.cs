@@ -529,59 +529,47 @@ public class InventoryService
     private async Task<ExistingIngredientRecord?> ExecuteSingleReaderAsync(
         string sql, Dictionary<string, object?> parameters, DbConnection? conn, DbTransaction? tx)
     {
-        bool closeConn = false;
         if (conn == null)
         {
             conn = _context.Database.GetDbConnection();
             if (conn.State != ConnectionState.Open)
             {
                 await conn.OpenAsync();
-                closeConn = true;
             }
         }
 
-        try
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        if (tx != null) cmd.Transaction = tx;
+
+        foreach (var kvp in parameters)
         {
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
-            cmd.CommandType = CommandType.Text;
-            if (tx != null) cmd.Transaction = tx;
-
-            foreach (var kvp in parameters)
-            {
-                var p = cmd.CreateParameter();
-                p.ParameterName = kvp.Key;
-                p.Value = kvp.Value ?? DBNull.Value;
-                cmd.Parameters.Add(p);
-            }
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                int mrpOrd = reader.GetOrdinal("mrp");
-                int supOrd = reader.GetOrdinal("supplier");
-
-                return new ExistingIngredientRecord(
-                    reader.GetInt64(reader.GetOrdinal("ingredient_id")),
-                    reader.GetString(reader.GetOrdinal("name")),
-                    reader.GetString(reader.GetOrdinal("category")),
-                    reader.GetString(reader.GetOrdinal("unit")),
-                    reader.GetDecimal(reader.GetOrdinal("current_stock")),
-                    reader.GetDecimal(reader.GetOrdinal("minimum_threshold")),
-                    reader.GetDecimal(reader.GetOrdinal("unit_cost")),
-                    reader.IsDBNull(mrpOrd) ? null : reader.GetDecimal(mrpOrd),
-                    reader.IsDBNull(supOrd) ? "Local Supplier" : reader.GetString(supOrd)
-                );
-            }
-            return null;
+            var p = cmd.CreateParameter();
+            p.ParameterName = kvp.Key;
+            p.Value = kvp.Value ?? DBNull.Value;
+            cmd.Parameters.Add(p);
         }
-        finally
+
+        using var reader = await cmd.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
-            if (closeConn && conn.State == ConnectionState.Open)
-            {
-                await conn.CloseAsync();
-            }
+            int mrpOrd = reader.GetOrdinal("mrp");
+            int supOrd = reader.GetOrdinal("supplier");
+
+            return new ExistingIngredientRecord(
+                reader.GetInt64(reader.GetOrdinal("ingredient_id")),
+                reader.GetString(reader.GetOrdinal("name")),
+                reader.GetString(reader.GetOrdinal("category")),
+                reader.GetString(reader.GetOrdinal("unit")),
+                reader.GetDecimal(reader.GetOrdinal("current_stock")),
+                reader.GetDecimal(reader.GetOrdinal("minimum_threshold")),
+                reader.GetDecimal(reader.GetOrdinal("unit_cost")),
+                reader.IsDBNull(mrpOrd) ? null : reader.GetDecimal(mrpOrd),
+                reader.IsDBNull(supOrd) ? "Local Supplier" : reader.GetString(supOrd)
+            );
         }
+        return null;
     }
 
     private async Task<long> InsertIngredientInDbAsync(
@@ -768,81 +756,57 @@ public class InventoryService
     private async Task<object?> ExecuteScalarInternalAsync(
         string sql, Dictionary<string, object?> parameters, DbConnection? conn, DbTransaction? tx)
     {
-        bool closeConn = false;
         if (conn == null)
         {
             conn = _context.Database.GetDbConnection();
             if (conn.State != ConnectionState.Open)
             {
                 await conn.OpenAsync();
-                closeConn = true;
             }
         }
 
-        try
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        if (tx != null) cmd.Transaction = tx;
+
+        foreach (var kvp in parameters)
         {
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
-            cmd.CommandType = CommandType.Text;
-            if (tx != null) cmd.Transaction = tx;
-
-            foreach (var kvp in parameters)
-            {
-                var p = cmd.CreateParameter();
-                p.ParameterName = kvp.Key;
-                p.Value = kvp.Value ?? DBNull.Value;
-                cmd.Parameters.Add(p);
-            }
-
-            return await cmd.ExecuteScalarAsync();
+            var p = cmd.CreateParameter();
+            p.ParameterName = kvp.Key;
+            p.Value = kvp.Value ?? DBNull.Value;
+            cmd.Parameters.Add(p);
         }
-        finally
-        {
-            if (closeConn && conn.State == ConnectionState.Open)
-            {
-                await conn.CloseAsync();
-            }
-        }
+
+        return await cmd.ExecuteScalarAsync();
     }
 
     private async Task<int> ExecuteNonQueryInternalAsync(
         string sql, Dictionary<string, object?> parameters, DbConnection? conn, DbTransaction? tx)
     {
-        bool closeConn = false;
         if (conn == null)
         {
             conn = _context.Database.GetDbConnection();
             if (conn.State != ConnectionState.Open)
             {
                 await conn.OpenAsync();
-                closeConn = true;
             }
         }
 
-        try
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.CommandType = CommandType.Text;
+        if (tx != null) cmd.Transaction = tx;
+
+        foreach (var kvp in parameters)
         {
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
-            cmd.CommandType = CommandType.Text;
-            if (tx != null) cmd.Transaction = tx;
-
-            foreach (var kvp in parameters)
-            {
-                var p = cmd.CreateParameter();
-                p.ParameterName = kvp.Key;
-                p.Value = kvp.Value ?? DBNull.Value;
-                cmd.Parameters.Add(p);
-            }
-
-            return await cmd.ExecuteNonQueryAsync();
+            var p = cmd.CreateParameter();
+            p.ParameterName = kvp.Key;
+            p.Value = kvp.Value ?? DBNull.Value;
+            cmd.Parameters.Add(p);
         }
-        finally
-        {
-            if (closeConn && conn.State == ConnectionState.Open)
-            {
-                await conn.CloseAsync();
-            }
-        }
+
+        return await cmd.ExecuteNonQueryAsync();
     }
 
     #endregion

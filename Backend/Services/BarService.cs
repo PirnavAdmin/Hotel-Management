@@ -1,3 +1,4 @@
+using System.Text;
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -1930,20 +1931,25 @@ public class BarService
         string? category = null,
         string? search = null,
         string? status = null,
-        bool? lowStockOnly = null)
+        bool? lowStockOnly = null,
+        string? supplier = null)
     {
         const string sql = @"
             SELECT 
                 ingredient_id,
                 ingredient_code,
-                COALESCE(name, ingredient_name, 'Item') AS item_name,
+                COALESCE(name, 'Item') AS item_name,
                 COALESCE(category, 'Wine') AS category,
                 COALESCE(unit, 'Bottle') AS unit,
                 COALESCE(current_stock, 0.000) AS current_stock,
+                COALESCE(used_quantity, 0.000) AS used_quantity,
                 COALESCE(minimum_threshold, reorder_level, 5.000) AS minimum_threshold,
                 COALESCE(unit_cost, cost_per_unit, 0.00) AS unit_cost,
+                COALESCE(mrp, 0.00) AS mrp,
+                COALESCE(item_type, '') AS item_type,
                 supplier,
                 is_active,
+                created_at,
                 updated_at
             FROM ingredients
             WHERE deleted_at IS NULL AND is_active = 1
@@ -1953,8 +1959,10 @@ public class BarService
         var list = await _spService.ExecuteSqlQueryAsync(sql, reader =>
         {
             var stock = SafeGetDecimal(reader, "current_stock") ?? 0m;
+            var usedQty = SafeGetDecimal(reader, "used_quantity") ?? 0m;
             var threshold = SafeGetDecimal(reader, "minimum_threshold") ?? 5m;
             var unitCost = SafeGetDecimal(reader, "unit_cost") ?? 0m;
+            var mrp = SafeGetDecimal(reader, "mrp") ?? 0m;
             var isAct = !reader.IsDBNull(reader.GetOrdinal("is_active")) && reader.GetInt32(reader.GetOrdinal("is_active")) == 1;
 
             return new BarInventoryItemDto
@@ -1965,10 +1973,14 @@ public class BarService
                 Category = SafeGetString(reader, "category") ?? "Wine",
                 Unit = SafeGetString(reader, "unit") ?? "Bottle",
                 Stock = stock,
+                UsedQuantity = usedQty,
                 Threshold = threshold,
                 UnitCost = unitCost,
+                Mrp = mrp,
+                ItemType = SafeGetString(reader, "item_type") ?? "",
                 Supplier = SafeGetString(reader, "supplier"),
                 IsActive = isAct,
+                CreatedAt = SafeGetDateTime(reader, "created_at") ?? DateTime.UtcNow,
                 UpdatedAt = SafeGetDateTime(reader, "updated_at") ?? DateTime.UtcNow
             };
         });
@@ -1988,15 +2000,21 @@ public class BarService
                 (i.Supplier?.ToLower().Contains(q) ?? false)).ToList();
         }
 
-        if (lowStockOnly == true || (!string.IsNullOrWhiteSpace(status) && status.Equals("low stock", StringComparison.OrdinalIgnoreCase)))
+        if (!string.IsNullOrWhiteSpace(supplier))
+        {
+            var s = supplier.Trim().ToLower();
+            list = list.Where(i => (i.Supplier ?? "").ToLower().Contains(s)).ToList();
+        }
+
+        if (lowStockOnly == true || (!string.IsNullOrWhiteSpace(status) && (status.Equals("low stock", StringComparison.OrdinalIgnoreCase) || status.Equals("low_stock", StringComparison.OrdinalIgnoreCase))))
         {
             list = list.Where(i => i.Stock <= i.Threshold && i.Stock > 0).ToList();
         }
-        else if (!string.IsNullOrWhiteSpace(status) && status.Equals("out of stock", StringComparison.OrdinalIgnoreCase))
+        else if (!string.IsNullOrWhiteSpace(status) && (status.Equals("out of stock", StringComparison.OrdinalIgnoreCase) || status.Equals("out_of_stock", StringComparison.OrdinalIgnoreCase)))
         {
             list = list.Where(i => i.Stock <= 0).ToList();
         }
-        else if (!string.IsNullOrWhiteSpace(status) && status.Equals("in stock", StringComparison.OrdinalIgnoreCase))
+        else if (!string.IsNullOrWhiteSpace(status) && (status.Equals("in stock", StringComparison.OrdinalIgnoreCase) || status.Equals("in_stock", StringComparison.OrdinalIgnoreCase)))
         {
             list = list.Where(i => i.Stock > i.Threshold).ToList();
         }
@@ -2013,13 +2031,24 @@ public class BarService
     public async Task<BarInventorySummaryDto> GetBarInventorySummaryAsync()
     {
         var items = await GetBarInventoryItemsAsync();
+        var tracked = items.Count;
+        var inStock = items.Count(i => i.Stock > i.Threshold);
+        var lowStock = items.Count(i => i.Stock <= i.Threshold && i.Stock > 0);
+        var outOfStock = items.Count(i => i.Stock <= 0);
+        var valuation = Math.Round(items.Sum(i => i.TotalValue), 2);
+
         return new BarInventorySummaryDto
         {
-            TotalItems = items.Count,
-            InStockItems = items.Count(i => i.Stock > i.Threshold),
-            LowStockItems = items.Count(i => i.Stock <= i.Threshold && i.Stock > 0),
-            OutOfStockItems = items.Count(i => i.Stock <= 0),
-            TotalInventoryValue = Math.Round(items.Sum(i => i.TotalValue), 2)
+            TotalItems = tracked,
+            TotalTrackedItems = tracked,
+            InStockItems = inStock,
+            LowStockItems = lowStock,
+            LowStockCount = lowStock,
+            OutOfStockItems = outOfStock,
+            OutOfStockCount = outOfStock,
+            TotalInventoryValue = valuation,
+            TotalStockValuation = valuation,
+            Currency = "INR"
         };
     }
 
@@ -2195,22 +2224,25 @@ public class BarService
         var name = !string.IsNullOrWhiteSpace(dto.ItemName) ? dto.ItemName.Trim() : existing.ItemName;
         var cat = !string.IsNullOrWhiteSpace(dto.Category) ? dto.Category.Trim() : existing.Category;
         var unit = !string.IsNullOrWhiteSpace(dto.Unit) ? dto.Unit.Trim() : existing.Unit;
-        var stock = dto.Stock ?? existing.Stock;
         var threshold = dto.Threshold ?? existing.Threshold;
         var unitCost = dto.UnitCost ?? existing.UnitCost;
         var supplier = dto.Supplier != null ? dto.Supplier.Trim() : existing.Supplier;
+        var mrp = dto.Mrp ?? existing.Mrp;
+        var itemType = !string.IsNullOrWhiteSpace(dto.ItemType) ? dto.ItemType.Trim() : existing.ItemType;
 
+        // NOTE: Stock changes must NEVER occur through ordinary item updates. Stock changes only occur through Receive, Use, or Stock Adjustment.
         const string updateSql = @"
             UPDATE ingredients 
             SET name = @name,
                 ingredient_name = @name,
                 category = @category,
                 unit = @unit,
-                current_stock = @stock,
                 minimum_threshold = @threshold,
                 reorder_level = @threshold,
                 unit_cost = @unit_cost,
                 cost_per_unit = @unit_cost,
+                mrp = @mrp,
+                item_type = @item_type,
                 supplier = @supplier,
                 updated_at = UTC_TIMESTAMP()
             WHERE ingredient_id = @id;
@@ -2222,9 +2254,10 @@ public class BarService
             { "@name", name },
             { "@category", cat },
             { "@unit", unit },
-            { "@stock", stock },
             { "@threshold", threshold },
             { "@unit_cost", unitCost },
+            { "@mrp", mrp },
+            { "@item_type", itemType },
             { "@supplier", supplier }
         });
 
@@ -2243,12 +2276,21 @@ public class BarService
             SET current_stock = @stock,
                 updated_at = UTC_TIMESTAMP()
             WHERE ingredient_id = @id;
+
+            INSERT INTO inventory_transactions (
+                ingredient_id, txn_type, quantity, unit_cost, note, created_at
+            ) VALUES (
+                @id, 'adjustment', @delta, @cost, @reason, UTC_TIMESTAMP()
+            );
         ";
 
         await _spService.ExecuteSqlNonQueryAsync(updateSql, new Dictionary<string, object?>
         {
             { "@id", id },
-            { "@stock", newStock }
+            { "@stock", newStock },
+            { "@delta", dto.QuantityChange },
+            { "@cost", existing.UnitCost },
+            { "@reason", !string.IsNullOrWhiteSpace(dto.Reason) ? dto.Reason.Trim() : "Manual stock adjustment" }
         });
 
         _logger.LogInformation("Stock adjusted for item {Id}: Old={Old}, Delta={Delta}, New={New}, Reason={Reason}",
@@ -2257,14 +2299,69 @@ public class BarService
         return await GetBarInventoryItemByIdAsync(id);
     }
 
+    public async Task<(bool Success, string? ErrorMessage, BarInventoryItemDto? Item)> UseBarInventoryStockAsync(long id, UseStockDto dto)
+    {
+        if (dto.Quantity <= 0)
+        {
+            return (false, "Used quantity must be greater than zero.", null);
+        }
+
+        var existing = await GetBarInventoryItemByIdAsync(id);
+        if (existing == null)
+        {
+            return (false, $"Inventory item {id} not found.", null);
+        }
+
+        if (existing.Stock < dto.Quantity)
+        {
+            return (false, $"Insufficient stock available. Current stock: {existing.Stock}, requested: {dto.Quantity}.", null);
+        }
+
+        var newStock = existing.Stock - dto.Quantity;
+
+        const string updateSql = @"
+            UPDATE ingredients 
+            SET current_stock = current_stock - @qty,
+                used_quantity = used_quantity + @qty,
+                updated_at = UTC_TIMESTAMP()
+            WHERE ingredient_id = @id;
+
+            INSERT INTO inventory_transactions (
+                ingredient_id, branch_id, txn_type, quantity, unit_cost, balance_after, remarks, txn_date
+            ) VALUES (
+                @id, 1, 'adjustment', @qty, @cost, @newStock, @note, UTC_TIMESTAMP()
+            );
+        ";
+
+        await _spService.ExecuteSqlNonQueryAsync(updateSql, new Dictionary<string, object?>
+        {
+            { "@id", id },
+            { "@qty", dto.Quantity },
+            { "@cost", existing.UnitCost },
+            { "@newStock", newStock },
+            { "@note", !string.IsNullOrWhiteSpace(dto.Note) ? dto.Note.Trim() : "Stock usage deduction" }
+        });
+
+        _logger.LogInformation("Stock used for item {Id}: Quantity={Qty}, NewStock={NewStock}, Note={Note}",
+            id, dto.Quantity, newStock, dto.Note);
+
+        var updated = await GetBarInventoryItemByIdAsync(id);
+        return (true, null, updated);
+    }
+
     public async Task<BarInventoryItemDto?> ReceiveInventoryStockAsync(long id, ReceiveInventoryStockDto dto)
     {
         var existing = await GetBarInventoryItemByIdAsync(id);
         if (existing == null) return null;
 
-        var newStock = existing.Stock + dto.QuantityReceived;
+        var qty = dto.QuantityReceived > 0 ? dto.QuantityReceived : dto.Quantity;
+        if (qty <= 0) qty = 1;
+
+        var newStock = existing.Stock + qty;
         var unitCost = dto.UnitCost ?? existing.UnitCost;
         var supplier = !string.IsNullOrWhiteSpace(dto.Supplier) ? dto.Supplier.Trim() : existing.Supplier;
+        var note = !string.IsNullOrWhiteSpace(dto.Note) ? dto.Note.Trim() : (!string.IsNullOrWhiteSpace(dto.InvoiceRef) ? $"Ref: {dto.InvoiceRef}" : "Stock receipt");
+        var receivedDate = dto.ReceivedDate ?? DateTime.UtcNow;
 
         const string updateSql = @"
             UPDATE ingredients 
@@ -2274,18 +2371,39 @@ public class BarService
                 supplier = @supplier,
                 updated_at = UTC_TIMESTAMP()
             WHERE ingredient_id = @id;
+
+            INSERT INTO inventory_purchases (
+                ingredient_id, item_name, department, supplier, quantity, unit_cost, total_amount, note, purchase_date, created_at
+            ) VALUES (
+                @id, @name, @dept, @supplier, @qty, @cost, @total, @note, @purchDate, UTC_TIMESTAMP()
+            );
+
+            INSERT INTO inventory_transactions (
+                ingredient_id, branch_id, txn_type, quantity, unit_cost, balance_after, remarks, txn_date
+            ) VALUES (
+                @id, 1, 'purchase', @qty, @cost, @newStock, @note, UTC_TIMESTAMP()
+            );
         ";
+
+        var isBar = (existing.Category ?? "").ToLower().Contains("drink") || (existing.Category ?? "").ToLower().Contains("bar") || (existing.Category ?? "").ToLower().Contains("beer") || (existing.Category ?? "").ToLower().Contains("wine") || (existing.Category ?? "").ToLower().Contains("whiskey");
 
         await _spService.ExecuteSqlNonQueryAsync(updateSql, new Dictionary<string, object?>
         {
             { "@id", id },
+            { "@name", existing.ItemName },
+            { "@dept", isBar ? "Bar" : "Dine" },
             { "@stock", newStock },
+            { "@newStock", newStock },
             { "@cost", unitCost },
-            { "@supplier", supplier }
+            { "@supplier", supplier ?? "Local Supplier" },
+            { "@qty", qty },
+            { "@total", qty * unitCost },
+            { "@note", note },
+            { "@purchDate", receivedDate }
         });
 
         _logger.LogInformation("Stock received for item {Id}: QtyReceived={Qty}, NewStock={NewStock}, Cost={Cost}, Ref={Ref}",
-            id, dto.QuantityReceived, newStock, unitCost, dto.InvoiceRef);
+            id, qty, newStock, unitCost, dto.InvoiceRef);
 
         return await GetBarInventoryItemByIdAsync(id);
     }
@@ -2295,6 +2413,248 @@ public class BarService
         const string sql = "UPDATE ingredients SET deleted_at = UTC_TIMESTAMP(), is_active = 0 WHERE ingredient_id = @id;";
         var rows = await _spService.ExecuteSqlNonQueryAsync(sql, new Dictionary<string, object?> { { "@id", id } });
         return rows > 0;
+    }
+
+    public async Task<object> GetBarInventoryPagedAsync(
+        string? category = null,
+        string? search = null,
+        string? supplier = null,
+        string? status = null,
+        bool? lowStockOnly = null,
+        int page = 1,
+        int pageSize = 20)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        var allItems = await GetBarInventoryItemsAsync(category, search, status, lowStockOnly, supplier);
+        var totalCount = allItems.Count;
+        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        var pagedItems = allItems.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        var summary = await GetBarInventorySummaryAsync();
+
+        return new
+        {
+            success = true,
+            totalCount,
+            page,
+            pageSize,
+            totalPages,
+            items = pagedItems,
+            data = pagedItems,
+            summary
+        };
+    }
+
+    public async Task<object> GetInventoryReportAsync(InventoryReportFilterDto filter)
+    {
+        var page = filter.Page < 1 ? 1 : filter.Page;
+        var pageSize = filter.PageSize < 1 ? 20 : filter.PageSize;
+
+        var items = await GetBarInventoryItemsAsync(filter.Category, filter.Search, filter.Status, null, filter.Supplier);
+
+        if (!string.IsNullOrWhiteSpace(filter.Department))
+        {
+            var dept = filter.Department.Trim().ToLowerInvariant();
+            if (dept == "bar")
+            {
+                items = items.Where(i => (i.Category ?? "").ToLower().Contains("bar") || (i.Category ?? "").ToLower().Contains("drink") || (i.Category ?? "").ToLower().Contains("beer") || (i.Category ?? "").ToLower().Contains("wine") || (i.Category ?? "").ToLower().Contains("whiskey") || (i.Category ?? "").ToLower().Contains("vodka") || (i.Category ?? "").ToLower().Contains("rum") || (i.Category ?? "").ToLower().Contains("cocktail")).ToList();
+            }
+            else if (dept == "dine" || dept == "kitchen")
+            {
+                items = items.Where(i => !((i.Category ?? "").ToLower().Contains("bar") || (i.Category ?? "").ToLower().Contains("drink") || (i.Category ?? "").ToLower().Contains("beer") || (i.Category ?? "").ToLower().Contains("wine") || (i.Category ?? "").ToLower().Contains("whiskey") || (i.Category ?? "").ToLower().Contains("vodka") || (i.Category ?? "").ToLower().Contains("rum") || (i.Category ?? "").ToLower().Contains("cocktail"))).ToList();
+            }
+        }
+
+        var totalCount = items.Count;
+        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        var paged = items.Skip((page - 1) * pageSize).Take(pageSize).Select(i => new InventoryReportItemDto
+        {
+            IngredientId = i.ItemId,
+            IngredientCode = i.ItemCode,
+            ItemName = i.ItemName,
+            Category = i.Category,
+            Department = (i.Category ?? "").ToLower().Contains("bar") || (i.Category ?? "").ToLower().Contains("drink") || (i.Category ?? "").ToLower().Contains("wine") || (i.Category ?? "").ToLower().Contains("beer") ? "Bar" : "Dine",
+            Unit = i.Unit,
+            CurrentStock = i.Stock,
+            UsedQuantity = i.UsedQuantity,
+            MinimumThreshold = i.Threshold,
+            UnitCost = i.UnitCost,
+            Mrp = i.Mrp,
+            StockValuation = i.StockValuation,
+            StockStatus = i.StockStatus,
+            Supplier = i.Supplier ?? "Local Supplier",
+            LastUpdated = i.UpdatedAt
+        }).ToList();
+
+        var totalValuation = items.Sum(i => i.StockValuation);
+        var lowStockCount = items.Count(i => i.StockStatus == "Low Stock");
+        var outOfStockCount = items.Count(i => i.StockStatus == "Out of Stock");
+
+        return new
+        {
+            success = true,
+            totalCount,
+            page,
+            pageSize,
+            totalPages,
+            totalValuation,
+            lowStockCount,
+            outOfStockCount,
+            currency = "INR",
+            items = paged,
+            data = paged
+        };
+    }
+
+    public async Task<byte[]> ExportInventoryCsvAsync(InventoryReportFilterDto filter)
+    {
+        var items = await GetBarInventoryItemsAsync(filter.Category, filter.Search, filter.Status, null, filter.Supplier);
+
+        if (!string.IsNullOrWhiteSpace(filter.Department))
+        {
+            var dept = filter.Department.Trim().ToLowerInvariant();
+            if (dept == "bar")
+            {
+                items = items.Where(i => (i.Category ?? "").ToLower().Contains("bar") || (i.Category ?? "").ToLower().Contains("drink") || (i.Category ?? "").ToLower().Contains("beer") || (i.Category ?? "").ToLower().Contains("wine") || (i.Category ?? "").ToLower().Contains("whiskey") || (i.Category ?? "").ToLower().Contains("vodka") || (i.Category ?? "").ToLower().Contains("rum") || (i.Category ?? "").ToLower().Contains("cocktail")).ToList();
+            }
+            else if (dept == "dine" || dept == "kitchen")
+            {
+                items = items.Where(i => !((i.Category ?? "").ToLower().Contains("bar") || (i.Category ?? "").ToLower().Contains("drink") || (i.Category ?? "").ToLower().Contains("beer") || (i.Category ?? "").ToLower().Contains("wine") || (i.Category ?? "").ToLower().Contains("whiskey") || (i.Category ?? "").ToLower().Contains("vodka") || (i.Category ?? "").ToLower().Contains("rum") || (i.Category ?? "").ToLower().Contains("cocktail"))).ToList();
+            }
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Item Code,Item Name,Category,Department,Current Stock,Used Quantity,Unit,Unit Cost (INR),MRP (INR),Stock Valuation (INR),Status,Supplier,Last Updated");
+
+        foreach (var item in items)
+        {
+            var dept = (item.Category ?? "").ToLower().Contains("bar") || (item.Category ?? "").ToLower().Contains("drink") || (item.Category ?? "").ToLower().Contains("wine") || (item.Category ?? "").ToLower().Contains("beer") ? "Bar" : "Dine";
+            var line = string.Join(",", new[]
+            {
+                EscapeCsv(item.ItemCode ?? ""),
+                EscapeCsv(item.ItemName),
+                EscapeCsv(item.Category),
+                dept,
+                item.Stock.ToString("F2"),
+                item.UsedQuantity.ToString("F2"),
+                EscapeCsv(item.Unit),
+                item.UnitCost.ToString("F2"),
+                (item.Mrp ?? 0m).ToString("F2"),
+                item.StockValuation.ToString("F2"),
+                item.StockStatus,
+                EscapeCsv(item.Supplier ?? "Local Supplier"),
+                item.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
+            });
+            sb.AppendLine(line);
+        }
+
+        return Encoding.UTF8.GetBytes(sb.ToString());
+    }
+
+    public async Task<object> GetInventoryPurchasesAsync(PurchaseLedgerFilterDto filter)
+    {
+        var page = filter.Page < 1 ? 1 : filter.Page;
+        var pageSize = filter.PageSize < 1 ? 20 : filter.PageSize;
+
+        var query = _context.InventoryPurchases.AsNoTracking().AsQueryable();
+
+        if (filter.FromDate.HasValue)
+        {
+            query = query.Where(p => p.PurchaseDate >= filter.FromDate.Value);
+        }
+        if (filter.ToDate.HasValue)
+        {
+            var toEnd = filter.ToDate.Value.Date.AddDays(1).AddTicks(-1);
+            query = query.Where(p => p.PurchaseDate <= toEnd);
+        }
+        if (!string.IsNullOrWhiteSpace(filter.Department) && !filter.Department.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(p => p.Department == filter.Department);
+        }
+        if (filter.ItemId.HasValue)
+        {
+            query = query.Where(p => p.IngredientId == filter.ItemId.Value);
+        }
+        if (!string.IsNullOrWhiteSpace(filter.Supplier))
+        {
+            var sup = filter.Supplier.Trim().ToLower();
+            query = query.Where(p => p.Supplier.ToLower().Contains(sup));
+        }
+
+        var totalExpenditure = await query.SumAsync(p => (decimal?)p.TotalAmount) ?? 0m;
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+        var list = await query
+            .OrderByDescending(p => p.PurchaseDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new PurchaseLedgerItemDto
+            {
+                PurchaseId = p.PurchaseId,
+                IngredientId = p.IngredientId,
+                ItemName = p.ItemName,
+                Department = p.Department,
+                Supplier = p.Supplier,
+                Quantity = p.Quantity,
+                UnitCost = p.UnitCost,
+                TotalAmount = p.TotalAmount,
+                Note = p.Note,
+                PurchaseDate = p.PurchaseDate,
+                CreatedAt = p.CreatedAt
+            })
+            .ToListAsync();
+
+        return new
+        {
+            success = true,
+            totalCount,
+            page,
+            pageSize,
+            totalPages,
+            totalExpenditure,
+            currency = "INR",
+            items = list,
+            data = list
+        };
+    }
+
+    public async Task<PurchaseSummaryDto> GetInventoryPurchaseSummaryAsync(DateTime? fromDate, DateTime? toDate)
+    {
+        var query = _context.InventoryPurchases.AsNoTracking().AsQueryable();
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(p => p.PurchaseDate >= fromDate.Value);
+        }
+        if (toDate.HasValue)
+        {
+            var toEnd = toDate.Value.Date.AddDays(1).AddTicks(-1);
+            query = query.Where(p => p.PurchaseDate <= toEnd);
+        }
+
+        var total = await query.SumAsync(p => (decimal?)p.TotalAmount) ?? 0m;
+        var dine = await query.Where(p => p.Department == "Dine").SumAsync(p => (decimal?)p.TotalAmount) ?? 0m;
+        var bar = await query.Where(p => p.Department == "Bar").SumAsync(p => (decimal?)p.TotalAmount) ?? 0m;
+
+        return new PurchaseSummaryDto
+        {
+            TotalPurchases = total,
+            DinePurchases = dine,
+            BarPurchases = bar,
+            Currency = "INR"
+        };
+    }
+
+    private static string EscapeCsv(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return "\"\"";
+        if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
+        {
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+        return value;
     }
 
     #endregion

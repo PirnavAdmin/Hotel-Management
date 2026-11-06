@@ -12,7 +12,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/upload")]
-[Route("api/upload")]
 public class UploadController : ControllerBase
 {
     private readonly MenuItemService _menuItemService;
@@ -26,7 +25,6 @@ public class UploadController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost]
-    [HttpPost("image")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload([FromForm] ImageUploadDto dto)
     {

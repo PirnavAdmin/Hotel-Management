@@ -76,7 +76,6 @@ public class PromotionsController : ControllerBase
 
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Promotions/{id}")]
     public async Task<IActionResult> DeletePromotion(string id)
     {
         long numericId = 0;

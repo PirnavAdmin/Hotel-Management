@@ -1,59 +1,70 @@
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/invoices")]
-[Route("api/Invoices")]
-[Route("api/v1/bills")]
-[Route("api/Bills")]
 public class InvoicesController : ControllerBase
 {
+    private readonly AppDbContext _context;
     private readonly SpService _spService;
     private readonly ILogger<InvoicesController> _logger;
 
-    public InvoicesController(SpService spService, ILogger<InvoicesController> logger)
+    public InvoicesController(AppDbContext context, SpService spService, ILogger<InvoicesController> logger)
     {
+        _context = context;
         _spService = spService;
         _logger = logger;
     }
 
     [AllowAnonymous]
     [HttpGet]
-    [HttpGet("history")]
     public async Task<IActionResult> GetInvoices([FromQuery] string? status)
     {
         try
         {
-            _logger.LogInformation("Fetching invoices via SP.");
-            var invoices = new List<Invoice>();
-            var payments = new List<InvoicePayment>();
+            _logger.LogInformation("Fetching invoices with status filter: '{Status}'", status);
 
-            var parameters = new Dictionary<string, object?> { { "p_status", status } };
+            var query = _context.Invoices
+                .AsNoTracking()
+                .Include(i => i.Payments)
+                .AsQueryable();
 
-            await _spService.ExecuteQueryMultipleAsync("sp_GetInvoices", parameters,
-                reader =>
-                {
-                    while (reader.Read()) invoices.Add(MapInvoiceFromReader(reader));
-                },
-                reader =>
-                {
-                    while (reader.Read()) payments.Add(MapPaymentFromReader(reader));
-                });
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var upperStatus = status.Trim().ToUpper();
+                query = query.Where(i => i.Status.ToUpper() == upperStatus);
+            }
+
+            var invoices = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
 
             foreach (var inv in invoices)
             {
-                inv.Payments = payments.Where(p => p.InvoiceId == inv.InvoiceId).ToList();
-                inv.PaymentMethod = inv.Payments.LastOrDefault()?.PaymentMode ?? "CASH";
+                var paymentsList = inv.Payments?.OrderBy(p => p.PaidAt).ToList() ?? new List<InvoicePayment>();
+                decimal totalPaid = paymentsList.Count > 0 ? paymentsList.Sum(p => p.Amount) : inv.PaidAmount;
+                inv.PaidAmount = totalPaid;
+                inv.AmountPaid = totalPaid;
+                inv.Payments = paymentsList;
+                inv.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
+
+                if (totalPaid >= inv.TotalAmount && inv.TotalAmount > 0)
+                {
+                    inv.Status = "PAID";
+                }
+                else if (totalPaid > 0)
+                {
+                    inv.Status = "PARTIAL";
+                }
             }
 
             await EnrichInvoicesAsync(invoices);
@@ -79,21 +90,8 @@ public class InvoicesController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Fetching invoice {InvoiceId} via SP", id);
-            Invoice? invoice = null;
-            var payments = new List<InvoicePayment>();
-
-            var parameters = new Dictionary<string, object?> { { "p_invoice_id", id } };
-
-            await _spService.ExecuteQueryMultipleAsync("sp_GetInvoiceById", parameters,
-                reader =>
-                {
-                    if (reader.Read()) invoice = MapInvoiceFromReader(reader);
-                },
-                reader =>
-                {
-                    while (reader.Read()) payments.Add(MapPaymentFromReader(reader));
-                });
+            _logger.LogInformation("Fetching invoice {InvoiceId}", id);
+            var invoice = await GetInvoiceByIdObject(id);
 
             if (invoice == null)
             {
@@ -101,7 +99,6 @@ public class InvoicesController : ControllerBase
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
 
-            invoice.Payments = payments;
             return Ok(new { success = true, data = invoice });
         }
         catch (Exception ex)
@@ -122,7 +119,7 @@ public class InvoicesController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Creating invoice for Order ID {OrderId} via SP", request.OrderId);
+            _logger.LogInformation("Creating invoice for Order ID {OrderId}", request.OrderId);
 
             var subtotal = request.Subtotal;
             var taxableAmount = request.TaxableAmount > 0 ? request.TaxableAmount : (subtotal - request.DiscountAmount);
@@ -132,24 +129,32 @@ public class InvoicesController : ControllerBase
             var taxAmount = request.TaxAmount >= 0 ? request.TaxAmount : (taxableAmount * 0.05m);
             var totalAmount = Math.Max(0, subtotal + taxAmount - request.DiscountAmount);
 
-            var parameters = new Dictionary<string, object?>
+            var invoice = new Invoice
             {
-                { "p_order_id", request.OrderId },
-                { "p_invoice_number", invoiceNumber },
-                { "p_subtotal", subtotal },
-                { "p_taxable_amount", taxableAmount },
-                { "p_tax_amount", taxAmount },
-                { "p_discount_amount", request.DiscountAmount },
-                { "p_total_amount", totalAmount }
+                OrderId = request.OrderId,
+                InvoiceNumber = invoiceNumber,
+                Subtotal = subtotal,
+                TaxableAmount = taxableAmount,
+                TaxAmount = taxAmount,
+                DiscountAmount = request.DiscountAmount,
+                TotalAmount = totalAmount,
+                PaidAmount = 0.00m,
+                AmountPaid = 0.00m,
+                Status = "UNPAID",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
-            long invoiceId = await _spService.ExecuteScalarAsync<long>("sp_CreateInvoice", parameters);
+            _context.Invoices.Add(invoice);
+            await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetInvoiceById), new { id = invoiceId }, new
+            var populated = await GetInvoiceByIdObject(invoice.InvoiceId);
+
+            return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.InvoiceId }, new
             {
                 success = true,
                 message = "Invoice created successfully.",
-                data = await GetInvoiceByIdObject(invoiceId)
+                data = populated
             });
         }
         catch (Exception ex)
@@ -161,7 +166,6 @@ public class InvoicesController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("{id:long}/payments")]
-    [HttpPost("{id:long}/cash-payment")]
     public async Task<IActionResult> RecordPayment(long id, [FromBody] RecordPaymentRequest request)
     {
         if (request == null || request.Amount <= 0)
@@ -171,23 +175,50 @@ public class InvoicesController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Recording payment of {Amount} for Invoice ID {InvoiceId} via SP", request.Amount, id);
+            _logger.LogInformation("Recording payment of {Amount} for Invoice ID {InvoiceId}", request.Amount, id);
 
-            var existing = await GetInvoiceByIdObject(id);
-            if (existing == null)
+            var invoice = await _context.Invoices
+                .Include(i => i.Payments)
+                .FirstOrDefaultAsync(i => i.InvoiceId == id);
+
+            if (invoice == null)
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
 
-            var parameters = new Dictionary<string, object?>
+            var mode = string.IsNullOrWhiteSpace(request.PaymentMode) ? "CASH" : request.PaymentMode.Trim().ToUpper();
+            var paymentMethod = mode.ToLower() switch
             {
-                { "p_invoice_id", id },
-                { "p_amount", request.Amount },
-                { "p_payment_mode", string.IsNullOrWhiteSpace(request.PaymentMode) ? "CASH" : request.PaymentMode.Trim().ToUpper() },
-                { "p_transaction_reference", request.TransactionReference }
+                "cash" => "cash",
+                "card" => "card",
+                "upi" => "upi",
+                "wallet" => "wallet",
+                "netbanking" or "net_banking" => "netbanking",
+                _ => "cash"
             };
 
-            await _spService.ExecuteNonQueryAsync("sp_RecordInvoicePayment", parameters);
+            var payment = new InvoicePayment
+            {
+                InvoiceId = id,
+                Amount = request.Amount,
+                AmountPaid = request.Amount,
+                PaymentMode = mode,
+                PaymentMethod = paymentMethod,
+                TransactionReference = request.TransactionReference,
+                TxnReference = request.TransactionReference,
+                PaymentStatus = "success",
+                PaidAt = DateTime.UtcNow
+            };
+
+            _context.InvoicePayments.Add(payment);
+
+            var totalPaid = invoice.Payments.Sum(p => p.Amount) + request.Amount;
+            invoice.PaidAmount = totalPaid;
+            invoice.AmountPaid = totalPaid;
+            invoice.Status = totalPaid >= invoice.TotalAmount ? "PAID" : "PARTIAL";
+            invoice.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
 
             var updated = await GetInvoiceByIdObject(id);
             return Ok(new
@@ -210,23 +241,66 @@ public class InvoicesController : ControllerBase
     {
         try
         {
-            var invoices = new List<Invoice>();
-            await _spService.ExecuteQueryMultipleAsync("sp_GetInvoices", new Dictionary<string, object?> { { "p_status", null } },
-                reader => { while (reader.Read()) invoices.Add(MapInvoiceFromReader(reader)); },
-                reader => { });
+            _logger.LogInformation("Retrieving latest invoice for Order ID {OrderId}", orderId);
 
-            var invoice = invoices.FirstOrDefault(i => i.OrderId == orderId);
+            // Directly query invoices table filtered by order_id, sorted by created_at DESC to always pick
+            // the latest invoice, with associated invoice_payments eagerly loaded.
+            var invoice = await _context.Invoices
+                .AsNoTracking()
+                .Include(i => i.Payments)
+                .Where(i => i.OrderId == orderId)
+                .OrderByDescending(i => i.CreatedAt)
+                .FirstOrDefaultAsync();
+
             if (invoice == null)
             {
-                return NotFound(new { success = false, message = $"Invoice for Order ID {orderId} not found." });
+                _logger.LogInformation("No invoice found for Order ID {OrderId}", orderId);
+                return NotFound(new
+                {
+                    success = false,
+                    message = $"Invoice for Order ID {orderId} not found."
+                });
             }
 
-            var populated = await GetInvoiceByIdObject(invoice.InvoiceId);
-            return Ok(new { success = true, data = populated });
+            // Calculate paid amount and due amount accurately without duplication
+            var paymentsList = invoice.Payments?.OrderBy(p => p.PaidAt).ToList() ?? new List<InvoicePayment>();
+            decimal totalPaid = paymentsList.Count > 0
+                ? paymentsList.Sum(p => p.Amount)
+                : (invoice.PaidAmount > 0 ? invoice.PaidAmount : invoice.AmountPaid);
+
+            invoice.PaidAmount = totalPaid;
+            invoice.AmountPaid = totalPaid;
+            invoice.Payments = paymentsList;
+            invoice.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
+
+            // Preserve and calculate invoice status
+            if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
+            {
+                invoice.Status = "PAID";
+            }
+            else if (totalPaid > 0)
+            {
+                invoice.Status = "PARTIAL";
+            }
+
+            // Sequentially populate order metadata (table, waiter, items)
+            await PopulateInvoiceMetadataAsync(invoice);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Invoice retrieved successfully.",
+                data = invoice
+            });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = ex.Message });
+            _logger.LogError(ex, "Error retrieving invoice for Order ID {OrderId}", orderId);
+            return StatusCode(500, new
+            {
+                success = false,
+                message = $"An error occurred while retrieving invoice for Order ID {orderId}: {ex.Message}"
+            });
         }
     }
 
@@ -252,6 +326,7 @@ public class InvoicesController : ControllerBase
             discountAmount = invoice.DiscountAmount,
             totalAmount = invoice.TotalAmount,
             paidAmount = invoice.PaidAmount,
+            dueAmount = invoice.DueAmount,
             status = invoice.Status,
             payments = invoice.Payments
         });
@@ -273,7 +348,7 @@ public class InvoicesController : ControllerBase
             billId = invoice.InvoiceId,
             totalAmount = invoice.TotalAmount,
             paidAmount = invoice.PaidAmount,
-            dueAmount = Math.Max(0, invoice.TotalAmount - invoice.PaidAmount),
+            dueAmount = invoice.DueAmount,
             status = invoice.Status,
             paymentCount = invoice.Payments.Count,
             payments = invoice.Payments
@@ -303,23 +378,40 @@ public class InvoicesController : ControllerBase
     [HttpPost("{id:long}/settle")]
     public async Task<IActionResult> SettleBill(long id)
     {
-        var invoice = await GetInvoiceByIdObject(id);
+        var invoice = await _context.Invoices
+            .Include(i => i.Payments)
+            .FirstOrDefaultAsync(i => i.InvoiceId == id);
+
         if (invoice == null)
         {
             return NotFound(new { success = false, message = $"Bill {id} not found." });
         }
 
-        var due = Math.Max(0, invoice.TotalAmount - invoice.PaidAmount);
+        var paidSoFar = invoice.Payments.Sum(p => p.Amount);
+        var due = Math.Max(0, invoice.TotalAmount - paidSoFar);
+
         if (due > 0)
         {
-            var parameters = new Dictionary<string, object?>
+            var payment = new InvoicePayment
             {
-                { "p_invoice_id", id },
-                { "p_amount", due },
-                { "p_payment_mode", "CASH" },
-                { "p_transaction_reference", $"SETTLE-{DateTime.UtcNow:HHmmss}" }
+                InvoiceId = id,
+                Amount = due,
+                AmountPaid = due,
+                PaymentMode = "CASH",
+                PaymentMethod = "cash",
+                TransactionReference = $"SETTLE-{DateTime.UtcNow:HHmmss}",
+                TxnReference = $"SETTLE-{DateTime.UtcNow:HHmmss}",
+                PaymentStatus = "success",
+                PaidAt = DateTime.UtcNow
             };
-            await _spService.ExecuteNonQueryAsync("sp_RecordInvoicePayment", parameters);
+
+            _context.InvoicePayments.Add(payment);
+            invoice.PaidAmount = invoice.TotalAmount;
+            invoice.AmountPaid = invoice.TotalAmount;
+            invoice.Status = "PAID";
+            invoice.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
         }
 
         var updated = await GetInvoiceByIdObject(id);
@@ -337,36 +429,31 @@ public class InvoicesController : ControllerBase
     {
         try
         {
-            var invoice = await GetInvoiceByIdObject(id);
+            var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceId == id);
             if (invoice == null)
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
 
-            var subtotal = request.Subtotal ?? invoice.Subtotal;
-            var taxAmount = request.TaxAmount ?? invoice.TaxAmount;
-            var discountAmount = request.DiscountAmount ?? invoice.DiscountAmount;
-            var totalAmount = request.TotalAmount ?? (subtotal + taxAmount - discountAmount);
-            var status = string.IsNullOrWhiteSpace(request.Status) ? invoice.Status : request.Status.Trim().ToUpper();
+            if (request.Subtotal.HasValue) invoice.Subtotal = request.Subtotal.Value;
+            if (request.TaxAmount.HasValue) invoice.TaxAmount = request.TaxAmount.Value;
+            if (request.DiscountAmount.HasValue) invoice.DiscountAmount = request.DiscountAmount.Value;
+            if (request.TotalAmount.HasValue)
+            {
+                invoice.TotalAmount = request.TotalAmount.Value;
+            }
+            else if (request.Subtotal.HasValue || request.TaxAmount.HasValue || request.DiscountAmount.HasValue)
+            {
+                invoice.TotalAmount = Math.Max(0, invoice.Subtotal + invoice.TaxAmount - invoice.DiscountAmount);
+            }
 
-            await _spService.ExecuteSqlNonQueryAsync(
-                @"UPDATE invoices 
-                  SET subtotal = @subtotal, 
-                      tax_amount = @tax_amount, 
-                      discount_amount = @discount_amount, 
-                      total_amount = @total_amount, 
-                      status = @status, 
-                      updated_at = NOW() 
-                  WHERE invoice_id = @id",
-                new Dictionary<string, object?>
-                {
-                    { "@subtotal", subtotal },
-                    { "@tax_amount", taxAmount },
-                    { "@discount_amount", discountAmount },
-                    { "@total_amount", totalAmount },
-                    { "@status", status },
-                    { "@id", id }
-                });
+            if (!string.IsNullOrWhiteSpace(request.Status))
+            {
+                invoice.Status = request.Status.Trim().ToUpper();
+            }
+
+            invoice.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
 
             var updated = await GetInvoiceByIdObject(id);
             return Ok(new
@@ -389,22 +476,17 @@ public class InvoicesController : ControllerBase
     {
         try
         {
-            var invoice = await GetInvoiceByIdObject(id);
+            var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceId == id);
             if (invoice == null)
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
 
             var newStatus = string.IsNullOrWhiteSpace(request.Status) ? "PAID" : request.Status.Trim().ToUpper();
+            invoice.Status = newStatus;
+            invoice.UpdatedAt = DateTime.UtcNow;
 
-            await _spService.ExecuteSqlNonQueryAsync(
-                @"UPDATE invoices SET status = @status, payment_status = @pay_status, updated_at = NOW() WHERE invoice_id = @id",
-                new Dictionary<string, object?>
-                {
-                    { "@status", newStatus },
-                    { "@pay_status", newStatus == "PAID" ? "paid" : "pending" },
-                    { "@id", id }
-                });
+            await _context.SaveChangesAsync();
 
             var updated = await GetInvoiceByIdObject(id);
             return Ok(new
@@ -423,7 +505,6 @@ public class InvoicesController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("{id:long}/pdf")]
-    [HttpGet("{id:long}/download")]
     public async Task<IActionResult> DownloadInvoicePdf(long id)
     {
         var invoice = await GetInvoiceByIdObject(id);
@@ -471,14 +552,13 @@ public class InvoicesController : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpDelete("{id}")]
-    [HttpDelete("/api/Invoices/{id}")]
+    [HttpDelete("{id:long}")]
     public async Task<IActionResult> DeleteInvoice(string id)
     {
         long numericId = 0;
         if (!string.IsNullOrEmpty(id))
         {
-            var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+            var cleanId = Regex.Replace(id, @"^[^\d]+", "");
             long.TryParse(cleanId, out numericId);
         }
 
@@ -487,8 +567,13 @@ public class InvoicesController : ControllerBase
             return Ok(new { success = true, message = "Invoice voided/deleted successfully." });
         }
 
-        var parameters = new Dictionary<string, object?> { { "p_invoice_id", numericId } };
-        await _spService.ExecuteNonQueryAsync("sp_DeleteInvoice", parameters);
+        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceId == numericId);
+        if (invoice != null)
+        {
+            invoice.Status = "VOID";
+            invoice.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
 
         return Ok(new
         {
@@ -503,37 +588,54 @@ public class InvoicesController : ControllerBase
         var orderIds = invoices.Select(i => i.OrderId).Where(id => id > 0).Distinct().ToList();
         if (orderIds.Count == 0) return;
 
-        var inClause = string.Join(",", orderIds);
         try
         {
-            var items = await _spService.ExecuteSqlQueryAsync(
-                $"SELECT order_id, item_name, quantity, unit_price, total_price FROM order_items WHERE order_id IN ({inClause}) AND is_deleted = 0",
-                reader => new
-                {
-                    OrderId = reader.GetInt64(0),
-                    ItemName = reader.GetString(1),
-                    Quantity = reader.GetInt32(2),
-                    UnitPrice = reader.GetDecimal(3),
-                    TotalPrice = reader.GetDecimal(4)
-                });
+            // Sequential step 1: Query order items
+            var items = await _context.OrderItems
+                .AsNoTracking()
+                .Where(oi => orderIds.Contains(oi.OrderId) && oi.IsActive && !oi.IsDeleted)
+                .Select(oi => new { oi.OrderId, ItemName = oi.Name, oi.Quantity, UnitPrice = oi.Price, oi.TotalPrice })
+                .ToListAsync();
 
-            var ordersInfo = await _spService.ExecuteSqlQueryAsync(
-                $"SELECT o.order_id, COALESCE(t.table_name, CONCAT('Table ', o.table_id)) AS table_name, 'Staff' AS server_name FROM orders o LEFT JOIN restaurant_tables t ON o.table_id = t.table_id WHERE o.order_id IN ({inClause})",
-                reader => new
-                {
-                    OrderId = reader.GetInt64(0),
-                    TableName = reader.IsDBNull(1) ? "Table 1" : reader.GetString(1),
-                    ServerName = reader.IsDBNull(2) ? "Staff" : reader.GetString(2)
-                });
+            // Sequential step 2: Query orders
+            var orders = await _context.Orders
+                .AsNoTracking()
+                .Where(o => orderIds.Contains(o.Id))
+                .Select(o => new { o.Id, o.TableId, o.WaiterId, o.OrderType })
+                .ToListAsync();
+
+            var tableIds = orders.Where(o => o.TableId.HasValue).Select(o => o.TableId!.Value).Distinct().ToList();
+            var tables = await _context.DiningTables
+                .AsNoTracking()
+                .Where(t => tableIds.Contains(t.Id))
+                .ToDictionaryAsync(t => t.Id, t => t.Name);
+
+            var waiterIds = orders.Where(o => o.WaiterId.HasValue).Select(o => o.WaiterId!.Value).Distinct().ToList();
+            var waiters = await _context.Staff
+                .AsNoTracking()
+                .Where(s => waiterIds.Contains(s.Id))
+                .ToDictionaryAsync(s => s.Id, s => s.Name);
 
             foreach (var inv in invoices)
             {
-                var ord = ordersInfo.FirstOrDefault(o => o.OrderId == inv.OrderId);
+                var ord = orders.FirstOrDefault(o => o.Id == inv.OrderId);
                 if (ord != null)
                 {
-                    inv.TableName = ord.TableName;
-                    inv.ServerName = ord.ServerName;
+                    if (ord.TableId.HasValue && tables.TryGetValue(ord.TableId.Value, out var tableName))
+                    {
+                        inv.TableName = tableName;
+                    }
+                    else if (string.Equals(ord.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inv.TableName = "Takeaway";
+                    }
+
+                    if (ord.WaiterId.HasValue && waiters.TryGetValue(ord.WaiterId.Value, out var waiterName))
+                    {
+                        inv.ServerName = waiterName;
+                    }
                 }
+
                 inv.Items = items.Where(it => it.OrderId == inv.OrderId).Select(it => new InvoiceItemDto
                 {
                     Name = it.ItemName,
@@ -551,91 +653,91 @@ public class InvoicesController : ControllerBase
 
     private async Task<Invoice?> GetInvoiceByIdObject(long id)
     {
-        Invoice? invoice = null;
-        var payments = new List<InvoicePayment>();
-        var parameters = new Dictionary<string, object?> { { "p_invoice_id", id } };
+        var invoice = await _context.Invoices
+            .AsNoTracking()
+            .Include(i => i.Payments)
+            .FirstOrDefaultAsync(i => i.InvoiceId == id);
 
-        await _spService.ExecuteQueryMultipleAsync("sp_GetInvoiceById", parameters,
-            reader => { if (reader.Read()) invoice = MapInvoiceFromReader(reader); },
-            reader => { while (reader.Read()) payments.Add(MapPaymentFromReader(reader)); });
+        if (invoice == null) return null;
 
-        if (invoice != null)
+        var paymentsList = invoice.Payments?.OrderBy(p => p.PaidAt).ToList() ?? new List<InvoicePayment>();
+        decimal totalPaid = paymentsList.Count > 0
+            ? paymentsList.Sum(p => p.Amount)
+            : (invoice.PaidAmount > 0 ? invoice.PaidAmount : invoice.AmountPaid);
+
+        invoice.PaidAmount = totalPaid;
+        invoice.AmountPaid = totalPaid;
+        invoice.Payments = paymentsList;
+        invoice.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
+
+        if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
         {
-            invoice.Payments = payments;
-            invoice.PaymentMethod = payments.LastOrDefault()?.PaymentMode ?? "CASH";
-
-            if (invoice.OrderId > 0)
-            {
-                try
-                {
-                    var ordersInfo = await _spService.ExecuteSqlQueryAsync(
-                        "SELECT o.order_id, COALESCE(t.table_name, CONCAT('Table ', o.table_id)) AS table_name, 'Staff' AS server_name FROM orders o LEFT JOIN restaurant_tables t ON o.table_id = t.table_id WHERE o.order_id = @orderId",
-                        reader => new
-                        {
-                            TableName = reader.IsDBNull(1) ? "Table 1" : reader.GetString(1),
-                            ServerName = reader.IsDBNull(2) ? "Staff" : reader.GetString(2)
-                        },
-                        new Dictionary<string, object?> { { "@orderId", invoice.OrderId } });
-
-                    if (ordersInfo.Count > 0)
-                    {
-                        invoice.TableName = ordersInfo[0].TableName;
-                        invoice.ServerName = ordersInfo[0].ServerName;
-                    }
-
-                    invoice.Items = await _spService.ExecuteSqlQueryAsync(
-                        "SELECT item_name, quantity, unit_price, total_price FROM order_items WHERE order_id = @orderId AND is_deleted = 0",
-                        reader => new InvoiceItemDto
-                        {
-                            Name = reader.GetString(0),
-                            Quantity = reader.GetInt32(1),
-                            Price = reader.GetDecimal(2),
-                            Total = reader.GetDecimal(3)
-                        },
-                        new Dictionary<string, object?> { { "@orderId", invoice.OrderId } });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Could not enrich invoice {InvoiceId}", id);
-                }
-            }
+            invoice.Status = "PAID";
         }
+        else if (totalPaid > 0)
+        {
+            invoice.Status = "PARTIAL";
+        }
+
+        await PopulateInvoiceMetadataAsync(invoice);
         return invoice;
     }
 
-    private static Invoice MapInvoiceFromReader(DbDataReader reader)
+    private async Task PopulateInvoiceMetadataAsync(Invoice invoice)
     {
-        return new Invoice
-        {
-            InvoiceId = reader.GetInt64(reader.GetOrdinal("invoice_id")),
-            OrderId = reader.GetInt64(reader.GetOrdinal("order_id")),
-            InvoiceNumber = reader.GetString(reader.GetOrdinal("invoice_number")),
-            Subtotal = reader.GetDecimal(reader.GetOrdinal("subtotal")),
-            TaxableAmount = reader.GetDecimal(reader.GetOrdinal("taxable_amount")),
-            TaxAmount = reader.GetDecimal(reader.GetOrdinal("tax_amount")),
-            DiscountAmount = reader.GetDecimal(reader.GetOrdinal("discount_amount")),
-            TotalAmount = reader.GetDecimal(reader.GetOrdinal("total_amount")),
-            PaidAmount = reader.GetDecimal(reader.GetOrdinal("paid_amount")),
-            AmountPaid = reader.GetDecimal(reader.GetOrdinal("paid_amount")),
-            Status = reader.GetString(reader.GetOrdinal("status")),
-            CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
-            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
-        };
-    }
+        if (invoice.OrderId <= 0) return;
 
-    private static InvoicePayment MapPaymentFromReader(DbDataReader reader)
-    {
-        var refOrd = reader.GetOrdinal("transaction_reference");
-
-        return new InvoicePayment
+        try
         {
-            PaymentId = reader.GetInt64(reader.GetOrdinal("payment_id")),
-            InvoiceId = reader.GetInt64(reader.GetOrdinal("invoice_id")),
-            Amount = reader.GetDecimal(reader.GetOrdinal("amount")),
-            PaymentMode = reader.GetString(reader.GetOrdinal("payment_mode")),
-            TransactionReference = reader.IsDBNull(refOrd) ? null : reader.GetString(refOrd),
-            PaidAt = reader.GetDateTime(reader.GetOrdinal("paid_at"))
-        };
+            // Sequential step 1: Query order info
+            var order = await _context.Orders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == invoice.OrderId);
+
+            if (order != null)
+            {
+                if (order.TableId.HasValue)
+                {
+                    var table = await _context.DiningTables
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.Id == order.TableId.Value);
+                    invoice.TableName = table?.Name ?? $"Table {order.TableId.Value}";
+                }
+                else if (string.Equals(order.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase))
+                {
+                    invoice.TableName = "Takeaway";
+                }
+
+                if (order.WaiterId.HasValue)
+                {
+                    var waiter = await _context.Staff
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(s => s.Id == order.WaiterId.Value);
+                    invoice.ServerName = waiter?.Name ?? "Staff";
+                }
+            }
+
+            // Sequential step 2: Query order items
+            var orderItems = await _context.OrderItems
+                .AsNoTracking()
+                .Where(oi => oi.OrderId == invoice.OrderId && oi.IsActive && !oi.IsDeleted)
+                .ToListAsync();
+
+            if (orderItems.Count > 0)
+            {
+                invoice.Items = orderItems.Select(oi => new InvoiceItemDto
+                {
+                    Name = oi.Name,
+                    Quantity = oi.Quantity,
+                    Price = oi.Price,
+                    Total = oi.TotalPrice
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not enrich metadata for invoice {InvoiceId}", invoice.InvoiceId);
+        }
     }
 }
 
