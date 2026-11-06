@@ -14,6 +14,8 @@ import {
   ChevronRight,
   IndianRupee,
   RefreshCw,
+  ShoppingBag,
+  Utensils,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ReceiptModal } from "../user/ReceiptModal";
@@ -71,6 +73,17 @@ const getInvoicePaymentMode = (order) => {
   return method ? normalizePaymentMethod(method) : "unknown";
 };
 
+const isTakeawayOrder = (order) => {
+  if (!order || typeof order !== "object") return false;
+  const orderType = String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase();
+  if (orderType === "takeaway" || orderType === "parcel") return true;
+  const tableName = String(order.tableName ?? order.TableName ?? order.table ?? "").trim().toLowerCase();
+  if (tableName.includes("takeaway") || tableName.includes("parcel")) return true;
+  const tableId = String(order.tableId ?? order.TableId ?? "").trim().toUpperCase();
+  if (tableId === "TAKEAWAY" || tableId === "PARCEL") return true;
+  return Boolean(order.isTakeaway);
+};
+
 const invoiceDisplayDate = (order) => {
   const dateKey = invoiceDateKey(order);
   if (!dateKey) return "—";
@@ -122,6 +135,7 @@ export function AdminInvoices({
   const [invoiceLoadError, setInvoiceLoadError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(() => localDateInputValue());
   const [selectedWeek, setSelectedWeek] = useState(() => ({
@@ -237,7 +251,7 @@ export function AdminInvoices({
     (customFromDate && customToDate && customFromDate > customToDate)
   );
 
-  const filteredOrders = allOrders.filter((order) => {
+  const baseFilteredOrders = allOrders.filter((order) => {
     const orderDate = invoiceDateKey(order);
     const matchesDate = dateFilter === "all" ||
       (dateFilter === "daily" && orderDate === selectedDate) ||
@@ -250,8 +264,6 @@ export function AdminInvoices({
       (dateFilter === "custom" && !invalidCustomDate && !!orderDate &&
         (!customFromDate || orderDate >= customFromDate) &&
         (!customToDate || orderDate <= customToDate));
-    const matchesPayment = paymentFilter === "all" ||
-      getInvoicePaymentMode(order) === paymentFilter;
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
@@ -260,7 +272,20 @@ export function AdminInvoices({
       String(order.tableName || "").toLowerCase().includes(query) ||
       String(order.server || "").toLowerCase().includes(query);
 
-    return matchesDate && matchesPayment && matchesSearch;
+    return matchesDate && matchesSearch;
+  });
+
+  const filteredOrders = baseFilteredOrders.filter((order) => {
+    const matchesOrderType =
+      orderTypeFilter === "all" ||
+      (orderTypeFilter === "takeaway" && isTakeawayOrder(order)) ||
+      (orderTypeFilter === "dine_in" && !isTakeawayOrder(order));
+
+    const matchesPayment =
+      paymentFilter === "all" ||
+      getInvoicePaymentMode(order) === paymentFilter;
+
+    return matchesOrderType && matchesPayment;
   });
 
   const pageCount = Math.max(
@@ -274,25 +299,44 @@ export function AdminInvoices({
     pageStart + itemsPerPage,
   );
 
-  const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0),
+  const getOrderRevenue = (o) =>
+    Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0;
+
+  const totalCollected = baseFilteredOrders.reduce(
+    (sum, o) => sum + getOrderRevenue(o),
     0,
   );
 
-  const upiTotal = filteredOrders
+  const upiTotal = baseFilteredOrders
     .filter((o) => getInvoicePaymentMode(o) === "upi")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
 
-  const cashTotal = filteredOrders
+  const cashTotal = baseFilteredOrders
     .filter((o) => getInvoicePaymentMode(o) === "cash")
-    .reduce((sum, o) => sum + (Number(o.paidAmount ?? o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
+    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
 
-  const cashOrdersCount = filteredOrders.filter(
+  const takeawayTotal = baseFilteredOrders
+    .filter(isTakeawayOrder)
+    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
+
+  const dineInTotal = baseFilteredOrders
+    .filter((o) => !isTakeawayOrder(o))
+    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
+
+  const totalOrdersCount = baseFilteredOrders.length;
+
+  const cashOrdersCount = baseFilteredOrders.filter(
     (o) => getInvoicePaymentMode(o) === "cash",
   ).length;
 
-  const upiOrdersCount = filteredOrders.filter(
+  const upiOrdersCount = baseFilteredOrders.filter(
     (o) => getInvoicePaymentMode(o) === "upi",
+  ).length;
+
+  const takeawayOrdersCount = baseFilteredOrders.filter(isTakeawayOrder).length;
+
+  const dineInOrdersCount = baseFilteredOrders.filter(
+    (o) => !isTakeawayOrder(o),
   ).length;
 
   return (
@@ -525,9 +569,9 @@ export function AdminInvoices({
                   marginTop: "3px",
                 }}
               >
-                {dateFilter === "all"
+                {dateFilter === "all" && paymentFilter === "all"
                   ? "All settled records"
-                  : `Filtered (${filteredOrders.length})`}
+                  : `Filtered (${filteredOrders.length} of ${totalOrdersCount})`}
               </div>
             </div>
             <div
@@ -814,6 +858,95 @@ export function AdminInvoices({
               <Smartphone size={18} color="var(--info)" />
             </div>
           </div>
+
+          {/* Card 5: Takeaway Revenue */}
+          <div
+            onClick={() => {
+              setOrderTypeFilter(orderTypeFilter === "takeaway" ? "all" : "takeaway");
+              setCurrentPage(1);
+            }}
+            style={{
+              background:
+                orderTypeFilter === "takeaway"
+                  ? "rgba(249, 115, 22, 0.12)"
+                  : "var(--bg-tertiary)",
+              border:
+                orderTypeFilter === "takeaway"
+                  ? "1px solid #f97316"
+                  : "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "0.85rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              boxShadow:
+                orderTypeFilter === "takeaway"
+                  ? "0 2px 10px rgba(249, 115, 22, 0.22)"
+                  : "none",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.borderColor = "#f97316";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor =
+                orderTypeFilter === "takeaway" ? "#f97316" : "var(--border-subtle)";
+            }}
+            title="Click to filter by Takeaway invoices"
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Takeaway Collected
+              </div>
+              <div
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  color: "#f97316",
+                  marginTop: "2px",
+                  lineHeight: 1.2,
+                }}
+              >
+                {formatCurrency(takeawayTotal)}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-dim)",
+                  marginTop: "3px",
+                }}
+              >
+                {takeawayOrdersCount}{" "}
+                {takeawayOrdersCount === 1 ? "takeaway invoice" : "takeaway invoices"}
+              </div>
+            </div>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "rgba(249, 115, 22, 0.15)",
+                border: "1px solid rgba(249, 115, 22, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <ShoppingBag size={18} color="#f97316" />
+            </div>
+          </div>
         </div>
 
         {/* Invoice date filters */}
@@ -823,7 +956,7 @@ export function AdminInvoices({
             aria-label="Filter invoices by date"
             value={dateFilter}
             onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
-            style={{ height: "38px", minWidth: "190px", boxSizing: "border-box", padding: "0 0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
+            style={{ height: "38px", minWidth: "160px", boxSizing: "border-box", padding: "0 0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
           >
             <option value="all">All Dates</option>
             <option value="daily">Today</option>
@@ -832,6 +965,35 @@ export function AdminInvoices({
             <option value="quarterly">Quarterly</option>
             <option value="custom">Custom Date Range</option>
           </select>
+
+          {/* Service / Dining Type Filter Dropdown */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", height: "38px" }}>
+            <Utensils size={15} color="#f59e0b" style={{ flex: "0 0 auto" }} />
+            <select
+              aria-label="Filter by Service / Dining Type"
+              value={orderTypeFilter}
+              onChange={(event) => {
+                setOrderTypeFilter(event.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                height: "38px",
+                minWidth: "175px",
+                boxSizing: "border-box",
+                padding: "0 0.7rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                color: "var(--text-main)",
+                background: "var(--bg-card)",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+              }}
+            >
+              <option value="all">All Types (Dine-In & Takeaway)</option>
+              <option value="dine_in">🍽️ Dine-In ({dineInOrdersCount})</option>
+              <option value="takeaway">🛍️ Takeaway ({takeawayOrdersCount})</option>
+            </select>
+          </div>
           {dateFilter === "daily" && (
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
               Date
@@ -931,36 +1093,111 @@ export function AdminInvoices({
             marginBottom: "1.25rem",
           }}
         >
-          {/* Payment Method Filter Pills */}
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {["all", "upi", "cash"].map((mode) => (
-              <button
-                key={mode}
-                onClick={() => {
-                  setPaymentFilter(mode);
-                  setCurrentPage(1);
-                }}
-                style={{
-                  background:
-                    paymentFilter === mode
-                      ? "rgba(245, 158, 11, 0.15)"
-                      : "var(--bg-tertiary)",
-                  border:
-                    paymentFilter === mode
-                      ? "1px solid var(--accent-amber)"
-                      : "1px solid var(--border-card)",
-                  color: paymentFilter === mode ? "var(--accent-amber)" : "var(--text-muted)",
-                  padding: "0.35rem 0.85rem",
-                  borderRadius: "20px",
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  textTransform: "uppercase",
-                }}
-              >
-                {mode === "all" ? "All Payments" : mode}
-              </button>
-            ))}
+          {/* Service & Payment Filter Pills */}
+          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+            {/* Dining Type Pills */}
+            <div style={{ display: "inline-flex", gap: "0.3rem", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "3px 4px", borderRadius: "20px", border: "1px solid var(--border-subtle)" }}>
+              {[
+                { id: "all", label: "All Types" },
+                { id: "dine_in", label: "🍽️ Dine-In" },
+                { id: "takeaway", label: "🛍️ Takeaway" },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setOrderTypeFilter(id);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    background:
+                      orderTypeFilter === id
+                        ? id === "takeaway"
+                          ? "rgba(249, 115, 22, 0.2)"
+                          : id === "dine_in"
+                          ? "rgba(99, 102, 241, 0.2)"
+                          : "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                    border:
+                      orderTypeFilter === id
+                        ? id === "takeaway"
+                          ? "1px solid #f97316"
+                          : id === "dine_in"
+                          ? "1px solid rgba(99, 102, 241, 0.6)"
+                          : "1px solid var(--accent-amber)"
+                        : "1px solid transparent",
+                    color:
+                      orderTypeFilter === id
+                        ? id === "takeaway"
+                          ? "#f97316"
+                          : id === "dine_in"
+                          ? "var(--accent-indigo)"
+                          : "var(--accent-amber)"
+                        : "var(--text-muted)",
+                    padding: "0.3rem 0.75rem",
+                    borderRadius: "16px",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Payment Method Pills */}
+            <div style={{ display: "inline-flex", gap: "0.3rem", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "3px 4px", borderRadius: "20px", border: "1px solid var(--border-subtle)" }}>
+              {[
+                { id: "all", label: "All Payments" },
+                { id: "upi", label: "UPI" },
+                { id: "cash", label: "Cash" },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setPaymentFilter(id);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    background:
+                      paymentFilter === id
+                        ? id === "upi"
+                          ? "rgba(56, 189, 248, 0.2)"
+                          : id === "cash"
+                          ? "rgba(16, 185, 129, 0.2)"
+                          : "rgba(245, 158, 11, 0.2)"
+                        : "transparent",
+                    border:
+                      paymentFilter === id
+                        ? id === "upi"
+                          ? "1px solid #38bdf8"
+                          : id === "cash"
+                          ? "1px solid var(--success)"
+                          : "1px solid var(--accent-amber)"
+                        : "1px solid transparent",
+                    color:
+                      paymentFilter === id
+                        ? id === "upi"
+                          ? "#38bdf8"
+                          : id === "cash"
+                          ? "var(--success)"
+                          : "var(--accent-amber)"
+                        : "var(--text-muted)",
+                    padding: "0.3rem 0.75rem",
+                    borderRadius: "16px",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div
@@ -968,13 +1205,27 @@ export function AdminInvoices({
               fontSize: "0.82rem",
               color: "var(--text-muted)",
               display: "flex",
-              gap: "1rem",
+              gap: "0.85rem",
+              flexWrap: "wrap",
+              alignItems: "center",
             }}
           >
             <span>
               Total:{" "}
               <strong style={{ color: "var(--accent-amber-light)" }}>
                 {formatCurrency(totalCollected)}
+              </strong>
+            </span>
+            <span>
+              Dine-In:{" "}
+              <strong style={{ color: "var(--accent-indigo)" }}>
+                {formatCurrency(dineInTotal)}
+              </strong>
+            </span>
+            <span>
+              Takeaway:{" "}
+              <strong style={{ color: "#f97316" }}>
+                {formatCurrency(takeawayTotal)}
               </strong>
             </span>
             <span>
@@ -989,7 +1240,6 @@ export function AdminInvoices({
                 {formatCurrency(cashTotal)}
               </strong>
             </span>
-
           </div>
         </div>
 

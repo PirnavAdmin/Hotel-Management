@@ -57,6 +57,15 @@ public class Ingredient
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
+    [Column("used_quantity", TypeName = "decimal(18,2)")]
+    public decimal UsedQuantity { get; set; } = 0.00m;
+
+    [Column("item_type")]
+    public string? ItemType { get; set; }
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

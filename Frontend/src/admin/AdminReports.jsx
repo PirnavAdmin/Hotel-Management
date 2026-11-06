@@ -473,7 +473,7 @@ export function AdminReports({
       );
     }
     return normalizePaymentMethod(order) === channel
-      ? Number(order.paidAmount ?? order.grandTotal ?? order.totalAmount ?? order.total ?? 0) || 0
+      ? Number(order.grandTotal ?? order.totalAmount ?? order.finalTotal ?? order.total ?? order.paidAmount ?? 0) || 0
       : 0;
   };
 

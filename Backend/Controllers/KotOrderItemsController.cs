@@ -8,10 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace HMS.Controllers;
 
 [ApiController]
-[Route("api/kot-order-items")]
 [Route("api/v1/kot-order-items")]
-[Route("api/kot_order_items")]
-[Route("api/v1/kot_order_items")]
 public class KotOrderItemsController : ControllerBase
 {
     private readonly KotService _kotService;
@@ -87,7 +84,6 @@ public class KotOrderItemsController : ControllerBase
 
     // PUT/PATCH /api/v1/kot-order-items/{id}/status
     [AllowAnonymous]
-    [HttpPut("{id:long}/status")]
     [HttpPatch("{id:long}/status")]
     public async Task<IActionResult> UpdateStatus(long id, [FromBody] UpdateItemStatusDto dto)
     {

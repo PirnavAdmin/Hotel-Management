@@ -23,7 +23,7 @@ public class InventoryPurchasesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPurchases([FromQuery] string? department, [FromQuery] int limit = 500)
     {
-        var query = _context.InventoryPurchases.AsNoTracking();
+        var query = _context.InventoryPurchaseRecords.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(department))
         {
             var normalizedDepartment = department.Trim().ToLowerInvariant();
@@ -61,7 +61,7 @@ public class InventoryPurchasesController : ControllerBase
             return BadRequest(new { success = false, message = "A valid purchase date is required." });
         }
 
-        var purchase = new InventoryPurchase
+        var purchase = new InventoryPurchaseRecord
         {
             ItemId = request.ItemId,
             Name = request.Name.Trim(),
@@ -76,7 +76,7 @@ public class InventoryPurchasesController : ControllerBase
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.InventoryPurchases.Add(purchase);
+        _context.InventoryPurchaseRecords.Add(purchase);
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetPurchases), new { department = purchase.Department }, new

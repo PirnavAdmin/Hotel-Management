@@ -13,7 +13,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/bar")]
-[Route("api/bar")]
 public class BarController : ControllerBase
 {
     private readonly BarService _barService;
@@ -40,7 +39,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("screen-feed")]
-    [HttpGet("screens")]
     public async Task<IActionResult> GetBarScreenFeed([FromQuery] long? branchId)
     {
         _logger.LogInformation("GET /api/v1/bar/screen-feed requested");
@@ -62,7 +60,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("overview")]
-    [HttpGet("dashboard")]
     public async Task<IActionResult> GetBarOverview([FromQuery] long? branchId)
     {
         _logger.LogInformation("GET /api/v1/bar/overview requested");
@@ -80,8 +77,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("orders")]
-    [HttpGet("overview/recent-orders")]
-    [HttpGet("recent-orders")]
     public async Task<IActionResult> GetBarOrders([FromQuery] long? branchId, [FromQuery] int limit = 50)
     {
         var orders = await _barService.GetRecentBarOrdersAsync(branchId, limit);
@@ -231,7 +226,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPatch("drinks/{id}/availability")]
-    [HttpPatch("drinks/{id}/toggle-status")]
     public async Task<IActionResult> ToggleDrinkAvailability(string id, [FromBody] ToggleAvailabilityDto? dto)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -311,7 +305,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPatch("drinks/{id}/special")]
-    [HttpPatch("drinks/{id}/toggle-special")]
     public async Task<IActionResult> ToggleDrinkSpecial(string id, [FromBody] ToggleSpecialDto? dto)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -1000,16 +993,14 @@ public class BarController : ControllerBase
     public async Task<IActionResult> GetBarInventoryItems(
         [FromQuery] string? category,
         [FromQuery] string? search,
+        [FromQuery] string? supplier,
         [FromQuery] string? status,
-        [FromQuery] bool? lowStockOnly)
+        [FromQuery] bool? lowStockOnly,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var items = await _barService.GetBarInventoryItemsAsync(category, search, status, lowStockOnly);
-        return Ok(new
-        {
-            success = true,
-            count = items.Count,
-            data = items
-        });
+        var result = await _barService.GetBarInventoryPagedAsync(category, search, supplier, status, lowStockOnly, page, pageSize);
+        return Ok(result);
     }
 
     /// <summary>
@@ -1196,6 +1187,38 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
+    /// Uses/consumes inventory stock for an item with quantity validation and audit logging.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("inventory/{id:long}/use")]
+    public async Task<IActionResult> UseInventoryStock(long id, [FromBody] UseStockDto dto)
+    {
+        if (dto == null || dto.Quantity <= 0)
+        {
+            return BadRequest(new { success = false, message = "Used quantity must be greater than zero." });
+        }
+
+        var (success, errorMsg, item) = await _barService.UseBarInventoryStockAsync(id, dto);
+        if (!success)
+        {
+            if (errorMsg != null && errorMsg.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { success = false, message = errorMsg });
+            }
+            return BadRequest(new { success = false, message = errorMsg });
+        }
+
+        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", item); } catch { }
+
+        return Ok(new
+        {
+            success = true,
+            message = $"Successfully consumed {dto.Quantity} units.",
+            data = item
+        });
+    }
+
+    /// <summary>
     /// Receives incoming stock delivery for an inventory item (Image 1: 'Receive' button).
     /// </summary>
     [AllowAnonymous]
@@ -1352,15 +1375,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("reports")]
-    [HttpGet("report")]
-    [HttpGet("reports/screen-feed")]
-    [HttpGet("reports/screens")]
-    [HttpGet("/api/v1/reports/bar")]
-    [HttpGet("/api/reports/bar")]
-    [HttpGet("/api/v1/bar-reports")]
-    [HttpGet("/api/bar-reports")]
-    [HttpPost("reports")]
-    [HttpPost("report")]
     public async Task<IActionResult> GetBarReports([FromQuery] string? format = null)
     {
         if (string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) ||
@@ -1397,18 +1411,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("reports/export-csv")]
-    [HttpGet("reports/export")]
-    [HttpGet("reports/export.csv")]
-    [HttpGet("reports/csv")]
-    [HttpGet("reports/download")]
-    [HttpGet("/api/v1/reports/bar/export-csv")]
-    [HttpGet("/api/reports/bar/export-csv")]
-    [HttpGet("/api/v1/bar-reports/export-csv")]
-    [HttpGet("/api/bar-reports/export-csv")]
-    [HttpPost("reports/export-csv")]
-    [HttpPost("reports/export")]
-    [HttpPost("/api/v1/reports/bar/export-csv")]
-    [HttpPost("/api/reports/bar/export-csv")]
     public async Task<IActionResult> ExportBarReportsCsv()
     {
         var csv = await _barService.ExportBarReportsCsvAsync();

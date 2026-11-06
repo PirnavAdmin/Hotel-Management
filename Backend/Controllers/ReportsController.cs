@@ -1,3 +1,4 @@
+using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -9,18 +10,25 @@ using Microsoft.Extensions.Logging;
 namespace HMS.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
 [Route("api/v1/reports")]
 [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 [Tags("Admin", "Reports")]
 public class ReportsController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly BarService _barService;
+    private readonly SalaryService _salaryService;
     private readonly ILogger<ReportsController> _logger;
 
-    public ReportsController(SpService spService, ILogger<ReportsController> logger)
+    public ReportsController(
+        SpService spService,
+        BarService barService,
+        SalaryService salaryService,
+        ILogger<ReportsController> logger)
     {
         _spService = spService;
+        _barService = barService;
+        _salaryService = salaryService;
         _logger = logger;
     }
 
@@ -227,8 +235,8 @@ public class ReportsController : ControllerBase
         }
     }
 
-    [HttpGet("inventory")]
-    public async Task<IActionResult> GetInventoryReport()
+    [HttpGet("inventory/legacy-valuation")]
+public async Task<IActionResult> GetInventoryReport()
     {
         try
         {
@@ -290,16 +298,30 @@ public class ReportsController : ControllerBase
     {
         try
         {
-            var list = await _spService.ExecuteQueryAsync("sp_GetLowStockIngredients", reader => new
+            var list = await _spService.ExecuteQueryAsync("sp_GetLowStockIngredients", reader =>
             {
-                ingredientId = reader.GetInt64(0),
-                name = reader.GetString(1),
-                unit = reader.GetString(2),
-                currentStock = reader.GetDecimal(3),
-                minimumThreshold = reader.GetDecimal(4),
-                unitCost = reader.GetDecimal(5),
-                category = reader.FieldCount > 6 && !reader.IsDBNull(6) ? reader.GetString(6) : "General",
-                supplier = reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetString(7) : "Local"
+                int idOrd = InventoryController.GetOrdinalSafe(reader, "ingredient_id", "id");
+                int nameOrd = InventoryController.GetOrdinalSafe(reader, "name", "ingredient_name");
+                int unitOrd = InventoryController.GetOrdinalSafe(reader, "unit");
+                int stockOrd = InventoryController.GetOrdinalSafe(reader, "current_stock", "stock");
+                int minOrd = InventoryController.GetOrdinalSafe(reader, "minimum_threshold", "reorder_level");
+                int costOrd = InventoryController.GetOrdinalSafe(reader, "unit_cost", "cost_per_unit");
+                int catOrd = InventoryController.GetOrdinalSafe(reader, "category");
+                int subOrd = InventoryController.GetOrdinalSafe(reader, "subcategory", "sub_category");
+                int supOrd = InventoryController.GetOrdinalSafe(reader, "supplier");
+
+                return new
+                {
+                    ingredientId = idOrd >= 0 && !reader.IsDBNull(idOrd) ? Convert.ToInt64(reader.GetValue(idOrd)) : 0L,
+                    name = nameOrd >= 0 && !reader.IsDBNull(nameOrd) ? reader.GetString(nameOrd) : string.Empty,
+                    unit = unitOrd >= 0 && !reader.IsDBNull(unitOrd) ? reader.GetString(unitOrd).ToUpperInvariant() : "KG",
+                    currentStock = stockOrd >= 0 && !reader.IsDBNull(stockOrd) ? Convert.ToDecimal(reader.GetValue(stockOrd)) : 0.00m,
+                    minimumThreshold = minOrd >= 0 && !reader.IsDBNull(minOrd) ? Convert.ToDecimal(reader.GetValue(minOrd)) : 5.00m,
+                    unitCost = costOrd >= 0 && !reader.IsDBNull(costOrd) ? Convert.ToDecimal(reader.GetValue(costOrd)) : 0.00m,
+                    category = catOrd >= 0 && !reader.IsDBNull(catOrd) ? reader.GetString(catOrd) : "General",
+                    subcategory = subOrd >= 0 && !reader.IsDBNull(subOrd) ? reader.GetString(subOrd) : string.Empty,
+                    supplier = supOrd >= 0 && !reader.IsDBNull(supOrd) ? reader.GetString(supOrd) : "Local Supplier"
+                };
             });
 
             return Ok(new
@@ -412,10 +434,150 @@ public class ReportsController : ControllerBase
         }
     }
 
-    [HttpGet("revenue")]
     [HttpGet("sales")]
     public async Task<IActionResult> GetRevenueReport()
     {
         return await GetDashboardReport();
     }
+
+    #region Inventory Reports
+
+    [HttpGet("inventory")]
+    public async Task<IActionResult> GetInventoryReport([FromQuery] InventoryReportFilterDto filter)
+    {
+        try
+        {
+            var report = await _barService.GetInventoryReportAsync(filter);
+            return Ok(report);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting inventory report");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("inventory/purchases")]
+    public async Task<IActionResult> GetInventoryPurchases([FromQuery] PurchaseLedgerFilterDto filter)
+    {
+        try
+        {
+            var purchases = await _barService.GetInventoryPurchasesAsync(filter);
+            return Ok(purchases);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting inventory purchases ledger");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("inventory/purchase-summary")]
+    public async Task<IActionResult> GetInventoryPurchaseSummary([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
+    {
+        try
+        {
+            var summary = await _barService.GetInventoryPurchaseSummaryAsync(fromDate, toDate);
+            return Ok(new { success = true, data = summary });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting inventory purchase summary");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("inventory/export")]
+    public async Task<IActionResult> ExportInventoryReport([FromQuery] InventoryReportFilterDto filter)
+    {
+        try
+        {
+            var bytes = await _barService.ExportInventoryCsvAsync(filter);
+            var fileName = $"inventory_report_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
+            return File(bytes, "text/csv; charset=utf-8", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting inventory CSV");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    #endregion
+
+    #region Salary Reports
+
+    [HttpGet("salaries")]
+    public async Task<IActionResult> GetSalaryReports([FromQuery] SalaryFilterDto filter)
+    {
+        try
+        {
+            var (payments, totalCount, totalPages, totalAmount) = await _salaryService.GetSalaryPaymentsAsync(filter);
+            return Ok(new
+            {
+                success = true,
+                totalCount,
+                page = filter.Page < 1 ? 1 : filter.Page,
+                pageSize = filter.PageSize < 1 ? 20 : filter.PageSize,
+                totalPages,
+                totalAmount,
+                currency = "INR",
+                items = payments,
+                data = payments
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting salary report");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("salaries/summary")]
+    public async Task<IActionResult> GetSalarySummary([FromQuery] string? month)
+    {
+        try
+        {
+            var summary = await _salaryService.GetSalarySummaryAsync(month);
+            return Ok(new { success = true, data = summary });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting salary summary report");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("salaries/budget")]
+    public async Task<IActionResult> GetPayrollBudget([FromQuery] string? month)
+    {
+        try
+        {
+            var budget = await _salaryService.GetPayrollBudgetAsync(month);
+            return Ok(new { success = true, data = budget });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting payroll budget");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("salaries/export")]
+    public async Task<IActionResult> ExportSalariesReport([FromQuery] SalaryFilterDto filter)
+    {
+        try
+        {
+            var bytes = await _salaryService.ExportSalariesCsvAsync(filter);
+            var fileName = $"salary_report_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
+            return File(bytes, "text/csv; charset=utf-8", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting salary CSV");
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    #endregion
 }

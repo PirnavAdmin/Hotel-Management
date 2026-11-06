@@ -100,11 +100,14 @@ export function normalizeInvoiceRecord(invoice, order = null) {
 
   const isSettledOrder = String(valueFrom(order, "status", "Status") || "").toLowerCase() === "settled";
   const invoicePaidAmount = valueFrom(invoice, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid");
-  const paidAmount = Number(
+  const rawPaidAmount = Number(
     invoicePaidAmount ??
       valueFrom(order, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid") ??
       grandTotal,
   ) || 0;
+  const paidAmount = isSettledOrder && rawPaidAmount > grandTotal
+    ? grandTotal
+    : rawPaidAmount;
 
   const createdAt = valueFrom(order, "settledAt", "SettledAt", "createdAt", "CreatedAt") ??
     valueFrom(invoice, "createdAt", "CreatedAt");

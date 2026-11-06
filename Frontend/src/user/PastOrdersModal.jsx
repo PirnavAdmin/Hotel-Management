@@ -4,7 +4,7 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw, RefreshCw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
-import { dedupeOrders, sortOrdersBySettlementTime } from '../utils/orderDedupe';
+import { dedupeOrders, sortOrdersBySettlementTime, parseOrderToYMD } from '../utils/orderDedupe';
 import { requestLiveInvoiceRecords } from '../utils/liveInvoiceData';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
@@ -14,8 +14,29 @@ const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
 
 const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
   if (!order) return fallbackDate;
-  if (order.date) return order.date;
-  if (order.settledDate) return order.settledDate;
+  const ymd = parseOrderToYMD(order);
+  if (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    const [year, month, day] = ymd.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+  }
+  const rawDate = order.settledDate || order.date || order.createdAt;
+  if (rawDate) {
+    const d = parseDisplayDate(rawDate);
+    if (d && !Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+  }
   if (order.orderTimestamp) {
     const date = new Date(Number(order.orderTimestamp));
     if (!Number.isNaN(date.getTime())) {
@@ -51,6 +72,10 @@ const parseDisplayDate = (value) => {
     const [, day, monthName, year] = localized;
     const month = new Date(`${monthName} 1, ${year}`).getMonth();
     if (!Number.isNaN(month)) return new Date(Number(year), month, Number(day));
+  }
+  const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
   }
   const parsed = new Date(text);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -319,7 +344,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
 
     return sortedKeys.map(dateKey => {
       const orders = sortOrdersBySettlementTime(map[dateKey]);
-      const totalRev = orders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+      const totalRev = orders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
       return {
         date: dateKey,
         orders,
@@ -437,7 +462,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
     return sortOrdersBySettlementTime(searchFilteredOrders);
   }, [viewMode, singleDayOrders, monthlyOrders, customRangeOrders, searchFilteredOrders]);
 
-  const totalCollected = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+  const totalCollected = activeOrders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? 0) || 0), 0);
   const averageTicket = activeOrders.length ? totalCollected / activeOrders.length : 0;
 
 
@@ -1382,7 +1407,7 @@ function OrderCard({ order, onReprintReceipt }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <div className="font-mono" style={{ fontSize: '1.02rem', fontWeight: 800, color: 'var(--text-main)' }}>
-          {formatCurrency(order.grandTotal)}
+          {formatCurrency(Number(order.grandTotal ?? order.totalAmount ?? order.total ?? 0) || 0)}
         </div>
 
         <button

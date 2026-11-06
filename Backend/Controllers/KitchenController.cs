@@ -9,7 +9,7 @@ using HMS.Hubs;
 using HMS.Services;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/kitchen")]
 public class KitchenController : ControllerBase
 {
     private readonly AppDbContext _context;

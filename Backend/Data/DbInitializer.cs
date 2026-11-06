@@ -145,6 +145,143 @@ public static class DbInitializer
             context.SaveChanges();
         }
 
+        // Seed staff_persons, ingredients, salary_payments, and inventory_purchases
+        try
+        {
+            if (!context.StaffPersons.Any())
+            {
+                var initialStaff = new List<StaffPerson>
+                {
+                    new StaffPerson { FullName = "Suresh Reddy", RoleTitle = "General Manager", Department = "Management", BaseSalary = 50000m, Phone = "9876543210", Shift = "General", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Vikas Anand", RoleTitle = "Head Bartender", Department = "Bar", BaseSalary = 30000m, Phone = "9876543211", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Rahul Sharma", RoleTitle = "Senior Mixologist", Department = "Bar", BaseSalary = 28000m, Phone = "9876543212", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Chef Sanjeev Kumar", RoleTitle = "Executive Chef", Department = "Kitchen", BaseSalary = 45000m, Phone = "9876543213", Shift = "Morning", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Anil Verma", RoleTitle = "Sous Chef", Department = "Kitchen", BaseSalary = 32000m, Phone = "9876543214", Shift = "Morning", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Pooja Patel", RoleTitle = "Cashier & Accountant", Department = "Management", BaseSalary = 26000m, Phone = "9876543215", Shift = "General", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Kiran Rao", RoleTitle = "Head Captain", Department = "Dining / Service", BaseSalary = 24000m, Phone = "9876543216", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Ramesh Babu", RoleTitle = "Senior Steward", Department = "Dining / Service", BaseSalary = 20000m, Phone = "9876543217", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                };
+                context.StaffPersons.AddRange(initialStaff);
+                context.SaveChanges();
+            }
+
+            if (!context.Ingredients.Any())
+            {
+                var initialIngredients = new List<Ingredient>
+                {
+                    new Ingredient { Name = "Johnnie Walker Black Label", IngredientName = "Johnnie Walker Black Label", Category = "Whiskey", Unit = "Bottle", CurrentStock = 24m, MinimumThreshold = 5m, UnitCost = 2800m, CostPerUnit = 2800m, ReorderLevel = 5m, Mrp = 3800m, Supplier = "Diageo Direct", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Absolut Vodka", IngredientName = "Absolut Vodka", Category = "Vodka & Gin", Unit = "Bottle", CurrentStock = 18m, MinimumThreshold = 4m, UnitCost = 1900m, CostPerUnit = 1900m, ReorderLevel = 4m, Mrp = 2600m, Supplier = "Pernod Ricard", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Corona Extra Beer", IngredientName = "Corona Extra Beer", Category = "Beer", Unit = "Bottle", CurrentStock = 120m, MinimumThreshold = 24m, UnitCost = 180m, CostPerUnit = 180m, ReorderLevel = 24m, Mrp = 300m, Supplier = "Anheuser-Busch", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Sula Cabernet Shiraz", IngredientName = "Sula Cabernet Shiraz", Category = "Wine", Unit = "Bottle", CurrentStock = 30m, MinimumThreshold = 6m, UnitCost = 950m, CostPerUnit = 950m, ReorderLevel = 6m, Mrp = 1500m, Supplier = "Sula Vineyards", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Basmati Rice Premium", IngredientName = "Basmati Rice Premium", Category = "Grains & Rice", Unit = "KG", CurrentStock = 200m, MinimumThreshold = 30m, UnitCost = 95m, CostPerUnit = 95m, ReorderLevel = 30m, Mrp = 120m, Supplier = "Royal Grains Ltd", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Fresh Paneer", IngredientName = "Fresh Paneer", Category = "Dairy & Cheeses", Unit = "KG", CurrentStock = 3m, MinimumThreshold = 10m, UnitCost = 320m, CostPerUnit = 320m, ReorderLevel = 10m, Mrp = 400m, Supplier = "Dairy Fresh Co", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Fresh Mint Leaves", IngredientName = "Fresh Mint Leaves", Category = "Garnishes", Unit = "GM", CurrentStock = 0m, MinimumThreshold = 500m, UnitCost = 0.20m, CostPerUnit = 0.20m, ReorderLevel = 500m, Mrp = 0.50m, Supplier = "Local Green Market", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                };
+                context.Ingredients.AddRange(initialIngredients);
+                context.SaveChanges();
+            }
+
+            var staffList = context.StaffPersons.ToList();
+            bool staffChanged = false;
+            foreach (var st in staffList)
+            {
+                var roleLower = (st.RoleTitle ?? "").ToLowerInvariant();
+                string targetDept = "Dining / Service";
+                decimal targetSalary = 22000m;
+
+                if (roleLower.Contains("bartender") || roleLower.Contains("bar") || roleLower.Contains("mixologist") || roleLower.Contains("sommelier"))
+                {
+                    targetDept = "Bar";
+                    targetSalary = 28000m;
+                }
+                else if (roleLower.Contains("chef") || roleLower.Contains("cook") || roleLower.Contains("kitchen") || roleLower.Contains("commis"))
+                {
+                    targetDept = "Kitchen";
+                    targetSalary = 32000m;
+                }
+                else if (roleLower.Contains("manager") || roleLower.Contains("supervisor") || roleLower.Contains("cashier") || roleLower.Contains("accountant") || roleLower.Contains("admin"))
+                {
+                    targetDept = "Management";
+                    targetSalary = 45000m;
+                }
+
+                if (string.IsNullOrWhiteSpace(st.Department) || (st.Department == "Dining / Service" && targetDept != "Dining / Service"))
+                {
+                    st.Department = targetDept;
+                    staffChanged = true;
+                }
+                if (st.BaseSalary <= 0 || (st.BaseSalary == 25000.00m && targetSalary != 25000.00m))
+                {
+                    st.BaseSalary = targetSalary;
+                    staffChanged = true;
+                }
+            }
+            if (staffChanged)
+            {
+                context.SaveChanges();
+            }
+
+            // Seed initial salary payments if empty
+            if (!context.SalaryPayments.Any() && staffList.Any())
+            {
+                var currentMonthStr = DateTime.UtcNow.ToString("yyyy-MM");
+                var paymentList = new List<SalaryPayment>();
+                foreach (var st in staffList.Take(6))
+                {
+                    paymentList.Add(new SalaryPayment
+                    {
+                        StaffId = st.StaffId,
+                        StaffName = st.FullName,
+                        RoleTitle = st.RoleTitle,
+                        Department = st.Department ?? "Dining / Service",
+                        Amount = st.BaseSalary,
+                        PaymentDate = DateTime.UtcNow.AddDays(-2),
+                        PaymentMonth = currentMonthStr,
+                        PaymentMethod = "BANK_TRANSFER",
+                        TransactionReference = $"TXN-{DateTime.UtcNow:yyyyMM}-{st.StaffId:D4}",
+                        Remarks = $"Monthly salary for {currentMonthStr}",
+                        Status = "COMPLETED",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                }
+                context.SalaryPayments.AddRange(paymentList);
+                context.SaveChanges();
+            }
+
+            // Seed initial inventory purchases if empty
+            if (!context.InventoryPurchases.Any())
+            {
+                var items = context.Ingredients.Where(i => i.IsActive).Take(6).ToList();
+                var purchaseList = new List<InventoryPurchase>();
+                foreach (var itm in items)
+                {
+                    var isBar = (itm.Category ?? "").ToLower().Contains("bar") || (itm.Category ?? "").ToLower().Contains("drink") || (itm.Category ?? "").ToLower().Contains("liquor") || (itm.Category ?? "").ToLower().Contains("beer") || (itm.Category ?? "").ToLower().Contains("wine") || (itm.Category ?? "").ToLower().Contains("whiskey");
+                    var qty = itm.CurrentStock > 0 ? itm.CurrentStock : 10m;
+                    var cost = itm.UnitCost > 0 ? itm.UnitCost : 150m;
+                    purchaseList.Add(new InventoryPurchase
+                    {
+                        IngredientId = itm.IngredientId,
+                        ItemName = itm.Name ?? itm.IngredientName ?? "Stock Item",
+                        Department = isBar ? "Bar" : "Dine",
+                        Supplier = !string.IsNullOrWhiteSpace(itm.Supplier) ? itm.Supplier : "AVSR Direct Supply",
+                        Quantity = qty,
+                        UnitCost = cost,
+                        TotalAmount = qty * cost,
+                        Note = "Initial stock procurement",
+                        PurchaseDate = DateTime.UtcNow.AddDays(-5),
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+                if (purchaseList.Any())
+                {
+                    context.InventoryPurchases.AddRange(purchaseList);
+                    context.SaveChanges();
+                }
+            }
+        }
+        catch { }
+
     }
 
     private static void EnsureTablesSchema(AppDbContext context)
@@ -237,7 +374,7 @@ public static class DbInitializer
                     "dining_sections", "menu_categories", "staff", "kitchen_stations", "kitchen_order_tickets",
                     "suppliers", "customers", "reservations", "ingredients", "purchase_orders",
                     "attendances", "promotions", "delivery_orders", "invoices", "invoice_payments",
-                    "password_reset_tokens"
+                    "password_reset_tokens", "inventory_purchases", "salary_payments", "inventory_transactions"
                 };
                 foreach (var tbl in allTables)
                 {
@@ -288,6 +425,22 @@ public static class DbInitializer
             SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
 
             EnsureColumnExists(conn, "ingredients", "name", "VARCHAR(100) NOT NULL DEFAULT ''");
+            EnsureColumnExists(conn, "ingredients", "ingredient_name", "VARCHAR(150) NULL DEFAULT ''");
+            EnsureColumnExists(conn, "ingredients", "cost_per_unit", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "inventory_transactions", "note", "VARCHAR(255) NULL");
+            EnsureColumnExists(conn, "inventory_transactions", "notes", "VARCHAR(255) NULL");
+            EnsureColumnExists(conn, "inventory_transactions", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "transaction_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "unit_cost", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "inventory_transactions", "txn_type", "VARCHAR(30) NOT NULL DEFAULT 'usage'");
+            EnsureColumnExists(conn, "inventory_transactions", "quantity", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "inventory_transactions", "remarks", "VARCHAR(255) NULL");
+            EnsureColumnExists(conn, "inventory_transactions", "txn_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "balance_after", "DECIMAL(18,3) NOT NULL DEFAULT 0.00");
+            SafeExecuteSql(conn, "ALTER TABLE `inventory_transactions` MODIFY COLUMN `balance_after` DECIMAL(18,3) NULL DEFAULT 0.00;");
+            SafeExecuteSql(conn, "ALTER TABLE `inventory_transactions` MODIFY COLUMN `txn_type` VARCHAR(50) NOT NULL DEFAULT 'usage';");
+            EnsureColumnExists(conn, "ingredients", "reorder_level", "DECIMAL(18,2) NOT NULL DEFAULT 5.00");
             EnsureColumnExists(conn, "ingredients", "unit", "VARCHAR(20) NOT NULL DEFAULT 'KG'");
             EnsureColumnExists(conn, "ingredients", "current_stock", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
             EnsureColumnExists(conn, "ingredients", "minimum_threshold", "DECIMAL(18,2) NOT NULL DEFAULT 5.00");
@@ -298,7 +451,12 @@ public static class DbInitializer
             EnsureColumnExists(conn, "ingredients", "mrp", "DECIMAL(10,2) NULL DEFAULT 0.00");
             EnsureColumnExists(conn, "ingredients", "ingredient_code", "VARCHAR(30) NULL");
             EnsureColumnExists(conn, "ingredients", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
+            EnsureColumnExists(conn, "ingredients", "deleted_at", "DATETIME NULL");
+            SafeExecuteSql(conn, "ALTER TABLE `ingredients` MODIFY COLUMN `cost_per_unit` DECIMAL(18,2) NOT NULL DEFAULT 0.00;");
+            EnsureColumnExists(conn, "ingredients", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "ingredients", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "ingredients", "used_quantity", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "ingredients", "item_type", "VARCHAR(100) NULL DEFAULT ''");
 
             EnsureColumnExists(conn, "suppliers", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "purchase_orders", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
@@ -358,6 +516,8 @@ public static class DbInitializer
             // staff_persons ALTER TABLE
             EnsureColumnExists(conn, "staff_persons", "full_name", "VARCHAR(100) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "role_title", "VARCHAR(50) NOT NULL DEFAULT ''");
+            EnsureColumnExists(conn, "staff_persons", "department", "VARCHAR(50) NOT NULL DEFAULT 'Dining / Service'");
+            EnsureColumnExists(conn, "staff_persons", "base_salary", "DECIMAL(18,2) NOT NULL DEFAULT 25000.00");
             EnsureColumnExists(conn, "staff_persons", "phone", "VARCHAR(20) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "shift", "VARCHAR(50) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
@@ -927,6 +1087,84 @@ public static class DbInitializer
                 `created_by` BIGINT NULL,
                 `updated_by` BIGINT NULL,
                 PRIMARY KEY (`kot_id`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `inventory_purchases` (
+                `purchase_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `ingredient_id` BIGINT NOT NULL,
+                `item_name` VARCHAR(150) NOT NULL,
+                `department` VARCHAR(50) NOT NULL DEFAULT 'Bar',
+                `supplier` VARCHAR(150) NOT NULL DEFAULT 'Local Supplier',
+                `quantity` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `unit_cost` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `total_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `note` VARCHAR(255) NULL,
+                `purchase_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `branch_id` BIGINT NULL,
+                `outlet_id` BIGINT NULL DEFAULT 1,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
+                PRIMARY KEY (`purchase_id`),
+                KEY `idx_inv_purchases_date` (`purchase_date`),
+                KEY `idx_inv_purchases_dept` (`department`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `salary_payments` (
+                `payment_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `staff_id` BIGINT NOT NULL,
+                `staff_name` VARCHAR(100) NOT NULL,
+                `role_title` VARCHAR(50) NOT NULL,
+                `department` VARCHAR(50) NOT NULL DEFAULT 'Dining / Service',
+                `amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `payment_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `payment_month` VARCHAR(20) NOT NULL DEFAULT '',
+                `payment_method` VARCHAR(50) NOT NULL DEFAULT 'BANK_TRANSFER',
+                `transaction_reference` VARCHAR(100) NULL,
+                `remarks` VARCHAR(255) NULL,
+                `status` VARCHAR(30) NOT NULL DEFAULT 'COMPLETED',
+                `branch_id` BIGINT NULL,
+                `outlet_id` BIGINT NULL DEFAULT 1,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
+                PRIMARY KEY (`payment_id`),
+                KEY `idx_salary_staff` (`staff_id`),
+                KEY `idx_salary_date` (`payment_date`),
+                KEY `idx_salary_dept` (`department`)
+            ) ENGINE=InnoDB;");
+
+        EnsureColumnExists(conn, "salary_payments", "role_title", "VARCHAR(50) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "salary_payments", "department", "VARCHAR(50) NOT NULL DEFAULT 'Dining / Service'");
+        EnsureColumnExists(conn, "salary_payments", "payment_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "salary_payments", "payment_month", "VARCHAR(20) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "salary_payments", "transaction_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "salary_payments", "remarks", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "salary_payments", "status", "VARCHAR(30) NOT NULL DEFAULT 'COMPLETED'");
+        EnsureColumnExists(conn, "salary_payments", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "salary_payments", "created_by", "BIGINT NULL DEFAULT NULL");
+        EnsureColumnExists(conn, "salary_payments", "paid_on", "DATE NULL");
+        EnsureColumnExists(conn, "salary_payments", "salary_period", "CHAR(7) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "salary_payments", "notes", "VARCHAR(255) NULL");
+        SafeExecuteSql(conn, "ALTER TABLE `salary_payments` MODIFY COLUMN `staff_id` BIGINT NULL;");
+        SafeExecuteSql(conn, "UPDATE `salary_payments` SET `payment_date` = `paid_on` WHERE `paid_on` IS NOT NULL;");
+        SafeExecuteSql(conn, "UPDATE `salary_payments` SET `payment_month` = `salary_period` WHERE `salary_period` <> '';");
+        SafeExecuteSql(conn, "UPDATE `salary_payments` SET `remarks` = `notes` WHERE `notes` IS NOT NULL;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `inventory_transactions` (
+                `txn_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `ingredient_id` BIGINT NOT NULL,
+                `txn_type` VARCHAR(30) NOT NULL,
+                `quantity` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `unit_cost` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `note` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`txn_id`),
+                KEY `idx_txn_ingredient` (`ingredient_id`)
             ) ENGINE=InnoDB;");
 
         // ============================================================
