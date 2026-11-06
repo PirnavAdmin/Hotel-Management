@@ -33,6 +33,13 @@ public class StaffPerson
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
+    [MaxLength(50)]
+    [Column("department")]
+    public string Department { get; set; } = "Dining / Service";
+
+    [Column("base_salary", TypeName = "decimal(18,2)")]
+    public decimal BaseSalary { get; set; } = 25000.00m;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

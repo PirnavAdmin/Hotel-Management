@@ -10,7 +10,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/restaurant-settings")]
-[Route("api/restaurant-settings")]
 [Tags("Admin", "RestaurantSettings")]
 public class RestaurantSettingsController : ControllerBase
 {
@@ -61,7 +60,6 @@ public class RestaurantSettingsController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPut]
-    [HttpPost]
     public async Task<IActionResult> UpdateSettings([FromBody] RestaurantSettingsDto dto)
     {
         try

@@ -75,7 +75,6 @@ public class SuppliersController : ControllerBase
 
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Suppliers/{id}")]
     public async Task<IActionResult> DeleteSupplier(string id)
     {
         long numericId = 0;

@@ -14,7 +14,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/reservations")]
-[Route("api/Reservations")]
 public class ReservationsController : ControllerBase
 {
     private readonly SpService _spService;
@@ -249,7 +248,6 @@ public class ReservationsController : ControllerBase
     // DELETE /api/v1/reservations/{id}
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Reservations/{id}")]
     public async Task<IActionResult> DeleteReservation(string id)
     {
         long numericId = 0;

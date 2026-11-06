@@ -888,15 +888,21 @@ CREATE PROCEDURE `sp_GetLowStockIngredients`()
 BEGIN
     SELECT 
         ingredient_id,
-        COALESCE(NULLIF(name, ''), ingredient_name) AS name,
-        unit,
-        current_stock,
-        minimum_threshold,
-        unit_cost,
+        COALESCE(NULLIF(name, ''), ingredient_name, '') AS name,
         COALESCE(category, 'General') AS category,
-        COALESCE(supplier, 'Local Supplier') AS supplier
+        COALESCE(subcategory, '') AS subcategory,
+        COALESCE(supplier, 'Local Supplier') AS supplier,
+        COALESCE(unit, 'KG') AS unit,
+        current_stock,
+        COALESCE(NULLIF(minimum_threshold, 0), reorder_level, 5.00) AS minimum_threshold,
+        COALESCE(NULLIF(unit_cost, 0), cost_per_unit, 0.00) AS unit_cost,
+        mrp,
+        COALESCE(ingredient_code, '') AS ingredient_code,
+        is_active,
+        updated_at
     FROM ingredients
-    WHERE current_stock <= minimum_threshold AND deleted_at IS NULL
+    WHERE current_stock <= COALESCE(NULLIF(minimum_threshold, 0), reorder_level, 5.00) 
+      AND deleted_at IS NULL
     ORDER BY current_stock ASC;
 END;
 

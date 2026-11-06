@@ -12,7 +12,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/menu-items")]
-[Route("api/Menu")]
 public class MenuItemsController : ControllerBase
 {
     private readonly MenuItemService _menuItemService;
@@ -27,7 +26,6 @@ public class MenuItemsController : ControllerBase
     // POST /api/v1/menu-items/upload-image or /api/v1/menu-items/upload or /api/Menu/upload-image or /api/Menu/upload
     [AllowAnonymous]
     [HttpPost("upload-image")]
-    [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadImage([FromForm] ImageUploadDto dto)
     {
@@ -103,8 +101,6 @@ public class MenuItemsController : ControllerBase
     // GET /api/v1/menu-items/specials or /api/menu-items/specials or /api/Menu/specials
     [AllowAnonymous]
     [HttpGet("specials")]
-    [HttpGet("/api/menu-items/specials")]
-    [HttpGet("/api/Menu/specials")]
     public async Task<IActionResult> GetSpecialMenuItems([FromQuery] string? category, [FromQuery] long? branchId)
     {
         _logger.LogInformation("Retrieving special menu items. Category: {Category}, BranchId: {BranchId}", category, branchId);
@@ -199,7 +195,6 @@ public class MenuItemsController : ControllerBase
     // POST /api/v1/menu-items or /api/Menu/items
     [AllowAnonymous]
     [HttpPost]
-    [HttpPost("items")]
     public async Task<IActionResult> CreateMenuItem([FromBody] CreateMenuItemDto dto)
     {
         if (!ModelState.IsValid)
@@ -228,7 +223,6 @@ public class MenuItemsController : ControllerBase
     // PUT /api/v1/menu-items/{id} or /api/Menu/items/{id}
     [AllowAnonymous]
     [HttpPut("{id:long}")]
-    [HttpPut("items/{id:long}")]
     public async Task<IActionResult> UpdateMenuItem(long id, [FromBody] UpdateMenuItemDto dto)
     {
         if (!ModelState.IsValid)
@@ -261,7 +255,6 @@ public class MenuItemsController : ControllerBase
     // PATCH /api/v1/menu-items/{id}/availability or /api/Menu/items/{id}/availability
     [AllowAnonymous]
     [HttpPatch("{id:long}/availability")]
-    [HttpPatch("items/{id:long}/availability")]
     public async Task<IActionResult> ToggleAvailability(long id, [FromBody] ToggleAvailabilityRequest request)
     {
         try
@@ -288,8 +281,6 @@ public class MenuItemsController : ControllerBase
     // PATCH /api/v1/menu-items/{id}/special-status or /api/menu-items/{id}/special-status or /api/Menu/items/{id}/special-status
     [AllowAnonymous]
     [HttpPatch("{id:long}/special-status")]
-    [HttpPatch("items/{id:long}/special-status")]
-    [HttpPatch("/api/menu-items/{id:long}/special-status")]
     public async Task<IActionResult> ToggleSpecialStatus(long id, [FromBody] ToggleSpecialStatusRequest request)
     {
         if (request == null)
@@ -326,7 +317,6 @@ public class MenuItemsController : ControllerBase
     // DELETE /api/v1/menu-items/{id} or /api/Menu/items/{id}
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("items/{id}")]
     public async Task<IActionResult> DeleteMenuItem(string id)
     {
         long numericId = 0;
