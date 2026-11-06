@@ -752,13 +752,13 @@ export function KitchenKOTView({
           width: 100%;
           min-width: 0;
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 260px));
           gap: 0.85rem;
-          align-items: stretch;
+          align-items: start;
         }
 
         .kot-cards-grid--single {
-          grid-template-columns: minmax(0, 320px);
+          grid-template-columns: minmax(0, min(100%, 260px));
           justify-content: center;
         }
 
@@ -769,36 +769,35 @@ export function KitchenKOTView({
 
         .kot-order-card--compact {
           box-sizing: border-box;
-          min-height: 140px;
-          padding: 0.7rem 0.8rem;
+          padding: 0.55rem 0.65rem;
           display: grid;
-          grid-template-rows: minmax(48px, 1fr) auto auto;
-          gap: 0.55rem;
-          align-content: stretch;
+          grid-template-rows: auto auto auto;
+          gap: 0.4rem;
+          align-content: start;
         }
 
         .kot-compact-header {
           display: grid;
           grid-template-columns: minmax(0, 1fr) max-content;
-          align-items: start;
-          column-gap: 0.55rem;
+          align-items: center;
+          column-gap: 0.45rem;
           min-width: 0;
         }
 
         .kot-compact-leading {
           display: grid;
-          grid-template-columns: 76px minmax(0, 1fr);
+          grid-template-columns: 66px minmax(0, 1fr);
           align-items: center;
-          column-gap: 0.55rem;
+          column-gap: 0.45rem;
           min-width: 0;
         }
 
         .kot-compact-table-badge {
           display: grid;
           place-items: center;
-          width: 76px;
-          min-height: 42px;
-          padding: 0.3rem 0.25rem;
+          width: 66px;
+          min-height: 34px;
+          padding: 0.22rem 0.2rem;
           box-sizing: border-box;
           border-radius: 7px;
           font-size: 0.78rem;
@@ -838,15 +837,15 @@ export function KitchenKOTView({
         }
 
         .kot-compact-title {
-          font-size: 0.86rem;
-          line-height: 1.2;
+          font-size: 0.82rem;
+          line-height: 1.15;
           min-width: 0;
           overflow-wrap: anywhere;
           word-break: normal;
         }
 
         .kot-compact-order-number {
-          margin-top: 3px;
+          margin-top: 2px;
           color: var(--text-muted);
           font-size: 0.69rem;
           line-height: 1.15;
@@ -879,7 +878,7 @@ export function KitchenKOTView({
           align-items: center;
           gap: 0.6rem;
           min-width: 0;
-          min-height: 20px;
+          min-height: 16px;
           color: var(--text-muted);
           font-size: 0.72rem;
           line-height: 1.2;
@@ -897,9 +896,9 @@ export function KitchenKOTView({
 
         .kot-compact-view-button {
           justify-self: start;
-          align-self: end;
-          min-height: 32px;
-          padding: 0.35rem 0.75rem;
+          align-self: start;
+          min-height: 29px;
+          padding: 0.3rem 0.7rem;
           border: 1px solid var(--border-card);
           border-radius: 7px;
           background: var(--bg-tertiary);
@@ -948,7 +947,8 @@ export function KitchenKOTView({
           }
 
           .kot-cards-grid {
-            grid-template-columns: minmax(0, 1fr);
+            grid-template-columns: minmax(0, min(100%, 260px));
+            justify-content: center;
             gap: 0.75rem !important;
           }
 
@@ -957,33 +957,21 @@ export function KitchenKOTView({
           }
 
           .kot-order-card--compact {
-            min-height: 140px;
-            padding: 0.65rem 0.7rem;
-            grid-template-rows: minmax(48px, 1fr) auto auto;
+            padding: 0.55rem 0.65rem;
+            grid-template-rows: auto auto auto;
           }
 
           .kot-compact-header { column-gap: 0.4rem; }
-          .kot-compact-leading { grid-template-columns: 76px minmax(0, 1fr); column-gap: 0.4rem; }
+          .kot-compact-leading { grid-template-columns: 66px minmax(0, 1fr); column-gap: 0.4rem; }
           .kot-compact-status { gap: 0.3rem; font-size: 0.68rem; }
           .kot-compact-title { font-size: 0.81rem; }
           .kot-compact-order-number { font-size: 0.66rem; }
         }
 
         @media (max-width: 360px) {
-          .kot-order-card--compact { min-height: 154px; }
-          .kot-compact-leading { grid-template-columns: 76px minmax(0, 1fr); }
-        }
-
-        @media (max-width: 520px) {
-          .kot-compact-header {
-            grid-template-columns: minmax(0, 1fr);
-            row-gap: 0.3rem;
-          }
-
-          .kot-compact-status {
-            grid-column: 1;
-            justify-self: end;
-          }
+          .kot-compact-leading { grid-template-columns: 60px minmax(0, 1fr); }
+          .kot-compact-table-badge { width: 60px; }
+          .kot-compact-status { gap: 0.25rem; font-size: 0.64rem; }
         }
       `}</style>
 
