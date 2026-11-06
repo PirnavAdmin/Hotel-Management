@@ -165,7 +165,7 @@ export async function apiGetBarDrinkById(id) {
 export async function apiCreateBarDrink(drinkData) {
   const name = String(drinkData.name || drinkData.dishName || drinkData.drinkName || '').trim();
   const category = String(drinkData.category || 'Cocktails').trim();
-  const measure = String(drinkData.measure || drinkData.servingMeasure || drinkData.servingVolume || '30 ml (Single Peg)').trim();
+  const measure = String(drinkData.measure || drinkData.servingMeasure || drinkData.servingVolume || 'Single Peg (30 ml)').trim();
   const price = Number(drinkData.price ?? drinkData.sellingPrice ?? 0);
   const isAvail = drinkData.isAvailable !== false && drinkData.isAvailable !== 'Unavailable';
   const drinkType = String(drinkData.drinkType || (drinkData.abv ? 'Alcoholic' : 'Non-Alcoholic')).trim();
@@ -190,6 +190,7 @@ export async function apiCreateBarDrink(drinkData) {
       name: name,
       dishName: name,
       category: category,
+      subcategory: drinkData.subcategory === undefined ? undefined : String(drinkData.subcategory ?? "").trim(),
       servingMeasure: measure,
       measure: measure,
       servingVolume: measure,
@@ -221,7 +222,7 @@ export async function apiCreateBarDrink(drinkData) {
 export async function apiUpdateBarDrink(id, drinkData) {
   const name = String(drinkData.name || drinkData.dishName || drinkData.drinkName || '').trim();
   const category = String(drinkData.category || 'Cocktails').trim();
-  const measure = String(drinkData.measure || drinkData.servingMeasure || drinkData.servingVolume || '30 ml (Single Peg)').trim();
+  const measure = String(drinkData.measure || drinkData.servingMeasure || drinkData.servingVolume || 'Single Peg (30 ml)').trim();
   const price = Number(drinkData.price ?? drinkData.sellingPrice ?? 0);
   const isAvail = drinkData.isAvailable !== false && drinkData.isAvailable !== 'Unavailable';
   const drinkType = String(drinkData.drinkType || (drinkData.abv ? 'Alcoholic' : 'Non-Alcoholic')).trim();
@@ -246,6 +247,7 @@ export async function apiUpdateBarDrink(id, drinkData) {
       name: name,
       dishName: name,
       category: category,
+      subcategory: drinkData.subcategory === undefined ? undefined : String(drinkData.subcategory ?? "").trim(),
       servingMeasure: measure,
       measure: measure,
       servingVolume: measure,

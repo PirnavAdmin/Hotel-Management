@@ -311,7 +311,6 @@ function globalSyncPlugin() {
           // Offline fallback: rewrite URL and seamlessly fall through to local handlers below
           req.url = apiPath;
         }
-
         // Centralized Backend HTTP Request/Response Logger
         const start = Date.now();
         const method = req.method || "GET";
@@ -2134,9 +2133,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), globalSyncPlugin()],
-    define: {
-      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBase),
-    },
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,

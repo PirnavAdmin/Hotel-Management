@@ -330,6 +330,8 @@ public class BarService
             _logger.LogInformation("Drink '{Name}' already exists (ID: {Id}). Synchronizing to prevent duplicate.", name, existing.MenuItemId);
             existing.DishName = name;
             existing.Category = category;
+            if (dto.Subcategory != null)
+                existing.Subcategory = string.IsNullOrWhiteSpace(dto.Subcategory) ? null : dto.Subcategory.Trim();
             existing.Price = price;
             existing.ServingMeasure = measure;
             existing.DrinkType = drinkType;
@@ -351,6 +353,7 @@ public class BarService
         {
             DishName = name,
             Category = category,
+            Subcategory = string.IsNullOrWhiteSpace(dto.Subcategory) ? null : dto.Subcategory.Trim(),
             Price = price,
             ServingMeasure = measure,
             DrinkType = drinkType,
@@ -393,6 +396,9 @@ public class BarService
 
         if (!string.IsNullOrWhiteSpace(dto.Category))
             item.Category = dto.Category.Trim();
+
+        if (dto.Subcategory != null)
+            item.Subcategory = string.IsNullOrWhiteSpace(dto.Subcategory) ? null : dto.Subcategory.Trim();
 
         decimal? price = dto.SellingPrice.HasValue && dto.SellingPrice.Value >= 0
             ? dto.SellingPrice.Value
@@ -2886,6 +2892,7 @@ public class BarService
             MenuItemId = m.MenuItemId,
             DrinkName = m.DishName,
             Category = m.Category,
+            Subcategory = m.Subcategory,
             ServingMeasure = measure,
             Price = m.Price,
             IsAvailable = m.IsAvailable,

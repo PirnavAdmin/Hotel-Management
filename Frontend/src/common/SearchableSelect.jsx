@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
 
-export default function SearchableSelect({ options = [], value = "", onChange, placeholder = "Select…", searchPlaceholder = "Search options…", allowCustom = false, customLabel = "+ Custom", onCustom }) {
+export default function SearchableSelect({ options = [], value = "", onChange, placeholder = "Select…", searchPlaceholder = "Search options…", emptyMessage = "No Results Found", allowCustom = false, customLabel = "+ Custom", onCustom }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState(null);
@@ -75,7 +75,7 @@ export default function SearchableSelect({ options = [], value = "", onChange, p
         {filtered.map((option, index) => <button key={`${option.value}-${index}`} ref={(node) => { optionRefs.current[index] = node; }} type="button" role="option" aria-selected={String(option.value) === String(value)} className="searchable-select-option" onKeyDown={(event) => handleListKey(event, index)} onClick={() => choose(option)}>
           <span>{option.label}</span>{String(option.value) === String(value) && <Check size={14} aria-hidden="true" />}
         </button>)}
-        {!filtered.length && <div className="searchable-select-empty">No Results Found</div>}
+        {!filtered.length && <div className="searchable-select-empty">{emptyMessage}</div>}
         {allowCustom && <button ref={(node) => { optionRefs.current[filtered.length] = node; }} type="button" role="option" aria-selected="false" className="searchable-select-option searchable-select-custom" onKeyDown={(event) => handleListKey(event, filtered.length)} onClick={chooseCustom}>{customLabel}</button>}
       </div>
     </div>, document.body)}

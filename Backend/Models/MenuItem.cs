@@ -21,6 +21,10 @@ public class MenuItem
     [Column("category")]
     public string Category { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    [Column("subcategory")]
+    public string? Subcategory { get; set; }
+
     [Column("price", TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
 

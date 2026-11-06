@@ -90,6 +90,7 @@ public class BarDrinkDto
     public string Name => DrinkName;
     public string DishName => DrinkName;
     public string Category { get; set; } = string.Empty;
+    public string? Subcategory { get; set; }
     public string ServingMeasure { get; set; } = "—";
     public string Measure => ServingMeasure;
     public string ServingVolume => ServingMeasure;
@@ -132,6 +133,9 @@ public class CreateBarDrinkDto
 
     [MaxLength(100)]
     public string? Category { get; set; } = "Cocktails";
+
+    [MaxLength(100)]
+    public string? Subcategory { get; set; }
 
     [MaxLength(30)]
     public string? DrinkType { get; set; } = "Alcoholic"; // "Alcoholic", "Non-Alcoholic"
@@ -196,6 +200,9 @@ public class UpdateBarDrinkDto
 
     [MaxLength(100)]
     public string? Category { get; set; }
+
+    [MaxLength(100)]
+    public string? Subcategory { get; set; }
 
     [MaxLength(30)]
     public string? DrinkType { get; set; }
