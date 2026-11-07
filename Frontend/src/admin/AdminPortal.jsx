@@ -63,6 +63,7 @@ import { GeneralLedgerView } from "./accounting/GeneralLedgerView";
 import { JournalEntriesView } from "./accounting/JournalEntriesView";
 import { AdminSettings } from "./AdminSettings";
 import { BarWorkspace } from "../bar/BarWorkspace";
+import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { API_BASE_URL, API_SYNC_BASE, openOptionalEventStream } from "../api/apiConfig";
@@ -632,6 +633,7 @@ export function AdminPortal({
     setMenuPage(1);
   };
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
+  const [adminKotStation, setAdminKotStation] = useState("kitchen");
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const [selectedKotModalTable, setSelectedKotModalTable] = useState(null);
@@ -4279,6 +4281,60 @@ export function AdminPortal({
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 10 }}>
+                        {/* Station Switcher: Kitchen KOT / Bar BOT */}
+                        <div
+                          role="tablist"
+                          aria-label="Admin KOT Station Switcher"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "8px",
+                            padding: "3px",
+                            gap: "4px",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={adminKotStation === "kitchen"}
+                            onClick={() => setAdminKotStation("kitchen")}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: "6px",
+                              border: "none",
+                              background: adminKotStation === "kitchen" ? "var(--accent-amber)" : "transparent",
+                              color: adminKotStation === "kitchen" ? "#ffffff" : "var(--text-muted)",
+                              fontSize: "0.78rem",
+                              fontWeight: 750,
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            🍳 Kitchen KOT
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={adminKotStation === "bar"}
+                            onClick={() => setAdminKotStation("bar")}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: "6px",
+                              border: "none",
+                              background: adminKotStation === "bar" ? "var(--accent-amber)" : "transparent",
+                              color: adminKotStation === "bar" ? "#ffffff" : "var(--text-muted)",
+                              fontSize: "0.78rem",
+                              fontWeight: 750,
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            🍸 Bar BOT
+                          </button>
+                        </div>
+
                         {onOpenKOTView && (
                           <button
                           onClick={() => {
@@ -4307,7 +4363,19 @@ export function AdminPortal({
                     </div>
                     </div>
 
-                    <>
+                    {adminKotStation === "bar" ? (
+                      <BarBOTView
+                        tables={tables}
+                        menuItems={menuItems}
+                        staffList={staffList}
+                        barDrinks={menuItems.filter((i) => isBeverageCategory(i.category))}
+                        onItemsUpdated={onBarOrderItemStatusUpdated}
+                        onUpdateItemKotStatus={onUpdateItemKotStatus}
+                        onCompleteTableKot={onCompleteTableKot}
+                        embedded={true}
+                      />
+                    ) : (
+                      <>
                     {/* Table Filter Bar with Dropdown matching TableDetailView */}
                     <div
                       style={{
@@ -5515,6 +5583,7 @@ export function AdminPortal({
                       );
                     })()}
                     </>
+                  )}
                   </div>
                 )}
 

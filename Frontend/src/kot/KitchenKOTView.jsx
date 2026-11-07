@@ -78,10 +78,13 @@ export function KitchenKOTView({
   restaurantName = "Restaurant",
   restaurantLogo = "",
   station = "kitchen",
+  activeStation,
+  onStationChange,
   menuItems = [],
 }) {
+  const currentStation = activeStation || station;
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const isBarStation = station === "bar";
+  const isBarStation = currentStation === "bar";
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
   const [isTableFilterOpen, setIsTableFilterOpen] = useState(false);
@@ -1065,6 +1068,60 @@ export function KitchenKOTView({
                   >
                     KITCHEN DISPLAY SYSTEM (KDS)
                   </span>
+                  {onStationChange && (
+                    <div
+                      role="tablist"
+                      aria-label="KOT Station switcher"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        background: "var(--bg-tertiary)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "2px",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={currentStation === "kitchen"}
+                        onClick={() => onStationChange("kitchen")}
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: currentStation === "kitchen" ? "var(--accent-amber)" : "transparent",
+                          color: currentStation === "kitchen" ? "#ffffff" : "var(--text-muted)",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        🍳 Kitchen KOT
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={currentStation === "bar"}
+                        onClick={() => onStationChange("bar")}
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: currentStation === "bar" ? "var(--accent-amber)" : "transparent",
+                          color: currentStation === "bar" ? "#ffffff" : "var(--text-muted)",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        🍸 Bar BOT
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <p
                   style={{

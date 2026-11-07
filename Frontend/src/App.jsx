@@ -16,6 +16,7 @@ import {
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
 import { TakeawayView } from "./user/TakeawayView";
+import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
@@ -752,6 +753,7 @@ export function App() {
 
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
+  const [activeKotStation, setActiveKotStation] = useState("kitchen");
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
   const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
@@ -3686,24 +3688,124 @@ export function App() {
 
       {/* Main Separate Routes Rendering */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - ONLY KOT RELATED! */}
+        {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - KITCHEN & BAR BOT WORKSPACE */}
         {isKotRoute &&
           (kotSession &&
           (kotSession.role === "kot" || kotSession.role === "admin") ? (
             <ErrorBoundary>
-              <KitchenKOTView
-                tables={tables}
-                pastOrders={pastOrders}
-                menuItems={menuItems}
-                currentTheme={theme}
-                onChangeTheme={setTheme}
-                onBackToFloor={() => { setActiveView("tables"); navigate("/"); }}
-                onUpdateItemKotStatus={handleUpdateItemKotStatus}
-                onCompleteTableKot={handleCompleteTableKot}
-                onOpenTableOrder={(tableId) => { setSelectedTableId(tableId); setActiveView("order"); navigate("/"); }}
-                currentSession={kotSession}
-                onLogout={handleKotLogout}
-              />
+              <>
+                <div
+                  role="tablist"
+                  aria-label="Kitchen and bar order tickets"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 20px",
+                    background: "var(--bg-primary, #0b1120)",
+                    borderBottom: "1px solid var(--border-subtle, #243044)",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[
+                      { id: "kitchen", label: "🍳 Kitchen KOT" },
+                      { id: "bar", label: "🍸 Bar BOT" },
+                    ].map((station) => (
+                      <button
+                        key={station.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeKotStation === station.id}
+                        onClick={() => setActiveKotStation(station.id)}
+                        style={{
+                          minHeight: 38,
+                          padding: "0 18px",
+                          borderRadius: 9,
+                          border: `1.5px solid ${
+                            activeKotStation === station.id
+                              ? "#f59e0b"
+                              : "var(--border-subtle, #243044)"
+                          }`,
+                          background:
+                            activeKotStation === station.id
+                              ? "rgba(245, 158, 11, 0.18)"
+                              : "var(--bg-secondary, #111b2b)",
+                          color:
+                            activeKotStation === station.id
+                              ? "#fbbf24"
+                              : "var(--text-main, #dbe4f0)",
+                          font: "inherit",
+                          fontWeight: 750,
+                          fontSize: "0.86rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          boxShadow:
+                            activeKotStation === station.id
+                              ? "0 0 12px rgba(245, 158, 11, 0.25)"
+                              : "none",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span>{station.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveView("tables");
+                        navigate("/");
+                      }}
+                      style={{
+                        minHeight: 34,
+                        padding: "0 14px",
+                        borderRadius: 7,
+                        border: "1px solid var(--border-subtle, #243044)",
+                        background: "var(--bg-secondary, #111b2b)",
+                        color: "var(--text-muted, #94a3b8)",
+                        fontSize: "0.8rem",
+                        fontWeight: 650,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ← Back to Floor
+                    </button>
+                  </div>
+                </div>
+
+                {activeKotStation === "bar" ? (
+                  <BarBOTView
+                    tables={tables}
+                    menuItems={menuItems}
+                    staffList={staffList}
+                    barDrinks={barMenuItems}
+                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                    onCompleteTableKot={handleCompleteTableKot}
+                  />
+                ) : (
+                  <KitchenKOTView
+                    tables={tables}
+                    pastOrders={pastOrders}
+                    menuItems={menuItems}
+                    currentTheme={theme}
+                    onChangeTheme={setTheme}
+                    activeStation={activeKotStation}
+                    onStationChange={setActiveKotStation}
+                    onBackToFloor={() => { setActiveView("tables"); navigate("/"); }}
+                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                    onCompleteTableKot={handleCompleteTableKot}
+                    onOpenTableOrder={(tableId) => { setSelectedTableId(tableId); setActiveView("order"); navigate("/"); }}
+                    currentSession={kotSession}
+                    onLogout={handleKotLogout}
+                    restaurantName={restaurantSettings.restaurantName}
+                    restaurantLogo={restaurantSettings.logo}
+                  />
+                )}
+              </>
             </ErrorBoundary>
           ) : (
             <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
