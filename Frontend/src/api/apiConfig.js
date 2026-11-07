@@ -35,7 +35,7 @@ const DEFAULT_HEADERS = {
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const { remoteOnly: _remoteOnly, ...requestOptions } = options;
+  const { remoteOnly = false, ...requestOptions } = options;
   const url = apiUrl(endpoint);
 
   try {
@@ -45,6 +45,7 @@ async function performApiRequest(endpoint, options = {}) {
         : null;
 
     const headers = {
+      ...(remoteOnly && import.meta.env.DEV ? { "X-Remote-Only": "true" } : {}),
       ...DEFAULT_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
@@ -58,14 +59,14 @@ async function performApiRequest(endpoint, options = {}) {
     let res;
     try {
       res = await fetch(url, config);
-      if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504) && url !== endpoint) {
+      if (!remoteOnly && !res.ok && (res.status === 502 || res.status === 503 || res.status === 504) && url !== endpoint) {
         try {
           const fallbackRes = await fetch(endpoint, config);
           if (fallbackRes.ok) res = fallbackRes;
         } catch {}
       }
     } catch (fetchErr) {
-      if (url !== endpoint) {
+      if (!remoteOnly && url !== endpoint) {
         try {
           res = await fetch(endpoint, config);
         } catch {

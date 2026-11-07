@@ -66,6 +66,9 @@ public class MenuItem
     [Column("is_bar_item")]
     public bool IsBarItem { get; set; } = false;
 
+    [Column("recipe_json", TypeName = "longtext")]
+    public string? RecipeJson { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

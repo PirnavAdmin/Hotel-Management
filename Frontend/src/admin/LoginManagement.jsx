@@ -54,6 +54,7 @@ export function LoginManagement({ currentAdminSession }) {
     try {
       localStorage.setItem('avsr_auth_users_v1', JSON.stringify(nextUsers));
     } catch {}
+    window.dispatchEvent(new Event('avsr-auth-users-updated'));
   };
 
   useEffect(() => { reload(); }, []);
@@ -107,13 +108,18 @@ export function LoginManagement({ currentAdminSession }) {
       };
       // Update UI immediately (optimistic update)
       const nextUsers = users.map((user) => user.id === editingUser.id
-        ? { ...user, name: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
+        ? { ...user, name: displayName, fullName: displayName, role: formRole, mobile: formMobile.trim(), email: updatedUser.email }
         : user);
       setUsers(nextUsers);
       saveUsersCache(nextUsers);
+      setIsSubmitting(true);
+      const result = await updateUserDetails(editingUser.id, updatedUser);
+      setIsSubmitting(false);
+      if (!result.success) {
+        setFormError(`Saved in this browser, but the server update failed: ${result.error || 'Unknown error'}`);
+        return;
+      }
       setFormSuccess(`Login "${editingUser.username}" updated successfully.`);
-      // Fire API in background
-      updateUserDetails(editingUser.id, updatedUser).catch(() => {});
       setTimeout(closeForm, 1200);
       return;
     }

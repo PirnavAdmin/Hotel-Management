@@ -57,13 +57,16 @@ public class InvoicesController : ControllerBase
                 inv.Payments = paymentsList;
                 inv.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
 
-                if (totalPaid >= inv.TotalAmount && inv.TotalAmount > 0)
+                if (!string.Equals(inv.Status, "VOID", StringComparison.OrdinalIgnoreCase))
                 {
-                    inv.Status = "PAID";
-                }
-                else if (totalPaid > 0)
-                {
-                    inv.Status = "PARTIAL";
+                    if (totalPaid >= inv.TotalAmount && inv.TotalAmount > 0)
+                    {
+                        inv.Status = "PAID";
+                    }
+                    else if (totalPaid > 0)
+                    {
+                        inv.Status = "PARTIAL";
+                    }
                 }
             }
 
@@ -127,7 +130,7 @@ public class InvoicesController : ControllerBase
 
             var invoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
             var taxAmount = request.TaxAmount >= 0 ? request.TaxAmount : (taxableAmount * 0.05m);
-            var totalAmount = Math.Max(0, subtotal + taxAmount - request.DiscountAmount);
+            var totalAmount = Math.Max(0, taxableAmount + taxAmount);
 
             var invoice = new Invoice
             {
@@ -184,6 +187,10 @@ public class InvoicesController : ControllerBase
             if (invoice == null)
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
+            }
+            if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { success = false, message = "Cannot record payment for a void invoice." });
             }
 
             var mode = string.IsNullOrWhiteSpace(request.PaymentMode) ? "CASH" : request.PaymentMode.Trim().ToUpper();
@@ -274,13 +281,16 @@ public class InvoicesController : ControllerBase
             invoice.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
 
             // Preserve and calculate invoice status
-            if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
+            if (!string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
             {
-                invoice.Status = "PAID";
-            }
-            else if (totalPaid > 0)
-            {
-                invoice.Status = "PARTIAL";
+                if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
+                {
+                    invoice.Status = "PAID";
+                }
+                else if (totalPaid > 0)
+                {
+                    invoice.Status = "PARTIAL";
+                }
             }
 
             // Sequentially populate order metadata (table, waiter, items)
@@ -341,7 +351,6 @@ public class InvoicesController : ControllerBase
         {
             return NotFound(new { success = false, message = $"Bill {id} not found." });
         }
-
         return Ok(new
         {
             success = true,
@@ -385,6 +394,10 @@ public class InvoicesController : ControllerBase
         if (invoice == null)
         {
             return NotFound(new { success = false, message = $"Bill {id} not found." });
+        }
+        if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { success = false, message = "Cannot settle a void invoice." });
         }
 
         var paidSoFar = invoice.Payments.Sum(p => p.Amount);
@@ -670,13 +683,16 @@ public class InvoicesController : ControllerBase
         invoice.Payments = paymentsList;
         invoice.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
 
-        if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
+        if (!string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
         {
-            invoice.Status = "PAID";
-        }
-        else if (totalPaid > 0)
-        {
-            invoice.Status = "PARTIAL";
+            if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
+            {
+                invoice.Status = "PAID";
+            }
+            else if (totalPaid > 0)
+            {
+                invoice.Status = "PARTIAL";
+            }
         }
 
         await PopulateInvoiceMetadataAsync(invoice);

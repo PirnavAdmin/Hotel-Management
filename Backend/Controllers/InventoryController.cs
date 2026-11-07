@@ -34,6 +34,7 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet]
+    [HttpGet("ingredients")]
     public async Task<IActionResult> GetIngredients([FromQuery] string? category, [FromQuery] string? search)
     {
         try

@@ -547,6 +547,7 @@ public static class DbInitializer
             EnsureColumnExists(conn, "menu_items", "image_url", "VARCHAR(255) NULL");
             EnsureColumnExists(conn, "menu_items", "is_chefs_special", "TINYINT(1) NOT NULL DEFAULT 0");
             EnsureColumnExists(conn, "menu_items", "is_available", "TINYINT(1) NOT NULL DEFAULT 1");
+            EnsureColumnExists(conn, "menu_items", "recipe_json", "LONGTEXT NULL");
             EnsureColumnExists(conn, "menu_items", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "menu_items", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "menu_items", "deleted_at", "DATETIME NULL");
@@ -803,6 +804,7 @@ public static class DbInitializer
                 `image_url` VARCHAR(255) NULL,
                 `is_chefs_special` TINYINT(1) NOT NULL DEFAULT 0,
                 `is_available` TINYINT(1) NOT NULL DEFAULT 1,
+                `recipe_json` LONGTEXT NULL,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `deleted_at` DATETIME NULL,

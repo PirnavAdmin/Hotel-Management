@@ -13,6 +13,11 @@ try {
 
 const FRONTEND_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = path.resolve(FRONTEND_ROOT, "..");
+const roundCurrency = (amount) => {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return 0;
+  return Math.sign(value) * Math.round((Math.abs(value) + Number.EPSILON) * 100) / 100;
+};
 
 const getBusinessDateStr = (dateObj = new Date()) => {
   const d = new Date(dateObj);
@@ -240,6 +245,7 @@ function globalSyncPlugin() {
         const requestUrl = req.url || "/";
         if (requestUrl.startsWith("/__backend_api/")) {
           const apiPath = requestUrl.slice("/__backend_api".length);
+          const remoteOnly = String(req.headers["x-remote-only"] || "").toLowerCase() === "true";
           const live = await isBackendAvailable();
 
           if (live) {
@@ -256,7 +262,8 @@ function globalSyncPlugin() {
                 "upgrade",
                 "te",
                 "proxy-authorization",
-                "proxy-authenticate"
+                "proxy-authenticate",
+                "x-remote-only"
               ]);
               for (const [key, value] of Object.entries(req.headers)) {
                 if (hopByHopHeaders.has(key.toLowerCase())) continue;
@@ -290,6 +297,10 @@ function globalSyncPlugin() {
 
               // Fallback to local server if live backend drops during request
               backendOnline = false;
+              if (remoteOnly) {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "The live backend is unavailable; this request requires the remote service." }));
+              }
               req.url = apiPath;
               return next();
             };
@@ -309,6 +320,10 @@ function globalSyncPlugin() {
           }
 
           // Offline fallback: rewrite URL and seamlessly fall through to local handlers below
+          if (remoteOnly) {
+            res.writeHead(503, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: false, error: "The live backend is unavailable; this request requires the remote service." }));
+          }
           req.url = apiPath;
         }
         // Centralized Backend HTTP Request/Response Logger
@@ -1279,18 +1294,134 @@ function globalSyncPlugin() {
         }
 
         // REST API: /api/v1/inventory (GET)
-        if (req.url.startsWith("/api/v1/inventory") && req.method === "GET") {
+        const inventoryUrl = new URL(req.url || "/", "http://localhost");
+        const inventoryPath = inventoryUrl.pathname.replace(/\/+$/, "") || "/";
+        if (
+          req.method === "GET" &&
+          inventoryPath.startsWith("/api/v1/inventory")
+        ) {
           db = loadDb();
-          const items = db.gourmet_pos_inventory_v1 || [];
-          res.writeHead(200, { "Content-Type": "application/json" });
-          return res.end(
-            JSON.stringify({
-              success: true,
-              count: items.length,
-              data: items,
-              ingredients: items,
-            }),
+          const allItems = db.gourmet_pos_inventory_v1 || [];
+          const itemIdMatch = inventoryPath.match(/^\/api\/v1\/inventory\/([^/]+)$/i);
+          if (inventoryPath === "/api/v1/inventory/transactions") {
+            const limit = Math.min(200, Math.max(1, Number(inventoryUrl.searchParams.get("limit")) || 50));
+            const transactions = (db.gourmet_pos_inventory_transactions_v1 || [])
+              .slice()
+              .sort((a, b) => String(b.txnDate || "").localeCompare(String(a.txnDate || "")))
+              .slice(0, limit);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: transactions.length, data: transactions }));
+          }
+          if (inventoryPath === "/api/v1/inventory/low-stock") {
+            const items = allItems
+              .filter((item) =>
+                Number(item.stock ?? item.currentStock ?? item.CurrentStock ?? 0) <=
+                Number(item.minThreshold ?? item.minimumThreshold ?? item.MinimumThreshold ?? 0),
+              )
+              .sort((a, b) =>
+                Number(a.stock ?? a.currentStock ?? a.CurrentStock ?? 0) -
+                Number(b.stock ?? b.currentStock ?? b.CurrentStock ?? 0),
+              );
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: items.length, data: items }));
+          }
+          if (inventoryPath === "/api/v1/inventory/categories") {
+            const categories = [...new Set(
+              allItems.map((item) => String(item.category || "").trim()).filter(Boolean),
+            )].sort((a, b) => a.localeCompare(b));
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: categories.length, data: categories }));
+          }
+          if (itemIdMatch && !["ingredients", "transactions", "purchases"].includes(itemIdMatch[1].toLowerCase())) {
+            const id = decodeURIComponent(itemIdMatch[1]);
+            const item = allItems.find((row) => String(row.id ?? row.ingredientId ?? row.IngredientId) === id);
+            res.writeHead(item ? 200 : 404, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify(item
+              ? { success: true, data: item }
+              : { success: false, error: "Inventory item not found." }));
+          }
+          if (inventoryPath !== "/api/v1/inventory" &&
+              inventoryPath !== "/api/v1/inventory/ingredients") {
+            return next();
+          }
+
+          const category = String(inventoryUrl.searchParams.get("category") || "").trim().toLowerCase();
+          const search = String(inventoryUrl.searchParams.get("search") || "").trim().toLowerCase();
+          const items = allItems.filter((item) =>
+            (!category || category === "all" || String(item.category || "").trim().toLowerCase() === category) &&
+            (!search || [item.name, item.supplier, item.ingredientCode]
+              .some((value) => String(value || "").toLowerCase().includes(search))),
           );
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({
+            success: true,
+            count: items.length,
+            data: items,
+            ingredients: items,
+          }));
+        }
+
+        if (new URL(req.url || "/", "http://localhost").pathname === "/api/v1/inventory/adjust" &&
+            req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const ingredientId = Number(payload.ingredientId ?? payload.id);
+              const quantityChange = Number(payload.quantityChange ?? payload.delta);
+              const reason = String(payload.reason || "Stock adjustment").trim();
+              if (!Number.isInteger(ingredientId) || ingredientId <= 0 ||
+                  !Number.isFinite(quantityChange) || quantityChange === 0) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Valid Ingredient ID and non-zero Quantity change are required." }));
+              }
+              if (reason.length > 255) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Stock adjustment reason cannot exceed 255 characters." }));
+              }
+
+              db = loadDb();
+              const items = db.gourmet_pos_inventory_v1 || [];
+              const item = items.find((row) =>
+                Number(row.id ?? row.ingredientId ?? row.IngredientId) === ingredientId,
+              );
+              if (!item) {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: `Ingredient ${ingredientId} was not found.` }));
+              }
+              const currentStock = Number(item.stock ?? item.currentStock ?? 0);
+              if (quantityChange < -currentStock) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: `Cannot consume more than the ${currentStock} ${item.unit || ""} currently in stock.` }));
+              }
+
+              const balanceAfter = currentStock + quantityChange;
+              item.stock = balanceAfter;
+              item.currentStock = balanceAfter;
+              const transactions = db.gourmet_pos_inventory_transactions_v1 || [];
+              const transaction = {
+                txnId: `txn-${Date.now()}`,
+                ingredientId,
+                ingredientName: item.name || "",
+                txnType: quantityChange > 0 ? "IN" : "OUT",
+                quantity: Math.abs(quantityChange),
+                unitCost: Number(item.unitCost ?? item.mrp ?? 0),
+                balanceAfter,
+                remarks: reason,
+                txnDate: new Date().toISOString(),
+              };
+              db.gourmet_pos_inventory_transactions_v1 = [transaction, ...transactions];
+              saveDb(db);
+              broadcast({ gourmet_pos_inventory_v1: items });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Stock adjusted successfully.", data: item }));
+            } catch (error) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: error.message }));
+            }
+          });
+          return;
         }
 
                 // REST API: /api/v1/inventory (POST)
@@ -1415,7 +1546,7 @@ function globalSyncPlugin() {
             (o) => o && String(o.status || o.Status || "").toLowerCase() === "settled"
           );
           const customInvoices = (db.invoices || db.gourmet_pos_invoices || []).filter(
-            (i) => i && String(i.status || i.Status || "").toLowerCase() === "settled"
+            (i) => i && typeof i === "object"
           );
 
           const mappedFromOrders = pastOrders.map((ord, idx) => {
@@ -1496,6 +1627,14 @@ function globalSyncPlugin() {
         if (invoiceByOrderMatch && req.method === "GET") {
           const targetOrderId = decodeURIComponent(invoiceByOrderMatch[1]);
           db = loadDb();
+          const customInvoices = db.invoices || db.gourmet_pos_invoices || [];
+          const matchedInvoice = customInvoices.find((invoice) =>
+            String(invoice.orderId ?? invoice.OrderId ?? "") === targetOrderId,
+          );
+          if (matchedInvoice) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: matchedInvoice, invoice: matchedInvoice }));
+          }
           const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
           const matchedOrder = pastOrders.find((o) => String(o.id ?? o.orderId) === targetOrderId);
           if (matchedOrder) {
@@ -1527,14 +1666,35 @@ function globalSyncPlugin() {
           req.on("end", () => {
             try {
               const payload = JSON.parse(body || "{}");
+              const orderId = Number(payload.orderId ?? payload.OrderId);
+              const subtotal = Number(payload.subtotal ?? payload.Subtotal);
+              if (!Number.isInteger(orderId) || orderId <= 0 || !Number.isFinite(subtotal) || subtotal <= 0) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Valid Order ID and positive subtotal are required." }));
+              }
               db = loadDb();
               const existing = db.invoices || db.gourmet_pos_invoices || [];
+              const discountAmount = Number(payload.discountAmount ?? payload.DiscountAmount) || 0;
+              const taxableAmount = Math.max(0, Number(payload.taxableAmount ?? payload.TaxableAmount) || subtotal - discountAmount);
+              const taxAmount = Number(payload.taxAmount ?? payload.TaxAmount);
+              const normalizedTaxAmount = Number.isFinite(taxAmount) && taxAmount >= 0
+                ? taxAmount
+                : taxableAmount * 0.05;
               const newInvoice = {
                 ...payload,
                 id: payload.id || `inv-${Date.now()}`,
+                orderId,
                 invoiceNo: payload.invoiceNo || payload.invoiceNumber || `INV-${Date.now()}`,
                 createdAt: payload.createdAt || new Date().toISOString(),
-                status: payload.status || "PAID",
+                subtotal,
+                taxableAmount,
+                discountAmount,
+                taxAmount: normalizedTaxAmount,
+                totalAmount: Math.max(0, subtotal + normalizedTaxAmount - discountAmount),
+                paidAmount: 0,
+                amountPaid: 0,
+                payments: [],
+                status: "UNPAID",
               };
               const updated = [newInvoice, ...existing];
               db.gourmet_pos_invoices = updated;
@@ -1546,6 +1706,74 @@ function globalSyncPlugin() {
             } catch (err) {
               res.writeHead(400, { "Content-Type": "application/json" });
               return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        if (invoicePaymentsMatch && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const amount = Number(payload.amount ?? payload.Amount);
+              if (!Number.isFinite(amount) || amount <= 0) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Payment amount must be greater than zero." }));
+              }
+
+              const invoiceId = decodeURIComponent(invoicePaymentsMatch[1]);
+              db = loadDb();
+              const invoices = db.invoices || db.gourmet_pos_invoices || [];
+              const index = invoices.findIndex((invoice) =>
+                String(invoice.id ?? invoice.invoiceId ?? invoice.invoiceNo ?? invoice.invoiceNumber) === invoiceId,
+              );
+              if (index < 0) {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: `Invoice ${invoiceId} not found.` }));
+              }
+
+              const invoice = invoices[index];
+              if (String(invoice.status || invoice.Status || "").toLowerCase() === "void") {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Cannot record payment for a void invoice." }));
+              }
+              const now = new Date().toISOString();
+              const paymentMode = String(payload.paymentMode ?? payload.PaymentMode ?? "CASH").trim().toUpperCase();
+              const payments = Array.isArray(invoice.payments ?? invoice.Payments)
+                ? [...(invoice.payments ?? invoice.Payments)]
+                : [];
+              payments.push({
+                amount,
+                amountPaid: amount,
+                paymentMode,
+                paymentMethod: paymentMode.toLowerCase(),
+                transactionReference: payload.transactionReference ?? payload.TransactionReference ?? null,
+                paidAt: now,
+              });
+              const paidAmount = payments.reduce((total, payment) =>
+                total + (Number(payment.amount ?? payment.Amount) || 0), 0);
+              const totalAmount = Number(invoice.totalAmount ?? invoice.TotalAmount ?? invoice.grandTotal ?? 0);
+              const updatedInvoice = {
+                ...invoice,
+                payments,
+                paidAmount,
+                amountPaid: paidAmount,
+                paymentMethod: paymentMode,
+                status: paidAmount >= totalAmount && totalAmount > 0 ? "PAID" : "PARTIAL",
+                updatedAt: now,
+              };
+              invoices[index] = updatedInvoice;
+              db.invoices = invoices;
+              db.gourmet_pos_invoices = invoices;
+              saveDb(db);
+              broadcast({ gourmet_pos_invoices: invoices });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Payment recorded successfully.", data: updatedInvoice }));
+            } catch (error) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: error.message }));
             }
           });
           return;
@@ -1578,12 +1806,21 @@ function globalSyncPlugin() {
                 (s, it) => s + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
                 0
               );
-              const subtotal = Number(payload.subtotal) > 0 ? Number(payload.subtotal) : itemsSubtotal;
-              const discountPercent = Number(payload.discountPercent || activeOrder?.discountPercent || 0);
-              const discountAmount = Math.round((subtotal * discountPercent) / 100);
-              const taxableAmount = Math.max(0, subtotal - discountAmount);
-              const taxAmount = Math.round(taxableAmount * 0.05);
-              const grandTotal = taxableAmount + taxAmount;
+              const subtotal = roundCurrency(Number(payload.subtotal) > 0 ? Number(payload.subtotal) : itemsSubtotal);
+              const rawDiscountPercent = Number(payload.discountPercent ?? activeOrder?.discountPercent ?? 0);
+              const discountPercent = Number.isFinite(rawDiscountPercent)
+                ? Math.max(0, Math.min(100, rawDiscountPercent))
+                : 0;
+              const discountAmount = roundCurrency((subtotal * discountPercent) / 100);
+              const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
+              const taxAmount = roundCurrency(taxableAmount * 0.05);
+              const serviceChargeEnabled = payload.serviceChargeEnabled !== false;
+              const serviceChargePercent = serviceChargeEnabled ? 5 : 0;
+              const serviceChargeAmount = roundCurrency(taxableAmount * serviceChargePercent / 100);
+              const tipAmount = roundCurrency(Math.max(0, Number(payload.tipAmount) || 0));
+              const grandTotal = roundCurrency(
+                taxableAmount + taxAmount + serviceChargeAmount + tipAmount,
+              );
 
               const now = new Date();
               const businessDate = getBusinessDateStr(now);
@@ -1606,6 +1843,10 @@ function globalSyncPlugin() {
                 discountAmount,
                 taxableAmount,
                 taxAmount,
+                serviceChargeEnabled,
+                serviceChargePercent,
+                serviceChargeAmount,
+                tipAmount,
                 grandTotal,
                 total: grandTotal,
                 totalAmount: grandTotal,

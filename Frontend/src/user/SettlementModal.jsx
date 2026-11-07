@@ -15,7 +15,7 @@ Zap,
 } from 'lucide-react';
 import { sounds } from '../utils/audio';
 import { logFormSubmission, logUserAction } from '../utils/logger';
-import { formatCurrency } from '../utils/formatCurrency';
+import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
 import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
 
 export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment }) {
@@ -156,13 +156,15 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
     item.name && item.quantity > 0 && Number.isFinite(item.price) && item.price >= 0,
   );
   const hasInvalidItems = safeItems.length === 0 || validItems.length !== safeItems.length;
-  const subtotal = validItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = (subtotal * (table?.discountPercent || 0)) / 100;
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  const subtotal = roundCurrency(validItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
+  const discountAmount = roundCurrency((subtotal * (table?.discountPercent || 0)) / 100);
+  const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
   const taxRate = 0.05;
-  const taxAmount = taxableAmount * taxRate;
-  const serviceChargeAmount = table?.serviceCharge ? (taxableAmount * (table.serviceCharge / 100)) : 0;
-  const grandTotal = Math.round(taxableAmount + taxAmount + serviceChargeAmount);
+  const taxAmount = roundCurrency(taxableAmount * taxRate);
+  const serviceChargeAmount = table?.serviceCharge
+    ? roundCurrency(taxableAmount * (table.serviceCharge / 100))
+    : 0;
+  const grandTotal = roundCurrency(taxableAmount + taxAmount + serviceChargeAmount);
 
   const effectiveCash = (parseFloat(cashTendered) > 0) ? parseFloat(cashTendered) : grandTotal;
   const changeDue = Math.max(0, (parseFloat(effectiveCash) || 0) - grandTotal);

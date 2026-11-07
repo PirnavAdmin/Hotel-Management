@@ -3,6 +3,34 @@ import { User, LogOut, ChevronDown, ShieldCheck, Mail, Phone, CheckCircle2, Arro
 import { apiGetUsers } from '../api/userApi';
 import './ProfileDropdown.css';
 
+const readCachedManagedUsers = () => {
+  try {
+    const managedUsers = JSON.parse(localStorage.getItem('avsr_auth_users_v1') || '[]');
+    return Array.isArray(managedUsers) ? managedUsers : [];
+  } catch {
+    return [];
+  }
+};
+
+const getCachedRegisteredName = (session, managedUsers) => {
+  const sessionId = String(session?.userId || session?.id || '');
+  const sessionUsername = String(session?.username || '').trim().toLowerCase();
+  const sessionEmail = String(session?.email || session?.loginEmail || '').trim().toLowerCase();
+  const registeredUser = managedUsers.find((user) => {
+    const userId = String(user?.id || user?.Id || user?.userId || user?.UserId || '');
+    const username = String(user?.username || user?.Username || '').trim().toLowerCase();
+    const email = String(user?.email || user?.Email || '').trim().toLowerCase();
+    return (sessionId && userId === sessionId) ||
+      (sessionUsername && username === sessionUsername) ||
+      (sessionEmail && email === sessionEmail);
+  });
+
+  return String(
+    registeredUser?.fullName || registeredUser?.FullName ||
+    registeredUser?.name || registeredUser?.Name || ''
+  ).trim();
+};
+
 export function ProfileDropdown({ 
   currentSession = null, 
   onLogout = null,
@@ -14,6 +42,19 @@ export function ProfileDropdown({
   const buttonRef = useRef(null);
   const [coords, setCoords] = useState(null);
   const [resolvedRegisteredEmail, setResolvedRegisteredEmail] = useState('');
+  const [cachedManagedUsers, setCachedManagedUsers] = useState(readCachedManagedUsers);
+  const [resolvedRegisteredName, setResolvedRegisteredName] = useState('');
+  const cachedRegisteredName = getCachedRegisteredName(currentSession, cachedManagedUsers);
+
+  useEffect(() => {
+    const syncCachedUsers = () => setCachedManagedUsers(readCachedManagedUsers());
+    window.addEventListener('avsr-auth-users-updated', syncCachedUsers);
+    window.addEventListener('storage', syncCachedUsers);
+    return () => {
+      window.removeEventListener('avsr-auth-users-updated', syncCachedUsers);
+      window.removeEventListener('storage', syncCachedUsers);
+    };
+  }, []);
 
   // Close when clicking outside
   useEffect(() => {
@@ -62,8 +103,8 @@ export function ProfileDropdown({
     setIsOpen(prev => !prev);
   };
 
-  // Extract user details or fallbacks
-  const displayName = currentSession?.name || currentSession?.username || 'User';
+  const displayName = cachedRegisteredName || resolvedRegisteredName ||
+    currentSession?.name || currentSession?.username || 'User';
   let cachedRegisteredEmail = '';
   try {
     const managedUsers = JSON.parse(localStorage.getItem('avsr_auth_users_v1') || '[]');
@@ -98,6 +139,7 @@ export function ProfileDropdown({
   useEffect(() => {
     let active = true;
     setResolvedRegisteredEmail('');
+    setResolvedRegisteredName('');
     const resolveRegisteredEmail = async () => {
       try {
         const result = await apiGetUsers();
@@ -131,6 +173,11 @@ export function ProfileDropdown({
           registeredUser?.email || registeredUser?.Email ||
           registeredUser?.emailAddress || registeredUser?.EmailAddress || ''
         ).trim();
+        const name = String(
+          registeredUser?.fullName || registeredUser?.FullName ||
+          registeredUser?.name || registeredUser?.Name || ''
+        ).trim();
+        if (name) setResolvedRegisteredName(name);
         if (email.includes('@')) setResolvedRegisteredEmail(email);
       } catch {}
     };

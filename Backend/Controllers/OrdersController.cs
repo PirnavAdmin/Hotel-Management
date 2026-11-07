@@ -1556,32 +1556,47 @@ public class OrdersController : ControllerBase
     private static void RecalculateTotals(Order order)
     {
         order.Subtotal =
-            order.Items.Sum(i =>
-                i.Price * i.Quantity);
+            Math.Round(
+                order.Items.Sum(i =>
+                    i.Price * i.Quantity),
+                2,
+                MidpointRounding.AwayFromZero);
 
         order.DiscountAmount =
-            order.Subtotal *
-            (order.DiscountPercent / 100m);
+            Math.Round(
+                order.Subtotal *
+                (order.DiscountPercent / 100m),
+                2,
+                MidpointRounding.AwayFromZero);
 
         var netSubtotal =
-            order.Subtotal -
-            order.DiscountAmount;
+            Math.Max(
+                0,
+                order.Subtotal -
+                order.DiscountAmount);
 
         order.TaxAmount =
-            netSubtotal *
-            (order.TaxPercent / 100m);
+            Math.Round(
+                netSubtotal *
+                (order.TaxPercent / 100m),
+                2,
+                MidpointRounding.AwayFromZero);
 
         order.ServiceChargeAmount =
-            netSubtotal *
-            (order.ServiceChargePercent / 100m);
+            Math.Round(
+                netSubtotal *
+                (order.ServiceChargePercent / 100m),
+                2,
+                MidpointRounding.AwayFromZero);
 
         order.GrandTotal =
             Math.Round(
                 netSubtotal +
                 order.TaxAmount +
                 order.ServiceChargeAmount +
-                order.TipAmount,
-                2);
+                Math.Round(order.TipAmount, 2, MidpointRounding.AwayFromZero),
+                2,
+                MidpointRounding.AwayFromZero);
     }
 
 

@@ -1718,7 +1718,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
-import { formatCurrency } from "../utils/formatCurrency";
+import { formatCurrency, roundCurrency } from "../utils/formatCurrency";
 import {
   parseTimeToSeconds,
   formatElapsedTimer,
@@ -1900,21 +1900,21 @@ export function TableDetailView({
   const allCookingReady = safeItems.length > 0 && safeItems.every((i) => isItemCookedReady(i));
   const canSettleAndCheckout = safeItems.length > 0 && allItemsSentToKot && allCookingReady;
 
-  const subtotal = safeItems.reduce(
+  const subtotal = roundCurrency(safeItems.reduce(
     (sum, item) =>
       sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
     0,
-  );
+  ));
   const currentDiscountPercent = Number(activeTable?.discountPercent ?? table?.discountPercent ?? 0);
   const currentServiceCharge = Number(activeTable?.serviceCharge ?? table?.serviceCharge ?? 0);
-  const discountAmount = (subtotal * currentDiscountPercent) / 100;
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  const discountAmount = roundCurrency((subtotal * currentDiscountPercent) / 100);
+  const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
   const taxRate = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
-  const taxAmount = taxableAmount * taxRate;
+  const taxAmount = roundCurrency(taxableAmount * taxRate);
   const serviceChargeAmount = currentServiceCharge
-    ? taxableAmount * (currentServiceCharge / 100)
+    ? roundCurrency(taxableAmount * (currentServiceCharge / 100))
     : 0;
-  const grandTotal = Math.round(
+  const grandTotal = roundCurrency(
     taxableAmount + taxAmount + serviceChargeAmount,
   );
 

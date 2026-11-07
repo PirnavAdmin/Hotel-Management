@@ -195,10 +195,11 @@ export async function updateUserDetails(userId, userData) {
       return u;
     });
     localStorage.setItem(STORAGE_KEY_MANAGED_USERS, JSON.stringify(nextSaved));
+    window.dispatchEvent(new Event('avsr-auth-users-updated'));
   } catch {}
 
   return {
-    success: (res.success && !rejected) || true,
+    success: res.success && !rejected,
     error: res.error || (rejected ? res.data?.error || res.data?.message : null),
     data: res.data,
   };
