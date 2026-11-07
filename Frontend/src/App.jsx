@@ -1808,13 +1808,114 @@ export function App() {
     };
   }, []);
 
+  // ── Table Concurrency Locking System ──────────────────────────────
+  // Prevents multiple waiters from concurrently modifying the same table order.
+  const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
+
+  const [tableLocks, setTableLocks] = useState(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_TABLE_LOCKS);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEY_TABLE_LOCKS && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && typeof parsed === "object") setTableLocks(parsed);
+        } catch {}
+      }
+    };
+    const handleLockEvent = (e) => {
+      if (e.detail && typeof e.detail === "object") {
+        setTableLocks(e.detail);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("avsr-table-locks-updated", handleLockEvent);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("avsr-table-locks-updated", handleLockEvent);
+    };
+  }, []);
+
+  const saveLocks = (newLocks) => {
+    setTableLocks(newLocks);
+    try {
+      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(newLocks));
+      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: newLocks }));
+      broadcastSync("SYNC_TABLE_LOCKS", newLocks);
+    } catch {}
+  };
+
+  const acquireTableLock = (tableId, session) => {
+    const tableKey = String(tableId);
+    const existing = tableLocks[tableKey];
+    const myId = String(session?.id || session?.userId || session?.username || "pos_user");
+    const myName = String(session?.name || session?.fullName || session?.username || "Waiter");
+    const isStaffAdmin = String(session?.role || "").toLowerCase() === "admin";
+
+    // Timeout: 5 minutes of inactivity releases lock
+    const LOCK_TIMEOUT_MS = 5 * 60 * 1000;
+    if (existing && String(existing.userId) !== myId && (Date.now() - (existing.timestamp || 0)) < LOCK_TIMEOUT_MS) {
+      if (!isStaffAdmin) {
+        return {
+          success: false,
+          lockedBy: existing,
+        };
+      }
+    }
+
+    const updated = {
+      ...tableLocks,
+      [tableKey]: {
+        tableId: tableKey,
+        userId: myId,
+        username: session?.username || myName,
+        serverName: myName,
+        timestamp: Date.now(),
+      },
+    };
+    saveLocks(updated);
+    return { success: true };
+  };
+
+  const releaseTableLock = (tableId) => {
+    if (!tableId) return;
+    const tableKey = String(tableId);
+    if (!tableLocks[tableKey]) return;
+    const updated = { ...tableLocks };
+    delete updated[tableKey];
+    saveLocks(updated);
+  };
+
   const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
 
-  // Table selection handler
+  // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = (id) => {
+    const lockResult = acquireTableLock(id, posSession);
+    const targetTable = tables.find((t) => String(t.id) === String(id));
+    const tblName = targetTable?.name || `Table ${id}`;
+
+    if (!lockResult.success) {
+      showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
+      return;
+    }
+
     setSelectedTableId(id);
     setActiveView("order");
     sounds.playAddItem();
+  };
+
+  const handleBackToTables = () => {
+    if (selectedTableId) {
+      releaseTableLock(selectedTableId);
+    }
+    setActiveView("tables");
   };
 
   // Add Item to Table Order
@@ -3661,6 +3762,8 @@ export function App() {
                   loadError={sharedRecordLoad.tableError}
                   onSelectTable={handleSelectTable}
                   onUpdateTable={handleUpdateTable}
+                  tableLocks={tableLocks}
+                  currentSession={posSession}
                 />
               )}
               {activeView === "takeaway" && (
@@ -3712,7 +3815,7 @@ export function App() {
                   menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
                   menuLoadError={sharedRecordLoad.menuError}
                   onSelectTable={setSelectedTableId}
-                  onBackToTables={() => setActiveView("tables")}
+                  onBackToTables={handleBackToTables}
                   onAddItemToTable={handleAddItemToTable}
                   onUpdateItemQuantity={handleUpdateItemQuantity}
                   onRemoveItemFromTable={handleRemoveItemFromTable}

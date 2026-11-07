@@ -26,8 +26,21 @@ Smartphone,
   PieChart,
   Layers,
   Percent,
+  Wallet,
+  Scale,
+  BookOpen,
+  FileText,
 } from "lucide-react";
-import { formatCurrency } from "../utils/formatCurrency";
+import { formatCurrency, roundCurrency } from "../utils/formatCurrency";
+import { DailyBalanceRegister } from "./accounting/DailyBalanceRegister";
+import { ProfitLossStatementView } from "./accounting/ProfitLossStatementView";
+import { TrialBalanceView } from "./accounting/TrialBalanceView";
+import { StockSummaryReportView } from "./accounting/StockSummaryReportView";
+import { BalanceSheetView } from "./accounting/BalanceSheetView";
+import { ChartOfAccountsView } from "./accounting/ChartOfAccountsView";
+import { GeneralLedgerView } from "./accounting/GeneralLedgerView";
+import { JournalEntriesView } from "./accounting/JournalEntriesView";
+import { getDailyBalances } from "./accounting/accountingService";
 import { printSurface } from "../utils/printSurface";
 import { apiGetInventory } from "../api/inventoryApi";
 import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
@@ -1695,11 +1708,62 @@ export function AdminReports({
     }
   };
 
+  // Real-time calculations for Opening Balance & Closing Balance Bar
+  const todayOrders = useMemo(() => {
+    return (pastOrders || []).filter((o) => {
+      const isSettled = String(o?.status || o?.Status || "").toLowerCase() === "settled" || o?.isPaid;
+      if (!isSettled) return false;
+      const dStr = o.settledDate || o.date || o.createdAt || "";
+      return dStr.startsWith(todayYMD);
+    });
+  }, [pastOrders, todayYMD]);
+
+  const todayCashInflow = roundCurrency(
+    todayOrders.filter((o) => {
+      const pm = String(o.paymentMode || o.paymentMethod || o.PaymentMethod || "").toLowerCase();
+      return pm === "cash";
+    }).reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0), 0)
+  );
+
+  const todayUpiInflow = roundCurrency(
+    todayOrders.filter((o) => {
+      const pm = String(o.paymentMode || o.paymentMethod || o.PaymentMethod || "").toLowerCase();
+      return pm.includes("upi") || pm.includes("card") || pm.includes("online");
+    }).reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0), 0)
+  );
+
+  const todayTotalInflow = roundCurrency(todayCashInflow + todayUpiInflow);
+
+  const todayPurchases = useMemo(() => {
+    return (inventoryPurchases || []).filter((p) => {
+      const d = p.purchaseDate || p.date || p.createdAt || "";
+      return d.startsWith(todayYMD);
+    });
+  }, [inventoryPurchases, todayYMD]);
+
+  const todayTotalOutflow = roundCurrency(
+    todayPurchases.reduce((sum, p) => sum + (Number(p.totalAmount ?? p.amount ?? 0) || 0), 0)
+  );
+
+  const savedDailyBalances = useMemo(() => getDailyBalances(), [activeTab]);
+  const todaySavedRecord = savedDailyBalances.find((b) => b.date === todayYMD);
+  const todayOpeningCash = todaySavedRecord?.openingCash ?? 5000;
+  const todayOpeningBank = todaySavedRecord?.openingBank ?? 25000;
+  const todayOpeningTotal = roundCurrency(todayOpeningCash + todayOpeningBank);
+  const todayClosingTotal = roundCurrency(todayOpeningTotal + todayTotalInflow - todayTotalOutflow);
+
   const navTabs = [
-    { id: 'sales', label: 'Sales & Channels', icon: BarChart3, badge: `${filteredOrders.length} Orders` },
     { id: 'statement', label: 'Profit & Loss Statement', icon: FileSpreadsheet, badge: isProfit ? `+${absMarginPercent}%` : `-${absMarginPercent}%` },
+    { id: 'trial-balance', label: 'Trial Balance', icon: Scale, badge: 'CA Audit' },
+    { id: 'stock-summary', label: 'Stock Summary Report', icon: Boxes, badge: `${inventoryItems.length} Items` },
+    { id: 'balance-sheet', label: 'Balance Sheet', icon: BookOpen, badge: 'Balanced' },
+    { id: 'daily-register', label: 'Opening & Closing Register', icon: Wallet, badge: 'Daily Float' },
+    { id: 'coa', label: 'Chart of Accounts', icon: Layers, badge: 'COA' },
+    { id: 'general-ledger', label: 'General Ledger', icon: Receipt, badge: 'Ledger' },
+    { id: 'journal-entries', label: 'Journal Entries', icon: FileText, badge: 'JV' },
+    { id: 'sales', label: 'Sales & Channels', icon: BarChart3, badge: `${filteredOrders.length} Orders` },
     { id: 'income', label: 'Detailed Income Ledger', icon: Receipt, badge: `${searchedOrders.length} Orders` },
-    { id: 'expenditure', label: 'Expenditure & Stock', icon: Boxes, badge: `${inventoryItems.length} Items` },
+    { id: 'expenditure', label: 'Operating Costs', icon: Boxes, badge: 'Expenses' },
   ];
 
   return (
@@ -2121,6 +2185,121 @@ export function AdminReports({
           </div>
 
           {/* ========================================================================= */}
+          {/* OPENING BALANCE & CLOSING BALANCE REGISTER BANNER (USER REQUESTED)        */}
+          {/* ========================================================================= */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
+              border: '1.5px solid rgba(245, 158, 11, 0.35)',
+              borderRadius: '12px',
+              padding: '0.85rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              marginBottom: '1rem',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  color: '#f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Wallet size={20} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Daily Register &bull; Today's Balance Bar
+                  </span>
+                  <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: todaySavedRecord?.isClosed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: todaySavedRecord?.isClosed ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                    {todaySavedRecord?.isClosed ? 'Shift Closed' : 'Live Shift'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Date: {now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} &bull; Cash Float: {formatCurrency(todayOpeningCash)} &bull; Bank: {formatCurrency(todayOpeningBank)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+              <div>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Opening Balance
+                </span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#f59e0b' }}>
+                  {formatCurrency(todayOpeningTotal)}
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&rarr;</div>
+
+              <div>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Inflows (Sales)
+                </span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#10b981' }}>
+                  +{formatCurrency(todayTotalInflow)}
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&minus;</div>
+
+              <div>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Outflows (Expenses)
+                </span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ef4444' }}>
+                  -{formatCurrency(todayTotalOutflow)}
+                </div>
+              </div>
+
+              <div style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>=</div>
+
+              <div>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Closing Balance
+                </span>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3b82f6' }}>
+                  {formatCurrency(todayClosingTotal)}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('daily-register')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '0.45rem 0.85rem',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  borderRadius: '8px',
+                  color: '#f59e0b',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>Manage Register</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
           {/* MASTER VIEW MODE TABS (THE SPA ENGINE - ZERO SCROLLING)                   */}
           {/* ========================================================================= */}
           <div
@@ -2462,9 +2641,71 @@ export function AdminReports({
           )}
 
           {/* ========================================================================= */}
-          {/* TAB 2: STRUCTURED PROFIT & LOSS STATEMENT                                 */}
+          {/* PRIMARY ACCOUNTING & FINANCIAL SUITE (MATCHING USER SCREENSHOTS)          */}
           {/* ========================================================================= */}
           {activeTab === 'statement' && (
+            <ProfitLossStatementView
+              orders={pastOrders}
+              inventoryPurchases={inventoryPurchases}
+              salaryPayments={salaryPayments}
+              inventoryItems={inventoryItems}
+            />
+          )}
+
+          {activeTab === 'trial-balance' && (
+            <TrialBalanceView
+              orders={pastOrders}
+              inventoryPurchases={inventoryPurchases}
+              salaryPayments={salaryPayments}
+              inventoryItems={inventoryItems}
+            />
+          )}
+
+          {activeTab === 'stock-summary' && (
+            <StockSummaryReportView
+              inventoryItems={inventoryItems}
+              inventoryPurchases={inventoryPurchases}
+            />
+          )}
+
+          {activeTab === 'balance-sheet' && (
+            <BalanceSheetView
+              orders={pastOrders}
+              inventoryPurchases={inventoryPurchases}
+              salaryPayments={salaryPayments}
+              inventoryItems={inventoryItems}
+            />
+          )}
+
+          {activeTab === 'daily-register' && (
+            <DailyBalanceRegister
+              orders={pastOrders}
+              inventoryPurchases={inventoryPurchases}
+              salaryPayments={salaryPayments}
+            />
+          )}
+
+          {activeTab === 'coa' && (
+            <ChartOfAccountsView />
+          )}
+
+          {activeTab === 'general-ledger' && (
+            <GeneralLedgerView
+              orders={pastOrders}
+              inventoryPurchases={inventoryPurchases}
+              salaryPayments={salaryPayments}
+              inventoryItems={inventoryItems}
+            />
+          )}
+
+          {activeTab === 'journal-entries' && (
+            <JournalEntriesView currentSession={restaurantSettings} />
+          )}
+
+          {/* ========================================================================= */}
+          {/* LEGACY OPERATIONAL PROFIT & LOSS STATEMENT                                */}
+          {/* ========================================================================= */}
+          {activeTab === 'legacy_statement' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               
               {/* Corner Row: Date Filter Dropdown + Export CSV / Excel Button (Matching Image 1) */}

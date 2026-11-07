@@ -248,6 +248,7 @@ import {
   Plus,
   Minus,
   Check,
+  Lock,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
@@ -906,7 +907,15 @@ function DynamicDiningTableComponent({ width, height, topCount, bottomCount, isL
 
 import { SkeletonCard } from "../common/Skeletons";
 
-export function TableView({ tables, onSelectTable, onUpdateTable, loading = false, loadError = "" }) {
+export function TableView({
+  tables,
+  onSelectTable,
+  onUpdateTable,
+  loading = false,
+  loadError = "",
+  tableLocks = {},
+  currentSession = null,
+}) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -1994,6 +2003,13 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
                   ? "0 4px 16px rgba(234, 88, 12, 0.22)"
                   : "0 4px 14px rgba(245, 158, 11, 0.16)";
 
+            const currentLock = tableLocks && tableLocks[String(table.id)];
+            const isLockedByOther =
+              currentLock &&
+              currentLock.userId &&
+              String(currentLock.userId) !== String(currentSession?.id || currentSession?.userId || currentSession?.username) &&
+              (Date.now() - (currentLock.timestamp || 0)) < 300000;
+
             return (
               <div
                 key={table.id}
@@ -2001,12 +2017,12 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
                 style={{
                   background: "var(--bg-secondary)",
                   borderRadius: "var(--radius-md)",
-                  border: `1.5px solid ${cardBorderColor}`,
+                  border: isLockedByOther ? "1.5px solid #f59e0b" : `1.5px solid ${cardBorderColor}`,
                   padding: "0.75rem 0.85rem",
                   position: "relative",
                   cursor: "pointer",
                   transition: "all 0.18s ease",
-                  boxShadow: cardShadow,
+                  boxShadow: isLockedByOther ? "0 4px 14px rgba(245, 158, 11, 0.25)" : cardShadow,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
@@ -2025,6 +2041,26 @@ export function TableView({ tables, onSelectTable, onUpdateTable, loading = fals
               >
                 {/* Table Card Header: Big, Bold, Crystal Clear Table Number */}
                 <div>
+                  {isLockedByOther && (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                        color: "#f59e0b",
+                        background: "rgba(245, 158, 11, 0.15)",
+                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                        borderRadius: "4px",
+                        padding: "2px 6px",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <Lock size={10} />
+                      <span>In use by {currentLock.serverName}</span>
+                    </div>
+                  )}
                   <div
                     style={{
                       display: "flex",

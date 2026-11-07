@@ -57,6 +57,10 @@ import { AdminOverview } from "./AdminOverview";
 import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
+import { DailyBalanceRegister } from "./accounting/DailyBalanceRegister";
+import { ChartOfAccountsView } from "./accounting/ChartOfAccountsView";
+import { GeneralLedgerView } from "./accounting/GeneralLedgerView";
+import { JournalEntriesView } from "./accounting/JournalEntriesView";
 import { AdminSettings } from "./AdminSettings";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
@@ -5545,6 +5549,43 @@ export function AdminPortal({
                     salaryPayments={salaryPayments}
                     inventoryPurchases={inventoryPurchases}
                   />
+                )}
+
+                {/* ================= ACCOUNTING: DAILY BALANCES ================= */}
+                {activeTab === "daily-balances" && (
+                  <div style={{ padding: "1.25rem", overflowY: "auto", height: "100%", boxSizing: "border-box" }}>
+                    <DailyBalanceRegister
+                      orders={pastOrders}
+                      inventoryPurchases={inventoryPurchases}
+                      salaryPayments={salaryPayments}
+                    />
+                  </div>
+                )}
+
+                {/* ================= ACCOUNTING: CHART OF ACCOUNTS ================= */}
+                {activeTab === "coa" && (
+                  <div style={{ padding: "1.25rem", overflowY: "auto", height: "100%", boxSizing: "border-box" }}>
+                    <ChartOfAccountsView />
+                  </div>
+                )}
+
+                {/* ================= ACCOUNTING: GENERAL LEDGER ================= */}
+                {activeTab === "general-ledger" && (
+                  <div style={{ padding: "1.25rem", overflowY: "auto", height: "100%", boxSizing: "border-box" }}>
+                    <GeneralLedgerView
+                      orders={pastOrders}
+                      inventoryPurchases={inventoryPurchases}
+                      salaryPayments={salaryPayments}
+                      inventoryItems={inventory}
+                    />
+                  </div>
+                )}
+
+                {/* ================= ACCOUNTING: JOURNAL ENTRIES ================= */}
+                {activeTab === "journal-entries" && (
+                  <div style={{ padding: "1.25rem", overflowY: "auto", height: "100%", boxSizing: "border-box" }}>
+                    <JournalEntriesView currentSession={currentSession} />
+                  </div>
                 )}
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
