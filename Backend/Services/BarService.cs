@@ -2385,12 +2385,12 @@ public class BarService
             var line = string.Join(",", new[]
             {
                 EscapeCsv(item.ItemCode ?? ""),
-                EscapeCsv(item.ItemName),
-                EscapeCsv(item.Category),
+                EscapeCsv(item.ItemName ?? ""),
+                EscapeCsv(item.Category ?? ""),
                 dept,
                 item.Stock.ToString("F2"),
                 item.UsedQuantity.ToString("F2"),
-                EscapeCsv(item.Unit),
+                EscapeCsv(item.Unit ?? ""),
                 item.UnitCost.ToString("F2"),
                 (item.Mrp ?? 0m).ToString("F2"),
                 item.StockValuation.ToString("F2"),
