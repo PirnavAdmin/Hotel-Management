@@ -167,7 +167,7 @@ const mergeCurrentBusinessDayOrders = (tables, orders) => {
       .map((item) => ({
         ...item,
         id: item.id ?? item.Id,
-        orderItemId: item.orderItemId ?? item.id ?? item.Id,
+        orderItemId: item.orderItemId ?? item.OrderItemId ?? item.id ?? item.Id,
         menuItemId: item.menuItemId ?? item.MenuItemId,
         name: item.name ?? item.Name ?? item.dishName ?? item.DishName ?? "Order Item",
         dishName: item.dishName ?? item.DishName ?? item.name ?? item.Name ?? "Order Item",

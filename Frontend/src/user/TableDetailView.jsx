@@ -1741,6 +1741,29 @@ const CATEGORY_ICONS = {
   IceCream: IceCream,
 };
 
+const createOrderLineKeys = (items = []) => {
+  const occurrences = new Map();
+  return items.map((item) => {
+    const persistedLineId = item?.orderItemId ?? item?.order_item_id ?? item?.lineId ?? item?.line_id;
+    if (persistedLineId !== undefined && persistedLineId !== null && String(persistedLineId).trim()) {
+      const base = `order-line-${String(persistedLineId)}`;
+      const occurrence = occurrences.get(base) || 0;
+      occurrences.set(base, occurrence + 1);
+      return occurrence === 0 ? base : `${base}-${occurrence}`;
+    }
+
+    const menuId = item?.menuItemId ?? item?.menu_item_id ?? item?.menu?.id ?? item?.id ?? "unknown";
+    const name = item?.name ?? item?.dishName ?? item?.dish_name ?? "item";
+    const unitPrice = item?.unitPrice ?? item?.price ?? 0;
+    const quantity = item?.quantity ?? item?.qty ?? 1;
+    const notes = item?.notes ?? "";
+    const base = `order-line-${String(menuId)}-${String(name)}-${String(unitPrice)}-${String(quantity)}-${String(notes)}`;
+    const occurrence = occurrences.get(base) || 0;
+    occurrences.set(base, occurrence + 1);
+    return occurrence === 0 ? base : `${base}-${occurrence}`;
+  });
+};
+
 export function TableDetailView({
   table,
   allTables,
@@ -1856,6 +1879,7 @@ export function TableDetailView({
   const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
   const propItems = Array.isArray(table?.items) ? table.items : [];
   const safeItems = activeItems.length > 0 ? activeItems : propItems;
+  const safeItemKeys = createOrderLineKeys(safeItems);
   const targetTableId = activeTable?.id ?? table?.id;
 
   // KOT Flow Helpers: Enforce Send KOT first, then Cooking, then Settle enabled
@@ -1961,11 +1985,14 @@ export function TableDetailView({
       <style>{`
         .pos-menu-grid {
           flex: 1;
+          width: 100%;
+          box-sizing: border-box;
+          min-width: 0;
           min-height: 0;
           overflow-y: auto;
           padding: 0.65rem;
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
           grid-auto-rows: min-content;
           gap: 0.5rem;
           align-content: start;
@@ -1973,6 +2000,7 @@ export function TableDetailView({
         }
 
         .pos-menu-card {
+          box-sizing: border-box;
           min-width: 0;
           background: var(--bg-secondary);
           border-radius: 8px;
@@ -2033,8 +2061,10 @@ export function TableDetailView({
         }
 
         .pos-menu-card-content {
+          box-sizing: border-box;
           padding: 0.4rem 0.45rem 0.45rem;
-          min-height: 90px;
+          min-height: 112px;
+          min-width: 0;
           flex: 1;
           display: flex;
           flex-direction: column;
@@ -2046,9 +2076,12 @@ export function TableDetailView({
           align-items: flex-start;
           justify-content: space-between;
           gap: 0.25rem;
+          min-width: 0;
         }
 
         .pos-menu-card-title {
+          min-width: 0;
+          overflow-wrap: anywhere;
           margin: 0;
           font-size: 0.76rem;
           font-weight: 800;
@@ -2076,6 +2109,7 @@ export function TableDetailView({
           align-items: center;
           justify-content: space-between;
           gap: 0.35rem;
+          min-width: 0;
           margin-top: 0.38rem;
           padding-top: 0.35rem;
           border-top: 1px solid var(--border-subtle);
@@ -2086,9 +2120,11 @@ export function TableDetailView({
           font-weight: 800;
           color: var(--accent-amber-light);
           white-space: nowrap;
+          flex: 0 0 auto;
         }
 
         .pos-menu-add {
+          flex: 0 0 auto;
           display: flex;
           align-items: center;
           gap: 0.15rem;
@@ -2109,6 +2145,7 @@ export function TableDetailView({
         }
 
         .pos-menu-qty {
+          flex: 0 0 auto;
           display: flex;
           align-items: center;
           gap: 0.18rem;
@@ -2163,6 +2200,7 @@ export function TableDetailView({
           top: 5px;
           right: 5px;
           z-index: 2;
+          max-width: calc(100% - 10px);
           background: linear-gradient(135deg, #f59e0b, #ea580c);
           color: #fff;
           padding: 3px;
@@ -2186,12 +2224,6 @@ export function TableDetailView({
           display: flex;
           align-items: center;
           gap: 2px;
-        }
-
-        @media (max-width: 1100px) {
-          .pos-menu-grid {
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-          }
         }
 
         @media (max-width: 760px) {
@@ -2238,6 +2270,10 @@ export function TableDetailView({
             padding: 0.25rem 0.42rem;
             font-size: 0.62rem;
           }
+        }
+
+        @media (max-width: 340px) {
+          .pos-menu-grid { grid-template-columns: minmax(0, 1fr); }
         }
 
         @keyframes cartPulse {
@@ -3724,9 +3760,9 @@ export function TableDetailView({
                   </p>
                 </div>
               ) : (
-                safeItems.map((item) => (
+                safeItems.map((item, index) => (
                   <div
-                    key={item.id}
+                    key={safeItemKeys[index]}
                     style={{
                       background: "var(--bg-tertiary)",
                       borderRadius: "6px",
@@ -4540,9 +4576,9 @@ export function TableDetailView({
                 maxHeight: "40vh",
               }}
             >
-              {safeItems.map((item) => (
+              {safeItems.map((item, index) => (
                 <div
-                  key={item.id}
+                  key={safeItemKeys[index]}
                   style={{
                     background: "var(--bg-primary)",
                     border: "1px solid var(--border-subtle)",

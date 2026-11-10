@@ -1,5 +1,5 @@
-import { API_BASE_URL, API_HTTP_BASE, apiClient } from "./apiConfig";
-import { getMenuItemImage } from "../utils/menuImageHelper";
+import { API_HTTP_BASE, apiClient } from "./apiConfig";
+import { getMenuItemImage, resolveMenuImageUrl } from "../utils/menuImageHelper";
 import {
   isDrinkCategory,
   isAlcoholicCategory,
@@ -65,14 +65,7 @@ export function normalizeMenuItem(item = {}) {
       (value) => typeof value === "string" && value.trim().length > 0,
     )?.trim() || "";
 
-  const resolvedImagePath =
-    typeof rawImagePath === "string" &&
-    rawImagePath.startsWith("/") &&
-    !rawImagePath.startsWith("//") &&
-    !rawImagePath.startsWith("/assets/") &&
-    API_BASE_URL
-      ? `${API_BASE_URL.replace(/\/$/, "")}${rawImagePath}`
-      : rawImagePath;
+  const resolvedImagePath = resolveMenuImageUrl(rawImagePath);
 
   const intermediate = {
     ...item,
@@ -196,10 +189,7 @@ export async function apiUploadMenuImage(file) {
     }
     return {
       success: true,
-      imageUrl:
-        imageUrl.startsWith("/") && API_BASE_URL
-          ? `${API_BASE_URL.replace(/\/$/, "")}${imageUrl}`
-          : imageUrl,
+      imageUrl: resolveMenuImageUrl(imageUrl),
       data,
     };
   } catch (error) {
