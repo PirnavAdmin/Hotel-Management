@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../../common/SearchableSelect";
 import React, { useState, useMemo } from "react";
 import {
   BookOpen,
@@ -255,7 +256,7 @@ export function GeneralLedgerView({
           <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "4px", fontWeight: 600 }}>
             Select Account to Inspect
           </label>
-          <select
+          <SearchableSelect
             value={selectedAccountCode}
             onChange={(e) => setSelectedAccountCode(e.target.value)}
             style={{
@@ -275,7 +276,7 @@ export function GeneralLedgerView({
                 {a.code} &bull; {a.name} ({a.group})
               </option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
 
         <div>

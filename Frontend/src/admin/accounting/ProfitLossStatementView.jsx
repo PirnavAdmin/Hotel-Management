@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../../common/SearchableSelect";
 import React, { useState, useMemo } from "react";
 import {
   FileSpreadsheet,
@@ -431,7 +432,7 @@ export function ProfitLossStatementView({
             <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "3px", fontWeight: 600 }}>
               Fiscal Year
             </label>
-            <select
+            <SearchableSelect
               value={fiscalYear}
               onChange={(e) => setFiscalYear(e.target.value)}
               style={{
@@ -449,14 +450,14 @@ export function ProfitLossStatementView({
               <option value="2026-2027">2026-2027</option>
               <option value="2025-2026">2025-2026</option>
               <option value="2024-2025">2024-2025</option>
-            </select>
+            </SearchableSelect>
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "3px", fontWeight: 600 }}>
               Periodicity
             </label>
-            <select
+            <SearchableSelect
               value={periodicity}
               onChange={(e) => setPeriodicity(e.target.value)}
               style={{
@@ -474,14 +475,14 @@ export function ProfitLossStatementView({
               <option value="Quarterly">Quarterly</option>
               <option value="Monthly">Monthly</option>
               <option value="Annual">Annual</option>
-            </select>
+            </SearchableSelect>
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "3px", fontWeight: 600 }}>
               Report View
             </label>
-            <select
+            <SearchableSelect
               value={reportView}
               onChange={(e) => setReportView(e.target.value)}
               style={{
@@ -498,7 +499,7 @@ export function ProfitLossStatementView({
             >
               <option value="Tree View">Tree View (Hierarchical)</option>
               <option value="Condensed">Condensed View</option>
-            </select>
+            </SearchableSelect>
           </div>
         </div>
 

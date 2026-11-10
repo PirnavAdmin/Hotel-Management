@@ -1,8 +1,26 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { Children, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
+import "./SearchableSelect.css";
 
-export default function SearchableSelect({ options = [], value = "", onChange, placeholder = "Select…", searchPlaceholder = "Search options…", emptyMessage = "No Results Found", allowCustom = false, customLabel = "+ Custom", onCustom }) {
+export default function SearchableSelect({
+  options: suppliedOptions,
+  children,
+  value = "",
+  onChange,
+  placeholder = "Select…",
+  searchPlaceholder = "Search options…",
+  emptyMessage = "No results found",
+  allowCustom = false,
+  customLabel = "+ Custom",
+  onCustom,
+  style,
+  className,
+  title,
+  id,
+  disabled = false,
+  "aria-label": ariaLabel,
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState(null);
@@ -11,6 +29,10 @@ export default function SearchableSelect({ options = [], value = "", onChange, p
   const popoverRef = useRef(null);
   const searchRef = useRef(null);
   const optionRefs = useRef([]);
+  const childrenMode = suppliedOptions == null;
+  const options = useMemo(() => childrenMode
+    ? Children.toArray(children).filter((child) => isValidElement(child) && child.type === "option").map((child) => ({ value: child.props.value ?? child.props.children ?? "", label: child.props.children ?? "", disabled: child.props.disabled }))
+    : suppliedOptions, [children, childrenMode, suppliedOptions]);
   const normalizedOptions = useMemo(() => {
     const seen = new Set();
     return options.map((option) => typeof option === "string" ? { label: option, value: option } : option)
@@ -52,7 +74,7 @@ export default function SearchableSelect({ options = [], value = "", onChange, p
   useEffect(() => { if (open) searchRef.current?.focus(); }, [open]);
   useEffect(() => { if (active >= 0) optionRefs.current[active]?.focus(); }, [active]);
   const move = (delta) => setActive((current) => (current + delta + count) % count);
-  const choose = (option) => { onChange?.(option.value); close(); };
+  const choose = (option) => { onChange?.(childrenMode ? { target: { value: String(option.value) } } : option.value); close(); };
   const chooseCustom = () => { onCustom?.(); close(); };
   const handleListKey = (event, index) => {
     if (event.key === "ArrowDown") { event.preventDefault(); move(1); }
@@ -61,23 +83,25 @@ export default function SearchableSelect({ options = [], value = "", onChange, p
   };
 
   return <div className="searchable-select" ref={rootRef}>
-    <button className="searchable-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)} onKeyDown={(event) => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); setOpen(true); } }}>
+    <button id={id} className={`searchable-select-trigger ${className || ""}`} style={style} type="button" title={title} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)} onKeyDown={(event) => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); setOpen(true); } }}>
       <span className={selected || value ? "" : "searchable-select-placeholder"}>{(selected?.label ?? value) || placeholder}</span><ChevronDown size={15} aria-hidden="true" />
     </button>
-    {open && position && createPortal(<div className="searchable-select-popover" ref={popoverRef} style={position}>
-      <label className="searchable-select-search"><Search size={14} aria-hidden="true" /><input ref={searchRef} type="search" placeholder={searchPlaceholder} value={query} onChange={(event) => { setQuery(event.target.value); setActive(-1); }} onKeyDown={(event) => {
+    {open && position && createPortal(<div className="searchable-select-popover" ref={popoverRef} style={position} role="dialog" aria-label={ariaLabel ? `${ariaLabel} options` : "Select options"}>
+      <label className="searchable-select-search"><Search size={14} aria-hidden="true" /><input ref={searchRef} type="search" placeholder={searchPlaceholder} value={query} aria-label={`Search ${ariaLabel || "options"}`} onChange={(event) => { setQuery(event.target.value); setActive(-1); }} onKeyDown={(event) => {
         if (event.key === "ArrowDown" && count) { event.preventDefault(); setActive(0); }
         if (event.key === "ArrowUp" && count) { event.preventDefault(); setActive(count - 1); }
         if (event.key === "Escape") { event.preventDefault(); close(true); }
         if (event.key === "Enter") { event.preventDefault(); if (active >= 0 && active < filtered.length) choose(filtered[active]); else if (active === filtered.length && allowCustom) chooseCustom(); else if (filtered.length === 1) choose(filtered[0]); }
       }} /></label>
-      <div className="searchable-select-options" role="listbox">
-        {filtered.map((option, index) => <button key={`${option.value}-${index}`} ref={(node) => { optionRefs.current[index] = node; }} type="button" role="option" aria-selected={String(option.value) === String(value)} className="searchable-select-option" onKeyDown={(event) => handleListKey(event, index)} onClick={() => choose(option)}>
+      <div className="searchable-select-options" role="listbox" aria-label={ariaLabel}>
+        {filtered.map((option, index) => <button key={`${option.value}-${index}`} ref={(node) => { optionRefs.current[index] = node; }} type="button" role="option" aria-selected={String(option.value) === String(value)} disabled={option.disabled} className="searchable-select-option" onKeyDown={(event) => handleListKey(event, index)} onClick={() => choose(option)}>
           <span>{option.label}</span>{String(option.value) === String(value) && <Check size={14} aria-hidden="true" />}
         </button>)}
-        {!filtered.length && <div className="searchable-select-empty">{emptyMessage}</div>}
+        {!filtered.length && <div className="searchable-select-empty" role="status">{emptyMessage}</div>}
         {allowCustom && <button ref={(node) => { optionRefs.current[filtered.length] = node; }} type="button" role="option" aria-selected="false" className="searchable-select-option searchable-select-custom" onKeyDown={(event) => handleListKey(event, filtered.length)} onClick={chooseCustom}>{customLabel}</button>}
       </div>
     </div>, document.body)}
   </div>;
 }
+
+export { SearchableSelect };

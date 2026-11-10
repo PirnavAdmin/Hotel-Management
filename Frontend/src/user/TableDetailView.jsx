@@ -2062,13 +2062,14 @@ export function TableDetailView({
 
         .pos-menu-card-content {
           box-sizing: border-box;
-          padding: 0.4rem 0.45rem 0.45rem;
-          min-height: 112px;
+          padding: 0.4rem 0.45rem 0.2rem;
+          min-height: 100px;
           min-width: 0;
           flex: 1;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
+          justify-content: flex-start;
+          gap: 0.2rem;
         }
 
         .pos-menu-card-title-row {
@@ -2108,10 +2109,10 @@ export function TableDetailView({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 0.35rem;
+          gap: 0.25rem;
           min-width: 0;
-          margin-top: 0.38rem;
-          padding-top: 0.35rem;
+          margin-top: 0.18rem;
+          padding-top: 0.2rem;
           border-top: 1px solid var(--border-subtle);
         }
 
@@ -2240,7 +2241,7 @@ export function TableDetailView({
 
           .pos-menu-card-content {
             min-height: 100px;
-            padding: 0.45rem;
+            padding: 0.45rem 0.45rem 0.2rem;
           }
 
           .pos-menu-card-title {

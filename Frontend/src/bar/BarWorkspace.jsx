@@ -908,7 +908,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
             >
               {/* Category Dropdown */}
               <div style={{ position: "relative", minWidth: 0 }}>
-                <select
+                <SearchableSelect
                   aria-label="Filter by category"
                   value={categoryFilter}
                   onChange={(e) => {
@@ -919,7 +919,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                     width: "100%",
                     minWidth: 0,
                     height: "40px",
-                    padding: "0 2.25rem 0 0.75rem",
+                    padding: "0 0.75rem",
                     color: "var(--text-main)",
                     background: "var(--bg-tertiary)",
                     border: "1px solid var(--border-card)",
@@ -937,25 +937,13 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                   {availableCategories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    right: "0.75rem",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-muted)",
-                    pointerEvents: "none",
-                  }}
-                />
+                </SearchableSelect>
+                
               </div>
 
               {/* Status Dropdown */}
               <div style={{ position: "relative", minWidth: 0 }}>
-                <select
+                <SearchableSelect
                   aria-label="Filter by status"
                   value={stockFilter === "expenditure" ? "all" : stockFilter}
                   onChange={(e) => {
@@ -966,7 +954,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                     width: "100%",
                     minWidth: 0,
                     height: "40px",
-                    padding: "0 2.25rem 0 0.75rem",
+                    padding: "0 0.75rem",
                     color: "var(--text-main)",
                     background: "var(--bg-tertiary)",
                     border: "1px solid var(--border-card)",
@@ -984,25 +972,13 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                   <option value="in_stock">In Stock</option>
                   <option value="low_stock">Low Stock</option>
                   <option value="out_of_stock">Out of Stock</option>
-                </select>
-                <ChevronDown
-                  size={16}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    right: "0.75rem",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-muted)",
-                    pointerEvents: "none",
-                  }}
-                />
+                </SearchableSelect>
+                
               </div>
 
               {/* Supplier Dropdown */}
               <div style={{ position: "relative", minWidth: 0 }}>
-                <select
+                <SearchableSelect
                   aria-label="Filter by supplier"
                   value={supplierFilter}
                   onChange={(e) => {
@@ -1013,7 +989,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                     width: "100%",
                     minWidth: 0,
                     height: "40px",
-                    padding: "0 2.25rem 0 0.75rem",
+                    padding: "0 0.75rem",
                     color: "var(--text-main)",
                     background: "var(--bg-tertiary)",
                     border: "1px solid var(--border-card)",
@@ -1031,20 +1007,8 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                   {availableSuppliers.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    right: "0.75rem",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-muted)",
-                    pointerEvents: "none",
-                  }}
-                />
+                </SearchableSelect>
+                
               </div>
             </div>
           </div>
@@ -3310,7 +3274,7 @@ function BarDrinksMenu({
 
         <label className="menu-filter-field">
           <span>Category</span>
-          <select
+          <SearchableSelect
             value={menuFilters.category}
             onChange={(e) => {
               setMenuFilters((prev) => ({ ...prev, category: e.target.value }));
@@ -3323,12 +3287,12 @@ function BarDrinksMenu({
                 {opt.label}
               </option>
             ))}
-          </select>
+          </SearchableSelect>
         </label>
 
         <label className="menu-filter-field">
           <span>Drink Type</span>
-          <select
+          <SearchableSelect
             value={menuFilters.drinkType}
             onChange={(e) => {
               setMenuFilters((prev) => ({ ...prev, drinkType: e.target.value }));
@@ -3338,12 +3302,12 @@ function BarDrinksMenu({
             <option value="">All</option>
             <option value="alcoholic">Alcoholic</option>
             <option value="non-alcoholic">Non-Alcoholic</option>
-          </select>
+          </SearchableSelect>
         </label>
 
         <label className="menu-filter-field">
           <span>Availability</span>
-          <select
+          <SearchableSelect
             value={menuFilters.availability}
             onChange={(e) => {
               setMenuFilters((prev) => ({ ...prev, availability: e.target.value }));
@@ -3353,7 +3317,7 @@ function BarDrinksMenu({
             <option value="">All</option>
             <option value="available">Available</option>
             <option value="unavailable">Unavailable</option>
-          </select>
+          </SearchableSelect>
         </label>
 
         <button
@@ -6455,7 +6419,7 @@ function BarStaffView({
               {/* Col 2: Role Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-role">
                 <span>Role</span>
-                <select
+                <SearchableSelect
                   id="bar-staff-filter-role"
                   value={staffFilters.role}
                   onChange={(e) => updateStaffFilter("role", e.target.value)}
@@ -6483,13 +6447,13 @@ function BarStaffView({
                       {role}
                     </option>
                   ))}
-                </select>
+                </SearchableSelect>
               </label>
 
               {/* Col 4: Shift Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-shift">
                 <span>Shift</span>
-                <select
+                <SearchableSelect
                   id="bar-staff-filter-shift"
                   value={staffFilters.shift}
                   onChange={(e) => updateStaffFilter("shift", e.target.value)}
@@ -6517,13 +6481,13 @@ function BarStaffView({
                       {shift}
                     </option>
                   ))}
-                </select>
+                </SearchableSelect>
               </label>
 
               {/* Col 5: Assigned Tables Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-assigned">
                 <span>Table Assignment</span>
-                <select
+                <SearchableSelect
                   id="bar-staff-filter-assigned"
                   value={staffFilters.assigned}
                   onChange={(e) => updateStaffFilter("assigned", e.target.value)}
@@ -6552,7 +6516,7 @@ function BarStaffView({
                   <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                     No Tables
                   </option>
-                </select>
+                </SearchableSelect>
               </label>
 
               {/* Col 6: Reset / Count */}
@@ -8148,20 +8112,20 @@ export function BarWorkspace({
 
   const listPage = listConfig && <section className="bar-page-card">
     <div className="bar-section-head"><div><h2>{listConfig.title}</h2><p>{listConfig.description}</p></div><button className="bar-button primary" disabled={sharedListKey && sharedListStatus !== "ready"} onClick={() => openForm(listConfig.kind)}><Plus size={16} /> Add {listConfig.kind === "drink" ? "Drink" : listConfig.kind === "table" ? "Table" : "Staff"}</button></div>
-    <div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={`Search ${listConfig.title.toLowerCase()}...`} /></label><label className="bar-select-label"><span>{route === "bar-staff" ? "Role" : route === "bar-tables" ? "Area" : "Category"}</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All {route === "bar-staff" ? "Roles" : route === "bar-tables" ? "Areas" : "Categories"}</option>{filterChoices.slice(1).map((choice) => <option key={choice}>{choice}</option>)}</select></label>
+    <div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={`Search ${listConfig.title.toLowerCase()}...`} /></label><label className="bar-select-label"><span>{route === "bar-staff" ? "Role" : route === "bar-tables" ? "Area" : "Category"}</span><SearchableSelect value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All {route === "bar-staff" ? "Roles" : route === "bar-tables" ? "Areas" : "Categories"}</option>{filterChoices.slice(1).map((choice) => <option key={choice}>{choice}</option>)}</SearchableSelect></label>
       {route === "bar-drinks" && (
         <>
           <label className="bar-select-label">
             <span>Availability</span>
-            <select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}>
+            <SearchableSelect value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}>
               <option value="all">All</option>
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
-            </select>
+            </SearchableSelect>
           </label>
           <label className="bar-select-label">
             <span>Price Range</span>
-            <select
+            <SearchableSelect
               value={pricePreset}
               onChange={(e) => {
                 const val = e.target.value;
@@ -8190,13 +8154,13 @@ export function BarWorkspace({
               <option value="150-300">₹150 – ₹300</option>
               <option value="300-500">₹300 – ₹500</option>
               <option value="above-500">Above ₹500</option>
-              </select>
+              </SearchableSelect>
           </label>
         </>
       )}
-      {route === "bar-tables" && <><label className="bar-select-label"><span>Occupancy</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">Any status</option>{[...new Set(tables.map((table) => table.status))].map((status) => <option key={status}>{status}</option>)}</select></label><label className="bar-select-label"><span>Minimum Capacity</span><select value={capacityFilter} onChange={(event) => { setCapacityFilter(event.target.value); setPage(1); }}><option value="all">Any capacity</option>{[2, 4, 6].map((size) => <option key={size} value={size}>{size}+ guests</option>)}</select></label></>}
-      {route === "bar-staff" && <label className="bar-select-label"><span>Shift</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All shifts</option>{BAR_SHIFTS.map((shift) => <option key={shift}>{shift}</option>)}</select></label>}
-      {route === "bar-staff" && <label className="bar-select-label"><span>Table Assignment</span><select value={assignmentFilter} onChange={(event) => { setAssignmentFilter(event.target.value); setPage(1); }}><option value="all">All assignments</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label>}
+      {route === "bar-tables" && <><label className="bar-select-label"><span>Occupancy</span><SearchableSelect value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">Any status</option>{[...new Set(tables.map((table) => table.status))].map((status) => <option key={status}>{status}</option>)}</SearchableSelect></label><label className="bar-select-label"><span>Minimum Capacity</span><SearchableSelect value={capacityFilter} onChange={(event) => { setCapacityFilter(event.target.value); setPage(1); }}><option value="all">Any capacity</option>{[2, 4, 6].map((size) => <option key={size} value={size}>{size}+ guests</option>)}</SearchableSelect></label></>}
+      {route === "bar-staff" && <label className="bar-select-label"><span>Shift</span><SearchableSelect value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All shifts</option>{BAR_SHIFTS.map((shift) => <option key={shift}>{shift}</option>)}</SearchableSelect></label>}
+      {route === "bar-staff" && <label className="bar-select-label"><span>Table Assignment</span><SearchableSelect value={assignmentFilter} onChange={(event) => { setAssignmentFilter(event.target.value); setPage(1); }}><option value="all">All assignments</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</SearchableSelect></label>}
     </div>
     {sharedListStatus === "loading" ? <SkeletonTable rows={6} columns={listConfig.columns.length} /> : sharedListStatus === "error" ? <div className="bar-error" role="alert">{sharedListError || `Could not load shared hotel ${sharedListKey}. The Bar page is not showing demo records.`}</div> : <>{renderStaticTable(listConfig.columns, visibleRows, (column, row) => renderListCell(column, row, listConfig.kind), `bar-${listConfig.kind}-table`)}
     <footer className="bar-pagination"><span>Showing {listRows.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, listRows.length)} of {listRows.length}</span><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Previous page"><ChevronLeft size={16} /></button><span>Page {page} of {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Next page"><ChevronRight size={16} /></button></div></footer>
@@ -9065,7 +9029,7 @@ export function BarWorkspace({
 
       {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} onRecordInventoryPurchase={onRecordInventoryPurchase} />}
 
-      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError}</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
+      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><SearchableSelect value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</SearchableSelect></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError}</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
       <OrderItemsModal order={tableItems} onClose={() => setTableItems(null)} />
 

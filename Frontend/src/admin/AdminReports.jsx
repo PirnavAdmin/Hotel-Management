@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
@@ -1868,7 +1869,7 @@ export function AdminReports({
                 }}
               >
                 <Calendar size={13} color="#f59e0b" />
-                <select
+                <SearchableSelect
                   value={filterPeriod}
                   onChange={(e) => handleSelectPeriod(e.target.value)}
                   style={{
@@ -1904,7 +1905,7 @@ export function AdminReports({
                     <option value="last_year">Last Year</option>
                   </optgroup>
                   <option value="custom">Custom Range...</option>
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Custom Date Range Picker */}
@@ -4001,7 +4002,7 @@ export function AdminReports({
                   </div>
 
                   {/* Category Dropdown Filter */}
-                  <select
+                  <SearchableSelect
                     value={invCategoryFilter}
                     onChange={(e) => setInvCategoryFilter(e.target.value)}
                     style={{
@@ -4022,7 +4023,7 @@ export function AdminReports({
                         {cat}
                       </option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>

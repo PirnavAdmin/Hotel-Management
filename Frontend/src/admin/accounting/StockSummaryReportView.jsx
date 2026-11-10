@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../../common/SearchableSelect";
 import React, { useState, useMemo } from "react";
 import {
   FileSpreadsheet,
@@ -308,7 +309,7 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
           <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "4px", fontWeight: 600 }}>
             Category
           </label>
-          <select
+          <SearchableSelect
             value={selectedCategory}
             onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
             style={{
@@ -326,14 +327,14 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
             {categories.map((c) => (
               <option key={c} value={c}>{c === "All" ? "All Categories" : c}</option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
 
         <div>
           <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "4px", fontWeight: 600 }}>
             Godown / Location
           </label>
-          <select
+          <SearchableSelect
             value={selectedGodown}
             onChange={(e) => { setSelectedGodown(e.target.value); setCurrentPage(1); }}
             style={{
@@ -351,14 +352,14 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
             {godowns.map((g) => (
               <option key={g} value={g}>{g === "All" ? "All Godowns" : g}</option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
 
         <div>
           <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "4px", fontWeight: 600 }}>
             Stock Status
           </label>
-          <select
+          <SearchableSelect
             value={selectedStatus}
             onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
             style={{
@@ -377,7 +378,7 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
             <option value="In Stock">In Stock</option>
             <option value="Low Stock">Low Stock</option>
             <option value="Out of Stock">Out of Stock</option>
-          </select>
+          </SearchableSelect>
         </div>
 
         <button
