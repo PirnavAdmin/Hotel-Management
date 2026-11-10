@@ -1,4 +1,5 @@
 import { SearchableSelect } from "../common/SearchableSelect";
+import "../common/MenuCatalogLayout.css";
 import React, { useEffect, useId, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList } from "lucide-react";
@@ -221,22 +222,16 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     <section className="takeaway-section" style={{ padding: "1.25rem 2rem", color: "var(--text-main)", minHeight: "calc(100vh - 130px)" }}>
       <style>{`
         .takeaway-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); gap: .75rem; align-items: start; min-width: 0; }
-        .takeaway-menu-grid { flex: 1; width: 100%; box-sizing: border-box; min-width: 0; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); grid-auto-rows: min-content; gap: .5rem; padding: .65rem; align-content: start; background: var(--bg-primary); }
-        .takeaway-menu-card { box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-secondary); box-shadow: var(--shadow-sm); }
-        .takeaway-menu-card img { display: block; width: 100%; height: 70px; flex: 0 0 70px; object-fit: cover; background: var(--bg-tertiary); }
-        .takeaway-menu-card-image { position: relative; height: 70px; min-height: 70px; overflow: hidden; background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); }
-        .takeaway-menu-card-image img { height: 100%; }
+        .takeaway-menu-card { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-secondary); box-shadow: var(--shadow-sm); }
+        .takeaway-menu-card-image { background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); }
         .takeaway-dietary-badge, .takeaway-prep-badge, .takeaway-special-badge { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 3px; padding: 2px 4px; border: 1px solid rgba(var(--surface-rgb),0.1); border-radius: 3px; background: rgba(0,0,0,.78); color: #fff; font-size: .54rem; font-weight: 700; }
         .takeaway-dietary-badge { top: 5px; left: 5px; }
         .takeaway-dietary-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; }
         .takeaway-special-badge { top: 5px; right: 5px; padding: 3px; background: linear-gradient(135deg,#f59e0b,#ea580c); }
         .takeaway-prep-badge { right: 5px; bottom: 5px; padding: 1px 4px; font-size: .52rem; }
-        .takeaway-menu-card-body { box-sizing: border-box; display: flex; flex: 1; min-width: 0; min-height: 100px; flex-direction: column; gap: .2rem; padding: .4rem .45rem .2rem; }
-        .takeaway-menu-card-info { display: flex; min-width: 0; flex-direction: column; gap: .18rem; }
-        .takeaway-menu-card-name { display: -webkit-box; min-width: 0; overflow: hidden; overflow-wrap: anywhere; margin: 0; color: var(--text-main); font-size: .76rem; font-weight: 800; line-height: 1.18; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-        .takeaway-menu-card-actions { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .25rem; margin-top: .18rem; padding-top: .2rem; border-top: 1px solid var(--border-subtle); }
+        .takeaway-menu-card-name { margin: 0; color: var(--text-main); font-size: .76rem; font-weight: 800; line-height: 1.18; }
         .takeaway-menu-card-price { flex: 0 0 auto; white-space: nowrap; font-size: .82rem; }
-        .takeaway-menu-description { display: block; width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; margin: 0; color: var(--text-muted); font-size: .62rem; line-height: 1.28; white-space: nowrap; text-overflow: ellipsis; cursor: help; }
+        .takeaway-menu-description { width: 100%; box-sizing: border-box; color: var(--text-muted); font-size: .62rem; white-space: nowrap; text-overflow: ellipsis; cursor: help; }
         .takeaway-menu-description:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; border-radius: 2px; }
         .takeaway-description-tooltip { position: fixed; z-index: 99999; width: max-content; max-width: min(300px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto; padding: .45rem .6rem; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--bg-secondary); color: var(--text-main); box-shadow: 0 8px 24px rgba(0,0,0,.35); font-size: .76rem; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; pointer-events: none; animation: takeawayTooltipIn 140ms ease-out both; }
         .takeaway-description-tooltip.above { transform: translateY(-100%); }
@@ -267,8 +262,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         .takeaway-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; align-items: start; margin-bottom: .6rem; padding: .75rem; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--bg-tertiary); }
         @media (max-width: 600px) { .takeaway-history-overlay { padding: .5rem; } .takeaway-history-dialog { max-height: 90vh; border-radius: 11px; } .takeaway-history-row { grid-template-columns: minmax(0, 1fr); } .takeaway-filter-controls { grid-template-columns: minmax(0, 1fr); } }
         @media (max-width: 900px) { .takeaway-layout { grid-template-columns: minmax(0, 1fr); } .takeaway-order-panel { position: static; } }
-        @media (max-width: 760px) { .takeaway-menu-grid { padding: .5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; } .takeaway-menu-card-image { height: 82px; min-height: 82px; } .takeaway-menu-card-image img { flex-basis: 82px; } .takeaway-menu-card-body { min-height: 100px; padding: .45rem .45rem .2rem; } .takeaway-menu-card-name { font-size: .72rem; } .takeaway-menu-description { font-size: .59rem; } }
-        @media (max-width: 420px) { .takeaway-menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .takeaway-menu-card-image { height: 76px; min-height: 76px; } .takeaway-menu-card-image img { flex-basis: 76px; } }
+        @media (max-width: 760px) { .takeaway-menu-card-name { font-size: .72rem; } .takeaway-menu-description { font-size: .59rem; } }
         @media (max-width: 600px) { .takeaway-section { padding: 1rem !important; } }
       `}</style>
       <div className="takeaway-page-header">
@@ -279,17 +273,17 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: ".5rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: ".6rem .8rem" }}><ShoppingBag size={18}/><strong>{count} items</strong><span style={{ color: "var(--accent-amber-light)" }}>₹{total.toFixed(2)}</span></div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: ".65rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+      <div className="menu-catalog-controls" style={{ marginBottom: "1rem" }}>
         <label style={{ display: "flex", alignItems: "center", gap: ".6rem", width: "min(100%, 350px)", padding: ".55rem .75rem", border: "1px solid var(--border-subtle)", borderRadius: 9, background: "var(--bg-secondary)" }}><Search size={16}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search menu items" style={{ background: "transparent", border: 0, outline: 0, color: "inherit", width: "100%" }}/></label>
         <SearchableSelect aria-label="Filter menu by category" value={category} onChange={(e) => setCategory(e.target.value)} style={{ minWidth: 180, padding: ".62rem .75rem", border: "1px solid var(--border-subtle)", borderRadius: 9, background: "var(--bg-secondary)", color: "var(--text-main)" }}><option value="all">All Categories</option>{categories.map((name) => <option key={name} value={name}>{name}</option>)}</SearchableSelect>
       </div>
       <div className="takeaway-layout">
-      {menuLoading ? <p>Loading menu…</p> : <div className="takeaway-menu-grid">
+      {menuLoading ? <p>Loading menu…</p> : <div className="takeaway-menu-grid menu-catalog-grid">
         {items.map((item) => {
           const quantity = cart[item.id]?.quantity || 0;
-          return <article key={item.id} className="takeaway-menu-card">
-            <div className="takeaway-menu-card-image"><img src={getMenuItemImage(item)} alt={item.name} onError={(event) => handleDishImageError(event, item)}/><span className="takeaway-dietary-badge"><i className="takeaway-dietary-dot" style={{ background: item.dietaryType?.toUpperCase() === "VEG" || item.isVeg ? "#10b981" : "#ef4444" }} />{item.dietaryType?.toUpperCase() === "VEG" || item.isVeg ? "VEG" : "NON-VEG"}</span>{(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) && <span className="takeaway-special-badge">★ Special</span>}<span className="takeaway-prep-badge">{item.prepTime || `${item.prepTimeMinutes || 15} min`}</span></div>
-            <div className="takeaway-menu-card-body"><div className="takeaway-menu-card-info"><strong className="takeaway-menu-card-name">{item.name}</strong>{item.description && <p className="takeaway-menu-description" tabIndex={0} aria-label={item.description} aria-describedby={descriptionTooltip?.itemId === item.id ? descriptionTooltipId : undefined} onMouseEnter={(event) => showDescriptionTooltip(event, item.description, item.id)} onMouseLeave={() => setDescriptionTooltip(null)} onFocus={(event) => showDescriptionTooltip(event, item.description, item.id)} onBlur={() => setDescriptionTooltip(null)}>{item.description}</p>}</div><div className="takeaway-menu-card-actions"><b className="takeaway-menu-card-price" style={{ color: "var(--accent-amber-light)" }}>₹{Number(item.price || 0).toFixed(2)}</b>{quantity ? <span style={{ display: "inline-flex", alignItems: "center", gap: ".35rem", flex: "0 0 auto" }}><button type="button" className="takeaway-qty-button" aria-label={`Remove one ${item.name}`} onClick={() => changeQty(item, -1)}><Minus size={14}/></button><b aria-live="polite">{quantity}</b><button type="button" className="takeaway-qty-button" aria-label={`Add one ${item.name}`} onClick={() => changeQty(item, 1)}><Plus size={14}/></button></span> : <button type="button" className="takeaway-add-button" onClick={() => changeQty(item, 1)}><Plus size={14}/> Add</button>}</div></div>
+          return <article key={item.id} className="takeaway-menu-card menu-catalog-card">
+            <div className="takeaway-menu-card-image menu-catalog-image"><img src={getMenuItemImage(item)} alt={item.name} onError={(event) => handleDishImageError(event, item)}/><span className="takeaway-dietary-badge"><i className="takeaway-dietary-dot" style={{ background: item.dietaryType?.toUpperCase() === "VEG" || item.isVeg ? "#10b981" : "#ef4444" }} />{item.dietaryType?.toUpperCase() === "VEG" || item.isVeg ? "VEG" : "NON-VEG"}</span>{(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) && <span className="takeaway-special-badge">★ Special</span>}<span className="takeaway-prep-badge">{item.prepTime || `${item.prepTimeMinutes || 15} min`}</span></div>
+            <div className="takeaway-menu-card-body menu-catalog-body"><div className="takeaway-menu-card-info menu-catalog-info"><strong className="takeaway-menu-card-name menu-catalog-title">{item.name}</strong>{item.description && <p className="takeaway-menu-description menu-catalog-description" tabIndex={0} aria-label={item.description} aria-describedby={descriptionTooltip?.itemId === item.id ? descriptionTooltipId : undefined} onMouseEnter={(event) => showDescriptionTooltip(event, item.description, item.id)} onMouseLeave={() => setDescriptionTooltip(null)} onFocus={(event) => showDescriptionTooltip(event, item.description, item.id)} onBlur={() => setDescriptionTooltip(null)}>{item.description}</p>}</div><div className="takeaway-menu-card-actions menu-catalog-actions"><b className="takeaway-menu-card-price" style={{ color: "var(--accent-amber-light)" }}>₹{Number(item.price || 0).toFixed(2)}</b>{quantity ? <span style={{ display: "inline-flex", alignItems: "center", gap: ".35rem", flex: "0 0 auto" }}><button type="button" className="takeaway-qty-button" aria-label={`Remove one ${item.name}`} onClick={() => changeQty(item, -1)}><Minus size={14}/></button><b aria-live="polite">{quantity}</b><button type="button" className="takeaway-qty-button" aria-label={`Add one ${item.name}`} onClick={() => changeQty(item, 1)}><Plus size={14}/></button></span> : <button type="button" className="takeaway-add-button" onClick={() => changeQty(item, 1)}><Plus size={14}/> Add</button>}</div></div>
           </article>;
         })}
         {!items.length && <p style={{ color: "var(--text-muted)" }}>No menu items found.</p>}

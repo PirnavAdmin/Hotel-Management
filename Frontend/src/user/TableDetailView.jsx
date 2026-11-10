@@ -1730,6 +1730,7 @@ import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper
 import { SkeletonMenuCard } from "../common/Skeletons";
 import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 import MenuItemVisual from "../common/MenuItemVisual";
+import "../common/MenuCatalogLayout.css";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1983,31 +1984,10 @@ export function TableDetailView({
       }}
     >
       <style>{`
-        .pos-menu-grid {
-          flex: 1;
-          width: 100%;
-          box-sizing: border-box;
-          min-width: 0;
-          min-height: 0;
-          overflow-y: auto;
-          padding: 0.65rem;
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
-          grid-auto-rows: min-content;
-          gap: 0.5rem;
-          align-content: start;
-          background: var(--bg-primary);
-        }
-
         .pos-menu-card {
-          box-sizing: border-box;
-          min-width: 0;
           background: var(--bg-secondary);
           border-radius: 8px;
           border: 1px solid var(--border-subtle);
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
           box-shadow: var(--shadow-sm);
           transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
         }
@@ -2041,35 +2021,11 @@ export function TableDetailView({
         }
 
         .pos-menu-card-image {
-          position: relative;
-          height: 70px;
-          min-height: 70px;
-          overflow: hidden;
           background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
-        }
-
-        .pos-menu-card-image img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          transition: transform 220ms ease;
         }
 
         .pos-menu-card:hover .pos-menu-card-image img {
           transform: scale(1.045);
-        }
-
-        .pos-menu-card-content {
-          box-sizing: border-box;
-          padding: 0.4rem 0.45rem 0.2rem;
-          min-height: 100px;
-          min-width: 0;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-start;
-          gap: 0.2rem;
         }
 
         .pos-menu-card-title-row {
@@ -2081,39 +2037,16 @@ export function TableDetailView({
         }
 
         .pos-menu-card-title {
-          min-width: 0;
-          overflow-wrap: anywhere;
           margin: 0;
           font-size: 0.76rem;
           font-weight: 800;
           color: var(--text-main);
           line-height: 1.18;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
 
         .pos-menu-card-description {
           font-size: 0.62rem;
           color: var(--text-muted);
-          margin-top: 0.18rem;
-          line-height: 1.28;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .pos-menu-card-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.25rem;
-          min-width: 0;
-          margin-top: 0.18rem;
-          padding-top: 0.2rem;
-          border-top: 1px solid var(--border-subtle);
         }
 
         .pos-menu-card-price {
@@ -2228,22 +2161,6 @@ export function TableDetailView({
         }
 
         @media (max-width: 760px) {
-          .pos-menu-grid {
-            padding: 0.5rem;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.45rem;
-          }
-
-          .pos-menu-card-image {
-            height: 82px;
-            min-height: 82px;
-          }
-
-          .pos-menu-card-content {
-            min-height: 100px;
-            padding: 0.45rem 0.45rem 0.2rem;
-          }
-
           .pos-menu-card-title {
             font-size: 0.72rem;
           }
@@ -2254,15 +2171,6 @@ export function TableDetailView({
         }
 
         @media (max-width: 420px) {
-          .pos-menu-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .pos-menu-card-image {
-            height: 76px;
-            min-height: 76px;
-          }
-
           .pos-menu-card-price {
             font-size: 0.82rem;
           }
@@ -2271,10 +2179,6 @@ export function TableDetailView({
             padding: 0.25rem 0.42rem;
             font-size: 0.62rem;
           }
-        }
-
-        @media (max-width: 340px) {
-          .pos-menu-grid { grid-template-columns: minmax(0, 1fr); }
         }
 
         @keyframes cartPulse {
@@ -2974,6 +2878,7 @@ export function TableDetailView({
         >
           {/* Menu Search Bar */}
           <div
+            className="menu-catalog-controls"
             style={{
               padding: "0.85rem 1.25rem",
               borderBottom: "1px solid var(--border-subtle)",
@@ -3148,7 +3053,7 @@ export function TableDetailView({
           </div>
 
           {/* Menu Items Grid - 4 dishes per row */}
-          <div className="pos-menu-grid">
+          <div className="pos-menu-grid menu-catalog-grid">
             {activeMenuLoading ? (
               Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
             ) : filteredMenuItems.length === 0 ? (
@@ -3202,7 +3107,7 @@ export function TableDetailView({
                 return (
                   <div
                     key={item.id}
-                    className={`pos-menu-card ${currentQty > 0 ? "has-qty" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
+                    className={`pos-menu-card menu-catalog-card ${currentQty > 0 ? "has-qty" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
                     onClick={() => {
                       if (!isAvailable) return;
                       handleOpenItemModal(item);
@@ -3216,7 +3121,7 @@ export function TableDetailView({
                     }}
                   >
                     {/* Item Image with culinary tags */}
-                    <div className="pos-menu-card-image" style={{ position: "relative" }}>
+                    <div className="pos-menu-card-image menu-catalog-image" style={{ position: "relative" }}>
                       {orderMode === "bar" ? <MenuItemVisual item={item} className="pos-menu-card-image-img" style={{ position: "absolute", inset: 0, zIndex: 1, filter: isAvailable ? "none" : "grayscale(35%)" }} /> : (
                         <img
                           src={getMenuItemImage(item)}
@@ -3308,11 +3213,11 @@ export function TableDetailView({
                     </div>
 
                     {/* Item Content with Title, Description, and Actions */}
-                    <div className="pos-menu-card-content">
-                      <div>
+                    <div className="pos-menu-card-content menu-catalog-body">
+                      <div className="menu-catalog-info">
                         <div className="pos-menu-card-title-row">
                           <h4
-                            className="pos-menu-card-title"
+                            className="pos-menu-card-title menu-catalog-title"
                             style={{
                               color: isAvailable ? "var(--text-main)" : "var(--text-dim)",
                             }}
@@ -3337,7 +3242,7 @@ export function TableDetailView({
                         </div>
 
                         <p
-                          className="pos-menu-card-description"
+                          className="pos-menu-card-description menu-catalog-description"
                           style={{
                             color: isAvailable ? "var(--text-muted)" : "var(--text-dim)",
                           }}
@@ -3347,7 +3252,7 @@ export function TableDetailView({
                       </div>
 
                       {/* Price in Rupees and Add / Quantity Control */}
-                      <div className="pos-menu-card-footer">
+                      <div className="pos-menu-card-footer menu-catalog-actions">
                         <span
                           className="font-mono pos-menu-card-price"
                           style={{
