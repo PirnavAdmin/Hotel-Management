@@ -156,6 +156,7 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [shake,   setShake]   = useState(false);
+  const loginRequestInFlight = useRef(false);
 
   // ── Role config ───────────────────────────────────────────
   const cfgMap = {
@@ -205,18 +206,29 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
   // ── LOGIN ─────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loginRequestInFlight.current) return;
     if (!username.trim() || !password.trim()) { setError('Please enter username and password.'); triggerShake(); return; }
+    loginRequestInFlight.current = true;
     setLoading(true); setError('');
-    const r = await loginUser(username.trim(), password.trim(), currentRole);
-    setLoading(false);
-    if (r.success) {
-      try {
-        if (rememberMe) localStorage.setItem(REMEMBERED_LOGIN_KEY, username.trim());
-        else localStorage.removeItem(REMEMBERED_LOGIN_KEY);
-      } catch {}
-      onLoginSuccess(r.session, currentRole);
+    try {
+      const r = await loginUser(username.trim(), password.trim(), currentRole);
+      if (r.success) {
+        try {
+          if (rememberMe) localStorage.setItem(REMEMBERED_LOGIN_KEY, username.trim());
+          else localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+        } catch {}
+        onLoginSuccess(r.session, currentRole);
+      } else {
+        setError(r.error || 'Login failed.');
+        triggerShake();
+      }
+    } catch (loginError) {
+      setError(loginError?.message || 'Login failed. Please try again.');
+      triggerShake();
+    } finally {
+      loginRequestInFlight.current = false;
+      setLoading(false);
     }
-    else { setError(r.error || 'Login failed.'); triggerShake(); }
   };
 
   // ── FORGOT PASSWORD HANDLERS ──────────────────────────────
