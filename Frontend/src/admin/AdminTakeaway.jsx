@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ShoppingBag,
   Search,
@@ -22,25 +22,57 @@ import {
   Phone,
   Receipt,
   Trash2,
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Flame,
-  Soup,
-  Sparkles,
+  CreditCard,
+  FileText,
 } from "lucide-react";
 import {
   apiGetTakeawayOrders,
   apiGetTakeawayOrderHistory,
   apiCreatePaidTakeawayOrder,
-  apiSendTakeawayOrderToKitchen,
   apiDispatchTakeawayOrder,
   apiCancelTakeawayOrder,
 } from "../api/orderApi";
+import { ReceiptModal } from "../user/ReceiptModal";
 
 const STORAGE_KEY_TAKEAWAY = "avsr_admin_takeaway_orders_v1";
+const TAKEAWAY_GST_RATE = 0.05;
+const TAKEAWAY_SERVICE_CHARGE_RATE = 0.05;
 
-// Initial seed orders matching user's reference mockup
+function calculateTakeawayBill(items, fallbackSubtotal = 0) {
+  const subtotalFromItems = (Array.isArray(items) ? items : []).reduce(
+    (sum, item) =>
+      sum +
+      (Number(item?.price ?? item?.unitPrice) || 0) *
+        (Number(item?.quantity ?? item?.qty) || 1),
+    0
+  );
+  const subtotal = Math.round((subtotalFromItems || Number(fallbackSubtotal) || 0) * 100) / 100;
+  const taxAmount = Math.round((subtotal * TAKEAWAY_GST_RATE + Number.EPSILON) * 100) / 100;
+  const serviceChargeAmount = Math.round((subtotal * TAKEAWAY_SERVICE_CHARGE_RATE + Number.EPSILON) * 100) / 100;
+
+  return {
+    subtotal,
+    taxAmount,
+    serviceChargeAmount,
+    grandTotal: Math.round((subtotal + taxAmount + serviceChargeAmount) * 100) / 100,
+  };
+}
+
+function getTakeawayOrderTotal(order) {
+  return calculateTakeawayBill(order?.items, order?.amount).grandTotal;
+}
+
+function isValidIndianMobileNumber(phone) {
+  const normalizedPhone = String(phone || "").trim().replace(/[\s()-]/g, "");
+  if (!/^\+?\d+$/.test(normalizedPhone)) return false;
+  const digits = normalizedPhone.replace(/\D/g, "");
+  const mobileNumber = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  return /^[6-9]\d{9}$/.test(mobileNumber);
+}
+
+// ── Initial Seed Data (Precisely calibrated to the 86 Total / 8 Pending / 78 Completed / ₹74,320.00 KPI mockup) ──
 const SEED_TAKEAWAY_ORDERS = [
   {
     id: "TK-1068",
@@ -187,7 +219,7 @@ const SEED_TAKEAWAY_ORDERS = [
   },
 ];
 
-// Helper to generate seed history to reach the mockup numbers (86 total, ₹74,320.00 sales, 78 completed, 8 pending/active, 2 cancelled)
+// Helper to seed the full 86 orders with 78 completed, 8 pending, and exact sales sum
 function generateExpandedSeedOrders() {
   const list = [...SEED_TAKEAWAY_ORDERS];
   const names = [
@@ -195,39 +227,113 @@ function generateExpandedSeedOrders() {
     "Swathi R.", "Pooja G.", "Harish T.", "Sneha L.", "Vijay C.", "Rohit K.",
     "Bhavya S.", "Rajesh M.", "Snehal P.", "Girish D.", "Aishwarya K.", "Sunil R."
   ];
-  const dishes = [
-    { name: "Chicken Biryani", price: 380 },
-    { name: "Mutton Dum Biryani", price: 490 },
-    { name: "Paneer Butter Masala", price: 320 },
-    { name: "Dal Tadka", price: 220 },
-    { name: "Butter Naan", price: 60 },
-    { name: "Tandoori Roti", price: 35 },
-    { name: "Veg Fried Rice", price: 250 },
-    { name: "Chicken 65", price: 310 },
-    { name: "Gulab Jamun", price: 150 },
+
+  // 7 more pending orders to reach 8 total pending
+  const pendingTemplates = [
+    { customer: "Sneha Reddy", phone: "+91 98451 22334", items: [{ name: "Veg Biryani", quantity: 2, price: 280 }], amount: 560, notes: "Pack extra raita" },
+    { customer: "Rahul V.", phone: "+91 98112 44556", items: [{ name: "Butter Chicken", quantity: 1, price: 390 }, { name: "Garlic Naan", quantity: 3, price: 75 }], amount: 615, notes: "" },
+    { customer: "Meenakshi S.", phone: "+91 97334 55667", items: [{ name: "Paneer Tikka", quantity: 2, price: 290 }], amount: 580, notes: "Green chutney extra" },
+    { customer: "Aditya Roy", phone: "+91 96221 88990", items: [{ name: "Chicken 65", quantity: 2, price: 310 }], amount: 620, notes: "Crispy fry" },
+    { customer: "Pooja Hegde", phone: "+91 95443 22110", items: [{ name: "Veg Hakka Noodles", quantity: 2, price: 240 }], amount: 480, notes: "" },
+    { customer: "Gautam Rao", phone: "+91 94332 11998", items: [{ name: "Tandoori Roti", quantity: 8, price: 35 }, { name: "Dal Makhani", quantity: 1, price: 280 }], amount: 560, notes: "" },
+    { customer: "Kavitha N.", phone: "+91 93221 00887", items: [{ name: "Chicken Dum Biryani", quantity: 2, price: 380 }], amount: 760, notes: "Urgent pickup" },
   ];
 
-  let currentSales = list
-    .filter((o) => o.status === "Completed")
-    .reduce((sum, o) => sum + o.amount, 0);
+  pendingTemplates.forEach((pt, i) => {
+    list.push({
+      id: `TK-${1060 - i}`,
+      orderNumber: `TK-${1060 - i}`,
+      customer: pt.customer,
+      phone: pt.phone,
+      itemsCount: pt.items.reduce((s, it) => s + it.quantity, 0),
+      items: pt.items,
+      amount: pt.amount,
+      status: "Pending",
+      orderTime: `14 Oct 2026, ${String(8 - Math.floor(i / 2)).padStart(2, "0")}:${String(15 + i * 5).padStart(2, "0")} AM`,
+      date: `2026-10-14T08:${String(15 + i * 5).padStart(2, "0")}:00`,
+      paymentMethod: "UPI",
+      notes: pt.notes,
+    });
+  });
 
-  const targetTotal = 86;
-  const targetCompleted = 78;
-  const currentCompleted = list.filter((o) => o.status === "Completed").length;
-  const neededCompleted = targetCompleted - currentCompleted;
+  // 1 more cancelled order to reach 2 total cancelled
+  list.push({
+    id: "TK-1053",
+    orderNumber: "TK-1053",
+    customer: "Sameer Joshi",
+    phone: "+91 98223 33441",
+    itemsCount: 2,
+    items: [{ name: "Mutton Biryani", quantity: 1, price: 490 }],
+    amount: 490.0,
+    status: "Cancelled",
+    orderTime: "14 Oct 2026, 08:10 AM",
+    date: "2026-10-14T08:10:00",
+    paymentMethod: "UPI",
+    notes: "Customer delayed, cancelled order",
+  });
+
+  // 4 more preparing orders to reach 5 total preparing
+  const preparingTemplates = [
+    { customer: "Varun Verma", phone: "+91 98334 11223", items: [{ name: "Chicken Tikka", quantity: 2, price: 320 }], amount: 640 },
+    { customer: "Shweta K.", phone: "+91 97445 22334", items: [{ name: "Veg Pulao", quantity: 2, price: 250 }], amount: 500 },
+    { customer: "Murali B.", phone: "+91 96556 33445", items: [{ name: "Fish Curry", quantity: 1, price: 420 }, { name: "Steamed Rice", quantity: 2, price: 120 }], amount: 660 },
+    { customer: "Neha Sharma", phone: "+91 95667 44556", items: [{ name: "Paneer Kulcha", quantity: 4, price: 90 }], amount: 360 },
+  ];
+  preparingTemplates.forEach((pt, i) => {
+    list.push({
+      id: `TK-${1052 - i}`,
+      orderNumber: `TK-${1052 - i}`,
+      customer: pt.customer,
+      phone: pt.phone,
+      itemsCount: pt.items.reduce((s, it) => s + it.quantity, 0),
+      items: pt.items,
+      amount: pt.amount,
+      status: "Preparing",
+      orderTime: `14 Oct 2026, 07:${String(45 + i * 3).padStart(2, "0")} AM`,
+      date: `2026-10-14T07:${String(45 + i * 3).padStart(2, "0")}:00`,
+      paymentMethod: "Card",
+      notes: "",
+    });
+  });
+
+  // 2 more ready orders to reach 3 total ready
+  const readyTemplates = [
+    { customer: "Prashanth D.", phone: "+91 94778 55667", items: [{ name: "Chicken Biryani", quantity: 2, price: 380 }], amount: 760 },
+    { customer: "Deepika R.", phone: "+91 93889 66778", items: [{ name: "Paneer Butter Masala", quantity: 1, price: 320 }, { name: "Naan", quantity: 4, price: 50 }], amount: 520 },
+  ];
+  readyTemplates.forEach((rt, i) => {
+    list.push({
+      id: `TK-${1048 - i}`,
+      orderNumber: `TK-${1048 - i}`,
+      customer: rt.customer,
+      phone: rt.phone,
+      itemsCount: rt.items.reduce((s, it) => s + it.quantity, 0),
+      items: rt.items,
+      amount: rt.amount,
+      status: "Ready",
+      orderTime: `14 Oct 2026, 07:30 AM`,
+      date: `2026-10-14T07:30:00`,
+      paymentMethod: "UPI",
+      notes: "Packed and ready at counter",
+    });
+  });
+
+  // Generate completed orders to reach exact target 78 completed and ₹74,320.00 total sales
+  const currentCompletedList = list.filter((o) => o.status === "Completed");
+  const neededCompleted = 78 - currentCompletedList.length;
+  let remainingSales = 74320.0 - currentCompletedList.reduce((s, o) => s + o.amount, 0);
 
   for (let i = 1; i <= neededCompleted; i++) {
-    const num = 1060 - i;
+    const num = 1046 - i;
     const name = names[i % names.length];
-    const dish1 = dishes[i % dishes.length];
-    const dish2 = dishes[(i + 3) % dishes.length];
-    const amount = dish1.price + dish2.price * 2;
-    currentSales += amount;
+    const isLast = i === neededCompleted;
+    const amount = isLast ? Math.max(200, Math.round(remainingSales)) : Math.round(remainingSales / (neededCompleted - i + 1));
+    remainingSales -= amount;
 
     const day = Math.max(1, 14 - Math.floor(i / 6));
     const dayStr = String(day).padStart(2, "0");
-    const hour = 12 + (i % 9);
-    const minute = (i * 7) % 60;
+    const hour = 11 + (i % 10);
+    const minute = (i * 13) % 60;
     const timeStr = `${dayStr} Oct 2026, ${String(hour > 12 ? hour - 12 : hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 
     list.push({
@@ -237,8 +343,8 @@ function generateExpandedSeedOrders() {
       phone: `+91 98${String(10000000 + i * 2311).slice(0, 8)}`,
       itemsCount: 3,
       items: [
-        { name: dish1.name, quantity: 1, price: dish1.price },
-        { name: dish2.name, quantity: 2, price: dish2.price },
+        { name: "Special Dine Combo", quantity: 1, price: Math.round(amount * 0.6) },
+        { name: "Indian Bread / Rice", quantity: 2, price: Math.round((amount * 0.4) / 2) },
       ],
       amount: amount,
       status: "Completed",
@@ -256,15 +362,34 @@ export function AdminTakeaway({
   menuItems = [],
   restaurantName = "Bhanu Fine Dining & POS Management",
   restaurantSettings = {},
+  restaurantLogo = "",
   currentSession = null,
 }) {
+  // Effective settings for invoices and receipts (matching Bhanu POS standard)
+  const effectiveSettings = useMemo(() => {
+    const base = restaurantSettings || {};
+    let name = base.restaurantName?.trim() || restaurantName || "BHANU";
+    if (!name || name.toLowerCase() === "restaurant") {
+      name = "BHANU";
+    }
+    return {
+      ...base,
+      restaurantName: name,
+      tagline: base.tagline?.trim() || "Fine Dining & POS Management",
+      address: base.address?.trim() || "Main Road, Near Tech Park, Hyderabad, India",
+      phone: base.phone?.trim() || "+91 98450 12345",
+      gstin: base.gstin?.trim() || "36AABCA1234F1Z5",
+      logo: restaurantLogo || base.logo || "",
+    };
+  }, [restaurantSettings, restaurantName, restaurantLogo]);
+
   // --- Persistent & Live Orders State ---
   const [orders, setOrders] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TAKEAWAY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length >= 8) return parsed;
       }
     } catch {}
     return generateExpandedSeedOrders();
@@ -322,24 +447,83 @@ export function AdminTakeaway({
   };
 
   // --- Filtering & Tab State ---
-  const [activeTabStatus, setActiveTabStatus] = useState("all"); // 'all', 'Pending', 'Preparing', 'Ready', 'Completed', 'Cancelled'
+  const [activeTabStatus, setActiveTabStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateFilter, setDateFilter] = useState("all"); // 'all', 'today', 'yesterday', '7days', 'month'
+  const [dateFilter, setDateFilter] = useState("all");
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState("all");
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [dateRangeLabel, setDateRangeLabel] = useState("01 Oct 2026 – 14 Oct 2026");
+  const [customDateRangeOpen, setCustomDateRangeOpen] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [appliedCustomStartDate, setAppliedCustomStartDate] = useState("");
+  const [appliedCustomEndDate, setAppliedCustomEndDate] = useState("");
 
   // --- Modals State ---
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [printReceiptOrder, setPrintReceiptOrder] = useState(null);
   const [actionMenuOrderId, setActionMenuOrderId] = useState(null);
+  const [actionMenuOpenAbove, setActionMenuOpenAbove] = useState(false);
+
+  // Table data formatted specifically for the unified ReceiptModal (80mm Thermal & A4 Tax Invoice)
+  const receiptTableData = useMemo(() => {
+    if (!printReceiptOrder) return null;
+
+    const items =
+      Array.isArray(printReceiptOrder.items) && printReceiptOrder.items.length > 0
+        ? printReceiptOrder.items.map((it) => ({
+            name: String(it?.name || it?.dishName || "Item").trim(),
+            quantity: Number(it?.quantity ?? it?.qty) || 1,
+            price: Number(it?.price ?? it?.unitPrice) || 0,
+          }))
+        : [
+            {
+              name: "Takeaway Meal Package",
+              quantity: 1,
+              price: Number(printReceiptOrder.amount) || 0,
+            },
+          ];
+
+    const { subtotal, taxAmount, serviceChargeAmount, grandTotal } = calculateTakeawayBill(
+      items,
+      printReceiptOrder.amount
+    );
+
+    const isCancelled = printReceiptOrder.status === "Cancelled";
+
+    return {
+      id: printReceiptOrder.id,
+      invoiceNo: printReceiptOrder.orderNumber || printReceiptOrder.id,
+      name: "Takeaway",
+      tableName: "Takeaway",
+      section: "Takeaway",
+      server: "Staff",
+      guests: 1,
+      date: printReceiptOrder.date || new Date().toISOString(),
+      orderTime: printReceiptOrder.orderTime || printReceiptOrder.date,
+      status: isCancelled ? "Cancelled" : "Completed",
+      isPaid: !isCancelled,
+      settled: !isCancelled,
+      settledAt: printReceiptOrder.date || new Date().toISOString(),
+      paymentMethod: (printReceiptOrder.paymentMethod || "CASH").toUpperCase(),
+      customer: printReceiptOrder.customer || "Walk-in Guest",
+      customerPhone: printReceiptOrder.phone || "",
+      items,
+      subtotal,
+      taxAmount,
+      serviceCharge: TAKEAWAY_SERVICE_CHARGE_RATE * 100,
+      serviceChargeAmount,
+      grandTotal,
+    };
+  }, [printReceiptOrder]);
 
   // Close dropdowns on outside click
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (!e.target.closest(".action-menu-container")) {
         setActionMenuOrderId(null);
+        setActionMenuOpenAbove(false);
       }
       if (!e.target.closest(".date-filter-dropdown-container")) {
         setDateDropdownOpen(false);
@@ -354,11 +538,11 @@ export function AdminTakeaway({
   const totalSalesAmount = useMemo(() => {
     return orders
       .filter((o) => o.status === "Completed")
-      .reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
+      .reduce((sum, o) => sum + getTakeawayOrderTotal(o), 0);
   }, [orders]);
 
   const pendingOrdersCount = useMemo(() => {
-    return orders.filter((o) => ["Pending", "Preparing", "Ready"].includes(o.status)).length;
+    return orders.filter((o) => o.status === "Pending").length;
   }, [orders]);
 
   const completedOrdersCount = useMemo(() => {
@@ -367,7 +551,7 @@ export function AdminTakeaway({
 
   // Tab Badge Counts
   const tabCounts = useMemo(() => {
-    const counts = {
+    return {
       all: orders.length,
       Pending: orders.filter((o) => o.status === "Pending").length,
       Preparing: orders.filter((o) => o.status === "Preparing").length,
@@ -375,7 +559,6 @@ export function AdminTakeaway({
       Completed: orders.filter((o) => o.status === "Completed").length,
       Cancelled: orders.filter((o) => o.status === "Cancelled").length,
     };
-    return counts;
   }, [orders]);
 
   // --- Filtered Orders List ---
@@ -394,7 +577,7 @@ export function AdminTakeaway({
         return false;
       }
 
-      // 3. Search query filter (Order ID, Customer, Phone)
+      // 3. Search query filter
       if (searchQuery.trim()) {
         const query = searchQuery.trim().toLowerCase();
         const idMatch = String(order.id || "").toLowerCase().includes(query);
@@ -420,12 +603,17 @@ export function AdminTakeaway({
         } else if (dateFilter === "month") {
           const monthAgo = new Date(today.getTime() - 30 * 86400000);
           if (orderDate < monthAgo) return false;
+        } else if (dateFilter === "custom") {
+          const startDate = new Date(`${appliedCustomStartDate}T00:00:00`);
+          const endDateExclusive = new Date(`${appliedCustomEndDate}T00:00:00`);
+          endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+          if (orderDate < startDate || orderDate >= endDateExclusive) return false;
         }
       }
 
       return true;
     });
-  }, [orders, activeTabStatus, secondaryStatusFilter, searchQuery, dateFilter]);
+  }, [orders, activeTabStatus, secondaryStatusFilter, searchQuery, dateFilter, appliedCustomStartDate, appliedCustomEndDate]);
 
   // --- Pagination State ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -448,9 +636,12 @@ export function AdminTakeaway({
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
     );
+    if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
+      setSelectedOrderDetails((prev) => ({ ...prev, status: newStatus }));
+    }
     setActionMenuOrderId(null);
+    setActionMenuOpenAbove(false);
 
-    // Call backend API if possible
     try {
       if (newStatus === "Cancelled") {
         await apiCancelTakeawayOrder(orderId).catch(() => null);
@@ -463,6 +654,7 @@ export function AdminTakeaway({
   // --- New Takeaway Order Form State ---
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [customerPhoneError, setCustomerPhoneError] = useState("");
   const [newOrderNotes, setNewOrderNotes] = useState("");
   const [newPaymentMethod, setNewPaymentMethod] = useState("UPI");
   const [newOrderCart, setNewOrderCart] = useState({});
@@ -504,14 +696,23 @@ export function AdminTakeaway({
   };
 
   const cartItemsList = Object.values(newOrderCart);
-  const cartSubtotal = cartItemsList.reduce(
-    (sum, line) => sum + (Number(line.item.price) || 0) * line.quantity,
-    0
+  const cartBill = calculateTakeawayBill(
+    cartItemsList.map((line) => ({ price: line.item.price, quantity: line.quantity }))
   );
-  const cartGst = Math.round(cartSubtotal * 0.05); // 5% GST
-  const cartTotal = cartSubtotal + cartGst;
+  const { subtotal: cartSubtotal, taxAmount: cartGst, serviceChargeAmount: cartServiceCharge, grandTotal: cartTotal } = cartBill;
 
   const handleCreateTakeawayOrder = async () => {
+    if (!isValidIndianMobileNumber(newCustomerPhone)) {
+      setCustomerPhoneError(
+        newCustomerPhone.trim()
+          ? "Enter a valid 10-digit Indian mobile number."
+          : "Phone number is required."
+      );
+      return;
+    }
+
+    setCustomerPhoneError("");
+
     if (cartItemsList.length === 0) {
       alert("Please add at least one item to the takeaway order.");
       return;
@@ -538,6 +739,10 @@ export function AdminTakeaway({
         price: Number(line.item.price) || 0,
       })),
       amount: cartTotal,
+      subtotal: cartSubtotal,
+      taxAmount: cartGst,
+      serviceChargeAmount: cartServiceCharge,
+      grandTotal: cartTotal,
       status: "Pending",
       orderTime: timeFormatted,
       date: now.toISOString(),
@@ -547,7 +752,6 @@ export function AdminTakeaway({
 
     setOrders((prev) => [newOrder, ...prev]);
 
-    // Backend dispatch if available
     try {
       await apiCreatePaidTakeawayOrder({
         orderNumber: newId,
@@ -555,16 +759,20 @@ export function AdminTakeaway({
         tableName: "Takeaway",
         customerName: newOrder.customer,
         customerPhone: newOrder.phone,
+        subtotal: cartSubtotal,
+        taxAmount: cartGst,
+        serviceChargeAmount: cartServiceCharge,
         totalAmount: cartTotal,
+        grandTotal: cartTotal,
         paymentMethod: newPaymentMethod,
         items: newOrder.items,
       }).catch(() => null);
     } catch {}
 
-    // Reset and close
     setIsNewOrderModalOpen(false);
     setNewCustomerName("");
     setNewCustomerPhone("");
+    setCustomerPhoneError("");
     setNewOrderNotes("");
     setNewOrderCart({});
   };
@@ -578,17 +786,18 @@ export function AdminTakeaway({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.35rem",
-              padding: "0.25rem 0.65rem",
+              gap: "0.38rem",
+              padding: "0.28rem 0.75rem",
               borderRadius: "9999px",
               fontSize: "0.78rem",
               fontWeight: 600,
               background: "rgba(245, 158, 11, 0.12)",
               color: "#d97706",
-              border: "1px solid rgba(245, 158, 11, 0.25)",
+              border: "1px solid rgba(245, 158, 11, 0.28)",
+              whiteSpace: "nowrap",
             }}
           >
-            <Hourglass size={12} />
+            <Hourglass size={12} strokeWidth={2.2} />
             Pending
           </span>
         );
@@ -598,17 +807,18 @@ export function AdminTakeaway({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.35rem",
-              padding: "0.25rem 0.65rem",
+              gap: "0.38rem",
+              padding: "0.28rem 0.75rem",
               borderRadius: "9999px",
               fontSize: "0.78rem",
               fontWeight: 600,
               background: "rgba(59, 130, 246, 0.12)",
               color: "#2563eb",
-              border: "1px solid rgba(59, 130, 246, 0.25)",
+              border: "1px solid rgba(59, 130, 246, 0.28)",
+              whiteSpace: "nowrap",
             }}
           >
-            <ChefHat size={12} />
+            <ChefHat size={12} strokeWidth={2.2} />
             Preparing
           </span>
         );
@@ -618,17 +828,18 @@ export function AdminTakeaway({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.35rem",
-              padding: "0.25rem 0.65rem",
+              gap: "0.38rem",
+              padding: "0.28rem 0.75rem",
               borderRadius: "9999px",
               fontSize: "0.78rem",
               fontWeight: 600,
               background: "rgba(168, 85, 247, 0.12)",
               color: "#9333ea",
-              border: "1px solid rgba(168, 85, 247, 0.25)",
+              border: "1px solid rgba(168, 85, 247, 0.28)",
+              whiteSpace: "nowrap",
             }}
           >
-            <Bell size={12} />
+            <Bell size={12} strokeWidth={2.2} />
             Ready
           </span>
         );
@@ -638,14 +849,15 @@ export function AdminTakeaway({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.35rem",
-              padding: "0.25rem 0.65rem",
+              gap: "0.38rem",
+              padding: "0.28rem 0.75rem",
               borderRadius: "9999px",
               fontSize: "0.78rem",
               fontWeight: 600,
               background: "rgba(34, 197, 94, 0.12)",
               color: "#16a34a",
-              border: "1px solid rgba(34, 197, 94, 0.25)",
+              border: "1px solid rgba(34, 197, 94, 0.28)",
+              whiteSpace: "nowrap",
             }}
           >
             <Check size={12} strokeWidth={2.5} />
@@ -658,14 +870,15 @@ export function AdminTakeaway({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.35rem",
-              padding: "0.25rem 0.65rem",
+              gap: "0.38rem",
+              padding: "0.28rem 0.75rem",
               borderRadius: "9999px",
               fontSize: "0.78rem",
               fontWeight: 600,
               background: "rgba(239, 68, 68, 0.12)",
               color: "#dc2626",
-              border: "1px solid rgba(239, 68, 68, 0.25)",
+              border: "1px solid rgba(239, 68, 68, 0.28)",
+              whiteSpace: "nowrap",
             }}
           >
             <X size={12} strokeWidth={2.5} />
@@ -723,14 +936,15 @@ export function AdminTakeaway({
                 fontWeight: 700,
                 letterSpacing: "-0.01em",
                 color: "var(--text-main)",
+                lineHeight: 1.2,
               }}
             >
               Takeaway Orders
             </h1>
             <p
               style={{
-                margin: "0.15rem 0 0",
-                fontSize: "0.85rem",
+                margin: "0.2rem 0 0",
+                fontSize: "0.84rem",
                 color: "var(--text-muted)",
               }}
             >
@@ -749,8 +963,9 @@ export function AdminTakeaway({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.55rem 0.95rem",
+                gap: "0.55rem",
+                height: "42px",
+                padding: "0 1rem",
                 borderRadius: "10px",
                 border: "1px solid var(--border-card)",
                 background: "var(--bg-card)",
@@ -758,13 +973,13 @@ export function AdminTakeaway({
                 fontSize: "0.84rem",
                 fontWeight: 500,
                 cursor: "pointer",
-                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
                 transition: "all 0.15s ease",
               }}
             >
               <Calendar size={15} color="#ea580c" />
               <span>{dateRangeLabel}</span>
-              <ChevronDown size={14} style={{ opacity: 0.7 }} />
+              <ChevronDown size={14} style={{ opacity: 0.6 }} />
             </button>
 
             {dateDropdownOpen && (
@@ -776,10 +991,10 @@ export function AdminTakeaway({
                   background: "var(--bg-card)",
                   border: "1px solid var(--border-card)",
                   borderRadius: "10px",
-                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.18)",
                   padding: "0.4rem",
                   zIndex: 50,
-                  minWidth: "190px",
+                  minWidth: "210px",
                   display: "flex",
                   flexDirection: "column",
                   gap: "0.2rem",
@@ -802,7 +1017,7 @@ export function AdminTakeaway({
                     }}
                     style={{
                       textAlign: "left",
-                      padding: "0.5rem 0.75rem",
+                      padding: "0.55rem 0.85rem",
                       borderRadius: "6px",
                       border: "none",
                       background: dateFilter === preset.value ? "rgba(234, 88, 12, 0.12)" : "transparent",
@@ -815,6 +1030,104 @@ export function AdminTakeaway({
                     {preset.label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setCustomDateRangeOpen((open) => !open)}
+                  style={{
+                    textAlign: "left",
+                    padding: "0.55rem 0.85rem",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: customDateRangeOpen || dateFilter === "custom" ? "rgba(234, 88, 12, 0.12)" : "transparent",
+                    color: customDateRangeOpen || dateFilter === "custom" ? "#ea580c" : "var(--text-main)",
+                    fontSize: "0.82rem",
+                    fontWeight: customDateRangeOpen || dateFilter === "custom" ? 600 : 400,
+                    cursor: "pointer",
+                  }}
+                >
+                  Custom date range
+                </button>
+                {customDateRangeOpen && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                      padding: "0.5rem 0.45rem 0.35rem",
+                      borderTop: "1px solid var(--border-card)",
+                    }}
+                  >
+                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                      From
+                      <input
+                        aria-label="Start date"
+                        type="date"
+                        value={customStartDate}
+                        max={customEndDate || undefined}
+                        onChange={(event) => setCustomStartDate(event.target.value)}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          padding: "0.45rem",
+                          border: "1px solid var(--border-card)",
+                          borderRadius: "6px",
+                          background: "var(--bg-main)",
+                          color: "var(--text-main)",
+                        }}
+                      />
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                      To
+                      <input
+                        aria-label="End date"
+                        type="date"
+                        value={customEndDate}
+                        min={customStartDate || undefined}
+                        onChange={(event) => setCustomEndDate(event.target.value)}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          padding: "0.45rem",
+                          border: "1px solid var(--border-card)",
+                          borderRadius: "6px",
+                          background: "var(--bg-main)",
+                          color: "var(--text-main)",
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
+                      onClick={() => {
+                        const formatDate = (date) =>
+                          new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          });
+                          setAppliedCustomStartDate(customStartDate);
+                          setAppliedCustomEndDate(customEndDate);
+                          setDateFilter("custom");
+                        setDateRangeLabel(`${formatDate(customStartDate)} – ${formatDate(customEndDate)}`);
+                        setDateDropdownOpen(false);
+                        setCustomDateRangeOpen(false);
+                      }}
+                      style={{
+                        padding: "0.5rem 0.75rem",
+                        border: "none",
+                        borderRadius: "6px",
+                        background: "#ea580c",
+                        color: "#fff",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        cursor: !customStartDate || !customEndDate || customStartDate > customEndDate ? "not-allowed" : "pointer",
+                        opacity: !customStartDate || !customEndDate || customStartDate > customEndDate ? 0.55 : 1,
+                      }}
+                    >
+                      Apply date range
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -827,7 +1140,8 @@ export function AdminTakeaway({
               display: "inline-flex",
               alignItems: "center",
               gap: "0.45rem",
-              padding: "0.6rem 1.25rem",
+              height: "42px",
+              padding: "0 1.25rem",
               borderRadius: "10px",
               border: "none",
               background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
@@ -849,10 +1163,10 @@ export function AdminTakeaway({
 
       {/* ── Key Metrics / KPI Summary Cards (4 Cards) ────────── */}
       <div
+        className="takeaway-metrics-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-          gap: "1rem",
+          gap: "0.75rem",
         }}
       >
         {/* Card 1: Total Takeaway Orders */}
@@ -861,17 +1175,18 @@ export function AdminTakeaway({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "12px",
-            padding: "1rem 1.25rem",
+            padding: "0.75rem 0.85rem",
             display: "flex",
             alignItems: "center",
-            gap: "1rem",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.04)",
+            gap: "0.7rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            minWidth: 0,
           }}
         >
           <div
             style={{
-              width: "46px",
-              height: "46px",
+              width: "40px",
+              height: "40px",
               borderRadius: "50%",
               background: "rgba(249, 115, 22, 0.12)",
               display: "flex",
@@ -881,13 +1196,30 @@ export function AdminTakeaway({
               flexShrink: 0,
             }}
           >
-            <ShoppingBag size={22} />
+            <ShoppingBag size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 500 }}>
+          <div style={{ minWidth: 0, overflow: "hidden" }}>
+            <div
+              style={{
+                fontSize: "0.74rem",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
               Total Takeaway Orders
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 700, marginTop: "0.2rem", color: "var(--text-main)" }}>
+            <div
+              style={{
+                fontSize: "1.35rem",
+                fontWeight: 800,
+                marginTop: "0.1rem",
+                color: "var(--text-main)",
+                whiteSpace: "nowrap",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+              }}
+            >
               {totalOrdersCount}
             </div>
           </div>
@@ -899,17 +1231,18 @@ export function AdminTakeaway({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "12px",
-            padding: "1rem 1.25rem",
+            padding: "0.75rem 0.85rem",
             display: "flex",
             alignItems: "center",
-            gap: "1rem",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.04)",
+            gap: "0.7rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            minWidth: 0,
           }}
         >
           <div
             style={{
-              width: "46px",
-              height: "46px",
+              width: "40px",
+              height: "40px",
               borderRadius: "50%",
               background: "rgba(34, 197, 94, 0.12)",
               display: "flex",
@@ -919,13 +1252,30 @@ export function AdminTakeaway({
               flexShrink: 0,
             }}
           >
-            <IndianRupee size={22} />
+            <IndianRupee size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 500 }}>
+          <div style={{ minWidth: 0, overflow: "hidden" }}>
+            <div
+              style={{
+                fontSize: "0.74rem",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
               Takeaway Sales
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 700, marginTop: "0.2rem", color: "#16a34a" }}>
+            <div
+              style={{
+                fontSize: "1.35rem",
+                fontWeight: 800,
+                marginTop: "0.1rem",
+                color: "#16a34a",
+                whiteSpace: "nowrap",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+              }}
+            >
               ₹ {totalSalesAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
@@ -937,17 +1287,18 @@ export function AdminTakeaway({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "12px",
-            padding: "1rem 1.25rem",
+            padding: "0.75rem 0.85rem",
             display: "flex",
             alignItems: "center",
-            gap: "1rem",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.04)",
+            gap: "0.7rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            minWidth: 0,
           }}
         >
           <div
             style={{
-              width: "46px",
-              height: "46px",
+              width: "40px",
+              height: "40px",
               borderRadius: "50%",
               background: "rgba(245, 158, 11, 0.12)",
               display: "flex",
@@ -957,13 +1308,30 @@ export function AdminTakeaway({
               flexShrink: 0,
             }}
           >
-            <Hourglass size={22} />
+            <Hourglass size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 500 }}>
+          <div style={{ minWidth: 0, overflow: "hidden" }}>
+            <div
+              style={{
+                fontSize: "0.74rem",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
               Pending Orders
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 700, marginTop: "0.2rem", color: "#d97706" }}>
+            <div
+              style={{
+                fontSize: "1.35rem",
+                fontWeight: 800,
+                marginTop: "0.1rem",
+                color: "#d97706",
+                whiteSpace: "nowrap",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+              }}
+            >
               {pendingOrdersCount}
             </div>
           </div>
@@ -975,17 +1343,18 @@ export function AdminTakeaway({
             background: "var(--bg-card)",
             border: "1px solid var(--border-card)",
             borderRadius: "12px",
-            padding: "1rem 1.25rem",
+            padding: "0.75rem 0.85rem",
             display: "flex",
             alignItems: "center",
-            gap: "1rem",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.04)",
+            gap: "0.7rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            minWidth: 0,
           }}
         >
           <div
             style={{
-              width: "46px",
-              height: "46px",
+              width: "40px",
+              height: "40px",
               borderRadius: "50%",
               background: "rgba(34, 197, 94, 0.12)",
               display: "flex",
@@ -995,13 +1364,30 @@ export function AdminTakeaway({
               flexShrink: 0,
             }}
           >
-            <CheckCircle2 size={22} />
+            <CheckCircle2 size={20} />
           </div>
-          <div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 500 }}>
+          <div style={{ minWidth: 0, overflow: "hidden" }}>
+            <div
+              style={{
+                fontSize: "0.74rem",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
               Completed Orders
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 700, marginTop: "0.2rem", color: "#16a34a" }}>
+            <div
+              style={{
+                fontSize: "1.35rem",
+                fontWeight: 800,
+                marginTop: "0.1rem",
+                color: "#16a34a",
+                whiteSpace: "nowrap",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+              }}
+            >
               {completedOrdersCount}
             </div>
           </div>
@@ -1028,6 +1414,14 @@ export function AdminTakeaway({
         ].map((tab) => {
           const isActive = activeTabStatus.toLowerCase() === tab.key.toLowerCase();
           const Icon = tab.icon;
+          const tabColor = {
+            all: { text: "#ea580c", background: "rgba(234, 88, 12, 0.1)", border: "rgba(234, 88, 12, 0.3)" },
+            pending: { text: "#b45309", background: "rgba(245, 158, 11, 0.1)", border: "rgba(245, 158, 11, 0.35)" },
+            preparing: { text: "#2563eb", background: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.3)" },
+            ready: { text: "#9333ea", background: "rgba(168, 85, 247, 0.1)", border: "rgba(168, 85, 247, 0.3)" },
+            completed: { text: "#16a34a", background: "rgba(34, 197, 94, 0.1)", border: "rgba(34, 197, 94, 0.3)" },
+            cancelled: { text: "#dc2626", background: "rgba(239, 68, 68, 0.1)", border: "rgba(239, 68, 68, 0.3)" },
+          }[tab.key.toLowerCase()];
           return (
             <button
               key={tab.key}
@@ -1037,18 +1431,19 @@ export function AdminTakeaway({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.45rem",
-                padding: "0.55rem 1rem",
+                height: "38px",
+                padding: "0 1.05rem",
                 borderRadius: "10px",
-                border: isActive ? "none" : "1px solid var(--border-card)",
+                border: `1px solid ${tabColor.border}`,
                 background: isActive
-                  ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)"
-                  : "var(--bg-card)",
-                color: isActive ? "#ffffff" : "var(--text-main)",
-                fontSize: "0.83rem",
+                  ? tabColor.text
+                  : `linear-gradient(${tabColor.background}, ${tabColor.background}), var(--bg-card)`,
+                color: isActive ? "#ffffff" : tabColor.text,
+                fontSize: "0.84rem",
                 fontWeight: isActive ? 600 : 500,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
-                boxShadow: isActive ? "0 3px 8px rgba(234, 88, 12, 0.3)" : "none",
+                boxShadow: isActive ? `0 3px 8px ${tabColor.border}` : "none",
                 transition: "all 0.15s ease",
               }}
             >
@@ -1075,18 +1470,19 @@ export function AdminTakeaway({
         <div
           style={{
             position: "relative",
-            flex: "1 1 300px",
-            maxWidth: "460px",
+            flex: "1 1 320px",
+            maxWidth: "480px",
           }}
         >
           <Search
             size={16}
             style={{
               position: "absolute",
-              left: "0.85rem",
+              left: "0.95rem",
               top: "50%",
               transform: "translateY(-50%)",
               color: "var(--text-muted)",
+              pointerEvents: "none",
             }}
           />
           <input
@@ -1096,12 +1492,13 @@ export function AdminTakeaway({
             placeholder="Search by Order ID, Customer or Phone..."
             style={{
               width: "100%",
-              padding: "0.58rem 0.85rem 0.58rem 2.4rem",
+              height: "42px",
+              padding: "0 0.95rem 0 2.5rem",
               borderRadius: "10px",
               border: "1px solid var(--border-card)",
               background: "var(--bg-card)",
               color: "var(--text-main)",
-              fontSize: "0.83rem",
+              fontSize: "0.84rem",
               outline: "none",
               boxSizing: "border-box",
             }}
@@ -1115,12 +1512,13 @@ export function AdminTakeaway({
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             style={{
-              padding: "0.55rem 0.85rem",
+              height: "42px",
+              padding: "0 1rem",
               borderRadius: "10px",
               border: "1px solid var(--border-card)",
               background: "var(--bg-card)",
               color: "var(--text-main)",
-              fontSize: "0.82rem",
+              fontSize: "0.83rem",
               fontWeight: 500,
               cursor: "pointer",
               outline: "none",
@@ -1138,12 +1536,13 @@ export function AdminTakeaway({
             value={secondaryStatusFilter}
             onChange={(e) => setSecondaryStatusFilter(e.target.value)}
             style={{
-              padding: "0.55rem 0.85rem",
+              height: "42px",
+              padding: "0 1rem",
               borderRadius: "10px",
               border: "1px solid var(--border-card)",
               background: "var(--bg-card)",
               color: "var(--text-main)",
-              fontSize: "0.82rem",
+              fontSize: "0.83rem",
               fontWeight: 500,
               cursor: "pointer",
               outline: "none",
@@ -1163,7 +1562,8 @@ export function AdminTakeaway({
             onClick={handleRefresh}
             title="Refresh orders from server"
             style={{
-              padding: "0.55rem",
+              height: "42px",
+              width: "42px",
               borderRadius: "10px",
               border: "1px solid var(--border-card)",
               background: "var(--bg-card)",
@@ -1190,40 +1590,62 @@ export function AdminTakeaway({
         style={{
           background: "var(--bg-card)",
           border: "1px solid var(--border-card)",
-          borderRadius: "12px",
+          borderRadius: "14px",
           overflow: "hidden",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
         }}
       >
-        <div style={{ overflowX: "auto" }}>
+        <div className="takeaway-orders-scroll" style={{ overflowX: "auto" }}>
           <table
             style={{
               width: "100%",
-              borderCollapse: "collapse",
+              tableLayout: "fixed",
+              borderCollapse: "separate",
+              borderSpacing: 0,
               textAlign: "left",
-              fontSize: "0.85rem",
+              fontSize: "0.86rem",
             }}
           >
+            <colgroup>
+              <col style={{ width: "4%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "14%" }} />
+            </colgroup>
             <thead>
-              <tr
-                style={{
-                  borderBottom: "1px solid var(--border-card)",
-                  color: "var(--text-muted)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.03em",
-                }}
-              >
-                <th style={{ padding: "0.85rem 1rem", width: "40px" }}>#</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Order ID</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Customer</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Phone</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Items</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Amount</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Status</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Order Time</th>
-                <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>Actions</th>
+              <tr>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  #
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  ORDER ID
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  CUSTOMER
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  PHONE
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  ITEMS
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  AMOUNT
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  STATUS
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  ORDER TIME
+                </th>
+                <th style={{ padding: "0.7rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
+                  ACTIONS
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1232,7 +1654,7 @@ export function AdminTakeaway({
                   <td
                     colSpan={9}
                     style={{
-                      padding: "3rem 1rem",
+                      padding: "3.5rem 1rem",
                       textAlign: "center",
                       color: "var(--text-muted)",
                       fontSize: "0.9rem",
@@ -1248,55 +1670,61 @@ export function AdminTakeaway({
                     <tr
                       key={order.id}
                       style={{
-                        borderBottom: "1px solid var(--border-card)",
                         transition: "background 0.15s ease",
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(249, 115, 22, 0.03)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted)" }}>
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         {rowNumber}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "var(--text-main)" }}>
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {order.orderNumber || order.id}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: "var(--text-main)" }}>
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {order.customer}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {order.phone}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-main)" }}>
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         <span
                           style={{
-                            background: "rgba(255, 255, 255, 0.06)",
-                            padding: "0.2rem 0.5rem",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "0.25rem 0.45rem",
                             borderRadius: "6px",
-                            fontSize: "0.78rem",
+                            fontSize: "0.76rem",
+                            fontWeight: 600,
+                            background: "rgba(100, 116, 139, 0.07)",
+                            color: "var(--text-main)",
                             border: "1px solid var(--border-card)",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {order.itemsCount} Items
                         </span>
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "var(--text-main)" }}>
-                        ₹ {Number(order.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        ₹ {getTakeawayOrderTotal(order).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem" }}>
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         {renderStatusBadge(order.status)}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted)", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.76rem", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {order.orderTime}
                       </td>
-                      <td style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                          {/* View details */}
+                      <td style={{ padding: "0.65rem 0.45rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                          {/* View bill & print invoice */}
                           <button
                             type="button"
-                            onClick={() => setSelectedOrderDetails(order)}
-                            title="View order details"
+                            onClick={() => setPrintReceiptOrder(order)}
+                            title="View bill & tax invoice"
                             style={{
-                              padding: "0.4rem",
+                              width: "32px",
+                              height: "32px",
                               borderRadius: "8px",
                               border: "1px solid var(--border-card)",
                               background: "transparent",
@@ -1305,7 +1733,10 @@ export function AdminTakeaway({
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
+                              transition: "background 0.15s ease",
                             }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(100, 116, 139, 0.08)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
                             <Eye size={15} />
                           </button>
@@ -1314,9 +1745,10 @@ export function AdminTakeaway({
                           <button
                             type="button"
                             onClick={() => setPrintReceiptOrder(order)}
-                            title="Print receipt / KOT"
+                            title="Print bill / tax invoice"
                             style={{
-                              padding: "0.4rem",
+                              width: "32px",
+                              height: "32px",
                               borderRadius: "8px",
                               border: "1px solid var(--border-card)",
                               background: "transparent",
@@ -1325,7 +1757,10 @@ export function AdminTakeaway({
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
+                              transition: "background 0.15s ease",
                             }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(100, 116, 139, 0.08)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
                             <Printer size={15} />
                           </button>
@@ -1336,15 +1771,31 @@ export function AdminTakeaway({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActionMenuOrderId(actionMenuOrderId === order.id ? null : order.id);
+                                if (actionMenuOrderId === order.id) {
+                                  setActionMenuOrderId(null);
+                                  setActionMenuOpenAbove(false);
+                                } else {
+                                  const buttonRect = e.currentTarget.getBoundingClientRect();
+                                  const scrollAreaRect = e.currentTarget.closest(".takeaway-orders-scroll")?.getBoundingClientRect();
+                                  const menuHeight = 220;
+                                  setActionMenuOpenAbove(
+                                    Boolean(
+                                      scrollAreaRect &&
+                                      scrollAreaRect.bottom - buttonRect.bottom < menuHeight &&
+                                      buttonRect.top - scrollAreaRect.top > menuHeight
+                                    )
+                                  );
+                                  setActionMenuOrderId(order.id);
+                                }
                               }}
                               title="Order actions"
                               style={{
-                                padding: "0.4rem",
+                                width: "32px",
+                                height: "32px",
                                 borderRadius: "8px",
                                 border: "1px solid var(--border-card)",
-                                background: "transparent",
-                                color: "var(--text-main)",
+                                background: actionMenuOrderId === order.id ? "rgba(234, 88, 12, 0.12)" : "transparent",
+                                color: actionMenuOrderId === order.id ? "#ea580c" : "var(--text-main)",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -1359,37 +1810,87 @@ export function AdminTakeaway({
                                 style={{
                                   position: "absolute",
                                   right: 0,
-                                  top: "calc(100% + 4px)",
+                                  top: actionMenuOpenAbove ? "auto" : "calc(100% + 4px)",
+                                  bottom: actionMenuOpenAbove ? "calc(100% + 4px)" : "auto",
                                   background: "var(--bg-card)",
                                   border: "1px solid var(--border-card)",
                                   borderRadius: "10px",
-                                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.25)",
+                                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
                                   padding: "0.35rem",
                                   zIndex: 50,
-                                  minWidth: "160px",
+                                  minWidth: "175px",
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: "0.2rem",
                                   textAlign: "left",
                                 }}
                               >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPrintReceiptOrder(order);
+                                    setActionMenuOrderId(null);
+                                  }}
+                                  style={{
+                                    textAlign: "left",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    background: "rgba(234, 88, 12, 0.08)",
+                                    color: "#ea580c",
+                                    fontSize: "0.8rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.45rem",
+                                  }}
+                                >
+                                  <Receipt size={14} /> View / Print Bill
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedOrderDetails(order);
+                                    setActionMenuOrderId(null);
+                                  }}
+                                  style={{
+                                    textAlign: "left",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "var(--text-main)",
+                                    fontSize: "0.8rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.45rem",
+                                    borderBottom: "1px solid var(--border-card)",
+                                    marginBottom: "0.2rem",
+                                    paddingBottom: "0.5rem",
+                                  }}
+                                >
+                                  <FileText size={14} /> Order Information
+                                </button>
                                 {order.status === "Pending" && (
                                   <button
                                     type="button"
                                     onClick={() => updateOrderStatus(order.id, "Preparing")}
                                     style={{
                                       textAlign: "left",
-                                      padding: "0.45rem 0.65rem",
+                                      padding: "0.5rem 0.75rem",
                                       borderRadius: "6px",
                                       border: "none",
                                       background: "transparent",
                                       color: "#2563eb",
                                       fontSize: "0.8rem",
-                                      fontWeight: 500,
+                                      fontWeight: 600,
                                       cursor: "pointer",
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: "0.4rem",
+                                      gap: "0.45rem",
                                     }}
                                   >
                                     <ChefHat size={14} /> Mark as Preparing
@@ -1401,17 +1902,17 @@ export function AdminTakeaway({
                                     onClick={() => updateOrderStatus(order.id, "Ready")}
                                     style={{
                                       textAlign: "left",
-                                      padding: "0.45rem 0.65rem",
+                                      padding: "0.5rem 0.75rem",
                                       borderRadius: "6px",
                                       border: "none",
                                       background: "transparent",
                                       color: "#9333ea",
                                       fontSize: "0.8rem",
-                                      fontWeight: 500,
+                                      fontWeight: 600,
                                       cursor: "pointer",
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: "0.4rem",
+                                      gap: "0.45rem",
                                     }}
                                   >
                                     <Bell size={14} /> Mark as Ready
@@ -1423,17 +1924,17 @@ export function AdminTakeaway({
                                     onClick={() => updateOrderStatus(order.id, "Completed")}
                                     style={{
                                       textAlign: "left",
-                                      padding: "0.45rem 0.65rem",
+                                      padding: "0.5rem 0.75rem",
                                       borderRadius: "6px",
                                       border: "none",
                                       background: "transparent",
                                       color: "#16a34a",
                                       fontSize: "0.8rem",
-                                      fontWeight: 500,
+                                      fontWeight: 600,
                                       cursor: "pointer",
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: "0.4rem",
+                                      gap: "0.45rem",
                                     }}
                                   >
                                     <CheckCircle2 size={14} /> Mark as Completed
@@ -1445,17 +1946,17 @@ export function AdminTakeaway({
                                     onClick={() => updateOrderStatus(order.id, "Cancelled")}
                                     style={{
                                       textAlign: "left",
-                                      padding: "0.45rem 0.65rem",
+                                      padding: "0.5rem 0.75rem",
                                       borderRadius: "6px",
                                       border: "none",
                                       background: "transparent",
                                       color: "#dc2626",
                                       fontSize: "0.8rem",
-                                      fontWeight: 500,
+                                      fontWeight: 600,
                                       cursor: "pointer",
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: "0.4rem",
+                                      gap: "0.45rem",
                                     }}
                                   >
                                     <XCircle size={14} /> Cancel Order
@@ -1480,9 +1981,9 @@ export function AdminTakeaway({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "0.85rem 1.25rem",
+            padding: "0.9rem 1.25rem",
             borderTop: "1px solid var(--border-card)",
-            fontSize: "0.82rem",
+            fontSize: "0.84rem",
             color: "var(--text-muted)",
             flexWrap: "wrap",
             gap: "0.75rem",
@@ -1490,15 +1991,15 @@ export function AdminTakeaway({
         >
           <div>
             Showing{" "}
-            <span style={{ fontWeight: 600, color: "var(--text-main)" }}>
+            <span style={{ fontWeight: 700, color: "var(--text-main)" }}>
               {filteredOrders.length > 0 ? (safePage - 1) * pageSize + 1 : 0}
             </span>{" "}
-            -{" "}
-            <span style={{ fontWeight: 600, color: "var(--text-main)" }}>
+            –{" "}
+            <span style={{ fontWeight: 700, color: "var(--text-main)" }}>
               {Math.min(safePage * pageSize, filteredOrders.length)}
             </span>{" "}
             of{" "}
-            <span style={{ fontWeight: 600, color: "var(--text-main)" }}>
+            <span style={{ fontWeight: 700, color: "var(--text-main)" }}>
               {filteredOrders.length}
             </span>{" "}
             orders
@@ -1511,8 +2012,8 @@ export function AdminTakeaway({
               disabled={safePage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               style={{
-                width: "32px",
-                height: "32px",
+                width: "34px",
+                height: "34px",
                 borderRadius: "8px",
                 border: "1px solid var(--border-card)",
                 background: "var(--bg-card)",
@@ -1527,7 +2028,6 @@ export function AdminTakeaway({
               <ChevronLeft size={16} />
             </button>
 
-            {/* Page number buttons */}
             {Array.from({ length: totalPages }, (_, i) => i + 1)
               .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
               .reduce((acc, p, index, arr) => {
@@ -1540,7 +2040,7 @@ export function AdminTakeaway({
               .map((pageItem, pIdx) => {
                 if (pageItem === "...") {
                   return (
-                    <span key={`dots-${pIdx}`} style={{ padding: "0 0.3rem", color: "var(--text-muted)" }}>
+                    <span key={`dots-${pIdx}`} style={{ padding: "0 0.35rem", color: "var(--text-muted)" }}>
                       ...
                     </span>
                   );
@@ -1552,8 +2052,8 @@ export function AdminTakeaway({
                     type="button"
                     onClick={() => setCurrentPage(pageItem)}
                     style={{
-                      width: "32px",
-                      height: "32px",
+                      width: "34px",
+                      height: "34px",
                       borderRadius: "8px",
                       border: isSelected ? "none" : "1px solid var(--border-card)",
                       background: isSelected
@@ -1561,7 +2061,7 @@ export function AdminTakeaway({
                         : "var(--bg-card)",
                       color: isSelected ? "#fff" : "var(--text-main)",
                       fontWeight: isSelected ? 700 : 500,
-                      fontSize: "0.82rem",
+                      fontSize: "0.84rem",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -1579,8 +2079,8 @@ export function AdminTakeaway({
               disabled={safePage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               style={{
-                width: "32px",
-                height: "32px",
+                width: "34px",
+                height: "34px",
                 borderRadius: "8px",
                 border: "1px solid var(--border-card)",
                 background: "var(--bg-card)",
@@ -1604,7 +2104,7 @@ export function AdminTakeaway({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.7)",
+            background: "rgba(0, 0, 0, 0.65)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
@@ -1617,31 +2117,31 @@ export function AdminTakeaway({
             style={{
               background: "var(--bg-card)",
               border: "1px solid var(--border-card)",
-              borderRadius: "16px",
+              borderRadius: "18px",
               width: "100%",
-              maxWidth: "850px",
+              maxWidth: "860px",
               maxHeight: "90vh",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.4)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.25)",
               overflow: "hidden",
             }}
           >
             {/* Modal Header */}
             <div
               style={{
-                padding: "1rem 1.5rem",
+                padding: "1.1rem 1.6rem",
                 borderBottom: "1px solid var(--border-card)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <div
                   style={{
-                    width: "36px",
-                    height: "36px",
+                    width: "40px",
+                    height: "40px",
                     borderRadius: "10px",
                     background: "rgba(234, 88, 12, 0.12)",
                     color: "#ea580c",
@@ -1650,13 +2150,13 @@ export function AdminTakeaway({
                     justifyContent: "center",
                   }}
                 >
-                  <Plus size={20} />
+                  <Plus size={22} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700, color: "var(--text-main)" }}>
+                  <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text-main)" }}>
                     New Takeaway Order
                   </h2>
-                  <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-muted)" }}>
                     Create and dispatch a new customer pickup order
                   </p>
                 </div>
@@ -1670,6 +2170,7 @@ export function AdminTakeaway({
                   color: "var(--text-muted)",
                   cursor: "pointer",
                   padding: "0.4rem",
+                  borderRadius: "8px",
                 }}
               >
                 <X size={20} />
@@ -1680,92 +2181,92 @@ export function AdminTakeaway({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: "1.15fr 1fr",
                 overflowY: "auto",
                 flex: 1,
               }}
             >
               {/* Left Column: Menu Items Selection */}
-              <div style={{ padding: "1.25rem", borderRight: "1px solid var(--border-card)" }}>
-                <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "0.5rem" }}>
+              <div style={{ padding: "1.4rem", borderRight: "1px solid var(--border-card)" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "0.75rem" }}>
                   Select Dishes from Menu
                 </div>
 
-                {/* Dish search & category filter */}
-                <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.85rem" }}>
-                  <div style={{ position: "relative", flex: 1 }}>
-                    <Search
-                      size={14}
-                      style={{
-                        position: "absolute",
-                        left: "0.65rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        color: "var(--text-muted)",
-                      }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search dish..."
-                      value={itemSearchQuery}
-                      onChange={(e) => setItemSearchQuery(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "0.45rem 0.65rem 0.45rem 2rem",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-card)",
-                        background: "var(--bg-main)",
-                        color: "var(--text-main)",
-                        fontSize: "0.8rem",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
+                {/* Dish search */}
+                <div style={{ position: "relative", marginBottom: "0.85rem" }}>
+                  <Search
+                    size={15}
+                    style={{
+                      position: "absolute",
+                      left: "0.75rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "var(--text-muted)",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search dish name..."
+                    value={itemSearchQuery}
+                    onChange={(e) => setItemSearchQuery(e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: "38px",
+                      padding: "0 0.75rem 0 2.2rem",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-card)",
+                      background: "var(--bg-main)",
+                      color: "var(--text-main)",
+                      fontSize: "0.82rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                    }}
+                  />
                 </div>
 
                 {/* Dishes list */}
                 <div
                   style={{
-                    maxHeight: "340px",
+                    maxHeight: "350px",
                     overflowY: "auto",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "0.45rem",
+                    gap: "0.5rem",
                   }}
                 >
-                  {availableFoodItems.slice(0, 30).map((dish) => {
+                  {availableFoodItems.slice(0, 35).map((dish) => {
                     const dishId = dish.id || dish.menuItemId || dish.name;
                     const inCart = newOrderCart[dishId]?.quantity || 0;
                     return (
                       <div
                         key={dishId}
                         style={{
-                          padding: "0.5rem 0.75rem",
-                          borderRadius: "8px",
+                          padding: "0.6rem 0.85rem",
+                          borderRadius: "10px",
                           border: "1px solid var(--border-card)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          background: inCart > 0 ? "rgba(234, 88, 12, 0.05)" : "var(--bg-main)",
+                          background: inCart > 0 ? "rgba(234, 88, 12, 0.06)" : "var(--bg-main)",
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: "0.82rem", color: "var(--text-main)" }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.84rem", color: "var(--text-main)" }}>
                             {dish.name}
                           </div>
-                          <div style={{ fontSize: "0.75rem", color: "#16a34a", fontWeight: 600 }}>
-                            ₹ {dish.price}
+                          <div style={{ fontSize: "0.78rem", color: "#16a34a", fontWeight: 700, marginTop: "0.1rem" }}>
+                            ₹ {Number(dish.price).toFixed(2)}
                           </div>
                         </div>
 
                         {inCart > 0 ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
                             <button
                               type="button"
                               onClick={() => removeCartItem(dish)}
                               style={{
-                                width: "24px",
-                                height: "24px",
+                                width: "26px",
+                                height: "26px",
                                 borderRadius: "6px",
                                 border: "1px solid var(--border-card)",
                                 background: "var(--bg-card)",
@@ -1774,19 +2275,20 @@ export function AdminTakeaway({
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
+                                fontWeight: 700,
                               }}
                             >
                               -
                             </button>
-                            <span style={{ fontSize: "0.82rem", fontWeight: 700, minWidth: "16px", textAlign: "center" }}>
+                            <span style={{ fontSize: "0.84rem", fontWeight: 700, minWidth: "18px", textAlign: "center" }}>
                               {inCart}
                             </span>
                             <button
                               type="button"
                               onClick={() => addCartItem(dish)}
                               style={{
-                                width: "24px",
-                                height: "24px",
+                                width: "26px",
+                                height: "26px",
                                 borderRadius: "6px",
                                 border: "none",
                                 background: "#ea580c",
@@ -1795,6 +2297,7 @@ export function AdminTakeaway({
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
+                                fontWeight: 700,
                               }}
                             >
                               +
@@ -1805,12 +2308,12 @@ export function AdminTakeaway({
                             type="button"
                             onClick={() => addCartItem(dish)}
                             style={{
-                              padding: "0.3rem 0.65rem",
+                              padding: "0.35rem 0.75rem",
                               borderRadius: "6px",
                               border: "1px solid rgba(234, 88, 12, 0.4)",
                               background: "rgba(234, 88, 12, 0.1)",
                               color: "#ea580c",
-                              fontSize: "0.76rem",
+                              fontSize: "0.78rem",
                               fontWeight: 600,
                               cursor: "pointer",
                             }}
@@ -1827,17 +2330,17 @@ export function AdminTakeaway({
               {/* Right Column: Customer Details & Order Cart */}
               <div
                 style={{
-                  padding: "1.25rem",
+                  padding: "1.4rem",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.85rem",
+                  gap: "0.95rem",
                 }}
               >
-                <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>Customer & Order Info</div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>Customer & Order Info</div>
 
                 {/* Customer Name */}
                 <div>
-                  <label style={{ fontSize: "0.76rem", color: "var(--text-muted)", display: "block", marginBottom: "0.25rem" }}>
+                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>
                     Customer Name *
                   </label>
                   <input
@@ -1847,52 +2350,77 @@ export function AdminTakeaway({
                     onChange={(e) => setNewCustomerName(e.target.value)}
                     style={{
                       width: "100%",
-                      padding: "0.5rem 0.75rem",
+                      height: "38px",
+                      padding: "0 0.85rem",
                       borderRadius: "8px",
                       border: "1px solid var(--border-card)",
                       background: "var(--bg-main)",
                       color: "var(--text-main)",
-                      fontSize: "0.82rem",
+                      fontSize: "0.84rem",
                       boxSizing: "border-box",
+                      outline: "none",
                     }}
                   />
                 </div>
 
                 {/* Customer Phone */}
                 <div>
-                  <label style={{ fontSize: "0.76rem", color: "var(--text-muted)", display: "block", marginBottom: "0.25rem" }}>
-                    Phone Number
+                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>
+                    Phone Number *
                   </label>
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    required
+                    aria-label="Phone number (required)"
+                    aria-invalid={Boolean(customerPhoneError)}
+                    aria-describedby={customerPhoneError ? "takeaway-phone-error" : undefined}
                     placeholder="e.g. +91 98450 11223"
                     value={newCustomerPhone}
-                    onChange={(e) => setNewCustomerPhone(e.target.value)}
+                    onChange={(e) => {
+                      setNewCustomerPhone(e.target.value);
+                      if (customerPhoneError && isValidIndianMobileNumber(e.target.value)) {
+                        setCustomerPhoneError("");
+                      }
+                    }}
+                    onBlur={() => {
+                      if (newCustomerPhone.trim() && !isValidIndianMobileNumber(newCustomerPhone)) {
+                        setCustomerPhoneError("Enter a valid 10-digit Indian mobile number.");
+                      }
+                    }}
                     style={{
                       width: "100%",
-                      padding: "0.5rem 0.75rem",
+                      height: "38px",
+                      padding: "0 0.85rem",
                       borderRadius: "8px",
-                      border: "1px solid var(--border-card)",
+                      border: `1px solid ${customerPhoneError ? "#dc2626" : "var(--border-card)"}`,
                       background: "var(--bg-main)",
                       color: "var(--text-main)",
-                      fontSize: "0.82rem",
+                      fontSize: "0.84rem",
                       boxSizing: "border-box",
+                      outline: "none",
                     }}
                   />
+                  {customerPhoneError && (
+                    <div id="takeaway-phone-error" role="alert" style={{ marginTop: "0.3rem", color: "#dc2626", fontSize: "0.74rem" }}>
+                      {customerPhoneError}
+                    </div>
+                  )}
                 </div>
 
                 {/* Selected Items summary */}
                 <div>
-                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
-                    Order Items ({cartItemsList.length})
+                  <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                    Selected Items ({cartItemsList.length})
                   </div>
                   <div
                     style={{
                       background: "var(--bg-main)",
                       border: "1px solid var(--border-card)",
                       borderRadius: "8px",
-                      padding: "0.6rem",
-                      maxHeight: "120px",
+                      padding: "0.65rem 0.85rem",
+                      maxHeight: "125px",
                       overflowY: "auto",
                       display: "flex",
                       flexDirection: "column",
@@ -1900,7 +2428,7 @@ export function AdminTakeaway({
                     }}
                   >
                     {cartItemsList.length === 0 ? (
-                      <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", textAlign: "center", padding: "0.5rem" }}>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textAlign: "center", padding: "0.6rem" }}>
                         No items added yet. Click + Add on the left.
                       </div>
                     ) : (
@@ -1910,14 +2438,14 @@ export function AdminTakeaway({
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
-                            fontSize: "0.8rem",
+                            fontSize: "0.82rem",
                           }}
                         >
                           <span>
                             {line.item.name} × {line.quantity}
                           </span>
-                          <span style={{ fontWeight: 600 }}>
-                            ₹ {(Number(line.item.price) || 0) * line.quantity}
+                          <span style={{ fontWeight: 700 }}>
+                            ₹ {((Number(line.item.price) || 0) * line.quantity).toFixed(2)}
                           </span>
                         </div>
                       ))
@@ -1927,24 +2455,24 @@ export function AdminTakeaway({
 
                 {/* Payment Method */}
                 <div>
-                  <label style={{ fontSize: "0.76rem", color: "var(--text-muted)", display: "block", marginBottom: "0.25rem" }}>
+                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>
                     Payment Mode
                   </label>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    {["UPI", "Cash", "Card"].map((mode) => (
+                    {["UPI", "Cash"].map((mode) => (
                       <button
                         key={mode}
                         type="button"
                         onClick={() => setNewPaymentMethod(mode)}
                         style={{
                           flex: 1,
-                          padding: "0.45rem",
-                          borderRadius: "6px",
+                          height: "36px",
+                          borderRadius: "8px",
                           border: newPaymentMethod === mode ? "1px solid #ea580c" : "1px solid var(--border-card)",
                           background: newPaymentMethod === mode ? "rgba(234, 88, 12, 0.1)" : "var(--bg-main)",
                           color: newPaymentMethod === mode ? "#ea580c" : "var(--text-main)",
-                          fontSize: "0.78rem",
-                          fontWeight: 600,
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
                           cursor: "pointer",
                         }}
                       >
@@ -1958,32 +2486,36 @@ export function AdminTakeaway({
                 <div
                   style={{
                     background: "var(--bg-main)",
-                    borderRadius: "8px",
-                    padding: "0.65rem 0.85rem",
+                    borderRadius: "10px",
+                    padding: "0.75rem 0.95rem",
                     border: "1px solid var(--border-card)",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "0.25rem",
-                    fontSize: "0.82rem",
+                    gap: "0.3rem",
+                    fontSize: "0.84rem",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
                     <span>Subtotal:</span>
-                    <span>₹ {cartSubtotal.toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>₹ {cartSubtotal.toFixed(2)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
                     <span>GST (5%):</span>
-                    <span>₹ {cartGst.toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>₹ {cartGst.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                    <span>Service Charge (5%):</span>
+                    <span style={{ fontWeight: 600 }}>₹ {cartServiceCharge.toFixed(2)}</span>
                   </div>
                   <div
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      fontWeight: 700,
-                      fontSize: "0.95rem",
+                      fontWeight: 800,
+                      fontSize: "1.05rem",
                       color: "#16a34a",
                       borderTop: "1px dashed var(--border-card)",
-                      paddingTop: "0.35rem",
+                      paddingTop: "0.45rem",
                       marginTop: "0.2rem",
                     }}
                   >
@@ -1997,7 +2529,7 @@ export function AdminTakeaway({
             {/* Modal Footer */}
             <div
               style={{
-                padding: "0.85rem 1.5rem",
+                padding: "1rem 1.6rem",
                 borderTop: "1px solid var(--border-card)",
                 display: "flex",
                 justifyContent: "flex-end",
@@ -2008,13 +2540,13 @@ export function AdminTakeaway({
                 type="button"
                 onClick={() => setIsNewOrderModalOpen(false)}
                 style={{
-                  padding: "0.55rem 1.15rem",
+                  padding: "0.6rem 1.25rem",
                   borderRadius: "8px",
                   border: "1px solid var(--border-card)",
                   background: "transparent",
                   color: "var(--text-main)",
-                  fontSize: "0.82rem",
-                  fontWeight: 500,
+                  fontSize: "0.84rem",
+                  fontWeight: 600,
                   cursor: "pointer",
                 }}
               >
@@ -2024,12 +2556,12 @@ export function AdminTakeaway({
                 type="button"
                 onClick={handleCreateTakeawayOrder}
                 style={{
-                  padding: "0.55rem 1.35rem",
+                  padding: "0.6rem 1.45rem",
                   borderRadius: "8px",
                   border: "none",
                   background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
                   color: "#fff",
-                  fontSize: "0.82rem",
+                  fontSize: "0.84rem",
                   fontWeight: 600,
                   cursor: "pointer",
                   boxShadow: "0 2px 8px rgba(234, 88, 12, 0.3)",
@@ -2048,7 +2580,7 @@ export function AdminTakeaway({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.7)",
+            background: "rgba(0, 0, 0, 0.65)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
@@ -2061,146 +2593,296 @@ export function AdminTakeaway({
             style={{
               background: "var(--bg-card)",
               border: "1px solid var(--border-card)",
-              borderRadius: "16px",
+              borderRadius: "18px",
               width: "100%",
-              maxWidth: "540px",
+              maxWidth: "580px",
+              maxHeight: "85vh",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.4)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.25)",
               overflow: "hidden",
             }}
           >
+            {/* Header */}
             <div
               style={{
-                padding: "1rem 1.25rem",
+                padding: "1.1rem 1.4rem",
                 borderBottom: "1px solid var(--border-card)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                flexShrink: 0,
               }}
             >
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--text-main)" }}>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text-main)", lineHeight: 1.2 }}>
                   Takeaway Order #{selectedOrderDetails.orderNumber || selectedOrderDetails.id}
                 </h3>
-                <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                  {selectedOrderDetails.orderTime}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                  <Clock size={13} />
+                  <span>{selectedOrderDetails.orderTime}</span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOrderDetails(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  padding: "0.4rem",
-                }}
-              >
-                <X size={18} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrintReceiptOrder(selectedOrderDetails);
+                    setSelectedOrderDetails(null);
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.42rem 0.85rem",
+                    borderRadius: "8px",
+                    border: "1px solid #ea580c",
+                    background: "rgba(234, 88, 12, 0.08)",
+                    color: "#ea580c",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <Printer size={14} /> View / Print Bill
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderDetails(null)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                    padding: "0.45rem",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
-            <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {/* Customer info */}
+            <div style={{ padding: "1.2rem 1.4rem", display: "flex", flexDirection: "column", gap: "0.95rem", overflowY: "auto", flex: "1 1 auto", minHeight: 0, maxHeight: "calc(85vh - 130px)" }}>
+              {/* Customer and Order Summary Banner */}
               <div
                 style={{
                   background: "var(--bg-main)",
-                  padding: "0.75rem 1rem",
-                  borderRadius: "10px",
+                  padding: "0.95rem 1.25rem",
+                  borderRadius: "12px",
                   border: "1px solid var(--border-card)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "0.85rem",
+                  display: "grid",
+                  gridTemplateColumns: "1.2fr 1.2fr 1fr",
+                  gap: "0.75rem",
+                  alignItems: "center",
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Customer</div>
-                  <div style={{ fontWeight: 600 }}>{selectedOrderDetails.customer}</div>
+                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <User size={13} /> Customer
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "var(--text-main)", marginTop: "0.15rem" }}>
+                    {selectedOrderDetails.customer}
+                  </div>
                 </div>
+
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Phone</div>
-                  <div style={{ fontWeight: 600 }}>{selectedOrderDetails.phone}</div>
+                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <Phone size={13} /> Phone
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--text-main)", marginTop: "0.15rem" }}>
+                    {selectedOrderDetails.phone}
+                  </div>
                 </div>
+
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Status</div>
-                  <div style={{ marginTop: "0.15rem" }}>
+                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, marginBottom: "0.2rem" }}>
+                    Status
+                  </div>
+                  <div>
                     {renderStatusBadge(selectedOrderDetails.status)}
                   </div>
                 </div>
               </div>
 
-              {/* Items List */}
+              {/* Items Ordered Table */}
               <div>
-                <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "0.4rem" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "0.5rem" }}>
                   Items Ordered
                 </div>
                 <div
                   style={{
                     border: "1px solid var(--border-card)",
-                    borderRadius: "8px",
+                    borderRadius: "10px",
                     overflow: "hidden",
                   }}
                 >
-                  {(selectedOrderDetails.items || []).map((it, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        padding: "0.55rem 0.85rem",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "0.82rem",
-                        borderBottom:
-                          idx < (selectedOrderDetails.items?.length || 0) - 1
-                            ? "1px solid var(--border-card)"
-                            : "none",
-                      }}
-                    >
-                      <span>
-                        {it.name} × {it.quantity}
-                      </span>
-                      <span style={{ fontWeight: 600 }}>
-                        ₹ {((Number(it.price) || 0) * (it.quantity || 1)).toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                    <tbody>
+                      {(selectedOrderDetails.items || []).map((it, idx) => (
+                        <tr
+                          key={idx}
+                          style={{
+                            borderBottom:
+                              idx < (selectedOrderDetails.items?.length || 0) - 1
+                                ? "1px solid var(--border-card)"
+                                : "none",
+                          }}
+                        >
+                          <td style={{ padding: "0.75rem 1rem", color: "var(--text-main)", fontWeight: 600 }}>
+                            {it.name} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>× {it.quantity}</span>
+                          </td>
+                          <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--text-main)" }}>
+                            ₹ {((Number(it.price) || 0) * (it.quantity || 1)).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* Total Summary */}
+              {/* Total Bill Amount (Matching Reference Image) */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  padding: "0.85rem",
+                  padding: "0.95rem 1.25rem",
                   background: "rgba(34, 197, 94, 0.08)",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(34, 197, 94, 0.2)",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(34, 197, 94, 0.25)",
                 }}
               >
-                <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Total Bill Amount:</span>
-                <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#16a34a" }}>
-                  ₹ {Number(selectedOrderDetails.amount).toFixed(2)}
+                <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-main)" }}>
+                  Total Bill Amount:
+                </span>
+                <span style={{ fontSize: "1.35rem", fontWeight: 800, color: "#16a34a", letterSpacing: "-0.01em" }}>
+                  ₹ {getTakeawayOrderTotal(selectedOrderDetails).toFixed(2)}
                 </span>
               </div>
 
               {/* Notes */}
               {selectedOrderDetails.notes && (
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                  <strong>Notes:</strong> {selectedOrderDetails.notes}
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--text-muted)",
+                    padding: "0.65rem 0.95rem",
+                    borderRadius: "8px",
+                    background: "var(--bg-main)",
+                    border: "1px solid var(--border-card)",
+                  }}
+                >
+                  <strong style={{ color: "var(--text-main)" }}>Notes:</strong> {selectedOrderDetails.notes}
                 </div>
               )}
+
+              {/* Status Change Quick Actions */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", paddingTop: "0.2rem" }}>
+                <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", marginRight: "0.3rem" }}>
+                  Quick Status:
+                </span>
+                {selectedOrderDetails.status === "Pending" && (
+                  <button
+                    type="button"
+                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Preparing")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.35rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid rgba(59, 130, 246, 0.4)",
+                      background: "rgba(59, 130, 246, 0.1)",
+                      color: "#2563eb",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <ChefHat size={13} /> Start Preparing
+                  </button>
+                )}
+                {(selectedOrderDetails.status === "Pending" || selectedOrderDetails.status === "Preparing") && (
+                  <button
+                    type="button"
+                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Ready")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.35rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid rgba(168, 85, 247, 0.4)",
+                      background: "rgba(168, 85, 247, 0.1)",
+                      color: "#9333ea",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Bell size={13} /> Mark as Ready
+                  </button>
+                )}
+                {selectedOrderDetails.status !== "Completed" && selectedOrderDetails.status !== "Cancelled" && (
+                  <button
+                    type="button"
+                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Completed")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.35rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid rgba(34, 197, 94, 0.4)",
+                      background: "rgba(34, 197, 94, 0.1)",
+                      color: "#16a34a",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <CheckCircle2 size={13} /> Complete Order
+                  </button>
+                )}
+                {selectedOrderDetails.status !== "Cancelled" && (
+                  <button
+                    type="button"
+                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Cancelled")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.35rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      background: "rgba(239, 68, 68, 0.1)",
+                      color: "#dc2626",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <XCircle size={13} /> Cancel
+                  </button>
+                )}
+              </div>
             </div>
 
+            {/* Modal Footer */}
             <div
               style={{
-                padding: "0.85rem 1.25rem",
+                padding: "1.1rem 1.5rem",
                 borderTop: "1px solid var(--border-card)",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexShrink: 0,
               }}
             >
               <button
@@ -2212,32 +2894,33 @@ export function AdminTakeaway({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "0.4rem",
-                  padding: "0.5rem 0.95rem",
+                  gap: "0.45rem",
+                  padding: "0.6rem 1.15rem",
                   borderRadius: "8px",
                   border: "1px solid var(--border-card)",
                   background: "transparent",
                   color: "var(--text-main)",
-                  fontSize: "0.8rem",
+                  fontSize: "0.84rem",
                   fontWeight: 600,
                   cursor: "pointer",
                 }}
               >
-                <Printer size={15} /> Print Receipt
+                <Printer size={16} /> Print Receipt
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedOrderDetails(null)}
                 style={{
-                  padding: "0.5rem 1.15rem",
+                  padding: "0.6rem 1.5rem",
                   borderRadius: "8px",
                   border: "none",
                   background: "#ea580c",
                   color: "#fff",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
+                  fontSize: "0.84rem",
+                  fontWeight: 700,
                   cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(234, 88, 12, 0.3)",
                 }}
               >
                 Close
@@ -2247,152 +2930,13 @@ export function AdminTakeaway({
         </div>
       )}
 
-      {/* ── MODAL 3: Thermal Receipt Preview ─────────────────── */}
-      {printReceiptOrder && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1100,
-            padding: "1rem",
-          }}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              color: "#111827",
-              width: "100%",
-              maxWidth: "380px",
-              borderRadius: "14px",
-              padding: "1.5rem",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.5)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-              fontFamily: "monospace",
-              fontSize: "0.82rem",
-            }}
-          >
-            {/* Header */}
-            <div style={{ textAlign: "center", borderBottom: "1px dashed #d1d5db", paddingBottom: "0.75rem" }}>
-              <div style={{ fontWeight: 800, fontSize: "1.1rem", fontFamily: "sans-serif" }}>
-                {restaurantName}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                Fine Dining & POS Management
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                Takeaway / Pickup Counter
-              </div>
-            </div>
-
-            {/* Meta */}
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
-              <span>Order #: {printReceiptOrder.orderNumber || printReceiptOrder.id}</span>
-              <span>{printReceiptOrder.orderTime}</span>
-            </div>
-            <div style={{ fontSize: "0.78rem" }}>
-              Customer: <strong>{printReceiptOrder.customer}</strong> ({printReceiptOrder.phone})
-            </div>
-
-            {/* Items Table */}
-            <div style={{ borderTop: "1px dashed #d1d5db", borderBottom: "1px dashed #d1d5db", padding: "0.5rem 0" }}>
-              <table style={{ width: "100%", textAlign: "left", fontSize: "0.78rem" }}>
-                <thead>
-                  <tr style={{ color: "#6b7280" }}>
-                    <th>Item</th>
-                    <th style={{ textAlign: "center" }}>Qty</th>
-                    <th style={{ textAlign: "right" }}>Amt</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(printReceiptOrder.items || []).map((it, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: "0.2rem 0" }}>{it.name}</td>
-                      <td style={{ textAlign: "center" }}>{it.quantity}</td>
-                      <td style={{ textAlign: "right" }}>
-                        ₹ {((Number(it.price) || 0) * (it.quantity || 1)).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Totals */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", fontSize: "0.8rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Subtotal:</span>
-                <span>₹ {(Number(printReceiptOrder.amount) * 0.95).toFixed(2)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>GST (5%):</span>
-                <span>₹ {(Number(printReceiptOrder.amount) * 0.05).toFixed(2)}</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontWeight: 800,
-                  fontSize: "1rem",
-                  borderTop: "1px solid #111827",
-                  paddingTop: "0.3rem",
-                  marginTop: "0.2rem",
-                }}
-              >
-                <span>TOTAL:</span>
-                <span>₹ {Number(printReceiptOrder.amount).toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{ textAlign: "center", fontSize: "0.75rem", color: "#6b7280", marginTop: "0.4rem" }}>
-              Thank you for your order! Please visit again.
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                style={{
-                  flex: 1,
-                  padding: "0.6rem",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: "#ea580c",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "sans-serif",
-                }}
-              >
-                Print
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintReceiptOrder(null)}
-                style={{
-                  padding: "0.6rem 1rem",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  background: "transparent",
-                  color: "#374151",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "sans-serif",
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ── MODAL 3: Tax Invoice & Bill Print (ReceiptModal) ─────────────────── */}
+      {receiptTableData && (
+        <ReceiptModal
+          table={receiptTableData}
+          restaurantSettings={effectiveSettings}
+          onClose={() => setPrintReceiptOrder(null)}
+        />
       )}
     </div>
   );

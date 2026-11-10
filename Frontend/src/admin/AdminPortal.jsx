@@ -2951,6 +2951,7 @@ export function AdminPortal({
                     menuItems={menuItems}
                     restaurantName={restaurantName}
                     restaurantSettings={restaurantSettings}
+                    restaurantLogo={restaurantLogo}
                     currentSession={currentSession}
                   />
                 )}

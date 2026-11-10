@@ -65,12 +65,6 @@ export function AdminSidebar({
           badge: menuCount,
         },
         {
-          id: "takeaway",
-          label: "Takeaway Orders",
-          icon: ShoppingBag,
-          badge: takeawayCount > 0 ? takeawayCount : null,
-        },
-        {
           id: "tables",
           label: "Tables & Chairs",
           icon: Armchair,
@@ -81,6 +75,12 @@ export function AdminSidebar({
           label: "Staff & Persons",
           icon: Users,
           badge: staffCount,
+        },
+        {
+          id: "takeaway",
+          label: "Takeaway Orders",
+          icon: ShoppingBag,
+          badge: takeawayCount > 0 ? takeawayCount : null,
         },
         {
           id: "kot",
