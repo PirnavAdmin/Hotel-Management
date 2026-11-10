@@ -201,24 +201,25 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   return (
     <section className="takeaway-section" style={{ padding: "1.25rem 2rem", color: "var(--text-main)", minHeight: "calc(100vh - 130px)" }}>
       <style>{`
-        .takeaway-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 340px); gap: 1rem; align-items: start; min-width: 0; }
-        .takeaway-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: .75rem; min-width: 0; align-content: start; }
-        .takeaway-menu-card { box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--bg-secondary); }
+        .takeaway-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); gap: .75rem; align-items: start; min-width: 0; }
+        .takeaway-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 132px), 158px)); grid-auto-rows: minmax(190px, auto); justify-content: start; gap: .5rem; min-width: 0; align-content: start; }
+        .takeaway-menu-card { box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-secondary); }
         .takeaway-menu-card img { display: block; width: 100%; height: 64px; flex: 0 0 64px; object-fit: cover; background: var(--bg-tertiary); }
         .takeaway-menu-card-image { position: relative; min-width: 0; }
-        .takeaway-menu-card-image img { height: 88px; }
-        .takeaway-dietary-badge, .takeaway-prep-badge, .takeaway-special-badge { position: absolute; z-index: 1; display: inline-flex; align-items: center; gap: .2rem; padding: .16rem .3rem; border-radius: 4px; background: rgba(0,0,0,.78); color: #fff; font-size: .58rem; font-weight: 800; }
-        .takeaway-dietary-badge { top: .35rem; left: .35rem; }
-        .takeaway-dietary-dot { width: 6px; height: 6px; border-radius: 50%; }
-        .takeaway-special-badge { top: .35rem; right: .35rem; background: linear-gradient(135deg,#f59e0b,#ea580c); }
-        .takeaway-prep-badge { right: .35rem; bottom: .35rem; }
-        .takeaway-menu-card-body { display: flex; flex: 1; min-width: 0; flex-direction: column; justify-content: space-between; gap: .55rem; padding: .65rem; }
-        .takeaway-menu-card-name { display: block; min-width: 0; overflow-wrap: anywhere; line-height: 1.2; font-size: .88rem; }
-        .takeaway-menu-card-actions { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .45rem; }
-        .takeaway-menu-card-price { flex: 0 0 auto; white-space: nowrap; }
-        .takeaway-menu-description { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; color: var(--text-muted); font-size: .76rem; line-height: 1.3; }
-        .takeaway-add-button, .takeaway-qty-button { display: inline-flex; align-items: center; justify-content: center; gap: .2rem; min-height: 27px; padding: .25rem .45rem; border: 1px solid rgba(245,158,11,.45); border-radius: 6px; background: linear-gradient(135deg,#f59e0b,#ea580c); color: #111827; font-size: .76rem; font-weight: 800; cursor: pointer; }
-        .takeaway-qty-button { width: 26px; min-height: 26px; padding: 0; background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
+        .takeaway-menu-card-image img { height: 66px; flex-basis: 66px; }
+        .takeaway-dietary-badge, .takeaway-prep-badge, .takeaway-special-badge { position: absolute; z-index: 1; display: inline-flex; align-items: center; gap: .16rem; padding: .12rem .24rem; border-radius: 4px; background: rgba(0,0,0,.78); color: #fff; font-size: .52rem; font-weight: 800; }
+        .takeaway-dietary-badge { top: .25rem; left: .25rem; }
+        .takeaway-dietary-dot { width: 5px; height: 5px; border-radius: 50%; }
+        .takeaway-special-badge { top: .25rem; right: .25rem; background: linear-gradient(135deg,#f59e0b,#ea580c); }
+        .takeaway-prep-badge { right: .25rem; bottom: .25rem; }
+        .takeaway-menu-card-body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: .35rem; padding: .45rem; }
+        .takeaway-menu-card-info { display: flex; min-width: 0; flex-direction: column; gap: .4rem; }
+        .takeaway-menu-card-name { display: block; min-width: 0; overflow-wrap: anywhere; line-height: 1.18; font-size: .8rem; }
+        .takeaway-menu-card-actions { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .3rem; margin-top: auto; }
+        .takeaway-menu-card-price { flex: 0 0 auto; white-space: nowrap; font-size: .82rem; }
+        .takeaway-menu-description { display: -webkit-box; overflow: hidden; margin: 0; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; color: var(--text-muted); font-size: .68rem; line-height: 1.25; }
+        .takeaway-add-button, .takeaway-qty-button { display: inline-flex; align-items: center; justify-content: center; gap: .15rem; min-height: 23px; padding: .18rem .32rem; border: 1px solid rgba(245,158,11,.45); border-radius: 5px; background: linear-gradient(135deg,#f59e0b,#ea580c); color: #111827; font-size: .68rem; font-weight: 800; cursor: pointer; }
+        .takeaway-qty-button { width: 22px; min-height: 22px; padding: 0; background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
         .takeaway-order-panel { position: sticky; top: 100px; box-sizing: border-box; width: 100%; min-width: 0; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-secondary); }
         .takeaway-cart-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem .6rem; align-items: start; border-bottom: 1px solid var(--border-subtle); padding-bottom: .65rem; }
         .takeaway-cart-line-details { min-width: 0; overflow-wrap: anywhere; }
@@ -243,7 +244,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         .takeaway-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; align-items: start; margin-bottom: .6rem; padding: .75rem; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--bg-tertiary); }
         @media (max-width: 600px) { .takeaway-history-overlay { padding: .5rem; } .takeaway-history-dialog { max-height: 90vh; border-radius: 11px; } .takeaway-history-row { grid-template-columns: minmax(0, 1fr); } .takeaway-filter-controls { grid-template-columns: minmax(0, 1fr); } }
         @media (max-width: 900px) { .takeaway-layout { grid-template-columns: minmax(0, 1fr); } .takeaway-order-panel { position: static; } }
-        @media (max-width: 520px) { .takeaway-menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; } .takeaway-menu-card-body { padding: .5rem; } .takeaway-menu-card-actions { flex-wrap: wrap; } }
+        @media (max-width: 520px) { .takeaway-menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(180px, auto); gap: .45rem; } .takeaway-menu-card-body { padding: .4rem; } .takeaway-menu-card-actions { flex-wrap: wrap; } }
         @media (max-width: 340px) { .takeaway-menu-grid { grid-template-columns: minmax(0, 1fr); } }
         @media (max-width: 600px) { .takeaway-section { padding: 1rem !important; } }
       `}</style>
@@ -265,7 +266,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
           const quantity = cart[item.id]?.quantity || 0;
           return <article key={item.id} className="takeaway-menu-card">
             <div className="takeaway-menu-card-image"><img src={getMenuItemImage(item)} alt={item.name} onError={(event) => handleDishImageError(event, item)}/><span className="takeaway-dietary-badge"><i className="takeaway-dietary-dot" style={{ background: item.dietaryType?.toUpperCase() === "VEG" || item.isVeg ? "#10b981" : "#ef4444" }} />{item.dietaryType?.toUpperCase() === "VEG" || item.isVeg ? "VEG" : "NON-VEG"}</span>{(item.isChefSpecial || item.isChefsSpecial || item.isSpecial) && <span className="takeaway-special-badge">★ Special</span>}<span className="takeaway-prep-badge">{item.prepTime || `${item.prepTimeMinutes || 15} min`}</span></div>
-            <div className="takeaway-menu-card-body"><strong className="takeaway-menu-card-name">{item.name}</strong>{item.description && <p className="takeaway-menu-description">{item.description}</p>}<div className="takeaway-menu-card-actions"><b className="takeaway-menu-card-price" style={{ color: "var(--accent-amber-light)" }}>₹{Number(item.price || 0).toFixed(2)}</b>{quantity ? <span style={{ display: "inline-flex", alignItems: "center", gap: ".35rem", flex: "0 0 auto" }}><button type="button" className="takeaway-qty-button" aria-label={`Remove one ${item.name}`} onClick={() => changeQty(item, -1)}><Minus size={14}/></button><b aria-live="polite">{quantity}</b><button type="button" className="takeaway-qty-button" aria-label={`Add one ${item.name}`} onClick={() => changeQty(item, 1)}><Plus size={14}/></button></span> : <button type="button" className="takeaway-add-button" onClick={() => changeQty(item, 1)}><Plus size={14}/> Add</button>}</div></div>
+            <div className="takeaway-menu-card-body"><div className="takeaway-menu-card-info"><strong className="takeaway-menu-card-name">{item.name}</strong>{item.description && <p className="takeaway-menu-description">{item.description}</p>}</div><div className="takeaway-menu-card-actions"><b className="takeaway-menu-card-price" style={{ color: "var(--accent-amber-light)" }}>₹{Number(item.price || 0).toFixed(2)}</b>{quantity ? <span style={{ display: "inline-flex", alignItems: "center", gap: ".35rem", flex: "0 0 auto" }}><button type="button" className="takeaway-qty-button" aria-label={`Remove one ${item.name}`} onClick={() => changeQty(item, -1)}><Minus size={14}/></button><b aria-live="polite">{quantity}</b><button type="button" className="takeaway-qty-button" aria-label={`Add one ${item.name}`} onClick={() => changeQty(item, 1)}><Plus size={14}/></button></span> : <button type="button" className="takeaway-add-button" onClick={() => changeQty(item, 1)}><Plus size={14}/> Add</button>}</div></div>
           </article>;
         })}
         {!items.length && <p style={{ color: "var(--text-muted)" }}>No menu items found.</p>}
