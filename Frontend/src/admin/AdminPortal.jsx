@@ -5608,7 +5608,8 @@ export function AdminPortal({
                   activeTab === "daily-balances" ||
                   activeTab === "coa" ||
                   activeTab === "general-ledger" ||
-                  activeTab === "journal-entries") && (
+                  activeTab === "journal-entries" ||
+                  activeTab === "audit") && (
                   <AdminReports
                     pastOrders={pastOrders}
                     menuItems={menuItems}
@@ -5618,7 +5619,9 @@ export function AdminPortal({
                     salaryPayments={salaryPayments}
                     inventoryPurchases={inventoryPurchases}
                     initialTab={
-                      activeTab === "daily-balances"
+                      activeTab === "audit"
+                        ? "audit-documents"
+                        : activeTab === "daily-balances"
                         ? "daily-register"
                         : activeTab === "coa"
                         ? "coa"

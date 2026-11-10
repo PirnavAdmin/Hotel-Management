@@ -1208,6 +1208,81 @@ public static class DbInitializer
             ) ENGINE=InnoDB;");
 
         // ============================================================
+        // CA FINANCIAL ACCOUNTING & STATUTORY AUDIT TABLES
+        // ============================================================
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `audit_logs` (
+                `log_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `user_id` BIGINT NULL,
+                `username` VARCHAR(100) NULL DEFAULT 'System',
+                `action` VARCHAR(100) NOT NULL,
+                `table_name` VARCHAR(100) NOT NULL,
+                `record_id` VARCHAR(100) NULL,
+                `old_value` TEXT NULL,
+                `new_value` TEXT NULL,
+                `ip_address` VARCHAR(50) NULL,
+                `severity` VARCHAR(20) NOT NULL DEFAULT 'INFO',
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`log_id`),
+                KEY `idx_audit_action` (`action`),
+                KEY `idx_audit_created` (`created_at`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `daily_balances` (
+                `id` BIGINT NOT NULL AUTO_INCREMENT,
+                `balance_date` VARCHAR(20) NOT NULL UNIQUE,
+                `opening_cash` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `opening_bank` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `opening_total` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `closing_cash` DECIMAL(18,2) NULL,
+                `closing_bank` DECIMAL(18,2) NULL,
+                `closing_total` DECIMAL(18,2) NULL,
+                `expected_cash` DECIMAL(18,2) NULL,
+                `cash_difference` DECIMAL(18,2) NULL,
+                `is_closed` TINYINT(1) NOT NULL DEFAULT 0,
+                `opened_by` VARCHAR(100) NULL,
+                `closed_by` VARCHAR(100) NULL,
+                `notes` TEXT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_balance_date` (`balance_date`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `journal_entries` (
+                `id` BIGINT NOT NULL AUTO_INCREMENT,
+                `voucher_number` VARCHAR(50) NOT NULL UNIQUE,
+                `entry_date` VARCHAR(20) NOT NULL,
+                `narration` TEXT NOT NULL,
+                `total_debit` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `total_credit` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `lines_json` LONGTEXT NOT NULL,
+                `created_by` VARCHAR(100) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_journal_date` (`entry_date`),
+                KEY `idx_journal_voucher` (`voucher_number`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `chart_of_accounts` (
+                `id` BIGINT NOT NULL AUTO_INCREMENT,
+                `account_code` VARCHAR(50) NOT NULL UNIQUE,
+                `account_name` VARCHAR(150) NOT NULL,
+                `account_group` VARCHAR(50) NOT NULL,
+                `account_type` VARCHAR(50) NOT NULL,
+                `normal_balance` VARCHAR(20) NOT NULL DEFAULT 'Debit',
+                `description` VARCHAR(255) NULL,
+                `opening_balance` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `is_system` TINYINT(1) NOT NULL DEFAULT 0,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_account_code` (`account_code`)
+            ) ENGINE=InnoDB;");
+
+        // ============================================================
         // ALTER TABLE COLUMN SAFEGUARDS (For Pre-existing Databases)
         // ============================================================
         string[] alterSqls = new[]

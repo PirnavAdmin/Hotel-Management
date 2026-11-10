@@ -30,6 +30,7 @@ Smartphone,
   Scale,
   BookOpen,
   FileText,
+  ShieldCheck,
 } from "lucide-react";
 import { formatCurrency, roundCurrency } from "../utils/formatCurrency";
 import { DailyBalanceRegister } from "./accounting/DailyBalanceRegister";
@@ -40,6 +41,7 @@ import { BalanceSheetView } from "./accounting/BalanceSheetView";
 import { ChartOfAccountsView } from "./accounting/ChartOfAccountsView";
 import { GeneralLedgerView } from "./accounting/GeneralLedgerView";
 import { JournalEntriesView } from "./accounting/JournalEntriesView";
+import { AuditDocumentsView } from "./accounting/AuditDocumentsView";
 import { getDailyBalances } from "./accounting/accountingService";
 import { printSurface } from "../utils/printSurface";
 import { apiGetInventory } from "../api/inventoryApi";
@@ -1780,6 +1782,7 @@ export function AdminReports({
     { id: 'coa', label: 'Chart of Accounts', icon: Layers, badge: 'COA' },
     { id: 'general-ledger', label: 'General Ledger', icon: Receipt, badge: 'Ledger' },
     { id: 'journal-entries', label: 'Journal Entries', icon: FileText, badge: 'JV' },
+    { id: 'audit-documents', label: 'Audit Documents', icon: ShieldCheck, badge: 'Statutory' },
     { id: 'sales', label: 'Sales & Channels', icon: BarChart3, badge: `${filteredOrders.length} Orders` },
     { id: 'income', label: 'Detailed Income Ledger', icon: Receipt, badge: `${searchedOrders.length} Orders` },
     { id: 'expenditure', label: 'Operating Costs', icon: Boxes, badge: 'Expenses' },
@@ -2728,6 +2731,10 @@ export function AdminReports({
 
           {activeTab === 'journal-entries' && (
             <JournalEntriesView currentSession={restaurantSettings} />
+          )}
+
+          {activeTab === 'audit-documents' && (
+            <AuditDocumentsView />
           )}
 
           {/* ========================================================================= */}
