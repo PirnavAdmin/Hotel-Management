@@ -11,6 +11,7 @@ import {
   Save,
   Search,
   BookOpen,
+  X,
 } from "lucide-react";
 import { formatCurrency, roundCurrency } from "../../utils/formatCurrency";
 import {
@@ -229,7 +230,7 @@ export function JournalEntriesView({ currentSession }) {
               boxShadow: "0 2px 6px rgba(16, 185, 129, 0.3)",
             }}
           >
-            <Plus size={14} /> + New Journal Voucher
+            <Plus size={14} /> New Journal Voucher
           </button>
 
           <button
@@ -403,13 +404,17 @@ export function JournalEntriesView({ currentSession }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.65)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(0,0,0,0.7)",
+            backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 9999,
-            padding: "1rem",
+            padding: "1.25rem",
+            boxSizing: "border-box",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsModalOpen(false);
           }}
         >
           <div
@@ -419,24 +424,81 @@ export function JournalEntriesView({ currentSession }) {
               borderRadius: "16px",
               padding: "1.5rem",
               width: "100%",
-              maxWidth: "720px",
+              maxWidth: "880px",
               boxShadow: "var(--shadow-xl)",
-              maxHeight: "90vh",
+              maxHeight: "92vh",
               overflowY: "auto",
+              overflowX: "hidden",
+              boxSizing: "border-box",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
             }}
           >
-            <h3 style={{ margin: "0 0 1rem", fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)" }}>
-              Create New Journal Voucher
-            </h3>
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingBottom: "0.85rem",
+                borderBottom: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                <div
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "8px",
+                    background: "rgba(16, 185, 129, 0.12)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--success)",
+                  }}
+                >
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)" }}>
+                    Create New Journal Voucher
+                  </h3>
+                  <div style={{ fontSize: "0.74rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                    Standard double-entry accounting transaction record
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
 
             {formError && (
-              <div style={{ padding: "0.6rem 0.8rem", background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", borderRadius: "8px", color: "#ef4444", fontSize: "0.8rem", marginBottom: "1rem", fontWeight: 600 }}>
+              <div style={{ padding: "0.6rem 0.8rem", background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", borderRadius: "8px", color: "#ef4444", fontSize: "0.8rem", fontWeight: 600 }}>
                 {formError}
               </div>
             )}
 
             <form onSubmit={handleSaveVoucher} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.75rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "0.75rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px", fontWeight: 600 }}>
                     Voucher Date
@@ -485,10 +547,15 @@ export function JournalEntriesView({ currentSession }) {
 
               {/* Dynamic Line Items */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                  <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
-                    Double-Entry Line Items
-                  </label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <label style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
+                      Double-Entry Line Items
+                    </label>
+                    <span style={{ fontSize: "0.7rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "4px", padding: "1px 6px", color: "var(--text-dim)" }}>
+                      {lines.length} lines
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleAddLine}
@@ -500,113 +567,174 @@ export function JournalEntriesView({ currentSession }) {
                       color: "#3b82f6",
                       border: "1px solid rgba(59, 130, 246, 0.3)",
                       borderRadius: "6px",
-                      padding: "2px 8px",
-                      fontSize: "0.72rem",
+                      padding: "3px 10px",
+                      fontSize: "0.74rem",
                       fontWeight: 700,
                       cursor: "pointer",
                     }}
                   >
-                    <Plus size={12} /> Add Line
+                    <Plus size={13} /> Add Line
                   </button>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {/* Column Headers for Alignment */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 2.6fr) minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(0, 2fr) 34px",
+                    gap: "0.5rem",
+                    padding: "0.4rem 0.6rem",
+                    background: "var(--bg-tertiary)",
+                    borderRadius: "6px",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.03em",
+                    textTransform: "uppercase",
+                    color: "var(--text-muted)",
+                    border: "1px solid var(--border-subtle)",
+                    marginBottom: "0.4rem",
+                  }}
+                >
+                  <div>Account (Ledger Head)</div>
+                  <div style={{ textAlign: "right", color: "#60a5fa" }}>Debit (₹)</div>
+                  <div style={{ textAlign: "right", color: "#34d399" }}>Credit (₹)</div>
+                  <div>Line Note / Particulars</div>
+                  <div></div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
                   {lines.map((line, idx) => (
                     <div
                       key={idx}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "2.5fr 1fr 1fr 2fr auto",
+                        gridTemplateColumns: "minmax(0, 2.6fr) minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(0, 2fr) 34px",
                         gap: "0.5rem",
                         alignItems: "center",
                         background: "var(--bg-tertiary)",
-                        padding: "0.5rem",
+                        padding: "0.45rem 0.55rem",
                         borderRadius: "8px",
                         border: "1px solid var(--border-subtle)",
+                        boxSizing: "border-box",
                       }}
                     >
-                      <select
-                        value={line.accountCode}
-                        onChange={(e) => handleLineChange(idx, "accountCode", e.target.value)}
-                        style={{
-                          background: "var(--bg-secondary)",
-                          border: "1px solid var(--border-subtle)",
-                          borderRadius: "6px",
-                          padding: "0.4rem 0.6rem",
-                          color: "var(--text-main)",
-                          fontSize: "0.78rem",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {chartOfAccounts.map((a) => (
-                          <option key={a.code} value={a.code}>
-                            {a.code} - {a.name} ({a.group})
-                          </option>
-                        ))}
-                      </select>
+                      {/* Account Dropdown */}
+                      <div style={{ minWidth: 0, width: "100%" }}>
+                        <select
+                          value={line.accountCode}
+                          onChange={(e) => handleLineChange(idx, "accountCode", e.target.value)}
+                          style={{
+                            width: "100%",
+                            maxWidth: "100%",
+                            boxSizing: "border-box",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "6px",
+                            padding: "0.42rem 0.55rem",
+                            color: "var(--text-main)",
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            outline: "none",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {chartOfAccounts.map((a) => (
+                            <option key={a.code} value={a.code}>
+                              {a.code} - {a.name} ({a.group})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                      <input
-                        type="number"
-                        placeholder="Debit (₹)"
-                        value={line.debit || ""}
-                        onChange={(e) => handleLineChange(idx, "debit", Number(e.target.value) || 0)}
-                        style={{
-                          background: "var(--bg-secondary)",
-                          border: "1px solid var(--border-subtle)",
-                          borderRadius: "6px",
-                          padding: "0.4rem 0.6rem",
-                          color: "#3b82f6",
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          textAlign: "right",
-                          outline: "none",
-                        }}
-                      />
+                      {/* Debit Input */}
+                      <div style={{ minWidth: 0, width: "100%" }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={line.debit || ""}
+                          onChange={(e) => handleLineChange(idx, "debit", Number(e.target.value) || 0)}
+                          style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "6px",
+                            padding: "0.42rem 0.55rem",
+                            color: "#60a5fa",
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            textAlign: "right",
+                            outline: "none",
+                          }}
+                        />
+                      </div>
 
-                      <input
-                        type="number"
-                        placeholder="Credit (₹)"
-                        value={line.credit || ""}
-                        onChange={(e) => handleLineChange(idx, "credit", Number(e.target.value) || 0)}
-                        style={{
-                          background: "var(--bg-secondary)",
-                          border: "1px solid var(--border-subtle)",
-                          borderRadius: "6px",
-                          padding: "0.4rem 0.6rem",
-                          color: "#10b981",
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          textAlign: "right",
-                          outline: "none",
-                        }}
-                      />
+                      {/* Credit Input */}
+                      <div style={{ minWidth: 0, width: "100%" }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={line.credit || ""}
+                          onChange={(e) => handleLineChange(idx, "credit", Number(e.target.value) || 0)}
+                          style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "6px",
+                            padding: "0.42rem 0.55rem",
+                            color: "#34d399",
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            textAlign: "right",
+                            outline: "none",
+                          }}
+                        />
+                      </div>
 
-                      <input
-                        type="text"
-                        placeholder="Line description"
-                        value={line.description || ""}
-                        onChange={(e) => handleLineChange(idx, "description", e.target.value)}
-                        style={{
-                          background: "var(--bg-secondary)",
-                          border: "1px solid var(--border-subtle)",
-                          borderRadius: "6px",
-                          padding: "0.4rem 0.6rem",
-                          color: "var(--text-main)",
-                          fontSize: "0.78rem",
-                          outline: "none",
-                        }}
-                      />
+                      {/* Line Note */}
+                      <div style={{ minWidth: 0, width: "100%" }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. Monthly rent"
+                          value={line.description || ""}
+                          onChange={(e) => handleLineChange(idx, "description", e.target.value)}
+                          style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "6px",
+                            padding: "0.42rem 0.55rem",
+                            color: "var(--text-main)",
+                            fontSize: "0.78rem",
+                            outline: "none",
+                          }}
+                        />
+                      </div>
 
+                      {/* Remove Button */}
                       <button
                         type="button"
+                        title={lines.length <= 2 ? "Minimum 2 lines required" : "Remove line"}
+                        disabled={lines.length <= 2}
                         onClick={() => handleRemoveLine(idx)}
                         style={{
                           background: "transparent",
                           border: "none",
-                          color: "#ef4444",
-                          cursor: "pointer",
+                          color: lines.length <= 2 ? "var(--text-dim)" : "#ef4444",
+                          cursor: lines.length <= 2 ? "not-allowed" : "pointer",
                           padding: "4px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "4px",
+                          opacity: lines.length <= 2 ? 0.35 : 1,
                         }}
                       >
                         <Trash2 size={16} />
@@ -628,6 +756,7 @@ export function JournalEntriesView({ currentSession }) {
                   alignItems: "center",
                   fontWeight: 700,
                   fontSize: "0.85rem",
+                  boxSizing: "border-box",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -637,19 +766,19 @@ export function JournalEntriesView({ currentSession }) {
                   </span>
                 </div>
 
-                <div style={{ display: "flex", gap: "1rem" }}>
-                  <span style={{ color: "#3b82f6" }}>Total Dr: {formatCurrency(totalDebit)}</span>
-                  <span style={{ color: "#10b981" }}>Total Cr: {formatCurrency(totalCredit)}</span>
+                <div style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}>
+                  <span style={{ color: "#60a5fa" }}>Total Dr: {formatCurrency(totalDebit)}</span>
+                  <span style={{ color: "#34d399" }}>Total Cr: {formatCurrency(totalCredit)}</span>
                 </div>
               </div>
 
               {/* Actions */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.25rem" }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   style={{
-                    padding: "0.5rem 1rem",
+                    padding: "0.55rem 1.15rem",
                     background: "var(--bg-tertiary)",
                     border: "1px solid var(--border-subtle)",
                     borderRadius: "8px",
@@ -665,7 +794,7 @@ export function JournalEntriesView({ currentSession }) {
                   type="submit"
                   disabled={!isBalanced}
                   style={{
-                    padding: "0.5rem 1.25rem",
+                    padding: "0.55rem 1.35rem",
                     background: isBalanced ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "var(--bg-tertiary)",
                     border: "none",
                     borderRadius: "8px",

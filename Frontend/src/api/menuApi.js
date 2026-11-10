@@ -143,7 +143,7 @@ export async function apiUploadMenuImage(file) {
       : null;
 
   try {
-    const response = await fetch(`${API_HTTP_BASE}/api/v1/menu-items/upload-image`, {
+    const response = await fetch(apiUrl("/api/v1/menu-items/upload-image"), {
       method: "POST",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

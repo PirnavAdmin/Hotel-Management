@@ -37,9 +37,6 @@ import { ProfitLossStatementView } from "./accounting/ProfitLossStatementView";
 import { TrialBalanceView } from "./accounting/TrialBalanceView";
 import { StockSummaryReportView } from "./accounting/StockSummaryReportView";
 import { BalanceSheetView } from "./accounting/BalanceSheetView";
-import { ChartOfAccountsView } from "./accounting/ChartOfAccountsView";
-import { GeneralLedgerView } from "./accounting/GeneralLedgerView";
-import { JournalEntriesView } from "./accounting/JournalEntriesView";
 import { getDailyBalances } from "./accounting/accountingService";
 import { printSurface } from "../utils/printSurface";
 import { apiGetInventory } from "../api/inventoryApi";
@@ -145,6 +142,7 @@ export function AdminReports({
   staffList = [],
   salaryPayments = [],
   inventoryPurchases = [],
+  initialTab = "sales",
 }) {
   const isBarMode = mode === "bar";
   const now = new Date();
@@ -268,8 +266,15 @@ export function AdminReports({
   const startInputRef = useRef(null);
 
   // Single-Page View Mode Tabs
-  // 'sales' | 'statement' | 'income' | 'expenditure'
-  const [activeTab, setActiveTab] = useState('sales');
+  // 'sales' | 'statement' | 'income' | 'expenditure' | 'daily-register' | 'coa' | 'general-ledger' | 'journal-entries' | etc.
+  const [activeTab, setActiveTab] = useState(initialTab || 'sales');
+
+  useEffect(() => {
+    if (initialTab && initialTab !== 'sales') {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
   const [expenditureView, setExpenditureView] = useState('inventory');
 
   // Search & Filter State
@@ -1436,7 +1441,7 @@ export function AdminReports({
           <tr style="font-size: 10pt;">
             <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">${idx + 1}</td>
             <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: bold; color: #166534;">${id}</td>
-            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">${formattedDate}</td>
+            <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; white-space: nowrap; mso-number-format: '\\@';">${formattedDate}</td>
             <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: 600;">${tbl}</td>
             <td style="border: 1px solid #000000; text-align: left; padding: 5px 8px;">${items.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
             <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: 600; color: #2563eb;">${pay}</td>
@@ -1485,7 +1490,7 @@ export function AdminReports({
             <colgroup>
               <col style="width: 40px;" />
               <col style="width: 75px;" />
-              <col style="width: 145px;" />
+              <col style="width: 175px;" />
               <col style="width: 95px;" />
               <col style="width: 320px;" />
               <col style="width: 85px;" />
@@ -1758,9 +1763,6 @@ export function AdminReports({
     { id: 'stock-summary', label: 'Stock Summary Report', icon: Boxes, badge: `${inventoryItems.length} Items` },
     { id: 'balance-sheet', label: 'Balance Sheet', icon: BookOpen, badge: 'Balanced' },
     { id: 'daily-register', label: 'Opening & Closing Register', icon: Wallet, badge: 'Daily Float' },
-    { id: 'coa', label: 'Chart of Accounts', icon: Layers, badge: 'COA' },
-    { id: 'general-ledger', label: 'General Ledger', icon: Receipt, badge: 'Ledger' },
-    { id: 'journal-entries', label: 'Journal Entries', icon: FileText, badge: 'JV' },
     { id: 'sales', label: 'Sales & Channels', icon: BarChart3, badge: `${filteredOrders.length} Orders` },
     { id: 'income', label: 'Detailed Income Ledger', icon: Receipt, badge: `${searchedOrders.length} Orders` },
     { id: 'expenditure', label: 'Operating Costs', icon: Boxes, badge: 'Expenses' },
@@ -2683,23 +2685,6 @@ export function AdminReports({
               inventoryPurchases={inventoryPurchases}
               salaryPayments={salaryPayments}
             />
-          )}
-
-          {activeTab === 'coa' && (
-            <ChartOfAccountsView />
-          )}
-
-          {activeTab === 'general-ledger' && (
-            <GeneralLedgerView
-              orders={pastOrders}
-              inventoryPurchases={inventoryPurchases}
-              salaryPayments={salaryPayments}
-              inventoryItems={inventoryItems}
-            />
-          )}
-
-          {activeTab === 'journal-entries' && (
-            <JournalEntriesView currentSession={restaurantSettings} />
           )}
 
           {/* ========================================================================= */}

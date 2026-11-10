@@ -16,9 +16,6 @@ import {
   GlassWater,
   Sparkles,
   ReceiptText,
-  Wallet,
-  BookOpen,
-  Layers,
 } from "lucide-react";
 
 export const BAR_ICON_MAP = {
@@ -103,31 +100,6 @@ export function AdminSidebar({
           id: "reports",
           label: "Reports",
           icon: BarChart3,
-        },
-      ],
-    },
-    {
-      title: "ACCOUNTING & AUDIT",
-      items: [
-        {
-          id: "daily-balances",
-          label: "Daily Balances",
-          icon: Wallet,
-        },
-        {
-          id: "coa",
-          label: "Chart of Accounts",
-          icon: BookOpen,
-        },
-        {
-          id: "general-ledger",
-          label: "General Ledger",
-          icon: Layers,
-        },
-        {
-          id: "journal-entries",
-          label: "Journal Entries",
-          icon: FileText,
         },
       ],
     },
