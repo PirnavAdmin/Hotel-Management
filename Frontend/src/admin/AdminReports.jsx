@@ -142,6 +142,7 @@ export function AdminReports({
   staffList = [],
   salaryPayments = [],
   inventoryPurchases = [],
+  initialTab = "sales",
 }) {
   const isBarMode = mode === "bar";
   const now = new Date();
@@ -265,8 +266,15 @@ export function AdminReports({
   const startInputRef = useRef(null);
 
   // Single-Page View Mode Tabs
-  // 'sales' | 'statement' | 'income' | 'expenditure'
-  const [activeTab, setActiveTab] = useState('sales');
+  // 'sales' | 'statement' | 'income' | 'expenditure' | 'daily-register' | 'coa' | 'general-ledger' | 'journal-entries' | etc.
+  const [activeTab, setActiveTab] = useState(initialTab || 'sales');
+
+  useEffect(() => {
+    if (initialTab && initialTab !== 'sales') {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
   const [expenditureView, setExpenditureView] = useState('inventory');
 
   // Search & Filter State

@@ -230,7 +230,7 @@ export function JournalEntriesView({ currentSession }) {
               boxShadow: "0 2px 6px rgba(16, 185, 129, 0.3)",
             }}
           >
-            <Plus size={14} /> + New Journal Voucher
+            <Plus size={14} /> New Journal Voucher
           </button>
 
           <button
