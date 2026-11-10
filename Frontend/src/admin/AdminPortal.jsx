@@ -52,8 +52,10 @@ import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { isDrinkItem, isBeverageCategory } from "../kot/orderRouting";
+import { isBarCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
+import { AdminTakeaway } from "./AdminTakeaway";
 import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
@@ -92,10 +94,8 @@ export function isDisallowedItemName(raw) {
     "tandoor", "tandoori", "tandoori & kebabs", "tandoor-kebabs", "kebabs",
     "fast-food", "fast food", "burgers, pizza & fast food", "pizza & fast food", "burgers",
     "breads", "naan & roti", "roti & naan", "roti",
-    "beverages", "beverages & coffee", "coffee & beverages", "coffee",
     "desserts", "desserts & sweets", "sweets & desserts", "sweets",
-    "cocktails", "mocktails", "beers", "wines", "spirits", "liquor", "bar",
-    "chinese", "soups", "salads", "soups & salads", "south indian", "north indian", "thali", "snacks"
+    "chinese", "soups", "salads", "soups & salads", "south indian", "north indian", "snacks"
   ];
   if (standardAllowed.includes(s)) return false;
 
@@ -109,9 +109,37 @@ export function isDisallowedItemName(raw) {
     "chicken", "mutton", "prawn", "fish", "paneer", "egg", "beef", "pork",
     "shawarma", "bagara", "lassi", "lemonade", "buttermilk", "chaas",
     "corn salt", "salt & pepper", "fried rice", "noodles", "chilli", "manchurian",
-    "dum biryani", "veg biryani", "biryani", "masala", "tikka", "kebab", "kabab", "fry", "dry"
+    "dum biryani", "veg biryani", "biryani", "masala", "tikka", "kebab", "kabab", "fry", "dry",
+    "thali", "veg thali", "watermelon", "juice", "beverage", "coffee", "tea"
   ];
   return dishKeywords.some((kw) => s.includes(kw));
+}
+
+/**
+ * Strict validator for Dine menu categories.
+ * Filters out bar categories, all beverages/drinks, and dish names.
+ */
+export function isDisallowedDineCategory(raw) {
+  if (!raw || typeof raw !== "string") return false;
+  const s = raw.trim().toLowerCase();
+  if (!s) return false;
+
+  // 1. Bar and alcohol categories
+  if (isBarCategory(s)) return true;
+
+  // 2. Drinks and beverage categories (Beverages, Juices, Watermelon Juice, Tea & Coffee, Shakes, etc.)
+  if (isDrinkCategory(s) || isBeverageCategory(s)) return true;
+  if (/^(beverage|beverages|drink|drinks|juice|juices|tea|coffee|shake|shakes|smoothie|smoothies)/i.test(s)) return true;
+  if (/\b(juice|juices|beverage|beverages|coffee|tea|mocktail|cocktail|beer|wine|vodka|gin|rum|brandy|whiskey|whisky|bourbon|scotch|tequila|liqueur|shake|smoothie|soda)\b/i.test(s)) return true;
+
+  // 3. Specific dish names or combo platters that leaked into categories
+  if (s === "veg thali" || s === "thali" || s.includes("thali") || s.includes("platter") || s.includes("combo")) return true;
+  if (s === "watermelon juice" || s.includes("watermelon")) return true;
+
+  // 4. Other dish keywords
+  if (isDisallowedItemName(s)) return true;
+
+  return false;
 }
 
 export function inferIngredientCategory(rawName = "") {
@@ -944,7 +972,7 @@ export function AdminPortal({
       if (!Array.isArray(parsed)) return [];
       const cleaned = parsed.filter((cat) => {
         const str = String(typeof cat === "string" ? cat : cat?.name || cat?.label || cat?.value || "").trim();
-        return str && !isDisallowedItemName(str);
+        return str && !isDisallowedDineCategory(str);
       });
       localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(cleaned));
       return cleaned;
@@ -982,7 +1010,7 @@ export function AdminPortal({
 
   // Persistent save helpers
   const saveCustomCategory = async (newCat) => {
-    if (!newCat || !newCat.trim()) return;
+    if (!newCat || !newCat.trim() || isDisallowedDineCategory(newCat)) return;
     const trimmed = newCat.trim();
     const knownNames = [
       ...customCategories.map((category) =>
@@ -1094,14 +1122,14 @@ export function AdminPortal({
         .filter(Boolean)
         .filter((name) => {
           const s = String(name).toLowerCase().trim();
-          return !dishNames.has(s) && !isDisallowedItemName(s);
+          return !dishNames.has(s) && !isDisallowedDineCategory(s);
         });
 
       setCustomCategories((previous) => {
         const merged = previous.filter(
           (p) => {
             const s = String(typeof p === "string" ? p : p?.name || "").toLowerCase().trim();
-            return !dishNames.has(s) && !isDisallowedItemName(s);
+            return !dishNames.has(s) && !isDisallowedDineCategory(s);
           }
         );
         names.forEach((name) => {
@@ -1139,34 +1167,104 @@ export function AdminPortal({
         .filter(Boolean),
     );
 
-    // Standard high-level categories
+    // Standard high-level dining categories ordered strictly from Soups to Desserts
     const standardCategories = [
-      { value: "starters", label: "Starters & Appetizers" },
-      { value: "biryani", label: "Biryanis & Rice Special" },
-      { value: "mains", label: "Main Course & Curries" },
-      { value: "tandoor-kebabs", label: "Tandoori & Kebabs" },
-      { value: "fast-food", label: "Burgers, Pizza & Fast Food" },
-      { value: "breads", label: "Naan & Roti" },
-      { value: "desserts", label: "Desserts & Sweets" },
+      {
+        value: "soups",
+        label: "Soups",
+        order: 10,
+        aliases: ["soups", "soup", "hot soup", "soups & salads", "soups & broths", "salads & soups"],
+      },
+      {
+        value: "starters",
+        label: "Starters",
+        order: 20,
+        aliases: ["starters", "starter", "starters & appetizers", "appetizers", "appetizer", "finger food"],
+      },
+      {
+        value: "tandoor-kebabs",
+        label: "Tandoori",
+        order: 30,
+        aliases: ["tandoor-kebabs", "tandoori & kebabs", "tandoori", "kebabs", "kebab", "tikka"],
+      },
+      {
+        value: "mains",
+        label: "Main Course",
+        order: 40,
+        aliases: ["mains", "main course", "main course & curries", "curries", "curry", "gravies", "gravy"],
+      },
+      {
+        value: "breads",
+        label: "Breads",
+        order: 50,
+        aliases: ["breads", "naan & roti", "roti", "naan", "tandoori roti", "indian breads", "bread", "rotis"],
+      },
+      {
+        value: "biryani",
+        label: "Biryani",
+        order: 60,
+        aliases: [
+          "biryani",
+          "biryanis",
+          "biryanis & rice special",
+          "biryani & rice special",
+          "biryani special",
+          "rice items",
+          "rice special",
+          "rice",
+          "fried rice",
+          "pulao",
+        ],
+      },
+      {
+        value: "burgers",
+        label: "Burgers",
+        order: 70,
+        aliases: ["burger", "burgers"],
+      },
+      {
+        value: "pizza",
+        label: "Pizza",
+        order: 71,
+        aliases: ["pizza", "pizzas"],
+      },
+      {
+        value: "fast-food",
+        label: "Fast Food",
+        order: 72,
+        aliases: ["fast-food", "fast food", "fastfood", "burgers, pizza & fast food", "pizza & fast food"],
+      },
+      {
+        value: "desserts",
+        label: "Desserts",
+        order: 990, // Desserts always at the very end
+        aliases: ["desserts", "desserts & sweets", "dessert", "sweets", "ice cream", "sweet", "mithai"],
+      },
     ];
 
     standardCategories.forEach((cat) => {
-      map.set(cat.value.toLowerCase(), cat);
+      map.set(cat.value.toLowerCase(), { value: cat.value, label: cat.label, order: cat.order });
     });
 
-    const getCleanCategoryLabel = (catVal) => {
-      const s = String(catVal || "").trim().toLowerCase();
-      if (s === "cocktail") return "Cocktails";
-      if (s === "curries" || s === "curry") return "Main Course & Curries";
-      const found = standardCategories.find(
-        (c) => c.value.toLowerCase() === s || c.label.toLowerCase() === s
+    const findStandard = (rawStr) => {
+      const lower = String(rawStr || "").trim().toLowerCase();
+      return standardCategories.find(
+        (c) =>
+          c.value.toLowerCase() === lower ||
+          c.label.toLowerCase() === lower ||
+          c.aliases.some((a) => a.toLowerCase() === lower)
       );
-      if (found) return found.label;
-      const str = String(catVal).replace(/[-_]/g, " ");
+    };
+
+    const getCleanCategoryLabel = (catVal) => {
+      const s = String(catVal || "").trim();
+      const std = findStandard(s);
+      if (std) return std.label;
+      const str = s.replace(/[-_]/g, " ");
       return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
-    // Add valid custom categories (strictly excluding any dish items)
+    // Add valid custom food categories (strictly excluding bar/drinks and dish items)
     (customCategories || []).forEach((cat) => {
       const name =
         typeof cat === "string"
@@ -1174,35 +1272,46 @@ export function AdminPortal({
           : cat.categoryName || cat.category || cat.name || cat.label || cat.value;
       if (!name || typeof name !== "string") return;
       const trimmed = name.trim();
-      let lower = trimmed.toLowerCase();
-      if (lower === "cocktail") lower = "cocktails";
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      if (!trimmed || isDisallowedDineCategory(trimmed) || dishNames.has(trimmed.toLowerCase())) {
+        return;
+      }
+
+      // If matches any standard category (e.g. "Biryanis & Rice Special", "Tandoori Roti", "Rice items"), skip to avoid duplicates
+      if (findStandard(trimmed)) return;
+
+      const canonicalKey = trimmed.toLowerCase().replace(/[-_]/g, " ");
+      if (!map.has(canonicalKey)) {
+        map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed), order: 80 });
       }
     });
 
-    // Add any genuine custom categories from menuItems
+    // Add any genuine custom categories from menuItems (strictly excluding bar/drinks and dish items)
     (menuItems || []).forEach((item) => {
       if (isDrinkItem(item)) return;
       const cat = item.category || item.categoryName;
       if (!cat || typeof cat !== "string") return;
       const trimmed = cat.trim();
-      if (isBeverageCategory(trimmed)) return;
+      if (!trimmed || isDisallowedDineCategory(trimmed)) return;
+
       const lower = trimmed.toLowerCase();
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      if (dishNames.has(lower)) return;
+
+      if (findStandard(trimmed)) return;
+
+      const canonicalKey = lower.replace(/[-_]/g, " ");
+      if (!map.has(canonicalKey)) {
+        map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed), order: 80 });
       }
     });
 
-    return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
+    // Sort strictly in dining meal course order: from Soups to Desserts
+    return Array.from(map.values())
+      .sort((a, b) => {
+        const orderDiff = (a.order ?? 80) - (b.order ?? 80);
+        if (orderDiff !== 0) return orderDiff;
+        return a.label.localeCompare(b.label);
+      })
+      .map(({ value, label }) => ({ value, label }));
   }, [customCategories, menuItems]);
 
   const allSectionOptions = React.useMemo(() => {
@@ -1720,7 +1829,22 @@ export function AdminPortal({
           .includes(query),
       ) &&
       (!menuFilters.category ||
-        (String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase() || String(item.category ?? "").toLowerCase().replace(/[-_]/g, "") === menuFilters.category.toLowerCase().replace(/[-_]/g, ""))) &&
+        (() => {
+          const sel = menuFilters.category.toLowerCase().trim();
+          const itemCat = String(item.category ?? "").toLowerCase().trim();
+          if (itemCat === sel || itemCat.replace(/[-_]/g, "") === sel.replace(/[-_]/g, "")) return true;
+          if (sel === "soups" && itemCat.includes("soup")) return true;
+          if (sel === "starters" && (itemCat.includes("starter") || itemCat.includes("appetiz"))) return true;
+          if (sel === "tandoor-kebabs" && (itemCat.includes("tandoor") || itemCat.includes("kebab") || itemCat.includes("tikka"))) return true;
+          if (sel === "mains" && (itemCat.includes("main") || itemCat.includes("curri") || itemCat.includes("curry") || itemCat.includes("gravy"))) return true;
+          if (sel === "breads" && (itemCat.includes("bread") || itemCat.includes("roti") || itemCat.includes("naan"))) return true;
+          if (sel === "biryani" && (itemCat.includes("biryani") || itemCat.includes("rice") || itemCat.includes("pulao"))) return true;
+          if (sel === "burgers" && (itemCat === "burger" || itemCat === "burgers")) return true;
+          if (sel === "pizza" && (itemCat === "pizza" || itemCat === "pizzas")) return true;
+          if (sel === "fast-food" && (itemCat.includes("fast") || itemCat === "burgers, pizza & fast food" || itemCat === "pizza & fast food")) return true;
+          if (sel === "desserts" && (itemCat.includes("dessert") || itemCat.includes("sweet") || itemCat.includes("ice cream"))) return true;
+          return false;
+        })()) &&
       (!menuFilters.dietary ||
         Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
       (!menuFilters.availability ||
@@ -2404,7 +2528,11 @@ export function AdminPortal({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {item.category.replace("-", " ")}
+                                    {allCategoryOptions.find(
+                                      (option) =>
+                                        option.value.toLowerCase() ===
+                                        String(item.category || "").toLowerCase(),
+                                    )?.label || item.category.replace(/[-_]/g, " ")}
                                   </td>
                                   <td style={{ padding: "0.6rem 0.85rem" }}>
                                     {item.isVeg ? (
@@ -2815,6 +2943,16 @@ export function AdminPortal({
                       )}
                     </div>
                   </div>
+                )}
+
+                {/* ================= TAB: TAKEAWAY ORDERS ================= */}
+                {activeTab === "takeaway" && (
+                  <AdminTakeaway
+                    menuItems={menuItems}
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                    currentSession={currentSession}
+                  />
                 )}
 
                 {/* ================= TAB 2: TABLES & CHAIRS (PERSONS CAPACITY) ================= */}

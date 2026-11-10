@@ -3366,7 +3366,6 @@ function BarDrinksMenu({
           }}
           title="Reset drink filters"
         >
-          <RotateCcw size={13} strokeWidth={2.2} />
           <span>Clear Filters</span>
         </button>
       </div>

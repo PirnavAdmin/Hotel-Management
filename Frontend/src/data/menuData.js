@@ -1,13 +1,15 @@
 export const MENU_CATEGORIES = [
   { id: 'all', name: 'All Items', icon: 'Utensils' },
-  { id: 'biryani', name: 'Biryanis & Rice Special', icon: 'Flame' },
-  { id: 'starters', name: 'Starters & Appetizers', icon: 'Sparkles' },
-  { id: 'mains', name: 'Main Course & Curries', icon: 'Soup' },
-  { id: 'tandoor-kebabs', name: 'Tandoori & Kebabs', icon: 'Flame' },
-  { id: 'fast-food', name: 'Burgers, Pizza & Fast Food', icon: 'Sandwich' },
-  { id: 'breads', name: 'Naan & Roti', icon: 'Sandwich' },
-  { id: 'beverages', name: 'Beverages & Coffee', icon: 'Coffee' },
-  { id: 'desserts', name: 'Desserts & Sweets', icon: 'IceCream' }
+  { id: 'soups', name: 'Soups', icon: 'Soup' },
+  { id: 'starters', name: 'Starters', icon: 'Sparkles' },
+  { id: 'tandoor-kebabs', name: 'Tandoori', icon: 'Flame' },
+  { id: 'mains', name: 'Main Course', icon: 'Utensils' },
+  { id: 'breads', name: 'Breads', icon: 'Sandwich' },
+  { id: 'biryani', name: 'Biryani', icon: 'Flame' },
+  { id: 'burgers', name: 'Burgers', icon: 'Sandwich' },
+  { id: 'pizza', name: 'Pizza', icon: 'Sandwich' },
+  { id: 'fast-food', name: 'Fast Food', icon: 'Sandwich' },
+  { id: 'desserts', name: 'Desserts', icon: 'IceCream' }
 ];
 
 export const MENU_ITEMS = [];
