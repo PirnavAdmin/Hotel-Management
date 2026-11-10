@@ -2269,6 +2269,7 @@ export function AdminPortal({
 
                     {/* Items Table List */}
                     <div
+                      className="menu-items-list"
                       style={{
                         borderRadius: "10px",
                         border: "1px solid var(--border-card)",
@@ -2276,6 +2277,7 @@ export function AdminPortal({
                       }}
                     >
                       <table
+                        className="menu-items-table"
                         style={{
                           width: "100%",
                           borderCollapse: "collapse",
@@ -2359,6 +2361,7 @@ export function AdminPortal({
                               return (
                                 <tr
                                   key={item.id}
+                                  className="menu-admin-item-row"
                                   style={{
                                     borderBottom: "1px solid var(--border-subtle)",
                                     transition:
@@ -2519,6 +2522,7 @@ export function AdminPortal({
                                     </div>
                                   </td>
                                   <td
+                                    data-label="Category"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       textTransform: "capitalize",
@@ -2534,7 +2538,7 @@ export function AdminPortal({
                                         String(item.category || "").toLowerCase(),
                                     )?.label || item.category.replace(/[-_]/g, " ")}
                                   </td>
-                                  <td style={{ padding: "0.6rem 0.85rem" }}>
+                                  <td data-label="Dietary" style={{ padding: "0.6rem 0.85rem" }}>
                                     {item.isVeg ? (
                                       <span
                                         style={{
@@ -2572,6 +2576,7 @@ export function AdminPortal({
                                     )}
                                   </td>
                                   <td
+                                    data-label="Price"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       fontWeight: 800,
@@ -2583,6 +2588,7 @@ export function AdminPortal({
                                     ₹{Number(item.price).toFixed(2)}
                                   </td>
                                   <td
+                                    data-label="Actions"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       textAlign: "center",
