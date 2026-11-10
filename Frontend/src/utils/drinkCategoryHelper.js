@@ -184,6 +184,31 @@ export function isDrinkCategory(category, item = null) {
 }
 
 /**
+ * Checks whether a category is strictly bar or alcohol related (beer, cocktails, spirits, wine, etc.).
+ * Used to filter out bar categories from Dine/Kitchen menu management.
+ * @param {string|null|undefined} category
+ * @returns {boolean}
+ */
+export function isBarCategory(category) {
+  if (!category || typeof category !== "string") return false;
+  const s = category.trim().toLowerCase();
+
+  const barKeywords = [
+    "beer", "beers", "cocktail", "cocktails", "mocktail", "mocktails",
+    "vodka", "gin", "vodka & gin", "rum", "brandy", "rum & brandy",
+    "whiskey", "whisky", "scotch", "bourbon", "wine", "wine & champagne",
+    "champagne", "tequila", "mezcal", "liqueur", "liquor", "spirits",
+    "shots", "shooters", "cider", "alcohol", "alcoholic", "bar", "bar drinks"
+  ];
+
+  return barKeywords.some((kw) => {
+    if (s === kw) return true;
+    const regex = new RegExp(`(?:^|[^a-z0-9])${kw.replace(/&/g, "\\&")}(?:$|[^a-z0-9])`, "i");
+    return regex.test(s);
+  });
+}
+
+/**
  * Checks whether a drink or category is alcoholic.
  * @param {string|null|undefined} category
  * @param {string|null|undefined} drinkType
