@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useState, useEffect, useRef } from "react";
 import { logRouteChange, logUserAction } from "../utils/logger";
 import {
@@ -2243,7 +2244,7 @@ export function AdminPortal({
                       ].map(({ key, label, options }) => (
                         <label className="menu-filter-field" key={key}>
                           <span>{label}</span>
-                          <select
+                          <SearchableSelect
                             value={menuFilters[key]}
                             onChange={(event) =>
                               updateMenuFilter(key, event.target.value)
@@ -2255,7 +2256,7 @@ export function AdminPortal({
                                 {option.label}
                               </option>
                             ))}
-                          </select>
+                          </SearchableSelect>
                         </label>
                       ))}
                       <button
@@ -3880,7 +3881,7 @@ export function AdminPortal({
                             {/* Col 2: Role Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-role">
                               <span>Role</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-role"
                                 value={staffFilters.role}
                                 onChange={(e) => updateStaffFilter("role", e.target.value)}
@@ -3908,13 +3909,13 @@ export function AdminPortal({
                                     {role}
                                   </option>
                                 ))}
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 4: Shift Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-shift">
                               <span>Shift</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-shift"
                                 value={staffFilters.shift}
                                 onChange={(e) => updateStaffFilter("shift", e.target.value)}
@@ -3942,13 +3943,13 @@ export function AdminPortal({
                                     {shift}
                                   </option>
                                 ))}
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 5: Assigned Tables Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-assigned">
                               <span>Table Assignment</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-assigned"
                                 value={staffFilters.assigned}
                                 onChange={(e) => updateStaffFilter("assigned", e.target.value)}
@@ -3977,7 +3978,7 @@ export function AdminPortal({
                                 <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                                   No Tables
                                 </option>
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 6: Reset / Count */}

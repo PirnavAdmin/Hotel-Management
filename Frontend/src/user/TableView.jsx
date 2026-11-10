@@ -230,6 +230,7 @@ export function DiningRoomBackground() {
   );
 }
 
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
@@ -1627,7 +1628,7 @@ export function TableView({
             >
               #
             </span>
-            <select
+            <SearchableSelect
               value={tableFilter}
               onChange={(e) => setTableFilter(e.target.value)}
               title="Filter by Table Number"
@@ -1652,7 +1653,7 @@ export function TableView({
                   {tbl.name || tbl.tableNumber || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
                 </option>
               ))}
-            </select>
+            </SearchableSelect>
           </div>
 
           {/* Filter by Server Name Dropdown */}
@@ -1668,7 +1669,7 @@ export function TableView({
               color={serverFilter !== "all" ? "var(--accent-amber-light)" : "var(--text-dim)"}
               style={{ position: "absolute", left: "10px", pointerEvents: "none" }}
             />
-            <select
+            <SearchableSelect
               value={serverFilter}
               onChange={(e) => setServerFilter(e.target.value)}
               title="Filter by Server Name"
@@ -1693,7 +1694,7 @@ export function TableView({
                   👤 {srv}
                 </option>
               ))}
-            </select>
+            </SearchableSelect>
           </div>
 
           {/* Reset Filters Button (visible when any filter active) */}

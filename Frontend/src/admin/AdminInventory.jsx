@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Package,
@@ -1672,7 +1673,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 },
               ].map(({ label, value, onChange, options }) => (
                 <div key={label} style={{ position: "relative", minWidth: 0 }}>
-                  <select
+                  <SearchableSelect
                     aria-label={label}
                     value={value}
                     onChange={(e) => {
@@ -1683,7 +1684,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                       width: "100%",
                       minWidth: 0,
                       height: "40px",
-                      padding: "0 2.25rem 0 0.75rem",
+                      padding: "0 0.75rem",
                       color: "var(--text-main)",
                       background: "var(--bg-tertiary)",
                       border: "1px solid var(--border-card)",
@@ -1703,20 +1704,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                         {option.label}
                       </option>
                     ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    strokeWidth={2.2}
-                    aria-hidden="true"
-                    style={{
-                      position: "absolute",
-                      top: "50%",
-                      right: "0.75rem",
-                      transform: "translateY(-50%)",
-                      color: "var(--text-muted)",
-                      pointerEvents: "none",
-                    }}
-                  />
+                  </SearchableSelect>
+                  
                 </div>
               ))}
             </div>
