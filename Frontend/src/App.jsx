@@ -15,6 +15,7 @@ import {
   PastOrdersModal,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import { CustomerLandingPage } from "./common/CustomerLandingPage";
 import { TakeawayView } from "./user/TakeawayView";
 import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
@@ -763,7 +764,6 @@ export function App() {
 
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
-  const isUserRoute = !isKotRoute && !isAdminRoute;
 
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
@@ -1007,6 +1007,8 @@ export function App() {
   const [posSession, setPosSession] = useState(null);
   const [kotSession, setKotSession] = useState(null);
   const [adminSession, setAdminSession] = useState(null);
+  const isLandingRoute = location.pathname === "/" && !posSession;
+  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
@@ -3712,6 +3714,17 @@ export function App() {
 
       {/* Main Separate Routes Rendering */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {isLandingRoute && (
+          <CustomerLandingPage
+            restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
+            restaurantLogo={restaurantSettings.logo || ""}
+            menuItems={menuItems}
+            menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+            tables={tables}
+            onAdminLogin={() => navigate("/admin")}
+          />
+        )}
+
         {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - KITCHEN & BAR BOT WORKSPACE */}
         {isKotRoute &&
           (kotSession &&
