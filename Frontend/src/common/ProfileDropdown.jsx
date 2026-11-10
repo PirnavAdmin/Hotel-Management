@@ -48,11 +48,18 @@ export function ProfileDropdown({
 
   useEffect(() => {
     const syncCachedUsers = () => setCachedManagedUsers(readCachedManagedUsers());
+    const handleStorage = (event) => {
+      // App uses generic synthetic "storage" events to notify unrelated local
+      // state changes. Only native storage events for managed users should
+      // cause the profile dropdown to update.
+      if (!('key' in event) || (event.key !== 'avsr_auth_users_v1' && event.key !== null)) return;
+      syncCachedUsers();
+    };
     window.addEventListener('avsr-auth-users-updated', syncCachedUsers);
-    window.addEventListener('storage', syncCachedUsers);
+    window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('avsr-auth-users-updated', syncCachedUsers);
-      window.removeEventListener('storage', syncCachedUsers);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
