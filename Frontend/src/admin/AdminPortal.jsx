@@ -894,7 +894,6 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
-<<<<<<< HEAD
     apiGetRestaurantSettings()
       .then((res) => {
         const data = res?.data || res;
@@ -902,18 +901,6 @@ export function AdminPortal({
           applySettings(data);
         }
       })
-=======
-    fetch(`${API_SYNC_BASE}/api/state`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) =>
-        applySettings(
-          data?.[RESTAURANT_SETTINGS_KEY] ||
-            data?.data?.[RESTAURANT_SETTINGS_KEY],
-        ),
-      )
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
       .catch(() => {});
 
     const events = openOptionalEventStream();

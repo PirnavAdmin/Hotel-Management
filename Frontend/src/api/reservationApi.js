@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { apiClient } from './apiConfig';
 
 export async function apiGetReservations(params = {}) {
@@ -29,7 +28,7 @@ export async function apiDeleteReservation(id) {
     method: 'DELETE',
   });
 }
-=======
+
 // Pure Frontend Mock Reservation Service - ZERO API / Backend dependencies
 const STORAGE_KEY = "bhanu_bistro_reservations_v1";
 const TABLES_STORAGE_KEY = "bhanu_bistro_reservation_tables_v1";
@@ -148,60 +147,3 @@ export function saveStoredReservationTables(tables) {
     console.warn("localStorage write error:", e);
   }
 }
-
-// Pure mock API functions that resolve immediately with NO network calls
-export async function apiGetReservations() {
-  return { success: true, data: getStoredReservations() };
-}
-
-export async function apiCreateReservation(data) {
-  const all = getStoredReservations();
-  const nextNum = 1000 + all.length + 1;
-  const newReservation = {
-    id: `RES-${nextNum}`,
-    reservationId: `RES-${nextNum}`,
-    ...data,
-    status: "confirmed",
-    createdAt: new Date().toISOString(),
-  };
-  const updated = [newReservation, ...all];
-  saveStoredReservations(updated);
-
-  // Mark table as reserved
-  const tables = getStoredReservationTables();
-  const updatedTables = tables.map((t) =>
-    t.id === data.tableId ? { ...t, status: "reserved" } : t
-  );
-  saveStoredReservationTables(updatedTables);
-
-  return { success: true, data: newReservation };
-}
-
-export async function apiUpdateReservation(id, data) {
-  const all = getStoredReservations();
-  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, ...data } : r));
-  saveStoredReservations(updated);
-  return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
-}
-
-export async function apiCancelReservation(id) {
-  const all = getStoredReservations();
-  const target = all.find((r) => r.id === id || r.reservationId === id);
-  const updated = all.map((r) =>
-    r.id === id || r.reservationId === id ? { ...r, status: "cancelled" } : r
-  );
-  saveStoredReservations(updated);
-
-  // Free table
-  if (target?.tableId) {
-    const tables = getStoredReservationTables();
-    const updatedTables = tables.map((t) =>
-      t.id === target.tableId ? { ...t, status: "available" } : t
-    );
-    saveStoredReservationTables(updatedTables);
-  }
-
-  return { success: true, message: "Reservation cancelled successfully." };
-}
-
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
