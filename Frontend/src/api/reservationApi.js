@@ -115,7 +115,13 @@ export async function apiGetReservationById(id) {
   return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`));
 }
 export async function apiCreateReservation(reservationData) {
-<<<<<<< HEAD
+  try {
+    const remote = await apiClient(BASE, { method: "POST", body: JSON.stringify(reservationData) });
+    if (remote?.success) return unwrap(remote);
+  } catch {
+    // Fallback to local storage when backend is unreachable or offline
+  }
+
   const all = getStoredReservations();
   const nextNum = 1000 + all.length + 1;
   const newReservation = {
@@ -138,9 +144,6 @@ export async function apiCreateReservation(reservationData) {
   }
 
   return { success: true, data: newReservation };
-=======
-  return unwrap(await apiClient(BASE, { method: "POST", body: JSON.stringify(reservationData) }));
->>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
 }
 export async function apiUpdateReservation(id, data) {
   return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }));

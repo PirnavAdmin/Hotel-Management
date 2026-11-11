@@ -1,4 +1,4 @@
-﻿import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import fs from "fs";
 import path from "path";
@@ -2354,7 +2354,6 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
           secure: false,
-<<<<<<< HEAD
           headers: { "ngrok-skip-browser-warning": "true" },
           configure: (proxy) => {
             proxy.on("error", (err, req, res) => {
@@ -2368,13 +2367,6 @@ export default defineConfig(({ mode }) => {
               }
             });
           },
-=======
->>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
-        },
-        "/uploads": {
-          target: backendTarget,
-          changeOrigin: true,
-          secure: false,
         },
         "/swagger": {
           target: backendTarget,
