@@ -1011,7 +1011,9 @@ export function App() {
   const [posSession, setPosSession] = useState(null);
   const [kotSession, setKotSession] = useState(null);
   const [adminSession, setAdminSession] = useState(null);
-  const isLandingRoute = location.pathname === "/" && !posSession;
+  const customerRoutes = ["/", "/profile", "/my-orders", "/my-reservations", "/menu", "/reserve", "/takeaway"];
+  const isLandingRoute =
+    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) && !posSession;
   const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),

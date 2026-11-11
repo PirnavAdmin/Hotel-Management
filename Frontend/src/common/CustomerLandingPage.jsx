@@ -43,6 +43,9 @@ import {
   Wheat,
   IceCream,
   Heart,
+  ChevronDown,
+  LogOut,
+  User,
 } from "lucide-react";
 import {
   apiCheckReservationAvailability,
@@ -62,6 +65,8 @@ import {
 } from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
+import { TableReservationFlow } from "../reservation/TableReservationFlow";
+import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import {
   cleanNotificationText,
@@ -70,6 +75,16 @@ import {
   getCleanAlertTitle,
 } from "../utils/notificationHelper";
 import "./CustomerLandingPage.css";
+
+const CUSTOMER_SESSION_KEY = "bhanu_bistro_customer_v1";
+
+const getInitialCustomer = () => {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_SESSION_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+};
 
 const formatPrice = (value) =>
   `₹${(Number(value) || 0).toLocaleString("en-IN", {
@@ -385,6 +400,18 @@ export const CURATED_TAKEAWAY_ITEMS = [
   },
 ];
 
+<<<<<<< HEAD
+const getAvailableTables = (tables, guests) => {
+  const filtered = (Array.isArray(tables) ? tables : []).filter((table) => {
+    const status = String(table.status || "").toLowerCase();
+    const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
+    return ["vacant", "available"].includes(status) && cap >= guests;
+  });
+  return filtered;
+};
+
+=======
+>>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
 function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -441,11 +468,22 @@ export function CustomerLandingPage({
       },
     };
   });
+  // Customer Authentication & Profile State (Frontend-Only)
+  const [customerUser, setCustomerUser] = useState(getInitialCustomer);
+  const [intendedDestination, setIntendedDestination] = useState("home");
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [reservationInitialStep, setReservationInitialStep] = useState(1);
+
   const [activeScreen, setActiveScreen] = useState(() => {
-    if (window.location.hash === "#menu" || window.location.hash === "#cart") return "menu";
-    if (window.location.hash === "#checkout") return "checkout";
-    if (window.location.hash === "#payment") return "payment";
-    if (window.location.hash === "#reserve") return "reservation";
+    const hash = window.location.hash;
+    const user = getInitialCustomer();
+    if (hash === "#auth") return "auth";
+    if (hash === "#menu") return user ? "menu" : "auth";
+    if (hash === "#cart") return user ? "cart" : "auth";
+    if (hash === "#checkout") return user ? "checkout" : "auth";
+    if (hash === "#payment") return user ? "payment" : "auth";
+    if (hash === "#reserve") return user ? "reservation" : "auth";
     return "home";
   });
 
@@ -465,10 +503,18 @@ export function CustomerLandingPage({
   // --- Checkout Details State ---
   const [pickupDate, setPickupDate] = useState(getFormattedPickupDate);
   const [pickupTime, setPickupTime] = useState("08:00 PM");
-  const [customerName, setCustomerName] = useState("Priya Sharma");
-  const [customerPhone, setCustomerPhone] = useState("+91 98765 43210");
+  const [customerName, setCustomerName] = useState(() => customerUser?.name || "Priya Sharma");
+  const [customerPhone, setCustomerPhone] = useState(() => customerUser?.phone || "+91 98765 43210");
   const [customerPhoneError, setCustomerPhoneError] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
+
+  // Sync customer details when customerUser changes
+  useEffect(() => {
+    if (customerUser) {
+      if (customerUser.name) setCustomerName(customerUser.name);
+      if (customerUser.phone) setCustomerPhone(customerUser.phone);
+    }
+  }, [customerUser]);
 
   // --- Coupon State ---
   const [couponCode, setCouponCode] = useState("");
@@ -541,14 +587,48 @@ export function CustomerLandingPage({
   useEffect(() => {
     const handleHistoryNavigation = () => {
       const hash = window.location.hash;
-      if (hash === "#menu" || hash === "#cart") setActiveScreen("menu");
-      else if (hash === "#checkout") setActiveScreen("checkout");
-      else if (hash === "#payment") setActiveScreen("payment");
-      else if (hash === "#reserve") setActiveScreen("reservation");
-      else if (hash === "#tracking") setActiveScreen("tracking");
-      else if (hash === "#ready") setActiveScreen("ready");
-      else if (hash === "#confirmation") setActiveScreen("confirmation");
-      else setActiveScreen("home");
+      const user = getInitialCustomer();
+      if (hash === "#menu") {
+        if (user) setActiveScreen("menu");
+        else {
+          setIntendedDestination("menu");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#cart") {
+        if (user) setActiveScreen("cart");
+        else {
+          setIntendedDestination("cart");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#checkout") {
+        if (user) setActiveScreen("checkout");
+        else {
+          setIntendedDestination("checkout");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#payment") {
+        if (user) setActiveScreen("payment");
+        else {
+          setIntendedDestination("payment");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#reserve") {
+        if (user) setActiveScreen("reservation");
+        else {
+          setIntendedDestination("reservation");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#auth") {
+        setActiveScreen("auth");
+      } else if (hash === "#tracking") {
+        setActiveScreen("tracking");
+      } else if (hash === "#ready") {
+        setActiveScreen("ready");
+      } else if (hash === "#confirmation") {
+        setActiveScreen("confirmation");
+      } else {
+        setActiveScreen("home");
+      }
       window.scrollTo({ top: 0 });
     };
     window.addEventListener("popstate", handleHistoryNavigation);
@@ -562,10 +642,51 @@ export function CustomerLandingPage({
         ? "#reserve"
         : targetScreen === "home"
         ? "#home"
-        : `#${targetScreen}`;
+        : screen === "auth"
+        ? "#auth"
+        : `#${screen}`;
     window.history.pushState(null, "", hash);
     setActiveScreen(targetScreen);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Mandatory Authentication Guard
+  const requireAuth = (targetScreen) => {
+    if (customerUser) {
+      if (targetScreen === "reservation") {
+        setReservationInitialStep(1);
+      }
+      navigateScreen(targetScreen);
+    } else {
+      setIntendedDestination(targetScreen);
+      navigateScreen("auth");
+    }
+  };
+
+  // Auth Success Callback
+  const handleLoginSuccess = (user, destination) => {
+    setCustomerUser(user);
+    try {
+      localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+    } catch (e) {}
+    if (user?.name) setCustomerName(user.name);
+    if (user?.phone) setCustomerPhone(user.phone);
+
+    const dest = destination || intendedDestination || "home";
+    if (dest === "reservation") {
+      setReservationInitialStep(1);
+    }
+    navigateScreen(dest);
+  };
+
+  // Logout Handler
+  const handleLogout = () => {
+    setCustomerUser(null);
+    try {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
+    } catch (e) {}
+    setShowProfileDropdown(false);
+    navigateScreen("home");
   };
 
   // Merge custom menu items with curated takeaway items ensuring the 6 signature screenshot items exist
@@ -1060,148 +1181,168 @@ export function CustomerLandingPage({
   return (
     <div className={`customer-site customer-screen-${activeScreen}`}>
       {/* ── Global Header ─────────────────────────────────── */}
-      <header className={`customer-header ${activeScreen === "menu" ? "is-takeaway-header" : ""}`}>
-        <a
-          className="customer-brand"
-          href="#home"
-          aria-label={`${restaurantName} home`}
-          onClick={(event) => {
-            event.preventDefault();
-            navigateScreen("home");
-          }}
-        >
-          {restaurantLogo ? (
-            <img className="customer-brand-logo" src={restaurantLogo} alt="" />
-          ) : (
-            <span className="customer-brand-mark">
-              <ChefHat size={25} />
+      {activeScreen !== "reservation" && activeScreen !== "auth" && (
+        <header className={`customer-header ${activeScreen === "menu" ? "is-takeaway-header" : ""}`}>
+          <a
+            className="customer-brand"
+            href="#home"
+            aria-label={`${restaurantName} home`}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateScreen("home");
+            }}
+          >
+            {restaurantLogo ? (
+              <img className="customer-brand-logo" src={restaurantLogo} alt="" />
+            ) : (
+              <span className="customer-brand-mark">
+                <ChefHat size={25} />
+              </span>
+            )}
+            <span>
+              <strong>{restaurantName}</strong>
+              <small>{activeScreen === "menu" ? "Takeaway Ordering" : "Fine Dining & Takeaway"}</small>
             </span>
-          )}
-          <span>
-            <strong>{restaurantName}</strong>
-            <small>{activeScreen === "menu" ? "Takeaway Ordering" : "Fine Dining & Takeaway"}</small>
-          </span>
-        </a>
+          </a>
 
-        {/* Center Pill: Takeaway Only (Matches Mockup) */}
-        {activeScreen === "menu" && (
-          <div className="takeaway-header-center-pill">
-            <ShoppingBag size={16} />
-            <span>Takeaway Only</span>
-          </div>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-          {/* User greeting pill */}
+          {/* Center Pill: Takeaway Only (Matches Mockup) */}
           {activeScreen === "menu" && (
-            <div className="takeaway-header-user-pill">
-              <UserRound size={15} />
-              <span>Hi, Priya</span>
+            <div className="takeaway-header-center-pill">
+              <ShoppingBag size={16} />
+              <span>Takeaway Only</span>
             </div>
           )}
 
-          {/* Cart Icon / Dropdown in Header */}
-          {activeScreen !== "home" && activeScreen !== "reservation" && (
-            <button
-              type="button"
-              className={activeScreen === "menu" ? "takeaway-header-cart-btn" : "customer-header-cart-btn"}
-              aria-label={`View your order, ${cartCount} item${cartCount === 1 ? "" : "s"}`}
-              onClick={() => {
-                if (activeScreen === "menu") {
-                  const el = document.getElementById("takeaway-order-sidebar");
-                  if (el) el.scrollIntoView({ behavior: "smooth" });
-                } else {
-                  navigateScreen("menu");
-                }
-              }}
-              title="Your Order"
-            >
-              <ShoppingCart size={19} strokeWidth={2.2} />
-              <span className="takeaway-cart-count-bubble">{cartCount}</span>
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+            {/* User greeting pill in takeaway view */}
+            {activeScreen === "menu" && customerUser && (
+              <div className="takeaway-header-user-pill">
+                <UserRound size={15} />
+                <span>Hi, {(customerUser.name || "Priya").split(" ")[0]}</span>
+              </div>
+            )}
 
-          {activeScreen === "menu" && (
-            <div className="takeaway-notification-wrap" ref={notifRef}>
+            {/* Cart Icon / Dropdown in Header */}
+            {activeScreen !== "home" && activeScreen !== "reservation" && activeScreen !== "auth" && (
               <button
                 type="button"
-                className="takeaway-notification-btn"
-                aria-label={`Kitchen status updates${kitchenNotifications.length ? `, ${kitchenNotifications.length} updates` : ""}`}
-                aria-expanded={isNotifOpen}
-                aria-haspopup="true"
-                title="Kitchen status updates"
-                onClick={() => setIsNotifOpen((open) => !open)}
+                className={activeScreen === "menu" ? "takeaway-header-cart-btn" : "customer-header-cart-btn"}
+                onClick={() => {
+                  if (activeScreen === "menu") {
+                    const el = document.getElementById("takeaway-order-sidebar");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                  } else {
+                    navigateScreen("menu");
+                  }
+                }}
+                title="Your Order"
               >
-                <Bell size={18} />
-                {kitchenNotifications.length > 0 && (
-                  <span className="takeaway-notification-badge">
-                    {kitchenNotifications.length > 9 ? "9+" : kitchenNotifications.length}
-                  </span>
-                )}
+                <ShoppingBag size={17} />
+                <span className="takeaway-cart-count-bubble">{cartCount}</span>
+                {activeScreen === "menu" && <ChevronDown size={14} />}
               </button>
-              {isNotifOpen && (
-                <div className="takeaway-notification-panel" role="dialog" aria-label="Notifications">
-                  <div className="takeaway-notification-panel-header">
-                    <strong>Kitchen Status Updates</strong>
-                    {kitchenNotifications.length > 0 && onClearNotifications && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onClearNotifications();
-                          setIsNotifOpen(false);
-                        }}
-                      >
-                        <Trash2 size={13} />
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-                  {kitchenNotifications.length === 0 ? (
-                    <div className="takeaway-notification-empty">
-                      <span aria-hidden="true">📭</span>
-                      <p>No kitchen status updates yet.</p>
-                    </div>
-                  ) : (
-                    <ul className="takeaway-notification-list">
-                      {kitchenNotifications.map((notification, index) => {
-                        const isCompleted = notification.type === "cooking_completed";
-                        return (
-                          <li
-                            key={notification.id || index}
-                            className={isCompleted ? "is-completed" : ""}
-                          >
-                            <span className="takeaway-notification-status-icon">
-                              {isCompleted ? <CheckCircle2 size={16} /> : <Clock size={16} />}
-                            </span>
-                            <span className="takeaway-notification-copy">
-                              <span className="takeaway-notification-title-row">
-                                <strong>{getCleanAlertTitle(notification)}</strong>
-                                <small>{getCleanAlertTimestamp(notification)}</small>
-                              </span>
-                              <span>{getCleanAlertMessage(notification)}</span>
-                              {notification.tableId && (
-                                <small className="takeaway-notification-table">
-                                  <MapPin size={11} />
-                                  {cleanNotificationText(notification.tableName) || `Table ${notification.tableId}`}
-                                </small>
-                              )}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+            )}
 
-          <button className="customer-admin-link" type="button" onClick={onHotelLogin}>
-            <ShieldCheck size={18} />
-            <span>Hotel Login</span>
-          </button>
-        </div>
-      </header>
+            {/* Customer Authentication & Profile Menu (Replaces Admin Login) */}
+            {!customerUser ? (
+              <button
+                className="customer-login-pill-btn"
+                type="button"
+                onClick={() => {
+                  setIntendedDestination("home");
+                  navigateScreen("auth");
+                }}
+                title="Customer Login"
+              >
+                <UserRound size={16} />
+                <span>Login</span>
+              </button>
+            ) : (
+              <div className="customer-profile-menu-container" style={{ position: "relative" }}>
+                <button
+                  className="customer-profile-pill-btn"
+                  type="button"
+                  onClick={() => setShowProfileDropdown((prev) => !prev)}
+                >
+                  <div className="customer-avatar-badge">
+                    {(customerUser.name || "Priya")[0].toUpperCase()}
+                  </div>
+                  <span className="customer-profile-name">
+                    {customerUser.name || "Priya Sharma"}
+                  </span>
+                  <ChevronDown size={14} />
+                </button>
+
+                {showProfileDropdown && (
+                  <div className="customer-profile-dropdown-menu">
+                    <div className="customer-profile-dropdown-header">
+                      <div className="customer-dropdown-avatar">
+                        {(customerUser.name || "Priya")[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <strong>{customerUser.name || "Priya Sharma"}</strong>
+                        <small>{customerUser.phone || customerUser.email || "+91 98765 43210"}</small>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="customer-profile-menu-item"
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        if (placedOrder) {
+                          navigateScreen("tracking");
+                        } else {
+                          requireAuth("menu");
+                        }
+                      }}
+                    >
+                      <ShoppingBag size={15} />
+                      <span>📋 My Orders</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="customer-profile-menu-item"
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        setReservationInitialStep(6);
+                        navigateScreen("reservation");
+                      }}
+                    >
+                      <CalendarDays size={15} />
+                      <span>📅 My Reservations</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="customer-profile-menu-item"
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        setShowProfileModal(true);
+                      }}
+                    >
+                      <User size={15} />
+                      <span>👤 My Profile</span>
+                    </button>
+
+                    <div className="customer-profile-dropdown-divider" />
+
+                    <button
+                      type="button"
+                      className="customer-profile-menu-item is-logout"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={15} />
+                      <span>🚪 Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </header>
+      )}
 
       <main>
         {/* ========================================================= */}
@@ -1218,7 +1359,7 @@ export function CustomerLandingPage({
                   href="#menu"
                   onClick={(event) => {
                     event.preventDefault();
-                    navigateScreen("menu");
+                    requireAuth("menu");
                   }}
                 >
                   Order Takeaway
@@ -1226,7 +1367,7 @@ export function CustomerLandingPage({
                 <i aria-hidden="true">|</i>
                 <button
                   type="button"
-                  onClick={() => navigateScreen("reservation")}
+                  onClick={() => requireAuth("reservation")}
                 >
                   Reserve Your Table
                 </button>
@@ -1241,16 +1382,13 @@ export function CustomerLandingPage({
                   </span>
                   <h2>Order Takeaway Online</h2>
                   <p>Browse our menu, place your order and pick it up at your convenience.</p>
-                  <a
+                  <button
                     className="customer-action-button takeaway-button"
-                    href="#menu"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      navigateScreen("menu");
-                    }}
+                    type="button"
+                    onClick={() => requireAuth("menu")}
                   >
                     Order Takeaway <ArrowRight size={18} />
-                  </a>
+                  </button>
                 </div>
               </article>
 
@@ -1264,7 +1402,7 @@ export function CustomerLandingPage({
                   <button
                     className="customer-action-button reservation-button"
                     type="button"
-                    onClick={() => navigateScreen("reservation")}
+                    onClick={() => requireAuth("reservation")}
                   >
                     Reserve Table <ArrowRight size={18} />
                   </button>
@@ -2317,9 +2455,33 @@ export function CustomerLandingPage({
         )}
 
         {/* ========================================================= */}
+        {/* CUSTOMER AUTHENTICATION FLOW SCREEN                       */}
+        {/* ========================================================= */}
+        {activeScreen === "auth" && (
+          <CustomerAuthFlow
+            onLoginSuccess={handleLoginSuccess}
+            onBackToHome={() => navigateScreen("home")}
+            intendedDestination={intendedDestination}
+            restaurantName={restaurantName}
+            restaurantLogo={restaurantLogo}
+          />
+        )}
+
+        {/* ========================================================= */}
         {/* TABLE RESERVATION SCREEN                                  */}
         {/* ========================================================= */}
         {activeScreen === "reservation" && (
+<<<<<<< HEAD
+          <div className="customer-reservation-flow-wrapper" style={{ width: "100%", minHeight: "100vh", background: "#0a0403" }}>
+            <TableReservationFlow
+              onBackToPos={() => navigateScreen("home")}
+              backLabel="Back to Home"
+              initialStep={reservationInitialStep}
+              customerUser={customerUser}
+              onLogout={handleLogout}
+            />
+          </div>
+=======
           <section className="customer-reservation-page">
             <div className="customer-reservation-layout">
               <div className="customer-reservation-copy">
@@ -2626,8 +2788,92 @@ export function CustomerLandingPage({
               </div>
             </div>
           </section>
+>>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
         )}
       </main>
+
+      {/* ── Customer Profile Modal ──────────────────────────── */}
+      {showProfileModal && (
+        <div className="customer-profile-modal-overlay" onClick={() => setShowProfileModal(false)}>
+          <div className="customer-profile-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#1a100b" }}>
+                Customer Profile
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#665449" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px", padding: "12px", background: "#faf7f4", borderRadius: "12px" }}>
+              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, #f59e0b, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", fontWeight: 800 }}>
+                {(customerUser?.name || "P")[0].toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "16px", color: "#1a100b" }}>{customerUser?.name || "Priya Sharma"}</div>
+                <div style={{ fontSize: "13px", color: "#6f6158" }}>{customerUser?.phone || "+91 98765 43210"}</div>
+                <div style={{ fontSize: "12px", color: "#ea580c" }}>{customerUser?.email || "priya@example.com"}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13.5px" }}>
+              <div>
+                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Full Name</label>
+                <input
+                  type="text"
+                  value={customerUser?.name || "Priya Sharma"}
+                  onChange={(e) => {
+                    const updated = { ...customerUser, name: e.target.value };
+                    setCustomerUser(updated);
+                    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+                  }}
+                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Mobile Number</label>
+                <input
+                  type="text"
+                  value={customerUser?.phone || "+91 98765 43210"}
+                  onChange={(e) => {
+                    const updated = { ...customerUser, phone: e.target.value };
+                    setCustomerUser(updated);
+                    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+                  }}
+                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Email Address</label>
+                <input
+                  type="text"
+                  value={customerUser?.email || "priya@example.com"}
+                  onChange={(e) => {
+                    const updated = { ...customerUser, email: e.target.value };
+                    setCustomerUser(updated);
+                    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+                  }}
+                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                style={{ flex: 1, height: "42px", background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}
+              >
+                Save &amp; Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── POS Tax Invoice / Receipt Modal ─────────────────── */}
       {showReceiptModal && receiptTableData && (

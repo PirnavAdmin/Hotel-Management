@@ -31,11 +31,21 @@ import {
   saveStoredReservationTables
 } from "../api/reservationApi";
 
-export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", onHotelLogin }) {
+export function TableReservationFlow({
+  onBackToPos,
+  backLabel = "Back to Home",
+  initialStep = 1,
+  customerUser,
+  onLogout,
+}) {
   // Navigation: step 1 to 9, or "overview" for the 9-screen poster
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(initialStep || 1);
   const [viewMode, setViewMode] = useState("interactive"); // "interactive" | "poster"
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    if (initialStep) setCurrentStep(initialStep);
+  }, [initialStep]);
 
   // Reservations & Tables state from localStorage
   const [reservations, setReservations] = useState([]);
@@ -47,11 +57,22 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
     time: "07:30 PM",
     guests: 2,
     tablePreference: "Indoor",
-    fullName: "Priya Sharma",
-    mobileNumber: "9876543210",
-    email: "priya@example.com",
+    fullName: customerUser?.name || "Priya Sharma",
+    mobileNumber: customerUser?.phone ? customerUser.phone.replace(/\D/g, "").slice(-10) : "9876543210",
+    email: customerUser?.email || "priya@example.com",
     specialRequests: "Anniversary celebration, window table preference.",
   });
+
+  useEffect(() => {
+    if (customerUser) {
+      setBookingForm((prev) => ({
+        ...prev,
+        fullName: customerUser.name || prev.fullName,
+        mobileNumber: customerUser.phone ? customerUser.phone.replace(/\D/g, "").slice(-10) : prev.mobileNumber,
+        email: customerUser.email || prev.email,
+      }));
+    }
+  }, [customerUser]);
 
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableFilter, setTableFilter] = useState("all"); // "all" | "indoor" | "outdoor"
@@ -332,67 +353,42 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
 
         {/* Action Controls (Right side matching Reference UI) */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {currentStep === 1 ? (
-            <button
-              onClick={() => {
-                if (onHotelLogin) onHotelLogin();
-                else showToast("Hotel login is unavailable right now.", "info");
-              }}
+          <button
+            onClick={() => setCurrentStep(6)}
+            title="View My Reservations"
+            style={{
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(245, 158, 11, 0.4)",
+              color: "#f5ede6",
+              padding: "6px 14px",
+              borderRadius: "20px",
+              fontSize: "12.5px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+            }}
+          >
+            <div
               style={{
-                background: "transparent",
-                border: "1.5px solid #f59e0b",
-                color: "#ffffff",
-                padding: "7px 18px",
-                borderRadius: "20px",
-                fontSize: "12.5px",
-                fontWeight: 700,
-                cursor: "pointer",
+                width: "22px",
+                height: "22px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
+                justifyContent: "center",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#fff",
               }}
             >
-              <ShieldCheck size={16} color="#f59e0b" />
-              Hotel Login
-            </button>
-          ) : (
-            <button
-              onClick={() => setCurrentStep(6)}
-              title="View My Reservations"
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(245, 158, 11, 0.4)",
-                color: "#f5ede6",
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "12.5px",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "7px",
-              }}
-            >
-              <div
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  color: "#fff",
-                }}
-              >
-                P
-              </div>
-              <span>Hi, {bookingForm.fullName.split(" ")[0] || "Priya"}</span>
-              <ChevronDown size={14} color="#f59e0b" />
-            </button>
-          )}
+              {(customerUser?.name || bookingForm.fullName || "P")[0].toUpperCase()}
+            </div>
+            <span>Hi, {(customerUser?.name || bookingForm.fullName || "Priya").split(" ")[0]}</span>
+            <ChevronDown size={14} color="#f59e0b" />
+          </button>
         </div>
       </div>
 

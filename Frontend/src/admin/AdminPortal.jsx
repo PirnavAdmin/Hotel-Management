@@ -69,7 +69,10 @@ import { AttendanceManagement } from "./modules/AttendanceManagement";
 import { PromotionsManagement } from "./modules/PromotionsManagement";
 import { SuppliersManagement } from "./modules/SuppliersManagement";
 import { RolesManagement } from "./modules/RolesManagement";
-import { apiGetRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
+import {
+  apiGetRestaurantSettings,
+  apiUpdateRestaurantSettings,
+} from "../api/settingsApi";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
@@ -910,10 +913,8 @@ export function AdminPortal({
     // Also fetch directly from dedicated restaurant-settings API
     apiGetRestaurantSettings()
       .then((res) => {
-        const data = res?.data || res;
-        if (data && typeof data === "object") {
-          applySettings(data);
-        }
+        const liveSettings = res?.data || res?.settings;
+        if (liveSettings) applySettings(liveSettings);
       })
       .catch(() => {});
 
