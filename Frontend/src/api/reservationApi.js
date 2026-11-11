@@ -1,4 +1,5 @@
-// Pure Frontend Mock Reservation Service - ZERO API / Backend dependencies
+import { apiClient } from './apiConfig';
+
 const STORAGE_KEY = "bhanu_bistro_reservations_v1";
 const TABLES_STORAGE_KEY = "bhanu_bistro_reservation_tables_v1";
 
@@ -17,7 +18,7 @@ const INITIAL_RESERVATIONS = [
     section: "Indoor",
     specialRequests: "Anniversary celebration, window table preference.",
     estimatedAmount: 2000,
-    advanceAmount: 100,
+    advanceAmount: 400,
     paymentMethod: "UPI (Google Pay)",
     status: "confirmed",
     createdAt: "2026-11-10T14:30:00Z",
@@ -36,29 +37,10 @@ const INITIAL_RESERVATIONS = [
     section: "Indoor",
     specialRequests: "High chair needed for child.",
     estimatedAmount: 3500,
-    advanceAmount: 100,
+    advanceAmount: 700,
     paymentMethod: "Credit Card",
     status: "completed",
     createdAt: "2026-11-04T10:00:00Z",
-  },
-  {
-    id: "RES-1012",
-    reservationId: "RES-1012",
-    customerName: "Ananya Roy",
-    phone: "+91 99887 76655",
-    email: "ananya@example.com",
-    guests: 6,
-    date: "2026-10-28",
-    time: "01:30 PM",
-    tableId: "T-08",
-    tableName: "T-08 (Outdoor)",
-    section: "Outdoor",
-    specialRequests: "Family lunch reunion.",
-    estimatedAmount: 5000,
-    advanceAmount: 100,
-    paymentMethod: "Net Banking",
-    status: "completed",
-    createdAt: "2026-10-27T16:00:00Z",
   }
 ];
 
@@ -160,8 +142,7 @@ export async function apiCreateReservation(reservationData) {
   const newReservation = {
     id: `RES-${nextNum}`,
     reservationId: `RES-${nextNum}`,
-    ...data,
-    advanceAmount: data?.advanceAmount || 100,
+    ...reservationData,
     status: "confirmed",
     createdAt: new Date().toISOString(),
   };
@@ -179,25 +160,41 @@ export async function apiCreateReservation(reservationData) {
   return { success: true, data: newReservation };
 }
 
-export async function apiUpdateReservation(id, data) {
+export async function apiUpdateReservation(id, reservationData) {
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(reservationData)
+    });
+    if (res?.success) return res;
+  } catch {}
+
   const all = getStoredReservations();
-  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, ...data } : r));
+  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, ...reservationData } : r));
   saveStoredReservations(updated);
   return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
 }
 
 export async function apiUpdateReservationStatus(id, status) {
-  const all = getStoredReservations();
-  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, status } : r));
-  saveStoredReservations(updated);
-  return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+    if (res?.success) return res;
+  } catch {}
+
+  return await apiUpdateReservation(id, { status });
 }
 
 export async function apiDeleteReservation(id) {
-  return await apiCancelReservation(id);
-}
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    if (res?.success) return res;
+  } catch {}
 
-export async function apiCancelReservation(id) {
   const all = getStoredReservations();
   const target = all.find((r) => r.id === id || r.reservationId === id);
   const updated = all.filter((r) => r.id !== id && r.reservationId !== id);
@@ -212,4 +209,16 @@ export async function apiCancelReservation(id) {
   }
 
   return { success: true, message: "Reservation deleted successfully." };
+}
+
+export const apiCancelReservation = apiDeleteReservation;
+
+export async function apiGetAvailableReservationTables(date, time, guests, branchId = 1) {
+  const query = new URLSearchParams({
+    date,
+    time,
+    guests: String(guests),
+    branchId: String(branchId)
+  }).toString();
+  return await apiClient(`/api/v1/reservations/available-tables?${query}`);
 }

@@ -15,8 +15,7 @@ import {
   PastOrdersModal,
   TakeawayOrderFlowView,
 } from "./user";
-import { Header, LoginPage, ErrorBoundary } from "./common";
-import { CustomerLandingPage } from "./common/CustomerLandingPage";
+import { Header, LoginPage, ErrorBoundary, CustomerLandingPage } from "./common";
 import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
 import { BarBOTView } from "./bar/BarBOTView";
