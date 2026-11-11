@@ -31,7 +31,7 @@ import {
   saveStoredReservationTables
 } from "../api/reservationApi";
 
-export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", onAdminLogin }) {
+export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", onHotelLogin }) {
   // Navigation: step 1 to 9, or "overview" for the 9-screen poster
   const [currentStep, setCurrentStep] = useState(1);
   const [viewMode, setViewMode] = useState("interactive"); // "interactive" | "poster"
@@ -335,8 +335,8 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
           {currentStep === 1 ? (
             <button
               onClick={() => {
-                if (onAdminLogin) onAdminLogin();
-                else showToast("Admin Portal access mode", "info");
+                if (onHotelLogin) onHotelLogin();
+                else showToast("Hotel login is unavailable right now.", "info");
               }}
               style={{
                 background: "transparent",
@@ -353,7 +353,7 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
               }}
             >
               <ShieldCheck size={16} color="#f59e0b" />
-              Admin Login
+              Hotel Login
             </button>
           ) : (
             <button

@@ -373,8 +373,6 @@ const getAvailableTables = (tables, guests) =>
     const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
     return ["vacant", "available"].includes(status) && cap >= guests;
   });
-  return filtered.length > 0 ? filtered : FALLBACK_TABLES;
-};
 
 const todayDate = () => {
   const now = new Date();
@@ -418,7 +416,7 @@ export function CustomerLandingPage({
   menuItems = [],
   menuLoading = false,
   tables = [],
-  onAdminLogin,
+  onHotelLogin,
 }) {
   // --- Cart & Navigation State ---
   const [cart, setCart] = useState(() => {
@@ -885,9 +883,9 @@ export function CustomerLandingPage({
             </button>
           )}
 
-          <button className="customer-admin-link" type="button" onClick={onAdminLogin}>
+          <button className="customer-admin-link" type="button" onClick={onHotelLogin}>
             <ShieldCheck size={18} />
-            <span>Admin Login</span>
+            <span>Hotel Login</span>
           </button>
         </div>
       </header>

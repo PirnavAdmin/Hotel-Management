@@ -2588,3 +2588,137 @@
 @media (prefers-reduced-motion: reduce) {
   .customer-site *, .customer-site *::before, .customer-site *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* Reservation landing view: fit the desktop viewport while letting compact
+   screens grow naturally instead of clipping form fields. */
+.customer-screen-reservation {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  overflow-x: clip;
+}
+.customer-screen-reservation .customer-header {
+  min-height: clamp(58px, 9vh, 76px);
+  padding-block: clamp(6px, 1vh, 9px);
+}
+.customer-screen-reservation .customer-brand-logo,
+.customer-screen-reservation .customer-brand-mark {
+  width: clamp(40px, 6vh, 52px);
+  height: clamp(40px, 6vh, 52px);
+  flex-basis: clamp(40px, 6vh, 52px);
+}
+.customer-reservation-page {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  padding: clamp(64px, 10.5vh, 86px) clamp(16px, 5vw, 72px) clamp(8px, 1.8vh, 16px);
+  overflow: hidden;
+  background-position: center;
+  background-size: cover;
+}
+.customer-reservation-layout {
+  width: min(100%, 1200px);
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  gap: clamp(16px, 3vw, 42px);
+}
+.customer-reservation-copy h1 {
+  margin: clamp(8px, 1.5vh, 14px) 0 8px;
+  font-size: clamp(32px, 4vw, 50px);
+}
+.customer-reservation-copy > p {
+  font-size: clamp(14px, 1.45vw, 18px);
+  line-height: 1.4;
+}
+.customer-reservation-perks { margin-top: clamp(12px, 3vh, 30px); }
+.customer-reservation-perks > div { min-height: clamp(62px, 10vh, 78px); gap: 5px; padding-inline: 6px; }
+.customer-reservation-perks svg,
+.customer-guests-icon,
+.customer-star-icon { width: clamp(27px, 4vh, 34px); height: clamp(27px, 4vh, 34px); }
+.customer-reservation-perks strong { font-size: clamp(11px, .95vw, 13px); }
+.customer-reservation-card { width: 100%; min-width: 0; border-radius: 16px; }
+.customer-reservation-card h2 {
+  gap: 10px;
+  padding: clamp(8px, 1.35vh, 13px) clamp(12px, 1.6vw, 20px);
+  font-size: clamp(19px, 1.9vw, 24px);
+}
+.customer-reservation-card h2 svg { width: clamp(20px, 3vh, 26px); height: clamp(20px, 3vh, 26px); }
+.customer-reservation-card form {
+  gap: clamp(5px, .85vh, 8px);
+  padding: clamp(8px, 1.2vh, 13px) clamp(12px, 1.5vw, 18px);
+}
+.customer-reservation-card form label { gap: 3px; font-size: clamp(10px, .8vw, 12px); }
+.customer-reservation-fields { gap: clamp(6px, 1vw, 12px); }
+.customer-reservation-card input,
+.customer-reservation-card select,
+.customer-reservation-card .customer-input-control,
+.customer-reservation-card .customer-email-control {
+  min-height: clamp(31px, 4.7vh, 36px);
+}
+.customer-reservation-card input,
+.customer-reservation-card select { padding-block: 5px; }
+.customer-reservation-card textarea { min-height: clamp(38px, 6vh, 50px); }
+.customer-guest-control { min-height: clamp(32px, 4.8vh, 38px); }
+.customer-guest-control button { width: clamp(27px, 4vh, 32px); height: clamp(27px, 4vh, 32px); flex-basis: clamp(27px, 4vh, 32px); }
+.customer-picker-button { width: clamp(30px, 4vh, 36px); height: clamp(30px, 4vh, 36px); }
+.customer-reservation-card .customer-reservation-submit { min-height: clamp(36px, 5.8vh, 44px); }
+
+@media (min-width: 621px) and (max-width: 900px) {
+  .customer-reservation-page { padding-inline: 3vw; }
+  .customer-reservation-layout {
+    grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+    gap: clamp(12px, 2vw, 22px);
+  }
+  .customer-reservation-contact-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .customer-reservation-contact-fields > label:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-height: 700px) and (min-width: 761px) {
+  .customer-screen-reservation .customer-header { min-height: 56px; }
+  .customer-reservation-page { padding-top: 62px; padding-bottom: 6px; }
+  .customer-reservation-copy h1 { font-size: clamp(30px, 4vh, 40px); }
+  .customer-reservation-perks { margin-top: 12px; }
+  .customer-reservation-card h2 { padding-block: 7px; }
+  .customer-reservation-card form { gap: 5px; padding-block: 7px; }
+  .customer-reservation-card textarea { min-height: 38px; }
+}
+
+@media (max-width: 760px) {
+  .customer-screen-reservation {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+  .customer-reservation-page {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: clamp(78px, 12vh, 92px) 16px 20px;
+    overflow: visible;
+  }
+  .customer-reservation-layout { align-content: start; }
+}
+
+@media (max-width: 620px) {
+  .customer-screen-reservation .customer-header {
+    min-height: 70px;
+    padding: 10px 16px;
+  }
+  .customer-screen-reservation .customer-brand-logo,
+  .customer-screen-reservation .customer-brand-mark {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+  .customer-screen-reservation .customer-reservation-page {
+    min-height: calc(100vh - 70px);
+    min-height: calc(100dvh - 70px);
+    padding: 16px 12px 24px;
+  }
+  .customer-screen-reservation .customer-reservation-card h2 { padding: 11px 14px; }
+  .customer-screen-reservation .customer-reservation-card form { gap: 7px; padding: 10px 14px 12px; }
+  .customer-screen-reservation .customer-reservation-card textarea { min-height: 44px; }
+}
