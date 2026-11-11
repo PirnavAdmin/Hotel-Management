@@ -373,13 +373,11 @@ const getAvailableTables = (tables, guests) =>
     const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
     return ["vacant", "available"].includes(status) && cap >= guests;
   });
-  return filtered.length > 0 ? filtered : FALLBACK_TABLES;
-};
 
-const todayDate = () => {
+function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
+}
 
 const getFormattedPickupDate = () => {
   const d = new Date();

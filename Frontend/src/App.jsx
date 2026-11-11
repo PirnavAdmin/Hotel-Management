@@ -1877,7 +1877,6 @@ export function App() {
     };
   }, []);
 
-<<<<<<< HEAD
   const [takeawayOrder, setTakeawayOrder] = useState({
     id: "takeaway",
     backendTableId: null,
@@ -1892,11 +1891,6 @@ export function App() {
     capacity: 1,
   });
 
-  const isTakeawayActive = String(selectedTableId) === "takeaway";
-  const currentTable = isTakeawayActive
-    ? takeawayOrder
-    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
-=======
   // ── Table Concurrency Locking System ──────────────────────────────
   // Prevents multiple waiters from concurrently modifying the same table order.
   const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
@@ -2002,26 +1996,26 @@ export function App() {
     apiUnlockTable(tableKey).catch(() => {});
   };
 
-  const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+  const isTakeawayActive = String(selectedTableId) === "takeaway";
+  const currentTable = isTakeawayActive
+    ? takeawayOrder
+    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
 
   // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = (id) => {
-<<<<<<< HEAD
     const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
-    setSelectedTableId(tableId);
-=======
-    const lockResult = acquireTableLock(id, posSession);
-    const targetTable = tables.find((t) => String(t.id) === String(id));
-    const tblName = targetTable?.name || `Table ${id}`;
+    if (String(tableId) !== "takeaway") {
+      const lockResult = acquireTableLock(tableId, posSession);
+      const targetTable = tables.find((t) => String(t.id) === String(tableId));
+      const tblName = targetTable?.name || `Table ${tableId}`;
 
-    if (!lockResult.success) {
-      showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
-      return;
+      if (!lockResult.success) {
+        showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
+        return;
+      }
     }
 
-    setSelectedTableId(id);
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+    setSelectedTableId(tableId);
     setActiveView("order");
     sounds.playAddItem();
   };
@@ -2535,10 +2529,7 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-<<<<<<< HEAD
-=======
           if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
           if (itemId) {
             return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
