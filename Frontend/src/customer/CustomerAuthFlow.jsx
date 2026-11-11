@@ -254,8 +254,10 @@ export function CustomerAuthFlow({
 
   const handleResendOtp = () => {
     if (resendTimer > 0) return;
+    const newOtp = getNextOtp();
+    setCurrentGeneratedOtp(newOtp);
+    setOtpDigits(newOtp.split(""));
     setResendTimer(58);
-    setOtpDigits(["2", "4", "7", "9", "1", "6"]);
     setOtpError("");
   };
 
@@ -603,7 +605,10 @@ export function CustomerAuthFlow({
                   </h2>
                   <p>
                     We've sent a 6-digit OTP to{" "}
-                    <strong>{currentUserData.phone || "+91 98765 43210"}</strong>.
+                    <strong>{currentUserData.phone || "+91 98765 43210"}</strong>:{" "}
+                    <span style={{ color: "#ea580c", fontWeight: 700, letterSpacing: "1px" }}>
+                      {currentGeneratedOtp}
+                    </span>
                   </p>
                 </div>
 
