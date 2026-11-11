@@ -13,8 +13,10 @@ import {
   SettlementModal,
   TransferTableModal,
   PastOrdersModal,
+  TakeawayOrderFlowView,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
 import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
@@ -3905,6 +3907,12 @@ export function App() {
                     setIsSettlementOpen(true);
                   }}
                 />
+              )}
+              {activeView === "takeaway-flow" && (
+                <TakeawayOrderFlowView onBack={() => setActiveView("takeaway")} />
+              )}
+              {activeView === "reservation" && (
+                <TableReservationFlow onBackToPos={() => setActiveView("tables")} />
               )}
               {activeView === "order" && (
                 <TableDetailView

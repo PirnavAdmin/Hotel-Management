@@ -1969,13 +1969,15 @@ export function AdminReports({
 
               {/* Export CSV */}
               <button
+                type="button"
+                className="btn-export-csv"
                 onClick={handleExportCSV}
                 style={{
                   background: "rgba(16, 185, 129, 0.12)",
-                  border: "1px solid rgba(16, 185, 129, 0.35)",
+                  border: "1.5px solid #10b981",
                   borderRadius: "9px",
                   padding: "0.38rem 0.75rem",
-                  color: "var(--success)",
+                  color: "#059669",
                   fontSize: "0.75rem",
                   fontWeight: 700,
                   cursor: "pointer",
@@ -1986,8 +1988,8 @@ export function AdminReports({
                 }}
                 title="Export report for this period to CSV spreadsheet"
               >
-                <Download size={13} />
-                <span>Export CSV</span>
+                <Download size={13} color="#059669" />
+                <span style={{ color: "#059669", fontWeight: 700 }}>Export CSV</span>
               </button>
 
               {/* Print Report */}
@@ -2190,8 +2192,9 @@ export function AdminReports({
           {/* OPENING BALANCE & CLOSING BALANCE REGISTER BANNER (USER REQUESTED)        */}
           {/* ========================================================================= */}
           <div
+            className="daily-balance-banner"
             style={{
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
+              background: 'var(--bg-secondary)',
               border: '1.5px solid rgba(245, 158, 11, 0.35)',
               borderRadius: '12px',
               padding: '0.85rem 1.25rem',
@@ -2201,7 +2204,7 @@ export function AdminReports({
               flexWrap: 'wrap',
               gap: '1rem',
               marginBottom: '1rem',
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+              boxShadow: 'var(--shadow-sm)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2228,7 +2231,7 @@ export function AdminReports({
                     {todaySavedRecord?.isClosed ? 'Shift Closed' : 'Live Shift'}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                <div className="balance-subtitle" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                   Date: {now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} &bull; Cash Float: {formatCurrency(todayOpeningCash)} &bull; Bank: {formatCurrency(todayOpeningBank)}
                 </div>
               </div>
@@ -2236,7 +2239,7 @@ export function AdminReports({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
               <div>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Opening Balance
                 </span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#f59e0b' }}>
@@ -2244,10 +2247,10 @@ export function AdminReports({
                 </div>
               </div>
 
-              <div style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&rarr;</div>
+              <div className="balance-arrow" style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&rarr;</div>
 
               <div>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Inflows (Sales)
                 </span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#10b981' }}>
@@ -2255,10 +2258,10 @@ export function AdminReports({
                 </div>
               </div>
 
-              <div style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&minus;</div>
+              <div className="balance-arrow" style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&minus;</div>
 
               <div>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Outflows (Expenses)
                 </span>
                 <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ef4444' }}>
@@ -2266,10 +2269,10 @@ export function AdminReports({
                 </div>
               </div>
 
-              <div style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>=</div>
+              <div className="balance-arrow" style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>=</div>
 
               <div>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Closing Balance
                 </span>
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3b82f6' }}>
@@ -2897,16 +2900,17 @@ export function AdminReports({
                 <div style={{ position: 'relative' }} ref={exportMenuRef}>
                   <button
                     type="button"
+                    className="btn-export-csv"
                     onClick={handleExportExcel}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.4rem',
                       background: 'rgba(16, 185, 129, 0.12)',
-                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      border: '1.5px solid #10b981',
                       borderRadius: '9px',
                       padding: '0.38rem 0.85rem',
-                      color: 'var(--success)',
+                      color: '#059669',
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -2915,14 +2919,14 @@ export function AdminReports({
                     }}
                     title="Export neat Profit & Loss Excel sheet (Template as Image 3)"
                   >
-                    <Download size={13} />
-                    <span>Export CSV</span>
+                    <Download size={13} color="#059669" />
+                    <span style={{ color: '#059669', fontWeight: 700 }}>Export CSV</span>
                     <span
                       onClick={(e) => { e.stopPropagation(); setIsExportMenuOpen((prev) => !prev); }}
                       style={{ display: 'flex', alignItems: 'center', paddingLeft: '4px', borderLeft: '1px solid rgba(16, 185, 129, 0.3)', cursor: 'pointer' }}
                       title="More export options"
                     >
-                      <ChevronDown size={11} />
+                      <ChevronDown size={11} color="#059669" />
                     </span>
                   </button>
 
@@ -3513,6 +3517,7 @@ export function AdminReports({
                   {/* Export CSV Button (Matching Image 1 & 2) */}
                   <button
                     type="button"
+                    className="btn-export-csv"
                     onClick={handleExportLedgerReconciliationExcel}
                     style={{
                       display: 'flex',
@@ -3522,7 +3527,7 @@ export function AdminReports({
                       border: '1.5px solid #10b981',
                       borderRadius: '10px',
                       padding: '0.38rem 0.85rem',
-                      color: '#ffffff',
+                      color: '#059669',
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -3531,8 +3536,8 @@ export function AdminReports({
                     }}
                     title="Export settled tickets to CSV"
                   >
-                    <Download size={14} color="#10b981" />
-                    <span>Export CSV</span>
+                    <Download size={14} color="#059669" />
+                    <span style={{ color: '#059669', fontWeight: 700 }}>Export CSV</span>
                   </button>
                 </div>
               </div>
@@ -3990,6 +3995,7 @@ export function AdminReports({
                   {/* Export CSV Button (Matching Image 1 & 2) */}
                   <button
                     type="button"
+                    className="btn-export-csv"
                     onClick={handleExportExpenditureReconciliationExcel}
                     style={{
                       display: 'flex',
@@ -3999,7 +4005,7 @@ export function AdminReports({
                       border: '1.5px solid #10b981',
                       borderRadius: '10px',
                       padding: '0.38rem 0.85rem',
-                      color: '#ffffff',
+                      color: '#059669',
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -4008,8 +4014,8 @@ export function AdminReports({
                     }}
                     title="Export inventory valuation to CSV"
                   >
-                    <Download size={14} color="#10b981" />
-                    <span>Export CSV</span>
+                    <Download size={14} color="#059669" />
+                    <span style={{ color: '#059669', fontWeight: 700 }}>Export CSV</span>
                   </button>
                 </div>
               </div>

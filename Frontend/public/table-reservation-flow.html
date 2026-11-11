@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bhanu Bistro – Table Reservation Flow (Frontend Only)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark-900: #0d0604;
+      --card-white: #ffffff;
+      --card-cream: #faf7f2;
+      --text-dark: #1f1610;
+      --text-muted: #6e6259;
+      --orange-500: #e65100;
+      --orange-600: #d84315;
+      --orange-400: #f57c00;
+      --gold-500: #d97706;
+      --gold-400: #f59e0b;
+      --green-600: #16a34a;
+      --green-100: #dcfce7;
+      --red-600: #dc2626;
+      --red-100: #fee2e2;
+      --border-warm: #e8ded6;
+      --font-serif: 'Cinzel', serif, Georgia;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-dark-900);
+      background-image: 
+        radial-gradient(ellipse at 50% 12%, rgba(95, 42, 19, 0.55) 0%, rgba(20, 10, 6, 0.95) 60%, #0a0403 100%),
+        url('./assets/dining-table.jpg');
+      background-size: cover, cover;
+      background-position: center top;
+      background-attachment: fixed;
+      font-family: var(--font-sans);
+      color: #f5ede6;
+      min-height: 100vh;
+      padding: 24px 20px 80px;
+    }
+
+    .main-wrapper {
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* Master Header */
+    .master-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      background: rgba(23, 11, 7, 0.88);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      backdrop-filter: blur(14px);
+      border-radius: 18px;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-group { display: flex; align-items: center; gap: 16px; }
+    .brand-crest {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706, #b45309);
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid #fbbf24;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
+    }
+    .brand-text h1 { font-family: var(--font-serif); font-size: 20px; color: #fff; font-weight: 800; line-height: 1.1; }
+    .brand-text p { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold-400); font-weight: 700; }
+
+    .flow-title-center { text-align: center; }
+    .flow-title-center h2 { font-family: var(--font-serif); font-size: 23px; color: #fff; font-weight: 800; }
+    .flow-title-center .subtitle-tag { font-size: 16px; color: var(--gold-400); font-weight: 600; }
+
+    .header-controls { display: flex; align-items: center; gap: 10px; }
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff; padding: 7px 16px; border-radius: 20px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .ctrl-btn.active, .ctrl-btn:hover {
+      background: var(--orange-500);
+      border-color: var(--orange-400);
+    }
+
+    /* Stepper Bar */
+    .step-pill-nav {
+      display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+    }
+    .step-nav-btn {
+      background: rgba(28, 14, 9, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      color: #dfd3ca; padding: 6px 14px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .step-nav-btn.active {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff; border-color: #f57c00;
+      box-shadow: 0 4px 14px rgba(230, 81, 0, 0.4);
+      font-weight: 800;
+    }
+
+    /* Step Card Frame */
+    .content-box {
+      background: #ffffff;
+      color: var(--text-dark);
+      border-radius: 18px;
+      padding: 28px 32px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+      border: 1px solid #e8ded6;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .content-box.wide { max-width: 980px; }
+
+    /* Form Fields */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 11px; font-weight: 700; color: #4b3f36; text-transform: uppercase; }
+    .form-input, .form-select, .form-textarea {
+      background: #faf7f2; border: 1px solid #d4c8bd; border-radius: 8px;
+      padding: 10px 12px; font-size: 13px; color: #1f1610; outline: none; width: 100%;
+      font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--orange-500); background: #ffffff;
+    }
+
+    /* Buttons */
+    .btn-orange-lg {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff; border: none; border-radius: 10px; padding: 12px 24px;
+      font-size: 14.5px; font-weight: 800; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45);
+      width: 100%; transition: background 0.15s;
+    }
+    .btn-orange-lg:hover { background: linear-gradient(135deg, #ea580c, #c2410c); }
+
+    .btn-secondary {
+      background: #ffffff; border: 1px solid #d4c8bd; color: #4b3f36;
+      border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 700;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+
+    .btn-danger {
+      background: #dc2626; color: #fff; border: none; border-radius: 8px;
+      padding: 10px 24px; font-size: 13px; font-weight: 800; cursor: pointer;
+    }
+
+    /* Toast */
+    .toast-box {
+      position: fixed; top: 24px; right: 24px;
+      background: #16a34a; color: #fff; padding: 12px 20px; border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 9999;
+      font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 10px;
+    }
+
+    /* 9-Screen Flow Poster Grid */
+    .poster-grid {
+      display: none;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .poster-grid.active { display: flex; }
+    .poster-row {
+      display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center; gap: 14px;
+    }
+    .poster-card {
+      width: 100%; height: 250px; background: #140905;
+      background-image: radial-gradient(circle at 50% 30%, rgba(55, 24, 13, 0.65) 0%, rgba(18, 9, 5, 0.96) 80%), url('./assets/dining-table.jpg');
+      background-size: cover; border-radius: 16px; border: 1px solid rgba(245, 158, 11, 0.25);
+      box-shadow: 0 14px 32px rgba(0,0,0,0.6); overflow: hidden; display: flex; flex-direction: column;
+      cursor: pointer; transition: transform 0.15s ease;
+    }
+    .poster-card:hover { transform: translateY(-4px); border-color: var(--orange-400); }
+
+    .arrow-circle {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      display: flex; align-items: center; justify-content: center;
+      color: #ffffff; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.35); font-weight: bold;
+    }
+
+    .step-pill {
+      background: #ffffff; color: #1f1610; padding: 6px 14px 6px 8px;
+      border-radius: 30px; display: inline-flex; align-items: center; gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4); margin-top: 10px;
+    }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #ffffff; font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    @media (max-width: 1100px) {
+      .poster-row { grid-template-columns: 1fr; }
+      .arrow-circle { transform: rotate(90deg); margin: 6px auto; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-wrapper">
+    <!-- Master Header -->
+    <header class="master-header">
+      <div class="brand-group">
+        <div class="brand-crest">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff">
+            <path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Bhanu Bistro</h1>
+          <p>Fine Dining & Takeaway</p>
+        </div>
+      </div>
+
+      <div class="flow-title-center">
+        <h2>
+          Bhanu Bistro – Table Reservation Flow
+          <span class="subtitle-tag">(Frontend Only • Zero Backend)</span>
+        </h2>
+      </div>
+
+      <div class="header-controls">
+        <button class="ctrl-btn" id="togglePosterBtn" onclick="toggleViewMode()">
+          View 9-Screen Flow
+        </button>
+        <button class="ctrl-btn" onclick="goToStep(6)">
+          My Reservations (<span id="confirmedCountHeader">1</span>)
+        </button>
+      </div>
+    </header>
+
+    <!-- Step Navigation Pills -->
+    <div class="step-pill-nav" id="stepPillNav">
+      <button class="step-nav-btn active" onclick="goToStep(1)">1. Book Table</button>
+      <button class="step-nav-btn" onclick="goToStep(2)">2. Select Table</button>
+      <button class="step-nav-btn" onclick="goToStep(3)">3. Payment</button>
+      <button class="step-nav-btn" onclick="goToStep(4)">4. Processing</button>
+      <button class="step-nav-btn" onclick="goToStep(5)">5. Confirmed</button>
+      <button class="step-nav-btn" onclick="goToStep(6)">6. My Reservations</button>
+      <button class="step-nav-btn" onclick="goToStep(7)">7. Modify</button>
+      <button class="step-nav-btn" onclick="goToStep(8)">8. Cancel</button>
+      <button class="step-nav-btn" onclick="goToStep(9)">9. Cancellation Confirmed</button>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastBox" class="toast-box" style="display: none;"></div>
+
+    <!-- ========================================================= -->
+    <!-- INTERACTIVE SCREENS CONTAINER                             -->
+    <!-- ========================================================= -->
+    <div id="interactiveContainer">
+
+      <!-- STEP 1: Book a Table -->
+      <div id="screenStep1" class="content-box">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+          <span style="font-size: 22px;">📅</span>
+          <h2 style="font-size: 20px; font-weight: 800; color: #1f1610;">Book a Table</h2>
+        </div>
+
+        <form onsubmit="handleStep1Submit(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Date *</label>
+              <input type="date" id="inputDate" class="form-input" value="2026-11-11" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Time *</label>
+              <select id="inputTime" class="form-select" required>
+                <option value="12:30 PM">12:30 PM (Lunch)</option>
+                <option value="01:00 PM">01:00 PM (Lunch)</option>
+                <option value="07:00 PM">07:00 PM (Dinner)</option>
+                <option value="07:30 PM" selected>07:30 PM (Dinner)</option>
+                <option value="08:00 PM">08:00 PM (Dinner)</option>
+                <option value="08:30 PM">08:30 PM (Dinner)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Guests *</label>
+              <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #d4c8bd; border-radius: 8px; background: #faf7f2; padding: 4px 8px;">
+                <button type="button" onclick="adjustGuests(-1)" style="width: 28px; height: 28px; border: none; background: #eee4da; border-radius: 6px; font-weight: 800; font-size: 16px; cursor: pointer;">-</button>
+                <span id="guestCountDisplay" style="font-weight: 700; font-size: 13px;">2 Guests</span>
+                <button type="button" onclick="adjustGuests(1)" style="width: 28px; height: 28px; border: none; background: #eee4da; border-radius: 6px; font-weight: 800; font-size: 16px; cursor: pointer;">+</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Table Preference</label>
+              <select id="inputPreference" class="form-select">
+                <option value="Indoor" selected>Indoor (Air Conditioned)</option>
+                <option value="Outdoor">Outdoor / Courtyard</option>
+                <option value="Garden Area">Garden Area</option>
+                <option value="Window Side">Window Side</option>
+                <option value="Family Section">Family Section</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Full Name *</label>
+              <input type="text" id="inputName" class="form-input" value="Priya Sharma" placeholder="e.g. Priya Sharma" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mobile Number *</label>
+              <input type="tel" id="inputPhone" class="form-input" value="9876543210" placeholder="e.g. 9876543210" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Email (Optional)</label>
+            <input type="email" id="inputEmail" class="form-input" value="priya@example.com" placeholder="e.g. priya@example.com">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 22px;">
+            <label class="form-label">Special Requests (Optional)</label>
+            <textarea id="inputRequests" class="form-textarea" rows="2" placeholder="Birthday celebration, anniversary, high chair, etc.">Anniversary celebration, window table preference.</textarea>
+          </div>
+
+          <button type="submit" class="btn-orange-lg">
+            Reserve Table →
+          </button>
+        </form>
+      </div>
+
+      <!-- STEP 2: Select a Table -->
+      <div id="screenStep2" class="content-box wide" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">🍽️</span>
+              <h2 style="font-size: 19px; font-weight: 800; color: #1f1610;">Select Your Table</h2>
+            </div>
+            <p id="tableSubheader" style="font-size: 12px; color: #6b5d52; margin: 4px 0 0;">
+              Choose from available tables for today
+            </p>
+          </div>
+
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-secondary" onclick="filterTables('all')" style="padding: 5px 12px; font-size: 12px;">All Tables</button>
+            <button class="btn-secondary" onclick="filterTables('Indoor')" style="padding: 5px 12px; font-size: 12px;">Indoor</button>
+            <button class="btn-secondary" onclick="filterTables('Outdoor')" style="padding: 5px 12px; font-size: 12px;">Outdoor</button>
+          </div>
+        </div>
+
+        <!-- Tables Grid -->
+        <div id="tablesGridContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; margin: 20px 0 24px;">
+          <!-- Dynamically populated via renderTablesGrid() -->
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn-secondary" onclick="goToStep(1)">← Back</button>
+          <button type="button" class="btn-orange-lg" style="width: auto; padding: 10px 24px;" onclick="handleStep2Submit()">
+            Continue to Payment →
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Payment -->
+      <div id="screenStep3" class="content-box wide" style="display: none;">
+        <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px;">
+          <!-- Left Details -->
+          <div>
+            <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 6px;">Complete Your Booking</h3>
+            <p style="font-size: 12px; color: #786c62; margin-bottom: 16px;">
+              Pay a small advance to confirm your table reservation.
+            </p>
+
+            <div style="background: #faf7f2; border: 1px solid #e7ded4; border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 12.5px;">
+              <div style="font-size: 11px; font-weight: 800; color: #8c7f74; text-transform: uppercase; margin-bottom: 8px;">Reservation Details</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div>Date: <strong id="paySummaryDate">11/11/2026</strong></div>
+                <div>Time: <strong id="paySummaryTime">07:30 PM</strong></div>
+                <div>Guests: <strong id="paySummaryGuests">2 Guests</strong></div>
+                <div>Table: <strong id="paySummaryTable" style="color: #ea580c;">T-03 (Indoor)</strong></div>
+              </div>
+            </div>
+
+            <div style="background: #fff9f5; border: 1px solid #fed7aa; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 11px; font-weight: 800; color: #ea580c; text-transform: uppercase; margin-bottom: 8px;">Advance Payment</div>
+              <div style="display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0;">
+                <span>Total Amount (Estimated):</span>
+                <span>₹2,000.00</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; color: #ea580c; font-weight: 700;">
+                <span>Advance (20% to lock table):</span>
+                <span>₹400.00</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; border-top: 1px solid #fed7aa; padding-top: 6px; margin-top: 4px;">
+                <span>Payable Now:</span>
+                <span style="color: #ea580c;">₹400.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Methods -->
+          <div>
+            <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 14px;">Select Payment Method</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+              <label style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #ea580c; background: #fff8f3; cursor: pointer;">
+                <input type="radio" name="payRadio" value="UPI" checked style="accent-color: #ea580c;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 700;">UPI (Google Pay, PhonePe, Paytm)</div>
+                  <div style="font-size: 11px; color: #786c62;">Instant confirmation via UPI</div>
+                </div>
+              </label>
+
+              <label style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid #e7ded4; background: #faf7f2; cursor: pointer;">
+                <input type="radio" name="payRadio" value="Card" style="accent-color: #ea580c;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 700;">Credit / Debit Card</div>
+                  <div style="font-size: 11px; color: #786c62;">Visa, Mastercard, RuPay</div>
+                </div>
+              </label>
+
+              <label style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid #e7ded4; background: #faf7f2; cursor: pointer;">
+                <input type="radio" name="payRadio" value="Net Banking" style="accent-color: #ea580c;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 700;">Net Banking</div>
+                  <div style="font-size: 11px; color: #786c62;">All Major Indian Banks</div>
+                </div>
+              </label>
+
+              <label style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid #e7ded4; background: #faf7f2; cursor: pointer;">
+                <input type="radio" name="payRadio" value="Wallets" style="accent-color: #ea580c;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 700;">Wallets</div>
+                  <div style="font-size: 11px; color: #786c62;">Paytm, Amazon Pay, etc.</div>
+                </div>
+              </label>
+            </div>
+
+            <div style="font-size: 11px; color: #6b5d52; margin-bottom: 16px;">
+              🔒 Secure 256-Bit SSL Encrypted Payment Simulation
+            </div>
+
+            <button type="button" class="btn-orange-lg" onclick="handlePayNow()">
+              Pay ₹400.00 & Confirm Booking
+            </button>
+            <div style="text-align: center; margin-top: 10px;">
+              <button type="button" onclick="goToStep(2)" style="background: none; border: none; font-size: 12px; color: #6b5d52; cursor: pointer; text-decoration: underline;">
+                ← Back to Table Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Payment Processing -->
+      <div id="screenStep4" class="content-box" style="display: none; text-align: center; padding: 40px 32px;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: #fff7ed; border: 2.5px solid #ea580c; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 26px;">
+          💳
+        </div>
+        <h2 style="font-size: 21px; font-weight: 800; margin-bottom: 6px;">Processing Payment...</h2>
+        <p style="font-size: 13px; color: #6b5d52; margin-bottom: 24px;">Please do not close this window.</p>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: #16a34a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold;">✓</div>
+            <span style="font-size: 11px; font-weight: 700; color: #16a34a;">Initiating</span>
+          </div>
+          <div style="width: 30px; height: 2px; background: #ea580c;"></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: #ea580c; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold;">⏳</div>
+            <span style="font-size: 11px; font-weight: 700; color: #ea580c;">Processing with Bank</span>
+          </div>
+          <div style="width: 30px; height: 2px; background: #e5ded5;"></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: #e5ded5; color: #786c62; display: flex; align-items: center; justify-content: center; font-size: 13px;">3</div>
+            <span style="font-size: 11px; color: #8c7f74;">Confirming</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Reservation Confirmed -->
+      <div id="screenStep5" class="content-box" style="display: none; text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: #16a34a; color: #ffffff; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 28px; font-weight: 800;">
+          ✓
+        </div>
+        <h2 style="font-size: 23px; font-weight: 800; color: #166534; margin-bottom: 4px;">Reservation Confirmed!</h2>
+        <p style="font-size: 13px; color: #6b5d52; margin-bottom: 20px;">Your table has been successfully reserved at Bhanu Bistro.</p>
+
+        <div style="background: #faf7f2; border: 1px solid #e7ded4; border-radius: 12px; padding: 18px 20px; text-align: left; margin-bottom: 24px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed #d4c8bd; padding-bottom: 8px;">
+            <span style="font-weight: 700; color: #6b5d52;">Reservation ID:</span>
+            <span id="confirmIdBadge" style="font-size: 14px; font-weight: 800; color: #ea580c; background: #ffedd5; padding: 2px 10px; border-radius: 6px;">RES-1023</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>Date: <strong id="confirmDate">11/11/2026</strong></div>
+            <div>Time: <strong id="confirmTime">07:30 PM</strong></div>
+            <div>Guests: <strong id="confirmGuests">2 Guests</strong></div>
+            <div>Table: <strong id="confirmTable" style="color: #ea580c;">T-03 (Indoor)</strong></div>
+            <div>Customer: <strong id="confirmCustomer">Priya Sharma</strong></div>
+            <div>Phone: <strong id="confirmPhone">+91 98765 43210</strong></div>
+            <div>Advance Paid: <strong style="color: #166534;">₹400.00 (UPI ✓)</strong></div>
+            <div>Status: <span style="background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 11px;">Confirmed</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button type="button" class="btn-secondary" style="border-color: #ea580c; color: #ea580c;" onclick="goToStep(6)">
+            👁️ View Reservation
+          </button>
+          <button type="button" class="btn-orange-lg" style="width: auto;" onclick="goToStep(1)">
+            🏠 Back to Home
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 6: My Reservations -->
+      <div id="screenStep6" class="content-box wide" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">📅</span>
+              <h2 style="font-size: 19px; font-weight: 800; color: #1f1610;">My Reservations</h2>
+            </div>
+            <p style="font-size: 12px; color: #6b5d52; margin: 4px 0 0;">
+              View, manage and track your table reservations at Bhanu Bistro.
+            </p>
+          </div>
+          <button class="btn-orange-lg" style="width: auto; padding: 8px 16px; font-size: 12.5px;" onclick="goToStep(1)">
+            + Book Another Table
+          </button>
+        </div>
+
+        <!-- Tabs -->
+        <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+          <button id="tabUpcomingBtn" class="btn-secondary" style="background: #ea580c; color: #fff; border-radius: 20px;" onclick="switchMyResTab('upcoming')">
+            Upcoming (<span id="countUpcoming">1</span>)
+          </button>
+          <button id="tabPastBtn" class="btn-secondary" style="border-radius: 20px;" onclick="switchMyResTab('past')">
+            Past / Cancelled (<span id="countPast">2</span>)
+          </button>
+        </div>
+
+        <!-- Reservations List -->
+        <div id="myResListContainer" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- STEP 7: Modify Reservation -->
+      <div id="screenStep7" class="content-box" style="display: none;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+          <span style="font-size: 22px;">✏️</span>
+          <h2 style="font-size: 19px; font-weight: 800; color: #1f1610;">Modify Reservation</h2>
+        </div>
+        <p style="font-size: 12px; color: #6b5d52; margin-bottom: 20px;">
+          Update your reservation details for ID: <strong id="modifyResId">RES-1023</strong>
+        </p>
+
+        <form onsubmit="handleModifySave(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Date *</label>
+              <input type="date" id="modifyDate" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Time *</label>
+              <select id="modifyTime" class="form-select">
+                <option value="12:30 PM">12:30 PM</option>
+                <option value="01:00 PM">01:00 PM</option>
+                <option value="07:00 PM">07:00 PM</option>
+                <option value="07:30 PM">07:30 PM</option>
+                <option value="08:00 PM">08:00 PM</option>
+                <option value="08:30 PM">08:30 PM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Guests *</label>
+              <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #d4c8bd; border-radius: 8px; background: #faf7f2; padding: 4px 8px;">
+                <button type="button" onclick="adjustModifyGuests(-1)" style="width: 28px; height: 28px; border: none; background: #eee4da; border-radius: 6px; font-weight: 800; font-size: 16px; cursor: pointer;">-</button>
+                <span id="modifyGuestsDisplay" style="font-weight: 700; font-size: 13px;">2 Guests</span>
+                <button type="button" onclick="adjustModifyGuests(1)" style="width: 28px; height: 28px; border: none; background: #eee4da; border-radius: 6px; font-weight: 800; font-size: 16px; cursor: pointer;">+</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Table</label>
+              <select id="modifyTableSelect" class="form-select"></select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 22px;">
+            <label class="form-label">Special Requests</label>
+            <textarea id="modifyRequests" class="form-textarea" rows="2"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn-secondary" onclick="goToStep(6)">Cancel</button>
+            <button type="submit" class="btn-orange-lg" style="width: auto; padding: 10px 24px;">
+              Update Reservation
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- STEP 8: Cancel Reservation -->
+      <div id="screenStep8" class="content-box" style="display: none; text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 26px;">
+          🗑️
+        </div>
+        <h2 style="font-size: 21px; font-weight: 800; color: #991b1b; margin-bottom: 6px;">Cancel Reservation?</h2>
+        <p style="font-size: 13px; color: #6b5d52; margin-bottom: 18px;">
+          Are you sure you want to cancel table reservation <strong id="cancelResId">RES-1023</strong>?
+        </p>
+
+        <div style="background: #faf7f2; border: 1px solid #e7ded4; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin: 0 auto 18px; font-size: 12.5px;">
+          <div id="cancelSnapshotTable"><strong>T-03 (Indoor)</strong> • 2 Guests</div>
+          <div id="cancelSnapshotTime" style="color: #6b5d52;">11/11/2026 at 07:30 PM</div>
+        </div>
+
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px 16px; color: #991b1b; font-size: 12px; line-height: 1.4; text-align: left; margin: 0 auto 24px;">
+          ⚠️ <strong>Cancellation cannot be undone.</strong> Once cancelled, this reservation will be removed and the table will be made available to other guests.
+        </div>
+
+        <div style="display: flex; gap: 14px; justify-content: center;">
+          <button type="button" class="btn-secondary" onclick="goToStep(6)">Keep Reservation</button>
+          <button type="button" class="btn-danger" onclick="handleConfirmCancel()">Confirm Cancellation</button>
+        </div>
+      </div>
+
+      <!-- STEP 9: Cancellation Confirmed -->
+      <div id="screenStep9" class="content-box" style="display: none; text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: #16a34a; color: #ffffff; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 26px; font-weight: 800;">
+          ✓
+        </div>
+        <h2 style="font-size: 22px; font-weight: 800; color: #166534; margin-bottom: 6px;">Reservation Cancelled</h2>
+        <p style="font-size: 13px; color: #6b5d52; margin-bottom: 20px;">
+          Your table reservation (<span id="cancelledResIdText">RES-1023</span>) has been successfully cancelled.
+        </p>
+
+        <div style="background: #faf7f2; border: 1px solid #e7ded4; border-radius: 12px; padding: 16px 20px; text-align: left; margin: 0 auto 20px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>Reservation ID:</span>
+            <strong id="cancelledResIdBadge">RES-1023</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-top: 1px dashed #d4c8bd; paddingTop: 8px; font-weight: 800;">
+            <span>Refund Status:</span>
+            <span style="color: #16a34a;">₹400.00 (Processed)</span>
+          </div>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 16px; color: #1e40af; font-size: 12px; margin: 0 auto 24px; text-align: left;">
+          ℹ️ The advance payment of ₹400.00 will be refunded to your original payment method within 3-5 business days.
+        </div>
+
+        <button type="button" class="btn-orange-lg" style="width: auto;" onclick="goToStep(6)">
+          Back to My Reservations
+        </button>
+      </div>
+
+    </div> <!-- /interactiveContainer -->
+
+    <!-- ========================================================= -->
+    <!-- 9-SCREEN VISUAL POSTER (Reference Presentation Grid)      -->
+    <!-- ========================================================= -->
+    <div id="posterContainer" class="poster-grid">
+      <!-- Row 1: Steps 1, 2, 3 -->
+      <div class="poster-row">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(1); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700; display: flex; justify-content: space-between;">
+              <span>Bhanu Bistro</span><span>Hi, Priya</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; font-size: 9px;">
+                <div style="font-weight: 800; font-size: 11px; margin-bottom: 4px;">Book a Table</div>
+                <div>Date: 11/11/2026 • 07:30 PM</div>
+                <div>2 Guests • Indoor Area</div>
+                <div>Name: Priya Sharma</div>
+                <div style="background: #ea580c; color: #fff; text-align: center; border-radius: 4px; padding: 3px; margin-top: 8px; font-weight: bold;">Reserve Table</div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">1</span>
+            <span style="font-size: 11px; font-weight: 700;">Book a Table – Enter reservation details</span>
+          </div>
+        </div>
+
+        <div class="arrow-circle">→</div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(2); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700; display: flex; justify-content: space-between;">
+              <span>Bhanu Bistro</span><span>Hi, Priya</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; font-size: 9px;">
+                <div style="font-weight: 800; font-size: 11px; margin-bottom: 4px;">Select Your Table</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                  <div style="border: 1px solid #ea580c; background: #fff8f3; padding: 4px; border-radius: 4px;"><strong>T-03 ✓</strong><br>2 Guests</div>
+                  <div style="border: 1px solid #ddd; opacity: 0.6; padding: 4px; border-radius: 4px;"><strong>T-04</strong><br>Reserved</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">2</span>
+            <span style="font-size: 11px; font-weight: 700;">Select Table – Choose an available table</span>
+          </div>
+        </div>
+
+        <div class="arrow-circle">→</div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(3); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700; display: flex; justify-content: space-between;">
+              <span>Bhanu Bistro</span><span>Hi, Priya</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; font-size: 9px;">
+                <div style="font-weight: 800; font-size: 11px; margin-bottom: 4px;">Complete Payment</div>
+                <div>Estimated: ₹2,000.00</div>
+                <div style="font-weight: bold; color: #ea580c;">Advance (20%): ₹400.00</div>
+                <div style="background: #ea580c; color: #fff; text-align: center; border-radius: 4px; padding: 3px; margin-top: 6px; font-weight: bold;">Pay ₹400 & Confirm</div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">3</span>
+            <span style="font-size: 11px; font-weight: 700;">Payment – Pay advance to confirm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Steps 4, 5, 6 -->
+      <div class="poster-row">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(4); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700;">
+              <span>Bhanu Bistro</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; text-align: center; display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 20px;">💳</span>
+                <div style="font-weight: 800; font-size: 11px; margin-top: 4px;">Processing Payment...</div>
+                <div style="font-size: 8px; color: #786c62;">Please do not close window</div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">4</span>
+            <span style="font-size: 11px; font-weight: 700;">Payment Processing – Verifying payment</span>
+          </div>
+        </div>
+
+        <div class="arrow-circle">→</div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(5); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700;">
+              <span>Bhanu Bistro</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; text-align: center;">
+                <span style="color: #16a34a; font-weight: 800; font-size: 18px;">✓</span>
+                <div style="font-weight: 800; font-size: 11px; color: #166534;">Reservation Confirmed!</div>
+                <div style="font-size: 8.5px; text-align: left; background: #faf7f2; padding: 4px; border-radius: 4px; margin-top: 4px;">
+                  ID: <strong>RES-1023</strong><br>
+                  Table T-03 (Indoor)<br>
+                  Paid: ₹400.00 (UPI)
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">5</span>
+            <span style="font-size: 11px; font-weight: 700;">Booking Confirmed – Reservation successful</span>
+          </div>
+        </div>
+
+        <div class="arrow-circle">→</div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(6); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700;">
+              <span>Bhanu Bistro</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; font-size: 8.5px;">
+                <div style="font-weight: 800; font-size: 11px; margin-bottom: 4px;">My Reservations</div>
+                <div style="background: #fff8f3; border: 1px solid #fed7aa; padding: 4px; border-radius: 4px;">
+                  <strong>RES-1023</strong> (Confirmed)<br>
+                  T-03 • 11/11/2026, 07:30 PM<br>
+                  <span style="color: #ea580c; font-weight: bold;">Modify | Cancel</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">6</span>
+            <span style="font-size: 11px; font-weight: 700;">My Reservations – View and manage bookings</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Steps 7, 8, 9 -->
+      <div class="poster-row">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(7); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700;">
+              <span>Bhanu Bistro</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; font-size: 8.5px;">
+                <div style="font-weight: 800; font-size: 11px; margin-bottom: 4px;">Modify Reservation</div>
+                <div>Change Date: 11/11/2026</div>
+                <div>Change Time: 08:00 PM</div>
+                <div>Table: T-05 (4 Guests)</div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">7</span>
+            <span style="font-size: 11px; font-weight: 700;">Modify Reservation – Change date, time, guests or table</span>
+          </div>
+        </div>
+
+        <div class="arrow-circle">→</div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(8); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700;">
+              <span>Bhanu Bistro</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; text-align: center;">
+                <span style="font-size: 18px;">⚠️</span>
+                <div style="font-weight: 800; font-size: 11px; color: #991b1b;">Cancel Reservation?</div>
+                <div style="background: #fef2f2; color: #991b1b; font-size: 7.5px; padding: 3px; border-radius: 4px; margin-top: 4px;">
+                  Cancellation cannot be undone.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">8</span>
+            <span style="font-size: 11px; font-weight: 700;">Cancel Reservation – Confirm cancellation</span>
+          </div>
+        </div>
+
+        <div class="arrow-circle">→</div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div class="poster-card" onclick="goToStep(9); toggleViewMode();">
+            <div style="background: rgba(18,9,6,0.95); padding: 6px 10px; font-size: 10px; color: #fff; font-weight: 700;">
+              <span>Bhanu Bistro</span>
+            </div>
+            <div style="flex-grow: 1; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              <div style="background: #fff; color: #1f1610; border-radius: 10px; padding: 12px; width: 100%; height: 100%; text-align: center;">
+                <span style="color: #16a34a; font-weight: 800; font-size: 18px;">✓</span>
+                <div style="font-weight: 800; font-size: 11px; color: #166534;">Reservation Cancelled</div>
+                <div style="font-size: 8.5px; background: #faf7f2; padding: 4px; border-radius: 4px; margin-top: 4px; text-align: left;">
+                  ID: RES-1023<br>
+                  <span style="color: #16a34a; font-weight: bold;">Refund: ₹400.00 (Processed)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="step-pill">
+            <span class="step-num">9</span>
+            <span style="font-size: 11px; font-weight: 700;">Cancellation Confirmed – Reservation cancelled with refund</span>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /posterContainer -->
+
+  </div> <!-- /main-wrapper -->
+
+  <script>
+    // Pure Frontend State & LocalStorage
+    const STORAGE_KEY = "bhanu_bistro_reservations_v1";
+    const TABLES_STORAGE_KEY = "bhanu_bistro_reservation_tables_v1";
+
+    const INITIAL_RESERVATIONS = [
+      {
+        id: "RES-1023",
+        customerName: "Priya Sharma",
+        phone: "+91 98765 43210",
+        email: "priya@example.com",
+        guests: 2,
+        date: "2026-11-11",
+        time: "07:30 PM",
+        tableId: "T-03",
+        tableName: "T-03 (Indoor)",
+        section: "Indoor",
+        specialRequests: "Anniversary celebration, window table preference.",
+        advanceAmount: 400,
+        status: "confirmed"
+      },
+      {
+        id: "RES-1018",
+        customerName: "Rajesh Varma",
+        phone: "+91 91234 56789",
+        email: "rajesh@example.com",
+        guests: 4,
+        date: "2026-11-05",
+        time: "08:00 PM",
+        tableId: "T-05",
+        tableName: "T-05 (Indoor)",
+        section: "Indoor",
+        specialRequests: "High chair needed.",
+        advanceAmount: 700,
+        status: "completed"
+      }
+    ];
+
+    const INITIAL_TABLES = [
+      { id: "T-01", name: "T-01", capacity: 2, section: "Indoor", status: "available" },
+      { id: "T-02", name: "T-02", capacity: 4, section: "Indoor", status: "reserved" },
+      { id: "T-03", name: "T-03", capacity: 2, section: "Indoor", status: "available" },
+      { id: "T-04", name: "T-04", capacity: 4, section: "Indoor", status: "reserved" },
+      { id: "T-05", name: "T-05", capacity: 4, section: "Indoor", status: "available" },
+      { id: "T-06", name: "T-06", capacity: 6, section: "Outdoor", status: "reserved" },
+      { id: "T-07", name: "T-07", capacity: 4, section: "Outdoor", status: "available" },
+      { id: "T-08", name: "T-08", capacity: 6, section: "Indoor", status: "available" },
+      { id: "T-09", name: "T-09", capacity: 8, section: "Indoor", status: "available" },
+      { id: "T-10", name: "T-10", capacity: 4, section: "Outdoor", status: "available" },
+    ];
+
+    let currentGuests = 2;
+    let selectedTable = null;
+    let tableFilter = "all";
+    let myResTab = "upcoming";
+    let activeResToModify = null;
+    let activeResToCancel = null;
+    let modifyGuestsCount = 2;
+
+    function getReservations() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : INITIAL_RESERVATIONS;
+      } catch {
+        return INITIAL_RESERVATIONS;
+      }
+    }
+
+    function saveReservations(res) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(res)); } catch {}
+      updateHeaderCounts();
+    }
+
+    function getTables() {
+      try {
+        const raw = localStorage.getItem(TABLES_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : INITIAL_TABLES;
+      } catch {
+        return INITIAL_TABLES;
+      }
+    }
+
+    function saveTables(tables) {
+      try { localStorage.setItem(TABLES_STORAGE_KEY, JSON.stringify(tables)); } catch {}
+    }
+
+    function updateHeaderCounts() {
+      const all = getReservations();
+      const confirmed = all.filter(r => r.status === "confirmed").length;
+      document.getElementById('confirmedCountHeader').textContent = confirmed;
+      const countUpcoming = document.getElementById('countUpcoming');
+      if (countUpcoming) countUpcoming.textContent = confirmed;
+      const countPast = document.getElementById('countPast');
+      if (countPast) countPast.textContent = all.filter(r => r.status !== "confirmed").length;
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toastBox');
+      box.textContent = msg;
+      box.style.display = 'flex';
+      setTimeout(() => { box.style.display = 'none'; }, 3200);
+    }
+
+    function goToStep(step) {
+      for (let i = 1; i <= 9; i++) {
+        const el = document.getElementById(`screenStep${i}`);
+        if (el) el.style.display = (i === step) ? 'block' : 'none';
+      }
+
+      // Update nav buttons
+      document.querySelectorAll('.step-nav-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', (idx + 1) === step);
+      });
+
+      if (step === 2) renderTablesGrid();
+      if (step === 6) renderMyReservations();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleViewMode() {
+      const interactive = document.getElementById('interactiveContainer');
+      const poster = document.getElementById('posterContainer');
+      const nav = document.getElementById('stepPillNav');
+      const btn = document.getElementById('togglePosterBtn');
+
+      if (poster.classList.contains('active')) {
+        poster.classList.remove('active');
+        interactive.style.display = 'block';
+        nav.style.display = 'flex';
+        btn.textContent = 'View 9-Screen Flow';
+      } else {
+        poster.classList.add('active');
+        interactive.style.display = 'none';
+        nav.style.display = 'none';
+        btn.textContent = 'Exit Flow Poster';
+      }
+    }
+
+    function adjustGuests(delta) {
+      currentGuests = Math.max(1, currentGuests + delta);
+      document.getElementById('guestCountDisplay').textContent = `${currentGuests} Guests`;
+    }
+
+    function handleStep1Submit(e) {
+      e.preventDefault();
+      const date = document.getElementById('inputDate').value;
+      const time = document.getElementById('inputTime').value;
+      const name = document.getElementById('inputName').value.trim();
+      const phone = document.getElementById('inputPhone').value.trim();
+
+      if (!date || !time || !name || !phone) {
+        showToast("Please complete all mandatory fields.");
+        return;
+      }
+
+      document.getElementById('tableSubheader').innerHTML = 
+        `Choose from available tables for <strong>${date}</strong> at <strong>${time}</strong> (${currentGuests} Guests)`;
+
+      // Set default selected table
+      const tables = getTables();
+      selectedTable = tables.find(t => t.id === "T-03" && t.status !== "reserved") || tables.find(t => t.status === "available");
+      
+      showToast("Details saved! Choose your table.");
+      goToStep(2);
+    }
+
+    function filterTables(filter) {
+      tableFilter = filter;
+      renderTablesGrid();
+    }
+
+    function renderTablesGrid() {
+      const container = document.getElementById('tablesGridContainer');
+      const tables = getTables().filter(t => {
+        if (tableFilter === "all") return true;
+        return t.section.toLowerCase() === tableFilter.toLowerCase();
+      });
+
+      container.innerHTML = tables.map(t => {
+        const isSelected = selectedTable && selectedTable.id === t.id;
+        const isReserved = t.status === "reserved";
+
+        return `
+          <div onclick="selectTableCell('${t.id}')" style="
+            border: ${isSelected ? '2px solid #ea580c' : isReserved ? '1px solid #e5ded5' : '1px solid #d4c8bd'};
+            background: ${isSelected ? '#fff8f3' : isReserved ? '#f9f7f4' : '#ffffff'};
+            border-radius: 12px; padding: 16px 14px;
+            cursor: ${isReserved ? 'not-allowed' : 'pointer'};
+            opacity: ${isReserved ? '0.65' : '1'};
+            position: relative;
+            box-shadow: ${isSelected ? '0 6px 18px rgba(234, 88, 12, 0.25)' : 'none'};
+          ">
+            ${isSelected ? '<span style="position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 50%; background: #ea580c; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">✓</span>' : ''}
+            <div style="font-size: 16px; font-weight: 800; color: #1f1610;">${t.name}</div>
+            <div style="font-size: 11px; color: #6b5d52; margin: 2px 0 6px;">${t.capacity} Guests • ${t.section}</div>
+            <span style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: ${isReserved ? '#fee2e2' : '#dcfce7'}; color: ${isReserved ? '#dc2626' : '#166534'};">
+              ${isReserved ? 'Reserved' : 'Available'}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectTableCell(id) {
+      const tables = getTables();
+      const target = tables.find(t => t.id === id);
+      if (!target || target.status === "reserved") return;
+      selectedTable = target;
+      renderTablesGrid();
+    }
+
+    function handleStep2Submit() {
+      if (!selectedTable) {
+        showToast("Please choose an available table.");
+        return;
+      }
+      // Populate Step 3
+      document.getElementById('paySummaryDate').textContent = document.getElementById('inputDate').value;
+      document.getElementById('paySummaryTime').textContent = document.getElementById('inputTime').value;
+      document.getElementById('paySummaryGuests').textContent = `${currentGuests} Guests`;
+      document.getElementById('paySummaryTable').textContent = `${selectedTable.name} (${selectedTable.section})`;
+
+      goToStep(3);
+    }
+
+    function handlePayNow() {
+      goToStep(4);
+      setTimeout(() => {
+        // Complete reservation
+        const all = getReservations();
+        const nextId = `RES-${1020 + all.length + 1}`;
+        const newRes = {
+          id: nextId,
+          customerName: document.getElementById('inputName').value,
+          phone: document.getElementById('inputPhone').value,
+          email: document.getElementById('inputEmail').value,
+          guests: currentGuests,
+          date: document.getElementById('inputDate').value,
+          time: document.getElementById('inputTime').value,
+          tableId: selectedTable.id,
+          tableName: `${selectedTable.name} (${selectedTable.section})`,
+          advanceAmount: 400,
+          status: "confirmed"
+        };
+
+        saveReservations([newRes, ...all]);
+
+        // Mark table reserved
+        const tables = getTables().map(t => t.id === selectedTable.id ? { ...t, status: "reserved" } : t);
+        saveTables(tables);
+
+        // Populate step 5
+        document.getElementById('confirmIdBadge').textContent = nextId;
+        document.getElementById('confirmDate').textContent = newRes.date;
+        document.getElementById('confirmTime').textContent = newRes.time;
+        document.getElementById('confirmGuests').textContent = `${newRes.guests} Guests`;
+        document.getElementById('confirmTable').textContent = newRes.tableName;
+        document.getElementById('confirmCustomer').textContent = newRes.customerName;
+        document.getElementById('confirmPhone').textContent = newRes.phone;
+
+        showToast(`Table reserved successfully! ID: ${nextId}`);
+        goToStep(5);
+      }, 1800);
+    }
+
+    function switchMyResTab(tab) {
+      myResTab = tab;
+      document.getElementById('tabUpcomingBtn').style.background = (tab === 'upcoming') ? '#ea580c' : '#f4eee7';
+      document.getElementById('tabUpcomingBtn').style.color = (tab === 'upcoming') ? '#fff' : '#4b3f36';
+      document.getElementById('tabPastBtn').style.background = (tab === 'past') ? '#ea580c' : '#f4eee7';
+      document.getElementById('tabPastBtn').style.color = (tab === 'past') ? '#fff' : '#4b3f36';
+      renderMyReservations();
+    }
+
+    function renderMyReservations() {
+      const container = document.getElementById('myResListContainer');
+      const all = getReservations();
+      const list = all.filter(r => myResTab === 'upcoming' ? r.status === 'confirmed' : r.status !== 'confirmed');
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div style="padding: 30px; text-align: center; background: #faf7f2; border-radius: 12px; color: #8c7f74;">
+            No ${myResTab} reservations found.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map(res => `
+        <div style="border: 1px solid #e7ded4; border-radius: 12px; background: #ffffff; padding: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="position: relative; width: 100px; height: 75px; border-radius: 8px; overflow: hidden; flex-shrink: 0;">
+            <img src="./assets/dining-table.jpg" onerror="this.src='./assets/chicken-dum-biryani.jpg'" style="width: 100%; height: 100%; object-fit: cover;">
+            <span style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.75); color: #fff; font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: bold;">${res.id}</span>
+          </div>
+
+          <div style="flex-grow: 1; min-width: 180px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span style="font-size: 14px; font-weight: 800;">Table ${res.tableName}</span>
+              <span style="font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: ${res.status === 'confirmed' ? '#dcfce7' : '#fee2e2'}; color: ${res.status === 'confirmed' ? '#166534' : '#dc2626'};">
+                ${res.status === 'confirmed' ? '✓ Confirmed' : 'Cancelled'}
+              </span>
+            </div>
+            <div style="font-size: 12px; color: #5d5046; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+              <div>📅 ${res.date} at ${res.time}</div>
+              <div>👥 ${res.guests} Guests</div>
+              <div>👤 ${res.customerName}</div>
+              <div>💰 Advance: ₹${res.advanceAmount || 400}.00</div>
+            </div>
+          </div>
+
+          ${res.status === 'confirmed' ? `
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <button onclick="openModifyStep('${res.id}')" class="btn-secondary" style="padding: 5px 12px; font-size: 11.5px; color: #ea580c; border-color: #ea580c;">✏️ Modify</button>
+              <button onclick="openCancelStep('${res.id}')" class="btn-secondary" style="padding: 5px 12px; font-size: 11.5px; color: #dc2626; border-color: #dc2626;">❌ Cancel</button>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    function openModifyStep(id) {
+      const res = getReservations().find(r => r.id === id);
+      if (!res) return;
+      activeResToModify = res;
+      document.getElementById('modifyResId').textContent = res.id;
+      document.getElementById('modifyDate').value = res.date;
+      document.getElementById('modifyTime').value = res.time;
+      modifyGuestsCount = res.guests || 2;
+      document.getElementById('modifyGuestsDisplay').textContent = `${modifyGuestsCount} Guests`;
+      document.getElementById('modifyRequests').value = res.specialRequests || '';
+
+      // Populate table select
+      const select = document.getElementById('modifyTableSelect');
+      select.innerHTML = getTables().map(t => 
+        `<option value="${t.id}" ${t.id === res.tableId ? 'selected' : ''}>${t.name} (${t.capacity} Guests • ${t.section})</option>`
+      ).join('');
+
+      goToStep(7);
+    }
+
+    function adjustModifyGuests(delta) {
+      modifyGuestsCount = Math.max(1, modifyGuestsCount + delta);
+      document.getElementById('modifyGuestsDisplay').textContent = `${modifyGuestsCount} Guests`;
+    }
+
+    function handleModifySave(e) {
+      e.preventDefault();
+      if (!activeResToModify) return;
+      const targetTable = getTables().find(t => t.id === document.getElementById('modifyTableSelect').value);
+
+      const all = getReservations().map(r => {
+        if (r.id !== activeResToModify.id) return r;
+        return {
+          ...r,
+          date: document.getElementById('modifyDate').value,
+          time: document.getElementById('modifyTime').value,
+          guests: modifyGuestsCount,
+          tableId: targetTable.id,
+          tableName: `${targetTable.name} (${targetTable.section})`,
+          section: targetTable.section,
+          specialRequests: document.getElementById('modifyRequests').value
+        };
+      });
+
+      saveReservations(all);
+      showToast(`Reservation ${activeResToModify.id} updated!`);
+      goToStep(6);
+    }
+
+    function openCancelStep(id) {
+      const res = getReservations().find(r => r.id === id);
+      if (!res) return;
+      activeResToCancel = res;
+      document.getElementById('cancelResId').textContent = res.id;
+      document.getElementById('cancelSnapshotTable').innerHTML = `<strong>${res.tableName}</strong> • ${res.guests} Guests`;
+      document.getElementById('cancelSnapshotTime').textContent = `${res.date} at ${res.time}`;
+      goToStep(8);
+    }
+
+    function handleConfirmCancel() {
+      if (!activeResToCancel) return;
+      const all = getReservations().map(r => {
+        if (r.id === activeResToCancel.id) return { ...r, status: "cancelled" };
+        return r;
+      });
+      saveReservations(all);
+
+      // Free table
+      if (activeResToCancel.tableId) {
+        const tables = getTables().map(t => t.id === activeResToCancel.tableId ? { ...t, status: "available" } : t);
+        saveTables(tables);
+      }
+
+      document.getElementById('cancelledResIdText').textContent = activeResToCancel.id;
+      document.getElementById('cancelledResIdBadge').textContent = activeResToCancel.id;
+      showToast(`Reservation ${activeResToCancel.id} cancelled. ₹400 refund initiated.`);
+      goToStep(9);
+    }
+
+    // Init
+    updateHeaderCounts();
+    goToStep(1);
+  </script>
+</body>
+</html>
+

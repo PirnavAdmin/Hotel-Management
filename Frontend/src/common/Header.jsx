@@ -21,7 +21,7 @@ import {
   Moon,
   Trash2,
   ChevronRight,
-  
+  Sparkles,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ProfileDropdown } from './ProfileDropdown';
@@ -315,6 +315,60 @@ export function Header({
           >
             <UtensilsCrossed size={15} />
             <span>Takeaway</span>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={activeView === "takeaway-flow"}
+            onClick={() => {
+              setActiveView("takeaway-flow");
+              navigate("/");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.45rem 0.85rem",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "0.82rem",
+              fontWeight: activeView === "takeaway-flow" ? 800 : 600,
+              background: activeView === "takeaway-flow" ? "var(--accent-amber)" : "transparent",
+              color: activeView === "takeaway-flow" ? "#000000" : "var(--text-muted)",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="View complete Takeaway Order Flow UI Journey"
+          >
+            <Sparkles size={15} />
+            <span>Takeaway Flow</span>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={activeView === "reservation"}
+            onClick={() => {
+              setActiveView("reservation");
+              navigate("/");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.45rem 0.85rem",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "0.82rem",
+              fontWeight: activeView === "reservation" ? 800 : 600,
+              background: activeView === "reservation" ? "var(--accent-amber)" : "transparent",
+              color: activeView === "reservation" ? "#000000" : "var(--text-muted)",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="Book a Table & View Table Reservations (Frontend Only)"
+          >
+            <Calendar size={15} />
+            <span>Reservations</span>
           </button>
 
           {/* Invoices History Button */}

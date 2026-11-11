@@ -125,6 +125,67 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
   color-scheme: light;
 }
 
+/* Daily Register Balance Bar theme adaptation */
+.daily-balance-banner {
+  background: var(--bg-secondary) !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.4) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+[data-theme="light-bistro"] .daily-balance-banner {
+  background: #ffffff !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light-bistro"] .daily-balance-banner .balance-label {
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light-bistro"] .daily-balance-banner .balance-arrow {
+  color: #475569 !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="light-bistro"] .daily-balance-banner .balance-subtitle {
+  color: #334155 !important;
+  font-weight: 600 !important;
+}
+
+/* Export CSV button theme styling */
+.btn-export-csv {
+  color: #059669 !important;
+  border: 1.5px solid #10b981 !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+}
+
+.btn-export-csv span {
+  color: #059669 !important;
+  font-weight: 700 !important;
+}
+
+.btn-export-csv svg {
+  color: #059669 !important;
+  stroke: #059669 !important;
+}
+
+[data-theme="light-bistro"] .btn-export-csv {
+  color: #047857 !important;
+  border-color: #059669 !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+}
+
+[data-theme="light-bistro"] .btn-export-csv span {
+  color: #047857 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light-bistro"] .btn-export-csv svg {
+  color: #047857 !important;
+  stroke: #047857 !important;
+}
+
 input,
 textarea,
 select {
