@@ -7156,6 +7156,63 @@
       "serviceCharge": 0,
       "total": 1326,
       "Status": "Settled"
+    },
+    {
+      "id": "ord_82",
+      "invoiceId": "ord_82",
+      "orderId": "ord_82",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
     }
   ],
   "avsr_auth_users_v1": [
