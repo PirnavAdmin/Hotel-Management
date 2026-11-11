@@ -10,10 +10,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/restaurant-settings")]
-<<<<<<< HEAD
-=======
 [Tags("Admin", "RestaurantSettings")]
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 public class RestaurantSettingsController : ControllerBase
 {
     private readonly RestaurantSettingsService _settingsService;
@@ -62,12 +59,8 @@ public class RestaurantSettingsController : ControllerBase
     /// Updates restaurant details & brand identity in MySQL.
     /// </summary>
     [AllowAnonymous]
-<<<<<<< HEAD
-    [HttpPut]public async Task<IActionResult> UpdateSettings([FromBody] RestaurantSettingsDto dto)
-=======
     [HttpPut]
     public async Task<IActionResult> UpdateSettings([FromBody] RestaurantSettingsDto dto)
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     {
         try
         {

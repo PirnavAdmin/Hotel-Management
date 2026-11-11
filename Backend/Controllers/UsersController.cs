@@ -14,6 +14,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/users")]
+[Route("api/[controller]")]
 [Tags("Admin", "Users")]
 public class UsersController : ControllerBase
 {

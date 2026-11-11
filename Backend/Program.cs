@@ -11,8 +11,8 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Ensure default listening on port 5018
-builder.WebHost.UseUrls("http://0.0.0.0:5018", "http://localhost:5018");
+// Listen on the container and server API port.
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
 
 // ============================================================
 // DATABASE
@@ -28,49 +28,7 @@ if (string.IsNullOrWhiteSpace(configuredConnectionString))
         "DefaultConnection is missing from appsettings.json.");
 }
 
-// Resilient credentials resolver (supports multi-developer environments)
-string connectionString = configuredConnectionString;
-try
-{
-    using var testConn = new MySqlConnector.MySqlConnection(connectionString);
-    testConn.Open();
-}
-catch (MySqlConnector.MySqlException ex) when (ex.Number == 1045) // Access Denied
-{
-    Console.WriteLine("[Database] Configured credentials failed (Error 1045: Access Denied). Attempting fallback credentials...");
-    var fallbackCandidates = new[]
-    {
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vineetha@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=vikas;Password=vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=root;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=;CharSet=utf8mb4;"
-    };
-
-    bool resolved = false;
-    foreach (var candidate in fallbackCandidates)
-    {
-        try
-        {
-            using var candidateConn = new MySqlConnector.MySqlConnection(candidate);
-            candidateConn.Open();
-            connectionString = candidate;
-            resolved = true;
-            Console.WriteLine($"[Database] Successfully connected with fallback credentials for user: {new MySqlConnector.MySqlConnectionStringBuilder(candidate).UserID}");
-            break;
-        }
-        catch
-        {
-            // try next candidate
-        }
-    }
-
-    if (!resolved)
-    {
-        Console.Error.WriteLine("[Database] Failed to connect with any fallback credentials.");
-    }
-}
+var connectionString = configuredConnectionString;
 
 var serverVersion = ServerVersion.AutoDetect(connectionString);
 
@@ -172,7 +130,6 @@ builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
-<<<<<<< HEAD
 builder.Services.AddScoped<TakeawayService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SalaryService>();
@@ -180,10 +137,8 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportingExportService>();
 builder.Services.AddScoped<AccountingService>();
-=======
-builder.Services.AddScoped<InventoryService>();
-builder.Services.AddScoped<SalaryService>();
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+builder.Services.AddSingleton<ISseBroadcaster, SseBroadcaster>();
+builder.Services.AddSingleton<ITableLockService, TableLockService>();
 builder.Services.AddSignalR();
 
 // ============================================================
@@ -305,7 +260,6 @@ if (!Directory.Exists(uploadsDir))
 app.UseCors("FrontendPolicy");
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseMiddleware<LegacyApiRewriteMiddleware>();
 
 // Centralized HTTP Request / Response Logging Middleware
 app.Use(async (context, next) =>
@@ -350,13 +304,7 @@ app.Use(async (context, next) =>
 
 
 
-<<<<<<< HEAD
-// Transparently rewrites legacy and unversioned frontend API request paths
-// to their canonical /api/v1/{module}/{resource} routes before endpoint routing
-app.UseMiddleware<HMS.Middleware.LegacyApiRewriteMiddleware>();
-
-=======
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+app.UseMiddleware<LegacyApiRewriteMiddleware>();
 app.UseRouting();
 
 app.UseStaticFiles();

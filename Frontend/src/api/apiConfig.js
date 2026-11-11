@@ -1,22 +1,12 @@
-<<<<<<< HEAD
-// In Vite development, point every LAN client at the API on the same host
-// serving the frontend, instead of allowing separate .env tunnel URLs to split data.
-export const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ||
-  ""
-
-).trim().replace(/\/$/, "");
-=======
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 
-// In development, all browser-to-API traffic stays same-origin via the Vite proxy (/__backend_api).
-// The Vite server forwards requests to the live backend (port 5018) when available,
+// Browser-to-API traffic stays same-origin through a reverse proxy.
+// During development, Vite forwards requests to the backend,
 // or gracefully falls back to local server-db.json when offline so data is NEVER lost.
 export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
 export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
 export const API_SYNC_BASE = import.meta.env.DEV ? "" : API_BASE_URL;
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
 // Keep development SSE on Vite for LAN state broadcasts; production uses the API.
 const EVENTS_URL = import.meta.env.DEV
@@ -39,7 +29,6 @@ export function openOptionalEventStream() {
 
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
-  "ngrok-skip-browser-warning": "true",
 };
 
 const inFlightGetRequests = new Map();
@@ -144,13 +133,10 @@ async function performApiRequest(endpoint, options = {}) {
       return { success: true, data: null };
     }
 
-    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
-      const isNgrok = text.includes('ngrok') || text.includes('ERR_NGROK') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
+    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html')) {
       const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
       let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;
-      if (isNgrok) {
-        msg = 'The ngrok backend tunnel is offline or expired. Make sure ngrok and your backend server are running.';
-      } else if (isViteFallback) {
+      if (isViteFallback) {
         msg = `The backend API server is offline or route ${endpoint} is unhandled.`;
       }
       return {

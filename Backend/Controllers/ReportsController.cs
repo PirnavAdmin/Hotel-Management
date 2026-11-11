@@ -12,34 +12,16 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/reports")]
 [Microsoft.AspNetCore.Authorization.AllowAnonymous]
-<<<<<<< HEAD
-[Tags("Reports")]
-public class ReportsController : ControllerBase
-{
-    private readonly SpService _spService;
-    private readonly ReportingExportService _reportingExportService;
-    private readonly ExportService _exportService;
-=======
 [Tags("Admin", "Reports")]
 public class ReportsController : ControllerBase
 {
     private readonly SpService _spService;
     private readonly BarService _barService;
     private readonly SalaryService _salaryService;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     private readonly ILogger<ReportsController> _logger;
 
     public ReportsController(
         SpService spService,
-<<<<<<< HEAD
-        ReportingExportService reportingExportService,
-        ExportService exportService,
-        ILogger<ReportsController> logger)
-    {
-        _spService = spService;
-        _reportingExportService = reportingExportService;
-        _exportService = exportService;
-=======
         BarService barService,
         SalaryService salaryService,
         ILogger<ReportsController> logger)
@@ -47,7 +29,6 @@ public class ReportsController : ControllerBase
         _spService = spService;
         _barService = barService;
         _salaryService = salaryService;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         _logger = logger;
     }[HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboardReport()
@@ -446,95 +427,12 @@ public async Task<IActionResult> GetInventoryReport()
             return StatusCode(500, new { success = false, message = ex.Message });
         }
     }
-<<<<<<< HEAD
-=======
-
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     [HttpGet("sales")]
     public async Task<IActionResult> GetRevenueReport()
     {
         return await GetDashboardReport();
     }
 
-<<<<<<< HEAD
-    #region Export Endpoints
-
-    [HttpGet("sales/export")]
-    public async Task<IActionResult> ExportSalesReport(
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate,
-        [FromQuery] string? department = null,
-        [FromQuery] int? days = null,
-        [FromQuery] string? format = "csv")
-    {
-        var doc = await _reportingExportService.GenerateSalesReportExportAsync(fromDate, toDate, department, days);
-        return _exportService.ExportResult(doc, format);
-    }
-
-    [HttpGet("profit-loss/export")]
-    public async Task<IActionResult> ExportProfitLossReport(
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate,
-        [FromQuery] string? department = null,
-        [FromQuery] string? format = "csv")
-    {
-        var doc = await _reportingExportService.GenerateProfitLossExportAsync(fromDate, toDate, department);
-        return _exportService.ExportResult(doc, format);
-    }
-
-    [HttpGet("expenditure/export")]
-    public async Task<IActionResult> ExportExpenditureReport(
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate,
-        [FromQuery] string? department = null,
-        [FromQuery] string? format = "csv")
-    {
-        var doc = await _reportingExportService.GenerateExpenditureExportAsync(fromDate, toDate, department);
-        return _exportService.ExportResult(doc, format);
-    }
-
-    [HttpGet("opening-balance/export")]
-    public async Task<IActionResult> ExportOpeningBalance(
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate,
-        [FromQuery] string? department = null,
-        [FromQuery] string? format = "csv")
-    {
-        var doc = await _reportingExportService.GenerateOpeningBalanceExportAsync(fromDate, toDate, department);
-        return _exportService.ExportResult(doc, format);
-    }
-
-    [HttpGet("closing-balance/export")]
-    public async Task<IActionResult> ExportClosingBalance(
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate,
-        [FromQuery] string? department = null,
-        [FromQuery] string? format = "csv")
-    {
-        var doc = await _reportingExportService.GenerateClosingBalanceExportAsync(fromDate, toDate, department);
-        return _exportService.ExportResult(doc, format);
-    }
-
-    [HttpGet("dine/export")]
-    public async Task<IActionResult> ExportDineReport(
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate,
-        [FromQuery] string? format = "csv")
-    {
-        var doc = await _reportingExportService.GenerateDineReportExportAsync(fromDate, toDate);
-        return _exportService.ExportResult(doc, format, "Dine_Performance_Report");
-    }
-
-    [HttpGet("financial/export")]
-    public async Task<IActionResult> ExportFinancialReport(
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate,
-        [FromQuery] string? department = null,
-        [FromQuery] string? format = "csv")
-    {
-        var doc = await _reportingExportService.GenerateFinancialReportExportAsync(fromDate, toDate, department);
-        return _exportService.ExportResult(doc, format);
-=======
     #region Inventory Reports
 
     [HttpGet("inventory")]
@@ -672,7 +570,6 @@ public async Task<IActionResult> GetInventoryReport()
             _logger.LogError(ex, "Error exporting salary CSV");
             return StatusCode(500, new { success = false, message = ex.Message });
         }
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     }
 
     #endregion

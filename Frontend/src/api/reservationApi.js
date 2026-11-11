@@ -1,35 +1,3 @@
-<<<<<<< HEAD
-import { apiClient } from './apiConfig';
-
-export async function apiGetReservations(params = {}) {
-  const queryParts = [];
-  if (params.branchId) queryParts.push(`branchId=${encodeURIComponent(params.branchId)}`);
-  if (params.date) queryParts.push(`date=${encodeURIComponent(params.date)}`);
-  if (params.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
-  const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-  return await apiClient(`/api/v1/reservations${query}`);
-}
-
-export async function apiCreateReservation(reservationData) {
-  return await apiClient('/api/v1/reservations', {
-    method: 'POST',
-    body: JSON.stringify(reservationData),
-  });
-}
-
-export async function apiUpdateReservationStatus(id, status) {
-  return await apiClient(`/api/v1/reservations/${id}/status`, {
-    method: 'PUT',
-    body: JSON.stringify({ status }),
-  });
-}
-
-export async function apiDeleteReservation(id) {
-  return await apiClient(`/api/v1/reservations/${id}`, {
-    method: 'DELETE',
-  });
-}
-=======
 // Pure Frontend Mock Reservation Service - ZERO API / Backend dependencies
 const STORAGE_KEY = "bhanu_bistro_reservations_v1";
 const TABLES_STORAGE_KEY = "bhanu_bistro_reservation_tables_v1";
@@ -49,9 +17,9 @@ const INITIAL_RESERVATIONS = [
     section: "Indoor",
     specialRequests: "Anniversary celebration, window table preference.",
     estimatedAmount: 2000,
-    advanceAmount: 400,
+    advanceAmount: 100,
     paymentMethod: "UPI (Google Pay)",
-    status: "confirmed", // confirmed | cancelled
+    status: "confirmed",
     createdAt: "2026-11-10T14:30:00Z",
   },
   {
@@ -68,7 +36,7 @@ const INITIAL_RESERVATIONS = [
     section: "Indoor",
     specialRequests: "High chair needed for child.",
     estimatedAmount: 3500,
-    advanceAmount: 700,
+    advanceAmount: 100,
     paymentMethod: "Credit Card",
     status: "completed",
     createdAt: "2026-11-04T10:00:00Z",
@@ -87,7 +55,7 @@ const INITIAL_RESERVATIONS = [
     section: "Outdoor",
     specialRequests: "Family lunch reunion.",
     estimatedAmount: 5000,
-    advanceAmount: 1000,
+    advanceAmount: 100,
     paymentMethod: "Net Banking",
     status: "completed",
     createdAt: "2026-10-27T16:00:00Z",
@@ -149,30 +117,64 @@ export function saveStoredReservationTables(tables) {
   }
 }
 
-// Pure mock API functions that resolve immediately with NO network calls
-export async function apiGetReservations() {
+/**
+ * Fetch table reservations from backend or fallback to local storage
+ * GET /api/v1/reservations?branchId=...&date=...&status=...
+ */
+export async function apiGetReservations(params = {}) {
+  try {
+    const queryParts = [];
+    if (params.branchId) queryParts.push(`branchId=${encodeURIComponent(params.branchId)}`);
+    if (params.date) queryParts.push(`date=${encodeURIComponent(params.date)}`);
+    if (params.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
+    const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    const res = await apiClient(`/api/v1/reservations${query}`);
+    if (res?.success && Array.isArray(res.data)) {
+      return res;
+    }
+  } catch {}
   return { success: true, data: getStoredReservations() };
 }
 
-export async function apiCreateReservation(data) {
+export async function apiGetReservationById(id) {
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`);
+    if (res?.success) return res;
+  } catch {}
+  const all = getStoredReservations();
+  const found = all.find((r) => r.id === id || r.reservationId === id);
+  return { success: !!found, data: found };
+}
+
+export async function apiCreateReservation(reservationData) {
+  try {
+    const res = await apiClient('/api/v1/reservations', {
+      method: 'POST',
+      body: JSON.stringify(reservationData),
+    });
+    if (res?.success) return res;
+  } catch {}
+
   const all = getStoredReservations();
   const nextNum = 1000 + all.length + 1;
   const newReservation = {
     id: `RES-${nextNum}`,
     reservationId: `RES-${nextNum}`,
     ...data,
+    advanceAmount: data?.advanceAmount || 100,
     status: "confirmed",
     createdAt: new Date().toISOString(),
   };
   const updated = [newReservation, ...all];
   saveStoredReservations(updated);
 
-  // Mark table as reserved
-  const tables = getStoredReservationTables();
-  const updatedTables = tables.map((t) =>
-    t.id === data.tableId ? { ...t, status: "reserved" } : t
-  );
-  saveStoredReservationTables(updatedTables);
+  if (reservationData?.tableId) {
+    const tables = getStoredReservationTables();
+    const updatedTables = tables.map((t) =>
+      t.id === reservationData.tableId ? { ...t, status: "reserved" } : t
+    );
+    saveStoredReservationTables(updatedTables);
+  }
 
   return { success: true, data: newReservation };
 }
@@ -184,15 +186,23 @@ export async function apiUpdateReservation(id, data) {
   return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
 }
 
+export async function apiUpdateReservationStatus(id, status) {
+  const all = getStoredReservations();
+  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, status } : r));
+  saveStoredReservations(updated);
+  return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
+}
+
+export async function apiDeleteReservation(id) {
+  return await apiCancelReservation(id);
+}
+
 export async function apiCancelReservation(id) {
   const all = getStoredReservations();
   const target = all.find((r) => r.id === id || r.reservationId === id);
-  const updated = all.map((r) =>
-    r.id === id || r.reservationId === id ? { ...r, status: "cancelled" } : r
-  );
+  const updated = all.filter((r) => r.id !== id && r.reservationId !== id);
   saveStoredReservations(updated);
 
-  // Free table
   if (target?.tableId) {
     const tables = getStoredReservationTables();
     const updatedTables = tables.map((t) =>
@@ -201,7 +211,5 @@ export async function apiCancelReservation(id) {
     saveStoredReservationTables(updatedTables);
   }
 
-  return { success: true, message: "Reservation cancelled successfully." };
+  return { success: true, message: "Reservation deleted successfully." };
 }
-
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c

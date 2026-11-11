@@ -31,7 +31,7 @@ import {
   saveStoredReservationTables
 } from "../api/reservationApi";
 
-export function TableReservationFlow({ onBackToPos }) {
+export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", onHotelLogin }) {
   // Navigation: step 1 to 9, or "overview" for the 9-screen poster
   const [currentStep, setCurrentStep] = useState(1);
   const [viewMode, setViewMode] = useState("interactive"); // "interactive" | "poster"
@@ -105,7 +105,7 @@ export function TableReservationFlow({ onBackToPos }) {
           section: selectedTable?.section || "Indoor",
           specialRequests: bookingForm.specialRequests,
           estimatedAmount: 2000,
-          advanceAmount: 400,
+          advanceAmount: 100,
           paymentMethod:
             paymentMethod === "upi"
               ? "UPI (Google Pay)"
@@ -208,7 +208,7 @@ export function TableReservationFlow({ onBackToPos }) {
     }
 
     setCancelledResInfo(selectedResForCancel);
-    showToast(`Reservation ${targetId} cancelled. Refund of ₹400.00 initiated.`, "info");
+    showToast(`Reservation ${targetId} cancelled. Refund of ₹100.00 initiated.`, "info");
     setCurrentStep(9);
   };
 
@@ -329,153 +329,73 @@ export function TableReservationFlow({ onBackToPos }) {
           </div>
         </div>
 
-        {/* Center Title */}
-        <div style={{ textAlign: "center" }}>
-          <h2
-            style={{
-              fontFamily: "'Cinzel', Georgia, serif",
-              fontSize: "22px",
-              color: "#ffffff",
-              fontWeight: 800,
-              margin: 0,
-            }}
-          >
-            Bhanu Bistro – Table Reservation Flow{" "}
-            <span style={{ fontSize: "16px", color: "#f59e0b", fontWeight: 600 }}>
-              (Frontend Only • With Advance Payment)
-            </span>
-          </h2>
-          <div style={{ fontSize: "11px", color: "#cbbcb1", marginTop: "2px" }}>
-            100% Client-Side State • No Backend/API Calls • Zero Server Errors
-          </div>
-        </div>
 
-        {/* Action Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button
-            onClick={() => setViewMode(viewMode === "interactive" ? "poster" : "interactive")}
-            style={{
-              background:
-                viewMode === "poster"
-                  ? "#e65100"
-                  : "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              color: "#fff",
-              padding: "7px 16px",
-              borderRadius: "20px",
-              fontSize: "12.5px",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <LayoutGrid size={14} />
-            {viewMode === "poster" ? "Exit Poster View" : "View 9-Screen Flow"}
-          </button>
-
-          <button
-            onClick={() => {
-              setCurrentStep(6);
-              setViewMode("interactive");
-            }}
-            style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              color: "#fff",
-              padding: "7px 16px",
-              borderRadius: "20px",
-              fontSize: "12.5px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            My Reservations ({reservations.filter((r) => r.status === "confirmed").length})
-          </button>
-
-          {onBackToPos && (
+        {/* Action Controls (Right side matching Reference UI) */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {currentStep === 1 ? (
             <button
-              onClick={onBackToPos}
+              onClick={() => {
+                if (onHotelLogin) onHotelLogin();
+                else showToast("Hotel login is unavailable right now.", "info");
+              }}
               style={{
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
-                border: "none",
-                color: "#fff",
+                background: "transparent",
+                border: "1.5px solid #f59e0b",
+                color: "#ffffff",
                 padding: "7px 18px",
                 borderRadius: "20px",
                 fontSize: "12.5px",
                 fontWeight: 700,
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
               }}
             >
-              Back to POS
+              <ShieldCheck size={16} color="#f59e0b" />
+              Hotel Login
+            </button>
+          ) : (
+            <button
+              onClick={() => setCurrentStep(6)}
+              title="View My Reservations"
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(245, 158, 11, 0.4)",
+                color: "#f5ede6",
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "7px",
+              }}
+            >
+              <div
+                style={{
+                  width: "22px",
+                  height: "22px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  color: "#fff",
+                }}
+              >
+                P
+              </div>
+              <span>Hi, {bookingForm.fullName.split(" ")[0] || "Priya"}</span>
+              <ChevronDown size={14} color="#f59e0b" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Step Progress Pill Nav (Interactive mode only) */}
-      {viewMode === "interactive" && (
-        <div
-          style={{
-            maxWidth: "1480px",
-            margin: "0 auto 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            gap: "8px",
-          }}
-        >
-          {[
-            { step: 1, label: "1. Book Table" },
-            { step: 2, label: "2. Select Table" },
-            { step: 3, label: "3. Payment" },
-            { step: 4, label: "4. Processing" },
-            { step: 5, label: "5. Confirmed" },
-            { step: 6, label: "6. My Bookings" },
-            { step: 7, label: "7. Modify" },
-            { step: 8, label: "8. Cancel" },
-            { step: 9, label: "9. Cancellation Confirmed" },
-          ].map((item) => (
-            <button
-              key={item.step}
-              onClick={() => {
-                if (item.step === 7 && !selectedResForModify) {
-                  setSelectedResForModify(reservations[0]);
-                }
-                if (item.step === 8 && !selectedResForCancel) {
-                  setSelectedResForCancel(reservations[0]);
-                }
-                setCurrentStep(item.step);
-              }}
-              style={{
-                background:
-                  currentStep === item.step
-                    ? "linear-gradient(135deg, #f97316, #ea580c)"
-                    : "rgba(28, 14, 9, 0.8)",
-                color: currentStep === item.step ? "#ffffff" : "#dfd3ca",
-                border:
-                  currentStep === item.step
-                    ? "1px solid #f57c00"
-                    : "1px solid rgba(245, 158, 11, 0.25)",
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: currentStep === item.step ? 800 : 600,
-                cursor: "pointer",
-                boxShadow:
-                  currentStep === item.step
-                    ? "0 4px 14px rgba(230, 81, 0, 0.4)"
-                    : "none",
-                transition: "all 0.15s",
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Main Container */}
       <div style={{ maxWidth: "1480px", margin: "0 auto" }}>
@@ -485,7 +405,7 @@ export function TableReservationFlow({ onBackToPos }) {
           /* ======================================================= */
           <div
             style={{
-              maxWidth: currentStep === 2 || currentStep === 6 ? "980px" : "680px",
+              maxWidth: currentStep === 1 ? "1180px" : currentStep === 2 || currentStep === 3 || currentStep === 6 ? "1060px" : "680px",
               margin: "0 auto",
             }}
           >
@@ -624,141 +544,356 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
   return (
     <div
       style={{
-        background: "#ffffff",
-        color: "#1f1610",
-        borderRadius: "18px",
-        padding: "28px 32px",
-        boxShadow: "0 18px 45px rgba(0,0,0,0.45)",
-        border: "1px solid #e8ded6",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+        gap: "40px",
+        alignItems: "center",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-        <Calendar size={24} color="#ea580c" />
-        <h2 style={{ fontSize: "20px", fontWeight: 800, margin: 0, color: "#1f1610" }}>
-          Book a Table
-        </h2>
-      </div>
-
-      <form onSubmit={onSubmit}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-          {/* Date */}
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-              Date *
-            </label>
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: errors.date ? "1px solid #dc2626" : "1px solid #d4c8bd",
-                borderRadius: "8px",
-                fontSize: "13px",
-                background: "#faf7f2",
-                color: "#1f1610",
-                outline: "none",
-              }}
-            />
-            {errors.date && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.date}</span>}
-          </div>
-
-          {/* Time */}
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-              Time *
-            </label>
-            <select
-              value={form.time}
-              onChange={(e) => setForm({ ...form, time: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: errors.time ? "1px solid #dc2626" : "1px solid #d4c8bd",
-                borderRadius: "8px",
-                fontSize: "13px",
-                background: "#faf7f2",
-                color: "#1f1610",
-                outline: "none",
-              }}
-            >
-              <option value="12:30 PM">12:30 PM (Lunch)</option>
-              <option value="01:00 PM">01:00 PM (Lunch)</option>
-              <option value="01:30 PM">01:30 PM (Lunch)</option>
-              <option value="07:00 PM">07:00 PM (Dinner)</option>
-              <option value="07:30 PM">07:30 PM (Dinner)</option>
-              <option value="08:00 PM">08:00 PM (Dinner)</option>
-              <option value="08:30 PM">08:30 PM (Dinner)</option>
-              <option value="09:00 PM">09:00 PM (Dinner)</option>
-            </select>
-          </div>
+      {/* Left Column: Hero branding, Ambiance & 3 Perks (Matching Reference Poster Screen 1) */}
+      <div style={{ color: "#f5ede6" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            color: "#f59e0b",
+            fontSize: "13px",
+            fontWeight: 800,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            marginBottom: "14px",
+            background: "rgba(245, 158, 11, 0.12)",
+            padding: "6px 14px",
+            borderRadius: "20px",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
+          }}
+        >
+          <Calendar size={18} color="#f59e0b" /> Table Reservation
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-          {/* Guests count */}
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-              Guests *
-            </label>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                border: "1px solid #d4c8bd",
-                borderRadius: "8px",
-                background: "#faf7f2",
-                padding: "4px 8px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, guests: Math.max(1, form.guests - 1) })}
+        <h1
+          style={{
+            fontFamily: "'Cinzel', Georgia, serif",
+            fontSize: "44px",
+            fontWeight: 800,
+            color: "#ffffff",
+            margin: "0 0 14px",
+            lineHeight: 1.15,
+            letterSpacing: "0.5px",
+          }}
+        >
+          Reserve <span style={{ color: "#f59e0b" }}>Your Table</span>
+        </h1>
+
+        <p
+          style={{
+            fontSize: "15px",
+            color: "#d4c5b9",
+            lineHeight: 1.6,
+            marginBottom: "24px",
+            maxWidth: "460px",
+          }}
+        >
+          Book a table in advance and enjoy a great dining experience at Bhanu Bistro.
+        </p>
+
+        {/* Dining Table Ambiance Preview (Candlelit table with glasses & flowers) */}
+        <div
+          style={{
+            width: "100%",
+            height: "190px",
+            borderRadius: "14px",
+            overflow: "hidden",
+            marginBottom: "26px",
+            boxShadow: "0 16px 36px rgba(0,0,0,0.6)",
+            border: "1px solid rgba(245, 158, 11, 0.35)",
+            position: "relative",
+          }}
+        >
+          <img
+            src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80"
+            alt="Fine Dining Ambiance at Bhanu Bistro"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.2) 60%, transparent 100%)",
+            }}
+          />
+        </div>
+
+        {/* 3 Perks (Matching Reference Image) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "12px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(245, 158, 11, 0.22)",
+              borderRadius: "12px",
+              padding: "14px 8px",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            <CheckCircle2 size={22} color="#f59e0b" style={{ margin: "0 auto 6px" }} />
+            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#ffffff", lineHeight: 1.35 }}>
+              Confirmed<br />Reservation
+            </div>
+          </div>
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(245, 158, 11, 0.22)",
+              borderRadius: "12px",
+              padding: "14px 8px",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            <Users size={22} color="#f59e0b" style={{ margin: "0 auto 6px" }} />
+            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#ffffff", lineHeight: 1.35 }}>
+              Perfect For<br />Families &amp; Groups
+            </div>
+          </div>
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(245, 158, 11, 0.22)",
+              borderRadius: "12px",
+              padding: "14px 8px",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            <Sparkles size={22} color="#f59e0b" style={{ margin: "0 auto 6px" }} />
+            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#ffffff", lineHeight: 1.35 }}>
+              Great<br />Dining Experience
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: White Content Card */}
+      <div
+        style={{
+          background: "#ffffff",
+          color: "#1f1610",
+          borderRadius: "18px",
+          padding: "28px 32px",
+          boxShadow: "0 18px 45px rgba(0,0,0,0.45)",
+          border: "1px solid #e8ded6",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+          <Calendar size={24} color="#ea580c" />
+          <h2 style={{ fontSize: "20px", fontWeight: 800, margin: 0, color: "#1f1610" }}>
+            Book a Table
+          </h2>
+        </div>
+
+        <form onSubmit={onSubmit}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+            {/* Date */}
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+                Date *
+              </label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
                 style={{
-                  width: "28px",
-                  height: "28px",
-                  border: "none",
-                  background: "#eee4da",
-                  borderRadius: "6px",
-                  fontWeight: 800,
-                  fontSize: "16px",
-                  cursor: "pointer",
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: errors.date ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  background: "#faf7f2",
+                  color: "#1f1610",
+                  outline: "none",
+                }}
+              />
+              {errors.date && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.date}</span>}
+            </div>
+
+            {/* Time */}
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+                Time *
+              </label>
+              <select
+                value={form.time}
+                onChange={(e) => setForm({ ...form, time: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: errors.time ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  background: "#faf7f2",
+                  color: "#1f1610",
+                  outline: "none",
                 }}
               >
-                -
-              </button>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: "13px" }}>
-                <Users size={15} color="#ea580c" />
-                <span>{form.guests} Guests</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, guests: form.guests + 1 })}
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  border: "none",
-                  background: "#eee4da",
-                  borderRadius: "6px",
-                  fontWeight: 800,
-                  fontSize: "16px",
-                  cursor: "pointer",
-                }}
-              >
-                +
-              </button>
+                <option value="12:30 PM">12:30 PM (Lunch)</option>
+                <option value="01:00 PM">01:00 PM (Lunch)</option>
+                <option value="01:30 PM">01:30 PM (Lunch)</option>
+                <option value="07:00 PM">07:00 PM (Dinner)</option>
+                <option value="07:30 PM">07:30 PM (Dinner)</option>
+                <option value="08:00 PM">08:00 PM (Dinner)</option>
+                <option value="08:30 PM">08:30 PM (Dinner)</option>
+                <option value="09:00 PM">09:00 PM (Dinner)</option>
+              </select>
             </div>
           </div>
 
-          {/* Table Preference */}
-          <div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+            {/* Guests count */}
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+                Guests *
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  border: "1px solid #d4c8bd",
+                  borderRadius: "8px",
+                  background: "#faf7f2",
+                  padding: "4px 8px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, guests: Math.max(1, form.guests - 1) })}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    border: "none",
+                    background: "#eee4da",
+                    borderRadius: "6px",
+                    fontWeight: 800,
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  -
+                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: "13px" }}>
+                  <Users size={15} color="#ea580c" />
+                  <span>{form.guests} Guests</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, guests: form.guests + 1 })}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    border: "none",
+                    background: "#eee4da",
+                    borderRadius: "6px",
+                    fontWeight: 800,
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Table Preference */}
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+                Table Preference (Optional)
+              </label>
+              <select
+                value={form.tablePreference}
+                onChange={(e) => setForm({ ...form, tablePreference: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #d4c8bd",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  background: "#faf7f2",
+                  color: "#1f1610",
+                  outline: "none",
+                }}
+              >
+                <option value="Indoor">Indoor (Air Conditioned)</option>
+                <option value="Outdoor">Outdoor / Courtyard</option>
+                <option value="Garden Area">Garden Area</option>
+                <option value="Window Side">Window Side Table</option>
+                <option value="Family Section">Family Section</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Name and Mobile */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+                Full Name *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Priya Sharma"
+                value={form.fullName}
+                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: errors.fullName ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  background: "#faf7f2",
+                  outline: "none",
+                }}
+              />
+              {errors.fullName && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.fullName}</span>}
+            </div>
+
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+                Mobile Number *
+              </label>
+              <input
+                type="tel"
+                placeholder="e.g. 9876543210"
+                value={form.mobileNumber}
+                onChange={(e) => setForm({ ...form, mobileNumber: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: errors.mobileNumber ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  background: "#faf7f2",
+                  outline: "none",
+                }}
+              />
+              {errors.mobileNumber && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.mobileNumber}</span>}
+            </div>
+          </div>
+
+          {/* Email */}
+          <div style={{ marginBottom: "16px" }}>
             <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-              Table Preference (Optional)
+              Email (Optional)
             </label>
-            <select
-              value={form.tablePreference}
-              onChange={(e) => setForm({ ...form, tablePreference: e.target.value })}
+            <input
+              type="email"
+              placeholder="e.g. priya@example.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -766,135 +901,59 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 borderRadius: "8px",
                 fontSize: "13px",
                 background: "#faf7f2",
-                color: "#1f1610",
-                outline: "none",
-              }}
-            >
-              <option value="Indoor">Indoor (Air Conditioned)</option>
-              <option value="Outdoor">Outdoor / Courtyard</option>
-              <option value="Garden Area">Garden Area</option>
-              <option value="Window Side">Window Side Table</option>
-              <option value="Family Section">Family Section</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Name and Mobile */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-              Full Name *
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Priya Sharma"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: errors.fullName ? "1px solid #dc2626" : "1px solid #d4c8bd",
-                borderRadius: "8px",
-                fontSize: "13px",
-                background: "#faf7f2",
                 outline: "none",
               }}
             />
-            {errors.fullName && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.fullName}</span>}
           </div>
 
-          <div>
+          {/* Special Requests */}
+          <div style={{ marginBottom: "22px" }}>
             <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-              Mobile Number *
+              Special Requests (Optional)
             </label>
-            <input
-              type="tel"
-              placeholder="e.g. 9876543210"
-              value={form.mobileNumber}
-              onChange={(e) => setForm({ ...form, mobileNumber: e.target.value })}
+            <textarea
+              rows={2}
+              placeholder="Birthday celebration, anniversary, high chair, dietary preferences, etc."
+              value={form.specialRequests}
+              onChange={(e) => setForm({ ...form, specialRequests: e.target.value })}
               style={{
                 width: "100%",
                 padding: "10px 12px",
-                border: errors.mobileNumber ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                border: "1px solid #d4c8bd",
                 borderRadius: "8px",
-                fontSize: "13px",
+                fontSize: "12.5px",
                 background: "#faf7f2",
                 outline: "none",
+                resize: "vertical",
               }}
             />
-            {errors.mobileNumber && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.mobileNumber}</span>}
           </div>
-        </div>
 
-        {/* Email */}
-        <div style={{ marginBottom: "16px" }}>
-          <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-            Email (Optional)
-          </label>
-          <input
-            type="email"
-            placeholder="e.g. priya@example.com"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          {/* Submit */}
+          <button
+            type="submit"
             style={{
               width: "100%",
-              padding: "10px 12px",
-              border: "1px solid #d4c8bd",
-              borderRadius: "8px",
-              fontSize: "13px",
-              background: "#faf7f2",
-              outline: "none",
+              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "10px",
+              padding: "12px 0",
+              fontSize: "15px",
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
             }}
-          />
-        </div>
-
-        {/* Special Requests */}
-        <div style={{ marginBottom: "22px" }}>
-          <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
-            Special Requests (Optional)
-          </label>
-          <textarea
-            rows={2}
-            placeholder="Birthday celebration, anniversary, high chair, dietary preferences, etc."
-            value={form.specialRequests}
-            onChange={(e) => setForm({ ...form, specialRequests: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              border: "1px solid #d4c8bd",
-              borderRadius: "8px",
-              fontSize: "12.5px",
-              background: "#faf7f2",
-              outline: "none",
-              resize: "vertical",
-            }}
-          />
-        </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "10px",
-            padding: "12px 0",
-            fontSize: "15px",
-            fontWeight: 800,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
-          }}
-        >
-          <Calendar size={18} />
-          Reserve Table →
-        </button>
-      </form>
+          >
+            <Calendar size={18} />
+            Book Table
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -1204,8 +1263,8 @@ function Step3Payment({
               <span>₹2,000.00</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", padding: "3px 0", color: "#ea580c", fontWeight: 700 }}>
-              <span>Advance (20% to lock table):</span>
-              <span>₹400.00</span>
+              <span>Advance (to lock table):</span>
+              <span>₹100.00</span>
             </div>
             <div
               style={{
@@ -1220,7 +1279,7 @@ function Step3Payment({
               }}
             >
               <span>Payable Now:</span>
-              <span style={{ color: "#ea580c" }}>₹400.00</span>
+              <span style={{ color: "#ea580c" }}>₹100.00</span>
             </div>
           </div>
         </div>
@@ -1314,7 +1373,7 @@ function Step3Payment({
               boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
             }}
           >
-            Pay ₹400.00 & Confirm Booking
+            Pay ₹100.00 & Confirm Booking
           </button>
 
           <div style={{ textAlign: "center", marginTop: "10px" }}>
@@ -1549,7 +1608,7 @@ function Step5ReservationConfirmed({ reservation, onViewReservation, onBackToHom
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Advance Paid:</span>{" "}
-            <strong style={{ color: "#166534" }}>₹{reservation?.advanceAmount || 400}.00 (UPI ✓)</strong>
+            <strong style={{ color: "#166534" }}>₹{reservation?.advanceAmount || 100}.00 (UPI ✓)</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Status:</span>{" "}
@@ -1791,7 +1850,7 @@ function Step6MyReservations({
                   <div>📅 {res.date} at {res.time}</div>
                   <div>👥 {res.guests} Guests</div>
                   <div>👤 {res.customerName} ({res.phone})</div>
-                  <div>💰 Paid Advance: ₹{res.advanceAmount || 400}.00</div>
+                  <div>💰 Paid Advance: ₹{res.advanceAmount || 100}.00</div>
                 </div>
               </div>
 
@@ -2265,7 +2324,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #d4c8bd", paddingTop: "8px", fontWeight: 800 }}>
           <span>Refund Status:</span>
-          <span style={{ color: "#16a34a" }}>₹{reservation?.advanceAmount || 400}.00 (Processed)</span>
+          <span style={{ color: "#16a34a" }}>₹{reservation?.advanceAmount || 100}.00 (Processed)</span>
         </div>
       </div>
 
@@ -2287,7 +2346,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
         }}
       >
         <Info size={18} style={{ flexShrink: 0 }} />
-        <span>The advance payment of ₹{reservation?.advanceAmount || 400}.00 will be refunded to your original payment method within 3-5 business days.</span>
+        <span>The advance payment of ₹{reservation?.advanceAmount || 100}.00 will be refunded to your original payment method within 3-5 business days.</span>
       </div>
 
       <button
@@ -2368,10 +2427,10 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
             <div style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}>Complete Booking</div>
             <div style={{ background: "#faf7f2", padding: "5px", borderRadius: "6px", marginBottom: "4px" }}>
               <div>Estimated Total: ₹2,000.00</div>
-              <div style={{ fontWeight: 800, color: "#ea580c" }}>Advance (20%): ₹400.00</div>
+              <div style={{ fontWeight: 800, color: "#ea580c" }}>Advance: ₹100.00</div>
             </div>
             <div style={{ background: "#fff7ed", padding: "3px 6px", borderRadius: "4px", color: "#ea580c", fontWeight: 700 }}>
-              Payable: ₹400.00 via UPI
+              Payable: ₹100.00 via UPI
             </div>
           </div>
         </PosterScreenCard>
@@ -2404,7 +2463,7 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
             <div style={{ fontSize: "9px", background: "#faf7f2", padding: "4px", borderRadius: "4px", marginTop: "4px", textAlign: "left" }}>
               <div>ID: <strong>RES-1023</strong></div>
               <div>Table T-03 (Indoor) • 2 Guests</div>
-              <div>Paid: ₹400.00 (UPI)</div>
+              <div>Paid: ₹100.00 (UPI)</div>
             </div>
           </div>
         </PosterScreenCard>
@@ -2478,7 +2537,7 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
             <div style={{ fontWeight: 800, fontSize: "11px", color: "#166534" }}>Reservation Cancelled</div>
             <div style={{ fontSize: "8.5px", background: "#faf7f2", padding: "4px", borderRadius: "4px", marginTop: "4px", textAlign: "left" }}>
               <div>RES-1023</div>
-              <div style={{ color: "#16a34a", fontWeight: 700 }}>Refund: ₹400.00 (Processed)</div>
+              <div style={{ color: "#16a34a", fontWeight: 700 }}>Refund: ₹100.00 (Processed)</div>
             </div>
           </div>
         </PosterScreenCard>
