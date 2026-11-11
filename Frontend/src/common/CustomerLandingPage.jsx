@@ -272,46 +272,133 @@ export function CustomerLandingPage({
       </header>
 
       <main>
-        {activeScreen === "home" && <section className="customer-hero" id="home">
-          <div className="customer-hero-content">
-            <p className="customer-eyebrow">Good food. Warm moments.</p>
-            <h1>Welcome to <span>{restaurantName}</span></h1>
-            <p className="customer-hero-links">
-              <a href="#menu" onClick={(event) => {
-                event.preventDefault();
-                navigateScreen("menu");
-              }}>Order Takeaway</a><i aria-hidden="true">|</i>
-              <button type="button" onClick={() => navigateScreen("reservation")}>Reserve Your Table</button>
-            </p>
-          </div>
-
-          <div className="customer-action-grid">
-            <article className="customer-action-card takeaway-action">
-              <div className="customer-action-copy">
-                <span className="customer-action-icon takeaway-icon"><ShoppingBag size={26} /></span>
-                <h2>Order Takeaway Online</h2>
-                <p>Browse our menu, choose your favourites and arrange a convenient pickup.</p>
-                <a className="customer-action-button takeaway-button" href="#menu" onClick={(event) => {
-                  event.preventDefault();
-                  navigateScreen("menu");
-                }}>
-                  Order Takeaway <ArrowRight size={20} />
+        {activeScreen === "home" && (
+          <section className="customer-hero" id="home">
+            <div className="customer-hero-content">
+              <h1>Welcome to <span>{restaurantName}</span></h1>
+              <p className="customer-hero-links">
+                <a
+                  href="#menu"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    navigateScreen("menu");
+                  }}
+                >
+                  Order Takeaway
                 </a>
-              </div>
-            </article>
-            <article className="customer-action-card reservation-action">
-              <div className="customer-action-copy">
-                <span className="customer-action-icon reservation-icon"><CalendarDays size={26} /></span>
-                <h2>Reserve a Table</h2>
-                <p>Book ahead for your party and enjoy a relaxed dining experience.</p>
-                <button className="customer-action-button reservation-button" type="button" onClick={() => navigateScreen("reservation")}>
-                  Reserve Table <ArrowRight size={20} />
+                <i aria-hidden="true">|</i>
+                <button
+                  type="button"
+                  onClick={() => navigateScreen("reservation")}
+                >
+                  Reserve Your Table
                 </button>
-              </div>
-            </article>
-          </div>
+              </p>
+            </div>
 
-        </section>}
+            <div className="customer-action-grid">
+              <article className="customer-action-card takeaway-action">
+                <div className="customer-action-copy">
+                  <span className="customer-action-icon takeaway-icon">
+                    <ShoppingBag size={24} />
+                  </span>
+                  <h2>Order Takeaway Online</h2>
+                  <p>Browse our menu, place your order and pick it up at your convenience.</p>
+                  <a
+                    className="customer-action-button takeaway-button"
+                    href="#menu"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      navigateScreen("menu");
+                    }}
+                  >
+                    Order Takeaway <ArrowRight size={18} />
+                  </a>
+                </div>
+              </article>
+
+              <article className="customer-action-card reservation-action">
+                <div className="customer-action-copy">
+                  <span className="customer-action-icon reservation-icon">
+                    <CalendarDays size={24} />
+                  </span>
+                  <h2>Reserve a Table</h2>
+                  <p>Book your table in advance and enjoy a great dining experience.</p>
+                  <button
+                    className="customer-action-button reservation-button"
+                    type="button"
+                    onClick={() => navigateScreen("reservation")}
+                  >
+                    Reserve Table <ArrowRight size={18} />
+                  </button>
+                </div>
+              </article>
+            </div>
+
+            {/* Bottom 4-features strip (Matching Image 1) */}
+            <div className="customer-features-strip">
+              <div className="customer-feature-item">
+                <span className="customer-feature-icon">
+                  <ChefHat size={26} strokeWidth={1.8} />
+                </span>
+                <div className="customer-feature-text">
+                  <strong>Delicious Food</strong>
+                  <small>A wide variety of cuisines</small>
+                </div>
+              </div>
+
+              <div className="customer-feature-divider" />
+
+              <div className="customer-feature-item">
+                <span className="customer-feature-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 4v2" />
+                    <path d="M4 18h16" />
+                    <path d="M20 18a8 8 0 0 0-16 0" />
+                  </svg>
+                </span>
+                <div className="customer-feature-text">
+                  <strong>Easy Ordering</strong>
+                  <small>Quick &amp; hassle-free takeaway</small>
+                </div>
+              </div>
+
+              <div className="customer-feature-divider" />
+
+              <div className="customer-feature-item">
+                <span className="customer-feature-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 10v9" />
+                    <path d="M3 14h3" />
+                    <path d="M6 10v9" />
+                    <path d="M8 12h8" />
+                    <path d="M10 12v7" />
+                    <path d="M14 12v7" />
+                    <path d="M18 10v9" />
+                    <path d="M18 14h3" />
+                    <path d="M21 10v9" />
+                  </svg>
+                </span>
+                <div className="customer-feature-text">
+                  <strong>Table Reservation</strong>
+                  <small>Book your table in seconds</small>
+                </div>
+              </div>
+
+              <div className="customer-feature-divider" />
+
+              <div className="customer-feature-item">
+                <span className="customer-feature-icon">
+                  <ShieldCheck size={26} strokeWidth={1.8} />
+                </span>
+                <div className="customer-feature-text">
+                  <strong>Secure &amp; Reliable</strong>
+                  <small>Your orders and bookings are safe</small>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {activeScreen === "menu" && <section className="customer-menu-section" id="menu">
           <div className="customer-section-heading">
