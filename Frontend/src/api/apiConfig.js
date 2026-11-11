@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // In Vite development, point every LAN client at the API on the same host
 // serving the frontend, instead of allowing separate .env tunnel URLs to split data.
 export const API_BASE_URL = (
@@ -5,9 +6,19 @@ export const API_BASE_URL = (
   ""
 
 ).trim().replace(/\/$/, "");
+=======
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 
-// The Vite dev server provides its own same-origin SSE endpoint for local
-// cross-tab/device synchronization. Production can use the configured API.
+// In development, all browser-to-API traffic stays same-origin via the Vite proxy (/__backend_api).
+// The Vite server forwards requests to the live backend (port 5018) when available,
+// or gracefully falls back to local server-db.json when offline so data is NEVER lost.
+export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
+export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
+export const API_SYNC_BASE = import.meta.env.DEV ? "" : API_BASE_URL;
+export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+
+// Keep development SSE on Vite for LAN state broadcasts; production uses the API.
 const EVENTS_URL = import.meta.env.DEV
   ? "/api/events"
   : `${API_BASE_URL.replace(/\/$/, "")}/api/events`;
@@ -34,8 +45,8 @@ const DEFAULT_HEADERS = {
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
   const { remoteOnly = false, ...requestOptions } = options;
+  const url = apiUrl(endpoint);
 
   try {
     const token =
@@ -44,6 +55,7 @@ async function performApiRequest(endpoint, options = {}) {
         : null;
 
     const headers = {
+      ...(remoteOnly && import.meta.env.DEV ? { "X-Remote-Only": "true" } : {}),
       ...DEFAULT_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
@@ -57,18 +69,19 @@ async function performApiRequest(endpoint, options = {}) {
     let res;
     try {
       res = await fetch(url, config);
-      if (!remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+      if (!remoteOnly && !res.ok && (res.status === 502 || res.status === 503 || res.status === 504) && url !== endpoint) {
         try {
-          const localRes = await fetch(endpoint, config);
-          if (localRes.ok) {
-            res = localRes;
-          }
+          const fallbackRes = await fetch(endpoint, config);
+          if (fallbackRes.ok) res = fallbackRes;
         } catch {}
       }
     } catch (fetchErr) {
-      if (API_BASE_URL && !remoteOnly) {
-        console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
-        res = await fetch(endpoint, config);
+      if (!remoteOnly && url !== endpoint) {
+        try {
+          res = await fetch(endpoint, config);
+        } catch {
+          throw fetchErr;
+        }
       } else {
         throw fetchErr;
       }
@@ -132,16 +145,6 @@ async function performApiRequest(endpoint, options = {}) {
     }
 
     if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
-      if (API_BASE_URL) {
-        try {
-          const localRes = await fetch(endpoint, config);
-          const localText = await localRes.text();
-          if (localRes.ok && !localText.trim().startsWith('<') && !localText.includes('ERR_NGROK')) {
-            const data = JSON.parse(localText);
-            return { success: true, data };
-          }
-        } catch {}
-      }
       const isNgrok = text.includes('ngrok') || text.includes('ERR_NGROK') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
       const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
       let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;
@@ -189,7 +192,12 @@ export function apiClient(endpoint, options = {}) {
   } catch {
     // The request layer still supports environments where storage is blocked.
   }
-  const key = `${API_BASE_URL}${endpoint}|${token}`;
+  const key = JSON.stringify({
+    url: `${API_BASE_URL}${endpoint}`,
+    token,
+    remoteOnly: Boolean(options.remoteOnly),
+    headers: options.headers || {},
+  });
   const existing = inFlightGetRequests.get(key);
   if (existing) return existing;
 

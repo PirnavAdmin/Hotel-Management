@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using HMS.DTOs;
 using HMS.Hubs;
@@ -992,16 +993,14 @@ public class BarController : ControllerBase
     public async Task<IActionResult> GetBarInventoryItems(
         [FromQuery] string? category,
         [FromQuery] string? search,
+        [FromQuery] string? supplier,
         [FromQuery] string? status,
-        [FromQuery] bool? lowStockOnly)
+        [FromQuery] bool? lowStockOnly,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var items = await _barService.GetBarInventoryItemsAsync(category, search, status, lowStockOnly);
-        return Ok(new
-        {
-            success = true,
-            count = items.Count,
-            data = items
-        });
+        var result = await _barService.GetBarInventoryPagedAsync(category, search, supplier, status, lowStockOnly, page, pageSize);
+        return Ok(result);
     }
 
     /// <summary>
@@ -1071,27 +1070,72 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Adds a new inventory item (Image 5: Add Inventory Modal).
+    /// Adds a new inventory item or batch of items (Image 5: Add Inventory Modal).
     /// Fields: Item Name *, Category *, Unit *, Stock *, Threshold *, Unit Cost *.
+    /// Supports single item object or JSON array [ ... ].
     /// </summary>
     [AllowAnonymous]
     [HttpPost("inventory")]
-    public async Task<IActionResult> CreateInventoryItem([FromBody] CreateInventoryItemDto dto)
+    [HttpPost("inventory/batch")]
+    public async Task<IActionResult> CreateInventoryItem([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
     {
-        if (string.IsNullOrWhiteSpace(dto.ItemName))
+        var items = _inventoryService.ParseJsonPayload(body);
+        if (items.Count == 0)
         {
             return BadRequest(new { success = false, message = "Item Name is required." });
         }
 
-        var created = await _barService.CreateInventoryItemAsync(dto);
-
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created); } catch { }
-
-        return CreatedAtAction(nameof(GetBarInventoryItemById), new { id = created.ItemId }, new
+        foreach (var item in items)
         {
-            success = true,
-            message = "Inventory item added successfully.",
-            data = created
+            item.IsBarItem = true;
+            if (string.IsNullOrWhiteSpace(item.Category) || item.Category.Equals("General", StringComparison.OrdinalIgnoreCase))
+            {
+                item.Category = "Wine";
+            }
+        }
+
+        if (items.Count == 1)
+        {
+            var (isValid, valErr) = _inventoryService.ValidateItem(items[0], 0);
+            if (!isValid)
+            {
+                return BadRequest(new { success = false, message = valErr });
+            }
+        }
+
+        var result = await _inventoryService.ProcessInventorySubmissionAsync(items, atomic ?? false);
+
+        if (!result.Success && result.Items.Count == 0)
+        {
+            return StatusCode(500, new { success = false, message = result.Message, errors = result.Errors });
+        }
+
+        if (items.Count == 1 && result.Items.Count == 1)
+        {
+            var created = result.Items[0];
+            try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created); } catch { }
+
+            return CreatedAtAction(nameof(GetBarInventoryItemById), new { id = created.Id }, new
+            {
+                success = true,
+                message = created.Action == "updated"
+                    ? $"Inventory item '{created.Name}' stock updated successfully."
+                    : "Inventory item added successfully.",
+                data = created
+            });
+        }
+
+        return Ok(new
+        {
+            success = result.Success,
+            message = result.Message,
+            totalReceived = result.TotalReceived,
+            insertedCount = result.InsertedCount,
+            updatedCount = result.UpdatedCount,
+            failedCount = result.FailedCount,
+            items = result.Items,
+            errors = result.Errors,
+            data = result.Items
         });
     }
 
@@ -1138,6 +1182,38 @@ public class BarController : ControllerBase
             success = true,
             message = "Stock adjusted successfully.",
             data = updated
+        });
+    }
+
+    /// <summary>
+    /// Uses/consumes inventory stock for an item with quantity validation and audit logging.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("inventory/{id:long}/use")]
+    public async Task<IActionResult> UseInventoryStock(long id, [FromBody] UseStockDto dto)
+    {
+        if (dto == null || dto.Quantity <= 0)
+        {
+            return BadRequest(new { success = false, message = "Used quantity must be greater than zero." });
+        }
+
+        var (success, errorMsg, item) = await _barService.UseBarInventoryStockAsync(id, dto);
+        if (!success)
+        {
+            if (errorMsg != null && errorMsg.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { success = false, message = errorMsg });
+            }
+            return BadRequest(new { success = false, message = errorMsg });
+        }
+
+        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", item); } catch { }
+
+        return Ok(new
+        {
+            success = true,
+            message = $"Successfully consumed {dto.Quantity} units.",
+            data = item
         });
     }
 
@@ -1387,4 +1463,3 @@ public class BarController : ControllerBase
 
     #endregion
 }
-

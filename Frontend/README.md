@@ -29,9 +29,12 @@ Click the **🛡️ Admin** button in the top navigation bar to access:
 
 ## 🚀 Running the Project
 
+Run these commands from the repository root. Dependencies are installed for the
+active app in `Frontend/`.
+
 ```bash
 # 1. Install dependencies
-npm install
+npm install --prefix Frontend
 
 # 2. Start local development server
 npm run dev

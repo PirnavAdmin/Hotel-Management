@@ -20,17 +20,16 @@ import {
   apiGetBarBotSummary,
   apiGetBarBotFilterOptions,
   apiUpdateBarBotItemStatus,
-  apiMarkAllBarBotReady,
   apiMarkAllBarBotTableReady,
   apiGetBarDrinks,
 } from "../api/barApi";
-import { apiGetActiveKitchenTickets, apiUpdateKitchenItemStatus } from "../api/kitchenApi";
 import {
   createMenuItemLookup,
   findMenuItem,
   isBeverageCategory,
   isDrinkItem,
 } from "../kot/orderRouting";
+import { getBusinessDayKey } from "../utils/invoiceCounter";
 
 function safeText(value) {
   return String(value ?? "").replace(
@@ -61,6 +60,7 @@ export function BarBOTView({
   barDrinks = [],
   onItemsUpdated,
   onUpdateItemKotStatus,
+  embedded = false,
 }) {
   const [adminBotTableFilter, setAdminBotTableFilter] = useState("all");
   const [isBotTableDropdownOpen, setIsBotTableDropdownOpen] = useState(false);
@@ -76,6 +76,15 @@ export function BarBOTView({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const inFlightRef = useRef(false);
+  const [todayBusinessDayKey, setTodayBusinessDayKey] = useState(getBusinessDayKey);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(
+      () => setTodayBusinessDayKey(getBusinessDayKey()),
+      60_000,
+    );
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   // Local overrides for optimistic status updates
   const [localItemStatusMap, setLocalItemStatusMap] = useState({});
@@ -110,8 +119,9 @@ export function BarBOTView({
     apiGetBarBotFilterOptions()
       .then((res) => {
         if (!isMounted) return;
-        if (res?.success && res.data) {
-          setBotFilterOptions(res.data);
+        const payload = res?.data?.data ?? res?.data;
+        if (res?.success && payload?.success !== false && payload) {
+          setBotFilterOptions(payload);
         }
       })
       .catch(() => {});
@@ -125,30 +135,37 @@ export function BarBOTView({
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     try {
-      // 1. Try dedicated Bar BOT endpoint first
       const botRes = await apiGetBarBotTickets();
-      if (botRes?.success && (Array.isArray(botRes.data) || Array.isArray(botRes.tickets))) {
-        const rows = botRes.data || botRes.tickets;
-        setBackendTickets(rows);
-        setError("");
-      } else {
-        // 2. Fallback to active kitchen tickets
-        const res = await apiGetActiveKitchenTickets();
-        if (res?.success && Array.isArray(res.data)) {
-          setBackendTickets(res.data);
-          setError("");
-        }
-      }
+      const botPayload = botRes?.data;
+      const botRows = Array.isArray(botPayload)
+        ? botPayload
+        : Array.isArray(botPayload?.data)
+        ? botPayload.data
+        : Array.isArray(botPayload?.tickets)
+        ? botPayload.tickets
+        : Array.isArray(botRes?.tickets)
+        ? botRes.tickets
+        : null;
 
-      // Fetch live KPI summary metrics
+      if (!botRes?.success || botPayload?.success === false || !botRows) {
+        throw new Error(botRes?.error || botPayload?.message || "The Bar BOT endpoint returned an invalid response.");
+      }
+      setBackendTickets(botRows);
+      setError("");
+
       try {
         const summaryRes = await apiGetBarBotSummary();
-        if (summaryRes?.success && summaryRes.data) {
-          setBotSummary(summaryRes.data);
+        const summary = summaryRes?.data?.data ?? summaryRes?.data;
+        if (summaryRes?.success && summary?.success !== false && summary) {
+          setBotSummary(summary);
         }
-      } catch {}
+      } catch (summaryError) {
+        console.warn("[BarBOTView] Could not refresh BOT summary:", summaryError?.message);
+      }
     } catch (err) {
-      // Backend error - non blocking
+      setBackendTickets([]);
+      setError(err?.message || "Live Bar BOT tickets could not be loaded.");
+      console.error("[BarBOTView] Could not refresh live BOT tickets:", err);
     } finally {
       inFlightRef.current = false;
       setLoading(false);
@@ -161,39 +178,30 @@ export function BarBOTView({
     return () => clearInterval(interval);
   }, [fetchTickets]);
 
-  // Reconcile tables with drink orders (from tables prop + live backend tickets)
+  // The backend BOT ticket feed is authoritative; table state supplies labels only.
   const tablesWithDrinks = useMemo(() => {
     const tableMap = new Map();
 
-    // 1. Process tables passed via props
     (Array.isArray(tables) ? tables : []).forEach((tbl) => {
       const tId = String(tbl.backendTableId ?? tbl.tableId ?? tbl.id);
-      const allItems = Array.isArray(tbl.items) ? tbl.items : [];
-      const drinkItems = allItems
-        .filter(
-          (item) =>
-            item &&
-            item.status !== "cancelled" &&
-            item.kotStatus !== "cancelled" &&
-            isDrinkItem(item, menuLookup, liveBarDrinks)
-        )
-        .map((item) => {
-          const key = `${tId}-${item.id || item.menuItemId || item.name}`;
-          const override = localItemStatusMap[key];
-          return override ? { ...item, kotStatus: override } : item;
-        });
-
       tableMap.set(tId, {
         ...tbl,
         tId,
-        drinkItems,
+        drinkItems: [],
       });
     });
 
-    // 2. Process backend tickets to catch any drink items
     backendTickets.forEach((ticket) => {
       const tId = String(ticket.tableId ?? ticket.TableId ?? "");
       if (!tId) return;
+      const timestamp = ticket.createdAt || ticket.orderTime;
+      const createdAt = timestamp ? Date.parse(timestamp) : NaN;
+      if (
+        !Number.isFinite(createdAt) ||
+        getBusinessDayKey(new Date(createdAt)) !== todayBusinessDayKey
+      ) {
+        return;
+      }
 
       const rawItems = Array.isArray(ticket.items)
         ? ticket.items
@@ -220,7 +228,7 @@ export function BarBOTView({
             dishName: i.dishName || i.name || i.drinkName || "Drink",
             quantity: i.quantity || 1,
             notes: i.specialNotes || i.preparationNotes || i.notes || "",
-            kotStatus: override || i.status || i.kotStatus || "received",
+            kotStatus: override || i.status || i.kotStatus || "queued",
             orderId: ticket.orderId || ticket.ticketId,
             orderTime: ticket.orderTime || ticket.createdAt,
             servingMeasure: i.servingMeasure,
@@ -261,7 +269,7 @@ export function BarBOTView({
     });
 
     return Array.from(tableMap.values());
-  }, [tables, backendTickets, menuLookup, liveBarDrinks, localItemStatusMap]);
+  }, [tables, backendTickets, menuLookup, liveBarDrinks, localItemStatusMap, todayBusinessDayKey]);
 
   // Active tables that have at least 1 drink item
   const activeBotTables = useMemo(() => {
@@ -295,36 +303,30 @@ export function BarBOTView({
   const handleUpdateDrinkStatus = async (tableId, item, nextStatus) => {
     const itemId = item.orderItemId || item.id || item.menuItemId;
     const key = `${tableId}-${itemId || item.name}`;
-
-    // 1. Optimistic local update
-    setLocalItemStatusMap((prev) => ({
-      ...prev,
-      [key]: nextStatus,
-    }));
-
-    // 2. Persist to backend
-    if (itemId && Number(itemId) > 0) {
-      try {
-        const res = await apiUpdateBarBotItemStatus(itemId, nextStatus);
-        if (!res?.success) {
-          await apiUpdateKitchenItemStatus(itemId, nextStatus);
-        }
-      } catch {
-        try {
-          await apiUpdateKitchenItemStatus(itemId, nextStatus);
-        } catch (err) {
-          console.warn("[BarBOTView] Update status fallback:", err?.message);
-        }
-      }
+    if (!itemId || !Number.isInteger(Number(itemId)) || Number(itemId) <= 0) {
+      setError("This drink ticket is missing a valid order item ID.");
+      return;
     }
 
-    // 3. Inform parent callbacks if present
+    try {
+      const response = await apiUpdateBarBotItemStatus(itemId, nextStatus);
+      if (!response?.success) {
+        throw new Error(response?.error || "The Bar BOT status update was rejected.");
+      }
+      setLocalItemStatusMap((prev) => ({
+        ...prev,
+        [key]: nextStatus,
+      }));
+      setError("");
+    } catch (err) {
+      setError(err?.message || "The drink status could not be saved.");
+      console.error("[BarBOTView] Drink status update failed:", err);
+      return;
+    }
+
     if (typeof onUpdateItemKotStatus === "function") {
       try {
         onUpdateItemKotStatus(tableId, nextStatus, itemId);
-      } catch {}
-      try {
-        onUpdateItemKotStatus(tableId, itemId, nextStatus);
       } catch {}
     }
 
@@ -345,6 +347,24 @@ export function BarBOTView({
   // Complete / ready all drinks for a table
   const handleCompleteTableDrinks = async (table) => {
     const items = table.drinkItems || [];
+    if (items.length === 0) return;
+    const tableId = Number(table.backendTableId ?? table.tId ?? table.id);
+    if (!Number.isInteger(tableId) || tableId <= 0) {
+      setError("This Bar BOT ticket is missing a valid table ID.");
+      return;
+    }
+
+    try {
+      const response = await apiMarkAllBarBotTableReady(tableId);
+      if (!response?.success) {
+        throw new Error(response?.error || "The Bar BOT items could not be marked ready.");
+      }
+    } catch (err) {
+      setError(err?.message || "The Bar BOT items could not be marked ready.");
+      console.error("[BarBOTView] Complete table drinks failed:", err);
+      return;
+    }
+
     const updates = {};
     items.forEach((item) => {
       const itemId = item.orderItemId || item.id || item.menuItemId;
@@ -352,24 +372,15 @@ export function BarBOTView({
       updates[key] = "ready";
     });
     setLocalItemStatusMap((prev) => ({ ...prev, ...updates }));
+    setError("");
 
-    // Try atomic table endpoint first
-    try {
-      await apiMarkAllBarBotTableReady(table.id);
-    } catch {
-      // Fallback per-item update
-      for (const item of items) {
+    if (typeof onUpdateItemKotStatus === "function") {
+      items.forEach((item) => {
         const itemId = item.orderItemId || item.id || item.menuItemId;
-        if (itemId && Number(itemId) > 0) {
-          try {
-            await apiUpdateBarBotItemStatus(itemId, "ready");
-          } catch {
-            try {
-              await apiUpdateKitchenItemStatus(itemId, "ready");
-            } catch {}
-          }
-        }
-      }
+        try {
+          onUpdateItemKotStatus(table.id, "ready", itemId);
+        } catch {}
+      });
     }
 
     if (typeof onItemsUpdated === "function") {
@@ -440,11 +451,16 @@ export function BarBOTView({
               padding: "1.5rem",
               overflowY: "auto",
             }
-          : {}
+          : {
+              width: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+              padding: embedded ? 0 : "0.5rem 0.75rem 1rem",
+            }
       }
     >
       {/* 1. Header Row (Matching Dine KOT Dispatch) */}
-      <div
+      {!embedded && <div
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -530,9 +546,14 @@ export function BarBOTView({
             <span>{isFullScreen ? "Close Full Screen" : "Open Full Screen BOT Screen"}</span>
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* 2. Table Filter Bar with Dropdown (Exact Match to Dine KOT) */}
+      {error && (
+        <div role="alert" style={{ color: "#fca5a5", marginBottom: "0.75rem" }}>
+          {error}
+        </div>
+      )}
       <div
         style={{
           background: "var(--bg-primary, #0b1120)",

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Printer, X, FileText, Receipt as ReceiptIcon } from 'lucide-react';
-import { formatCurrency } from '../utils/formatCurrency';
+import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
 import { getTodayDateString, getNextInvoiceNumber } from '../utils/invoiceCounter';
 import { printSurface } from '../utils/printSurface';
 
@@ -46,37 +46,46 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     quantity: Number(item?.quantity ?? item?.qty) || 1,
     price: Number(item?.price ?? item?.unitPrice) || 0,
   }));
+  const itemsSubtotal = roundCurrency(items.reduce((sum, item) => sum + (item.price * item.quantity), 0));
   const subtotal = table.subtotal !== undefined && Number(table.subtotal) > 0
     ? Number(table.subtotal)
-    : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    : itemsSubtotal;
+  const hasItemSubtotalMismatch =
+    items.length > 0 && subtotal > 0 && Math.abs(itemsSubtotal - subtotal) > 1;
   
   const discountPercent = Number(table.discountPercent) || 0;
   const discountAmount = table.discountAmount !== undefined && Number(table.discountAmount) > 0
     ? Number(table.discountAmount)
-    : (subtotal * discountPercent) / 100;
+    : roundCurrency((subtotal * discountPercent) / 100);
 
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
   const taxRate = 0.05; // 5% GST
   
   const taxAmount = table.taxAmount !== undefined && Number(table.taxAmount) > 0
     ? Number(table.taxAmount)
-    : taxableAmount * taxRate;
+    : roundCurrency(taxableAmount * taxRate);
   
   const cgst = taxAmount / 2;
   const sgst = taxAmount / 2;
   
   const serviceChargePercent = Number(table.serviceCharge) || 5;
-  const serviceChargeAmount = table.serviceChargeAmount !== undefined && Number(table.serviceChargeAmount) > 0
+  const serviceChargeAmount = table.serviceChargeAmount !== undefined && table.serviceChargeAmount !== null && Number.isFinite(Number(table.serviceChargeAmount))
     ? Number(table.serviceChargeAmount)
-    : (table.serviceCharge ? (taxableAmount * (serviceChargePercent / 100)) : 0);
+    : (table.serviceCharge ? roundCurrency(taxableAmount * (serviceChargePercent / 100)) : 0);
+  const tipAmount = Number(table.tipAmount ?? table.TipAmount) || 0;
   
   const grandTotal = table.grandTotal !== undefined && Number(table.grandTotal) > 0
     ? Number(table.grandTotal)
-    : Math.round(taxableAmount + taxAmount + serviceChargeAmount);
+    : roundCurrency(taxableAmount + taxAmount + serviceChargeAmount + tipAmount);
+  const calculatedTotal = roundCurrency(taxableAmount + taxAmount + serviceChargeAmount + tipAmount);
+  const hasTotalMismatch = Math.abs(calculatedTotal - grandTotal) > 1;
 
   const invoiceNumber = table.invoiceNo || getNextInvoiceNumber();
   const currentDate = table.date || getTodayDateString();
   const orderTime = formatReceiptTime(table.orderTime || table.createdAt || table.orderTimestamp);
+  const displayTableName = table.name || table.tableName || table.tableNumber || (table.id != null ? `Table ${table.id}` : "Takeaway / Direct");
+  const displaySection = table.section || table.sectionArea || table.area || "Dine-In";
+  const displayServer = table.server || table.serverName || table.assignedServer || "Staff";
   const tableCapacity = Number(table.capacity) || 0;
   const guestCount =
     (Number(table.guests) > 0 ? Number(table.guests) : null) ??
@@ -85,14 +94,16 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     2;
 
   // Determine if this bill has been settled and paid vs an unsettled active customer check
-  const isSettled = Boolean(
+  const receiptStatus = String(table.status || table.Status || "").toLowerCase();
+  const isVoid = ["void", "voided", "cancelled", "canceled"].includes(receiptStatus);
+  const isSettled = !isVoid && Boolean(
     (table.isPaid === true ||
      table.settled === true ||
-     String(table.status || '').toLowerCase() === 'settled' ||
-     String(table.status || '').toLowerCase() === 'paid' ||
+     receiptStatus === 'settled' ||
+     receiptStatus === 'paid' ||
      Boolean(table.settledAt)) &&
-    String(table.status || '').toLowerCase() !== 'occupied' &&
-    String(table.status || '').toLowerCase() !== 'active'
+    receiptStatus !== 'occupied' &&
+    receiptStatus !== 'active'
   );
 
   const paidTime = isSettled
@@ -232,6 +243,31 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           </button>
         </div>
 
+        {(hasItemSubtotalMismatch || hasTotalMismatch) && (
+          <div
+            className="no-print"
+            role="alert"
+            style={{
+              padding: "0.65rem 0.9rem",
+              color: "#7f1d1d",
+              background: "#fee2e2",
+              borderBottom: "1px solid #fecaca",
+              fontSize: "0.78rem",
+              lineHeight: 1.45,
+              fontWeight: 700,
+            }}
+          >
+            This invoice has inconsistent saved totals
+            {hasItemSubtotalMismatch
+              ? `: line items total ${formatCurrency(itemsSubtotal)} but the saved subtotal is ${formatCurrency(subtotal)}`
+              : ""}
+            {hasTotalMismatch
+              ? `${hasItemSubtotalMismatch ? "; " : ": "}saved total ${formatCurrency(grandTotal)} differs from the calculated total ${formatCurrency(calculatedTotal)}`
+              : ""}
+            . Review the source order before editing or printing; saved data was not changed.
+          </div>
+        )}
+
         {/* PRINTABLE RECEIPT CONTENT */}
         {printFormat === 'thermal' ? (
           /* ======================================================= */
@@ -283,7 +319,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 color: isSettled ? '#15803d' : '#b91c1c',
                 background: isSettled ? 'rgba(22, 163, 74, 0.08)' : 'rgba(220, 38, 38, 0.08)'
               }}>
-                {isSettled
+                {isVoid
+                  ? 'VOID — NOT A VALID PAYMENT INVOICE'
+                  : isSettled
                   ? '★ PAID TAX INVOICE ★'
                   : '⚠ GUEST BILL / ESTIMATE — UNPAID (PAYMENT DUE) ⚠'}
               </div>
@@ -291,13 +329,18 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
             {/* Bill Meta Grid */}
             <div style={{ borderBottom: '1px dashed #000000', paddingBottom: '0.45rem', marginBottom: '0.45rem', fontSize: '0.72rem', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, auto)', gap: '4px 10px' }}>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Table: <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></span>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Table: <strong>{displayTableName} ({displaySection})</strong></span>
               <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Inv: <strong>{invoiceNumber}</strong></span>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Server: <strong>{table.server || 'Staff'}</strong></span>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>Server: <strong>{displayServer}</strong></span>
               <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Guests: <strong>{guestCount}</strong></span>
               <span>Date: <strong>{currentDate}</strong></span>
               {orderTime && <span style={{ textAlign: 'right' }}>Order: <strong>{orderTime}</strong></span>}
-              {isSettled ? (
+              {isVoid ? (
+                <>
+                  <span style={{ color: '#b91c1c', fontWeight: 800 }}>Payment: <strong>VOID</strong></span>
+                  <span style={{ textAlign: 'right', fontWeight: 800, color: '#b91c1c' }}>Status: <strong>NOT VALID</strong></span>
+                </>
+              ) : isSettled ? (
                 <>
                   {paidTime && <span>Paid: <strong>{paidTime}</strong></span>}
                   <span style={{ textAlign: 'right', fontWeight: 800, color: '#15803d' }}>
@@ -385,6 +428,12 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#222222' }}>
                   <span>Service Charge ({serviceChargePercent}%):</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{serviceChargeAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {tipAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#222222' }}>
+                  <span>Tip:</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{tipAmount.toFixed(2)}</span>
                 </div>
               )}
 
@@ -479,10 +528,10 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 900, color: isSettled ? '#0f172a' : '#b91c1c', letterSpacing: '0.04em' }}>
-                  {isSettled ? 'TAX INVOICE' : 'GUEST ESTIMATE / UNPAID BILL'}
+                  {isVoid ? 'VOID INVOICE' : isSettled ? 'TAX INVOICE' : 'GUEST ESTIMATE / UNPAID BILL'}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: isSettled ? '#15803d' : '#b91c1c', fontWeight: 800 }}>
-                  {isSettled ? 'Original for Recipient (Settled & Paid)' : 'PAYMENT DUE — UNSETTLED'}
+                  {isVoid ? 'NOT VALID FOR PAYMENT' : isSettled ? 'Original for Recipient (Settled & Paid)' : 'PAYMENT DUE — UNSETTLED'}
                 </div>
                 <div style={{ fontSize: '0.86rem', fontWeight: 800, marginTop: '4px' }}>Invoice: #{invoiceNumber}</div>
                 <div style={{ fontSize: '0.74rem', color: '#475569' }}>
@@ -493,13 +542,13 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
             {/* Table / Order Meta Strip */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '0.85rem', fontSize: '0.78rem' }}>
-              <div><span style={{ color: '#64748b' }}>Table:</span> <strong>{table.name || `Table ${table.id}`} ({table.section || 'Dine-In'})</strong></div>
-              <div><span style={{ color: '#64748b' }}>Server:</span> <strong>{table.server || 'Staff'}</strong></div>
+              <div><span style={{ color: '#64748b' }}>Table:</span> <strong>{displayTableName} ({displaySection})</strong></div>
+              <div><span style={{ color: '#64748b' }}>Server:</span> <strong>{displayServer}</strong></div>
               <div><span style={{ color: '#64748b' }}>Guests:</span> <strong>{guestCount} Persons</strong></div>
               <div>
                 <span style={{ color: '#64748b' }}>Payment Status:</span>{' '}
                 <strong style={{ color: isSettled ? '#16a34a' : '#dc2626' }}>
-                  {isSettled ? (paymentMethod ? `${paymentMethod} (PAID)` : 'PAID') : 'UNPAID / BILL DUE'}
+                  {isVoid ? 'VOID / NOT VALID' : isSettled ? (paymentMethod ? `${paymentMethod} (PAID)` : 'PAID') : 'UNPAID / BILL DUE'}
                 </strong>
               </div>
             </div>
@@ -568,6 +617,12 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                     <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{serviceChargeAmount.toFixed(2)}</span>
                   </div>
                 )}
+                {tipAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', padding: '1px 0' }}>
+                    <span>Tip:</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{tipAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0f172a', borderBottom: '2px solid #0f172a', padding: '6px 0', marginTop: '4px', fontSize: '1.05rem', fontWeight: 900 }}>
                   <span>Total Payable:</span>
                   <span style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>₹{grandTotal.toFixed(2)}</span>
@@ -633,7 +688,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           >
             <Printer size={15} />
             <span>
-              Print {isSettled ? (printFormat === 'a4' ? 'A4 Tax Invoice' : 'Thermal Receipt') : (printFormat === 'a4' ? 'A4 Bill (Unpaid)' : 'Bill / Estimate')}
+              Print {isVoid ? 'Void Invoice' : isSettled ? (printFormat === 'a4' ? 'A4 Tax Invoice' : 'Thermal Receipt') : (printFormat === 'a4' ? 'A4 Bill (Unpaid)' : 'Bill / Estimate')}
             </span>
           </button>
         </div>

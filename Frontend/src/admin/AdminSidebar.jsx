@@ -3,6 +3,7 @@ import {
   ChefHat,
   LayoutDashboard,
   Utensils,
+  ShoppingBag,
   Armchair,
   Users,
   Package,
@@ -43,6 +44,7 @@ export function AdminSidebar({
   onClose,
   onLogout,
   menuCount = 0,
+  takeawayCount = 0,
   tablesCount = 0,
   staffCount = 0,
   activeKOTCount = 0,
@@ -79,6 +81,12 @@ export function AdminSidebar({
           label: "Staff & Persons",
           icon: Users,
           badge: staffCount,
+        },
+        {
+          id: "takeaway",
+          label: "Takeaway Orders",
+          icon: ShoppingBag,
+          badge: takeawayCount > 0 ? takeawayCount : null,
         },
         {
           id: "kot",

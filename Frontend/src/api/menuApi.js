@@ -1,5 +1,5 @@
-import { API_BASE_URL, apiClient } from "./apiConfig";
-import { getMenuItemImage } from "../utils/menuImageHelper";
+import { API_HTTP_BASE, apiClient } from "./apiConfig";
+import { getMenuItemImage, resolveMenuImageUrl } from "../utils/menuImageHelper";
 import {
   isDrinkCategory,
   isAlcoholicCategory,
@@ -65,14 +65,7 @@ export function normalizeMenuItem(item = {}) {
       (value) => typeof value === "string" && value.trim().length > 0,
     )?.trim() || "";
 
-  const resolvedImagePath =
-    typeof rawImagePath === "string" &&
-    rawImagePath.startsWith("/") &&
-    !rawImagePath.startsWith("//") &&
-    !rawImagePath.startsWith("/assets/") &&
-    API_BASE_URL
-      ? `${API_BASE_URL.replace(/\/$/, "")}${rawImagePath}`
-      : rawImagePath;
+  const resolvedImagePath = resolveMenuImageUrl(rawImagePath);
 
   const intermediate = {
     ...item,
@@ -80,7 +73,7 @@ export function normalizeMenuItem(item = {}) {
     name: item.name ?? item.dishName ?? item.dish_name ?? "",
     dishName: item.name ?? item.dishName ?? item.dish_name ?? "",
     drinkName: item.drinkName ?? item.name ?? item.dishName ?? "",
-    category: item.category ?? "",
+    category: item.category ?? item.categoryName ?? item.category_name ?? item.dishCategory ?? "",
     price: Number(item.price) || 0,
     dietaryType: resolvedDietary,
     isVeg: resolvedIsVeg,
@@ -150,7 +143,7 @@ export async function apiUploadMenuImage(file) {
       : null;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/menu-items/upload-image`, {
+    const response = await fetch(apiUrl("/api/v1/menu-items/upload-image"), {
       method: "POST",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -196,10 +189,7 @@ export async function apiUploadMenuImage(file) {
     }
     return {
       success: true,
-      imageUrl:
-        imageUrl.startsWith("/") && API_BASE_URL
-          ? `${API_BASE_URL.replace(/\/$/, "")}${imageUrl}`
-          : imageUrl,
+      imageUrl: resolveMenuImageUrl(imageUrl),
       data,
     };
   } catch (error) {

@@ -1,10 +1,11 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   X, Receipt, Search, Eye, Calendar, CalendarDays, CalendarRange,
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw, RefreshCw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
-import { dedupeOrders, sortOrdersBySettlementTime } from '../utils/orderDedupe';
+import { dedupeOrders, sortOrdersBySettlementTime, parseOrderToYMD } from '../utils/orderDedupe';
 import { requestLiveInvoiceRecords } from '../utils/liveInvoiceData';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
@@ -14,8 +15,29 @@ const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
 
 const formatOrderDate = (order, fallbackDate = TODAY_DATE_STR) => {
   if (!order) return fallbackDate;
-  if (order.date) return order.date;
-  if (order.settledDate) return order.settledDate;
+  const ymd = parseOrderToYMD(order);
+  if (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    const [year, month, day] = ymd.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+  }
+  const rawDate = order.settledDate || order.date || order.createdAt;
+  if (rawDate) {
+    const d = parseDisplayDate(rawDate);
+    if (d && !Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+  }
   if (order.orderTimestamp) {
     const date = new Date(Number(order.orderTimestamp));
     if (!Number.isNaN(date.getTime())) {
@@ -52,6 +74,10 @@ const parseDisplayDate = (value) => {
     const month = new Date(`${monthName} 1, ${year}`).getMonth();
     if (!Number.isNaN(month)) return new Date(Number(year), month, Number(day));
   }
+  const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  }
   const parsed = new Date(text);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
@@ -67,23 +93,24 @@ const formatUSDateInput = (value) => {
 const compareDatesNewestFirst = (a, b) =>
   (parseDisplayDate(b)?.getTime() || 0) - (parseDisplayDate(a)?.getTime() || 0);
 
-export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, onRefresh }) {
+export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
   const [liveOrders, setLiveOrders] = useState([]);
-  const [liveOrdersLoaded, setLiveOrdersLoaded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [liveOrdersError, setLiveOrdersError] = useState("");
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       const { records, error } = await requestLiveInvoiceRecords();
-      if (!error && Array.isArray(records)) {
-        setLiveOrders(records);
-        setLiveOrdersLoaded(true);
-        if (typeof onRefresh === 'function') {
-          onRefresh(records);
-        }
+      setLiveOrders(Array.isArray(records) ? records : []);
+      setLiveOrdersError(error || "");
+      if (Array.isArray(records) && typeof onRefresh === 'function') {
+        onRefresh(records);
       }
-    } catch {} finally {
+    } catch (error) {
+      setLiveOrders([]);
+      setLiveOrdersError(error?.message || "Live invoices could not be loaded.");
+    } finally {
       setIsRefreshing(false);
     }
   };
@@ -92,26 +119,14 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
     handleRefresh();
     const handleUpdate = () => handleRefresh();
     window.addEventListener("avsr-invoices-updated", handleUpdate);
-    window.addEventListener("storage", (e) => {
-      if (e.key === "gourmet_pos_past_orders_v2_inr") handleRefresh();
-    });
     return () => {
       window.removeEventListener("avsr-invoices-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
     };
   }, []);
 
   const uniquePastOrders = useMemo(() => {
-    const combined = liveOrdersLoaded
-      ? liveOrders
-      : pastOrders;
-    const settledOnly = combined.filter((o) => {
-      if (!o || typeof o !== "object") return false;
-      const status = String(o.status || o.Status || "").toLowerCase();
-      return status !== "active" && status !== "dining" && status !== "vacant";
-    });
-    return dedupeOrders(settledOnly);
-  }, [pastOrders, liveOrders, liveOrdersLoaded]);
+    return dedupeOrders(liveOrders);
+  }, [liveOrders]);
 
 
   // Helper to parse date from order safely
@@ -330,7 +345,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
 
     return sortedKeys.map(dateKey => {
       const orders = sortOrdersBySettlementTime(map[dateKey]);
-      const totalRev = orders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+      const totalRev = orders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0), 0);
       return {
         date: dateKey,
         orders,
@@ -448,7 +463,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
     return sortOrdersBySettlementTime(searchFilteredOrders);
   }, [viewMode, singleDayOrders, monthlyOrders, customRangeOrders, searchFilteredOrders]);
 
-  const totalCollected = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+  const totalCollected = activeOrders.reduce((sum, o) => sum + (Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0), 0);
   const averageTicket = activeOrders.length ? totalCollected / activeOrders.length : 0;
 
 
@@ -543,6 +558,11 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
             </button>
           </div>
         </div>
+        {liveOrdersError && (
+          <div role="alert" style={{ padding: "0.65rem 1rem", color: "var(--danger)", borderBottom: "1px solid var(--border-subtle)", fontSize: "0.8rem" }}>
+            {liveOrdersError}
+          </div>
+        )}
 
         {/* View Mode & Filter Navigation Bar */}
         <div style={{
@@ -672,7 +692,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
               </button>
 
               {/* Quick Date Select Dropdown */}
-              <select
+              <SearchableSelect
                 value={selectedDate}
                 onChange={e => {
                   setSelectedDate(e.target.value);
@@ -697,7 +717,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
                     </option>
                   );
                 })}
-              </select>
+              </SearchableSelect>
 
               {/* Native HTML DatePicker */}
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -804,7 +824,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
               </button>
 
               {/* Month Select Dropdown */}
-              <select
+              <SearchableSelect
                 value={selectedMonth}
                 onChange={e => {
                   setSelectedMonth(e.target.value);
@@ -829,7 +849,7 @@ export function PastOrdersModal({ pastOrders = [], onClose, onReprintReceipt, on
                     </option>
                   );
                 })}
-              </select>
+              </SearchableSelect>
 
               {/* Native HTML Month Picker */}
               <input
@@ -1388,7 +1408,7 @@ function OrderCard({ order, onReprintReceipt }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <div className="font-mono" style={{ fontSize: '1.02rem', fontWeight: 800, color: 'var(--text-main)' }}>
-          {formatCurrency(order.grandTotal)}
+          {formatCurrency(Number(order.grandTotal ?? order.totalAmount ?? order.total ?? 0) || 0)}
         </div>
 
         <button

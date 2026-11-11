@@ -24,6 +24,10 @@ public class CreateReservationDto
     }
     public string? CustomerPhone { get; set; }
 
+    [EmailAddress]
+    [MaxLength(100)]
+    public string? Email { get; set; }
+
     [Required]
     public long TableId { get; set; }
 
@@ -44,6 +48,8 @@ public class CreateReservationDto
     public DateTime? ReservationDateTime { get; set; }
 
     public string Status { get; set; } = "booked";
+
+    public string? TablePreference { get; set; }
 
     public string? Notes { get; set; }
 }

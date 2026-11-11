@@ -13,12 +13,15 @@ import {
   SettlementModal,
   TransferTableModal,
   PastOrdersModal,
+  TakeawayOrderFlowView,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
+import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
-import { setSession, logoutUser } from "./utils/auth";
+import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
 import {
   apiGetTables,
   apiCreateTable,
@@ -64,6 +67,7 @@ import {
 } from "./api/staffApi";
 import {
   apiGetOrderHistory,
+  apiGetActiveOrders,
   apiGetOrderForTable,
   apiCreateOrder,
   apiAddOrderItems,
@@ -73,12 +77,17 @@ import {
   apiUpdateOrderDiscount,
   apiSettleOrder,
 } from "./api/orderApi";
-import { apiAdjustStock } from "./api/inventoryApi";
-import { API_BASE_URL } from "./api/apiConfig";
+import {
+  apiAdjustStock,
+  apiCreateInventoryPurchase,
+  apiGetInventoryPurchases,
+} from "./api/inventoryApi";
+import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymentApi";
+import { API_BASE_URL, API_SYNC_BASE } from "./api/apiConfig";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
-import { getTodayDateString } from "./utils/invoiceCounter";
+import { getBusinessDayKey, getTodayDateString } from "./utils/invoiceCounter";
 import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
@@ -93,8 +102,171 @@ const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
 const STORAGE_KEY_MENU = "gourmet_pos_menu_items_v2";
 const STORAGE_KEY_STAFF = "gourmet_pos_staff_v1";
 const STORAGE_KEY_INVENTORY = "gourmet_pos_inventory_v1";
+const STORAGE_KEY_SALARY_PAYMENTS = "gourmet_pos_salary_payments_v1";
+const STORAGE_KEY_INVENTORY_PURCHASES = "gourmet_pos_inventory_purchases_v1";
 const STOCK_DEDUCTION_LEDGER_KEY = "gourmet_pos_inventory_deductions_v1";
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+
+const readStoredArray = (key) => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const mergeCurrentBusinessDayOrders = (tables, orders) => {
+  const today = getBusinessDayKey(new Date());
+  const orderByTableId = new Map();
+  const orderByTableNumber = new Map();
+
+  (Array.isArray(orders) ? orders : []).forEach((order) => {
+    const status = String(order?.status || order?.Status || "").toLowerCase();
+    const orderType = String(order?.orderType || order?.OrderType || "").toLowerCase();
+    const createdAt = order?.createdAt || order?.CreatedAt || order?.orderTimestamp;
+    if (
+      !order ||
+      !["active", "billed"].includes(status) ||
+      orderType === "takeaway" ||
+      !createdAt ||
+      getBusinessDayKey(createdAt) !== today
+    ) {
+      return;
+    }
+
+    const tableId = order.tableId ?? order.TableId;
+    const tableNumber = parseTableNumber({
+      tableNumber: order.tableNumber ?? order.TableNumber,
+      tableName: order.tableName ?? order.TableName,
+      name: order.tableName ?? order.TableName,
+    });
+    if (Number(tableId) > 0 && !orderByTableId.has(String(tableId))) {
+      orderByTableId.set(String(tableId), order);
+    }
+    if (tableNumber > 0 && !orderByTableNumber.has(String(tableNumber))) {
+      orderByTableNumber.set(String(tableNumber), order);
+    }
+  });
+
+  return tables.map((table) => {
+    const order =
+      orderByTableId.get(String(table.backendTableId ?? table.tableId ?? "")) ||
+      orderByTableNumber.get(String(parseTableNumber(table) || ""));
+    if (!order) return table;
+
+    const orderItems = Array.isArray(order.items)
+      ? order.items
+      : Array.isArray(order.Items)
+      ? order.Items
+      : [];
+    const items = orderItems
+      .filter((item) => {
+        const status = String(item?.status || item?.Status || "").toLowerCase();
+        const kotStatus = String(item?.kotStatus || item?.KotStatus || "").toLowerCase();
+        return status !== "cancelled" && status !== "canceled" && kotStatus !== "cancelled" && kotStatus !== "canceled";
+      })
+      .map((item) => ({
+        ...item,
+        id: item.id ?? item.Id,
+        orderItemId: item.orderItemId ?? item.OrderItemId ?? item.id ?? item.Id,
+        menuItemId: item.menuItemId ?? item.MenuItemId,
+        name: item.name ?? item.Name ?? item.dishName ?? item.DishName ?? "Order Item",
+        dishName: item.dishName ?? item.DishName ?? item.name ?? item.Name ?? "Order Item",
+        price: Number(item.price ?? item.Price) || 0,
+        quantity: Number(item.quantity ?? item.Quantity) || 1,
+        notes: item.notes ?? item.Notes ?? "",
+        status: "active",
+        kotStatus: String(item.kotStatus ?? item.KotStatus ?? "queued").toLowerCase(),
+        orderId: item.orderId ?? item.OrderId ?? order.id ?? order.Id,
+      }));
+
+    if (items.length === 0) return table;
+    const orderStatus = String(order.status ?? order.Status).toLowerCase();
+    const guests = Number(order.guests ?? order.Guests) || 0;
+    const createdAt = order.createdAt ?? order.CreatedAt;
+    return {
+      ...table,
+      status: orderStatus === "billed" ? "billed" : "occupied",
+      guests,
+      occupiedChairs: guests,
+      selectedSeats: [],
+      items,
+      activeOrderId: order.id ?? order.Id,
+      orderTime: createdAt,
+      orderTimestamp: new Date(createdAt).getTime() || null,
+      subtotal: Number(order.subtotal ?? order.Subtotal) || 0,
+      discountPercent: Number(order.discountPercent ?? order.DiscountPercent) || 0,
+      discountAmount: Number(order.discountAmount ?? order.DiscountAmount) || 0,
+      taxAmount: Number(order.taxAmount ?? order.TaxAmount) || 0,
+      serviceChargeAmount: Number(order.serviceChargeAmount ?? order.ServiceChargeAmount) || 0,
+      grandTotal: Number(order.grandTotal ?? order.GrandTotal) || 0,
+    };
+  });
+};
+
+const normalizeSalaryPayment = (payment) => ({
+  ...payment,
+  id: payment.id ?? payment.paymentId,
+  staffId: payment.staffId ?? payment.staffID,
+  staffName: payment.staffName || payment.name || "",
+  amount: Number(payment.amount) || 0,
+  paidOn: String(payment.paidOn || payment.paymentDate || "").slice(0, 10),
+  salaryPeriod: payment.salaryPeriod || payment.payPeriod || "",
+  paymentMethod: payment.paymentMethod || payment.method || "Bank Transfer",
+  notes: payment.notes || "",
+});
+
+const normalizeInventoryPurchase = (purchase) => ({
+  ...purchase,
+  id: purchase.id ?? purchase.purchaseId,
+  itemId: purchase.itemId ?? purchase.inventoryId,
+  name: purchase.name || purchase.itemName || "",
+  department: String(purchase.department || "dine").toLowerCase(),
+  quantity: Number(purchase.quantity) || 0,
+  unitCost: Number(purchase.unitCost) || 0,
+  totalCost: Number(purchase.totalCost) || (Number(purchase.quantity) || 0) * (Number(purchase.unitCost) || 0),
+  purchaseDate: String(purchase.purchaseDate || "").slice(0, 10),
+});
+
+const mergeSalaryPayments = (current, incoming) => {
+  const rows = new Map();
+  [...(Array.isArray(current) ? current : []), ...(Array.isArray(incoming) ? incoming : [])]
+    .map(normalizeSalaryPayment)
+    .forEach((payment) => {
+      const identity = payment.id != null
+        ? `id:${payment.id}`
+        : `${payment.staffId}|${payment.paidOn}|${payment.salaryPeriod}|${payment.amount}|${payment.paymentMethod}|${payment.notes}`;
+      rows.set(identity, { ...rows.get(identity), ...payment });
+    });
+  return Array.from(rows.values());
+};
+
+const mergeInventoryPurchases = (current, incoming) => {
+  const rows = new Map();
+  [...(Array.isArray(current) ? current : []), ...(Array.isArray(incoming) ? incoming : [])]
+    .map(normalizeInventoryPurchase)
+    .forEach((purchase) => {
+      const identity = purchase.id != null
+        ? `id:${purchase.id}`
+        : `${purchase.itemId}|${purchase.purchaseDate}|${purchase.quantity}|${purchase.unitCost}|${purchase.supplier}`;
+      rows.set(identity, { ...rows.get(identity), ...purchase });
+    });
+  return Array.from(rows.values());
+};
+
+let inFlightNetworkStateRequest = null;
+const requestSharedNetworkState = () => {
+  if (!inFlightNetworkStateRequest) {
+    inFlightNetworkStateRequest = fetch(`${API_SYNC_BASE}/api/state`, {
+      headers: { "ngrok-skip-browser-warning": "true" },
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .catch(() => null)
+      .finally(() => { inFlightNetworkStateRequest = null; });
+  }
+  return inFlightNetworkStateRequest;
+};
 
 
 const readRestaurantSettings = () => {
@@ -127,6 +299,27 @@ const dedupeStaff = (staff) => {
   return Array.from(byIdentity.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
 };
 
+const mergeStaffWithLocalSalaries = (incomingStaff, existingStaff) => {
+  const existing = Array.isArray(existingStaff) ? existingStaff : [];
+  return dedupeStaff((Array.isArray(incomingStaff) ? incomingStaff : []).map((person) => {
+    const incomingIds = [person.staffId, person.backendStaffId, person.id]
+      .filter((id) => id != null)
+      .map(String);
+    const localPerson = existing.find((candidate) =>
+      [candidate.backendStaffId, candidate.staffId, candidate.id]
+        .filter((id) => id != null)
+        .some((id) => incomingIds.includes(String(id))),
+    ) || existing.find((candidate) =>
+      String(candidate.name || candidate.fullName || "").trim().toLowerCase() ===
+        String(person.name || person.fullName || "").trim().toLowerCase(),
+    );
+    const salary = person.monthlySalary == null
+      ? Number(localPerson?.monthlySalary) || 0
+      : Number(person.monthlySalary) || 0;
+    return { ...person, monthlySalary: salary };
+  }));
+};
+
 const isRogueName = (name) => {
   if (!name) return false;
   const lower = String(name).trim().toLowerCase();
@@ -145,30 +338,65 @@ const parseTableNumber = (table) => {
   return getTableSortNumber(table);
 };
 
-const mergeIncomingTables = (incomingTables, deletedTableIds) => {
+const clearCachedTableOrder = (table) => ({
+  ...table,
+  status: ["reserved", "cleaning", "inactive"].includes(
+    String(table.status || "").toLowerCase(),
+  )
+    ? table.status
+    : "vacant",
+  guests: 0,
+  occupiedChairs: 0,
+  selectedSeats: [],
+  items: [],
+  orderTime: null,
+  orderTimestamp: null,
+  occupiedSince: null,
+  activeOrderId: null,
+  cookingStartedAt: null,
+  completedAt: null,
+  completedDuration: null,
+  discountPercent: 0,
+  discountAmount: 0,
+  subtotal: 0,
+  taxAmount: 0,
+  serviceChargeAmount: 0,
+  grandTotal: 0,
+});
+
+const mergeIncomingTables = (
+  incomingTables,
+  deletedTableIds,
+  { preserveCachedOrders = true, preserveCachedDefinitions = true } = {},
+) => {
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
     : [];
   const tablesById = new Map();
 
   // Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
-  try {
-    const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
-    if (rawSaved) {
-      const parsedSaved = JSON.parse(rawSaved);
-      if (Array.isArray(parsedSaved)) {
-        parsedSaved.forEach((st) => {
-          if (st && st.id && !deletedIds.includes(String(st.id))) {
-            const num = parseTableNumber(st) || Number(st.id);
-            if (num) {
-              const existingDef = tablesById.get(num) || {};
-              tablesById.set(num, { ...existingDef, ...st });
+  if (preserveCachedDefinitions) {
+    try {
+      const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
+      if (rawSaved) {
+        const parsedSaved = JSON.parse(rawSaved);
+        if (Array.isArray(parsedSaved)) {
+          parsedSaved.forEach((savedTable) => {
+            const st = preserveCachedOrders
+              ? savedTable
+              : clearCachedTableOrder(savedTable);
+            if (st && st.id && !deletedIds.includes(String(st.id))) {
+              const num = parseTableNumber(st) || Number(st.id);
+              if (num) {
+                const existingDef = tablesById.get(num) || {};
+                tablesById.set(num, { ...existingDef, ...st });
+              }
             }
-          }
-        });
+          });
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   // 2. Overlay incoming live tables from server or localStorage
   if (Array.isArray(incomingTables)) {
@@ -200,7 +428,7 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
       const hasActiveItems =
         (Array.isArray(table.items) && table.items.length > 0)
           ? table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
-          : (Array.isArray(existing.items) && existing.items.length > 0
+          : (preserveCachedOrders && Array.isArray(existing.items) && existing.items.length > 0
               ? existing.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled")
               : false);
 
@@ -218,13 +446,13 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
         : (Number(table.guests) > 0 ? Number(table.guests) : null) ??
           (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
           (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
-          (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
+          (preserveCachedOrders && Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
           0;
 
       const resolvedItems =
         (Array.isArray(table.items) && table.items.length > 0)
           ? table.items
-          : (Array.isArray(existing.items) && existing.items.length > 0
+          : (preserveCachedOrders && Array.isArray(existing.items) && existing.items.length > 0
               ? existing.items
               : (Array.isArray(table.items) ? table.items : []));
 
@@ -249,20 +477,20 @@ const mergeIncomingTables = (incomingTables, deletedTableIds) => {
           ? []
           : (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0
               ? table.selectedSeats
-              : (Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
+              : (preserveCachedOrders && Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
         items: isFinalVacant ? [] : resolvedItems,
-        orderTime: isFinalVacant ? null : (table.orderTime ?? existing.orderTime ?? null),
-        orderTimestamp: isFinalVacant ? null : (table.orderTimestamp ?? existing.orderTimestamp ?? null),
-        cookingStartedAt: isFinalVacant ? null : (table.cookingStartedAt ?? existing.cookingStartedAt ?? null),
-        completedAt: isFinalVacant ? null : (table.completedAt ?? existing.completedAt ?? null),
-        completedDuration: isFinalVacant ? null : (table.completedDuration ?? existing.completedDuration ?? null),
+        orderTime: isFinalVacant ? null : (table.orderTime ?? (preserveCachedOrders ? existing.orderTime : null) ?? null),
+        orderTimestamp: isFinalVacant ? null : (table.orderTimestamp ?? (preserveCachedOrders ? existing.orderTimestamp : null) ?? null),
+        cookingStartedAt: isFinalVacant ? null : (table.cookingStartedAt ?? (preserveCachedOrders ? existing.cookingStartedAt : null) ?? null),
+        completedAt: isFinalVacant ? null : (table.completedAt ?? (preserveCachedOrders ? existing.completedAt : null) ?? null),
+        completedDuration: isFinalVacant ? null : (table.completedDuration ?? (preserveCachedOrders ? existing.completedDuration : null) ?? null),
         discountPercent: Number(
-          table.discountPercent ?? existing.discountPercent ?? 0,
+          table.discountPercent ?? (preserveCachedOrders ? existing.discountPercent : 0) ?? 0,
         ),
         serviceCharge: Number(
           table.serviceCharge ?? existing.serviceCharge ?? 5,
         ),
-        occupiedSince: isFinalVacant ? null : (table.occupiedSince || existing.occupiedSince || null),
+        occupiedSince: isFinalVacant ? null : (table.occupiedSince || (preserveCachedOrders ? existing.occupiedSince : null) || null),
       };
 
       tablesById.set(targetId, normalized);
@@ -342,19 +570,7 @@ export function App() {
       }
     };
     const loadInitialSettings = async () => {
-      let data = null;
-      try {
-        const res = await fetch("/api/state");
-        if (res.ok) data = await res.json();
-      } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
+      const data = await requestSharedNetworkState();
       if (data && active) {
         applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
       }
@@ -375,7 +591,7 @@ export function App() {
       localEvents.onmessage = handleSettingsMsg;
     } catch {}
 
-    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+    if (!import.meta.env.DEV && API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
       try {
         remoteEvents = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
         remoteEvents.onmessage = handleSettingsMsg;
@@ -413,15 +629,7 @@ export function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return mergeIncomingTables(parsed, delList)
-            .map((t) => {
-              const safeItems = Array.isArray(t.items) ? t.items : [];
-              const hasActiveItems = safeItems.some(i => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
-              if (!hasActiveItems && t.status === "occupied") {
-                return { ...t, status: "vacant", guests: 0, occupiedChairs: 0, selectedSeats: [], items: [] };
-              }
-              return { ...t, items: safeItems };
-            })
+          return mergeIncomingTables(parsed, delList, { preserveCachedOrders: false })
             .filter((t) => !isDeleted(t.id));
         }
       }
@@ -430,6 +638,8 @@ export function App() {
     }
     return [];
   });
+  const [tablesReadyForSync, setTablesReadyForSync] = useState(false);
+  const replaceCachedTableOrdersRef = useRef(false);
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
     tables: "loading",
     staff: "loading",
@@ -522,6 +732,12 @@ export function App() {
     }
     return [];
   });
+  const [salaryPayments, setSalaryPayments] = useState([]);
+  const salaryPaymentsApiLoadedRef = useRef(false);
+  const [salaryPaymentsApiLoaded, setSalaryPaymentsApiLoaded] = useState(false);
+  const [inventoryPurchases, setInventoryPurchases] = useState([]);
+  const inventoryPurchasesApiLoadedRef = useRef(false);
+  const [inventoryPurchasesApiLoaded, setInventoryPurchasesApiLoaded] = useState(false);
 
   // Past settled orders history in Rupees
   const [pastOrders, setPastOrders] = useState(() => {
@@ -539,6 +755,7 @@ export function App() {
 
   // Navigation & Table Selection ('tables' | 'order' | 'kot')
   const [activeView, setActiveView] = useState("tables");
+  const [activeKotStation, setActiveKotStation] = useState("kitchen");
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
   const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
@@ -548,37 +765,72 @@ export function App() {
 
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
-  const isUserRoute = !isKotRoute && !isAdminRoute;
 
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
-    apiGetTables().then((response) => {
-      const backendTables = Array.isArray(response)
-        ? response
-        : response?.success && Array.isArray(response.data)
-          ? response.data
-          : response?.success && Array.isArray(response.tables)
-            ? response.tables
-        : response?.success && Array.isArray(response.data?.tables)
-          ? response.data.tables
-        : response?.success && Array.isArray(response.data?.data)
-          ? response.data.data
-          : null;
-      if (Array.isArray(backendTables)) {
-        const merged = mergeIncomingTables(
+    const loadLiveTables = async () => {
+      try {
+        const response = await apiGetTables();
+        const backendTables = Array.isArray(response)
+          ? response
+          : response?.success && Array.isArray(response.data)
+            ? response.data
+            : response?.success && Array.isArray(response.tables)
+              ? response.tables
+              : response?.success && Array.isArray(response.data?.tables)
+                ? response.data.tables
+                : response?.success && Array.isArray(response.data?.data)
+                  ? response.data.data
+                  : null;
+        if (!Array.isArray(backendTables)) {
+          throw new Error(response?.error || response?.data?.message || "Table records could not be loaded.");
+        }
+
+        const tableDefinitions = mergeIncomingTables(
           backendTables,
           getDeletedTableIds(),
+          { preserveCachedOrders: false, preserveCachedDefinitions: false },
         );
+        const ordersResponse = await apiGetActiveOrders();
+        const activeOrders = ordersResponse?.success && Array.isArray(ordersResponse.data)
+          ? ordersResponse.data
+          : ordersResponse?.success && Array.isArray(ordersResponse.data?.orders)
+            ? ordersResponse.data.orders
+            : null;
+        if (!activeOrders) {
+          throw new Error(
+            ordersResponse?.error ||
+            ordersResponse?.data?.message ||
+            "Active POS orders could not be loaded.",
+          );
+        }
+
+        const merged = mergeCurrentBusinessDayOrders(tableDefinitions, activeOrders);
+        replaceCachedTableOrdersRef.current = true;
         setTables(merged);
-        try {
-          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(merged));
-        } catch {}
         setSharedRecordLoad((state) => ({ ...state, tables: "ready", tableError: "" }));
-      } else {
-        setSharedRecordLoad((state) => ({ ...state, tables: "error", tableError: response?.error || response?.data?.message || "Table records could not be loaded." }));
+        setTablesReadyForSync(true);
+      } catch (error) {
+        let cachedTables = [];
+        try {
+          cachedTables = JSON.parse(localStorage.getItem(STORAGE_KEY_TABLES) || "[]");
+        } catch {}
+        if (Array.isArray(cachedTables) && cachedTables.length > 0) {
+          setTables(cachedTables);
+        } else {
+          const cleanCachedTables = mergeIncomingTables(
+            [],
+            getDeletedTableIds(),
+            { preserveCachedOrders: false },
+          );
+          setTables(cleanCachedTables);
+        }
+        setSharedRecordLoad((state) => ({ ...state, tables: "error", tableError: error?.message || "Table records could not be loaded." }));
+        setTablesReadyForSync(true);
       }
-    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, tables: "error", tableError: error?.message || "Table records could not be loaded." })));
+    };
+    loadLiveTables();
 
     // 2. Load live menu items from backend API
     apiGetMenuItems().then((response) => {
@@ -657,25 +909,39 @@ export function App() {
             ? response.staff
             : null;
       if (Array.isArray(backendStaff) && backendStaff.length > 0) {
-        const uniqueStaff = dedupeStaff(backendStaff.map((s) => ({
-          ...s,
-          id: s.staffId ?? s.id,
-          staffId: s.staffId ?? s.id,
-          name: s.fullName || s.name,
-          fullName: s.fullName || s.name,
-          role: s.roleTitle || s.role || "Waiter",
-          roleTitle: s.roleTitle || s.role || "Waiter",
-        })));
+        const locallySavedStaff = readStoredArray(STORAGE_KEY_STAFF);
+        const uniqueStaff = dedupeStaff(backendStaff.map((s) => {
+          const localSalary = mergeStaffWithLocalSalaries([{
+            id: s.staffId ?? s.id,
+            backendStaffId: s.staffId ?? s.id,
+            name: s.fullName || s.name,
+            monthlySalary: s.monthlySalary,
+          }], locallySavedStaff)[0]?.monthlySalary;
+          return {
+            ...s,
+            id: s.staffId ?? s.id,
+            staffId: s.staffId ?? s.id,
+            backendStaffId: s.staffId ?? s.id,
+            name: s.fullName || s.name,
+            fullName: s.fullName || s.name,
+            role: s.roleTitle || s.role || "Waiter",
+            roleTitle: s.roleTitle || s.role || "Waiter",
+            monthlySalary: localSalary,
+          };
+        }));
         setStaffList(uniqueStaff);
         try {
           localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(uniqueStaff));
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       } else {
-        setStaffList([]);
-        try {
-          localStorage.setItem(STORAGE_KEY_STAFF, "[]");
-        } catch {}
+        const locallySavedStaff = readStoredArray(STORAGE_KEY_STAFF);
+        setStaffList(locallySavedStaff);
+        if (locallySavedStaff.length === 0) {
+          try {
+            localStorage.setItem(STORAGE_KEY_STAFF, "[]");
+          } catch {}
+        }
         setSharedRecordLoad((state) => ({ ...state, staff: "ready", staffError: "" }));
       }
     }).catch((error) => {
@@ -689,6 +955,38 @@ export function App() {
         setPastOrders((current) => mergeSettledOrders(current, records));
       }
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadInventoryPurchases = async () => {
+      try {
+        const response = await apiGetInventoryPurchases();
+        const rows = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.data?.data)
+            ? response.data.data
+            : null;
+        if (!response?.success || !rows) {
+          throw new Error(response?.error || "Inventory purchase records could not be loaded.");
+        }
+        if (cancelled) return;
+        inventoryPurchasesApiLoadedRef.current = true;
+        setInventoryPurchasesApiLoaded(true);
+        setInventoryPurchases(rows.map(normalizeInventoryPurchase));
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Inventory] Failed to load purchase records from the API:", error);
+        inventoryPurchasesApiLoadedRef.current = true;
+        setInventoryPurchasesApiLoaded(true);
+        setInventoryPurchases([]);
+        showToast(`Inventory purchase history is unavailable: ${error?.message || "API request failed."}`);
+      }
+    };
+    loadInventoryPurchases();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ── Authentication sessions per route ────────────────────────────────
@@ -707,15 +1005,81 @@ export function App() {
     }
   };
 
-  const [posSession, setPosSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_POS),
+  const [posSession, setPosSession] = useState(null);
+  const [kotSession, setKotSession] = useState(null);
+  const [adminSession, setAdminSession] = useState(null);
+  const isLandingRoute = location.pathname === "/" && !posSession;
+  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
+  const [authRestorePending, setAuthRestorePending] = useState(() =>
+    [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
-  const [kotSession, setKotSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_KOT),
-  );
-  const [adminSession, setAdminSession] = useState(() =>
-    loadRouteSession(SESSION_KEY_ADMIN),
-  );
+
+  // A saved browser session is only a hint. Revalidate it with the API before
+  // restoring an authenticated workspace so a server outage cannot look like
+  // a successful login on this device.
+  useEffect(() => {
+    const savedSessions = {
+      pos: loadRouteSession(SESSION_KEY_POS),
+      kot: loadRouteSession(SESSION_KEY_KOT),
+      admin: loadRouteSession(SESSION_KEY_ADMIN),
+    };
+    if (!savedSessions.pos && !savedSessions.kot && !savedSessions.admin) {
+      setAuthRestorePending(false);
+      return;
+    }
+
+    let savedToken = "";
+    try {
+      savedToken = localStorage.getItem("avsr_jwt_token") || "";
+    } catch {
+      // A blocked storage environment cannot provide a restorable token.
+    }
+
+    const restoreSavedSessions = () => {
+      setPosSession(savedSessions.pos);
+      setKotSession(savedSessions.kot);
+      setAdminSession(savedSessions.admin);
+    };
+    const clearSavedSessions = () => {
+      logoutUser();
+      setPosSession(null);
+      setKotSession(null);
+      setAdminSession(null);
+    };
+
+    if (!savedToken) {
+      clearSavedSessions();
+      setAuthRestorePending(false);
+      return;
+    }
+
+    let active = true;
+    fetchCurrentAuthUser()
+      .then(({ success, status }) => {
+        if (!active) return;
+        if (success) {
+          restoreSavedSessions();
+          return;
+        }
+        if (status === 401) {
+          clearSavedSessions();
+          return;
+        }
+        // Network errors and server/permission failures do not invalidate a
+        // previously stored session. Keep the user signed in while the API is
+        // unavailable or refuses an endpoint for a non-authentication reason.
+        restoreSavedSessions();
+      })
+      .catch(() => {
+        if (!active) return;
+        restoreSavedSessions();
+      })
+      .finally(() => {
+        if (active) setAuthRestorePending(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   const saveRouteSession = (key, session) => {
     try {
@@ -793,6 +1157,38 @@ export function App() {
     }, 2800);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadSalaryPayments = async () => {
+      try {
+        const response = await apiGetSalaryPayments();
+        const rows = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.data?.data)
+            ? response.data.data
+            : null;
+        if (!response?.success || !rows) {
+          throw new Error(response?.error || "Salary payment records could not be loaded.");
+        }
+        if (cancelled) return;
+        salaryPaymentsApiLoadedRef.current = true;
+        setSalaryPaymentsApiLoaded(true);
+        setSalaryPayments(rows.map(normalizeSalaryPayment));
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Payroll] Failed to load salary payments from the API:", error);
+        salaryPaymentsApiLoadedRef.current = true;
+        setSalaryPaymentsApiLoaded(true);
+        setSalaryPayments([]);
+        showToast(`Salary history is unavailable: ${error?.message || "API request failed."}`);
+      }
+    };
+    loadSalaryPayments();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ── Kitchen Real-Time Notifications System ───────────────────
   const STORAGE_KEY_KITCHEN_NOTIFICATIONS = "avsr_kitchen_notifications";
   const STORAGE_KEY_LATEST_ALERT = "avsr_latest_kitchen_alert";
@@ -824,21 +1220,13 @@ export function App() {
         "ngrok-skip-browser-warning": "true",
       };
 
-      // 1. Primary sync to the same-origin host server (instant LAN / multi-device SSE broadcast)
-      fetch("/api/sync", {
+      // Persist through the shared API first. In Vite development, relay the
+      // accepted update locally for instant LAN screen refreshes as well.
+      fetch(`${API_SYNC_BASE}/api/sync`, {
         method: "POST",
         headers,
         body: syncBody,
       }).catch(() => {});
-
-      // 2. Also sync to remote backend API if configured and different from host
-      if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
-        fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/sync`, {
-          method: "POST",
-          headers,
-          body: syncBody,
-        }).catch(() => {});
-      }
     } catch {}
   };
 
@@ -900,6 +1288,7 @@ export function App() {
 
   // Sync to LocalStorage & Global Network DB
   useEffect(() => {
+    if (!tablesReadyForSync) return;
     try {
       const isDeleted = (id) =>
         (Array.isArray(deletedTableIds) ? deletedTableIds : []).some(
@@ -908,9 +1297,14 @@ export function App() {
       const cleanTables = mergeIncomingTables(
         Array.isArray(tables) ? tables : [],
         deletedTableIds,
+        {
+          preserveCachedOrders: !replaceCachedTableOrdersRef.current,
+          preserveCachedDefinitions: !replaceCachedTableOrdersRef.current,
+        },
       )
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
+      replaceCachedTableOrdersRef.current = false;
       const cleanJson = JSON.stringify(cleanTables);
       if (localStorage.getItem(STORAGE_KEY_TABLES) !== cleanJson) {
         localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
@@ -918,9 +1312,10 @@ export function App() {
         broadcastSync("SYNC_TABLES", cleanTables);
       }
     } catch {}
-  }, [tables, deletedTableIds]);
+  }, [tables, deletedTableIds, tablesReadyForSync]);
 
   useEffect(() => {
+    if (sharedRecordLoad.menu === "loading") return;
     try {
       const menuJson = JSON.stringify(menuItems);
       if (localStorage.getItem(STORAGE_KEY_MENU) !== menuJson) {
@@ -929,7 +1324,7 @@ export function App() {
         broadcastSync("SYNC_MENU", menuItems);
       }
     } catch {}
-  }, [menuItems]);
+  }, [menuItems, sharedRecordLoad.menu]);
 
   useEffect(() => {
     try {
@@ -941,6 +1336,34 @@ export function App() {
       }
     } catch {}
   }, [staffList]);
+
+  useEffect(() => {
+    if (!salaryPaymentsApiLoaded) return;
+    try {
+      const paymentsJson = JSON.stringify(salaryPayments);
+      if (localStorage.getItem(STORAGE_KEY_SALARY_PAYMENTS) !== paymentsJson) {
+        localStorage.setItem(STORAGE_KEY_SALARY_PAYMENTS, paymentsJson);
+        pushGlobalSync({ [STORAGE_KEY_SALARY_PAYMENTS]: salaryPayments });
+        broadcastSync("SYNC_SALARY_PAYMENTS", salaryPayments);
+      }
+    } catch (error) {
+      console.error("[Payroll] Failed to save salary payment history:", error);
+    }
+  }, [salaryPayments, salaryPaymentsApiLoaded]);
+
+  useEffect(() => {
+    if (!inventoryPurchasesApiLoaded) return;
+    try {
+      const purchasesJson = JSON.stringify(inventoryPurchases);
+      if (localStorage.getItem(STORAGE_KEY_INVENTORY_PURCHASES) !== purchasesJson) {
+        localStorage.setItem(STORAGE_KEY_INVENTORY_PURCHASES, purchasesJson);
+        pushGlobalSync({ [STORAGE_KEY_INVENTORY_PURCHASES]: inventoryPurchases });
+        broadcastSync("SYNC_INVENTORY_PURCHASES", inventoryPurchases);
+      }
+    } catch (error) {
+      console.error("[Inventory] Failed to save purchase history:", error);
+    }
+  }, [inventoryPurchases, inventoryPurchasesApiLoaded]);
 
   useEffect(() => {
     try {
@@ -962,27 +1385,7 @@ export function App() {
 
     // 1. Fetch initial network DB state on startup (same-origin host with fallback)
     const fetchInitialDbState = async () => {
-      let data = null;
-      try {
-        const res = await fetch("/api/state");
-        if (res.ok) data = await res.json();
-      } catch {}
-      if (!data && API_BASE_URL) {
-        try {
-          const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/state`, {
-            headers: { "ngrok-skip-browser-warning": "true" },
-          });
-          if (res.ok) data = await res.json();
-        } catch {}
-      }
-      // Load live backend invoices into pastOrders so all panels display identical billing records
-      try {
-        const { records: liveInvoices } = await requestLiveInvoiceRecords();
-        if (Array.isArray(liveInvoices) && liveInvoices.length > 0 && !isCancelled) {
-          setPastOrders((current) => mergeSettledOrders(current, liveInvoices));
-        }
-      } catch {}
-
+      const data = await requestSharedNetworkState();
       if (!data || isCancelled) return;
         if (!data) return;
         const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
@@ -1017,15 +1420,18 @@ export function App() {
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
         if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
-          const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
+          const localStaff = readStoredArray(STORAGE_KEY_STAFF);
+          const normalizedStaff = mergeStaffWithLocalSalaries(incomingStaff.map((s) => ({
             id: s.staffId ?? s.id,
+            backendStaffId: s.backendStaffId ?? s.staffId ?? s.id,
             name: s.fullName || s.name,
             role: s.roleTitle || s.role || "Waiter",
             phone: s.phone || "",
             email: s.email || "",
             shift: s.shift || "Full Day",
+            monthlySalary: s.monthlySalary,
             status: s.isActive === false ? "inactive" : "active",
-          })));
+          })), localStaff);
           setStaffList(normalizedStaff);
           try {
             localStorage.setItem(
@@ -1050,6 +1456,14 @@ export function App() {
             localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
             window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
           } catch {}
+        }
+        const incomingSalaryPayments = data[STORAGE_KEY_SALARY_PAYMENTS];
+        if (!salaryPaymentsApiLoadedRef.current && Array.isArray(incomingSalaryPayments)) {
+          setSalaryPayments((current) => mergeSalaryPayments(current, incomingSalaryPayments));
+        }
+        const incomingInventoryPurchases = data[STORAGE_KEY_INVENTORY_PURCHASES];
+        if (!inventoryPurchasesApiLoadedRef.current && Array.isArray(incomingInventoryPurchases)) {
+          setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingInventoryPurchases));
         }
     };
     fetchInitialDbState();
@@ -1143,15 +1557,18 @@ export function App() {
           }
           const incomingStaff = payload.staff ?? payload[STORAGE_KEY_STAFF];
           if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
-            const normalizedStaff = dedupeStaff(incomingStaff.map((s) => ({
+            const localStaff = readStoredArray(STORAGE_KEY_STAFF);
+            const normalizedStaff = mergeStaffWithLocalSalaries(incomingStaff.map((s) => ({
               id: s.staffId || s.id,
+              backendStaffId: s.backendStaffId ?? s.staffId ?? s.id,
               name: s.fullName || s.name,
               role: s.roleTitle || s.role || "Waiter",
               phone: s.phone || "",
               email: s.email || "",
               shift: s.shift || "Full Day",
+              monthlySalary: s.monthlySalary,
               status: s.isActive === false ? "inactive" : "active",
-            })));
+            })), localStaff);
             setStaffList(normalizedStaff);
             try {
               localStorage.setItem(
@@ -1166,6 +1583,14 @@ export function App() {
               localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(incomingInventory));
               window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
             } catch {}
+          }
+          const incomingSalaryPayments = payload[STORAGE_KEY_SALARY_PAYMENTS];
+          if (!salaryPaymentsApiLoadedRef.current && Array.isArray(incomingSalaryPayments)) {
+            setSalaryPayments((current) => mergeSalaryPayments(current, incomingSalaryPayments));
+          }
+          const incomingInventoryPurchases = payload[STORAGE_KEY_INVENTORY_PURCHASES];
+          if (!inventoryPurchasesApiLoadedRef.current && Array.isArray(incomingInventoryPurchases)) {
+            setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingInventoryPurchases));
           }
           if (payload["avsr_auth_users_v1"]) {
             try {
@@ -1193,7 +1618,7 @@ export function App() {
       localEs.onmessage = handleSseMessage;
     } catch {}
 
-    if (API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
+    if (!import.meta.env.DEV && API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
       try {
         remoteEs = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
         remoteEs.onmessage = handleSseMessage;
@@ -1251,6 +1676,20 @@ export function App() {
             window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: incomingInventory }));
           }
         } catch {}
+      } else if (e.key === STORAGE_KEY_SALARY_PAYMENTS) {
+        try {
+          const incomingPayments = JSON.parse(e.newValue);
+          if (!salaryPaymentsApiLoadedRef.current && Array.isArray(incomingPayments)) {
+            setSalaryPayments((current) => mergeSalaryPayments(current, incomingPayments));
+          }
+        } catch {}
+      } else if (e.key === STORAGE_KEY_INVENTORY_PURCHASES && !inventoryPurchasesApiLoadedRef.current) {
+        try {
+          const incomingPurchases = JSON.parse(e.newValue);
+          if (Array.isArray(incomingPurchases)) {
+            setInventoryPurchases((current) => mergeInventoryPurchases(current, incomingPurchases));
+          }
+        } catch {}
       } else if (e.key === RESTAURANT_SETTINGS_KEY) {
         try {
           const incomingSettings = JSON.parse(e.newValue);
@@ -1300,6 +1739,10 @@ export function App() {
           } else if (type === "SYNC_STAFF" && Array.isArray(payload) && payload.length > 0) {
             const deduped = dedupeStaff(payload);
             setStaffList((prev) => (JSON.stringify(prev) === JSON.stringify(deduped) ? prev : deduped));
+          } else if (type === "SYNC_SALARY_PAYMENTS" && !salaryPaymentsApiLoadedRef.current && Array.isArray(payload)) {
+            setSalaryPayments((current) => mergeSalaryPayments(current, payload));
+          } else if (type === "SYNC_INVENTORY_PURCHASES" && !inventoryPurchasesApiLoadedRef.current && Array.isArray(payload)) {
+            setInventoryPurchases((current) => mergeInventoryPurchases(current, payload));
           } else if (type === "SYNC_DELETED_TABLES" && Array.isArray(payload)) {
             setDeletedTableIds(payload);
             setTables((prev) => prev.filter((t) => !payload.map(String).includes(String(t.id))));
@@ -1353,6 +1796,19 @@ export function App() {
         }
       } catch {}
 
+      if (!salaryPaymentsApiLoadedRef.current) {
+        const localSalaryPayments = readStoredArray(STORAGE_KEY_SALARY_PAYMENTS);
+        setSalaryPayments((current) => localSalaryPayments.length
+          ? mergeSalaryPayments(current, localSalaryPayments)
+          : []);
+      }
+      if (!inventoryPurchasesApiLoadedRef.current) {
+        const localInventoryPurchases = readStoredArray(STORAGE_KEY_INVENTORY_PURCHASES);
+        setInventoryPurchases((current) => localInventoryPurchases.length
+          ? mergeInventoryPurchases(current, localInventoryPurchases)
+          : []);
+      }
+
       try {
         const rawDel = localStorage.getItem(STORAGE_KEY_DELETED_TABLES);
         if (rawDel) {
@@ -1381,6 +1837,7 @@ export function App() {
     };
   }, []);
 
+<<<<<<< HEAD
   const [takeawayOrder, setTakeawayOrder] = useState({
     id: "takeaway",
     backendTableId: null,
@@ -1399,13 +1856,121 @@ export function App() {
   const currentTable = isTakeawayActive
     ? takeawayOrder
     : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
+=======
+  // ── Table Concurrency Locking System ──────────────────────────────
+  // Prevents multiple waiters from concurrently modifying the same table order.
+  const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
 
-  // Table selection handler
+  const [tableLocks, setTableLocks] = useState(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_TABLE_LOCKS);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEY_TABLE_LOCKS && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && typeof parsed === "object") setTableLocks(parsed);
+        } catch {}
+      }
+    };
+    const handleLockEvent = (e) => {
+      if (e.detail && typeof e.detail === "object") {
+        setTableLocks(e.detail);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("avsr-table-locks-updated", handleLockEvent);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("avsr-table-locks-updated", handleLockEvent);
+    };
+  }, []);
+
+  const saveLocks = (newLocks) => {
+    setTableLocks(newLocks);
+    try {
+      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(newLocks));
+      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: newLocks }));
+      broadcastSync("SYNC_TABLE_LOCKS", newLocks);
+    } catch {}
+  };
+
+  const acquireTableLock = (tableId, session) => {
+    const tableKey = String(tableId);
+    const existing = tableLocks[tableKey];
+    const myId = String(session?.id || session?.userId || session?.username || "pos_user");
+    const myName = String(session?.name || session?.fullName || session?.username || "Waiter");
+    const isStaffAdmin = String(session?.role || "").toLowerCase() === "admin";
+
+    // Timeout: 5 minutes of inactivity releases lock
+    const LOCK_TIMEOUT_MS = 5 * 60 * 1000;
+    if (existing && String(existing.userId) !== myId && (Date.now() - (existing.timestamp || 0)) < LOCK_TIMEOUT_MS) {
+      if (!isStaffAdmin) {
+        return {
+          success: false,
+          lockedBy: existing,
+        };
+      }
+    }
+
+    const updated = {
+      ...tableLocks,
+      [tableKey]: {
+        tableId: tableKey,
+        userId: myId,
+        username: session?.username || myName,
+        serverName: myName,
+        timestamp: Date.now(),
+      },
+    };
+    saveLocks(updated);
+    return { success: true };
+  };
+
+  const releaseTableLock = (tableId) => {
+    if (!tableId) return;
+    const tableKey = String(tableId);
+    if (!tableLocks[tableKey]) return;
+    const updated = { ...tableLocks };
+    delete updated[tableKey];
+    saveLocks(updated);
+  };
+
+  const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+
+  // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = (id) => {
+<<<<<<< HEAD
     const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
     setSelectedTableId(tableId);
+=======
+    const lockResult = acquireTableLock(id, posSession);
+    const targetTable = tables.find((t) => String(t.id) === String(id));
+    const tblName = targetTable?.name || `Table ${id}`;
+
+    if (!lockResult.success) {
+      showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
+      return;
+    }
+
+    setSelectedTableId(id);
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     setActiveView("order");
     sounds.playAddItem();
+  };
+
+  const handleBackToTables = () => {
+    if (selectedTableId) {
+      releaseTableLock(selectedTableId);
+    }
+    setActiveView("tables");
   };
 
   // Add Item to Table Order
@@ -1910,6 +2475,10 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
+<<<<<<< HEAD
+=======
+          if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
           if (itemId) {
             return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
@@ -2307,6 +2876,7 @@ export function App() {
     };
 
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
+    let dineInBackendTableVacated = false;
     if (isTakeawayOrder) {
       const createResult = await apiCreatePaidTakeawayOrder({
         orderType: "Takeaway",
@@ -2348,6 +2918,79 @@ export function App() {
       const kotResult = await apiSendTakeawayOrderToKitchen(backendOrderId);
       if (!kotResult?.success) {
         showToast(`Payment saved for takeaway order #${backendOrderId}, but kitchen dispatch failed: ${kotResult?.error || "Please contact the kitchen."}`);
+      }
+    } else {
+      // Do not create a local invoice or vacate the table until the shared API
+      // confirms that the order and payment were saved.
+      try {
+        const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
+        const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
+        const currentResult = await apiGetOrderForTable(backendTableId);
+        let orderData = currentResult?.success
+          ? (currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data)
+          : null;
+        if (!currentResult?.success && currentResult?.status !== 404) {
+          throw new Error(currentResult?.error || "Could not load the shared table order.");
+        }
+        let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        const itemsToPersist = billableItems.map((item) => ({
+          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          notes: item.notes || "",
+        }));
+        const unsavedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
+        if (!orderData) {
+          const createResult = await apiCreateOrder({
+            tableId: backendTableId,
+            tableName: settlementData.tableName,
+            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+            serverName: settlementData.server || "Server",
+            guests: enrichedSettlement.guests,
+            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+            serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+            tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
+            status: "Active",
+            items: itemsToPersist,
+          });
+          if (!createResult?.success) throw new Error(createResult?.error || "Could not save the table order.");
+          orderData = createResult.data?.data ?? createResult.data;
+          backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        } else if (unsavedItems.length > 0) {
+          const addResult = await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
+            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+            name: item.name || item.dishName,
+            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+            notes: item.notes || "",
+          })));
+          if (!addResult?.success) throw new Error(addResult?.error || "Could not save the latest table items.");
+        }
+        if (!backendOrderId) throw new Error("The order API did not return an order ID.");
+        const settleResult = await apiSettleOrder(backendOrderId, {
+          discountPercent: settlementData.discountPercent,
+          serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+          tipAmount: settlementData.tipAmount,
+          paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: enrichedSettlement.invoiceNo,
+        });
+        if (!settleResult?.success || settleResult.data?.success === false) {
+          throw new Error(settleResult?.error || settleResult.data?.message || "The server did not confirm payment.");
+        }
+        enrichedSettlement.backendOrderId = backendOrderId;
+        enrichedSettlement.billingSessionId = String(backendOrderId);
+
+        const vacateResult = await apiVacateTable(backendTableId);
+        if (!vacateResult?.success || vacateResult.data?.success === false) {
+          showToast(`Payment saved as order #${backendOrderId}; table is still occupied because vacate failed: ${vacateResult?.error || vacateResult.data?.message || "server rejected the request"}`);
+        } else {
+          dineInBackendTableVacated = true;
+        }
+      } catch (error) {
+        const errorMessage = `Payment was not completed in the shared system: ${error?.message || "Could not reach the backend."}`;
+        showToast(errorMessage);
+        return errorMessage;
       }
     }
 
@@ -2480,84 +3123,12 @@ export function App() {
       );
       pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
     } catch {}
-    void (async () => {
-      try {
-        if (String(settlementData.tableId) === "TAKEAWAY") return;
-        const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
-        const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
-        const currentResult = await apiGetOrderForTable(backendTableId);
-        if (!currentResult?.success) throw new Error(currentResult?.error || "Could not load the shared order for settlement.");
-        let orderData = currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data;
-        let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
-        const itemsToPersist = enrichedSettlement.items.map((item) => ({
-          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          id: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          name: item.name || item.dishName,
-          dishName: item.name || item.dishName,
-          price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-          quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-          notes: item.notes || "",
-        }));
-        const notYetPersistedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
-        if (orderData && notYetPersistedItems.length > 0) {
-          const addResult = await apiAddOrderItems(backendOrderId, notYetPersistedItems.map((item) => ({
-            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-            id: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-            name: item.name || item.dishName,
-            dishName: item.name || item.dishName,
-            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-            notes: item.notes || "",
-          })));
-          if (!addResult?.success) throw new Error(addResult?.error || "Could not add all table items to the shared order.");
-        }
-        if (!orderData) {
-          const createResult = await apiCreateOrder({
-            tableId: backendTableId,
-            tableName: settlementData.tableName,
-            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
-            serverName: settlementData.server || "Server",
-            guests: enrichedSettlement.guests,
-            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
-            serviceChargeEnabled: false,
-            tipAmount: 0,
-            status: "Active",
-            items: itemsToPersist,
-          });
-          if (!createResult?.success) throw new Error(createResult?.error || "Could not save order items before settlement.");
-          orderData = createResult.data?.data ?? createResult.data ?? orderData;
-          backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
-        }
-        if (!backendOrderId) throw new Error("The shared order API did not return an order ID.");
-        const settleResult = await apiSettleOrder(backendOrderId, {
-          discountPercent: settlementData.discountPercent,
-          serviceChargeEnabled: (Number(settlementData.serviceChargeAmount ?? 0) > 0),
-          tipAmount: settlementData.tipAmount,
-          paymentMethod: enrichedSettlement.paymentMethod,
-          invoiceNumber: enrichedSettlement.invoiceNo,
-        });
-        if (!settleResult?.success) throw new Error(settleResult?.error || "The server did not confirm settlement.");
-        // Link the local receipt to the backend order session so a later
-        // history sync recognizes the same sale instead of counting it twice.
-        setPastOrders((current) => {
-          return dedupeOrders(current.map((order) =>
-            order.id === enrichedSettlement.id ||
-            (enrichedSettlement.invoiceNo && order.invoiceNo === enrichedSettlement.invoiceNo &&
-              String(order.tableId ?? order.tableName) === String(enrichedSettlement.tableId ?? enrichedSettlement.tableName))
-              ? { ...order, backendOrderId, billingSessionId: String(backendOrderId) }
-              : order,
-          ));
-        });
-      } catch (error) {
-        console.warn("Backend order settlement failed; local settlement retained:", error);
-      }
-    })();
-
     const updatedTables = tables.map((t) => {
       const isTarget =
         String(t.id) === String(settlementData.tableId) ||
         t.name === settlementData.tableName;
       if (!isTarget) return t;
+      if (!isTakeawayOrder && !dineInBackendTableVacated) return t;
       return {
         ...t,
         status: "vacant",
@@ -2595,20 +3166,15 @@ export function App() {
       window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: cleanTables }));
     } catch {}
 
-    try {
-      const targetApiId = tableObj?.backendTableId || tableObj?.id || settlementData.tableId;
-      if (targetApiId && String(settlementData.tableId) !== "TAKEAWAY") {
-        apiVacateTable(targetApiId).catch(() => {});
-        apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
-      }
-    } catch {}
 
     setIsSettlementOpen(false);
     setSelectedTableId(null);
     setActiveView(isTakeawayOrder ? "takeaway" : "tables");
     if (isTakeawayOrder) setTakeawayOrderRefreshToken((current) => current + 1);
     showToast(
-      `✅ ${settlementData.tableName} bill settled via ${settlementData.paymentMethod.toUpperCase()}`,
+      !isTakeawayOrder && !dineInBackendTableVacated
+        ? `Payment saved for ${settlementData.tableName}; please vacate the table from the floor view.`
+        : `Bill settled for ${settlementData.tableName} via ${settlementData.paymentMethod.toUpperCase()}.`,
     );
 
     setReprintReceiptData({
@@ -2926,12 +3492,14 @@ export function App() {
       ...(created || {}),
       id: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
       staffId: created?.staffId ?? created?.id ?? newPerson.id ?? fallbackId,
+      backendStaffId: created?.staffId ?? created?.id ?? null,
       name: created?.fullName || created?.name || newPerson.name || "Staff",
       fullName: created?.fullName || created?.name || newPerson.name || "Staff",
       role: created?.roleTitle || created?.role || newPerson.role || "Waiter",
       roleTitle: created?.roleTitle || created?.role || newPerson.role || "Waiter",
       phone: newPerson.phone || created?.phone || "",
       shift: newPerson.shift || created?.shift || "Morning Shift (10 AM - 4 PM)",
+      monthlySalary: Number(created?.monthlySalary ?? newPerson.monthlySalary) || 0,
       isActive: true,
       avatarInitial: (newPerson.name || "S").charAt(0).toUpperCase(),
     };
@@ -2958,16 +3526,18 @@ export function App() {
       oldPerson?.name || oldPerson?.fullName || oldPerson?.FullName;
     const newName = updatedPerson.name || updatedPerson.fullName;
 
-    try {
-      await apiUpdateStaff(personId, {
-        name: newName,
-        fullName: newName,
-        role: updatedPerson.role || updatedPerson.roleTitle || "Waiter",
-        phone: updatedPerson.phone || "",
-        email: updatedPerson.email || "",
-        shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
-      });
-    } catch {}
+    if (oldPerson?.backendStaffId != null) {
+      try {
+        await apiUpdateStaff(oldPerson.backendStaffId, {
+          name: newName,
+          fullName: newName,
+          role: updatedPerson.role || updatedPerson.roleTitle || "Waiter",
+          phone: updatedPerson.phone || "",
+          email: updatedPerson.email || "",
+          shift: updatedPerson.shift || "Morning Shift (10 AM - 4 PM)",
+        });
+      } catch {}
+    }
 
     setStaffList((prev) => {
       const nextStaff = prev.map((p) =>
@@ -3015,9 +3585,11 @@ export function App() {
       assignedServerId: null,
     })));
 
-    try {
-      await apiDeleteStaff(personId);
-    } catch {}
+    if (person?.backendStaffId != null) {
+      try {
+        await apiDeleteStaff(person.backendStaffId);
+      } catch {}
+    }
 
     setStaffList((prev) => {
       const nextStaff = prev.filter((p) => String(p.id ?? p.staffId) !== String(personId));
@@ -3031,10 +3603,105 @@ export function App() {
     showToast(`🗑️ Removed "${personName}"`);
   };
 
+  const handleRecordSalaryPayment = async (payment) => {
+    const amount = Number(payment.amount);
+    const staffName = String(payment.staffName || "").trim();
+    const paidOn = String(payment.paidOn || "");
+    const salaryPeriod = String(payment.salaryPeriod || "");
+    const paymentMethod = String(payment.paymentMethod || "").trim();
+    if (!staffName || staffName.length > 100) {
+      showToast("Enter a valid staff name (up to 100 characters).");
+      return false;
+    }
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 99999999.99) {
+      showToast("Enter a salary payment amount between ₹0.01 and ₹99,999,999.99.");
+      return false;
+    }
+    const paidOnParts = /^\d{4}-\d{2}-\d{2}$/.test(paidOn)
+      ? paidOn.split("-").map(Number)
+      : null;
+    const paidOnDate = paidOnParts
+      ? new Date(paidOnParts[0], paidOnParts[1] - 1, paidOnParts[2])
+      : null;
+    if (
+      !paidOnDate ||
+      paidOnDate.getFullYear() !== paidOnParts[0] ||
+      paidOnDate.getMonth() !== paidOnParts[1] - 1 ||
+      paidOnDate.getDate() !== paidOnParts[2]
+    ) {
+      showToast("Select a valid payment date.");
+      return false;
+    }
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(salaryPeriod)) {
+      showToast("Select a valid salary month.");
+      return false;
+    }
+    if (!["Bank Transfer", "UPI", "Cash", "Cheque"].includes(paymentMethod)) {
+      showToast("Select a supported salary payment method.");
+      return false;
+    }
+    if (String(payment.notes || "").length > 255) {
+      showToast("Salary payment notes cannot exceed 255 characters.");
+      return false;
+    }
+
+    const response = await apiCreateSalaryPayment({ ...payment, staffName, amount, paidOn, salaryPeriod, paymentMethod });
+    const savedPayment = response?.data?.data ?? response?.data;
+    if (!response?.success || !savedPayment || typeof savedPayment !== "object") {
+      showToast(`Salary payment was not saved: ${response?.error || "The server returned an invalid response."}`);
+      return false;
+    }
+    const normalizedPayment = normalizeSalaryPayment(savedPayment);
+    setSalaryPayments((current) => mergeSalaryPayments(current, [normalizedPayment]));
+    showToast(`Salary payment recorded for ${normalizedPayment.staffName}.`);
+    return true;
+  };
+
+  const handleRecordInventoryPurchase = async (purchase) => {
+    const quantity = Number(purchase.quantity);
+    const unitCost = Number(purchase.unitCost);
+    const name = String(purchase.name || "").trim();
+    const unit = String(purchase.unit || "").trim();
+    const department = String(purchase.department || "dine").trim().toLowerCase();
+    if (!name || name.length > 100 || !unit || unit.length > 50) {
+      showToast("Inventory purchase needs a valid item name and unit.");
+      return false;
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 999999999 || !Number.isFinite(unitCost) || unitCost < 0) {
+      showToast("Inventory purchase needs a valid quantity and non-negative unit cost.");
+      return false;
+    }
+    if (!["bar", "dine"].includes(department)) {
+      showToast("Inventory purchase department must be Bar or Dine.");
+      return false;
+    }
+
+    const now = new Date();
+    const record = {
+      ...purchase,
+      name,
+      quantity,
+      unitCost,
+      department,
+      totalCost: Number((quantity * unitCost).toFixed(2)),
+      purchaseDate: purchase.purchaseDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    };
+
+    const response = await apiCreateInventoryPurchase(record);
+    const savedPurchase = response?.data?.data ?? response?.data;
+    if (!response?.success || !savedPurchase || typeof savedPurchase !== "object") {
+      showToast(`Inventory purchase was not recorded: ${response?.error || "The server returned an invalid response."}`);
+      return false;
+    }
+    const savedRecord = normalizeInventoryPurchase(savedPurchase);
+    setInventoryPurchases((current) => mergeInventoryPurchases(current, [savedRecord]));
+    return true;
+  };
+
   // Reset to default initial state
   const handleResetData = async () => {
     const confirmed = await confirmDialog(
-      "Reset locally saved tables, menu, staff, inventory, and order history? Active orders will be cleared.",
+      "Reset POS setup and order history? Salary payments and dated inventory purchase records are retained for accounting. Active orders will be cleared.",
       {
         title: "Reset all data?",
         confirmText: "Yes, Reset Data",
@@ -3061,8 +3728,16 @@ export function App() {
       [STORAGE_KEY_ORDERS]: [],
       [STORAGE_KEY_INVENTORY]: [],
     });
-    showToast("Data reset. Add your restaurant tables, menu, and staff to get started.");
+    showToast("POS setup reset. Salary and inventory purchase history was retained.");
   };
+
+  if (authRestorePending) {
+    return (
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#080d18", color: "#d6deeb" }}>
+        Verifying your session with the server…
+      </div>
+    );
+  }
 
   return (
     <div
@@ -3110,31 +3785,135 @@ export function App() {
 
       {/* Main Separate Routes Rendering */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - ONLY KOT RELATED! */}
+        {isLandingRoute && (
+          <CustomerLandingPage
+            restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
+            restaurantLogo={restaurantSettings.logo || ""}
+            menuItems={menuItems}
+            menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+            tables={tables}
+            onAdminLogin={() => navigate("/admin")}
+          />
+        )}
+
+        {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - KITCHEN & BAR BOT WORKSPACE */}
         {isKotRoute &&
           (kotSession &&
           (kotSession.role === "kot" || kotSession.role === "admin") ? (
             <ErrorBoundary>
-              <KitchenKOTView
-                tables={tables}
-                pastOrders={pastOrders}
-                menuItems={menuItems}
-                currentTheme={theme}
-                onChangeTheme={setTheme}
-                onBackToFloor={() => {
-                  setActiveView("tables");
-                  navigate("/");
-                }}
-                onUpdateItemKotStatus={handleUpdateItemKotStatus}
-                onCompleteTableKot={handleCompleteTableKot}
-                onOpenTableOrder={(tableId) => {
-                  setSelectedTableId(tableId);
-                  setActiveView("order");
-                  navigate("/");
-                }}
-                currentSession={kotSession}
-                onLogout={handleKotLogout}
-              />
+              <>
+                <div
+                  role="tablist"
+                  aria-label="Kitchen and bar order tickets"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 20px",
+                    background: "var(--bg-primary, #0b1120)",
+                    borderBottom: "1px solid var(--border-subtle, #243044)",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[
+                      { id: "kitchen", label: "🍳 Kitchen KOT" },
+                      { id: "bar", label: "🍸 Bar BOT" },
+                    ].map((station) => (
+                      <button
+                        key={station.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeKotStation === station.id}
+                        onClick={() => setActiveKotStation(station.id)}
+                        style={{
+                          minHeight: 38,
+                          padding: "0 18px",
+                          borderRadius: 9,
+                          border: `1.5px solid ${
+                            activeKotStation === station.id
+                              ? "#f59e0b"
+                              : "var(--border-subtle, #243044)"
+                          }`,
+                          background:
+                            activeKotStation === station.id
+                              ? "rgba(245, 158, 11, 0.18)"
+                              : "var(--bg-secondary, #111b2b)",
+                          color:
+                            activeKotStation === station.id
+                              ? "#fbbf24"
+                              : "var(--text-main, #dbe4f0)",
+                          font: "inherit",
+                          fontWeight: 750,
+                          fontSize: "0.86rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          boxShadow:
+                            activeKotStation === station.id
+                              ? "0 0 12px rgba(245, 158, 11, 0.25)"
+                              : "none",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span>{station.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveView("tables");
+                        navigate("/");
+                      }}
+                      style={{
+                        minHeight: 34,
+                        padding: "0 14px",
+                        borderRadius: 7,
+                        border: "1px solid var(--border-subtle, #243044)",
+                        background: "var(--bg-secondary, #111b2b)",
+                        color: "var(--text-muted, #94a3b8)",
+                        fontSize: "0.8rem",
+                        fontWeight: 650,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ← Back to Floor
+                    </button>
+                  </div>
+                </div>
+
+                {activeKotStation === "bar" ? (
+                  <BarBOTView
+                    tables={tables}
+                    menuItems={menuItems}
+                    staffList={staffList}
+                    barDrinks={barMenuItems}
+                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                    onCompleteTableKot={handleCompleteTableKot}
+                  />
+                ) : (
+                  <KitchenKOTView
+                    tables={tables}
+                    pastOrders={pastOrders}
+                    menuItems={menuItems}
+                    currentTheme={theme}
+                    onChangeTheme={setTheme}
+                    activeStation={activeKotStation}
+                    onStationChange={setActiveKotStation}
+                    onBackToFloor={() => { setActiveView("tables"); navigate("/"); }}
+                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
+                    onCompleteTableKot={handleCompleteTableKot}
+                    onOpenTableOrder={(tableId) => { setSelectedTableId(tableId); setActiveView("order"); navigate("/"); }}
+                    currentSession={kotSession}
+                    onLogout={handleKotLogout}
+                    restaurantName={restaurantSettings.restaurantName}
+                    restaurantLogo={restaurantSettings.logo}
+                  />
+                )}
+              </>
             </ErrorBoundary>
           ) : (
             <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
@@ -3160,6 +3939,10 @@ export function App() {
               onUpdateTable={handleUpdateTable}
               onDeleteTable={handleDeleteTable}
               staffList={staffList}
+              salaryPayments={salaryPayments}
+              inventoryPurchases={inventoryPurchases}
+              onRecordSalaryPayment={handleRecordSalaryPayment}
+              onRecordInventoryPurchase={handleRecordInventoryPurchase}
               onAddStaff={handleAddStaff}
               onUpdateStaff={handleUpdateStaff}
               onDeleteStaff={handleDeleteStaff}
@@ -3185,9 +3968,12 @@ export function App() {
               {activeView === "tables" && (
                 <TableView
                   tables={tables}
-                  loading={sharedRecordLoad.tables === "loading" && tables.length === 0}
+                  loading={sharedRecordLoad.tables === "loading"}
+                  loadError={sharedRecordLoad.tableError}
                   onSelectTable={handleSelectTable}
                   onUpdateTable={handleUpdateTable}
+                  tableLocks={tableLocks}
+                  currentSession={posSession}
                 />
               )}
               {activeView === "takeaway" && (
@@ -3195,12 +3981,44 @@ export function App() {
                   menuItems={menuItems}
                   menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
                   orderPlacedSignal={takeawayOrderRefreshToken}
+                  onShowReceipt={(receipt, orderId) => {
+                    const receiptItems = Array.isArray(receipt?.items) ? receipt.items.map((item) => ({
+                      ...item,
+                      name: item.name || item.dishName || "",
+                      quantity: Number(item.quantity ?? item.qty) || 0,
+                      price: Number(item.price ?? item.unitPrice) || 0,
+                    })) : [];
+                    setReprintReceiptData({
+                      id: orderId,
+                      name: receipt?.table || receipt?.tableName || "Takeaway",
+                      section: receipt?.section || "Takeaway",
+                      server: receipt?.server || receipt?.serverName || "",
+                      guests: Number(receipt?.guests) || 1,
+                      items: receiptItems,
+                      subtotal: receipt?.subtotal,
+                      taxAmount: receipt?.taxAmount,
+                      serviceCharge: receipt?.serviceChargePercent,
+                      serviceChargeAmount: receipt?.serviceChargeAmount,
+                      tipAmount: receipt?.tipAmount,
+                      grandTotal: receipt?.grandTotal,
+                      paymentMethod: receipt?.paymentMethod || "",
+                      invoiceNo: receipt?.invoiceNo || receipt?.orderNumber || "",
+                      date: receipt?.date,
+                    });
+                    setIsReceiptOpen(true);
+                  }}
                   onCheckout={(items) => {
                     const orderTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                     setTakeawayCheckoutTable({ id: "TAKEAWAY", name: "Takeaway", section: "Takeaway", server: posSession?.name || "Server", guests: 1, capacity: 1, items, orderTime, discountPercent: 0, serviceCharge: 0 });
                     setIsSettlementOpen(true);
                   }}
                 />
+              )}
+              {activeView === "takeaway-flow" && (
+                <TakeawayOrderFlowView onBack={() => setActiveView("takeaway")} />
+              )}
+              {activeView === "reservation" && (
+                <TableReservationFlow onBackToPos={() => setActiveView("tables")} />
               )}
               {activeView === "order" && (
                 <TableDetailView
@@ -3213,7 +4031,7 @@ export function App() {
                   menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
                   menuLoadError={sharedRecordLoad.menuError}
                   onSelectTable={setSelectedTableId}
-                  onBackToTables={() => setActiveView("tables")}
+                  onBackToTables={handleBackToTables}
                   onAddItemToTable={handleAddItemToTable}
                   onUpdateItemQuantity={handleUpdateItemQuantity}
                   onRemoveItemFromTable={handleRemoveItemFromTable}
@@ -3493,6 +4311,10 @@ export function App() {
           onUpdateTable={handleUpdateTable}
           onDeleteTable={handleDeleteTable}
           staffList={staffList}
+          salaryPayments={salaryPayments}
+          inventoryPurchases={inventoryPurchases}
+          onRecordSalaryPayment={handleRecordSalaryPayment}
+          onRecordInventoryPurchase={handleRecordInventoryPurchase}
           onAddStaff={handleAddStaff}
           onUpdateStaff={handleUpdateStaff}
           onDeleteStaff={handleDeleteStaff}
@@ -3544,7 +4366,6 @@ export function App() {
       {/* Past Orders & Invoices Modal */}
       {isPastOrdersOpen && (
         <PastOrdersModal
-          pastOrders={pastOrders}
           onClose={() => setIsPastOrdersOpen(false)}
           onRefresh={async (records) => {
             if (Array.isArray(records) && records.length > 0) {

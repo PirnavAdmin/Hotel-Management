@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Package,
@@ -21,9 +22,8 @@ import {
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { formatCurrency } from "../utils/formatCurrency";
-import { API_BASE_URL } from "../api/apiConfig";
+import { API_SYNC_BASE } from "../api/apiConfig";
 import {
-  apiGetInventory,
   apiCreateInventoryItem,
   apiUpdateInventoryItem,
 } from "../api/inventoryApi";
@@ -464,7 +464,7 @@ export const deduplicateAndNormalizeInventory = (items) => {
   return Array.from(map.values());
 };
 
-export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
+export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sharedInventory = [], inventoryApiError = "", onRecordInventoryPurchase }) {
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
   const [inventory, setInventory] = useState(() => {
     try {
@@ -706,7 +706,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const [recipeDraft, setRecipeDraft] = useState([]);
   const [recipeError, setRecipeError] = useState("");
   const [restockItem, setRestockItem] = useState(null);
+  const [restockSaving, setRestockSaving] = useState(false);
+  const [inventoryWriteError, setInventoryWriteError] = useState("");
+  const [inventoryValidationError, setInventoryValidationError] = useState("");
   const [restockAmount, setRestockAmount] = useState("");
+  const [restockUnitCost, setRestockUnitCost] = useState("");
   const [restockSupplier, setRestockSupplier] = useState("");
   const [consumeItem, setConsumeItem] = useState(null);
   const [consumeAmount, setConsumeAmount] = useState("");
@@ -778,32 +782,48 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
   const saveInventory = (updated) => {
     const normalized = deduplicateAndNormalizeInventory(updated);
     setInventory(normalized);
-    normalized.forEach((item) => {
+    const pendingWrites = normalized.map(async (item) => {
       const backendId = Number(item.id);
       if (!Number.isFinite(backendId) || backendId <= 0) {
-        apiCreateInventoryItem(item)
-          .then((res) => {
-            const newId = res?.data?.ingredientId || res?.data?.id || res?.data?.data?.ingredientId;
-            if (newId) {
-              setInventory((prev) => {
-                const next = prev.map((it) => (it.id === item.id ? { ...it, id: newId } : it));
-                try {
-                  localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(next));
-                } catch {}
-                return next;
-              });
-            }
-          })
-          .catch((err) => console.error("[Inventory] Failed to create ingredient:", err));
+        const response = await apiCreateInventoryItem(item);
+        if (!response?.success) {
+          throw new Error(response?.error || `Could not create "${item.name}" in the inventory API.`);
+        }
+        const created = response.data?.data ?? response.data;
+        const newId = created?.ingredientId ?? created?.id ?? created?.Id;
+        if (!newId) {
+          throw new Error(`The inventory API did not return an ID for "${item.name}".`);
+        }
+        return { ...item, id: String(newId) };
       } else {
-        apiUpdateInventoryItem(backendId, item).catch((err) =>
-          console.error("[Inventory] Failed to update ingredient:", err),
-        );
+        const response = await apiUpdateInventoryItem(backendId, item);
+        if (!response?.success) {
+          throw new Error(response?.error || `Could not update "${item.name}" in the inventory API.`);
+        }
+        return item;
       }
     });
+    const writePromise = Promise.all(pendingWrites)
+      .then((savedRows) => {
+        const savedInventory = deduplicateAndNormalizeInventory(savedRows);
+        setInventory(savedInventory);
+        try {
+          localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(savedInventory));
+        } catch {}
+        window.dispatchEvent(
+          new CustomEvent("avsr-inventory-updated", { detail: savedInventory }),
+        );
+        setInventoryWriteError("");
+        return true;
+      })
+      .catch((error) => {
+        console.error("[Inventory] One or more inventory writes failed:", error);
+        setInventoryWriteError(error?.message || "One or more inventory records failed to sync.");
+        return false;
+      });
     try {
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(normalized));
-      fetch(`${API_BASE_URL}/api/sync`, {
+      fetch(`${API_SYNC_BASE}/api/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -815,20 +835,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         new CustomEvent("avsr-inventory-updated", { detail: normalized }),
       );
     } catch {}
+    return writePromise;
   };
 
   useEffect(() => {
-    let active = true;
-    apiGetInventory().then((response) => {
-      const payload = response?.data ?? response;
-      const rows = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload?.ingredients)
-            ? payload.ingredients
-            : [];
-      if (!active || !response?.success || !rows.length) return;
+      const rows = Array.isArray(sharedInventory) ? sharedInventory : [];
       let saved = [];
       try {
         saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
@@ -866,16 +877,10 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
           };
         });
-      const remoteIds = new Set(remote.map((item) => String(item.id)));
-      const merged = deduplicateAndNormalizeInventory([
-        ...remote,
-        ...(Array.isArray(saved) ? saved.filter((item) => !remoteIds.has(String(item.id))) : []),
-      ]);
+      const merged = deduplicateAndNormalizeInventory(remote);
       setInventory(merged);
       try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
-    }).catch(() => {});
-    return () => { active = false; };
-  }, []);
+  }, [sharedInventory]);
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
@@ -997,30 +1002,56 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     setRecipeError("");
   };
 
-  const receiveStock = (event) => {
+  const receiveStock = async (event) => {
     event.preventDefault();
     const amount = Number(restockAmount);
-    if (!restockItem || !Number.isFinite(amount) || amount <= 0) return;
-    const restockedDate = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-    const updated = inventory.map((item) =>
-      item.id === restockItem.id
-        ? {
-            ...item,
-            stock: Number((Number(item.stock || 0) + amount).toFixed(3)),
-            totalRestocked: Number(item.totalRestocked || 0) + amount,
-            lastRestocked: restockedDate,
-            supplier: restockSupplier.trim() || item.supplier,
-          }
-        : item,
-    );
-    saveInventory(updated);
-    setRestockItem(null);
-    setRestockAmount("");
-    setRestockSupplier("");
+    const unitCost = Number(restockUnitCost);
+    if (!restockItem || restockSaving || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(unitCost) || unitCost < 0) return;
+    setRestockSaving(true);
+    try {
+      const restockedDate = new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const date = new Date();
+      const updated = inventory.map((item) =>
+        item.id === restockItem.id
+          ? {
+              ...item,
+              stock: Number((Number(item.stock || 0) + amount).toFixed(3)),
+              totalRestocked: Number(item.totalRestocked || 0) + amount,
+              lastRestocked: restockedDate,
+              supplier: restockSupplier.trim() || item.supplier,
+              mrp: unitCost,
+              unitCost,
+            }
+          : item,
+      );
+      if (!(await saveInventory(updated))) return;
+      const purchaseSaved = await onRecordInventoryPurchase?.({
+        itemId: restockItem.id,
+        name: restockItem.name,
+        category: restockItem.category,
+        subcategory: restockItem.subcategory,
+        supplier: restockSupplier.trim() || restockItem.supplier,
+        quantity: amount,
+        unit: restockItem.unit,
+        unitCost,
+        department: "dine",
+        purchaseDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      });
+      if (purchaseSaved === false) {
+        setInventoryWriteError("Stock was updated, but its purchase record was not saved.");
+        return;
+      }
+      setRestockItem(null);
+      setRestockAmount("");
+      setRestockUnitCost("");
+      setRestockSupplier("");
+    } finally {
+      setRestockSaving(false);
+    }
   };
 
   const handleRecordUsage = (event) => {
@@ -1028,6 +1059,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
     const amount = Number(consumeAmount);
     if (!consumeItem || !Number.isFinite(amount) || amount <= 0) return;
     const currentStock = Number(consumeItem.stock || 0);
+    if (amount > currentStock) {
+      setInventoryValidationError("Usage quantity cannot exceed the available stock.");
+      return;
+    }
+    setInventoryValidationError("");
     const nextStock = Math.max(0, Number((currentStock - amount).toFixed(3)));
     const updated = inventory.map((item) =>
       item.id === consumeItem.id
@@ -1283,7 +1319,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
       title: "Remove Inventory Item?",
       message: `Are you sure you want to remove "${itemName}" from restaurant inventory? This action cannot be undone.`,
       confirmLabel: "Yes, Remove",
-      onConfirm: () => {
+      onConfirm: async () => {
         // 1. Collect all local and backend IDs associated with this item
         const idsToDelete = Array.from(
           new Set([String(id), ...(item?.associatedIds || []).map(String)]),
@@ -1311,29 +1347,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
         saveInventory(remaining);
 
         // 4. Call backend API to permanently delete from remote database
-        idsToDelete.forEach((backendId) => {
-          if (
+        const backendIds = idsToDelete.filter(
+          (backendId) =>
             backendId &&
             !backendId.startsWith("inv-") &&
-            !backendId.startsWith("recipe-")
-          ) {
-            void apiDeleteIngredient(backendId)
-              .then((result) => {
-                if (!result?.success) {
-                  console.error(
-                    `[Inventory] Failed to delete ingredient ${backendId}:`,
-                    result?.error || "Unknown API error",
-                  );
-                }
-              })
-              .catch((error) => {
-                console.error(
-                  `[Inventory] Failed to delete ingredient ${backendId}:`,
-                  error instanceof Error ? error.message : error,
-                );
-              });
-          }
-        });
+            !backendId.startsWith("recipe-"),
+        );
+        const deleteResults = await Promise.all(
+          backendIds.map((backendId) => apiDeleteIngredient(backendId)),
+        );
+        const failedDelete = deleteResults.find((result) => !result?.success);
+        if (failedDelete) {
+          const error = failedDelete.error || "The server rejected the inventory delete.";
+          console.error("[Inventory] Failed to delete ingredient:", error);
+          setInventoryWriteError(error);
+        }
       },
     });
   };
@@ -1395,6 +1423,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {inventoryApiError && (
+        <div role="alert" style={{ color: "#b91c1c", background: "#fef2f2", padding: "0.75rem 1rem", borderRadius: "0.5rem" }}>
+          Inventory API is unavailable. Showing the last cached inventory; changes may not sync until the server is available. {inventoryApiError}
+        </div>
+      )}
+      {inventoryWriteError && (
+        <div role="alert" style={{ color: "#b91c1c", background: "#fef2f2", padding: "0.75rem 1rem", borderRadius: "0.5rem" }}>
+          Inventory operation failed or did not fully sync: {inventoryWriteError}
+        </div>
+      )}
+      {inventoryValidationError && (
+        <div role="alert" style={{ color: "#b91c1c", background: "#fef2f2", padding: "0.75rem 1rem", borderRadius: "0.5rem" }}>
+          {inventoryValidationError}
+        </div>
+      )}
       {/* Outer Card Matching Design */}
       <div
         style={{
@@ -1630,7 +1673,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 },
               ].map(({ label, value, onChange, options }) => (
                 <div key={label} style={{ position: "relative", minWidth: 0 }}>
-                  <select
+                  <SearchableSelect
                     aria-label={label}
                     value={value}
                     onChange={(e) => {
@@ -1641,7 +1684,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                       width: "100%",
                       minWidth: 0,
                       height: "40px",
-                      padding: "0 2.25rem 0 0.75rem",
+                      padding: "0 0.75rem",
                       color: "var(--text-main)",
                       background: "var(--bg-tertiary)",
                       border: "1px solid var(--border-card)",
@@ -1661,20 +1704,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                         {option.label}
                       </option>
                     ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    strokeWidth={2.2}
-                    aria-hidden="true"
-                    style={{
-                      position: "absolute",
-                      top: "50%",
-                      right: "0.75rem",
-                      transform: "translateY(-50%)",
-                      color: "var(--text-muted)",
-                      pointerEvents: "none",
-                    }}
-                  />
+                  </SearchableSelect>
+                  
                 </div>
               ))}
             </div>
@@ -2289,6 +2320,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                           onClick={() => {
                             setRestockItem(item);
                             setRestockAmount("");
+                            setRestockUnitCost(String(Number(item.mrp ?? item.unitCost) || 0));
                             setRestockSupplier(
                               item.supplier === "Supplier not set"
                                 ? ""
@@ -3211,6 +3243,41 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                 marginBottom: "0.35rem",
               }}
             >
+              PURCHASE COST PER {restockItem.unit} (INR)
+            </label>
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={restockUnitCost}
+              onChange={(event) => setRestockUnitCost(event.target.value)}
+              placeholder="Enter unit purchase cost"
+              style={{
+                width: "100%",
+                height: "38px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                marginBottom: "0.7rem",
+              }}
+            />
+            <div style={{ color: "var(--text-muted)", fontSize: "0.74rem", marginBottom: "0.7rem" }}>
+              Purchase total: <strong style={{ color: "var(--text-main)" }}>{formatCurrency((Number(restockAmount) || 0) * (Number(restockUnitCost) || 0))}</strong>
+            </div>
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
               SUPPLIER
             </label>
             <div style={{ marginBottom: "0.9rem" }}>
@@ -3233,6 +3300,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
             >
               <button
                 type="button"
+                disabled={restockSaving}
                 onClick={() => setRestockItem(null)}
                 style={{
                   height: "36px",
@@ -3250,6 +3318,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
               </button>
               <button
                 type="submit"
+                disabled={restockSaving}
                 style={{
                   height: "36px",
                   padding: "0 0.9rem",
@@ -3259,10 +3328,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem }) {
                   background: "linear-gradient(135deg, #059669, #10b981)",
                   fontWeight: 800,
                   fontSize: "0.76rem",
-                  cursor: "pointer",
+                  cursor: restockSaving ? "wait" : "pointer",
+                  opacity: restockSaving ? 0.7 : 1,
                 }}
               >
-                Save Received Stock
+                {restockSaving ? "Recording..." : "Save Received Stock"}
               </button>
             </div>
           </form>

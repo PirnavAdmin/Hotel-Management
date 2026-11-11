@@ -11,6 +11,7 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/salaries")]
 [AllowAnonymous]
+<<<<<<< HEAD
 [Tags("Salaries")]
 public class SalariesController : ControllerBase
 {
@@ -28,6 +29,17 @@ public class SalariesController : ControllerBase
         _salaryService = salaryService;
         _reportingExportService = reportingExportService;
         _exportService = exportService;
+=======
+[Tags("Admin", "Salaries")]
+public class SalariesController : ControllerBase
+{
+    private readonly SalaryService _salaryService;
+    private readonly ILogger<SalariesController> _logger;
+
+    public SalariesController(SalaryService salaryService, ILogger<SalariesController> logger)
+    {
+        _salaryService = salaryService;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         _logger = logger;
     }
 
@@ -174,6 +186,7 @@ public class SalariesController : ControllerBase
     }
 
     /// <summary>
+<<<<<<< HEAD
     /// Exports salary payments matching filter criteria as CSV or XLSX.
     /// Supports ?month=...&amp;paymentMonth=...&amp;department=...&amp;status=...&amp;format=csv|xlsx.
     /// </summary>
@@ -197,6 +210,23 @@ public class SalariesController : ControllerBase
         {
             _logger.LogError(ex, "Error exporting salaries");
             return StatusCode(500, new { success = false, message = "Failed to export salaries.", error = ex.Message });
+=======
+    /// Exports salary payments matching filter criteria as CSV.
+    /// </summary>
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportSalariesCsv([FromQuery] SalaryFilterDto filter)
+    {
+        try
+        {
+            var bytes = await _salaryService.ExportSalariesCsvAsync(filter);
+            var fileName = $"salary_payments_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
+            return File(bytes, "text/csv; charset=utf-8", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting salaries CSV");
+            return StatusCode(500, new { success = false, message = ex.Message });
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         }
     }
 }

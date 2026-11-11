@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
@@ -22,6 +22,7 @@ public class StateController : ControllerBase
     private readonly MenuItemService _menuItemService;
     private readonly StaffService _staffService;
     private readonly RestaurantSettingsService _settingsService;
+    private readonly InventoryService _inventoryService;
     private readonly ILogger<StateController> _logger;
 
     public StateController(
@@ -30,6 +31,7 @@ public class StateController : ControllerBase
         MenuItemService menuItemService,
         StaffService staffService,
         RestaurantSettingsService settingsService,
+        InventoryService inventoryService,
         ILogger<StateController> logger)
     {
         _spService = spService;
@@ -37,6 +39,7 @@ public class StateController : ControllerBase
         _menuItemService = menuItemService;
         _staffService = staffService;
         _settingsService = settingsService;
+        _inventoryService = inventoryService;
         _logger = logger;
     }
 
@@ -194,74 +197,13 @@ public class StateController : ControllerBase
                               syncPayload.TryGetProperty("inventory", out invElement) ||
                               syncPayload.TryGetProperty("ingredients", out invElement);
 
-                if (hasInv && invElement.ValueKind == JsonValueKind.Array)
+                if (hasInv)
                 {
-                    _logger.LogInformation("Syncing {Count} inventory items via /api/sync to MySQL.", invElement.GetArrayLength());
-                    foreach (var itemElem in invElement.EnumerateArray())
+                    var items = _inventoryService.ParseJsonPayload(invElement);
+                    if (items.Count > 0)
                     {
-                        try
-                        {
-                            var name = itemElem.TryGetProperty("name", out var n) ? n.GetString() : null;
-                            if (string.IsNullOrWhiteSpace(name)) continue;
-
-                            var category = itemElem.TryGetProperty("category", out var c) ? c.GetString() : "General";
-                            var subcategory = itemElem.TryGetProperty("subCategory", out var sc) ? sc.GetString() : (itemElem.TryGetProperty("subcategory", out var sc2) ? sc2.GetString() : "");
-                            var supplier = itemElem.TryGetProperty("supplier", out var s) ? s.GetString() : "Local Supplier";
-                            var unit = itemElem.TryGetProperty("unit", out var u) ? u.GetString() : "KG";
-                            var stock = itemElem.TryGetProperty("stock", out var st) ? (st.TryGetDecimal(out var dStock) ? dStock : 0) : (itemElem.TryGetProperty("currentStock", out var cs) && cs.TryGetDecimal(out var dCs) ? dCs : 0);
-                            var min = itemElem.TryGetProperty("minThreshold", out var mt) ? (mt.TryGetDecimal(out var dMin) ? dMin : 5) : (itemElem.TryGetProperty("minimumThreshold", out var mt2) && mt2.TryGetDecimal(out var dMt2) ? dMt2 : 5);
-                            var mrp = itemElem.TryGetProperty("mrp", out var mr) ? (mr.TryGetDecimal(out var dMrp) ? dMrp : 0) : (itemElem.TryGetProperty("unitCost", out var uc) && uc.TryGetDecimal(out var dUc) ? dUc : 0);
-
-                            long existingId = 0;
-                            if (itemElem.TryGetProperty("id", out var idProp))
-                            {
-                                if (idProp.ValueKind == JsonValueKind.Number) existingId = idProp.GetInt64();
-                                else if (idProp.ValueKind == JsonValueKind.String && long.TryParse(idProp.GetString(), out var parsedLong)) existingId = parsedLong;
-                            }
-                            if (existingId <= 0 && itemElem.TryGetProperty("ingredientId", out var ingIdProp))
-                            {
-                                if (ingIdProp.ValueKind == JsonValueKind.Number) existingId = ingIdProp.GetInt64();
-                                else if (ingIdProp.ValueKind == JsonValueKind.String && long.TryParse(ingIdProp.GetString(), out var parsedLong2)) existingId = parsedLong2;
-                            }
-
-                            if (existingId > 0)
-                            {
-                                var parameters = new Dictionary<string, object?>
-                                {
-                                    { "p_id", existingId },
-                                    { "p_name", name.Trim() },
-                                    { "p_category", string.IsNullOrWhiteSpace(category) ? "General" : category.Trim() },
-                                    { "p_subcategory", subcategory?.Trim() ?? string.Empty },
-                                    { "p_supplier", string.IsNullOrWhiteSpace(supplier) ? "Local Supplier" : supplier.Trim() },
-                                    { "p_unit", string.IsNullOrWhiteSpace(unit) ? "KG" : unit.Trim().ToUpper() },
-                                    { "p_current_stock", stock },
-                                    { "p_minimum_threshold", min > 0 ? min : 5.00m },
-                                    { "p_unit_cost", mrp },
-                                    { "p_mrp", mrp }
-                                };
-                                await _spService.ExecuteNonQueryAsync("sp_UpdateIngredient", parameters);
-                            }
-                            else
-                            {
-                                var parameters = new Dictionary<string, object?>
-                                {
-                                    { "p_name", name.Trim() },
-                                    { "p_category", string.IsNullOrWhiteSpace(category) ? "General" : category.Trim() },
-                                    { "p_subcategory", subcategory?.Trim() ?? string.Empty },
-                                    { "p_supplier", string.IsNullOrWhiteSpace(supplier) ? "Local Supplier" : supplier.Trim() },
-                                    { "p_unit", string.IsNullOrWhiteSpace(unit) ? "KG" : unit.Trim().ToUpper() },
-                                    { "p_current_stock", stock },
-                                    { "p_minimum_threshold", min > 0 ? min : 5.00m },
-                                    { "p_unit_cost", mrp },
-                                    { "p_mrp", mrp }
-                                };
-                                await _spService.ExecuteScalarAsync<long>("sp_CreateIngredient", parameters);
-                            }
-                        }
-                        catch (Exception invEx)
-                        {
-                            _logger.LogWarning(invEx, "Could not sync individual inventory item.");
-                        }
+                        _logger.LogInformation("Syncing {Count} inventory items via /api/sync through InventoryService.", items.Count);
+                        await _inventoryService.ProcessInventorySubmissionAsync(items, atomic: false);
                     }
                 }
             }

@@ -26,6 +26,7 @@ public class SalaryService
     public async Task<SalaryPaymentDto> RecordSalaryPaymentAsync(CreateSalaryPaymentDto dto, long? createdBy = 1L)
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
+<<<<<<< HEAD
         if (dto.StaffId <= 0) throw new ArgumentException("A valid Staff ID is required.");
         if (dto.Amount <= 0) throw new ArgumentException("Salary payment amount must be greater than zero.");
 
@@ -35,6 +36,17 @@ public class SalaryService
         if (staff == null)
         {
             throw new KeyNotFoundException($"Staff person with ID {dto.StaffId} was not found.");
+=======
+        if (!dto.StaffId.HasValue || dto.StaffId.Value <= 0) throw new ArgumentException("A valid Staff ID is required.");
+        if (dto.Amount <= 0) throw new ArgumentException("Salary payment amount must be greater than zero.");
+
+        var staff = await _context.StaffPersons
+            .FirstOrDefaultAsync(s => s.StaffId == dto.StaffId.Value && s.DeletedAt == null);
+
+        if (staff == null)
+        {
+            throw new KeyNotFoundException($"Staff person with ID {dto.StaffId.Value} was not found.");
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         }
 
         var paymentDate = dto.PaymentDate ?? DateTime.UtcNow;
@@ -314,7 +326,11 @@ public class SalaryService
     private static SalaryPaymentDto MapToDto(SalaryPayment p) => new()
     {
         PaymentId = p.PaymentId,
+<<<<<<< HEAD
         StaffId = p.StaffId,
+=======
+        StaffId = p.StaffId ?? 0,
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         StaffName = p.StaffName,
         RoleTitle = p.RoleTitle,
         Department = p.Department,

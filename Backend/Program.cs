@@ -1,5 +1,6 @@
 using System.Text;
 using HMS.Data;
+using HMS.Middleware;
 using HMS.Services;
 using System.Net;
 using System.Net.Sockets;
@@ -77,7 +78,14 @@ builder.Services.AddDbContext<AppDbContext>(
     options =>
         options.UseMySql(
             connectionString,
-            serverVersion));
+            serverVersion,
+            mySqlOptions =>
+            {
+                mySqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(5),
+                    errorNumbersToAdd: null);
+            }));
 
 // ============================================================
 // JWT
@@ -164,6 +172,7 @@ builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
+<<<<<<< HEAD
 builder.Services.AddScoped<TakeawayService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SalaryService>();
@@ -171,6 +180,10 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportingExportService>();
 builder.Services.AddScoped<AccountingService>();
+=======
+builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<SalaryService>();
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 builder.Services.AddSignalR();
 
 // ============================================================
@@ -187,7 +200,6 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
 
     options.SwaggerDoc(
         "v1",
@@ -292,6 +304,9 @@ if (!Directory.Exists(uploadsDir))
 
 app.UseCors("FrontendPolicy");
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<LegacyApiRewriteMiddleware>();
+
 // Centralized HTTP Request / Response Logging Middleware
 app.Use(async (context, next) =>
 {
@@ -335,10 +350,13 @@ app.Use(async (context, next) =>
 
 
 
+<<<<<<< HEAD
 // Transparently rewrites legacy and unversioned frontend API request paths
 // to their canonical /api/v1/{module}/{resource} routes before endpoint routing
 app.UseMiddleware<HMS.Middleware.LegacyApiRewriteMiddleware>();
 
+=======
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 app.UseRouting();
 
 app.UseStaticFiles();

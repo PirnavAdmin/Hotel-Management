@@ -87,12 +87,20 @@ public class InventoryService
         }
 
         // 2. Check OrderItemRouting logic
+<<<<<<< HEAD
         if (OrderItemRouting.IsBarItem(false, null, category, name))
+=======
+        if (OrderItemRouting.IsBarItem(name, category, null, false))
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         {
             return (true, "Bar");
         }
 
+<<<<<<< HEAD
         if (!string.IsNullOrWhiteSpace(subcategory) && OrderItemRouting.IsBarItem(false, null, subcategory, name))
+=======
+        if (!string.IsNullOrWhiteSpace(subcategory) && OrderItemRouting.IsBarItem(name, subcategory, null, false))
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         {
             return (true, "Bar");
         }
@@ -239,6 +247,29 @@ public class InventoryService
         {
             return (false, $"Item at index {index}: Item Name is required.");
         }
+<<<<<<< HEAD
+=======
+        if (item.Name.Trim().Length > 100)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: Name cannot exceed 100 characters.");
+        }
+        if (string.IsNullOrWhiteSpace(item.Unit) || item.Unit.Trim().Length > 50)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: Unit is required and cannot exceed 50 characters.");
+        }
+        if (item.Category?.Trim().Length > 100)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: Category cannot exceed 100 characters.");
+        }
+        if (item.Subcategory?.Trim().Length > 100 || item.Brand?.Trim().Length > 100)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: Subcategory and brand cannot exceed 100 characters.");
+        }
+        if (item.Supplier?.Trim().Length > 150)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: Supplier cannot exceed 150 characters.");
+        }
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
         if (item.Stock < 0)
         {
@@ -254,6 +285,21 @@ public class InventoryService
         {
             return (false, $"Item '{item.Name}' at index {index}: Unit cost cannot be negative ({item.UnitCost}).");
         }
+<<<<<<< HEAD
+=======
+        if (item.Mrp < 0 || item.SellingPrice < 0)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: Selling price cannot be negative.");
+        }
+        if (item.Abv < 0 || item.Abv > 100)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: ABV must be between 0 and 100.");
+        }
+        if (item.VolumeMl <= 0)
+        {
+            return (false, $"Item '{item.Name}' at index {index}: Volume must be greater than zero.");
+        }
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
         return (true, null);
     }
@@ -262,7 +308,14 @@ public class InventoryService
     /// Processes inventory items (single or batch), performing classification, duplicate resolution/stock merging,
     /// persistence into MySQL `ingredients` (and sync into `bar_inventory_stock`), transaction safety, and structured reporting.
     /// </summary>
+<<<<<<< HEAD
     public async Task<InventoryBatchResultDto> ProcessInventorySubmissionAsync(List<InventoryItemInputDto> items, bool atomic = false)
+=======
+    public async Task<InventoryBatchResultDto> ProcessInventorySubmissionAsync(
+        List<InventoryItemInputDto> items,
+        bool atomic = false,
+        bool replaceStockOnExisting = false)
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     {
         var result = new InventoryBatchResultDto
         {
@@ -364,6 +417,7 @@ public class InventoryService
 
                 if (existing != null)
                 {
+<<<<<<< HEAD
                     // Update existing item - accumulate stock according to business rules
                     finalId = existing.IngredientId;
                     finalStock = existing.CurrentStock + item.Stock;
@@ -371,12 +425,27 @@ public class InventoryService
                     result.UpdatedCount++;
 
                     decimal finalCost = item.UnitCost > 0 ? item.UnitCost : existing.UnitCost;
+=======
+                    // Batch receipt submissions add stock; item edits replace the stored stock value.
+                    finalId = existing.IngredientId;
+                    finalStock = replaceStockOnExisting ? item.Stock : existing.CurrentStock + item.Stock;
+                    action = "updated";
+                    result.UpdatedCount++;
+
+                    decimal finalCost = replaceStockOnExisting || item.UnitCost > 0 ? item.UnitCost : existing.UnitCost;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
                     decimal? finalMrp = item.Mrp ?? existing.Mrp;
                     string finalUnit = !string.IsNullOrWhiteSpace(safeUnit) && !safeUnit.Equals("KG", StringComparison.OrdinalIgnoreCase)
                         ? safeUnit : existing.Unit;
                     string finalSupplier = !string.IsNullOrWhiteSpace(safeSupplier) && !safeSupplier.Equals("Local Supplier", StringComparison.OrdinalIgnoreCase)
                         ? safeSupplier : existing.Supplier;
+<<<<<<< HEAD
                     decimal finalThreshold = item.MinThreshold > 0 ? item.MinThreshold : existing.MinimumThreshold;
+=======
+                    decimal finalThreshold = replaceStockOnExisting || item.MinThreshold > 0
+                        ? item.MinThreshold
+                        : existing.MinimumThreshold;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
                     await UpdateIngredientInDbAsync(
                         finalId, safeName, safeCategory, safeSubcategory, finalUnit,
@@ -384,7 +453,11 @@ public class InventoryService
                         connection, transaction);
 
                     _logger.LogInformation(
+<<<<<<< HEAD
                         "[Inventory] Updated existing ingredient {Id} ('{Name}'). PreviousStock={Prev}, AddedStock={Added}, NewStock={NewStock}",
+=======
+                        "[Inventory] Updated existing ingredient {Id} ('{Name}'). PreviousStock={Prev}, SubmittedStock={Submitted}, NewStock={NewStock}",
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
                         finalId, safeName, existing.CurrentStock, item.Stock, finalStock);
                 }
                 else

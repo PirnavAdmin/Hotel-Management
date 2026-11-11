@@ -20,6 +20,10 @@ public class SpService
     private async Task<DbConnection> GetOpenConnectionAsync()
     {
         var conn = _context.Database.GetDbConnection();
+        if (conn.State == ConnectionState.Broken)
+        {
+            await conn.CloseAsync();
+        }
         if (conn.State != ConnectionState.Open)
         {
             await conn.OpenAsync();
