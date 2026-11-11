@@ -1,4 +1,4 @@
-import react from "@vitejs/plugin-react";
+﻿import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import fs from "fs";
 import path from "path";
@@ -2175,9 +2175,6 @@ function globalSyncPlugin(backendTarget) {
           return;
         }
 
-<<<<<<< HEAD
-        // Authentication is forwarded directly to ASP.NET Core API via Vite proxy
-=======
         // REST API: /api/v1/auth/login (local fallback)
         if (req.url === "/api/v1/auth/login" && req.method === "POST") {
           let body = "";
@@ -2334,7 +2331,6 @@ function globalSyncPlugin(backendTarget) {
           });
           return;
         }
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
         // REST API: /api/v1/auth/forgot-password
         if (
@@ -2459,20 +2455,6 @@ function globalSyncPlugin(backendTarget) {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-<<<<<<< HEAD
-  const env = loadEnv(mode, process.cwd(), "");
-
-  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
-  const backendTarget =
-    process.env.BACKEND_URL ||
-    env.BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    env.VITE_BACKEND_URL ||
-    "http://127.0.0.1:5018";
-
-  const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
-  const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
-=======
   const env = {
     ...loadEnv(mode, WORKSPACE_ROOT, ""),
     ...loadEnv(mode, FRONTEND_ROOT, ""),
@@ -2491,7 +2473,6 @@ export default defineConfig(({ mode }) => {
   } else {
     apiBase = apiBase.trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
   }
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
   const backendTarget =
     process.env.BACKEND_URL ||
@@ -2506,7 +2487,6 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
-      allowedHosts: [".trycloudflare.com", ".ngrok-free.dev", "localhost", "127.0.0.1"],
       watch: {
         ignored: [
           '**/.vs/**',
@@ -2519,47 +2499,6 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
-<<<<<<< HEAD
-        "^/__backend_api": {
-          target: backendTarget,
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/__backend_api/, ""),
-          headers: { "ngrok-skip-browser-warning": "true" },
-          configure: (proxy) => {
-            proxy.on("error", (err, req, res) => {
-              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
-              if (res && !res.headersSent && typeof res.writeHead === "function") {
-                res.writeHead(503, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({
-                  success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
-                }));
-              }
-            });
-          },
-        },
-        "^/api": {
-          target: backendTarget,
-          changeOrigin: true,
-          secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
-          configure: (proxy) => {
-            proxy.on("error", (err, req, res) => {
-              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
-              if (res && !res.headersSent && typeof res.writeHead === "function") {
-                res.writeHead(503, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({
-                  success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
-                }));
-              }
-            });
-          },
-        },
-        "/uploads": {
-          target: backendTarget,
-=======
         "/__backend_api": {
           target: backendTarget,
           changeOrigin: true,
@@ -2573,19 +2512,15 @@ export default defineConfig(({ mode }) => {
         },
         "/api/v1": {
           target: backendTarget,
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
           changeOrigin: true,
           secure: false,
           headers: { "ngrok-skip-browser-warning": "true" },
         },
-<<<<<<< HEAD
-        "/swagger": {
-=======
         "/api/auth": {
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
           target: backendTarget,
           changeOrigin: true,
           secure: false,
+          headers: { "ngrok-skip-browser-warning": "true" },
         },
       },
     },

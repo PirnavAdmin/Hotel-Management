@@ -1,35 +1,3 @@
-<<<<<<< HEAD
-import { apiClient } from './apiConfig';
-
-export async function apiGetReservations(params = {}) {
-  const queryParts = [];
-  if (params.branchId) queryParts.push(`branchId=${encodeURIComponent(params.branchId)}`);
-  if (params.date) queryParts.push(`date=${encodeURIComponent(params.date)}`);
-  if (params.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
-  const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-  return await apiClient(`/api/v1/reservations${query}`);
-}
-
-export async function apiCreateReservation(reservationData) {
-  return await apiClient('/api/v1/reservations', {
-    method: 'POST',
-    body: JSON.stringify(reservationData),
-  });
-}
-
-export async function apiUpdateReservationStatus(id, status) {
-  return await apiClient(`/api/v1/reservations/${id}/status`, {
-    method: 'PUT',
-    body: JSON.stringify({ status }),
-  });
-}
-
-export async function apiDeleteReservation(id) {
-  return await apiClient(`/api/v1/reservations/${id}`, {
-    method: 'DELETE',
-  });
-}
-=======
 // Pure Frontend Mock Reservation Service - ZERO API / Backend dependencies
 const STORAGE_KEY = "bhanu_bistro_reservations_v1";
 const TABLES_STORAGE_KEY = "bhanu_bistro_reservation_tables_v1";
@@ -68,7 +36,7 @@ const INITIAL_RESERVATIONS = [
     section: "Indoor",
     specialRequests: "High chair needed for child.",
     estimatedAmount: 3500,
-    advanceAmount: 700,
+    advanceAmount: 100,
     paymentMethod: "Credit Card",
     status: "completed",
     createdAt: "2026-11-04T10:00:00Z",
@@ -87,7 +55,7 @@ const INITIAL_RESERVATIONS = [
     section: "Outdoor",
     specialRequests: "Family lunch reunion.",
     estimatedAmount: 5000,
-    advanceAmount: 1000,
+    advanceAmount: 100,
     paymentMethod: "Net Banking",
     status: "completed",
     createdAt: "2026-10-27T16:00:00Z",
@@ -161,6 +129,7 @@ export async function apiCreateReservation(data) {
     id: `RES-${nextNum}`,
     reservationId: `RES-${nextNum}`,
     ...data,
+    advanceAmount: data?.advanceAmount || 100,
     status: "confirmed",
     createdAt: new Date().toISOString(),
   };
@@ -184,6 +153,17 @@ export async function apiUpdateReservation(id, data) {
   return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
 }
 
+export async function apiUpdateReservationStatus(id, status) {
+  const all = getStoredReservations();
+  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, status } : r));
+  saveStoredReservations(updated);
+  return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
+}
+
+export async function apiDeleteReservation(id) {
+  return await apiCancelReservation(id);
+}
+
 export async function apiCancelReservation(id) {
   const all = getStoredReservations();
   const target = all.find((r) => r.id === id || r.reservationId === id);
@@ -203,5 +183,3 @@ export async function apiCancelReservation(id) {
 
   return { success: true, message: "Reservation cancelled successfully." };
 }
-
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
