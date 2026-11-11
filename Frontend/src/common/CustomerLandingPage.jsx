@@ -15,6 +15,7 @@ import {
   Phone,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Utensils,
   UserRound,
   Users,
@@ -26,6 +27,7 @@ import {
   Smartphone,
   Check,
   Bell,
+  BellRing,
   MapPin,
   Tag,
   Star,
@@ -40,10 +42,8 @@ import {
   Sandwich,
   Soup,
   Wheat,
-  Coffee,
   IceCream,
   Heart,
-  ChevronDown,
 } from "lucide-react";
 import { apiClient } from "../api/apiConfig";
 import { apiCreateReservation } from "../api/reservationApi";
@@ -66,7 +66,6 @@ export const TAKEAWAY_CATEGORIES = [
   { id: "starters", label: "Starters", icon: Sparkles },
   { id: "tandoor", label: "Tandoor", icon: Flame },
   { id: "fastfood", label: "Fast Food", icon: Sandwich },
-  { id: "beverages", label: "Beverages", icon: Coffee },
   { id: "desserts", label: "Desserts", icon: IceCream },
 ];
 
@@ -373,13 +372,11 @@ const getAvailableTables = (tables, guests) => {
     const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
     return ["vacant", "available"].includes(status) && cap >= guests;
   });
-  return filtered.length > 0 ? filtered : FALLBACK_TABLES;
-};
 
-const todayDate = () => {
+function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
+}
 
 const getFormattedPickupDate = () => {
   const d = new Date();
@@ -443,7 +440,6 @@ export function CustomerLandingPage({
   });
 
   // --- Menu Filters & Category State (Matches POS Screen Template) ---
-  const [orderMode, setOrderMode] = useState("kitchen"); // "kitchen" | "bar"
   const [dietaryFilter, setDietaryFilter] = useState("all"); // "all" | "veg" | "non-veg" | "special"
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -494,6 +490,76 @@ export function CustomerLandingPage({
   const [reservationSubmitting, setReservationSubmitting] = useState(false);
   const reservationDateRef = useRef(null);
   const reservationTimeRef = useRef(null);
+
+  // --- Notifications State (Matches POS Header) ---
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem("avsr_kitchen_notifications");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [
+      {
+        id: "notif-seed-1",
+        type: "cooking_completed",
+        title: "Order Ready for Pickup",
+        message: "Takeaway order #TK-1066 is packed and waiting at the counter.",
+        timestamp: "Just now",
+      },
+      {
+        id: "notif-seed-2",
+        type: "cooking",
+        title: "Kitchen Preparing Dishes",
+        message: "Chef has started cooking Chicken Biryani and Butter Naan.",
+        timestamp: "5 mins ago",
+      },
+    ];
+  });
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "avsr_kitchen_notifications" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setNotifications(parsed);
+        } catch {}
+      }
+    };
+    const handleCustom = (e) => {
+      if (e.detail) {
+        setNotifications((prev) => [e.detail, ...prev].slice(0, 30));
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("avsr-kitchen-notification", handleCustom);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("avsr-kitchen-notification", handleCustom);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
+    };
+    if (isNotifOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isNotifOpen]);
+
+  const handleClearNotifications = () => {
+    setNotifications([]);
+    try {
+      localStorage.removeItem("avsr_kitchen_notifications");
+    } catch {}
+  };
 
   // Sync hash with browser history
   useEffect(() => {
@@ -546,21 +612,14 @@ export function CustomerLandingPage({
   );
   const activeCategoryLabel = activeCategoryObj.label;
 
-  // Filtered menu items by station, category, dietary type, and search (Exact POS Template Logic)
+  // Filtered food items by category, dietary type, and search.
   const visibleMenuItems = useMemo(() => {
     return combinedMenuItems.filter((item) => {
       const isBarItem =
         item.station === "bar" ||
         String(item.category || "").toLowerCase().includes("bev") ||
         String(item.category || "").toLowerCase().includes("drink");
-
-      // 1. Station filter (Kitchen vs Bar)
-      if (orderMode === "kitchen" && isBarItem && selectedCategory !== "beverages") {
-        return false;
-      }
-      if (orderMode === "bar" && !isBarItem) {
-        return false;
-      }
+      if (isBarItem) return false;
 
       // 2. Category filter
       const cat = String(item.category || "").toLowerCase();
@@ -571,7 +630,6 @@ export function CustomerLandingPage({
       else if (selectedCategory === "fastfood") matchesCat = cat.includes("fast") || cat.includes("burger") || cat.includes("pizza") || cat.includes("fries");
       else if (selectedCategory === "curries") matchesCat = cat.includes("curry") || cat.includes("curries") || cat.includes("main");
       else if (selectedCategory === "breads") matchesCat = cat.includes("bread") || cat.includes("naan") || cat.includes("roti");
-      else if (selectedCategory === "beverages") matchesCat = isBarItem;
       else if (selectedCategory === "desserts") matchesCat = cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice") || cat.includes("cake") || cat.includes("brownie") || cat.includes("jamun");
       else if (selectedCategory !== "all") matchesCat = cat.includes(selectedCategory.toLowerCase());
 
@@ -594,7 +652,7 @@ export function CustomerLandingPage({
 
       return true;
     });
-  }, [combinedMenuItems, orderMode, selectedCategory, dietaryFilter, searchQuery]);
+  }, [combinedMenuItems, selectedCategory, dietaryFilter, searchQuery]);
 
   // Cart calculations matching screenshot financial breakdown:
   // Subtotal ₹640 + Packaging Charge ₹20 + GST (5%) ₹33 = Total Amount ₹693
@@ -871,6 +929,7 @@ export function CustomerLandingPage({
             <button
               type="button"
               className={activeScreen === "menu" ? "takeaway-header-cart-btn" : "customer-header-cart-btn"}
+              aria-label={`View your order, ${cartCount} item${cartCount === 1 ? "" : "s"}`}
               onClick={() => {
                 if (activeScreen === "menu") {
                   const el = document.getElementById("takeaway-order-sidebar");
@@ -881,9 +940,8 @@ export function CustomerLandingPage({
               }}
               title="Your Order"
             >
-              <ShoppingBag size={17} />
+              <ShoppingCart size={19} strokeWidth={2.2} />
               <span className="takeaway-cart-count-bubble">{cartCount}</span>
-              {activeScreen === "menu" && <ChevronDown size={14} />}
             </button>
           )}
 
@@ -1080,11 +1138,7 @@ export function CustomerLandingPage({
                         key={cat.id}
                         type="button"
                         className={`pos-takeaway-cat-btn ${isSelected ? "is-selected" : ""}`}
-                        onClick={() => {
-                          setSelectedCategory(cat.id);
-                          if (cat.id === "beverages") setOrderMode("bar");
-                          else if (orderMode === "bar" && cat.id !== "all") setOrderMode("kitchen");
-                        }}
+                        onClick={() => setSelectedCategory(cat.id)}
                       >
                         <IconComp size={16} className="pos-cat-icon" />
                         <span className="pos-cat-label">{cat.label}</span>
@@ -1098,42 +1152,12 @@ export function CustomerLandingPage({
               <div className="pos-takeaway-center">
                 {/* Catalog Controls Bar */}
                 <div className="pos-takeaway-controls-bar">
-                  {/* Station Toggle: Kitchen / Food vs Bar / Beverages */}
-                  <div className="pos-station-group">
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("kitchen");
-                        if (selectedCategory === "beverages") setSelectedCategory("all");
-                      }}
-                    >
-                      <ChefHat size={14} />
-                      <span>Kitchen / Food</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "bar" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("bar");
-                        setSelectedCategory("all");
-                      }}
-                    >
-                      <Coffee size={14} />
-                      <span>Bar / Beverages</span>
-                    </button>
-                  </div>
-
                   {/* Search Input */}
                   <div className="pos-search-box">
                     <Search size={15} className="pos-search-icon" />
                     <input
                       type="text"
-                      placeholder={
-                        orderMode === "bar"
-                          ? "Search drinks, lassi, soda, mocktails..."
-                          : "Search Biryani, Chicken 65, Naan, Desserts..."
-                      }
+                      placeholder="Search Biryani, Chicken 65, Naan, Desserts..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -1192,7 +1216,6 @@ export function CustomerLandingPage({
                           setSelectedCategory("all");
                           setSearchQuery("");
                           setDietaryFilter("all");
-                          setOrderMode("kitchen");
                         }}
                       >
                         Show All Dishes
