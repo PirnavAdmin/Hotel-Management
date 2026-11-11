@@ -30,6 +30,7 @@ import {
   getStoredReservationTables,
   saveStoredReservationTables
 } from "../api/reservationApi";
+import "./TableReservationFlow.css";
 
 export function TableReservationFlow({
   onBackToPos,
@@ -246,6 +247,7 @@ export function TableReservationFlow({
 
   return (
     <div
+      className="table-reservation-flow"
       style={{
         minHeight: "100vh",
         backgroundColor: "#0d0604",
@@ -712,6 +714,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   fontSize: "13px",
                   background: "#faf7f2",
                   color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               />
@@ -734,6 +737,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   fontSize: "13px",
                   background: "#faf7f2",
                   color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               >
@@ -774,6 +778,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                     height: "28px",
                     border: "none",
                     background: "#eee4da",
+                    color: "#1f1610",
                     borderRadius: "6px",
                     fontWeight: 800,
                     fontSize: "16px",
@@ -782,9 +787,9 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 >
                   -
                 </button>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: "13px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: "13px", color: "#1f1610" }}>
                   <Users size={15} color="#ea580c" />
-                  <span>{form.guests} Guests</span>
+                  <span style={{ color: "#1f1610" }}>{form.guests} Guests</span>
                 </div>
                 <button
                   type="button"
@@ -794,6 +799,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                     height: "28px",
                     border: "none",
                     background: "#eee4da",
+                    color: "#1f1610",
                     borderRadius: "6px",
                     fontWeight: 800,
                     fontSize: "16px",
@@ -821,6 +827,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   fontSize: "13px",
                   background: "#faf7f2",
                   color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               >
@@ -851,6 +858,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   borderRadius: "8px",
                   fontSize: "13px",
                   background: "#faf7f2",
+                  color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               />
@@ -873,6 +882,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   borderRadius: "8px",
                   fontSize: "13px",
                   background: "#faf7f2",
+                  color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               />
@@ -897,6 +908,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 borderRadius: "8px",
                 fontSize: "13px",
                 background: "#faf7f2",
+                color: "#1f1610",
+                colorScheme: "light",
                 outline: "none",
               }}
             />
@@ -919,6 +932,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 borderRadius: "8px",
                 fontSize: "12.5px",
                 background: "#faf7f2",
+                color: "#1f1610",
+                colorScheme: "light",
                 outline: "none",
                 resize: "vertical",
               }}
@@ -1941,6 +1956,8 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
               borderRadius: "8px",
               fontSize: "13px",
               background: "#faf7f2",
+              color: "#1f1610",
+              colorScheme: "light",
               outline: "none",
             }}
           />
@@ -1960,6 +1977,8 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
               borderRadius: "8px",
               fontSize: "13px",
               background: "#faf7f2",
+              color: "#1f1610",
+              colorScheme: "light",
               outline: "none",
             }}
           >
@@ -2003,6 +2022,7 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
                 height: "28px",
                 border: "none",
                 background: "#eee4da",
+                color: "#1f1610",
                 borderRadius: "6px",
                 fontWeight: 800,
                 fontSize: "16px",
@@ -2011,7 +2031,7 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
             >
               -
             </button>
-            <span style={{ fontWeight: 700, fontSize: "13px" }}>{reservation?.guests || 2} Guests</span>
+            <span style={{ fontWeight: 700, fontSize: "13px", color: "#1f1610" }}>{reservation?.guests || 2} Guests</span>
             <button
               type="button"
               onClick={() =>
@@ -2025,6 +2045,7 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
                 height: "28px",
                 border: "none",
                 background: "#eee4da",
+                color: "#1f1610",
                 borderRadius: "6px",
                 fontWeight: 800,
                 fontSize: "16px",
@@ -2058,6 +2079,8 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
               borderRadius: "8px",
               fontSize: "13px",
               background: "#faf7f2",
+              color: "#1f1610",
+              colorScheme: "light",
               outline: "none",
             }}
           >
@@ -2085,6 +2108,8 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
             borderRadius: "8px",
             fontSize: "12.5px",
             background: "#faf7f2",
+            color: "#1f1610",
+            colorScheme: "light",
             outline: "none",
           }}
         />

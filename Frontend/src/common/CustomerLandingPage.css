@@ -990,6 +990,29 @@
   background: #ffffff;
 }
 
+.customer-field-control input::placeholder,
+.customer-field-textarea::placeholder,
+.customer-menu-search-box input::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1 !important;
+}
+
+.customer-reservation-flow-wrapper input,
+.customer-reservation-flow-wrapper select,
+.customer-reservation-flow-wrapper textarea {
+  color: #1f1610 !important;
+  -webkit-text-fill-color: #1f1610 !important;
+  color-scheme: light !important;
+}
+
+.customer-reservation-flow-wrapper input::placeholder,
+.customer-reservation-flow-wrapper textarea::placeholder {
+  color: #786c62 !important;
+  -webkit-text-fill-color: #786c62 !important;
+  opacity: 1 !important;
+}
+
 /* Payment Options List - UPI & Cash Tender */
 .customer-payment-options-list {
   display: flex;
@@ -3165,7 +3188,6 @@
   color: #ffffff;
 }
 
-<<<<<<< HEAD
 .customer-profile-menu-item.is-logout {
   color: #ef4444;
 }
@@ -3212,7 +3234,6 @@
   }
 }
 
-=======
 .customer-reservation-availability,
 .customer-reservation-followup,
 .customer-reservation-account,
@@ -3298,4 +3319,3 @@
   .customer-reservation-account header { align-items: flex-start; }
   .customer-reservation-account header div { justify-content: flex-start; }
 }
->>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
