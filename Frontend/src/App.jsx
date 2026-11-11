@@ -1109,6 +1109,12 @@ export function App() {
     saveRouteSession(SESSION_KEY_ADMIN, s);
   };
 
+  const handleHotelLogin = () => {
+    setAdminSession(null);
+    saveRouteSession(SESSION_KEY_ADMIN, null);
+    navigate("/admin");
+  };
+
   const handleGlobalLogin = (s, targetRole) => {
     const roleToUse = targetRole || s?.role || "pos";
     setSession(s);
@@ -3725,11 +3731,9 @@ export function App() {
             menuItems={menuItems}
             menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
             tables={tables}
-            onAdminLogin={() => {
-              setAdminSession(null);
-              saveRouteSession(SESSION_KEY_ADMIN, null);
-              navigate("/admin");
-            }}
+            onHotelLogin={handleHotelLogin}
+            kitchenNotifications={kitchenNotifications}
+            onClearNotifications={handleClearNotifications}
           />
         )}
 
@@ -3963,7 +3967,10 @@ export function App() {
                 <TakeawayOrderFlowView onBack={() => setActiveView("takeaway")} />
               )}
               {activeView === "reservation" && (
-                <TableReservationFlow onBackToPos={() => setActiveView("tables")} />
+                <TableReservationFlow
+                  onBackToPos={() => setActiveView("tables")}
+                  onHotelLogin={handleHotelLogin}
+                />
               )}
               {activeView === "order" && (
                 <TableDetailView
