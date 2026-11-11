@@ -248,8 +248,8 @@
       </div>
     </header>
 
-    <!-- Step Navigation Pills -->
-    <div class="step-pill-nav" id="stepPillNav">
+    <!-- Step Navigation Pills (Hidden: Flow is sequential page-by-page) -->
+    <div class="step-pill-nav" id="stepPillNav" style="display: none;">
       <button class="step-nav-btn active" onclick="goToStep(1)">1. Book Table</button>
       <button class="step-nav-btn" onclick="goToStep(2)">2. Select Table</button>
       <button class="step-nav-btn" onclick="goToStep(3)">3. Payment</button>
@@ -403,12 +403,12 @@
                 <span>₹2,000.00</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; color: #ea580c; font-weight: 700;">
-                <span>Advance (20% to lock table):</span>
-                <span>₹400.00</span>
+                <span>Advance (to lock table):</span>
+                <span>₹100.00</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; border-top: 1px solid #fed7aa; padding-top: 6px; margin-top: 4px;">
                 <span>Payable Now:</span>
-                <span style="color: #ea580c;">₹400.00</span>
+                <span style="color: #ea580c;">₹100.00</span>
               </div>
             </div>
           </div>
@@ -455,7 +455,7 @@
             </div>
 
             <button type="button" class="btn-orange-lg" onclick="handlePayNow()">
-              Pay ₹400.00 & Confirm Booking
+              Pay ₹100.00 & Confirm Booking
             </button>
             <div style="text-align: center; margin-top: 10px;">
               <button type="button" onclick="goToStep(2)" style="background: none; border: none; font-size: 12px; color: #6b5d52; cursor: pointer; text-decoration: underline;">
@@ -512,7 +512,7 @@
             <div>Table: <strong id="confirmTable" style="color: #ea580c;">T-03 (Indoor)</strong></div>
             <div>Customer: <strong id="confirmCustomer">Priya Sharma</strong></div>
             <div>Phone: <strong id="confirmPhone">+91 98765 43210</strong></div>
-            <div>Advance Paid: <strong style="color: #166534;">₹400.00 (UPI ✓)</strong></div>
+            <div>Advance Paid: <strong style="color: #166534;">₹100.00 (UPI ✓)</strong></div>
             <div>Status: <span style="background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 11px;">Confirmed</span></div>
           </div>
         </div>
@@ -660,12 +660,12 @@
           </div>
           <div style="display: flex; justify-content: space-between; border-top: 1px dashed #d4c8bd; paddingTop: 8px; font-weight: 800;">
             <span>Refund Status:</span>
-            <span style="color: #16a34a;">₹400.00 (Processed)</span>
+            <span style="color: #16a34a;">₹100.00 (Processed)</span>
           </div>
         </div>
 
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 16px; color: #1e40af; font-size: 12px; margin: 0 auto 24px; text-align: left;">
-          ℹ️ The advance payment of ₹400.00 will be refunded to your original payment method within 3-5 business days.
+          ℹ️ The advance payment of ₹100.00 will be refunded to your original payment method within 3-5 business days.
         </div>
 
         <button type="button" class="btn-orange-lg" style="width: auto;" onclick="goToStep(6)">
@@ -910,7 +910,7 @@
         tableName: "T-03 (Indoor)",
         section: "Indoor",
         specialRequests: "Anniversary celebration, window table preference.",
-        advanceAmount: 400,
+        advanceAmount: 100,
         status: "confirmed"
       },
       {
@@ -1133,7 +1133,7 @@
           time: document.getElementById('inputTime').value,
           tableId: selectedTable.id,
           tableName: `${selectedTable.name} (${selectedTable.section})`,
-          advanceAmount: 400,
+          advanceAmount: 100,
           status: "confirmed"
         };
 
@@ -1198,7 +1198,7 @@
               <div>📅 ${res.date} at ${res.time}</div>
               <div>👥 ${res.guests} Guests</div>
               <div>👤 ${res.customerName}</div>
-              <div>💰 Advance: ₹${res.advanceAmount || 400}.00</div>
+              <div>💰 Advance: ₹${res.advanceAmount || 100}.00</div>
             </div>
           </div>
 
@@ -1287,7 +1287,7 @@
 
       document.getElementById('cancelledResIdText').textContent = activeResToCancel.id;
       document.getElementById('cancelledResIdBadge').textContent = activeResToCancel.id;
-      showToast(`Reservation ${activeResToCancel.id} cancelled. ₹400 refund initiated.`);
+      showToast(`Reservation ${activeResToCancel.id} cancelled. ₹100 refund initiated.`);
       goToStep(9);
     }
 
@@ -1297,3 +1297,4 @@
   </script>
 </body>
 </html>
+
