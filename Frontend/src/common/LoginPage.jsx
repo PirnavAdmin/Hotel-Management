@@ -189,13 +189,13 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
       accent: '#6366f1', accentLight: '#818cf8',
       btnBg: 'var(--primary-gradient)',
       btnShadow: '0 4px 18px rgba(255,157,0,.25)',
-      badge: '⚙️ ADMIN PORTAL',
+      badge: '⚙️ HOTEL PORTAL',
       badgeBg: 'rgba(99,102,241,0.15)', badgeBorder: 'rgba(99,102,241,0.4)',
       hint: 'Access: Menu, Tables, Staff, Reports'
     }
   };
   const cfg = cfgMap[currentRole] || cfgMap.pos;
-  const loginTitle = currentRole === 'admin' ? 'Admin Login'
+  const loginTitle = currentRole === 'admin' ? 'Hotel Login'
     : currentRole === 'kot' ? 'Kitchen Login' : 'Billing Login';
 
 

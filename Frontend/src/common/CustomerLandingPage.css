@@ -1610,31 +1610,234 @@
 }
 
 .takeaway-header-cart-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: #7c2d12;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  color: #ffb52e;
   border-radius: 12px;
-  padding: 6px 14px;
-  font-size: 0.88rem;
-  font-weight: 750;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .takeaway-header-cart-btn:hover {
-  background: #9a3412;
+  background: rgba(249, 115, 22, 0.2);
+  border-color: #f97316;
+  color: #ffffff;
   transform: translateY(-1px);
 }
 .takeaway-cart-count-bubble {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border: 2px solid #140d07;
   background: #ea580c;
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 850;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
   border-radius: 999px;
-  padding: 1px 7px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.takeaway-notification-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.takeaway-notification-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.takeaway-notification-btn:hover,
+.takeaway-notification-btn[aria-expanded="true"] {
+  border-color: rgba(255, 181, 46, 0.55);
+  background: rgba(255, 181, 46, 0.14);
+  color: #ffb52e;
+}
+
+.takeaway-notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid #140d07;
+  border-radius: 999px;
+  background: #ea580c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.takeaway-notification-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1100;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(420px, calc(100dvh - 100px));
+  overflow: hidden;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 14px;
+  background: #171d29;
+  color: #f8fafc;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+.takeaway-notification-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.takeaway-notification-panel-header strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.takeaway-notification-panel-header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 7px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.takeaway-notification-panel-header button:hover {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.takeaway-notification-empty {
+  padding: 28px 16px;
+  color: #aab4c3;
+  text-align: center;
+  font-size: 13px;
+}
+
+.takeaway-notification-empty > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.takeaway-notification-empty p {
+  margin: 0;
+}
+
+.takeaway-notification-list {
+  display: grid;
+  gap: 6px;
+  max-height: 340px;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.takeaway-notification-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 9px;
+  background: rgba(245, 158, 11, 0.07);
+  font-size: 12px;
+}
+
+.takeaway-notification-list li.is-completed {
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.07);
+}
+
+.takeaway-notification-status-icon {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  color: #fbbf24;
+}
+
+.takeaway-notification-list li.is-completed .takeaway-notification-status-icon {
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #34d399;
+}
+
+.takeaway-notification-copy {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+  color: #aab4c3;
+  line-height: 1.4;
+}
+
+.takeaway-notification-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.takeaway-notification-title-row strong {
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.takeaway-notification-title-row small {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.takeaway-notification-table {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 750;
 }
 
 /* ─── Takeaway POS Template Layout (Matches POS Screen Template) ─── */
@@ -2583,6 +2786,209 @@
     border-left: none;
     border-top: 1px solid var(--border-subtle, #e2e8f0);
   }
+}
+
+/* ─── Notification Bell Button & Dropdown in Takeaway Header (Matches POS Header) ─── */
+.takeaway-header-notif-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.takeaway-header-notif-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.takeaway-header-notif-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.takeaway-header-notif-btn.has-alerts {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1.5px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.takeaway-bell-ring-active {
+  color: #10b981;
+  animation: bellShake 1.8s ease infinite;
+}
+
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-10deg); }
+  20%, 40% { transform: rotate(10deg); }
+  50% { transform: rotate(0); }
+}
+
+.takeaway-notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.64rem;
+  font-weight: 850;
+  border-radius: 999px;
+  min-width: 17px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+  border: 1.5px solid #1c140e;
+}
+
+.takeaway-notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: #18130e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+  z-index: 1100;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.takeaway-notif-header {
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.takeaway-notif-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #f8fafc;
+}
+
+.takeaway-notif-clear-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.takeaway-notif-clear-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.takeaway-notif-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.takeaway-notif-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.takeaway-notif-empty p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.takeaway-notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s ease;
+}
+
+.takeaway-notif-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.takeaway-notif-item.is-ready {
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.takeaway-notif-icon-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.takeaway-notif-icon-circle.is-ready {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.takeaway-notif-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.takeaway-notif-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.takeaway-notif-item-top strong {
+  font-size: 0.76rem;
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.takeaway-notif-item-top span {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+.takeaway-notif-item-body p {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  line-height: 1.35;
 }
 
 @media (prefers-reduced-motion: reduce) {

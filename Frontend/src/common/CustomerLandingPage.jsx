@@ -15,6 +15,7 @@ import {
   Phone,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Utensils,
   UserRound,
   Users,
@@ -40,7 +41,6 @@ import {
   Sandwich,
   Soup,
   Wheat,
-  Coffee,
   IceCream,
   Heart,
   ChevronDown,
@@ -54,6 +54,12 @@ import { ReceiptModal } from "../user/ReceiptModal";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import {
+  cleanNotificationText,
+  getCleanAlertMessage,
+  getCleanAlertTimestamp,
+  getCleanAlertTitle,
+} from "../utils/notificationHelper";
 import "./CustomerLandingPage.css";
 
 const CUSTOMER_SESSION_KEY = "bhanu_bistro_customer_v1";
@@ -80,7 +86,6 @@ export const TAKEAWAY_CATEGORIES = [
   { id: "starters", label: "Starters", icon: Sparkles },
   { id: "tandoor", label: "Tandoor", icon: Flame },
   { id: "fastfood", label: "Fast Food", icon: Sandwich },
-  { id: "beverages", label: "Beverages", icon: Coffee },
   { id: "desserts", label: "Desserts", icon: IceCream },
 ];
 
@@ -390,10 +395,10 @@ const getAvailableTables = (tables, guests) => {
   return filtered;
 };
 
-const todayDate = () => {
+function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
+}
 
 const getFormattedPickupDate = () => {
   const d = new Date();
@@ -432,7 +437,9 @@ export function CustomerLandingPage({
   menuItems = [],
   menuLoading = false,
   tables = [],
-  onAdminLogin,
+  onHotelLogin,
+  kitchenNotifications = [],
+  onClearNotifications,
 }) {
   // --- Cart & Navigation State ---
   const [cart, setCart] = useState(() => {
@@ -465,7 +472,6 @@ export function CustomerLandingPage({
   });
 
   // --- Menu Filters & Category State (Matches POS Screen Template) ---
-  const [orderMode, setOrderMode] = useState("kitchen"); // "kitchen" | "bar"
   const [dietaryFilter, setDietaryFilter] = useState("all"); // "all" | "veg" | "non-veg" | "special"
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -525,6 +531,21 @@ export function CustomerLandingPage({
   const reservationDateRef = useRef(null);
   const reservationTimeRef = useRef(null);
 
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
+    };
+    if (isNotifOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isNotifOpen]);
+
   // Sync hash with browser history
   useEffect(() => {
     const handleHistoryNavigation = () => {
@@ -578,16 +599,17 @@ export function CustomerLandingPage({
   }, []);
 
   const navigateScreen = (screen) => {
+    const targetScreen = screen === "cart" ? "menu" : screen;
     const hash =
-      screen === "reservation"
+      targetScreen === "reservation"
         ? "#reserve"
-        : screen === "home"
+        : targetScreen === "home"
         ? "#home"
         : screen === "auth"
         ? "#auth"
         : `#${screen}`;
     window.history.pushState(null, "", hash);
-    setActiveScreen(screen);
+    setActiveScreen(targetScreen);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -650,21 +672,14 @@ export function CustomerLandingPage({
   );
   const activeCategoryLabel = activeCategoryObj.label;
 
-  // Filtered menu items by station, category, dietary type, and search (Exact POS Template Logic)
+  // Filtered food items by category, dietary type, and search.
   const visibleMenuItems = useMemo(() => {
     return combinedMenuItems.filter((item) => {
       const isBarItem =
         item.station === "bar" ||
         String(item.category || "").toLowerCase().includes("bev") ||
         String(item.category || "").toLowerCase().includes("drink");
-
-      // 1. Station filter (Kitchen vs Bar)
-      if (orderMode === "kitchen" && isBarItem && selectedCategory !== "beverages") {
-        return false;
-      }
-      if (orderMode === "bar" && !isBarItem) {
-        return false;
-      }
+      if (isBarItem) return false;
 
       // 2. Category filter
       const cat = String(item.category || "").toLowerCase();
@@ -675,7 +690,6 @@ export function CustomerLandingPage({
       else if (selectedCategory === "fastfood") matchesCat = cat.includes("fast") || cat.includes("burger") || cat.includes("pizza") || cat.includes("fries");
       else if (selectedCategory === "curries") matchesCat = cat.includes("curry") || cat.includes("curries") || cat.includes("main");
       else if (selectedCategory === "breads") matchesCat = cat.includes("bread") || cat.includes("naan") || cat.includes("roti");
-      else if (selectedCategory === "beverages") matchesCat = isBarItem;
       else if (selectedCategory === "desserts") matchesCat = cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice") || cat.includes("cake") || cat.includes("brownie") || cat.includes("jamun");
       else if (selectedCategory !== "all") matchesCat = cat.includes(selectedCategory.toLowerCase());
 
@@ -698,7 +712,7 @@ export function CustomerLandingPage({
 
       return true;
     });
-  }, [combinedMenuItems, orderMode, selectedCategory, dietaryFilter, searchQuery]);
+  }, [combinedMenuItems, selectedCategory, dietaryFilter, searchQuery]);
 
   // Cart calculations matching screenshot financial breakdown:
   // Subtotal ₹640 + Packaging Charge ₹20 + GST (5%) ₹33 = Total Amount ₹693
@@ -1225,9 +1239,9 @@ export function CustomerLandingPage({
         )}
 
         {/* ========================================================= */}
-        {/* STEP 2: Browse Menu - POS Template (Sidebar + Grid + Slip) */}
+        {/* STEP 2: Browse Menu & Cart - POS Template (Sidebar + Grid + Slip) */}
         {/* ========================================================= */}
-        {activeScreen === "menu" && (
+        {(activeScreen === "menu" || activeScreen === "cart") && (
           <div className="pos-takeaway-app" id="menu">
             {/* Top Table Switcher / Counter Strip (matches POS screen sub-strip) */}
             <div className="pos-takeaway-substrip">
@@ -1276,11 +1290,7 @@ export function CustomerLandingPage({
                         key={cat.id}
                         type="button"
                         className={`pos-takeaway-cat-btn ${isSelected ? "is-selected" : ""}`}
-                        onClick={() => {
-                          setSelectedCategory(cat.id);
-                          if (cat.id === "beverages") setOrderMode("bar");
-                          else if (orderMode === "bar" && cat.id !== "all") setOrderMode("kitchen");
-                        }}
+                        onClick={() => setSelectedCategory(cat.id)}
                       >
                         <IconComp size={16} className="pos-cat-icon" />
                         <span className="pos-cat-label">{cat.label}</span>
@@ -1294,42 +1304,12 @@ export function CustomerLandingPage({
               <div className="pos-takeaway-center">
                 {/* Catalog Controls Bar */}
                 <div className="pos-takeaway-controls-bar">
-                  {/* Station Toggle: Kitchen / Food vs Bar / Beverages */}
-                  <div className="pos-station-group">
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("kitchen");
-                        if (selectedCategory === "beverages") setSelectedCategory("all");
-                      }}
-                    >
-                      <ChefHat size={14} />
-                      <span>Kitchen / Food</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "bar" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("bar");
-                        setSelectedCategory("all");
-                      }}
-                    >
-                      <Coffee size={14} />
-                      <span>Bar / Beverages</span>
-                    </button>
-                  </div>
-
                   {/* Search Input */}
                   <div className="pos-search-box">
                     <Search size={15} className="pos-search-icon" />
                     <input
                       type="text"
-                      placeholder={
-                        orderMode === "bar"
-                          ? "Search drinks, lassi, soda, mocktails..."
-                          : "Search Biryani, Chicken 65, Naan, Desserts..."
-                      }
+                      placeholder="Search Biryani, Chicken 65, Naan, Desserts..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -1388,7 +1368,6 @@ export function CustomerLandingPage({
                           setSelectedCategory("all");
                           setSearchQuery("");
                           setDietaryFilter("all");
-                          setOrderMode("kitchen");
                         }}
                       >
                         Show All Dishes
@@ -1628,164 +1607,7 @@ export function CustomerLandingPage({
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* STEP 3: Cart - Review items and proceed to checkout      */}
-        {/* ========================================================= */}
-        {activeScreen === "cart" && (
-          <section className="customer-flow-section" id="cart">
-            <div className="customer-flow-topbar">
-              <button
-                className="customer-back-btn"
-                type="button"
-                onClick={() => navigateScreen("menu")}
-              >
-                <ArrowLeft size={16} /> Back to Menu
-              </button>
-            </div>
 
-            <div className="customer-two-column-layout">
-              {/* Left Column: Cart Items */}
-              <div className="customer-layout-main">
-                <div className="customer-card-box">
-                  <div className="customer-card-header">
-                    <ShoppingBag size={20} color="#ea580c" />
-                    <h2>Your Cart ({cartCount} {cartCount === 1 ? "item" : "items"})</h2>
-                  </div>
-
-                  {cartItems.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#64748b" }}>
-                      <ShoppingBag size={42} style={{ margin: "0 auto 0.8rem", opacity: 0.4 }} />
-                      <p style={{ margin: 0, fontWeight: 600 }}>Your cart is empty.</p>
-                      <button
-                        type="button"
-                        className="customer-action-button takeaway-button"
-                        style={{ marginTop: "1rem", minWidth: "160px" }}
-                        onClick={() => navigateScreen("menu")}
-                      >
-                        Browse Menu <ArrowRight size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="customer-cart-items-list">
-                      {cartItems.map(({ item, quantity }) => (
-                        <div className="customer-cart-row" key={item.id}>
-                          <img
-                            src={getMenuItemImage(item)}
-                            alt={item.name}
-                            className="customer-cart-item-thumb"
-                            onError={(event) => handleDishImageError(event, item)}
-                          />
-                          <div className="customer-cart-item-info">
-                            <h4>{item.name}</h4>
-                            <span className="customer-cart-item-rate">{formatPrice(item.price)}</span>
-                          </div>
-
-                          <div className="customer-stepper" style={{ height: "36px" }}>
-                            <button
-                              type="button"
-                              onClick={() => changeQuantity(item, -1)}
-                            >
-                              <Minus size={13} />
-                            </button>
-                            <span>{quantity}</span>
-                            <button
-                              type="button"
-                              onClick={() => changeQuantity(item, 1)}
-                            >
-                              <Plus size={13} />
-                            </button>
-                          </div>
-
-                          <div className="customer-cart-item-total">
-                            {formatPrice(Number(item.price) * quantity)}
-                          </div>
-
-                          <button
-                            type="button"
-                            className="customer-cart-trash-btn"
-                            onClick={() => removeFromCart(item.id)}
-                            title="Remove item"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Apply Coupon Box */}
-                  {cartItems.length > 0 && (
-                    <form className="customer-coupon-form" onSubmit={handleApplyCoupon}>
-                      <div className="customer-coupon-input-wrap">
-                        <Tag size={16} />
-                        <input
-                          type="text"
-                          placeholder="Apply Coupon (e.g. BHANU10)"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
-                        />
-                      </div>
-                      <button type="submit" className="customer-coupon-apply-btn">
-                        Apply
-                      </button>
-                    </form>
-                  )}
-
-                  {couponApplied && (
-                    <div className="customer-coupon-success">
-                      <Check size={14} /> Coupon applied! Saved {formatPrice(couponDiscount)}
-                    </div>
-                  )}
-                  {couponError && (
-                    <div className="customer-coupon-error">{couponError}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Column: Order Summary */}
-              {cartItems.length > 0 && (
-                <div className="customer-layout-sidebar">
-                  <div className="customer-card-box customer-summary-card">
-                    <h3>Order Summary</h3>
-                    <div className="customer-summary-lines">
-                      <div className="customer-summary-line">
-                        <span>Items ({cartCount})</span>
-                        <span>{formatPrice(itemsSubtotal)}</span>
-                      </div>
-                      <div className="customer-summary-line">
-                        <span>Packing Charges</span>
-                        <span>{formatPrice(packingCharges)}</span>
-                      </div>
-                      <div className="customer-summary-line">
-                        <span>Taxes (5%)</span>
-                        <span>{formatPrice(taxes)}</span>
-                      </div>
-                      {couponApplied && (
-                        <div className="customer-summary-line" style={{ color: "#16a34a", fontWeight: 700 }}>
-                          <span>Discount (Coupon)</span>
-                          <span>-{formatPrice(couponDiscount)}</span>
-                        </div>
-                      )}
-                      <div className="customer-summary-divider" />
-                      <div className="customer-summary-total">
-                        <strong>Total Amount</strong>
-                        <strong>{formatPrice(totalAmount)}</strong>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="customer-proceed-cta-btn"
-                      onClick={() => navigateScreen("checkout")}
-                    >
-                      Proceed to Checkout <ArrowRight size={17} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
 
         {/* ========================================================= */}
         {/* STEP 4: Checkout Details - Add pickup time & contact     */}
@@ -1796,7 +1618,7 @@ export function CustomerLandingPage({
               <button
                 className="customer-back-btn"
                 type="button"
-                onClick={() => navigateScreen("cart")}
+                onClick={() => navigateScreen("menu")}
               >
                 <ArrowLeft size={16} /> Back to Cart
               </button>

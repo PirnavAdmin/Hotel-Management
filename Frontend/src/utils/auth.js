@@ -259,7 +259,12 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
   
   // Verify role if expectedRole is passed
   if (targetExpected && actualRole !== targetExpected && actualRole !== 'admin') {
-    return { success: false, error: `Unauthorized. Required role: ${expectedRole}` };
+    return {
+      success: false,
+      error: targetExpected === 'admin'
+        ? 'This account does not have access to the hotel portal.'
+        : `Unauthorized. Required role: ${expectedRole}`,
+    };
   }
 
   const isInputEmail = trimmedInput.includes('@');

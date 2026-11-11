@@ -2353,7 +2353,7 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
-        "^/api": {
+        "/uploads": {
           target: backendTarget,
           changeOrigin: true,
           secure: false,
