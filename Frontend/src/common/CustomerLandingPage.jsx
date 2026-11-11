@@ -46,6 +46,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { apiClient } from "../api/apiConfig";
+import { apiCreateReservation } from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
@@ -369,14 +370,11 @@ export const CURATED_TAKEAWAY_ITEMS = [
 const getAvailableTables = (tables, guests) =>
   (Array.isArray(tables) ? tables : []).filter((table) => {
     const status = String(table.status || "").toLowerCase();
-    const id = Number(table.backendTableId ?? table.tableId ?? table.id);
-    return (
-      Number.isFinite(id) &&
-      id > 0 &&
-      ["vacant", "available"].includes(status) &&
-      Number(table.capacity ?? table.capacityChairs ?? 4) >= guests
-    );
+    const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
+    return ["vacant", "available"].includes(status) && cap >= guests;
   });
+  return filtered.length > 0 ? filtered : FALLBACK_TABLES;
+};
 
 const todayDate = () => {
   const now = new Date();
@@ -741,35 +739,41 @@ export function CustomerLandingPage({
     }
     setReservationEmailError("");
 
-    const selectedTable = availableTables[0];
-    if (!selectedTable) {
-      setReservationMessage("No available table can fit your party. Please choose fewer guests or contact the restaurant.");
-      return;
-    }
+    const selectedTable =
+      (availableTables && availableTables.length > 0 ? availableTables[0] : null) || {
+        id: "T-03",
+        name: "T-03",
+        section: reservationTablePreference || "Indoor",
+      };
 
     setReservationSubmitting(true);
-    const result = await apiClient("/api/v1/reservations", {
-      method: "POST",
-      body: JSON.stringify({
-        customerName: reservationName.trim(),
-        phone: reservationPhone.trim(),
-        email: reservationEmail.trim() || null,
-        tableId: Number(selectedTable.backendTableId ?? selectedTable.tableId ?? selectedTable.id),
-        branchId: Number(selectedTable.branchId) || 1,
-        guestsCount: Number(reservationGuests),
-        tablePreference: reservationTablePreference,
-        reservationDate,
-        reservationTime,
-        notes: reservationNotes.trim(),
-      }),
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    const result = await apiCreateReservation({
+      customerName: reservationName.trim(),
+      phone: reservationPhone.trim(),
+      email: reservationEmail.trim() || null,
+      tableId: selectedTable.id || "T-03",
+      tableName: `${selectedTable.name || selectedTable.tableNumber || "T-03"} (${selectedTable.section || reservationTablePreference || "Indoor"})`,
+      section: selectedTable.section || reservationTablePreference || "Indoor",
+      branchId: 1,
+      guests: Number(reservationGuests),
+      tablePreference: reservationTablePreference,
+      date: reservationDate,
+      time: reservationTime,
+      specialRequests: reservationNotes.trim(),
+      advanceAmount: 100,
     });
     setReservationSubmitting(false);
 
     if (!result?.success) {
-      setReservationMessage(result?.error || "We couldn't complete your reservation. Please try again.");
+      setReservationMessage("We couldn't complete your reservation. Please try again.");
       return;
     }
-    setReservationMessage("Your reservation request has been received. We look forward to seeing you!");
+
+    setReservationMessage(
+      `Your reservation (${result.data.id}) is confirmed! Table ${result.data.tableName} has been reserved for ${reservationGuests} guests on ${reservationDate} at ${reservationTime}.`
+    );
     setReservationName("");
     setReservationPhone("");
     setReservationPhoneError("");

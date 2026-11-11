@@ -1,3 +1,4 @@
+using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,16 +15,32 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/invoices")]
+<<<<<<< HEAD
+[Tags("Invoices")]
+=======
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 public class InvoicesController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly SpService _spService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<InvoicesController> _logger;
 
+<<<<<<< HEAD
+    public InvoicesController(
+        SpService spService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InvoicesController> logger)
+=======
     public InvoicesController(AppDbContext context, SpService spService, ILogger<InvoicesController> logger)
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     {
         _context = context;
         _spService = spService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }
 
@@ -188,7 +205,18 @@ public class InvoicesController : ControllerBase
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
+<<<<<<< HEAD
+            if (string.Equals(existing.Status, "VOID", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(existing.Status, "REFUNDED", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(existing.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { success = false, message = $"Cannot record payment for a {existing.Status} invoice." });
+            }
+
+            var parameters = new Dictionary<string, object?>
+=======
             if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             {
                 return BadRequest(new { success = false, message = "Cannot record payment for a void invoice." });
             }
@@ -565,7 +593,11 @@ public class InvoicesController : ControllerBase
     }
 
     [AllowAnonymous]
+<<<<<<< HEAD
+    [HttpDelete("{id}")]
+=======
     [HttpDelete("{id:long}")]
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     public async Task<IActionResult> DeleteInvoice(string id)
     {
         long numericId = 0;
@@ -753,6 +785,30 @@ public class InvoicesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not enrich metadata for invoice {InvoiceId}", invoice.InvoiceId);
+        }
+    }
+    /// <summary>
+    /// Exports Customer Billing Invoices as CSV or XLSX.
+    /// Supports ?fromDate=...&toDate=...&status=...&department=...&format=csv|xlsx.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportInvoices(
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? status,
+        [FromQuery] string? department,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateInvoicesExportAsync(fromDate, toDate, status, department);
+            return _exportService.ExportResult(doc, format, doc.BaseFileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting customer billing invoices");
+            return StatusCode(500, new { success = false, message = "Failed to export invoices.", error = ex.Message });
         }
     }
 }

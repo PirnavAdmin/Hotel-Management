@@ -13,9 +13,10 @@ import {
   SettlementModal,
   TransferTableModal,
   PastOrdersModal,
+  TakeawayOrderFlowView,
 } from "./user";
-import { Header, LoginPage, ErrorBoundary } from "./common";
-import { CustomerLandingPage } from "./common/CustomerLandingPage";
+import { Header, LoginPage, ErrorBoundary, CustomerLandingPage } from "./common";
+import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
 import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
@@ -1836,6 +1837,26 @@ export function App() {
     };
   }, []);
 
+<<<<<<< HEAD
+  const [takeawayOrder, setTakeawayOrder] = useState({
+    id: "takeaway",
+    backendTableId: null,
+    name: "Takeaway",
+    tableName: "Takeaway",
+    section: "Takeaway",
+    isTakeaway: true,
+    items: [],
+    status: "vacant",
+    server: "Cashier",
+    guests: 1,
+    capacity: 1,
+  });
+
+  const isTakeawayActive = String(selectedTableId) === "takeaway";
+  const currentTable = isTakeawayActive
+    ? takeawayOrder
+    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
+=======
   // ── Table Concurrency Locking System ──────────────────────────────
   // Prevents multiple waiters from concurrently modifying the same table order.
   const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
@@ -1922,9 +1943,14 @@ export function App() {
   };
 
   const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
   // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = (id) => {
+<<<<<<< HEAD
+    const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
+    setSelectedTableId(tableId);
+=======
     const lockResult = acquireTableLock(id, posSession);
     const targetTable = tables.find((t) => String(t.id) === String(id));
     const tblName = targetTable?.name || `Table ${id}`;
@@ -1935,6 +1961,7 @@ export function App() {
     }
 
     setSelectedTableId(id);
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     setActiveView("order");
     sounds.playAddItem();
   };
@@ -1948,6 +1975,26 @@ export function App() {
 
   // Add Item to Table Order
   const handleAddItemToTable = (tableId, menuItem) => {
+    if (String(tableId) === "takeaway") {
+      setTakeawayOrder((prev) => {
+        const currentItems = Array.isArray(prev.items) ? prev.items : [];
+        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        let newItems;
+        if (existingIndex > -1) {
+          newItems = currentItems.map((item, idx) =>
+            idx === existingIndex
+              ? { ...item, quantity: item.quantity + (menuItem.quantity || 1) }
+              : item
+          );
+        } else {
+          newItems = [...currentItems, { ...menuItem, quantity: menuItem.quantity || 1, kotSent: false }];
+        }
+        return { ...prev, items: newItems, status: "occupied" };
+      });
+      sounds.playAddItem();
+      showToast(`Added ${menuItem.name} to Takeaway Order`);
+      return;
+    }
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
@@ -2046,6 +2093,21 @@ export function App() {
 
   // Update Item Quantity
   const handleUpdateItemQuantity = (tableId, itemId, newQty) => {
+    if (String(tableId) === "takeaway") {
+      setTakeawayOrder((prev) => {
+        const currentItems = Array.isArray(prev.items) ? prev.items : [];
+        let newItems;
+        if (newQty <= 0) {
+          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        } else {
+          newItems = currentItems.map((i) =>
+            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i
+          );
+        }
+        return { ...prev, items: newItems, status: newItems.length > 0 ? "occupied" : "vacant" };
+      });
+      return;
+    }
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
@@ -2351,10 +2413,15 @@ export function App() {
       } catch {}
 
       const submittedIds = new Set(unsentItems.map((item) => String(item.id ?? item.menuItemId ?? item.name)));
+      const resKitchenKot = result?.data?.kitchenKot ?? result?.kitchenKot;
+      const resBarKot = result?.data?.barKot ?? result?.barKot;
+
       const targetUpdatedTable = {
         ...persistedTable,
         backendOrderId,
         activeOrderId: backendOrderId,
+        kitchenKotNumber: resKitchenKot?.kotNumber || persistedTable.kitchenKotNumber,
+        barBotNumber: resBarKot?.botNumber || persistedTable.barBotNumber,
         kotSent: true,
         status: persistedTable.status === "vacant" ? "occupied" : persistedTable.status,
         orderTime: persistedTable.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -2408,10 +2475,14 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
+<<<<<<< HEAD
+=======
           if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
           if (itemId) {
-            return String(i.menuItemId ?? i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
+            return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
+          if (i.isBarItem || i.isBarDrink) return i;
           // Table-level status change
           if (status === "cooking") {
             // If starting cooking for the table, DO NOT revert already prepared/served/completed dishes back to cooking!
@@ -3721,7 +3792,11 @@ export function App() {
             menuItems={menuItems}
             menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
             tables={tables}
-            onAdminLogin={() => navigate("/admin")}
+            onAdminLogin={() => {
+              setAdminSession(null);
+              saveRouteSession(SESSION_KEY_ADMIN, null);
+              navigate("/admin");
+            }}
           />
         )}
 
@@ -3850,7 +3925,8 @@ export function App() {
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
         {isAdminRoute &&
-          (adminSession && adminSession.role === "admin" ? (
+          (adminSession &&
+          (adminSession.role === "admin" || adminSession.role === "manager") ? (
             <AdminPortal
               isFullPage={true}
               onClose={() => navigate("/")}
@@ -3886,7 +3962,14 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
+            <LoginPage
+              currentTheme={theme}
+              onChangeTheme={setTheme}
+              role="admin"
+              onLoginSuccess={handleGlobalLogin}
+              restaurantName={restaurantSettings.restaurantName}
+              restaurantLogo={restaurantSettings.logo}
+            />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
@@ -3942,6 +4025,12 @@ export function App() {
                     setIsSettlementOpen(true);
                   }}
                 />
+              )}
+              {activeView === "takeaway-flow" && (
+                <TakeawayOrderFlowView onBack={() => setActiveView("takeaway")} />
+              )}
+              {activeView === "reservation" && (
+                <TableReservationFlow onBackToPos={() => setActiveView("tables")} />
               )}
               {activeView === "order" && (
                 <TableDetailView
