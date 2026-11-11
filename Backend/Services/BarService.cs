@@ -1603,32 +1603,30 @@ public class BarService
         };
 
         
-const string itemsSql = @"
-    UPDATE order_items oi
-    LEFT JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id
-    SET oi.item_status = @p_item_status
-    WHERE oi.bot_id = @p_kot_id
-      AND oi.is_active = 1
-      AND oi.is_deleted = 0;
-";
+        const string itemsSql = @"
+            UPDATE order_items oi
+            LEFT JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id
+            SET oi.item_status = @p_item_status
+            WHERE oi.bot_id = @p_kot_id
+              AND oi.is_active = 1
+              AND oi.is_deleted = 0;
+        ";
 
-await _spService.ExecuteSqlNonQueryAsync(
-    itemsSql,
-    new Dictionary<string, object?>
-    {
-        { "@p_item_status", itemStatus },
-        { "@p_kot_id", kotId }
-    });
+        await _spService.ExecuteSqlNonQueryAsync(
+            itemsSql,
+            new Dictionary<string, object?>
+            {
+                { "@p_item_status", itemStatus },
+                { "@p_kot_id", kotId }
+            });
 
-await _spService.ExecuteSqlNonQueryAsync(
-    "UPDATE bar_bot_items SET item_status = @p_item_status WHERE bot_id = @p_kot_id;",
-    new Dictionary<string, object?>
-    {
-        { "@p_item_status", itemStatus },
-        { "@p_kot_id", kotId }
-    });
-    }
-        catch { }
+        await _spService.ExecuteSqlNonQueryAsync(
+            "UPDATE bar_bot_items SET item_status = @p_item_status WHERE bot_id = @p_kot_id;",
+            new Dictionary<string, object?>
+            {
+                { "@p_item_status", itemStatus },
+                { "@p_kot_id", kotId }
+            });
 
         try
         {
