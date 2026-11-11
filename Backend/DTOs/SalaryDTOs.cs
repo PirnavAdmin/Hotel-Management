@@ -6,14 +6,26 @@ namespace HMS.DTOs;
 
 public class CreateSalaryPaymentDto
 {
+<<<<<<< HEAD
+    [Required(ErrorMessage = "Staff ID is required.")]
+    public long StaffId { get; set; }
+=======
     public long? StaffId { get; set; }
 
     public string StaffName { get; set; } = string.Empty;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
     [Required(ErrorMessage = "Salary amount is required.")]
     [Range(0.01, 10000000.00, ErrorMessage = "Payment amount must be greater than zero.")]
     public decimal Amount { get; set; }
 
+<<<<<<< HEAD
+    public string? PaymentMonth { get; set; } // e.g. "2026-11"
+
+    public DateTime? PaymentDate { get; set; }
+
+    public string PaymentMethod { get; set; } = "BANK_TRANSFER"; // "BANK_TRANSFER", "CASH", "UPI", "CHEQUE"
+=======
     public string? PaymentMonth { get; set; }
 
     public DateTime? PaymentDate { get; set; }
@@ -31,17 +43,21 @@ public class CreateSalaryPaymentDto
     }
 
     public string PaymentMethod { get; set; } = "BANK_TRANSFER";
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
     public string? TransactionReference { get; set; }
 
     public string? Remarks { get; set; }
 
+<<<<<<< HEAD
+=======
     public string? Notes
     {
         get => Remarks;
         set => Remarks = value;
     }
 
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     public string? Department { get; set; }
 
     public string Status { get; set; } = "PAID";

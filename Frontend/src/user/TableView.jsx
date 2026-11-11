@@ -1554,6 +1554,42 @@ export function TableView({
             flexWrap: "wrap",
           }}
         >
+          {/* Quick Takeaway / Parcel Order Action */}
+          <button
+            type="button"
+            onClick={() =>
+              onSelectTable({
+                id: "takeaway",
+                backendTableId: null,
+                name: "Takeaway",
+                tableName: "Takeaway",
+                section: "Takeaway",
+                isTakeaway: true,
+                items: [],
+                status: "active",
+                guests: 1,
+              })
+            }
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+              color: "#ffffff",
+              padding: "0.52rem 1.1rem",
+              borderRadius: "var(--radius-md)",
+              border: "none",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(245, 158, 11, 0.35)",
+              transition: "transform 0.15s ease",
+            }}
+            title="Create Direct Takeaway / Parcel Order"
+          >
+            <span>🛍️</span>
+            <span>Takeaway Order</span>
+          </button>
           {/* Quick Search with Clear */}
           <div
             style={{

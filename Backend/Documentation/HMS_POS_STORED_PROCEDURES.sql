@@ -1153,7 +1153,8 @@ BEGIN
     WHERE UPPER(status) = 'PAID';
 
     SELECT COALESCE(NULLIF(COUNT(CASE WHEN DATE(order_time) = CURDATE() THEN 1 END), 0), COUNT(1)) AS today_total_orders 
-    FROM orders;
+    FROM orders
+    WHERE LOWER(COALESCE(status, '')) <> 'cancelled';
 
     SELECT COUNT(1) AS active_tables_count 
     FROM restaurant_tables 
@@ -1165,16 +1166,68 @@ BEGIN
         COALESCE(SUM(oi.total_price), SUM(oi.unit_price * oi.quantity), 0.00) AS total_revenue
     FROM order_items oi
     LEFT JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
+    LEFT JOIN restaurant_orders ro ON oi.order_id = ro.order_id
     WHERE oi.is_deleted = 0
+      AND LOWER(COALESCE(oi.item_status, '')) <> 'cancelled'
+      AND (ro.order_id IS NULL OR (ro.is_deleted = 0 AND LOWER(COALESCE(ro.order_status, '')) <> 'cancelled'))
     GROUP BY COALESCE(m.dish_name, oi.item_name)
     ORDER BY quantity_sold DESC
     LIMIT 5;
 
     SELECT 
-        UPPER(payment_mode) AS payment_method,
-        COALESCE(SUM(amount), 0.00) AS total_amount
-    FROM invoice_payments
-    GROUP BY UPPER(payment_mode);
+        UPPER(ip.payment_mode) AS payment_method,
+        COALESCE(SUM(ip.amount), 0.00) AS total_amount
+    FROM invoice_payments ip
+    LEFT JOIN invoices inv ON ip.invoice_id = inv.invoice_id
+    WHERE LOWER(COALESCE(ip.payment_status, 'success')) NOT IN ('failed', 'pending', 'cancelled', 'void', 'refunded')
+      AND (inv.invoice_id IS NULL OR UPPER(COALESCE(inv.status, '')) NOT IN ('VOID', 'REFUNDED', 'CANCELLED'))
+    GROUP BY UPPER(ip.payment_mode);
+END;
+
+DROP PROCEDURE IF EXISTS `sp_GetDailySalesReport`;
+CREATE PROCEDURE `sp_GetDailySalesReport`(IN p_days INT)
+BEGIN
+    DECLARE v_days INT DEFAULT 30;
+    IF p_days IS NOT NULL AND p_days > 0 THEN
+        SET v_days = p_days;
+    END IF;
+
+    SELECT 
+        DATE(created_at) AS sale_date,
+        COUNT(invoice_id) AS total_invoices,
+        SUM(CASE WHEN UPPER(status) = 'PAID' THEN 1 ELSE 0 END) AS paid_invoices,
+        COALESCE(SUM(subtotal), 0.00) AS subtotal,
+        COALESCE(SUM(tax_amount), 0.00) AS tax_amount,
+        COALESCE(SUM(discount_amount), 0.00) AS discount_amount,
+        COALESCE(SUM(total_amount), 0.00) AS total_amount,
+        COALESCE(SUM(paid_amount), 0.00) AS paid_amount
+    FROM `invoices`
+    WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL v_days DAY)
+      AND UPPER(COALESCE(status, '')) NOT IN ('VOID', 'REFUNDED', 'CANCELLED')
+    GROUP BY DATE(created_at)
+    ORDER BY sale_date DESC;
+END;
+
+DROP PROCEDURE IF EXISTS `sp_GetMonthlySalesReport`;
+CREATE PROCEDURE `sp_GetMonthlySalesReport`(IN p_year INT)
+BEGIN
+    DECLARE v_year INT;
+    SET v_year = IFNULL(p_year, YEAR(CURDATE()));
+
+    SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') AS sale_month,
+        COUNT(invoice_id) AS total_invoices,
+        SUM(CASE WHEN UPPER(status) = 'PAID' THEN 1 ELSE 0 END) AS paid_invoices,
+        COALESCE(SUM(subtotal), 0.00) AS subtotal,
+        COALESCE(SUM(tax_amount), 0.00) AS tax_amount,
+        COALESCE(SUM(discount_amount), 0.00) AS discount_amount,
+        COALESCE(SUM(total_amount), 0.00) AS total_amount,
+        COALESCE(SUM(paid_amount), 0.00) AS paid_amount
+    FROM `invoices`
+    WHERE YEAR(created_at) = v_year
+      AND UPPER(COALESCE(status, '')) NOT IN ('VOID', 'REFUNDED', 'CANCELLED')
+    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+    ORDER BY sale_month DESC;
 END;
 
 

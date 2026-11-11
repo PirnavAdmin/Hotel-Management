@@ -3048,7 +3048,7 @@ export function TableDetailView({
               <Search
                 size={16}
                 color="var(--text-dim)"
-                style={{ position: "absolute", left: "12px", top: "11px" }}
+                style={{ position: "absolute", left: "12px", top: "12px" }}
               />
               <input
                 type="text"
@@ -3057,11 +3057,13 @@ export function TableDetailView({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: "100%",
+                  height: "40px",
+                  boxSizing: "border-box",
                   background: "var(--bg-primary)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-md)",
                   color: "var(--text-main)",
-                  padding: "0.55rem 1rem 0.55rem 2.25rem",
+                  padding: "0.35rem 1rem 0.35rem 2.25rem",
                   fontSize: "0.85rem",
                 }}
               />
@@ -3071,7 +3073,7 @@ export function TableDetailView({
                   style={{
                     position: "absolute",
                     right: "10px",
-                    top: "8px",
+                    top: "12px",
                     background: "transparent",
                     color: "var(--text-muted)",
                     border: "none",

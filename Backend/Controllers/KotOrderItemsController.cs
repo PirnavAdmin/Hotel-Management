@@ -84,7 +84,11 @@ public class KotOrderItemsController : ControllerBase
 
     // PUT/PATCH /api/v1/kot-order-items/{id}/status
     [AllowAnonymous]
+<<<<<<< HEAD
+    [HttpPut("{id:long}/status")]
+=======
     [HttpPatch("{id:long}/status")]
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     public async Task<IActionResult> UpdateStatus(long id, [FromBody] UpdateItemStatusDto dto)
     {
         var updated = await _kotService.UpdateItemStatusDirectAsync(id, dto.Status);

@@ -12,7 +12,7 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // Ensure default listening on port 5018
-builder.WebHost.UseUrls("http://localhost:5018", "http://0.0.0.0:5018");
+builder.WebHost.UseUrls("http://0.0.0.0:5018", "http://localhost:5018");
 
 // ============================================================
 // DATABASE
@@ -149,25 +149,8 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .SetIsOriginAllowed(origin =>
-                {
-                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
-                        uri.Scheme != "http" || uri.Port is not (5173 or 5174))
-                    {
-                        return false;
-                    }
+                .SetIsOriginAllowed(origin => true)
 
-                    if (uri.IsLoopback) return true;
-                    if (!IPAddress.TryParse(uri.Host, out var address) || address.AddressFamily != AddressFamily.InterNetwork)
-                    {
-                        return false;
-                    }
-
-                    var bytes = address.GetAddressBytes();
-                    return bytes[0] == 10 ||
-                           (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-                           (bytes[0] == 192 && bytes[1] == 168);
-                })
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()
@@ -189,8 +172,18 @@ builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
+<<<<<<< HEAD
+builder.Services.AddScoped<TakeawayService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SalaryService>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<ExportService>();
+builder.Services.AddScoped<ReportingExportService>();
+builder.Services.AddScoped<AccountingService>();
+=======
+builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<SalaryService>();
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 builder.Services.AddSignalR();
 
 // ============================================================
@@ -357,6 +350,13 @@ app.Use(async (context, next) =>
 
 
 
+<<<<<<< HEAD
+// Transparently rewrites legacy and unversioned frontend API request paths
+// to their canonical /api/v1/{module}/{resource} routes before endpoint routing
+app.UseMiddleware<HMS.Middleware.LegacyApiRewriteMiddleware>();
+
+=======
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 app.UseRouting();
 
 app.UseStaticFiles();

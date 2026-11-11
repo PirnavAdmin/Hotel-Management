@@ -1,3 +1,4 @@
+using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -16,6 +17,25 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory")]
+<<<<<<< HEAD
+[Tags("Inventory")]
+public class InventoryController : ControllerBase
+{
+    private readonly SpService _spService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
+    private readonly ILogger<InventoryController> _logger;
+
+    public InventoryController(
+        SpService spService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InventoryController> logger)
+    {
+        _spService = spService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
+=======
 public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
@@ -26,6 +46,7 @@ public class InventoryController : ControllerBase
     {
         _spService = spService;
         _inventoryService = inventoryService;
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         _logger = logger;
     }
 
@@ -34,7 +55,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet]
-    [HttpGet("ingredients")]
     public async Task<IActionResult> GetIngredients([FromQuery] string? category, [FromQuery] string? search)
     {
         try
@@ -168,7 +188,11 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost]
+<<<<<<< HEAD
+    public async Task<IActionResult> CreateIngredient([FromBody] CreateIngredientRequest request)
+=======
     public async Task<IActionResult> CreateIngredient([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     {
         try
         {
@@ -250,7 +274,11 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPut("{id:long}")]
+<<<<<<< HEAD
+    public async Task<IActionResult> UpdateIngredient(long id, [FromBody] UpdateIngredientRequest request)
+=======
     public async Task<IActionResult> UpdateIngredient(long id, [FromBody] JsonElement body)
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     {
         try
         {
@@ -434,6 +462,14 @@ public class InventoryController : ControllerBase
         }
     }
 
+<<<<<<< HEAD
+        private static int GetOrdinalSafe(DbDataReader reader, string columnName)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), columnName, StringComparison.OrdinalIgnoreCase))
+                return i;
+=======
     public static int GetOrdinalSafe(DbDataReader reader, params string[] columnNames)
     {
         for (int i = 0; i < reader.FieldCount; i++)
@@ -446,10 +482,44 @@ public class InventoryController : ControllerBase
                     return i;
                 }
             }
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         }
         return -1;
     }
 
+<<<<<<< HEAD
+    public static Ingredient MapIngredientFromReader(DbDataReader reader)
+    {
+        int idOrd = GetOrdinalSafe(reader, "ingredient_id");
+        int nameOrd = GetOrdinalSafe(reader, "name");
+        int catOrd = GetOrdinalSafe(reader, "category");
+        int subOrd = GetOrdinalSafe(reader, "subcategory");
+        int supOrd = GetOrdinalSafe(reader, "supplier");
+        int unitOrd = GetOrdinalSafe(reader, "unit");
+        int stockOrd = GetOrdinalSafe(reader, "current_stock");
+        int minOrd = GetOrdinalSafe(reader, "minimum_threshold");
+        int costOrd = GetOrdinalSafe(reader, "unit_cost");
+        int mrpOrd = GetOrdinalSafe(reader, "mrp");
+        int codeOrd = GetOrdinalSafe(reader, "ingredient_code");
+        int actOrd = GetOrdinalSafe(reader, "is_active");
+        int updatedOrd = GetOrdinalSafe(reader, "updated_at");
+
+        return new Ingredient
+        {
+            IngredientId = idOrd >= 0 && !reader.IsDBNull(idOrd) ? reader.GetInt64(idOrd) : 0L,
+            Name = nameOrd >= 0 && !reader.IsDBNull(nameOrd) ? reader.GetString(nameOrd) : string.Empty,
+            Category = catOrd >= 0 && !reader.IsDBNull(catOrd) ? reader.GetString(catOrd) : "General",
+            Subcategory = subOrd >= 0 && !reader.IsDBNull(subOrd) ? reader.GetString(subOrd) : string.Empty,
+            Supplier = supOrd >= 0 && !reader.IsDBNull(supOrd) ? reader.GetString(supOrd) : "Local Supplier",
+            Unit = unitOrd >= 0 && !reader.IsDBNull(unitOrd) ? reader.GetString(unitOrd).ToUpper() : "UNIT",
+            CurrentStock = stockOrd >= 0 && !reader.IsDBNull(stockOrd) ? reader.GetDecimal(stockOrd) : 0m,
+            MinimumThreshold = minOrd >= 0 && !reader.IsDBNull(minOrd) ? reader.GetDecimal(minOrd) : 0m,
+            UnitCost = costOrd >= 0 && !reader.IsDBNull(costOrd) ? reader.GetDecimal(costOrd) : 0m,
+            Mrp = mrpOrd >= 0 && !reader.IsDBNull(mrpOrd) ? reader.GetDecimal(mrpOrd) : null,
+            IngredientCode = codeOrd >= 0 && !reader.IsDBNull(codeOrd) ? reader.GetString(codeOrd) : null,
+            IsActive = actOrd >= 0 && !reader.IsDBNull(actOrd) && (reader.GetInt32(actOrd) == 1 || reader.GetBoolean(actOrd)),
+            UpdatedAt = updatedOrd >= 0 && !reader.IsDBNull(updatedOrd) ? reader.GetDateTime(updatedOrd) : DateTime.UtcNow
+=======
     private static string GetStringSafe(DbDataReader reader, string defaultValue, params string[] columnNames)
     {
         int ord = GetOrdinalSafe(reader, columnNames);
@@ -572,7 +642,33 @@ public class InventoryController : ControllerBase
             IngredientCode = string.IsNullOrWhiteSpace(code) ? null : code,
             IsActive = GetBoolSafe(reader, true, "is_active", "active"),
             UpdatedAt = GetDateTimeSafe(reader, DateTime.UtcNow, "updated_at")
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         };
+    }
+    /// <summary>
+    /// Exports Dine Inventory (or All / Bar when ?department=All|Bar is passed) as CSV or XLSX.
+    /// Supports ?category=...&amp;status=in-stock|low-stock|out-of-stock&amp;search=...&amp;lowStockOnly=true&amp;department=Dine|Bar|All&amp;format=csv|xlsx.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportInventory(
+        [FromQuery] string? category,
+        [FromQuery] string? status,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? lowStockOnly = null,
+        [FromQuery] string? department = null,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateDineInventoryExportAsync(category, status, search, lowStockOnly, department);
+            return _exportService.ExportResult(doc, format, doc.BaseFileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting dine inventory");
+            return StatusCode(500, new { success = false, message = "Failed to export dine inventory.", error = ex.Message });
+        }
     }
 }
 
