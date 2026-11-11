@@ -3734,6 +3734,8 @@ export function App() {
             menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
             tables={tables}
             onHotelLogin={handleHotelLogin}
+            kitchenNotifications={kitchenNotifications}
+            onClearNotifications={handleClearNotifications}
           />
         )}
 

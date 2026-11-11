@@ -27,7 +27,6 @@ import {
   Smartphone,
   Check,
   Bell,
-  BellRing,
   MapPin,
   Tag,
   Star,
@@ -50,6 +49,12 @@ import { apiCreateReservation } from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import {
+  cleanNotificationText,
+  getCleanAlertMessage,
+  getCleanAlertTimestamp,
+  getCleanAlertTitle,
+} from "../utils/notificationHelper";
 import "./CustomerLandingPage.css";
 
 const formatPrice = (value) =>
@@ -416,6 +421,8 @@ export function CustomerLandingPage({
   menuLoading = false,
   tables = [],
   onHotelLogin,
+  kitchenNotifications = [],
+  onClearNotifications,
 }) {
   // --- Cart & Navigation State ---
   const [cart, setCart] = useState(() => {
@@ -429,8 +436,7 @@ export function CustomerLandingPage({
     };
   });
   const [activeScreen, setActiveScreen] = useState(() => {
-    if (window.location.hash === "#menu") return "menu";
-    if (window.location.hash === "#cart") return "cart";
+    if (window.location.hash === "#menu" || window.location.hash === "#cart") return "menu";
     if (window.location.hash === "#checkout") return "checkout";
     if (window.location.hash === "#payment") return "payment";
     if (window.location.hash === "#reserve") return "reservation";
@@ -489,56 +495,8 @@ export function CustomerLandingPage({
   const reservationDateRef = useRef(null);
   const reservationTimeRef = useRef(null);
 
-  // --- Notifications State (Matches POS Header) ---
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem("avsr_kitchen_notifications");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return [
-      {
-        id: "notif-seed-1",
-        type: "cooking_completed",
-        title: "Order Ready for Pickup",
-        message: "Takeaway order #TK-1066 is packed and waiting at the counter.",
-        timestamp: "Just now",
-      },
-      {
-        id: "notif-seed-2",
-        type: "cooking",
-        title: "Kitchen Preparing Dishes",
-        message: "Chef has started cooking Chicken Biryani and Butter Naan.",
-        timestamp: "5 mins ago",
-      },
-    ];
-  });
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
-
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === "avsr_kitchen_notifications" && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed)) setNotifications(parsed);
-        } catch {}
-      }
-    };
-    const handleCustom = (e) => {
-      if (e.detail) {
-        setNotifications((prev) => [e.detail, ...prev].slice(0, 30));
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("avsr-kitchen-notification", handleCustom);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("avsr-kitchen-notification", handleCustom);
-    };
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -552,19 +510,11 @@ export function CustomerLandingPage({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isNotifOpen]);
 
-  const handleClearNotifications = () => {
-    setNotifications([]);
-    try {
-      localStorage.removeItem("avsr_kitchen_notifications");
-    } catch {}
-  };
-
   // Sync hash with browser history
   useEffect(() => {
     const handleHistoryNavigation = () => {
       const hash = window.location.hash;
-      if (hash === "#menu") setActiveScreen("menu");
-      else if (hash === "#cart") setActiveScreen("cart");
+      if (hash === "#menu" || hash === "#cart") setActiveScreen("menu");
       else if (hash === "#checkout") setActiveScreen("checkout");
       else if (hash === "#payment") setActiveScreen("payment");
       else if (hash === "#reserve") setActiveScreen("reservation");
@@ -579,14 +529,15 @@ export function CustomerLandingPage({
   }, []);
 
   const navigateScreen = (screen) => {
+    const targetScreen = screen === "cart" ? "menu" : screen;
     const hash =
-      screen === "reservation"
+      targetScreen === "reservation"
         ? "#reserve"
-        : screen === "home"
+        : targetScreen === "home"
         ? "#home"
-        : `#${screen}`;
+        : `#${targetScreen}`;
     window.history.pushState(null, "", hash);
-    setActiveScreen(screen);
+    setActiveScreen(targetScreen);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -943,6 +894,81 @@ export function CustomerLandingPage({
             </button>
           )}
 
+          {activeScreen === "menu" && (
+            <div className="takeaway-notification-wrap" ref={notifRef}>
+              <button
+                type="button"
+                className="takeaway-notification-btn"
+                aria-label={`Kitchen status updates${kitchenNotifications.length ? `, ${kitchenNotifications.length} updates` : ""}`}
+                aria-expanded={isNotifOpen}
+                aria-haspopup="true"
+                title="Kitchen status updates"
+                onClick={() => setIsNotifOpen((open) => !open)}
+              >
+                <Bell size={18} />
+                {kitchenNotifications.length > 0 && (
+                  <span className="takeaway-notification-badge">
+                    {kitchenNotifications.length > 9 ? "9+" : kitchenNotifications.length}
+                  </span>
+                )}
+              </button>
+              {isNotifOpen && (
+                <div className="takeaway-notification-panel" role="dialog" aria-label="Notifications">
+                  <div className="takeaway-notification-panel-header">
+                    <strong>Kitchen Status Updates</strong>
+                    {kitchenNotifications.length > 0 && onClearNotifications && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClearNotifications();
+                          setIsNotifOpen(false);
+                        }}
+                      >
+                        <Trash2 size={13} />
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+                  {kitchenNotifications.length === 0 ? (
+                    <div className="takeaway-notification-empty">
+                      <span aria-hidden="true">📭</span>
+                      <p>No kitchen status updates yet.</p>
+                    </div>
+                  ) : (
+                    <ul className="takeaway-notification-list">
+                      {kitchenNotifications.map((notification, index) => {
+                        const isCompleted = notification.type === "cooking_completed";
+                        return (
+                          <li
+                            key={notification.id || index}
+                            className={isCompleted ? "is-completed" : ""}
+                          >
+                            <span className="takeaway-notification-status-icon">
+                              {isCompleted ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+                            </span>
+                            <span className="takeaway-notification-copy">
+                              <span className="takeaway-notification-title-row">
+                                <strong>{getCleanAlertTitle(notification)}</strong>
+                                <small>{getCleanAlertTimestamp(notification)}</small>
+                              </span>
+                              <span>{getCleanAlertMessage(notification)}</span>
+                              {notification.tableId && (
+                                <small className="takeaway-notification-table">
+                                  <MapPin size={11} />
+                                  {cleanNotificationText(notification.tableName) || `Table ${notification.tableId}`}
+                                </small>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <button className="customer-admin-link" type="button" onClick={onHotelLogin}>
             <ShieldCheck size={18} />
             <span>Hotel Login</span>
@@ -1085,9 +1111,9 @@ export function CustomerLandingPage({
         )}
 
         {/* ========================================================= */}
-        {/* STEP 2: Browse Menu - POS Template (Sidebar + Grid + Slip) */}
+        {/* STEP 2: Browse Menu & Cart - POS Template (Sidebar + Grid + Slip) */}
         {/* ========================================================= */}
-        {activeScreen === "menu" && (
+        {(activeScreen === "menu" || activeScreen === "cart") && (
           <div className="pos-takeaway-app" id="menu">
             {/* Top Table Switcher / Counter Strip (matches POS screen sub-strip) */}
             <div className="pos-takeaway-substrip">
@@ -1453,164 +1479,7 @@ export function CustomerLandingPage({
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* STEP 3: Cart - Review items and proceed to checkout      */}
-        {/* ========================================================= */}
-        {activeScreen === "cart" && (
-          <section className="customer-flow-section" id="cart">
-            <div className="customer-flow-topbar">
-              <button
-                className="customer-back-btn"
-                type="button"
-                onClick={() => navigateScreen("menu")}
-              >
-                <ArrowLeft size={16} /> Back to Menu
-              </button>
-            </div>
 
-            <div className="customer-two-column-layout">
-              {/* Left Column: Cart Items */}
-              <div className="customer-layout-main">
-                <div className="customer-card-box">
-                  <div className="customer-card-header">
-                    <ShoppingBag size={20} color="#ea580c" />
-                    <h2>Your Cart ({cartCount} {cartCount === 1 ? "item" : "items"})</h2>
-                  </div>
-
-                  {cartItems.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#64748b" }}>
-                      <ShoppingBag size={42} style={{ margin: "0 auto 0.8rem", opacity: 0.4 }} />
-                      <p style={{ margin: 0, fontWeight: 600 }}>Your cart is empty.</p>
-                      <button
-                        type="button"
-                        className="customer-action-button takeaway-button"
-                        style={{ marginTop: "1rem", minWidth: "160px" }}
-                        onClick={() => navigateScreen("menu")}
-                      >
-                        Browse Menu <ArrowRight size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="customer-cart-items-list">
-                      {cartItems.map(({ item, quantity }) => (
-                        <div className="customer-cart-row" key={item.id}>
-                          <img
-                            src={getMenuItemImage(item)}
-                            alt={item.name}
-                            className="customer-cart-item-thumb"
-                            onError={(event) => handleDishImageError(event, item)}
-                          />
-                          <div className="customer-cart-item-info">
-                            <h4>{item.name}</h4>
-                            <span className="customer-cart-item-rate">{formatPrice(item.price)}</span>
-                          </div>
-
-                          <div className="customer-stepper" style={{ height: "36px" }}>
-                            <button
-                              type="button"
-                              onClick={() => changeQuantity(item, -1)}
-                            >
-                              <Minus size={13} />
-                            </button>
-                            <span>{quantity}</span>
-                            <button
-                              type="button"
-                              onClick={() => changeQuantity(item, 1)}
-                            >
-                              <Plus size={13} />
-                            </button>
-                          </div>
-
-                          <div className="customer-cart-item-total">
-                            {formatPrice(Number(item.price) * quantity)}
-                          </div>
-
-                          <button
-                            type="button"
-                            className="customer-cart-trash-btn"
-                            onClick={() => removeFromCart(item.id)}
-                            title="Remove item"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Apply Coupon Box */}
-                  {cartItems.length > 0 && (
-                    <form className="customer-coupon-form" onSubmit={handleApplyCoupon}>
-                      <div className="customer-coupon-input-wrap">
-                        <Tag size={16} />
-                        <input
-                          type="text"
-                          placeholder="Apply Coupon (e.g. BHANU10)"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
-                        />
-                      </div>
-                      <button type="submit" className="customer-coupon-apply-btn">
-                        Apply
-                      </button>
-                    </form>
-                  )}
-
-                  {couponApplied && (
-                    <div className="customer-coupon-success">
-                      <Check size={14} /> Coupon applied! Saved {formatPrice(couponDiscount)}
-                    </div>
-                  )}
-                  {couponError && (
-                    <div className="customer-coupon-error">{couponError}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Column: Order Summary */}
-              {cartItems.length > 0 && (
-                <div className="customer-layout-sidebar">
-                  <div className="customer-card-box customer-summary-card">
-                    <h3>Order Summary</h3>
-                    <div className="customer-summary-lines">
-                      <div className="customer-summary-line">
-                        <span>Items ({cartCount})</span>
-                        <span>{formatPrice(itemsSubtotal)}</span>
-                      </div>
-                      <div className="customer-summary-line">
-                        <span>Packing Charges</span>
-                        <span>{formatPrice(packingCharges)}</span>
-                      </div>
-                      <div className="customer-summary-line">
-                        <span>Taxes (5%)</span>
-                        <span>{formatPrice(taxes)}</span>
-                      </div>
-                      {couponApplied && (
-                        <div className="customer-summary-line" style={{ color: "#16a34a", fontWeight: 700 }}>
-                          <span>Discount (Coupon)</span>
-                          <span>-{formatPrice(couponDiscount)}</span>
-                        </div>
-                      )}
-                      <div className="customer-summary-divider" />
-                      <div className="customer-summary-total">
-                        <strong>Total Amount</strong>
-                        <strong>{formatPrice(totalAmount)}</strong>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="customer-proceed-cta-btn"
-                      onClick={() => navigateScreen("checkout")}
-                    >
-                      Proceed to Checkout <ArrowRight size={17} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
 
         {/* ========================================================= */}
         {/* STEP 4: Checkout Details - Add pickup time & contact     */}
@@ -1621,7 +1490,7 @@ export function CustomerLandingPage({
               <button
                 className="customer-back-btn"
                 type="button"
-                onClick={() => navigateScreen("cart")}
+                onClick={() => navigateScreen("menu")}
               >
                 <ArrowLeft size={16} /> Back to Cart
               </button>
