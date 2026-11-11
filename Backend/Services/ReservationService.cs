@@ -139,17 +139,25 @@ public class ReservationService
         }
 
         string? role = user.FindFirstValue(ClaimTypes.Role) ?? user.FindFirstValue("roleName");
+        string? accountType = user.FindFirstValue("accountType");
         string? scope = user.FindFirstValue("tokenScope");
-        long? userId = TryParsePositiveLong(user.FindFirstValue("userId") ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub));
         long? customerId = TryParsePositiveLong(user.FindFirstValue("customerId"));
         string? phone = user.FindFirstValue("phone") ?? user.FindFirstValue(ClaimTypes.MobilePhone);
         string? scopedResNo = user.FindFirstValue("reservationNumber");
         long? scopedResId = TryParsePositiveLong(user.FindFirstValue("reservationId"));
         string? actorName = user.FindFirstValue("fullName") ?? user.FindFirstValue(ClaimTypes.Name) ?? user.FindFirstValue(JwtRegisteredClaimNames.UniqueName);
 
-        bool isStaff = !string.IsNullOrWhiteSpace(role) && StaffRoles.Contains(role.Trim()) &&
-                       !string.Equals(scope, "reservation_checkout", StringComparison.OrdinalIgnoreCase) &&
-                       !string.Equals(scope, "reservation_otp", StringComparison.OrdinalIgnoreCase);
+        bool isCustomerPrincipal =
+            string.Equals(role, "Customer", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(accountType, "Customer", StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrWhiteSpace(scope) &&
+             (scope.StartsWith("customer", StringComparison.OrdinalIgnoreCase) ||
+              scope.StartsWith("reservation", StringComparison.OrdinalIgnoreCase)));
+
+        bool isStaff = !isCustomerPrincipal && !string.IsNullOrWhiteSpace(role) && StaffRoles.Contains(role.Trim());
+        long? userId = isStaff
+            ? TryParsePositiveLong(user.FindFirstValue("userId") ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub))
+            : null;
 
         return new ReservationCallerContext
         {
@@ -195,17 +203,22 @@ public class ReservationService
         }
 
         // OTP-verified or Customer JWT
+        if (caller.CustomerId.HasValue && reservation.CustomerId.HasValue)
+        {
+            if (caller.CustomerId.Value != reservation.CustomerId.Value)
+            {
+                throw new ReservationForbiddenException("You do not have permission to access or modify another customer's reservation.");
+            }
+            return;
+        }
+
         string callerPhoneKey = PhoneKey(caller.Phone);
         string resPhoneKey = PhoneKey(reservation.Phone);
         bool phoneMatches = !string.IsNullOrWhiteSpace(callerPhoneKey) &&
                             !string.IsNullOrWhiteSpace(resPhoneKey) &&
                             string.Equals(callerPhoneKey, resPhoneKey, StringComparison.Ordinal);
 
-        bool customerIdMatches = caller.CustomerId.HasValue &&
-                                 reservation.CustomerId.HasValue &&
-                                 caller.CustomerId.Value == reservation.CustomerId.Value;
-
-        if (!phoneMatches && !customerIdMatches)
+        if (!phoneMatches)
         {
             throw new ReservationForbiddenException("You do not have permission to access or modify this reservation.");
         }
@@ -655,6 +668,19 @@ public class ReservationService
         string rawPhone = (request.Phone ?? string.Empty).Trim();
         string? email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
 
+        if (caller.IsAuthenticated && !caller.IsStaff && caller.CustomerId.HasValue)
+        {
+            var authCustomer = await _context.Customers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.CustomerId == caller.CustomerId.Value && c.DeletedAt == null);
+            if (authCustomer != null)
+            {
+                if (string.IsNullOrWhiteSpace(customerName)) customerName = authCustomer.FullName;
+                if (string.IsNullOrWhiteSpace(rawPhone)) rawPhone = authCustomer.Phone;
+                if (string.IsNullOrWhiteSpace(email)) email = authCustomer.Email;
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(customerName))
         {
             throw new ArgumentException("Customer name is required.");
@@ -783,8 +809,12 @@ public class ReservationService
                         $"Table {ResolveTableName(table)} is already reserved from {cs:hh:mm tt} to {cs.AddMinutes(dur):hh:mm tt}. Please choose another table or time slot.");
                 }
 
+                long? targetCustomerId = (caller.IsAuthenticated && !caller.IsStaff && caller.CustomerId.HasValue)
+                    ? caller.CustomerId.Value
+                    : (request.CustomerId ?? caller.CustomerId);
+
                 long? resolvedCustomerId = await ResolveOrUpsertCustomerAsync(
-                    request.CustomerId ?? caller.CustomerId,
+                    targetCustomerId,
                     customerName,
                     rawPhone,
                     email,
@@ -1418,7 +1448,9 @@ public class ReservationService
         var owned = candidates
             .Where(r =>
                 (caller.CustomerId.HasValue && r.CustomerId == caller.CustomerId.Value) ||
-                (!string.IsNullOrWhiteSpace(targetPhoneKey) && PhoneKey(r.Phone) == targetPhoneKey))
+                ((!caller.CustomerId.HasValue || r.CustomerId == null) &&
+                 !string.IsNullOrWhiteSpace(targetPhoneKey) &&
+                 PhoneKey(r.Phone) == targetPhoneKey))
             .ToList();
 
         var tableMap = await LoadTableLookupAsync(owned.Where(r => r.TableId.HasValue).Select(r => r.TableId!.Value).Distinct());
@@ -2097,28 +2129,31 @@ public class ReservationService
             Customer? customer = null;
             if (requestedCustomerId.HasValue && requestedCustomerId.Value > 0)
             {
-                customer = await _context.Customers.FirstOrDefaultAsync(c => c.CustomerId == requestedCustomerId.Value);
+                customer = await _context.Customers.FirstOrDefaultAsync(c => c.CustomerId == requestedCustomerId.Value && c.DeletedAt == null);
             }
 
             customer ??= await FindCustomerByPhoneAsync(phone, tracked: true);
 
             if (customer != null)
             {
-                bool dirty = false;
-                if (!string.IsNullOrWhiteSpace(fullName) && !string.Equals(customer.FullName, fullName, StringComparison.Ordinal))
+                if (string.IsNullOrEmpty(customer.PasswordHash))
                 {
-                    customer.FullName = fullName;
-                    dirty = true;
-                }
-                if (!string.IsNullOrWhiteSpace(email) && !string.Equals(customer.Email, email, StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Email = email;
-                    dirty = true;
-                }
-                if (dirty)
-                {
-                    customer.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
+                    bool dirty = false;
+                    if (!string.IsNullOrWhiteSpace(fullName) && !string.Equals(customer.FullName, fullName, StringComparison.Ordinal))
+                    {
+                        customer.FullName = fullName;
+                        dirty = true;
+                    }
+                    if (!string.IsNullOrWhiteSpace(email) && !string.Equals(customer.Email, email, StringComparison.OrdinalIgnoreCase))
+                    {
+                        customer.Email = email;
+                        dirty = true;
+                    }
+                    if (dirty)
+                    {
+                        customer.UpdatedAt = DateTime.UtcNow;
+                        await _context.SaveChangesAsync();
+                    }
                 }
                 return customer.CustomerId;
             }
@@ -2147,7 +2182,8 @@ public class ReservationService
     private async Task<Customer?> FindCustomerByPhoneAsync(string rawPhone, bool tracked = false)
     {
         string trimmed = rawPhone.Trim();
-        IQueryable<Customer> query = tracked ? _context.Customers : _context.Customers.AsNoTracking();
+        IQueryable<Customer> query = (tracked ? _context.Customers : _context.Customers.AsNoTracking())
+            .Where(c => c.DeletedAt == null);
 
         var exact = await query.FirstOrDefaultAsync(c => c.Phone == trimmed);
         if (exact != null) return exact;

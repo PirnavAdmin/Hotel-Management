@@ -579,14 +579,7 @@ public static class DbInitializer
             EnsureColumnExists(conn, "invoice_payments", "paid_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "customers", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "customers", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            EnsureColumnExists(conn, "reservations", "branch_id", "BIGINT NOT NULL DEFAULT 1");
-            EnsureColumnExists(conn, "reservations", "customer_name", "VARCHAR(100) NULL");
-            EnsureColumnExists(conn, "reservations", "phone", "VARCHAR(20) NULL");
-            EnsureColumnExists(conn, "reservations", "reservation_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            EnsureColumnExists(conn, "reservations", "notes", "VARCHAR(255) NULL");
-            EnsureColumnExists(conn, "reservations", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            EnsureColumnExists(conn, "reservations", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
+            EnsureReservationColumns(conn);
 
             EnsureColumnExists(conn, "ingredients", "name", "VARCHAR(100) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "ingredients", "ingredient_name", "VARCHAR(150) NULL DEFAULT ''");
@@ -801,12 +794,18 @@ public static class DbInitializer
                 CreateAllTables(conn);
             }
 
-            // Verify customers schema
-            try { _ = context.Customers.AsNoTracking().Take(1).ToList(); }
+            // Ensure customer portal authentication columns and tables exist BEFORE probing Customers via EF Core
+            EnsureCustomerAuthSchema(conn);
+            try
+            {
+                _ = context.Customers.AsNoTracking().Take(1).ToList();
+                _ = context.CustomerOtpTokens.AsNoTracking().Take(1).ToList();
+                _ = context.CustomerRefreshTokens.AsNoTracking().Take(1).ToList();
+            }
             catch
             {
-                SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `customers`; SET FOREIGN_KEY_CHECKS = 1;");
                 CreateAllTables(conn);
+                EnsureCustomerAuthSchema(conn);
             }
 
             // Verify reservations schema
@@ -925,6 +924,19 @@ public static class DbInitializer
             {
                 CreateAllTables(conn);
             }
+
+            // Verify reservation payments & OTP tokens schema and ensure indexes/backfill
+            try
+            {
+                _ = context.ReservationPayments.AsNoTracking().Take(1).ToList();
+                _ = context.ReservationOtpTokens.AsNoTracking().Take(1).ToList();
+            }
+            catch
+            {
+                CreateAllTables(conn);
+            }
+
+            EnsureReservationSchema(conn);
         }
         catch { }
     }
@@ -1081,32 +1093,149 @@ public static class DbInitializer
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `customers` (
                 `customer_id` BIGINT NOT NULL AUTO_INCREMENT,
-                `full_name` VARCHAR(100) NOT NULL,
+                `full_name` VARCHAR(120) NOT NULL,
                 `phone` VARCHAR(20) NOT NULL,
-                `email` VARCHAR(100) NULL,
+                `email` VARCHAR(120) NULL,
+                `password_hash` VARCHAR(255) NULL,
+                `role` VARCHAR(30) NOT NULL DEFAULT 'Customer',
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `is_verified` TINYINT(1) NOT NULL DEFAULT 0,
+                `verified_at` DATETIME NULL,
+                `last_login` DATETIME NULL,
+                `registered_branch_id` BIGINT UNSIGNED NULL,
                 `loyalty_points` INT NOT NULL DEFAULT 0,
+                `failed_login_attempts` INT NOT NULL DEFAULT 0,
+                `lockout_until` DATETIME NULL,
+                `token_version` INT NOT NULL DEFAULT 1,
+                `deleted_at` DATETIME NULL,
+                `branch_id` BIGINT NULL,
+                `outlet_id` BIGINT NULL DEFAULT 1,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`customer_id`)
-            ) ENGINE=InnoDB;");
+                PRIMARY KEY (`customer_id`),
+                KEY `idx_customers_email` (`email`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_otp_tokens` (
+                `otp_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `purpose` VARCHAR(40) NOT NULL DEFAULT 'ACCOUNT_VERIFY',
+                `channel` VARCHAR(30) NOT NULL DEFAULT 'EMAIL_AND_PHONE',
+                `target_identifier` VARCHAR(150) NOT NULL,
+                `otp_hash` VARCHAR(255) NOT NULL,
+                `reset_token_hash` VARCHAR(128) NULL,
+                `expires_at` DATETIME NOT NULL,
+                `verified_at` DATETIME NULL,
+                `used_at` DATETIME NULL,
+                `invalidated_at` DATETIME NULL,
+                `attempts` INT NOT NULL DEFAULT 0,
+                `max_attempts` INT NOT NULL DEFAULT 5,
+                `ip_address` VARCHAR(64) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`otp_id`),
+                KEY `idx_cust_otp_lookup` (`customer_id`, `purpose`, `created_at`),
+                KEY `idx_cust_otp_reset_hash` (`reset_token_hash`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_refresh_tokens` (
+                `refresh_token_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `token_hash` VARCHAR(128) NOT NULL,
+                `family_id` VARCHAR(64) NOT NULL,
+                `remember_me` TINYINT(1) NOT NULL DEFAULT 0,
+                `expires_at` DATETIME NOT NULL,
+                `revoked_at` DATETIME NULL,
+                `revoked_reason` VARCHAR(100) NULL,
+                `replaced_by_token_hash` VARCHAR(128) NULL,
+                `created_by_ip` VARCHAR(64) NULL,
+                `revoked_by_ip` VARCHAR(64) NULL,
+                `user_agent` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`refresh_token_id`),
+                UNIQUE KEY `uk_cust_rt_token_hash` (`token_hash`),
+                KEY `idx_cust_rt_customer` (`customer_id`, `revoked_at`, `expires_at`),
+                KEY `idx_cust_rt_family` (`family_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `reservations` (
                 `reservation_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `reservation_number` VARCHAR(30) NULL,
                 `branch_id` BIGINT NOT NULL DEFAULT 1,
+                `outlet_id` BIGINT NULL DEFAULT 1,
                 `customer_id` BIGINT NULL,
                 `customer_name` VARCHAR(100) NULL,
                 `phone` VARCHAR(20) NULL,
+                `email` VARCHAR(120) NULL,
                 `table_id` BIGINT NULL,
                 `guests_count` INT NOT NULL DEFAULT 2,
+                `seating_preference` VARCHAR(50) NULL,
                 `reservation_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `reservation_time` TIME NOT NULL DEFAULT '12:00:00',
-                `status` VARCHAR(20) NOT NULL DEFAULT 'booked',
-                `notes` VARCHAR(255) NULL,
+                `slot_duration_minutes` INT NOT NULL DEFAULT 120,
+                `reservation_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `advance_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `paid_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `remaining_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `payment_status` VARCHAR(30) NOT NULL DEFAULT 'UNPAID',
+                `status` VARCHAR(40) NOT NULL DEFAULT 'PENDING_PAYMENT',
+                `notes` VARCHAR(500) NULL,
+                `idempotency_key` VARCHAR(100) NULL,
+                `cancellation_reason` VARCHAR(255) NULL,
+                `cancelled_at` DATETIME NULL,
+                `cancelled_by` VARCHAR(100) NULL,
+                `refund_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `refund_status` VARCHAR(30) NOT NULL DEFAULT 'NONE',
+                `refund_reference` VARCHAR(100) NULL,
+                `confirmed_at` DATETIME NULL,
+                `modified_at` DATETIME NULL,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`reservation_id`)
-            ) ENGINE=InnoDB;");
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `reservation_payments` (
+                `payment_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `reservation_id` BIGINT NOT NULL,
+                `customer_id` BIGINT NULL,
+                `payment_type` VARCHAR(20) NOT NULL DEFAULT 'ADVANCE',
+                `amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `payment_method` VARCHAR(30) NOT NULL DEFAULT 'UPI',
+                `payment_status` VARCHAR(30) NOT NULL DEFAULT 'pending',
+                `gateway_provider` VARCHAR(40) NULL,
+                `gateway_order_id` VARCHAR(100) NULL,
+                `gateway_payment_id` VARCHAR(100) NULL,
+                `gateway_signature` VARCHAR(255) NULL,
+                `transaction_reference` VARCHAR(100) NULL,
+                `refund_reference` VARCHAR(100) NULL,
+                `idempotency_key` VARCHAR(100) NULL,
+                `failure_reason` VARCHAR(255) NULL,
+                `paid_at` DATETIME NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`payment_id`),
+                KEY `idx_res_pay_reservation` (`reservation_id`),
+                KEY `idx_res_pay_idempotency` (`idempotency_key`),
+                KEY `idx_res_pay_gateway_pid` (`gateway_payment_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `reservation_otp_tokens` (
+                `otp_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `phone` VARCHAR(20) NOT NULL,
+                `otp_hash` VARCHAR(255) NOT NULL,
+                `expires_at` DATETIME NOT NULL,
+                `verified_at` DATETIME NULL,
+                `attempts` INT NOT NULL DEFAULT 0,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`otp_id`),
+                KEY `idx_res_otp_phone` (`phone`, `created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `ingredients` (
@@ -1673,6 +1802,131 @@ public static class DbInitializer
         EnsureColumnExists(conn, "invoice_payments", "gateway_signature", "VARCHAR(255) NULL");
         EnsureColumnExists(conn, "invoice_payments", "failure_reason", "VARCHAR(255) NULL");
         EnsureColumnExists(conn, "invoice_payments", "idempotency_key", "VARCHAR(100) NULL");
+    }
+
+    private static void EnsureReservationColumns(DbConnection conn)
+    {
+        EnsureColumnExists(conn, "reservations", "branch_id", "BIGINT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "reservations", "outlet_id", "BIGINT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "reservations", "reservation_number", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "reservations", "customer_name", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "phone", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "reservations", "email", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "reservations", "seating_preference", "VARCHAR(50) NULL");
+        EnsureColumnExists(conn, "reservations", "reservation_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "reservations", "slot_duration_minutes", "INT NOT NULL DEFAULT 120");
+        EnsureColumnExists(conn, "reservations", "reservation_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "advance_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "paid_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "remaining_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "payment_status", "VARCHAR(30) NOT NULL DEFAULT 'UNPAID'");
+        EnsureColumnExists(conn, "reservations", "notes", "VARCHAR(500) NULL");
+        EnsureColumnExists(conn, "reservations", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "cancellation_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "reservations", "cancelled_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "reservations", "cancelled_by", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "refund_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "refund_status", "VARCHAR(30) NOT NULL DEFAULT 'NONE'");
+        EnsureColumnExists(conn, "reservations", "refund_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "confirmed_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "reservations", "modified_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "reservations", "created_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "reservations", "updated_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "reservations", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "reservations", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
+        SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `status` VARCHAR(40) NOT NULL DEFAULT 'PENDING_PAYMENT';");
+        SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `notes` VARCHAR(500) NULL;");
+    }
+
+    private static void EnsureCustomerAuthSchema(DbConnection conn)
+    {
+        EnsureColumnExists(conn, "customers", "password_hash", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "customers", "role", "VARCHAR(30) NOT NULL DEFAULT 'Customer'");
+        EnsureColumnExists(conn, "customers", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "customers", "is_verified", "TINYINT(1) NOT NULL DEFAULT 0");
+        EnsureColumnExists(conn, "customers", "verified_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "last_login", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "registered_branch_id", "BIGINT UNSIGNED NULL");
+        EnsureColumnExists(conn, "customers", "failed_login_attempts", "INT NOT NULL DEFAULT 0");
+        EnsureColumnExists(conn, "customers", "lockout_until", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "token_version", "INT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "customers", "deleted_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "branch_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "customers", "outlet_id", "BIGINT NULL DEFAULT 1");
+
+        SafeExecuteSql(conn, "UPDATE `customers` SET `role` = 'Customer' WHERE `role` IS NULL OR `role` = '';");
+        SafeExecuteSql(conn, "UPDATE `customers` SET `token_version` = 1 WHERE `token_version` IS NULL OR `token_version` < 1;");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_customers_email` ON `customers` (`email`);");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_otp_tokens` (
+                `otp_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `purpose` VARCHAR(40) NOT NULL DEFAULT 'ACCOUNT_VERIFY',
+                `channel` VARCHAR(30) NOT NULL DEFAULT 'EMAIL_AND_PHONE',
+                `target_identifier` VARCHAR(150) NOT NULL,
+                `otp_hash` VARCHAR(255) NOT NULL,
+                `reset_token_hash` VARCHAR(128) NULL,
+                `expires_at` DATETIME NOT NULL,
+                `verified_at` DATETIME NULL,
+                `used_at` DATETIME NULL,
+                `invalidated_at` DATETIME NULL,
+                `attempts` INT NOT NULL DEFAULT 0,
+                `max_attempts` INT NOT NULL DEFAULT 5,
+                `ip_address` VARCHAR(64) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`otp_id`),
+                KEY `idx_cust_otp_lookup` (`customer_id`, `purpose`, `created_at`),
+                KEY `idx_cust_otp_reset_hash` (`reset_token_hash`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_refresh_tokens` (
+                `refresh_token_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `token_hash` VARCHAR(128) NOT NULL,
+                `family_id` VARCHAR(64) NOT NULL,
+                `remember_me` TINYINT(1) NOT NULL DEFAULT 0,
+                `expires_at` DATETIME NOT NULL,
+                `revoked_at` DATETIME NULL,
+                `revoked_reason` VARCHAR(100) NULL,
+                `replaced_by_token_hash` VARCHAR(128) NULL,
+                `created_by_ip` VARCHAR(64) NULL,
+                `revoked_by_ip` VARCHAR(64) NULL,
+                `user_agent` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`refresh_token_id`),
+                UNIQUE KEY `uk_cust_rt_token_hash` (`token_hash`),
+                KEY `idx_cust_rt_customer` (`customer_id`, `revoked_at`, `expires_at`),
+                KEY `idx_cust_rt_family` (`family_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+    }
+
+    private static void EnsureReservationSchema(DbConnection conn)
+    {
+        EnsureReservationColumns(conn);
+
+        EnsureColumnExists(conn, "reservation_payments", "customer_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "reservation_payments", "payment_type", "VARCHAR(20) NOT NULL DEFAULT 'ADVANCE'");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_provider", "VARCHAR(40) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_order_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_payment_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_signature", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "transaction_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "refund_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "failure_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "paid_at", "DATETIME NULL");
+
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `reservation_number` = CONCAT('RES-', 1000 + `reservation_id`) WHERE `reservation_number` IS NULL OR `reservation_number` = '';");
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `slot_duration_minutes` = 120 WHERE `slot_duration_minutes` IS NULL OR `slot_duration_minutes` <= 0;");
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `payment_status` = 'UNPAID' WHERE `payment_status` IS NULL OR `payment_status` = '';");
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `refund_status` = 'NONE' WHERE `refund_status` IS NULL OR `refund_status` = '';");
+        SafeExecuteSql(conn, "CREATE UNIQUE INDEX `uk_reservations_number` ON `reservations` (`reservation_number`);");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_table_date_status` ON `reservations` (`table_id`, `reservation_date`, `status`);");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_phone` ON `reservations` (`phone`);");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_idempotency` ON `reservations` (`idempotency_key`);");
     }
 
     private static void SafeExecuteSql(DbConnection conn, string sql)
