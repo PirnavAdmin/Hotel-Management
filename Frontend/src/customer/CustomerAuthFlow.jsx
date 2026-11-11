@@ -43,8 +43,13 @@ export function CustomerAuthFlow({
 
   // Destination friendly label
   const getDestinationLabel = () => {
-    if (intendedDestination === "menu" || intendedDestination === "takeaway") return "Takeaway Menu";
-    if (intendedDestination === "reservation" || intendedDestination === "table") return "Table Reservation";
+    if (intendedDestination === "menu" || intendedDestination === "takeaway")
+      return "Takeaway Menu";
+    if (
+      intendedDestination === "reservation" ||
+      intendedDestination === "table"
+    )
+      return "Table Reservation";
     if (intendedDestination === "cart") return "Your Cart";
     if (intendedDestination === "checkout") return "Checkout";
     return "Home";
@@ -60,7 +65,10 @@ export function CustomerAuthFlow({
   // Auto-increment OTP helper for new user signups
   const getNextOtp = () => {
     try {
-      const stored = parseInt(localStorage.getItem("bhanu_bistro_otp_counter") || "247915", 10);
+      const stored = parseInt(
+        localStorage.getItem("bhanu_bistro_otp_counter") || "247915",
+        10,
+      );
       const next = stored + 1;
       localStorage.setItem("bhanu_bistro_otp_counter", String(next));
       return String(next).padStart(6, "0");
@@ -192,7 +200,9 @@ export function CustomerAuthFlow({
     const newUser = {
       name: regFullName.trim(),
       phone: regMobile.trim(),
-      email: regEmail.trim() || `${regFullName.toLowerCase().replace(/\s+/g, "")}@example.com`,
+      email:
+        regEmail.trim() ||
+        `${regFullName.toLowerCase().replace(/\s+/g, "")}@example.com`,
     };
     setCurrentUserData(newUser);
 
@@ -227,7 +237,10 @@ export function CustomerAuthFlow({
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
     if (!pasted) return;
     const newOtp = [...otpDigits];
     for (let i = 0; i < 6; i++) {
@@ -271,7 +284,7 @@ export function CustomerAuthFlow({
     }
 
     setForgotSentMessage(
-      `Password reset instructions have been sent to ${forgotIdentifier.trim()}!`
+      `Password reset instructions have been sent to ${forgotIdentifier.trim()}!`,
     );
 
     // After brief moment, seamlessly proceed to Screen 5 (Reset Password)
@@ -298,7 +311,9 @@ export function CustomerAuthFlow({
       return;
     }
 
-    setResetSuccessMessage("Password reset successfully! Redirecting to login...");
+    setResetSuccessMessage(
+      "Password reset successfully! Redirecting to login...",
+    );
     setTimeout(() => {
       setResetSuccessMessage("");
       setActiveStep("login");
@@ -359,7 +374,8 @@ export function CustomerAuthFlow({
                     Customer <span>Login</span>
                   </h2>
                   <p>
-                    Sign in to order takeaway, reserve a table and enjoy a great dining experience.
+                    Sign in to order takeaway, reserve a table and enjoy a great
+                    dining experience.
                   </p>
                 </div>
 
@@ -370,7 +386,10 @@ export function CustomerAuthFlow({
                   </div>
                 )}
 
-                <form className="customer-auth-form" onSubmit={handleLoginSubmit}>
+                <form
+                  className="customer-auth-form"
+                  onSubmit={handleLoginSubmit}
+                >
                   {/* Email / Mobile Field */}
                   <div className="customer-auth-field">
                     <div className="customer-auth-input-wrapper">
@@ -407,7 +426,11 @@ export function CustomerAuthFlow({
                         onClick={() => setShowLoginPassword(!showLoginPassword)}
                         aria-label="Toggle password visibility"
                       >
-                        {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {showLoginPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -466,7 +489,8 @@ export function CustomerAuthFlow({
                     Create Your <span>Account</span>
                   </h2>
                   <p>
-                    Join {restaurantName} and enjoy takeaway and table reservation.
+                    Join {restaurantName} and enjoy takeaway and table
+                    reservation.
                   </p>
                 </div>
 
@@ -477,7 +501,10 @@ export function CustomerAuthFlow({
                   </div>
                 )}
 
-                <form className="customer-auth-form" onSubmit={handleRegisterSubmit}>
+                <form
+                  className="customer-auth-form"
+                  onSubmit={handleRegisterSubmit}
+                >
                   {/* Full Name */}
                   <div className="customer-auth-field">
                     <div className="customer-auth-input-wrapper">
@@ -545,7 +572,11 @@ export function CustomerAuthFlow({
                         className="customer-auth-eye-btn"
                         onClick={() => setShowRegPassword(!showRegPassword)}
                       >
-                        {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {showRegPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -566,9 +597,15 @@ export function CustomerAuthFlow({
                       <button
                         type="button"
                         className="customer-auth-eye-btn"
-                        onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                        onClick={() =>
+                          setShowRegConfirmPassword(!showRegConfirmPassword)
+                        }
                       >
-                        {showRegConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {showRegConfirmPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -605,8 +642,17 @@ export function CustomerAuthFlow({
                   </h2>
                   <p>
                     We've sent a 6-digit OTP to{" "}
-                    <strong>{currentUserData.phone || "+91 98765 43210"}</strong>:{" "}
-                    <span style={{ color: "#ea580c", fontWeight: 700, letterSpacing: "1px" }}>
+                    <strong>
+                      {currentUserData.phone || "+91 98765 43210"}
+                    </strong>
+                    :{" "}
+                    <span
+                      style={{
+                        color: "#ea580c",
+                        fontWeight: 700,
+                        letterSpacing: "1px",
+                      }}
+                    >
                       {currentGeneratedOtp}
                     </span>
                   </p>
@@ -621,7 +667,10 @@ export function CustomerAuthFlow({
 
                 <form className="customer-auth-form" onSubmit={handleVerifyOtp}>
                   {/* 6 Digit OTP Input Boxes */}
-                  <div className="customer-auth-otp-row" onPaste={handleOtpPaste}>
+                  <div
+                    className="customer-auth-otp-row"
+                    onPaste={handleOtpPaste}
+                  >
                     {otpDigits.map((digit, idx) => (
                       <input
                         key={idx}
@@ -642,7 +691,8 @@ export function CustomerAuthFlow({
                     Didn't receive the OTP?{" "}
                     {resendTimer > 0 ? (
                       <span style={{ color: "#ea580c", fontWeight: 700 }}>
-                        Resend OTP (00:{resendTimer < 10 ? `0${resendTimer}` : resendTimer})
+                        Resend OTP (00:
+                        {resendTimer < 10 ? `0${resendTimer}` : resendTimer})
                       </span>
                     ) : (
                       <button
@@ -684,7 +734,8 @@ export function CustomerAuthFlow({
                     Forgot <span>Password?</span>
                   </h2>
                   <p>
-                    Enter your registered email or mobile number to receive a password reset link.
+                    Enter your registered email or mobile number to receive a
+                    password reset link.
                   </p>
                 </div>
 
@@ -702,7 +753,10 @@ export function CustomerAuthFlow({
                   </div>
                 )}
 
-                <form className="customer-auth-form" onSubmit={handleForgotSubmit}>
+                <form
+                  className="customer-auth-form"
+                  onSubmit={handleForgotSubmit}
+                >
                   <div className="customer-auth-field">
                     <div className="customer-auth-input-wrapper">
                       <span className="customer-auth-field-icon">
@@ -764,7 +818,10 @@ export function CustomerAuthFlow({
                   </div>
                 )}
 
-                <form className="customer-auth-form" onSubmit={handleResetSubmit}>
+                <form
+                  className="customer-auth-form"
+                  onSubmit={handleResetSubmit}
+                >
                   {/* New Password */}
                   <div className="customer-auth-field">
                     <div className="customer-auth-input-wrapper">
@@ -784,7 +841,11 @@ export function CustomerAuthFlow({
                         className="customer-auth-eye-btn"
                         onClick={() => setShowNewPassword(!showNewPassword)}
                       >
-                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {showNewPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -805,9 +866,15 @@ export function CustomerAuthFlow({
                       <button
                         type="button"
                         className="customer-auth-eye-btn"
-                        onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                        onClick={() =>
+                          setShowConfirmNewPassword(!showConfirmNewPassword)
+                        }
                       >
-                        {showConfirmNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {showConfirmNewPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -839,9 +906,12 @@ export function CustomerAuthFlow({
                   <Check size={42} strokeWidth={3} />
                 </div>
 
-                <div className="customer-auth-success-title">Login Successful!</div>
+                <div className="customer-auth-success-title">
+                  Login Successful!
+                </div>
                 <div className="customer-auth-success-subtitle">
-                  Welcome back to {restaurantName}, <strong>{currentUserData.name}</strong>.
+                  Welcome back to {restaurantName},{" "}
+                  <strong>{currentUserData.name}</strong>.
                 </div>
 
                 <div className="customer-auth-redirect-status">
@@ -858,7 +928,9 @@ export function CustomerAuthFlow({
                     type="button"
                     className="customer-auth-secondary-btn"
                     style={{ fontSize: "13px", height: "38px" }}
-                    onClick={() => onLoginSuccess(currentUserData, intendedDestination)}
+                    onClick={() =>
+                      onLoginSuccess(currentUserData, intendedDestination)
+                    }
                   >
                     Click if not redirected automatically →
                   </button>
@@ -873,4 +945,3 @@ export function CustomerAuthFlow({
 }
 
 export default CustomerAuthFlow;
-
