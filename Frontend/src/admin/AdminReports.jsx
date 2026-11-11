@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
@@ -37,6 +38,9 @@ import { ProfitLossStatementView } from "./accounting/ProfitLossStatementView";
 import { TrialBalanceView } from "./accounting/TrialBalanceView";
 import { StockSummaryReportView } from "./accounting/StockSummaryReportView";
 import { BalanceSheetView } from "./accounting/BalanceSheetView";
+import { ChartOfAccountsView } from "./accounting/ChartOfAccountsView";
+import { GeneralLedgerView } from "./accounting/GeneralLedgerView";
+import { JournalEntriesView } from "./accounting/JournalEntriesView";
 import { getDailyBalances } from "./accounting/accountingService";
 import { printSurface } from "../utils/printSurface";
 import { apiGetInventory } from "../api/inventoryApi";
@@ -274,6 +278,17 @@ export function AdminReports({
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  const tabsScrollRef = useRef(null);
+
+  useEffect(() => {
+    if (tabsScrollRef.current) {
+      const activeEl = tabsScrollRef.current.querySelector('[data-active="true"]');
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+  }, [activeTab]);
 
   const [expenditureView, setExpenditureView] = useState('inventory');
 
@@ -1763,6 +1778,9 @@ export function AdminReports({
     { id: 'stock-summary', label: 'Stock Summary Report', icon: Boxes, badge: `${inventoryItems.length} Items` },
     { id: 'balance-sheet', label: 'Balance Sheet', icon: BookOpen, badge: 'Balanced' },
     { id: 'daily-register', label: 'Opening & Closing Register', icon: Wallet, badge: 'Daily Float' },
+    { id: 'coa', label: 'Chart of Accounts', icon: Layers, badge: 'COA' },
+    { id: 'general-ledger', label: 'General Ledger', icon: Receipt, badge: 'Ledger' },
+    { id: 'journal-entries', label: 'Journal Entries', icon: FileText, badge: 'JV' },
     { id: 'sales', label: 'Sales & Channels', icon: BarChart3, badge: `${filteredOrders.length} Orders` },
     { id: 'income', label: 'Detailed Income Ledger', icon: Receipt, badge: `${searchedOrders.length} Orders` },
     { id: 'expenditure', label: 'Operating Costs', icon: Boxes, badge: 'Expenses' },
@@ -1851,7 +1869,7 @@ export function AdminReports({
                 }}
               >
                 <Calendar size={13} color="#f59e0b" />
-                <select
+                <SearchableSelect
                   value={filterPeriod}
                   onChange={(e) => handleSelectPeriod(e.target.value)}
                   style={{
@@ -1887,7 +1905,7 @@ export function AdminReports({
                     <option value="last_year">Last Year</option>
                   </optgroup>
                   <option value="custom">Custom Range...</option>
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Custom Date Range Picker */}
@@ -2199,17 +2217,18 @@ export function AdminReports({
               borderRadius: '12px',
               padding: '0.85rem 1.25rem',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              flexDirection: 'column',
+              alignItems: 'stretch',
               flexWrap: 'wrap',
               gap: '1rem',
               marginBottom: '1rem',
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="daily-register-balance-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div
-                style={{
+              className="daily-register-balance-icon"
+              style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
@@ -2224,10 +2243,10 @@ export function AdminReports({
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span className="daily-register-balance-title" style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Daily Register &bull; Today's Balance Bar
                   </span>
-                  <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: todaySavedRecord?.isClosed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: todaySavedRecord?.isClosed ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                  <span className="daily-register-balance-status" style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: todaySavedRecord?.isClosed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: todaySavedRecord?.isClosed ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
                     {todaySavedRecord?.isClosed ? 'Shift Closed' : 'Live Shift'}
                   </span>
                 </div>
@@ -2242,7 +2261,7 @@ export function AdminReports({
                 <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Opening Balance
                 </span>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#f59e0b' }}>
+                <div className="daily-register-opening-value" style={{ fontSize: '1.1rem', fontWeight: 900, color: '#f59e0b' }}>
                   {formatCurrency(todayOpeningTotal)}
                 </div>
               </div>
@@ -2253,7 +2272,7 @@ export function AdminReports({
                 <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Inflows (Sales)
                 </span>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#10b981' }}>
+                <div className="daily-register-inflow-value" style={{ fontSize: '1.1rem', fontWeight: 900, color: '#10b981' }}>
                   +{formatCurrency(todayTotalInflow)}
                 </div>
               </div>
@@ -2264,7 +2283,7 @@ export function AdminReports({
                 <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Outflows (Expenses)
                 </span>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ef4444' }}>
+                <div className="daily-register-outflow-value" style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ef4444' }}>
                   -{formatCurrency(todayTotalOutflow)}
                 </div>
               </div>
@@ -2275,12 +2294,13 @@ export function AdminReports({
                 <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
                   Closing Balance
                 </span>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3b82f6' }}>
+                <div className="daily-register-closing-value" style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3b82f6' }}>
                   {formatCurrency(todayClosingTotal)}
                 </div>
               </div>
 
               <button
+                className="daily-register-manage-button"
                 type="button"
                 onClick={() => setActiveTab('daily-register')}
                 style={{
@@ -2305,9 +2325,15 @@ export function AdminReports({
           </div>
 
           {/* ========================================================================= */}
-          {/* MASTER VIEW MODE TABS (THE SPA ENGINE - ZERO SCROLLING)                   */}
+          {/* MASTER VIEW MODE TABS (SEAMLESS HORIZONTAL SCROLL STRIP)                  */}
           {/* ========================================================================= */}
           <div
+            ref={tabsScrollRef}
+            onWheel={(e) => {
+              if (e.deltaY !== 0 && tabsScrollRef.current) {
+                tabsScrollRef.current.scrollLeft += e.deltaY;
+              }
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -2321,87 +2347,90 @@ export function AdminReports({
               overflowX: 'auto',
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
+              scrollBehavior: 'smooth',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
-            {navTabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              const Icon = tab.icon;
+              {navTabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const Icon = tab.icon;
 
-              // Color logic:
-              // - statement: profit -> green, loss -> red
-              // - expenditure: orange
-              // - sales & income: amber/orange
-              let activeBackground = 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)';
-              let activeShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
+                // Color logic:
+                // - statement: profit -> green, loss -> red
+                // - expenditure: orange
+                // - sales & income: amber/orange
+                let activeBackground = 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)';
+                let activeShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
 
-              if (tab.id === 'statement') {
-                if (isProfit) {
-                  activeBackground = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                  activeShadow = '0 2px 8px rgba(16, 185, 129, 0.35)';
-                } else {
-                  activeBackground = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                  activeShadow = '0 2px 8px rgba(239, 68, 68, 0.35)';
+                if (tab.id === 'statement') {
+                  if (isProfit) {
+                    activeBackground = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    activeShadow = '0 2px 8px rgba(16, 185, 129, 0.35)';
+                  } else {
+                    activeBackground = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    activeShadow = '0 2px 8px rgba(239, 68, 68, 0.35)';
+                  }
+                } else if (tab.id === 'expenditure') {
+                  activeBackground = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+                  activeShadow = '0 2px 8px rgba(249, 115, 22, 0.35)';
                 }
-              } else if (tab.id === 'expenditure') {
-                activeBackground = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
-                activeShadow = '0 2px 8px rgba(249, 115, 22, 0.35)';
-              }
 
-              // Inactive styling for statement badge
-              let inactiveBadgeBg = 'rgba(var(--surface-rgb), 0.08)';
-              let inactiveBadgeColor = 'var(--text-dim)';
-              let inactiveBadgeBorder = 'none';
+                // Inactive styling for statement badge
+                let inactiveBadgeBg = 'rgba(var(--surface-rgb), 0.08)';
+                let inactiveBadgeColor = 'var(--text-dim)';
+                let inactiveBadgeBorder = 'none';
 
-              if (tab.id === 'statement' && !isActive) {
-                inactiveBadgeBg = isProfit ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
-                inactiveBadgeColor = isProfit ? '#10b981' : '#ef4444';
-                inactiveBadgeBorder = `1px solid ${isProfit ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`;
-              }
+                if (tab.id === 'statement' && !isActive) {
+                  inactiveBadgeBg = isProfit ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+                  inactiveBadgeColor = isProfit ? '#10b981' : '#ef4444';
+                  inactiveBadgeBorder = `1px solid ${isProfit ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`;
+                }
 
-              return (
-                <button
-                  key={tab.id}
-                  type='button'
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: '8px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: 'none',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    transition: 'all 0.15s ease',
-                    background: isActive ? activeBackground : 'transparent',
-                    color: isActive ? '#ffffff' : 'var(--text-muted)',
-                    boxShadow: isActive ? activeShadow : 'none',
-                  }}
-                >
-                  <Icon size={14} />
-                  <span>{tab.label}</span>
-                  {tab.badge && (
-                    <span
-                      style={{
-                        fontSize: '0.66rem',
-                        padding: '1px 5px',
-                        borderRadius: '10px',
-                        background: isActive ? 'rgba(255, 255, 255, 0.25)' : inactiveBadgeBg,
-                        color: isActive ? '#ffffff' : inactiveBadgeColor,
-                        border: isActive ? 'none' : inactiveBadgeBorder,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={tab.id}
+                    data-active={isActive ? "true" : "false"}
+                    type='button'
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: 'none',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease',
+                      background: isActive ? activeBackground : 'transparent',
+                      color: isActive ? '#ffffff' : 'var(--text-muted)',
+                      boxShadow: isActive ? activeShadow : 'none',
+                    }}
+                  >
+                    <Icon size={14} />
+                    <span>{tab.label}</span>
+                    {tab.badge && (
+                      <span
+                        style={{
+                          fontSize: '0.66rem',
+                          padding: '1px 5px',
+                          borderRadius: '10px',
+                          background: isActive ? 'rgba(255, 255, 255, 0.25)' : inactiveBadgeBg,
+                          color: isActive ? '#ffffff' : inactiveBadgeColor,
+                          border: isActive ? 'none' : inactiveBadgeBorder,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
           {/* ========================================================================= */}
           {/* TAB 1: SALES & CHANNELS (PAYMENT DISTRIBUTION + TOP DISHES)               */}
@@ -2688,6 +2717,23 @@ export function AdminReports({
               inventoryPurchases={inventoryPurchases}
               salaryPayments={salaryPayments}
             />
+          )}
+
+          {activeTab === 'coa' && (
+            <ChartOfAccountsView />
+          )}
+
+          {activeTab === 'general-ledger' && (
+            <GeneralLedgerView
+              orders={pastOrders}
+              inventoryPurchases={inventoryPurchases}
+              salaryPayments={salaryPayments}
+              inventoryItems={inventoryItems}
+            />
+          )}
+
+          {activeTab === 'journal-entries' && (
+            <JournalEntriesView currentSession={restaurantSettings} />
           )}
 
           {/* ========================================================================= */}
@@ -3516,6 +3562,7 @@ export function AdminReports({
 
                   {/* Export CSV Button (Matching Image 1 & 2) */}
                   <button
+                    className="report-reconciliation-export"
                     type="button"
                     className="btn-export-csv"
                     onClick={handleExportLedgerReconciliationExcel}
@@ -3963,7 +4010,7 @@ export function AdminReports({
                   </div>
 
                   {/* Category Dropdown Filter */}
-                  <select
+                  <SearchableSelect
                     value={invCategoryFilter}
                     onChange={(e) => setInvCategoryFilter(e.target.value)}
                     style={{
@@ -3984,7 +4031,7 @@ export function AdminReports({
                         {cat}
                       </option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
@@ -3994,6 +4041,7 @@ export function AdminReports({
 
                   {/* Export CSV Button (Matching Image 1 & 2) */}
                   <button
+                    className="report-reconciliation-export"
                     type="button"
                     className="btn-export-csv"
                     onClick={handleExportExpenditureReconciliationExcel}

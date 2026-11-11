@@ -165,7 +165,7 @@ const sendOtpEmail = async (email, otp, fullName = "Admin") => {
   return { success: true, fallback: true, isLive: false };
 };
 
-function globalSyncPlugin() {
+function globalSyncPlugin(backendTarget) {
   let sseClients = [];
   const getDataFile = () => {
     const candidates = [
@@ -221,6 +221,8 @@ function globalSyncPlugin() {
 
   let backendOnline = false;
   let lastHealthCheck = 0;
+  const backendBaseUrl = String(backendTarget || "").replace(/\/+$/, "");
+  const backendUrl = (pathname) => `${backendBaseUrl}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
 
   const isBackendAvailable = async () => {
     const now = Date.now();
@@ -228,8 +230,11 @@ function globalSyncPlugin() {
     lastHealthCheck = now;
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 600);
-      const res = await fetch("http://127.0.0.1:5018/api/v1/tables", { signal: controller.signal });
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(backendUrl("/api/v1/tables"), {
+        signal: controller.signal,
+        headers: { "ngrok-skip-browser-warning": "true" },
+      });
       clearTimeout(timer);
       backendOnline = res.ok || res.status < 500;
     } catch {
@@ -246,84 +251,80 @@ function globalSyncPlugin() {
         if (requestUrl.startsWith("/__backend_api/")) {
           const apiPath = requestUrl.slice("/__backend_api".length);
           const remoteOnly = String(req.headers["x-remote-only"] || "").toLowerCase() === "true";
-          const live = await isBackendAvailable();
+          const requestChunks = [];
+          const forwardRequest = async (body) => {
+            const method = String(req.method || "GET").toUpperCase();
+            const headers = {};
+            const hopByHopHeaders = new Set([
+              "host",
+              "connection",
+              "transfer-encoding",
+              "content-length",
+              "keep-alive",
+              "upgrade",
+              "te",
+              "proxy-authorization",
+              "proxy-authenticate",
+              "x-remote-only"
+            ]);
+            for (const [key, value] of Object.entries(req.headers)) {
+              if (hopByHopHeaders.has(key.toLowerCase())) continue;
+              headers[key] = value;
+            }
 
-          if (live) {
-            const requestChunks = [];
-            const forwardRequest = async (body) => {
-              const method = String(req.method || "GET").toUpperCase();
-              const headers = {};
-              const hopByHopHeaders = new Set([
-                "host",
-                "connection",
-                "transfer-encoding",
-                "content-length",
-                "keep-alive",
-                "upgrade",
-                "te",
-                "proxy-authorization",
-                "proxy-authenticate",
-                "x-remote-only"
-              ]);
-              for (const [key, value] of Object.entries(req.headers)) {
-                if (hopByHopHeaders.has(key.toLowerCase())) continue;
-                headers[key] = value;
-              }
-
-              const targets = [
-                `http://127.0.0.1:5018${apiPath}`,
-                `http://localhost:5018${apiPath}`
-              ];
-
-              for (const targetUrl of targets) {
-                try {
-                  const upstream = await fetch(targetUrl, {
-                    method,
-                    headers,
-                    ...(method === "GET" || method === "HEAD" ? {} : { body, duplex: "half" }),
-                  });
-
-                  const responseBody = Buffer.from(await upstream.arrayBuffer());
-                  const resHeaders = {
-                    "Content-Type": upstream.headers.get("content-type") || "application/json",
-                    "Cache-Control": "no-store",
-                  };
-                  res.writeHead(upstream.status, resHeaders);
-                  return res.end(responseBody);
-                } catch {
-                  // Try next target
-                }
-              }
-
-              // Fallback to local server if live backend drops during request
+            try {
+              const upstream = await fetch(backendUrl(apiPath), {
+                method,
+                headers,
+                ...(method === "GET" || method === "HEAD" ? {} : { body, duplex: "half" }),
+              });
+              const responseBody = Buffer.from(await upstream.arrayBuffer());
+              const resHeaders = {
+                "Content-Type": upstream.headers.get("content-type") || "application/json",
+                "Cache-Control": "no-store",
+              };
+              res.writeHead(upstream.status, resHeaders);
+              return res.end(responseBody);
+            } catch {
               backendOnline = false;
               if (remoteOnly) {
                 res.writeHead(503, { "Content-Type": "application/json" });
-                return res.end(JSON.stringify({ success: false, error: "The live backend is unavailable; this request requires the remote service." }));
+                return res.end(JSON.stringify({ success: false, error: "The configured backend is unavailable; this request requires the remote service." }));
               }
               req.url = apiPath;
               return next();
-            };
-
+            }
+          };
+          const receiveAndForward = () => {
             if (req.readableEnded) {
               forwardRequest(Buffer.concat(requestChunks));
-            } else {
-              req.on("data", (chunk) => requestChunks.push(chunk));
-              req.on("end", () => forwardRequest(Buffer.concat(requestChunks)));
-              req.on("error", (err) => {
-                console.error("[Vite Proxy] Client stream error:", err.message);
-                res.writeHead(500, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({ success: false, error: err.message }));
-              });
+              return;
             }
+            req.on("data", (chunk) => requestChunks.push(chunk));
+            req.on("end", () => forwardRequest(Buffer.concat(requestChunks)));
+            req.on("error", (err) => {
+              console.error("[Vite Proxy] Client stream error:", err.message);
+              res.writeHead(500, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ success: false, error: err.message }));
+            });
+          };
+
+          // Authentication requests must reach the configured API directly;
+          // a separate health probe can be slower or routed differently.
+          if (remoteOnly) {
+            // Leave the proxy prefix intact so Vite's configured proxy target
+            // handles this request and strips the prefix exactly once.
+            delete req.headers["x-remote-only"];
+            return next();
+          }
+
+          const live = await isBackendAvailable();
+          if (live) {
+            receiveAndForward();
             return;
           }
 
           // Offline fallback: rewrite URL and seamlessly fall through to local handlers below
-          if (remoteOnly) {
-            res.writeHead(503, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ success: false, error: "The live backend is unavailable; this request requires the remote service." }));
-          }
           req.url = apiPath;
         }
         // Centralized Backend HTTP Request/Response Logger
@@ -2482,7 +2483,7 @@ export default defineConfig(({ mode }) => {
     "http://127.0.0.1:5018";
 
   return {
-    plugins: [react(), globalSyncPlugin()],
+    plugins: [react(), globalSyncPlugin(backendTarget)],
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,

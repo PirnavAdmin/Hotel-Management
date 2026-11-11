@@ -18,7 +18,7 @@ import { logFormSubmission, logUserAction } from '../utils/logger';
 import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
 import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
 
-export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment }) {
+export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment, confirmLabel }) {
   // 'upi' | 'cash'
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [cashTendered, setCashTendered] = useState("0.00");
@@ -995,7 +995,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             }}
           >
             <CheckCircle2 size={19} strokeWidth={2.2} />
-            <span>{isProcessing ? 'Processing Settlement...' : `Confirm & Vacate ${table.name}`}</span>
+            <span>{isProcessing ? 'Processing Settlement...' : (confirmLabel || `Confirm & Vacate ${table.name}`)}</span>
           </button>
         </div>
       </div>

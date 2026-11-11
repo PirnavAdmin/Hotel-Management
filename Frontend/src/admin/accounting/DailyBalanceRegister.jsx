@@ -315,6 +315,7 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
 
           <button
             type="button"
+            className="daily-register-export"
             onClick={handleExportCSV}
             style={{
               display: "flex",

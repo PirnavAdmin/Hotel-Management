@@ -765,7 +765,6 @@ export function App() {
 
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
-  const isUserRoute = !isKotRoute && !isAdminRoute;
 
   // ── Live Backend Integration Hook (Ngrok API) ──────────────────
   useEffect(() => {
@@ -1009,6 +1008,8 @@ export function App() {
   const [posSession, setPosSession] = useState(null);
   const [kotSession, setKotSession] = useState(null);
   const [adminSession, setAdminSession] = useState(null);
+  const isLandingRoute = location.pathname === "/" && !posSession;
+  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
@@ -1027,27 +1028,51 @@ export function App() {
       return;
     }
 
+    let savedToken = "";
+    try {
+      savedToken = localStorage.getItem("avsr_jwt_token") || "";
+    } catch {
+      // A blocked storage environment cannot provide a restorable token.
+    }
+
+    const restoreSavedSessions = () => {
+      setPosSession(savedSessions.pos);
+      setKotSession(savedSessions.kot);
+      setAdminSession(savedSessions.admin);
+    };
+    const clearSavedSessions = () => {
+      logoutUser();
+      setPosSession(null);
+      setKotSession(null);
+      setAdminSession(null);
+    };
+
+    if (!savedToken) {
+      clearSavedSessions();
+      setAuthRestorePending(false);
+      return;
+    }
+
     let active = true;
     fetchCurrentAuthUser()
-      .then(({ success }) => {
+      .then(({ success, status }) => {
         if (!active) return;
-        if (!success) {
-          logoutUser();
-          setPosSession(null);
-          setKotSession(null);
-          setAdminSession(null);
+        if (success) {
+          restoreSavedSessions();
           return;
         }
-        setPosSession(savedSessions.pos);
-        setKotSession(savedSessions.kot);
-        setAdminSession(savedSessions.admin);
+        if (status === 401) {
+          clearSavedSessions();
+          return;
+        }
+        // Network errors and server/permission failures do not invalidate a
+        // previously stored session. Keep the user signed in while the API is
+        // unavailable or refuses an endpoint for a non-authentication reason.
+        restoreSavedSessions();
       })
       .catch(() => {
         if (!active) return;
-        logoutUser();
-        setPosSession(null);
-        setKotSession(null);
-        setAdminSession(null);
+        restoreSavedSessions();
       })
       .finally(() => {
         if (active) setAuthRestorePending(false);
@@ -3690,6 +3715,17 @@ export function App() {
 
       {/* Main Separate Routes Rendering */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {isLandingRoute && (
+          <CustomerLandingPage
+            restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
+            restaurantLogo={restaurantSettings.logo || ""}
+            menuItems={menuItems}
+            menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+            tables={tables}
+            onAdminLogin={() => navigate("/admin")}
+          />
+        )}
+
         {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - KITCHEN & BAR BOT WORKSPACE */}
         {isKotRoute &&
           (kotSession &&

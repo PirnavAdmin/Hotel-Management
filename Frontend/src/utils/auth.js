@@ -217,9 +217,13 @@ export async function updateUserPassword(userId, newPassword) {
 export async function fetchCurrentAuthUser() {
   const res = await apiGetMe();
   if (res.success && res.data) {
-    return { success: true, user: res.data };
+    return { success: true, user: res.data, status: res.status };
   }
-  return { success: false, error: res.error || 'Failed to fetch user profile' };
+  return {
+    success: false,
+    error: res.error || 'Failed to fetch user profile',
+    status: res.status,
+  };
 }
 
 export async function loginUser(usernameOrEmail, password, expectedRole) {
@@ -227,23 +231,6 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
   const normUser = trimmedInput.toLowerCase();
   const res = await apiLogin(trimmedInput, password.trim());
   if (!res.success) {
-    // Zero-downtime offline administrative fallback for pirnav
-    if (normUser === 'pirnav' || normUser === 'pirnavadmin' || normUser.includes('pirnav')) {
-      const fallbackSession = {
-        userId: 'pirnav',
-        username: 'pirnav',
-        name: 'pirnav',
-        role: 'admin',
-        email: 'maturi.vikas@pirnav.com',
-        loginEmail: 'maturi.vikas@pirnav.com',
-        loginIdentifier: 'pirnav',
-        mobile: '9999999999',
-        loginAt: new Date().toISOString()
-      };
-      setSession(fallbackSession, 'local-pirnav-admin-token');
-      return { success: true, session: fallbackSession };
-    }
-
     const isConnectionError =
       !res.status ||
       [502, 503, 504].includes(res.status) ||

@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useEffect, useState } from "react";
 import {
   FileText,
@@ -952,7 +953,7 @@ export function AdminInvoices({
         {/* Invoice date filters */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "0.65rem", flexWrap: "wrap", minHeight: "54px", boxSizing: "border-box", padding: "0.55rem 0.8rem", marginBottom: "0.9rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
           <Calendar size={16} color="#f59e0b" style={{ flex: "0 0 auto" }} />
-          <select
+          <SearchableSelect
             aria-label="Filter invoices by date"
             value={dateFilter}
             onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
@@ -964,12 +965,12 @@ export function AdminInvoices({
             <option value="monthly">Monthly</option>
             <option value="quarterly">Quarterly</option>
             <option value="custom">Custom Date Range</option>
-          </select>
+          </SearchableSelect>
 
           {/* Service / Dining Type Filter Dropdown */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", height: "38px" }}>
             <Utensils size={15} color="#f59e0b" style={{ flex: "0 0 auto" }} />
-            <select
+            <SearchableSelect
               aria-label="Filter by Service / Dining Type"
               value={orderTypeFilter}
               onChange={(event) => {
@@ -992,7 +993,7 @@ export function AdminInvoices({
               <option value="all">All Types (Dine-In & Takeaway)</option>
               <option value="dine_in">🍽️ Dine-In ({dineInOrdersCount})</option>
               <option value="takeaway">🛍️ Takeaway ({takeawayOrdersCount})</option>
-            </select>
+            </SearchableSelect>
           </div>
           {dateFilter === "daily" && (
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
@@ -1009,7 +1010,7 @@ export function AdminInvoices({
           {dateFilter === "quarterly" && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
               <label htmlFor="invoice-quarter">Quarter</label>
-              <select
+              <SearchableSelect
                 id="invoice-quarter"
                 value={selectedQuarter.quarter}
                 onChange={(event) => {
@@ -1019,7 +1020,7 @@ export function AdminInvoices({
                 style={{ height: "38px", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }}
               >
                 {[1, 2, 3, 4].map((quarter) => <option key={quarter} value={quarter}>Q{quarter} ({(quarter - 1) * 3 + 1}–{quarter * 3})</option>)}
-              </select>
+              </SearchableSelect>
               <label htmlFor="invoice-quarter-year">Year</label>
               <input
                 id="invoice-quarter-year"
