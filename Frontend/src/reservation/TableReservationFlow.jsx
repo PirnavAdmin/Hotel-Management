@@ -22,20 +22,31 @@ import {
   Check,
   Compass,
   LayoutGrid,
-  Info
+  Info,
 } from "lucide-react";
 import {
   getStoredReservations,
   saveStoredReservations,
   getStoredReservationTables,
-  saveStoredReservationTables
+  saveStoredReservationTables,
 } from "../api/reservationApi";
+import "./TableReservationFlow.css";
 
-export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", onHotelLogin }) {
+export function TableReservationFlow({
+  onBackToPos,
+  backLabel = "Back to Home",
+  initialStep = 1,
+  customerUser,
+  onLogout,
+}) {
   // Navigation: step 1 to 9, or "overview" for the 9-screen poster
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(initialStep || 1);
   const [viewMode, setViewMode] = useState("interactive"); // "interactive" | "poster"
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    if (initialStep) setCurrentStep(initialStep);
+  }, [initialStep]);
 
   // Reservations & Tables state from localStorage
   const [reservations, setReservations] = useState([]);
@@ -47,11 +58,26 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
     time: "07:30 PM",
     guests: 2,
     tablePreference: "Indoor",
-    fullName: "Priya Sharma",
-    mobileNumber: "9876543210",
-    email: "priya@example.com",
+    fullName: customerUser?.name || "Priya Sharma",
+    mobileNumber: customerUser?.phone
+      ? customerUser.phone.replace(/\D/g, "").slice(-10)
+      : "9876543210",
+    email: customerUser?.email || "priya@example.com",
     specialRequests: "Anniversary celebration, window table preference.",
   });
+
+  useEffect(() => {
+    if (customerUser) {
+      setBookingForm((prev) => ({
+        ...prev,
+        fullName: customerUser.name || prev.fullName,
+        mobileNumber: customerUser.phone
+          ? customerUser.phone.replace(/\D/g, "").slice(-10)
+          : prev.mobileNumber,
+        email: customerUser.email || prev.email,
+      }));
+    }
+  }, [customerUser]);
 
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableFilter, setTableFilter] = useState("all"); // "all" | "indoor" | "outdoor"
@@ -74,7 +100,8 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
     setReservations(loadedRes);
     setTables(loadedTables);
     // Pre-select T-03 by default
-    const defaultTable = loadedTables.find((t) => t.id === "T-03") || loadedTables[0];
+    const defaultTable =
+      loadedTables.find((t) => t.id === "T-03") || loadedTables[0];
     setSelectedTable(defaultTable);
   }, []);
 
@@ -124,7 +151,7 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
 
         // Update table to reserved
         const updatedTables = tables.map((t) =>
-          t.id === newRes.tableId ? { ...t, status: "reserved" } : t
+          t.id === newRes.tableId ? { ...t, status: "reserved" } : t,
         );
         setTables(updatedTables);
         saveStoredReservationTables(updatedTables);
@@ -135,7 +162,14 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
       }, 1800);
     }
     return () => clearTimeout(timer);
-  }, [currentStep, reservations, bookingForm, selectedTable, paymentMethod, tables]);
+  }, [
+    currentStep,
+    reservations,
+    bookingForm,
+    selectedTable,
+    paymentMethod,
+    tables,
+  ]);
 
   // Validation for Step 1
   const validateStep1 = () => {
@@ -145,7 +179,9 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
     if (!bookingForm.fullName.trim()) errors.fullName = "Full name is required";
     if (!bookingForm.mobileNumber.trim()) {
       errors.mobileNumber = "Mobile number is required";
-    } else if (!/^\+?[0-9]{10,12}$/.test(bookingForm.mobileNumber.replace(/\s+/g, ""))) {
+    } else if (
+      !/^\+?[0-9]{10,12}$/.test(bookingForm.mobileNumber.replace(/\s+/g, ""))
+    ) {
       errors.mobileNumber = "Please enter a valid 10-digit mobile number";
     }
 
@@ -170,7 +206,10 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
       return;
     }
     if (selectedTable.status === "reserved") {
-      showToast("This table is already reserved. Please pick an available table.", "error");
+      showToast(
+        "This table is already reserved. Please pick an available table.",
+        "error",
+      );
       return;
     }
     setCurrentStep(3);
@@ -180,11 +219,14 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
   const handleUpdateReservation = () => {
     if (!selectedResForModify) return;
     const updated = reservations.map((r) =>
-      r.id === selectedResForModify.id ? selectedResForModify : r
+      r.id === selectedResForModify.id ? selectedResForModify : r,
     );
     setReservations(updated);
     saveStoredReservations(updated);
-    showToast(`Reservation ${selectedResForModify.id} updated successfully!`, "success");
+    showToast(
+      `Reservation ${selectedResForModify.id} updated successfully!`,
+      "success",
+    );
     setCurrentStep(6);
   };
 
@@ -193,7 +235,7 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
     if (!selectedResForCancel) return;
     const targetId = selectedResForCancel.id;
     const updated = reservations.map((r) =>
-      r.id === targetId ? { ...r, status: "cancelled" } : r
+      r.id === targetId ? { ...r, status: "cancelled" } : r,
     );
     setReservations(updated);
     saveStoredReservations(updated);
@@ -201,14 +243,19 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
     // Free table
     if (selectedResForCancel.tableId) {
       const updatedTables = tables.map((t) =>
-        t.id === selectedResForCancel.tableId ? { ...t, status: "available" } : t
+        t.id === selectedResForCancel.tableId
+          ? { ...t, status: "available" }
+          : t,
       );
       setTables(updatedTables);
       saveStoredReservationTables(updatedTables);
     }
 
     setCancelledResInfo(selectedResForCancel);
-    showToast(`Reservation ${targetId} cancelled. Refund of ₹100.00 initiated.`, "info");
+    showToast(
+      `Reservation ${targetId} cancelled. Refund of ₹100.00 initiated.`,
+      "info",
+    );
     setCurrentStep(9);
   };
 
@@ -220,11 +267,14 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
   });
 
   const activeReservationsList = reservations.filter((r) =>
-    activeTab === "upcoming" ? r.status === "confirmed" : r.status !== "confirmed"
+    activeTab === "upcoming"
+      ? r.status === "confirmed"
+      : r.status !== "confirmed",
   );
 
   return (
     <div
+      className="table-reservation-flow"
       style={{
         minHeight: "100vh",
         backgroundColor: "#0d0604",
@@ -263,7 +313,11 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
             animation: "fadeIn 0.2s ease-out",
           }}
         >
-          {toast.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          {toast.type === "error" ? (
+            <AlertCircle size={18} />
+          ) : (
+            <CheckCircle2 size={18} />
+          )}
           <span>{toast.message}</span>
         </div>
       )}
@@ -329,73 +383,55 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
           </div>
         </div>
 
-
         {/* Action Controls (Right side matching Reference UI) */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {currentStep === 1 ? (
-            <button
-              onClick={() => {
-                if (onHotelLogin) onHotelLogin();
-                else showToast("Hotel login is unavailable right now.", "info");
-              }}
+          <button
+            onClick={() => setCurrentStep(6)}
+            title="View My Reservations"
+            style={{
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(245, 158, 11, 0.4)",
+              color: "#f5ede6",
+              padding: "6px 14px",
+              borderRadius: "20px",
+              fontSize: "12.5px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+            }}
+          >
+            <div
               style={{
-                background: "transparent",
-                border: "1.5px solid #f59e0b",
-                color: "#ffffff",
-                padding: "7px 18px",
-                borderRadius: "20px",
-                fontSize: "12.5px",
-                fontWeight: 700,
-                cursor: "pointer",
+                width: "22px",
+                height: "22px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
+                justifyContent: "center",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#fff",
               }}
             >
-              <ShieldCheck size={16} color="#f59e0b" />
-              Hotel Login
-            </button>
-          ) : (
-            <button
-              onClick={() => setCurrentStep(6)}
-              title="View My Reservations"
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(245, 158, 11, 0.4)",
-                color: "#f5ede6",
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "12.5px",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "7px",
-              }}
-            >
-              <div
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  color: "#fff",
-                }}
-              >
-                P
-              </div>
-              <span>Hi, {bookingForm.fullName.split(" ")[0] || "Priya"}</span>
-              <ChevronDown size={14} color="#f59e0b" />
-            </button>
-          )}
+              {(customerUser?.name ||
+                bookingForm.fullName ||
+                "P")[0].toUpperCase()}
+            </div>
+            <span>
+              Hi,{" "}
+              {
+                (customerUser?.name || bookingForm.fullName || "Priya").split(
+                  " ",
+                )[0]
+              }
+            </span>
+            <ChevronDown size={14} color="#f59e0b" />
+          </button>
         </div>
       </div>
-
 
       {/* Main Container */}
       <div style={{ maxWidth: "1480px", margin: "0 auto" }}>
@@ -405,7 +441,12 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
           /* ======================================================= */
           <div
             style={{
-              maxWidth: currentStep === 1 ? "1180px" : currentStep === 2 || currentStep === 3 || currentStep === 6 ? "1060px" : "680px",
+              maxWidth:
+                currentStep === 1
+                  ? "1180px"
+                  : currentStep === 2 || currentStep === 3 || currentStep === 6
+                    ? "1060px"
+                    : "680px",
               margin: "0 auto",
             }}
           >
@@ -476,8 +517,12 @@ export function TableReservationFlow({ onBackToPos, backLabel = "Back to Home", 
                 setActiveTab={setActiveTab}
                 reservations={activeReservationsList}
                 allReservationsCount={reservations.length}
-                upcomingCount={reservations.filter((r) => r.status === "confirmed").length}
-                pastCount={reservations.filter((r) => r.status !== "confirmed").length}
+                upcomingCount={
+                  reservations.filter((r) => r.status === "confirmed").length
+                }
+                pastCount={
+                  reservations.filter((r) => r.status !== "confirmed").length
+                }
                 onModify={(res) => {
                   setSelectedResForModify(res);
                   setCurrentStep(7);
@@ -595,7 +640,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             maxWidth: "460px",
           }}
         >
-          Book a table in advance and enjoy a great dining experience at Bhanu Bistro.
+          Book a table in advance and enjoy a great dining experience at Bhanu
+          Bistro.
         </p>
 
         {/* Dining Table Ambiance Preview (Candlelit table with glasses & flowers) */}
@@ -620,7 +666,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(to top, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.2) 60%, transparent 100%)",
+              background:
+                "linear-gradient(to top, rgba(10,4,3,0.85) 0%, rgba(10,4,3,0.2) 60%, transparent 100%)",
             }}
           />
         </div>
@@ -643,9 +690,22 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
               backdropFilter: "blur(6px)",
             }}
           >
-            <CheckCircle2 size={22} color="#f59e0b" style={{ margin: "0 auto 6px" }} />
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#ffffff", lineHeight: 1.35 }}>
-              Confirmed<br />Reservation
+            <CheckCircle2
+              size={22}
+              color="#f59e0b"
+              style={{ margin: "0 auto 6px" }}
+            />
+            <div
+              style={{
+                fontSize: "11.5px",
+                fontWeight: 700,
+                color: "#ffffff",
+                lineHeight: 1.35,
+              }}
+            >
+              Confirmed
+              <br />
+              Reservation
             </div>
           </div>
           <div
@@ -658,8 +718,17 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             }}
           >
             <Users size={22} color="#f59e0b" style={{ margin: "0 auto 6px" }} />
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#ffffff", lineHeight: 1.35 }}>
-              Perfect For<br />Families &amp; Groups
+            <div
+              style={{
+                fontSize: "11.5px",
+                fontWeight: 700,
+                color: "#ffffff",
+                lineHeight: 1.35,
+              }}
+            >
+              Perfect For
+              <br />
+              Families &amp; Groups
             </div>
           </div>
           <div
@@ -671,9 +740,22 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
               backdropFilter: "blur(6px)",
             }}
           >
-            <Sparkles size={22} color="#f59e0b" style={{ margin: "0 auto 6px" }} />
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#ffffff", lineHeight: 1.35 }}>
-              Great<br />Dining Experience
+            <Sparkles
+              size={22}
+              color="#f59e0b"
+              style={{ margin: "0 auto 6px" }}
+            />
+            <div
+              style={{
+                fontSize: "11.5px",
+                fontWeight: 700,
+                color: "#ffffff",
+                lineHeight: 1.35,
+              }}
+            >
+              Great
+              <br />
+              Dining Experience
             </div>
           </div>
         </div>
@@ -690,18 +772,47 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           border: "1px solid #e8ded6",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "20px",
+          }}
+        >
           <Calendar size={24} color="#ea580c" />
-          <h2 style={{ fontSize: "20px", fontWeight: 800, margin: 0, color: "#1f1610" }}>
+          <h2
+            style={{
+              fontSize: "20px",
+              fontWeight: 800,
+              margin: 0,
+              color: "#1f1610",
+            }}
+          >
             Book a Table
           </h2>
         </div>
 
         <form onSubmit={onSubmit}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+              marginBottom: "16px",
+            }}
+          >
             {/* Date */}
             <div>
-              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#4b3f36",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 Date *
               </label>
               <input
@@ -711,20 +822,35 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  border: errors.date ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  border: errors.date
+                    ? "1px solid #dc2626"
+                    : "1px solid #d4c8bd",
                   borderRadius: "8px",
                   fontSize: "13px",
                   background: "#faf7f2",
                   color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               />
-              {errors.date && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.date}</span>}
+              {errors.date && (
+                <span style={{ color: "#dc2626", fontSize: "10px" }}>
+                  {errors.date}
+                </span>
+              )}
             </div>
 
             {/* Time */}
             <div>
-              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#4b3f36",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 Time *
               </label>
               <select
@@ -733,11 +859,14 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  border: errors.time ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  border: errors.time
+                    ? "1px solid #dc2626"
+                    : "1px solid #d4c8bd",
                   borderRadius: "8px",
                   fontSize: "13px",
                   background: "#faf7f2",
                   color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               >
@@ -753,10 +882,25 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+              marginBottom: "16px",
+            }}
+          >
             {/* Guests count */}
             <div>
-              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#4b3f36",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 Guests *
               </label>
               <div
@@ -772,12 +916,15 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
               >
                 <button
                   type="button"
-                  onClick={() => setForm({ ...form, guests: Math.max(1, form.guests - 1) })}
+                  onClick={() =>
+                    setForm({ ...form, guests: Math.max(1, form.guests - 1) })
+                  }
                   style={{
                     width: "28px",
                     height: "28px",
                     border: "none",
                     background: "#eee4da",
+                    color: "#1f1610",
                     borderRadius: "6px",
                     fontWeight: 800,
                     fontSize: "16px",
@@ -786,9 +933,18 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 >
                   -
                 </button>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: "13px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    color: "#1f1610",
+                  }}
+                >
                   <Users size={15} color="#ea580c" />
-                  <span>{form.guests} Guests</span>
+                  <span style={{ color: "#1f1610" }}>{form.guests} Guests</span>
                 </div>
                 <button
                   type="button"
@@ -798,6 +954,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                     height: "28px",
                     border: "none",
                     background: "#eee4da",
+                    color: "#1f1610",
                     borderRadius: "6px",
                     fontWeight: 800,
                     fontSize: "16px",
@@ -811,12 +968,22 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
 
             {/* Table Preference */}
             <div>
-              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#4b3f36",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 Table Preference (Optional)
               </label>
               <select
                 value={form.tablePreference}
-                onChange={(e) => setForm({ ...form, tablePreference: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, tablePreference: e.target.value })
+                }
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -825,6 +992,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   fontSize: "13px",
                   background: "#faf7f2",
                   color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               >
@@ -838,9 +1006,24 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           </div>
 
           {/* Name and Mobile */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+              marginBottom: "16px",
+            }}
+          >
             <div>
-              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#4b3f36",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 Full Name *
               </label>
               <input
@@ -851,42 +1034,76 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  border: errors.fullName ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  border: errors.fullName
+                    ? "1px solid #dc2626"
+                    : "1px solid #d4c8bd",
                   borderRadius: "8px",
                   fontSize: "13px",
                   background: "#faf7f2",
+                  color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               />
-              {errors.fullName && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.fullName}</span>}
+              {errors.fullName && (
+                <span style={{ color: "#dc2626", fontSize: "10px" }}>
+                  {errors.fullName}
+                </span>
+              )}
             </div>
 
             <div>
-              <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#4b3f36",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 Mobile Number *
               </label>
               <input
                 type="tel"
                 placeholder="e.g. 9876543210"
                 value={form.mobileNumber}
-                onChange={(e) => setForm({ ...form, mobileNumber: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, mobileNumber: e.target.value })
+                }
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  border: errors.mobileNumber ? "1px solid #dc2626" : "1px solid #d4c8bd",
+                  border: errors.mobileNumber
+                    ? "1px solid #dc2626"
+                    : "1px solid #d4c8bd",
                   borderRadius: "8px",
                   fontSize: "13px",
                   background: "#faf7f2",
+                  color: "#1f1610",
+                  colorScheme: "light",
                   outline: "none",
                 }}
               />
-              {errors.mobileNumber && <span style={{ color: "#dc2626", fontSize: "10px" }}>{errors.mobileNumber}</span>}
+              {errors.mobileNumber && (
+                <span style={{ color: "#dc2626", fontSize: "10px" }}>
+                  {errors.mobileNumber}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Email */}
           <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+            <label
+              style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                color: "#4b3f36",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
               Email (Optional)
             </label>
             <input
@@ -901,6 +1118,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 borderRadius: "8px",
                 fontSize: "13px",
                 background: "#faf7f2",
+                color: "#1f1610",
+                colorScheme: "light",
                 outline: "none",
               }}
             />
@@ -908,14 +1127,24 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
 
           {/* Special Requests */}
           <div style={{ marginBottom: "22px" }}>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+            <label
+              style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                color: "#4b3f36",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
               Special Requests (Optional)
             </label>
             <textarea
               rows={2}
               placeholder="Birthday celebration, anniversary, high chair, dietary preferences, etc."
               value={form.specialRequests}
-              onChange={(e) => setForm({ ...form, specialRequests: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, specialRequests: e.target.value })
+              }
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -923,6 +1152,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 borderRadius: "8px",
                 fontSize: "12.5px",
                 background: "#faf7f2",
+                color: "#1f1610",
+                colorScheme: "light",
                 outline: "none",
                 resize: "vertical",
               }}
@@ -982,17 +1213,31 @@ function Step2SelectTable({
         border: "1px solid #e8ded6",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "16px",
+        }}
+      >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Calendar size={20} color="#ea580c" />
-            <h2 style={{ fontSize: "19px", fontWeight: 800, margin: 0, color: "#1f1610" }}>
+            <h2
+              style={{
+                fontSize: "19px",
+                fontWeight: 800,
+                margin: 0,
+                color: "#1f1610",
+              }}
+            >
               Select Your Table
             </h2>
           </div>
           <p style={{ fontSize: "12px", color: "#6b5d52", margin: "4px 0 0" }}>
-            Choose from available tables for <strong>{bookingForm.date}</strong> at{" "}
-            <strong>{bookingForm.time}</strong> ({bookingForm.guests} Guests)
+            Choose from available tables for <strong>{bookingForm.date}</strong>{" "}
+            at <strong>{bookingForm.time}</strong> ({bookingForm.guests} Guests)
           </p>
         </div>
 
@@ -1085,10 +1330,18 @@ function Step2SelectTable({
                 </div>
               )}
 
-              <div style={{ fontSize: "16px", fontWeight: 800, color: "#1f1610" }}>
+              <div
+                style={{ fontSize: "16px", fontWeight: 800, color: "#1f1610" }}
+              >
                 {table.name}
               </div>
-              <div style={{ fontSize: "11px", color: "#6b5d52", margin: "2px 0 6px" }}>
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: "#6b5d52",
+                  margin: "2px 0 6px",
+                }}
+              >
                 {table.capacity} Guests • {table.section}
               </div>
 
@@ -1112,7 +1365,13 @@ function Step2SelectTable({
       </div>
 
       {/* Buttons */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <button
           type="button"
           onClick={onBack}
@@ -1198,17 +1457,37 @@ function Step3Payment({
         <span style={{ color: "#c4b5a6" }}>→</span>
         <span style={{ color: "#166534" }}>✓ Select Table</span>
         <span style={{ color: "#c4b5a6" }}>→</span>
-        <span style={{ color: "#ea580c", background: "#fff5ee", padding: "3px 8px", borderRadius: "12px" }}>
+        <span
+          style={{
+            color: "#ea580c",
+            background: "#fff5ee",
+            padding: "3px 8px",
+            borderRadius: "12px",
+          }}
+        >
           3. Payment
         </span>
         <span style={{ color: "#c4b5a6" }}>→</span>
         <span style={{ color: "#8c7f74" }}>Confirmation</span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: "24px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.1fr 1fr",
+          gap: "24px",
+        }}
+      >
         {/* Left: Reservation Details & Advance Breakdown */}
         <div>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 6px", color: "#1f1610" }}>
+          <h3
+            style={{
+              fontSize: "16px",
+              fontWeight: 800,
+              margin: "0 0 6px",
+              color: "#1f1610",
+            }}
+          >
             Complete Your Booking
           </h3>
           <p style={{ fontSize: "12px", color: "#786c62", margin: "0 0 16px" }}>
@@ -1224,23 +1503,42 @@ function Step3Payment({
               marginBottom: "16px",
             }}
           >
-            <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#8c7f74", marginBottom: "8px" }}>
+            <div
+              style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                color: "#8c7f74",
+                marginBottom: "8px",
+              }}
+            >
               Reservation Details
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "12.5px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "10px",
+                fontSize: "12.5px",
+              }}
+            >
               <div>
-                <span style={{ color: "#6b5d52" }}>Date:</span> <strong>{bookingForm.date}</strong>
+                <span style={{ color: "#6b5d52" }}>Date:</span>{" "}
+                <strong>{bookingForm.date}</strong>
               </div>
               <div>
-                <span style={{ color: "#6b5d52" }}>Time:</span> <strong>{bookingForm.time}</strong>
+                <span style={{ color: "#6b5d52" }}>Time:</span>{" "}
+                <strong>{bookingForm.time}</strong>
               </div>
               <div>
-                <span style={{ color: "#6b5d52" }}>Guests:</span> <strong>{bookingForm.guests} Guests</strong>
+                <span style={{ color: "#6b5d52" }}>Guests:</span>{" "}
+                <strong>{bookingForm.guests} Guests</strong>
               </div>
               <div>
                 <span style={{ color: "#6b5d52" }}>Table:</span>{" "}
                 <strong style={{ color: "#ea580c" }}>
-                  {selectedTable?.name || "T-03"} ({selectedTable?.section || "Indoor"})
+                  {selectedTable?.name || "T-03"} (
+                  {selectedTable?.section || "Indoor"})
                 </strong>
               </div>
             </div>
@@ -1255,14 +1553,27 @@ function Step3Payment({
               padding: "14px",
             }}
           >
-            <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#ea580c", marginBottom: "8px" }}>
+            <div
+              style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                color: "#ea580c",
+                marginBottom: "8px",
+              }}
+            >
               Advance Payment
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", padding: "3px 0" }}>
-              <span>Total Amount (Estimated):</span>
-              <span>₹2,000.00</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", padding: "3px 0", color: "#ea580c", fontWeight: 700 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "12.5px",
+                padding: "3px 0",
+                color: "#ea580c",
+                fontWeight: 700,
+              }}
+            >
               <span>Advance (to lock table):</span>
               <span>₹100.00</span>
             </div>
@@ -1286,11 +1597,25 @@ function Step3Payment({
 
         {/* Right: Select Payment Method */}
         <div>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 14px", color: "#1f1610" }}>
+          <h3
+            style={{
+              fontSize: "16px",
+              fontWeight: 800,
+              margin: "0 0 14px",
+              color: "#1f1610",
+            }}
+          >
             Select Payment Method
           </h3>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+              marginBottom: "16px",
+            }}
+          >
             {[
               {
                 id: "upi",
@@ -1322,7 +1647,10 @@ function Step3Payment({
                   gap: "10px",
                   padding: "10px 12px",
                   borderRadius: "10px",
-                  border: paymentMethod === m.id ? "1.5px solid #ea580c" : "1px solid #e7ded4",
+                  border:
+                    paymentMethod === m.id
+                      ? "1.5px solid #ea580c"
+                      : "1px solid #e7ded4",
                   background: paymentMethod === m.id ? "#fff8f3" : "#faf7f2",
                   cursor: "pointer",
                 }}
@@ -1335,8 +1663,18 @@ function Step3Payment({
                   style={{ accentColor: "#ea580c", marginTop: "3px" }}
                 />
                 <div>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#1f1610" }}>{m.title}</div>
-                  <div style={{ fontSize: "11px", color: "#786c62" }}>{m.desc}</div>
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "#1f1610",
+                    }}
+                  >
+                    {m.title}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#786c62" }}>
+                    {m.desc}
+                  </div>
                 </div>
               </label>
             ))}
@@ -1431,7 +1769,14 @@ function Step4PaymentProcessing() {
         <CreditCard size={30} color="#ea580c" />
       </div>
 
-      <h2 style={{ fontSize: "21px", fontWeight: 800, color: "#1f1610", margin: "0 0 6px" }}>
+      <h2
+        style={{
+          fontSize: "21px",
+          fontWeight: 800,
+          color: "#1f1610",
+          margin: "0 0 6px",
+        }}
+      >
         Processing Payment...
       </h2>
       <p style={{ fontSize: "13px", color: "#6b5d52", margin: "0 0 24px" }}>
@@ -1448,7 +1793,14 @@ function Step4PaymentProcessing() {
           margin: "20px 0",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4px",
+          }}
+        >
           <div
             style={{
               width: "28px",
@@ -1465,12 +1817,21 @@ function Step4PaymentProcessing() {
           >
             ✓
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}>Initiating</span>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}>
+            Initiating
+          </span>
         </div>
 
         <div style={{ width: "40px", height: "2px", background: "#ea580c" }} />
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4px",
+          }}
+        >
           <div
             style={{
               width: "28px",
@@ -1488,12 +1849,21 @@ function Step4PaymentProcessing() {
           >
             ⏳
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "#ea580c" }}>Processing with Bank</span>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: "#ea580c" }}>
+            Processing with Bank
+          </span>
         </div>
 
         <div style={{ width: "40px", height: "2px", background: "#e5ded5" }} />
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4px",
+          }}
+        >
           <div
             style={{
               width: "28px",
@@ -1520,7 +1890,11 @@ function Step4PaymentProcessing() {
 /* ===================================================================== */
 /* STEP 5: RESERVATION CONFIRMED                                         */
 /* ===================================================================== */
-function Step5ReservationConfirmed({ reservation, onViewReservation, onBackToHome }) {
+function Step5ReservationConfirmed({
+  reservation,
+  onViewReservation,
+  onBackToHome,
+}) {
   return (
     <div
       style={{
@@ -1552,7 +1926,14 @@ function Step5ReservationConfirmed({ reservation, onViewReservation, onBackToHom
         ✓
       </div>
 
-      <h2 style={{ fontSize: "23px", fontWeight: 800, color: "#166534", margin: "0 0 4px" }}>
+      <h2
+        style={{
+          fontSize: "23px",
+          fontWeight: 800,
+          color: "#166534",
+          margin: "0 0 4px",
+        }}
+      >
         Reservation Confirmed!
       </h2>
       <p style={{ fontSize: "13px", color: "#6b5d52", margin: "0 0 20px" }}>
@@ -1570,8 +1951,19 @@ function Step5ReservationConfirmed({ reservation, onViewReservation, onBackToHom
           margin: "0 0 24px",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px dashed #d4c8bd", paddingBottom: "8px" }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: "#6b5d52" }}>Reservation ID:</span>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "12px",
+            borderBottom: "1px dashed #d4c8bd",
+            paddingBottom: "8px",
+          }}
+        >
+          <span style={{ fontSize: "12px", fontWeight: 700, color: "#6b5d52" }}>
+            Reservation ID:
+          </span>
           <span
             style={{
               fontSize: "14px",
@@ -1586,33 +1978,58 @@ function Step5ReservationConfirmed({ reservation, onViewReservation, onBackToHom
           </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "13px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "12px",
+            fontSize: "13px",
+          }}
+        >
           <div>
-            <span style={{ color: "#6b5d52" }}>Date:</span> <strong>{reservation?.date || "2026-11-11"}</strong>
+            <span style={{ color: "#6b5d52" }}>Date:</span>{" "}
+            <strong>{reservation?.date || "2026-11-11"}</strong>
           </div>
           <div>
-            <span style={{ color: "#6b5d52" }}>Time:</span> <strong>{reservation?.time || "07:30 PM"}</strong>
+            <span style={{ color: "#6b5d52" }}>Time:</span>{" "}
+            <strong>{reservation?.time || "07:30 PM"}</strong>
           </div>
           <div>
-            <span style={{ color: "#6b5d52" }}>Guests:</span> <strong>{reservation?.guests || 2} Guests</strong>
+            <span style={{ color: "#6b5d52" }}>Guests:</span>{" "}
+            <strong>{reservation?.guests || 2} Guests</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Table:</span>{" "}
-            <strong style={{ color: "#ea580c" }}>{reservation?.tableName || "T-03 (Indoor)"}</strong>
+            <strong style={{ color: "#ea580c" }}>
+              {reservation?.tableName || "T-03 (Indoor)"}
+            </strong>
           </div>
           <div>
-            <span style={{ color: "#6b5d52" }}>Customer:</span> <strong>{reservation?.customerName || "Priya Sharma"}</strong>
+            <span style={{ color: "#6b5d52" }}>Customer:</span>{" "}
+            <strong>{reservation?.customerName || "Priya Sharma"}</strong>
           </div>
           <div>
-            <span style={{ color: "#6b5d52" }}>Phone:</span> <strong>{reservation?.phone || "+91 98765 43210"}</strong>
+            <span style={{ color: "#6b5d52" }}>Phone:</span>{" "}
+            <strong>{reservation?.phone || "+91 98765 43210"}</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Advance Paid:</span>{" "}
-            <strong style={{ color: "#166534" }}>₹{reservation?.advanceAmount || 100}.00 (UPI ✓)</strong>
+            <strong style={{ color: "#166534" }}>
+              ₹{reservation?.advanceAmount || 100}.00 (UPI ✓)
+            </strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Status:</span>{" "}
-            <span style={{ background: "#dcfce7", color: "#166534", padding: "1px 6px", borderRadius: "4px", fontWeight: 700, fontSize: "11px" }}>
+            <span
+              style={{
+                background: "#dcfce7",
+                color: "#166534",
+                padding: "1px 6px",
+                borderRadius: "4px",
+                fontWeight: 700,
+                fontSize: "11px",
+              }}
+            >
               Confirmed
             </span>
           </div>
@@ -1691,11 +2108,25 @@ function Step6MyReservations({
         border: "1px solid #e8ded6",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "16px",
+        }}
+      >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Calendar size={20} color="#ea580c" />
-            <h2 style={{ fontSize: "19px", fontWeight: 800, margin: 0, color: "#1f1610" }}>
+            <h2
+              style={{
+                fontSize: "19px",
+                fontWeight: 800,
+                margin: 0,
+                color: "#1f1610",
+              }}
+            >
               My Reservations
             </h2>
           </div>
@@ -1767,7 +2198,9 @@ function Step6MyReservations({
               color: "#8c7f74",
             }}
           >
-            <p style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px" }}>
+            <p
+              style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px" }}
+            >
               No {activeTab} reservations found.
             </p>
             <button
@@ -1803,7 +2236,16 @@ function Step6MyReservations({
               }}
             >
               {/* Photo */}
-              <div style={{ position: "relative", width: "110px", height: "80px", borderRadius: "8px", overflow: "hidden", flexShrink: 0 }}>
+              <div
+                style={{
+                  position: "relative",
+                  width: "110px",
+                  height: "80px",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
                 <img
                   src="/assets/dining-table.jpg"
                   alt="Dining Table"
@@ -1828,8 +2270,21 @@ function Step6MyReservations({
 
               {/* Details */}
               <div style={{ flexGrow: 1, minWidth: "200px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#1f1610" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 800,
+                      color: "#1f1610",
+                    }}
+                  >
                     Table {res.tableName}
                   </span>
                   <span
@@ -1838,7 +2293,8 @@ function Step6MyReservations({
                       fontWeight: 700,
                       padding: "2px 8px",
                       borderRadius: "10px",
-                      background: res.status === "confirmed" ? "#dcfce7" : "#fee2e2",
+                      background:
+                        res.status === "confirmed" ? "#dcfce7" : "#fee2e2",
                       color: res.status === "confirmed" ? "#166534" : "#dc2626",
                     }}
                   >
@@ -1846,17 +2302,36 @@ function Step6MyReservations({
                   </span>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", fontSize: "12px", color: "#5d5046" }}>
-                  <div>📅 {res.date} at {res.time}</div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "6px",
+                    fontSize: "12px",
+                    color: "#5d5046",
+                  }}
+                >
+                  <div>
+                    📅 {res.date} at {res.time}
+                  </div>
                   <div>👥 {res.guests} Guests</div>
-                  <div>👤 {res.customerName} ({res.phone})</div>
+                  <div>
+                    👤 {res.customerName} ({res.phone})
+                  </div>
                   <div>💰 Paid Advance: ₹{res.advanceAmount || 100}.00</div>
                 </div>
               </div>
 
               {/* Action buttons */}
               {res.status === "confirmed" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", flexShrink: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    flexShrink: 0,
+                  }}
+                >
                   <button
                     onClick={() => onModify(res)}
                     style={{
@@ -1907,7 +2382,13 @@ function Step6MyReservations({
 /* ===================================================================== */
 /* STEP 7: MODIFY RESERVATION                                            */
 /* ===================================================================== */
-function Step7ModifyReservation({ reservation, setReservation, tables, onCancel, onSave }) {
+function Step7ModifyReservation({
+  reservation,
+  setReservation,
+  tables,
+  onCancel,
+  onSave,
+}) {
   return (
     <div
       style={{
@@ -1919,25 +2400,57 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
         border: "1px solid #e8ded6",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "6px",
+        }}
+      >
         <Calendar size={22} color="#ea580c" />
-        <h2 style={{ fontSize: "19px", fontWeight: 800, margin: 0, color: "#1f1610" }}>
+        <h2
+          style={{
+            fontSize: "19px",
+            fontWeight: 800,
+            margin: 0,
+            color: "#1f1610",
+          }}
+        >
           Modify Reservation
         </h2>
       </div>
       <p style={{ fontSize: "12px", color: "#6b5d52", margin: "0 0 20px" }}>
-        Update your reservation details for ID: <strong>{reservation?.id}</strong>
+        Update your reservation details for ID:{" "}
+        <strong>{reservation?.id}</strong>
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "16px",
+          marginBottom: "16px",
+        }}
+      >
         <div>
-          <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+          <label
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: "#4b3f36",
+              display: "block",
+              marginBottom: "6px",
+            }}
+          >
             Date *
           </label>
           <input
             type="date"
             value={reservation?.date || ""}
-            onChange={(e) => setReservation({ ...reservation, date: e.target.value })}
+            onChange={(e) =>
+              setReservation({ ...reservation, date: e.target.value })
+            }
             style={{
               width: "100%",
               padding: "10px 12px",
@@ -1945,18 +2458,30 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
               borderRadius: "8px",
               fontSize: "13px",
               background: "#faf7f2",
+              color: "#1f1610",
+              colorScheme: "light",
               outline: "none",
             }}
           />
         </div>
 
         <div>
-          <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+          <label
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: "#4b3f36",
+              display: "block",
+              marginBottom: "6px",
+            }}
+          >
             Time *
           </label>
           <select
             value={reservation?.time || "07:30 PM"}
-            onChange={(e) => setReservation({ ...reservation, time: e.target.value })}
+            onChange={(e) =>
+              setReservation({ ...reservation, time: e.target.value })
+            }
             style={{
               width: "100%",
               padding: "10px 12px",
@@ -1964,6 +2489,8 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
               borderRadius: "8px",
               fontSize: "13px",
               background: "#faf7f2",
+              color: "#1f1610",
+              colorScheme: "light",
               outline: "none",
             }}
           >
@@ -1978,9 +2505,24 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "16px",
+          marginBottom: "16px",
+        }}
+      >
         <div>
-          <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+          <label
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: "#4b3f36",
+              display: "block",
+              marginBottom: "6px",
+            }}
+          >
             Guests *
           </label>
           <div
@@ -2007,6 +2549,7 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
                 height: "28px",
                 border: "none",
                 background: "#eee4da",
+                color: "#1f1610",
                 borderRadius: "6px",
                 fontWeight: 800,
                 fontSize: "16px",
@@ -2015,7 +2558,11 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
             >
               -
             </button>
-            <span style={{ fontWeight: 700, fontSize: "13px" }}>{reservation?.guests || 2} Guests</span>
+            <span
+              style={{ fontWeight: 700, fontSize: "13px", color: "#1f1610" }}
+            >
+              {reservation?.guests || 2} Guests
+            </span>
             <button
               type="button"
               onClick={() =>
@@ -2029,6 +2576,7 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
                 height: "28px",
                 border: "none",
                 background: "#eee4da",
+                color: "#1f1610",
                 borderRadius: "6px",
                 fontWeight: 800,
                 fontSize: "16px",
@@ -2041,7 +2589,15 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
         </div>
 
         <div>
-          <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+          <label
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: "#4b3f36",
+              display: "block",
+              marginBottom: "6px",
+            }}
+          >
             Table Assignment
           </label>
           <select
@@ -2051,7 +2607,9 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
               setReservation({
                 ...reservation,
                 tableId: e.target.value,
-                tableName: matched ? `${matched.name} (${matched.section})` : e.target.value,
+                tableName: matched
+                  ? `${matched.name} (${matched.section})`
+                  : e.target.value,
                 section: matched?.section || "Indoor",
               });
             }}
@@ -2062,6 +2620,8 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
               borderRadius: "8px",
               fontSize: "13px",
               background: "#faf7f2",
+              color: "#1f1610",
+              colorScheme: "light",
               outline: "none",
             }}
           >
@@ -2075,13 +2635,23 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
       </div>
 
       <div style={{ marginBottom: "22px" }}>
-        <label style={{ fontSize: "11px", fontWeight: 700, color: "#4b3f36", display: "block", marginBottom: "6px" }}>
+        <label
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "#4b3f36",
+            display: "block",
+            marginBottom: "6px",
+          }}
+        >
           Special Requests (Optional)
         </label>
         <textarea
           rows={2}
           value={reservation?.specialRequests || ""}
-          onChange={(e) => setReservation({ ...reservation, specialRequests: e.target.value })}
+          onChange={(e) =>
+            setReservation({ ...reservation, specialRequests: e.target.value })
+          }
           style={{
             width: "100%",
             padding: "10px 12px",
@@ -2089,12 +2659,20 @@ function Step7ModifyReservation({ reservation, setReservation, tables, onCancel,
             borderRadius: "8px",
             fontSize: "12.5px",
             background: "#faf7f2",
+            color: "#1f1610",
+            colorScheme: "light",
             outline: "none",
           }}
         />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <button
           type="button"
           onClick={onCancel}
@@ -2166,11 +2744,19 @@ function Step8CancelReservation({ reservation, onKeep, onConfirm }) {
         <Trash2 size={26} />
       </div>
 
-      <h2 style={{ fontSize: "21px", fontWeight: 800, color: "#991b1b", margin: "0 0 6px" }}>
+      <h2
+        style={{
+          fontSize: "21px",
+          fontWeight: 800,
+          color: "#991b1b",
+          margin: "0 0 6px",
+        }}
+      >
         Cancel Reservation?
       </h2>
       <p style={{ fontSize: "13px", color: "#6b5d52", margin: "0 0 18px" }}>
-        Are you sure you want to cancel table reservation <strong>{reservation?.id}</strong>?
+        Are you sure you want to cancel table reservation{" "}
+        <strong>{reservation?.id}</strong>?
       </p>
 
       {/* Snapshot */}
@@ -2189,7 +2775,8 @@ function Step8CancelReservation({ reservation, onKeep, onConfirm }) {
         }}
       >
         <div>
-          <strong>{reservation?.tableName}</strong> • {reservation?.guests} Guests
+          <strong>{reservation?.tableName}</strong> • {reservation?.guests}{" "}
+          Guests
         </div>
         <div style={{ color: "#6b5d52" }}>
           {reservation?.date} at {reservation?.time}
@@ -2216,7 +2803,9 @@ function Step8CancelReservation({ reservation, onKeep, onConfirm }) {
       >
         <AlertCircle size={20} style={{ flexShrink: 0, marginTop: "2px" }} />
         <div>
-          <strong>Cancellation cannot be undone.</strong> Once cancelled, this reservation will be removed and the table will be made available to other guests.
+          <strong>Cancellation cannot be undone.</strong> Once cancelled, this
+          reservation will be removed and the table will be made available to
+          other guests.
         </div>
       </div>
 
@@ -2294,11 +2883,19 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
         ✓
       </div>
 
-      <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#166534", margin: "0 0 6px" }}>
+      <h2
+        style={{
+          fontSize: "22px",
+          fontWeight: 800,
+          color: "#166534",
+          margin: "0 0 6px",
+        }}
+      >
         Reservation Cancelled
       </h2>
       <p style={{ fontSize: "13px", color: "#6b5d52", margin: "0 0 20px" }}>
-        Your table reservation ({reservation?.id || "RES-1023"}) has been successfully cancelled.
+        Your table reservation ({reservation?.id || "RES-1023"}) has been
+        successfully cancelled.
       </p>
 
       {/* Refund details card */}
@@ -2314,17 +2911,41 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
           fontSize: "13px",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "8px",
+          }}
+        >
           <span>Reservation ID:</span>
           <strong>{reservation?.id || "RES-1023"}</strong>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "8px",
+          }}
+        >
           <span>Cancelled Date & Time:</span>
-          <span>{reservation?.date} at {reservation?.time}</span>
+          <span>
+            {reservation?.date} at {reservation?.time}
+          </span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #d4c8bd", paddingTop: "8px", fontWeight: 800 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            borderTop: "1px dashed #d4c8bd",
+            paddingTop: "8px",
+            fontWeight: 800,
+          }}
+        >
           <span>Refund Status:</span>
-          <span style={{ color: "#16a34a" }}>₹{reservation?.advanceAmount || 100}.00 (Processed)</span>
+          <span style={{ color: "#16a34a" }}>
+            ₹{reservation?.advanceAmount || 100}.00 (Processed)
+          </span>
         </div>
       </div>
 
@@ -2346,7 +2967,10 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
         }}
       >
         <Info size={18} style={{ flexShrink: 0 }} />
-        <span>The advance payment of ₹{reservation?.advanceAmount || 100}.00 will be refunded to your original payment method within 3-5 business days.</span>
+        <span>
+          The advance payment of ₹{reservation?.advanceAmount || 100}.00 will be
+          refunded to your original payment method within 3-5 business days.
+        </span>
       </div>
 
       <button
@@ -2373,20 +2997,45 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
 /* ===================================================================== */
 /* 9-SCREEN VISUAL POSTER PRESENTATION (Matches user's reference image)   */
 /* ===================================================================== */
-function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSelectStep }) {
+function ReservationFlowPoster({
+  bookingForm,
+  selectedTable,
+  reservations,
+  onSelectStep,
+}) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
       {/* Row 1: Steps 1, 2, 3 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto 1fr", alignItems: "center", gap: "14px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr auto 1fr",
+          alignItems: "center",
+          gap: "14px",
+        }}
+      >
         <PosterScreenCard
           step={1}
           title="Book a Table – Enter reservation details"
           onClick={() => onSelectStep(1)}
         >
           <div style={{ fontSize: "9px" }}>
-            <div style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}>Reserve Your Table</div>
-            <div style={{ color: "#786c62", marginBottom: "8px" }}>Enjoy fine dining at Bhanu Bistro</div>
-            <div style={{ background: "#faf7f2", padding: "6px", borderRadius: "6px", fontSize: "8.5px" }}>
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}
+            >
+              Reserve Your Table
+            </div>
+            <div style={{ color: "#786c62", marginBottom: "8px" }}>
+              Enjoy fine dining at Bhanu Bistro
+            </div>
+            <div
+              style={{
+                background: "#faf7f2",
+                padding: "6px",
+                borderRadius: "6px",
+                fontSize: "8.5px",
+              }}
+            >
               <div>📅 11/11/2026 • 07:30 PM</div>
               <div>👥 2 Guests • Indoor Area</div>
               <div>👤 Priya Sharma (+91 98765 43210)</div>
@@ -2402,13 +3051,38 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
           onClick={() => onSelectStep(2)}
         >
           <div style={{ fontSize: "9px" }}>
-            <div style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}>Select Your Table</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px", marginTop: "6px" }}>
-              <div style={{ background: "#fff7ed", border: "1.5px solid #ea580c", padding: "4px", borderRadius: "4px" }}>
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}
+            >
+              Select Your Table
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "4px",
+                marginTop: "6px",
+              }}
+            >
+              <div
+                style={{
+                  background: "#fff7ed",
+                  border: "1.5px solid #ea580c",
+                  padding: "4px",
+                  borderRadius: "4px",
+                }}
+              >
                 <strong>T-03 ✓</strong>
                 <div>2 Guests • Indoor</div>
               </div>
-              <div style={{ background: "#f9f7f4", opacity: 0.6, padding: "4px", borderRadius: "4px" }}>
+              <div
+                style={{
+                  background: "#f9f7f4",
+                  opacity: 0.6,
+                  padding: "4px",
+                  borderRadius: "4px",
+                }}
+              >
                 <strong>T-04</strong>
                 <div>4 Guests (Reserved)</div>
               </div>
@@ -2424,12 +3098,33 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
           onClick={() => onSelectStep(3)}
         >
           <div style={{ fontSize: "9px" }}>
-            <div style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}>Complete Booking</div>
-            <div style={{ background: "#faf7f2", padding: "5px", borderRadius: "6px", marginBottom: "4px" }}>
-              <div>Estimated Total: ₹2,000.00</div>
-              <div style={{ fontWeight: 800, color: "#ea580c" }}>Advance: ₹100.00</div>
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}
+            >
+              Complete Booking
             </div>
-            <div style={{ background: "#fff7ed", padding: "3px 6px", borderRadius: "4px", color: "#ea580c", fontWeight: 700 }}>
+            <div
+              style={{
+                background: "#faf7f2",
+                padding: "5px",
+                borderRadius: "6px",
+                marginBottom: "4px",
+              }}
+            >
+              <div>Estimated Total: ₹2,000.00</div>
+              <div style={{ fontWeight: 800, color: "#ea580c" }}>
+                Advance: ₹100.00
+              </div>
+            </div>
+            <div
+              style={{
+                background: "#fff7ed",
+                padding: "3px 6px",
+                borderRadius: "4px",
+                color: "#ea580c",
+                fontWeight: 700,
+              }}
+            >
               Payable: ₹100.00 via UPI
             </div>
           </div>
@@ -2437,16 +3132,31 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
       </div>
 
       {/* Row 2: Steps 4, 5, 6 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto 1fr", alignItems: "center", gap: "14px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr auto 1fr",
+          alignItems: "center",
+          gap: "14px",
+        }}
+      >
         <PosterScreenCard
           step={4}
           title="Payment Processing – Verifying payment"
           onClick={() => onSelectStep(4)}
         >
           <div style={{ textAlign: "center", padding: "12px 0" }}>
-            <CreditCard size={22} color="#ea580c" style={{ margin: "0 auto 4px" }} />
-            <div style={{ fontWeight: 800, fontSize: "11px" }}>Processing Payment...</div>
-            <div style={{ fontSize: "8px", color: "#786c62" }}>Please do not close window</div>
+            <CreditCard
+              size={22}
+              color="#ea580c"
+              style={{ margin: "0 auto 4px" }}
+            />
+            <div style={{ fontWeight: 800, fontSize: "11px" }}>
+              Processing Payment...
+            </div>
+            <div style={{ fontSize: "8px", color: "#786c62" }}>
+              Please do not close window
+            </div>
           </div>
         </PosterScreenCard>
 
@@ -2458,10 +3168,29 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
           onClick={() => onSelectStep(5)}
         >
           <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#16a34a", fontSize: "16px", fontWeight: 800 }}>✓</div>
-            <div style={{ fontWeight: 800, fontSize: "11px", color: "#166534" }}>Reservation Confirmed!</div>
-            <div style={{ fontSize: "9px", background: "#faf7f2", padding: "4px", borderRadius: "4px", marginTop: "4px", textAlign: "left" }}>
-              <div>ID: <strong>RES-1023</strong></div>
+            <div
+              style={{ color: "#16a34a", fontSize: "16px", fontWeight: 800 }}
+            >
+              ✓
+            </div>
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", color: "#166534" }}
+            >
+              Reservation Confirmed!
+            </div>
+            <div
+              style={{
+                fontSize: "9px",
+                background: "#faf7f2",
+                padding: "4px",
+                borderRadius: "4px",
+                marginTop: "4px",
+                textAlign: "left",
+              }}
+            >
+              <div>
+                ID: <strong>RES-1023</strong>
+              </div>
               <div>Table T-03 (Indoor) • 2 Guests</div>
               <div>Paid: ₹100.00 (UPI)</div>
             </div>
@@ -2476,16 +3205,47 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
           onClick={() => onSelectStep(6)}
         >
           <div style={{ fontSize: "9px" }}>
-            <div style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}>My Reservations</div>
-            <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", padding: "4px", borderRadius: "4px" }}>
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}
+            >
+              My Reservations
+            </div>
+            <div
+              style={{
+                background: "#fff7ed",
+                border: "1px solid #fed7aa",
+                padding: "4px",
+                borderRadius: "4px",
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <strong>RES-1023</strong>
-                <span style={{ color: "#166534", fontWeight: 700 }}>Confirmed</span>
+                <span style={{ color: "#166534", fontWeight: 700 }}>
+                  Confirmed
+                </span>
               </div>
               <div>T-03 • 11/11/2026, 07:30 PM</div>
               <div style={{ display: "flex", gap: "4px", marginTop: "3px" }}>
-                <span style={{ background: "#ea580c", color: "#fff", padding: "1px 4px", borderRadius: "3px" }}>Modify</span>
-                <span style={{ border: "1px solid #fca5a5", color: "#dc2626", padding: "1px 4px", borderRadius: "3px" }}>Cancel</span>
+                <span
+                  style={{
+                    background: "#ea580c",
+                    color: "#fff",
+                    padding: "1px 4px",
+                    borderRadius: "3px",
+                  }}
+                >
+                  Modify
+                </span>
+                <span
+                  style={{
+                    border: "1px solid #fca5a5",
+                    color: "#dc2626",
+                    padding: "1px 4px",
+                    borderRadius: "3px",
+                  }}
+                >
+                  Cancel
+                </span>
               </div>
             </div>
           </div>
@@ -2493,15 +3253,32 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
       </div>
 
       {/* Row 3: Steps 7, 8, 9 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto 1fr", alignItems: "center", gap: "14px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr auto 1fr",
+          alignItems: "center",
+          gap: "14px",
+        }}
+      >
         <PosterScreenCard
           step={7}
           title="Modify Reservation – Change date, time, guests or table"
           onClick={() => onSelectStep(7)}
         >
           <div style={{ fontSize: "9px" }}>
-            <div style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}>Modify Reservation</div>
-            <div style={{ background: "#faf7f2", padding: "4px", borderRadius: "4px" }}>
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", marginBottom: "4px" }}
+            >
+              Modify Reservation
+            </div>
+            <div
+              style={{
+                background: "#faf7f2",
+                padding: "4px",
+                borderRadius: "4px",
+              }}
+            >
               <div>Change Date: 11/11/2026</div>
               <div>Change Time: 08:00 PM</div>
               <div>Guests: 4 Guests • Table T-05</div>
@@ -2517,9 +3294,26 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
           onClick={() => onSelectStep(8)}
         >
           <div style={{ textAlign: "center" }}>
-            <Trash2 size={18} color="#dc2626" style={{ margin: "0 auto 2px" }} />
-            <div style={{ fontWeight: 800, fontSize: "11px", color: "#991b1b" }}>Cancel Reservation?</div>
-            <div style={{ background: "#fef2f2", color: "#991b1b", fontSize: "7.5px", padding: "3px", borderRadius: "4px", marginTop: "4px" }}>
+            <Trash2
+              size={18}
+              color="#dc2626"
+              style={{ margin: "0 auto 2px" }}
+            />
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", color: "#991b1b" }}
+            >
+              Cancel Reservation?
+            </div>
+            <div
+              style={{
+                background: "#fef2f2",
+                color: "#991b1b",
+                fontSize: "7.5px",
+                padding: "3px",
+                borderRadius: "4px",
+                marginTop: "4px",
+              }}
+            >
               Cancellation cannot be undone.
             </div>
           </div>
@@ -2533,11 +3327,30 @@ function ReservationFlowPoster({ bookingForm, selectedTable, reservations, onSel
           onClick={() => onSelectStep(9)}
         >
           <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#16a34a", fontSize: "16px", fontWeight: 800 }}>✓</div>
-            <div style={{ fontWeight: 800, fontSize: "11px", color: "#166534" }}>Reservation Cancelled</div>
-            <div style={{ fontSize: "8.5px", background: "#faf7f2", padding: "4px", borderRadius: "4px", marginTop: "4px", textAlign: "left" }}>
+            <div
+              style={{ color: "#16a34a", fontSize: "16px", fontWeight: 800 }}
+            >
+              ✓
+            </div>
+            <div
+              style={{ fontWeight: 800, fontSize: "11px", color: "#166534" }}
+            >
+              Reservation Cancelled
+            </div>
+            <div
+              style={{
+                fontSize: "8.5px",
+                background: "#faf7f2",
+                padding: "4px",
+                borderRadius: "4px",
+                marginTop: "4px",
+                textAlign: "left",
+              }}
+            >
               <div>RES-1023</div>
-              <div style={{ color: "#16a34a", fontWeight: 700 }}>Refund: ₹100.00 (Processed)</div>
+              <div style={{ color: "#16a34a", fontWeight: 700 }}>
+                Refund: ₹100.00 (Processed)
+              </div>
             </div>
           </div>
         </PosterScreenCard>
@@ -2569,7 +3382,14 @@ function PosterArrow() {
 
 function PosterScreenCard({ step, title, children, onClick }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "10px",
+      }}
+    >
       <div
         onClick={onClick}
         style={{
@@ -2588,8 +3408,12 @@ function PosterScreenCard({ step, title, children, onClick }) {
           cursor: "pointer",
           transition: "transform 0.15s ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-3px)")}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.transform = "translateY(-3px)")
+        }
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.transform = "translateY(0)")
+        }
       >
         {/* Mock topbar */}
         <div
@@ -2603,10 +3427,24 @@ function PosterScreenCard({ step, title, children, onClick }) {
             borderBottom: "1px solid rgba(245, 158, 11, 0.2)",
           }}
         >
-          <span style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", fontWeight: 700, color: "#fff" }}>
+          <span
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: "10px",
+              fontWeight: 700,
+              color: "#fff",
+            }}
+          >
             Bhanu Bistro
           </span>
-          <div style={{ display: "flex", gap: "8px", fontSize: "8.5px", color: "#c9bbae" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              fontSize: "8.5px",
+              color: "#c9bbae",
+            }}
+          >
             <span>Home</span>
             <span>Menu</span>
           </div>
@@ -2614,7 +3452,15 @@ function PosterScreenCard({ step, title, children, onClick }) {
         </div>
 
         {/* Inner Card */}
-        <div style={{ flexGrow: 1, padding: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+          style={{
+            flexGrow: 1,
+            padding: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <div
             style={{
               background: "#ffffff",
@@ -2665,11 +3511,18 @@ function PosterScreenCard({ step, title, children, onClick }) {
         >
           {step}
         </span>
-        <span style={{ fontSize: "11px", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
           {title}
         </span>
       </div>
     </div>
   );
 }
-
