@@ -447,7 +447,6 @@ public static class DbInitializer
             // Keep initialization resilient if accounting tables are temporarily locked
         }
     }
-    }
 
     private static void EnsureTablesSchema(AppDbContext context)
     {
