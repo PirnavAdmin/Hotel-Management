@@ -19,7 +19,7 @@ const INITIAL_RESERVATIONS = [
     estimatedAmount: 2000,
     advanceAmount: 100,
     paymentMethod: "UPI (Google Pay)",
-    status: "confirmed", // confirmed | cancelled
+    status: "confirmed",
     createdAt: "2026-11-10T14:30:00Z",
   },
   {
@@ -117,12 +117,44 @@ export function saveStoredReservationTables(tables) {
   }
 }
 
-// Pure mock API functions that resolve immediately with NO network calls
-export async function apiGetReservations() {
+/**
+ * Fetch table reservations from backend or fallback to local storage
+ * GET /api/v1/reservations?branchId=...&date=...&status=...
+ */
+export async function apiGetReservations(params = {}) {
+  try {
+    const queryParts = [];
+    if (params.branchId) queryParts.push(`branchId=${encodeURIComponent(params.branchId)}`);
+    if (params.date) queryParts.push(`date=${encodeURIComponent(params.date)}`);
+    if (params.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
+    const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    const res = await apiClient(`/api/v1/reservations${query}`);
+    if (res?.success && Array.isArray(res.data)) {
+      return res;
+    }
+  } catch {}
   return { success: true, data: getStoredReservations() };
 }
 
-export async function apiCreateReservation(data) {
+export async function apiGetReservationById(id) {
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`);
+    if (res?.success) return res;
+  } catch {}
+  const all = getStoredReservations();
+  const found = all.find((r) => r.id === id || r.reservationId === id);
+  return { success: !!found, data: found };
+}
+
+export async function apiCreateReservation(reservationData) {
+  try {
+    const res = await apiClient('/api/v1/reservations', {
+      method: 'POST',
+      body: JSON.stringify(reservationData),
+    });
+    if (res?.success) return res;
+  } catch {}
+
   const all = getStoredReservations();
   const nextNum = 1000 + all.length + 1;
   const newReservation = {
@@ -136,12 +168,13 @@ export async function apiCreateReservation(data) {
   const updated = [newReservation, ...all];
   saveStoredReservations(updated);
 
-  // Mark table as reserved
-  const tables = getStoredReservationTables();
-  const updatedTables = tables.map((t) =>
-    t.id === data.tableId ? { ...t, status: "reserved" } : t
-  );
-  saveStoredReservationTables(updatedTables);
+  if (reservationData?.tableId) {
+    const tables = getStoredReservationTables();
+    const updatedTables = tables.map((t) =>
+      t.id === reservationData.tableId ? { ...t, status: "reserved" } : t
+    );
+    saveStoredReservationTables(updatedTables);
+  }
 
   return { success: true, data: newReservation };
 }
@@ -167,12 +200,9 @@ export async function apiDeleteReservation(id) {
 export async function apiCancelReservation(id) {
   const all = getStoredReservations();
   const target = all.find((r) => r.id === id || r.reservationId === id);
-  const updated = all.map((r) =>
-    r.id === id || r.reservationId === id ? { ...r, status: "cancelled" } : r
-  );
+  const updated = all.filter((r) => r.id !== id && r.reservationId !== id);
   saveStoredReservations(updated);
 
-  // Free table
   if (target?.tableId) {
     const tables = getStoredReservationTables();
     const updatedTables = tables.map((t) =>
@@ -181,5 +211,5 @@ export async function apiCancelReservation(id) {
     saveStoredReservationTables(updatedTables);
   }
 
-  return { success: true, message: "Reservation cancelled successfully." };
+  return { success: true, message: "Reservation deleted successfully." };
 }

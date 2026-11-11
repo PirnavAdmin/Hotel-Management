@@ -130,6 +130,11 @@ export function AdminSidebar({
           label: "Reports",
           icon: BarChart3,
         },
+        {
+          id: "audit",
+          label: "Audit Documents",
+          icon: FileText,
+        },
       ],
     },
     {

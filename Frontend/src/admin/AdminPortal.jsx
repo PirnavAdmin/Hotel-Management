@@ -74,6 +74,7 @@ import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
+import { apiGetRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 import { API_BASE_URL, API_SYNC_BASE, openOptionalEventStream } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
@@ -894,6 +895,15 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
+<<<<<<< HEAD
+    apiGetRestaurantSettings()
+      .then((res) => {
+        const data = res?.data || res;
+        if (data && typeof data === "object") {
+          applySettings(data);
+        }
+      })
+=======
     fetch(`${API_SYNC_BASE}/api/state`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
@@ -901,9 +911,19 @@ export function AdminPortal({
       .then((data) =>
         applySettings(
           data?.[RESTAURANT_SETTINGS_KEY] ||
-            data?.data?.[RESTAURANT_SETTINGS_KEY],
+            data?.data?.[RESTAURANT_SETTINGS_KEY] ||
+            data?.restaurantSettings ||
+            data?.data?.restaurantSettings,
         ),
       )
+      .catch(() => {});
+
+    // Also fetch directly from dedicated restaurant-settings API
+    apiGetRestaurantSettings()
+      .then((res) => {
+        const liveSettings = res?.data || res?.settings;
+        if (liveSettings) applySettings(liveSettings);
+      })
       .catch(() => {});
 
     const events = openOptionalEventStream();
@@ -926,6 +946,14 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
+    // 1. Save directly to dedicated REST endpoint
+    try {
+      await apiUpdateRestaurantSettings(settings);
+    } catch (restErr) {
+      console.warn("Direct restaurant-settings API update warning:", restErr);
+    }
+
+    // 2. Broadcast via /api/sync
     const response = await fetch(`${API_SYNC_BASE}/api/sync`, {
       method: "POST",
       headers: {
@@ -5914,7 +5942,8 @@ export function AdminPortal({
                   activeTab === "daily-balances" ||
                   activeTab === "coa" ||
                   activeTab === "general-ledger" ||
-                  activeTab === "journal-entries") && (
+                  activeTab === "journal-entries" ||
+                  activeTab === "audit") && (
                   <AdminReports
                     pastOrders={pastOrders}
                     menuItems={menuItems}
@@ -5924,7 +5953,9 @@ export function AdminPortal({
                     salaryPayments={salaryPayments}
                     inventoryPurchases={inventoryPurchases}
                     initialTab={
-                      activeTab === "daily-balances"
+                      activeTab === "audit"
+                        ? "audit-documents"
+                        : activeTab === "daily-balances"
                         ? "daily-register"
                         : activeTab === "coa"
                         ? "coa"
