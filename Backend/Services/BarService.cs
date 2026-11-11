@@ -1628,7 +1628,6 @@ await _spService.ExecuteSqlNonQueryAsync(
         { "@p_kot_id", kotId }
     });
 
-        }
         catch { }
 
         try
