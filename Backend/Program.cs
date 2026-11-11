@@ -260,7 +260,6 @@ if (!Directory.Exists(uploadsDir))
 app.UseCors("FrontendPolicy");
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseMiddleware<LegacyApiRewriteMiddleware>();
 
 // Centralized HTTP Request / Response Logging Middleware
 app.Use(async (context, next) =>
@@ -305,13 +304,7 @@ app.Use(async (context, next) =>
 
 
 
-<<<<<<< HEAD
-// Transparently rewrites legacy and unversioned frontend API request paths
-// to their canonical /api/v1/{module}/{resource} routes before endpoint routing
-app.UseMiddleware<HMS.Middleware.LegacyApiRewriteMiddleware>();
-
-=======
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+app.UseMiddleware<LegacyApiRewriteMiddleware>();
 app.UseRouting();
 
 app.UseStaticFiles();
