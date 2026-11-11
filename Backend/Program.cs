@@ -191,6 +191,8 @@ builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SalaryService>();
+builder.Services.AddSingleton<ISseBroadcaster, SseBroadcaster>();
+builder.Services.AddSingleton<ITableLockService, TableLockService>();
 builder.Services.AddSignalR();
 
 // ============================================================

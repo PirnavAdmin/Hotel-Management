@@ -26,6 +26,7 @@ import {
   apiCreateInventoryItem,
   apiUpdateInventoryItem,
 } from "../api/inventoryApi";
+import { apiGetSuppliers, apiCreateSupplier } from "../api/supplierApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans"];
@@ -602,7 +603,22 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
       } catch {}
       return updated;
     });
+
+    // Also persist new supplier to backend
+    apiCreateSupplier({ name: trimmed, supplierName: trimmed, phone: "", address: "" }).catch(() => {});
   };
+
+  useEffect(() => {
+    apiGetSuppliers().then((res) => {
+      const list = res?.data || res?.suppliers;
+      if (Array.isArray(list) && list.length > 0) {
+        const names = list.map((s) => s.name || s.supplierName || s.fullName).filter(Boolean);
+        if (names.length > 0) {
+          setCustomInvSuppliers((prev) => Array.from(new Set([...prev, ...names])));
+        }
+      }
+    }).catch(() => {});
+  }, []);
 
   const saveCustomSubcategory = (newSub) => {
     if (!newSub || !newSub.trim()) return;

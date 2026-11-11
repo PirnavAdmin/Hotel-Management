@@ -27,6 +27,9 @@ import {
   apiDeleteTable,
   apiVacateTable,
   apiUpdateTableStatus,
+  apiLockTable,
+  apiUnlockTable,
+  apiGetTableLocks,
 } from "./api/tableApi";
 import {
   apiGetMenuItems,
@@ -1119,6 +1122,22 @@ export function App() {
   };
 
   const handlePosLogout = () => {
+    if (selectedTableId) {
+      releaseTableLock(selectedTableId);
+    }
+    const myId = String(posSession?.id || posSession?.userId || posSession?.username || "");
+    if (myId && tableLocks) {
+      const updated = { ...tableLocks };
+      let changed = false;
+      Object.entries(updated).forEach(([k, lock]) => {
+        if (lock && String(lock.userId) === myId) {
+          delete updated[k];
+          changed = true;
+          apiUnlockTable(k, myId).catch(() => {});
+        }
+      });
+      if (changed) saveLocks(updated);
+    }
     setPosSession(null);
     saveRouteSession(SESSION_KEY_POS, null);
     logoutUser();
@@ -1607,6 +1626,27 @@ export function App() {
             if (alert.type === "cooking_completed") sounds.playBell();
             else sounds.playAddItem();
           }
+
+          // Live multi-waiter table concurrency locks from SSE
+          const incomingLocks = payload[STORAGE_KEY_TABLE_LOCKS] || payload.tableLocks || (parsedMsg.type === "SYNC_TABLE_LOCKS" ? payload : null);
+          if (incomingLocks && typeof incomingLocks === "object" && !Array.isArray(incomingLocks)) {
+            setTableLocks(incomingLocks);
+            try {
+              localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(incomingLocks));
+              window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: incomingLocks }));
+            } catch {}
+          }
+
+          // Live KOT Chef notifications to all 3 modules
+          if (parsedMsg.type === "KOT_STATUS_UPDATED" || parsedMsg.type === "KOT_PREPARED" || parsedMsg.type === "KOT_ITEM_UPDATED") {
+            const kotData = payload;
+            const status = String(kotData?.status || "").toLowerCase();
+            const tblId = kotData?.tableId || kotData?.tableNumber || "";
+            if (status === "ready" || status === "prepared" || parsedMsg.type === "KOT_PREPARED") {
+              sounds.playBell();
+              showToast(`🔔 Table ${tblId}: Food is READY to be served!`);
+            }
+          }
         } catch {}
       };
 
@@ -1863,6 +1903,17 @@ export function App() {
     };
     window.addEventListener("storage", handleStorage);
     window.addEventListener("avsr-table-locks-updated", handleLockEvent);
+
+    // Initial load of live table locks from backend
+    apiGetTableLocks()
+      .then((res) => {
+        const liveLocks = res?.data || res?.locks;
+        if (liveLocks && typeof liveLocks === "object") {
+          setTableLocks((prev) => ({ ...prev, ...liveLocks }));
+        }
+      })
+      .catch(() => {});
+
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("avsr-table-locks-updated", handleLockEvent);
@@ -1872,7 +1923,7 @@ export function App() {
   const saveLocks = (newLocks) => {
     setTableLocks(newLocks);
     try {
-      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(newLocks));
+      localStorage.setItem(STORAGE_KEY_TABLES ? STORAGE_KEY_TABLE_LOCKS : "avsr_table_locks_v1", JSON.stringify(newLocks));
       window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: newLocks }));
       broadcastSync("SYNC_TABLE_LOCKS", newLocks);
     } catch {}
@@ -1896,17 +1947,23 @@ export function App() {
       }
     }
 
+    const lockObj = {
+      tableId: tableKey,
+      userId: myId,
+      username: session?.username || myName,
+      serverName: myName,
+      timestamp: Date.now(),
+    };
+
     const updated = {
       ...tableLocks,
-      [tableKey]: {
-        tableId: tableKey,
-        userId: myId,
-        username: session?.username || myName,
-        serverName: myName,
-        timestamp: Date.now(),
-      },
+      [tableKey]: lockObj,
     };
     saveLocks(updated);
+
+    // Sync to backend API & broadcast to other waiters/devices
+    apiLockTable(tableKey, lockObj).catch(() => {});
+
     return { success: true };
   };
 
@@ -1917,6 +1974,9 @@ export function App() {
     const updated = { ...tableLocks };
     delete updated[tableKey];
     saveLocks(updated);
+
+    // Release on backend API & broadcast to other waiters/devices
+    apiUnlockTable(tableKey).catch(() => {});
   };
 
   const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;

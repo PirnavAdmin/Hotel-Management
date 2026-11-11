@@ -13,11 +13,13 @@ public class KotController : ControllerBase
 {
     private readonly KotService _kotService;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly ISseBroadcaster _sseBroadcaster;
 
-    public KotController(KotService kotService, IHubContext<PosHub> hubContext)
+    public KotController(KotService kotService, IHubContext<PosHub> hubContext, ISseBroadcaster sseBroadcaster)
     {
         _kotService = kotService;
         _hubContext = hubContext;
+        _sseBroadcaster = sseBroadcaster;
     }
 
     // ============================================================
@@ -72,6 +74,7 @@ public class KotController : ControllerBase
     // GET /api/v1/kot/{id} OR /api/v1/kot/orders/{id}
     [AllowAnonymous]
     [HttpGet("orders/{id:long}")]
+    [HttpGet("{id:long}")]
     public async Task<IActionResult> GetKotOrderById(long id)
     {
         var order = await _kotService.GetKotOrderByIdAsync(id);
@@ -93,6 +96,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("ReceiveNewKOT", created);
             await _hubContext.Clients.All.SendAsync("KotOrderCreated", created);
+            await _sseBroadcaster.BroadcastAsync("KOT_CREATED", created);
         }
         catch { }
 
@@ -107,6 +111,7 @@ public class KotController : ControllerBase
     // PUT/PATCH /api/v1/kot/orders/{id}/status OR /api/v1/kot/{id}/status
     [AllowAnonymous]
     [HttpPatch("orders/{id:long}/status")]
+    [HttpPatch("{id:long}/status")]
     public async Task<IActionResult> UpdateOrderStatus(long id, [FromBody] UpdateOrderStatusDto dto)
     {
         var updated = await _kotService.UpdateOrderStatusAsync(id, dto.Status);
@@ -119,6 +124,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotOrderUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", updated);
         }
         catch { }
 
@@ -133,6 +139,7 @@ public class KotController : ControllerBase
     // POST /api/v1/kot/{id}/mark-all-prepared OR /api/v1/kot/orders/{id}/mark-all-prepared
     [AllowAnonymous]
     [HttpPost("orders/{id:long}/mark-all-prepared")]
+    [HttpPost("{id:long}/mark-all-prepared")]
     public async Task<IActionResult> MarkAllPrepared(long id)
     {
         var updated = await _kotService.MarkAllPreparedAsync(id);
@@ -145,6 +152,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotOrderUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", updated);
         }
         catch { }
 
@@ -268,6 +276,8 @@ public class KotController : ControllerBase
     // PUT/PATCH /api/v1/kot/items/{itemId}/status OR /api/v1/kot/orders/{orderId}/items/{itemId}/status
     [AllowAnonymous]
     [HttpPatch("orders/{orderId:long}/items/{itemId:long}/status")]
+    [HttpPatch("{orderId:long}/items/{itemId:long}/status")]
+    [HttpPatch("items/{itemId:long}/status")]
     public async Task<IActionResult> UpdateItemStatus([FromRoute] long itemId, [FromRoute] long? orderId, [FromBody] UpdateItemStatusDto dto)
     {
         var updated = await _kotService.UpdateItemStatusDirectAsync(itemId, dto.Status, orderId);
@@ -280,6 +290,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_ITEM_UPDATED", updated);
         }
         catch { }
 
@@ -294,6 +305,8 @@ public class KotController : ControllerBase
     // POST /api/v1/kot/items/{itemId}/advance OR /api/v1/kot/orders/{orderId}/items/{itemId}/advance
     [AllowAnonymous]
     [HttpPost("orders/{orderId:long}/items/{itemId:long}/advance")]
+    [HttpPost("{orderId:long}/items/{itemId:long}/advance")]
+    [HttpPost("items/{itemId:long}/advance")]
     public async Task<IActionResult> AdvanceItemStatus([FromRoute] long itemId, [FromRoute] long? orderId)
     {
         var updated = await _kotService.AdvanceItemStatusDirectAsync(itemId, orderId);
@@ -306,6 +319,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_ITEM_UPDATED", updated);
         }
         catch { }
 
