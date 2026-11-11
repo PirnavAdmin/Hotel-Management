@@ -69,6 +69,11 @@ public static class OrderItemRouting
                               (term.Length >= 4 && w.StartsWith(term, StringComparison.OrdinalIgnoreCase)));
     }
 
+    public static bool IsBarItem(string? itemName, string? category = null, string? drinkType = null, bool isBarItem = false)
+    {
+        return IsBarItem(isBarItem, drinkType, category, itemName);
+    }
+
     public static bool IsBarItem(bool isBarItem, string? drinkType, string? category, string? itemName = null)
     {
         if (isBarItem || !string.IsNullOrWhiteSpace(drinkType))
@@ -182,5 +187,27 @@ public static class OrderItemRouting
         }
 
         return (kitchenItems, barItems);
+    }
+    public static async Task<long> ResolveMenuItemIdAsync(
+        AppDbContext context,
+        long? providedId,
+        string? itemName,
+        bool? isBarHint = null)
+    {
+        if (providedId.HasValue && providedId.Value > 0)
+        {
+            var exists = await context.MenuItems.AnyAsync(m => m.MenuItemId == providedId.Value);
+            if (exists) return providedId.Value;
+        }
+
+        var cleanName = (itemName ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(cleanName)) return 0;
+
+        var match = await context.MenuItems
+            .Where(m => m.DishName == cleanName)
+            .Select(m => m.MenuItemId)
+            .FirstOrDefaultAsync();
+
+        return match;
     }
 }

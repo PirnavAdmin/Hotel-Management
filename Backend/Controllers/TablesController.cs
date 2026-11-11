@@ -9,7 +9,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/tables")]
-[Route("api/tables")]
 public class TablesController : ControllerBase
 {
     private readonly TableService _tableService;
@@ -162,7 +161,6 @@ public class TablesController : ControllerBase
     // PATCH /api/v1/tables/{id}/status OR PUT /api/v1/tables/{id}/status
     [AllowAnonymous]
     [HttpPatch("{id}/status")]
-    [HttpPut("{id}/status")]
     public async Task<IActionResult> UpdateTableStatus(string id, [FromBody] UpdateTableStatusDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Status))

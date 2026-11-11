@@ -1,3 +1,4 @@
+using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -13,23 +14,28 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/invoices")]
-[Route("api/Invoices")]
-[Route("api/v1/bills")]
-[Route("api/Bills")]
+[Tags("Invoices")]
 public class InvoicesController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<InvoicesController> _logger;
 
-    public InvoicesController(SpService spService, ILogger<InvoicesController> logger)
+    public InvoicesController(
+        SpService spService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InvoicesController> logger)
     {
         _spService = spService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }
 
     [AllowAnonymous]
     [HttpGet]
-    [HttpGet("history")]
     public async Task<IActionResult> GetInvoices([FromQuery] string? status)
     {
         try
@@ -161,7 +167,6 @@ public class InvoicesController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("{id:long}/payments")]
-    [HttpPost("{id:long}/cash-payment")]
     public async Task<IActionResult> RecordPayment(long id, [FromBody] RecordPaymentRequest request)
     {
         if (request == null || request.Amount <= 0)
@@ -177,6 +182,12 @@ public class InvoicesController : ControllerBase
             if (existing == null)
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
+            }
+            if (string.Equals(existing.Status, "VOID", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(existing.Status, "REFUNDED", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(existing.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { success = false, message = $"Cannot record payment for a {existing.Status} invoice." });
             }
 
             var parameters = new Dictionary<string, object?>
@@ -423,7 +434,6 @@ public class InvoicesController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("{id:long}/pdf")]
-    [HttpGet("{id:long}/download")]
     public async Task<IActionResult> DownloadInvoicePdf(long id)
     {
         var invoice = await GetInvoiceByIdObject(id);
@@ -472,7 +482,6 @@ public class InvoicesController : ControllerBase
 
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Invoices/{id}")]
     public async Task<IActionResult> DeleteInvoice(string id)
     {
         long numericId = 0;
@@ -636,6 +645,30 @@ public class InvoicesController : ControllerBase
             TransactionReference = reader.IsDBNull(refOrd) ? null : reader.GetString(refOrd),
             PaidAt = reader.GetDateTime(reader.GetOrdinal("paid_at"))
         };
+    }
+    /// <summary>
+    /// Exports Customer Billing Invoices as CSV or XLSX.
+    /// Supports ?fromDate=...&toDate=...&status=...&department=...&format=csv|xlsx.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportInvoices(
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? status,
+        [FromQuery] string? department,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateInvoicesExportAsync(fromDate, toDate, status, department);
+            return _exportService.ExportResult(doc, format, doc.BaseFileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting customer billing invoices");
+            return StatusCode(500, new { success = false, message = "Failed to export invoices.", error = ex.Message });
+        }
     }
 }
 

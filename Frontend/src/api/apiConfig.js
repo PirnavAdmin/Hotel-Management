@@ -1,5 +1,3 @@
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "https://chapter-catnip-evaluator.ngrok-free.dev";
-
 // In Vite development, point every LAN client at the API on the same host
 // serving the frontend, instead of allowing separate .env tunnel URLs to split data.
 export const API_BASE_URL = (

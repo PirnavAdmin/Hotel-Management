@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging;
 namespace HMS.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
 [Route("api/v1/users")]
 public class UsersController : ControllerBase
 {

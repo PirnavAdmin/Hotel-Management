@@ -9,7 +9,7 @@ using HMS.Hubs;
 using HMS.Services;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/kitchen")]
 public class KitchenController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -31,6 +31,8 @@ public class KitchenController : ControllerBase
             .Where(o =>
                 o.IsActive &&
                 !o.IsDeleted &&
+                o.Status != "Cancelled" && o.Status != "cancelled" &&
+                (o.FulfillmentStatus == null || (o.FulfillmentStatus != "Cancelled" && o.FulfillmentStatus != "cancelled")) &&
                 (o.Status == "Active" ||
                  o.Status == "active" ||
                  o.Status == "Billed" ||
@@ -51,6 +53,8 @@ public class KitchenController : ControllerBase
             var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
             var batches = kitchenItems
                 .Where(i =>
+                    i.IsActive && !i.IsDeleted &&
+                    !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
                     (i.KotStatus == "Queued" ||
                      i.KotStatus == "queued" ||
                      i.KotStatus == "Cooking" ||
@@ -152,6 +156,15 @@ public class KitchenController : ControllerBase
                 return NotFound(new { success = false, message = "Order item not found." });
             }
 
+            if (item.IsDeleted || !item.IsActive ||
+                string.Equals(item.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+                (item.Order != null && (item.Order.IsDeleted || !item.Order.IsActive ||
+                 string.Equals(item.Order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(item.Order.FulfillmentStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))))
+            {
+                return Conflict(new { success = false, message = "Cannot update kitchen item status for a cancelled or deleted order." });
+            }
+
             var cleanStatus = request.Status.Trim();
             if (cleanStatus.Equals("PREPARATION COMPLETED", StringComparison.OrdinalIgnoreCase) || cleanStatus.Equals("READY", StringComparison.OrdinalIgnoreCase))
             {
@@ -170,6 +183,7 @@ public class KitchenController : ControllerBase
             item.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, item.OrderId);
 
             if (item.Order != null)
             {
@@ -228,9 +242,17 @@ public class KitchenController : ControllerBase
             });
         }
 
+        if (order.IsDeleted || !order.IsActive ||
+            string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.FulfillmentStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            return Conflict(new { success = false, message = "Cannot start cooking a cancelled or deleted order." });
+        }
+
         var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
         var itemsToUpdate = kitchenItems
             .Where(i =>
+                i.IsActive && !i.IsDeleted &&
                 (i.KotBatch == batch || batch == 0) &&
                 (i.KotStatus == "Queued" ||
                  i.KotStatus == "queued" ||
@@ -244,7 +266,17 @@ public class KitchenController : ControllerBase
             item.UpdatedAt = DateTime.UtcNow;
         }
 
+        var kotTickets = await _context.KitchenOrderTickets
+            .Where(k => k.OrderId == order.Id && k.IsActive && !k.IsDeleted && k.Status == "Queued")
+            .ToListAsync();
+        foreach (var kt in kotTickets)
+        {
+            kt.Status = "Cooking";
+            kt.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
+        await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
 
         await _hubContext.Clients
             .Group("floor")
@@ -292,9 +324,18 @@ public class KitchenController : ControllerBase
             });
         }
 
+        if (order.IsDeleted || !order.IsActive ||
+            string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(order.FulfillmentStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            return Conflict(new { success = false, message = "Cannot complete a cancelled or deleted order." });
+        }
+
         var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
         var itemsToUpdate = kitchenItems
             .Where(i =>
+                i.IsActive && !i.IsDeleted &&
+                !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
                 (i.KotBatch == batch || batch == 0) &&
                 i.KotStatus != "served")
             .ToList();
@@ -305,7 +346,18 @@ public class KitchenController : ControllerBase
             item.UpdatedAt = DateTime.UtcNow;
         }
 
+        var kotTickets = await _context.KitchenOrderTickets
+            .Where(k => k.OrderId == order.Id && k.IsActive && !k.IsDeleted && k.Status != "Served" && k.Status != "Cancelled")
+            .ToListAsync();
+        foreach (var kt in kotTickets)
+        {
+            kt.Status = "Ready";
+            kt.CompletedAt = DateTime.UtcNow;
+            kt.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
+        await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
 
         await _hubContext.Clients
             .Group("floor")

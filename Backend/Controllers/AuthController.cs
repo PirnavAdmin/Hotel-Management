@@ -8,7 +8,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/auth")]
-[Route("api/Auth")]
 public class AuthController : ControllerBase
 {
     private readonly AuthService _authService;

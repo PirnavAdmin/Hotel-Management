@@ -1867,19 +1867,8 @@ export default defineConfig(({ mode }) => {
     env.VITE_BACKEND_URL ||
     "http://127.0.0.1:5018";
 
-  let apiBase = env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
-  if (!apiBase) {
-    try {
-      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
-      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
-      if (match) apiBase = match[0].replace(/\/$/, "");
-    } catch {}
-  }
-  if (!apiBase) {
-    apiBase = "";
-  } else {
-    apiBase = apiBase.trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
-  }
+  const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
+  const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
 
   return {
     plugins: [react(), globalSyncPlugin()],
@@ -1889,6 +1878,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
+      allowedHosts: [".trycloudflare.com", ".ngrok-free.dev", "localhost", "127.0.0.1"],
       watch: {
         ignored: [
           '**/.vs/**',

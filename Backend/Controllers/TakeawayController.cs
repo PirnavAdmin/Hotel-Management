@@ -1,17 +1,18 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using HMS.DTOs;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 
 namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/takeaway")]
-[Route("api/takeaway")]
-[AllowAnonymous]
 public class TakeawayController : ControllerBase
 {
     private readonly TakeawayService _takeawayService;
@@ -23,12 +24,32 @@ public class TakeawayController : ControllerBase
         _logger = logger;
     }
 
+    private (long? UserId, string? FullName, string? IpAddress) ExtractActorContext()
+    {
+        long? userId = null;
+        string? rawId = User.FindFirstValue("userId")
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (long.TryParse(rawId, out var parsedId) && parsedId > 0)
+        {
+            userId = parsedId;
+        }
+
+        string? fullName = User.FindFirstValue("fullName")
+            ?? User.FindFirstValue(ClaimTypes.Name)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.UniqueName);
+
+        string? ipAddress = HttpContext?.Connection?.RemoteIpAddress?.ToString();
+        return (userId, fullName, ipAddress);
+    }
+
     #region 1. Takeaway Menu Endpoints
 
     /// <summary>
     /// Returns active and available menu items for the Takeaway POS screen with pagination and sorting.
     /// Excludes deleted and unavailable items.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("menu")]
     public async Task<IActionResult> GetMenu(
         [FromQuery] string? search,
@@ -58,6 +79,7 @@ public class TakeawayController : ControllerBase
     /// <summary>
     /// Returns distinct categories containing active and available takeaway menu items.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories()
     {
@@ -81,6 +103,7 @@ public class TakeawayController : ControllerBase
     /// <summary>
     /// Searches available menu items by dish name or category keyword (case-insensitive).
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("menu/search")]
     public async Task<IActionResult> SearchMenu(
         [FromQuery] string? query,
@@ -114,6 +137,7 @@ public class TakeawayController : ControllerBase
     /// <summary>
     /// Retrieves active and available menu items belonging to a specific category (by ID or category name).
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("menu/category/{categoryId}")]
     public async Task<IActionResult> GetMenuByCategory(string categoryId)
     {
@@ -149,6 +173,7 @@ public class TakeawayController : ControllerBase
     /// Validates items in MySQL, retrieves actual selling prices, applies discounts, calculates 5% GST and packaging charges.
     /// Never trusts client-supplied prices or tax rates.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost("calculate")]
     public async Task<IActionResult> CalculateCart([FromBody] TakeawayCartCalculateRequest request)
     {
@@ -184,14 +209,83 @@ public class TakeawayController : ControllerBase
 
     #endregion
 
-    #region 3. Takeaway Order Creation & Checkout Endpoint
+    #region 3. Takeaway Orders List, Summary, Creation, Status Lifecycle & Cancellation Endpoints
+
+    /// <summary>
+    /// Retrieves paginated Takeaway orders for the Admin / POS Takeaway Dashboard with search, status, date, payment status, and payment method filters.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("orders")]
+    public async Task<IActionResult> GetOrders(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null,
+        [FromQuery] string? paymentStatus = null,
+        [FromQuery] string? paymentMethod = null)
+    {
+        try
+        {
+            var orders = await _takeawayService.GetTakeawayOrdersAsync(
+                page, pageSize, search, status, fromDate, toDate, paymentStatus, paymentMethod);
+            return Ok(new
+            {
+                success = true,
+                message = "Takeaway orders retrieved successfully.",
+                data = orders
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving takeaway orders.");
+            return StatusCode(500, new { success = false, message = "Failed to retrieve takeaway orders.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Retrieves KPI summary statistics for Takeaway orders over an optional date range.
+    /// Excludes cancelled orders and voided/refunded invoices from net sales metrics.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("orders/summary")]
+    public async Task<IActionResult> GetOrdersSummary(
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
+    {
+        try
+        {
+            var summary = await _takeawayService.GetTakeawayOrdersSummaryAsync(fromDate, toDate);
+            return Ok(new
+            {
+                success = true,
+                message = "Takeaway orders summary retrieved successfully.",
+                data = summary
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving takeaway orders summary.");
+            return StatusCode(500, new { success = false, message = "Failed to retrieve takeaway orders summary.", error = ex.Message });
+        }
+    }
 
     /// <summary>
     /// Processes checkout for a Takeaway order.
-    /// Validates items against MySQL, verifies actual prices, creates parent order in restaurant_orders,
-    /// saves line items, dispatches Kitchen KOT / Bar BOT tickets, generates invoice, records payment,
+    /// Validates items against MySQL, verifies payment gateway payload/signature, creates parent order in restaurant_orders,
+    /// saves customer details and line items, dispatches Kitchen KOT / Bar BOT tickets, generates invoice, records payment,
     /// and uses database transactions with idempotency protection.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost("orders")]
     public async Task<IActionResult> CreateOrder([FromBody] CreateTakeawayOrderRequest request)
     {
@@ -202,8 +296,13 @@ public class TakeawayController : ControllerBase
 
         try
         {
-            var orderResult = await _takeawayService.CreateTakeawayOrderAsync(request);
-            return StatusCode(201, orderResult);
+            var (userId, fullName, ipAddress) = ExtractActorContext();
+            var orderResult = await _takeawayService.CreateTakeawayOrderAsync(request, userId, fullName, ipAddress);
+            return StatusCode(orderResult.AlreadyProcessed ? 200 : 201, orderResult);
+        }
+        catch (PaymentVerificationException ex)
+        {
+            return BadRequest(new { success = false, paymentStatus = "Failed", message = ex.Message });
         }
         catch (ArgumentException ex)
         {
@@ -220,6 +319,102 @@ public class TakeawayController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Updates the fulfillment lifecycle status of a takeaway order
+    /// (New -> Preparing -> Ready -> PickedUp -> Completed, or Cancelled) and synchronizes Kitchen KOT / Bar BOT tickets.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPatch("orders/{orderId:long}/status")]
+    public async Task<IActionResult> UpdateOrderStatus(long orderId, [FromBody] UpdateTakeawayOrderStatusRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var (userId, fullName, ipAddress) = ExtractActorContext();
+            var updated = await _takeawayService.UpdateTakeawayOrderStatusAsync(orderId, request, userId, fullName, ipAddress);
+            if (updated == null)
+            {
+                return NotFound(new { success = false, message = $"Takeaway order {orderId} was not found." });
+            }
+
+            return Ok(updated);
+        }
+        catch (TakeawayOrderConflictException ex)
+        {
+            return Conflict(new { success = false, message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating status for takeaway order {OrderId}.", orderId);
+            return StatusCode(500, new { success = false, message = "Failed to update takeaway order status.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Atomically cancels an active or settled (not yet PickedUp/Completed) Takeaway order,
+    /// voids unpaid/pending invoices or marks collected payments/invoices as Refunded,
+    /// cancels Kitchen KOT &amp; Bar BOT tickets, preserves financial history, and records an audit log.
+    /// Restricted to Admin, Super Admin, Branch Manager, POS Cashier, and User POS roles.
+    /// </summary>
+    [Authorize(Roles = "Admin,Super Admin,Branch Manager,POS Cashier,User POS")]
+    [HttpPost("orders/{orderId:long}/cancel")]
+    public async Task<IActionResult> CancelOrder(
+        long orderId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] CancelTakeawayOrderRequest? request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var (userId, fullName, ipAddress) = ExtractActorContext();
+            var result = await _takeawayService.CancelTakeawayOrderAsync(
+                orderId,
+                request ?? new CancelTakeawayOrderRequest(),
+                userId,
+                fullName,
+                ipAddress);
+
+            if (result == null)
+            {
+                return NotFound(new { success = false, message = $"Takeaway order {orderId} was not found." });
+            }
+
+            return Ok(result);
+        }
+        catch (TakeawayOrderConflictException ex)
+        {
+            return Conflict(new { success = false, message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cancelling takeaway order {OrderId}.", orderId);
+            return StatusCode(500, new { success = false, message = "Failed to cancel takeaway order.", error = ex.Message });
+        }
+    }
+
     #endregion
 
     #region 4. Takeaway Invoices & History Endpoints
@@ -227,6 +422,7 @@ public class TakeawayController : ControllerBase
     /// <summary>
     /// Retrieves paginated invoice history for Takeaway orders with date and search filters.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("invoices")]
     public async Task<IActionResult> GetInvoices(
         [FromQuery] DateTime? startDate,
@@ -256,6 +452,7 @@ public class TakeawayController : ControllerBase
     /// <summary>
     /// Retrieves complete invoice details for a specific Takeaway invoice by ID.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("invoices/{invoiceId:long}")]
     public async Task<IActionResult> GetInvoiceById(long invoiceId)
     {
@@ -282,8 +479,9 @@ public class TakeawayController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves full order details including line items, associated invoice, payment, and KOT/BOT tickets.
+    /// Retrieves full order details including customer details, fulfillment status, line items, associated invoice, payment history, and KOT/BOT tickets.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("orders/{orderId:long}")]
     public async Task<IActionResult> GetOrderDetails(long orderId)
     {
@@ -314,8 +512,9 @@ public class TakeawayController : ControllerBase
     #region 5. Payment Recording Endpoints
 
     /// <summary>
-    /// Records or updates payment for a pending takeaway order.
+    /// Records or verifies payment (Success, Pending, or Failed) for a takeaway order with duplicate-payment protection.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost("orders/{orderId:long}/pay")]
     public async Task<IActionResult> RecordOrderPayment(long orderId, [FromBody] TakeawayRecordPaymentRequest request)
     {
@@ -326,17 +525,34 @@ public class TakeawayController : ControllerBase
 
         try
         {
-            bool updated = await _takeawayService.RecordPaymentAsync(orderId, request);
-            if (!updated)
+            var result = await _takeawayService.RecordPaymentAsync(orderId, request, lookupByOrderId: true);
+            if (result == null)
             {
-                return NotFound(new { success = false, message = $"Takeaway order or invoice {orderId} was not found." });
+                return NotFound(new { success = false, message = $"Takeaway order {orderId} was not found." });
             }
 
-            return Ok(new
+            if (!result.Success)
             {
-                success = true,
-                message = $"Payment of {request.Amount:C} via {request.PaymentMethod} recorded successfully for takeaway order {orderId}."
-            });
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (DuplicatePaymentException ex)
+        {
+            return Conflict(new { success = false, message = ex.Message });
+        }
+        catch (PaymentVerificationException ex)
+        {
+            return BadRequest(new { success = false, paymentStatus = "Failed", message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -346,12 +562,53 @@ public class TakeawayController : ControllerBase
     }
 
     /// <summary>
-    /// Records payment for a specific takeaway invoice.
+    /// Records or verifies payment (Success, Pending, or Failed) for a specific takeaway invoice with duplicate-payment protection.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost("invoices/{invoiceId:long}/pay")]
     public async Task<IActionResult> RecordInvoicePayment(long invoiceId, [FromBody] TakeawayRecordPaymentRequest request)
     {
-        return await RecordOrderPayment(invoiceId, request);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var result = await _takeawayService.RecordPaymentAsync(invoiceId, request, lookupByOrderId: false);
+            if (result == null)
+            {
+                return NotFound(new { success = false, message = $"Takeaway invoice {invoiceId} was not found." });
+            }
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (DuplicatePaymentException ex)
+        {
+            return Conflict(new { success = false, message = ex.Message });
+        }
+        catch (PaymentVerificationException ex)
+        {
+            return BadRequest(new { success = false, paymentStatus = "Failed", message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error recording payment for takeaway invoice {InvoiceId}.", invoiceId);
+            return StatusCode(500, new { success = false, message = "Failed to record payment.", error = ex.Message });
+        }
     }
 
     #endregion

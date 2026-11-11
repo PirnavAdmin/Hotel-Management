@@ -11,23 +11,29 @@ using HMS.Models;
 using HMS.Services;
 
 [ApiController]
-[Route("api/[controller]")]
 [Route("api/v1/orders")]
+[Tags("Orders")]
 public class OrdersController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly SpService _spService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly IHubContext<PosHub> _hubContext;
     private readonly ILogger<OrdersController> _logger;
 
     public OrdersController(
         AppDbContext context,
         SpService spService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
         IHubContext<PosHub> hubContext,
         ILogger<OrdersController> logger)
     {
         _context = context;
         _spService = spService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _hubContext = hubContext;
         _logger = logger;
     }
@@ -78,13 +84,13 @@ public class OrdersController : ControllerBase
             item.KotStatus = "Served";
             item.UpdatedAt = DateTime.UtcNow;
         }
+        order.FulfillmentStatus = "PickedUp";
         order.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        return Ok(new { success = true, message = "Takeaway order dispatched.", orderId = order.Id });
+        return Ok(new { success = true, message = "Takeaway order dispatched.", orderId = order.Id, fulfillmentStatus = order.FulfillmentStatus });
     }
 
     [HttpGet]
-    [HttpGet("active")]
     public async Task<IActionResult> GetActiveOrders()
     {
         var orders = await _context.Orders
@@ -238,6 +244,7 @@ public class OrdersController : ControllerBase
                 ServerName = !string.IsNullOrWhiteSpace(request.ServerName) ? request.ServerName : "Cashier",
                 Guests = request.Guests > 0 ? request.Guests : 1,
                 Status = "Active",
+                FulfillmentStatus = "New",
                 IsActive = true,
                 IsDeleted = false,
                 CreatedAt = DateTime.UtcNow
@@ -298,6 +305,8 @@ public class OrdersController : ControllerBase
             if (isSettlingNow)
             {
                 takeawayOrder.Status = "Settled";
+                takeawayOrder.PaymentStatus = "Paid";
+                takeawayOrder.FulfillmentStatus = "New";
                 takeawayOrder.PaymentMethod = request.PaymentMethod ?? "Cash";
                 takeawayOrder.DiscountPercent = request.DiscountPercent;
                 takeawayOrder.TipAmount = request.TipAmount;
@@ -305,12 +314,6 @@ public class OrdersController : ControllerBase
                 takeawayOrder.SettledAt = DateTime.UtcNow;
                 takeawayOrder.UpdatedAt = DateTime.UtcNow;
                 RecalculateTotals(takeawayOrder);
-
-                foreach (var item in takeawayOrder.Items)
-                {
-                    item.KotStatus = "Served";
-                    item.UpdatedAt = DateTime.UtcNow;
-                }
 
                 await _context.SaveChangesAsync();
 
@@ -677,7 +680,6 @@ public class OrdersController : ControllerBase
     // ============================================================
 
     [HttpPost("{id}/items")]
-    [HttpPut("{id}/items")]
     public async Task<IActionResult> UpdateOrderItems(
         long id,
         [FromBody] UpdateOrderItemsRequest request)
@@ -1135,8 +1137,6 @@ public class OrdersController : ControllerBase
     // ============================================================
     // SEND KOT & BOT AUTOMATICALLY ROUTED
     // ============================================================
-
-    [HttpPost("{id}/send-kot")]
     [HttpPost("{id}/kot")]
     public async Task<IActionResult> SendKot(long id)
     {
@@ -1969,6 +1969,31 @@ public class OrdersController : ControllerBase
         {
             _logger.LogError(ex, "Failed to create invoice for settled order {OrderId}", order.Id);
             return 0;
+        }
+    }
+    /// <summary>
+    /// Exports Restaurant Orders History as CSV or XLSX.
+    /// Supports ?fromDate=...&amp;toDate=...&amp;status=...&amp;orderType=...&amp;department=...&amp;format=csv|xlsx.
+    /// </summary>
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportOrders(
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? status,
+        [FromQuery] string? orderType,
+        [FromQuery] string? department = null,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateOrdersExportAsync(fromDate, toDate, status, orderType, department);
+            return _exportService.ExportResult(doc, format, "Orders_Log");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting orders history");
+            return StatusCode(500, new { success = false, message = "Failed to export orders history.", error = ex.Message });
         }
     }
 }

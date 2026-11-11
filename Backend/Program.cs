@@ -165,6 +165,12 @@ builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
 builder.Services.AddScoped<TakeawayService>();
+builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<SalaryService>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<ExportService>();
+builder.Services.AddScoped<ReportingExportService>();
+builder.Services.AddScoped<AccountingService>();
 builder.Services.AddSignalR();
 
 // ============================================================
@@ -328,6 +334,12 @@ app.Use(async (context, next) =>
 
 
 
+
+// Transparently rewrites legacy and unversioned frontend API request paths
+// to their canonical /api/v1/{module}/{resource} routes before endpoint routing
+app.UseMiddleware<HMS.Middleware.LegacyApiRewriteMiddleware>();
+
+app.UseRouting();
 
 app.UseStaticFiles();
 
