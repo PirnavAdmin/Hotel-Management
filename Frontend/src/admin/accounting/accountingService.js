@@ -1,4 +1,13 @@
 import { roundCurrency } from "../../utils/formatCurrency";
+import {
+  apiGetChartOfAccounts,
+  apiSaveChartOfAccount,
+  apiGetJournalEntries,
+  apiCreateJournalEntry,
+  apiDeleteJournalEntry,
+  apiGetDailyBalances,
+  apiSaveDailyBalance,
+} from "../../api/accountingApi";
 
 // ============================================================================
 // STORAGE KEYS
@@ -61,11 +70,30 @@ export function getChartOfAccounts() {
   return DEFAULT_CHART_OF_ACCOUNTS;
 }
 
+export async function syncChartOfAccountsFromApi() {
+  try {
+    const res = await apiGetChartOfAccounts();
+    if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+      localStorage.setItem(STORAGE_KEY_COA, JSON.stringify(res.data));
+      window.dispatchEvent(new CustomEvent("avsr-coa-updated", { detail: res.data }));
+      return res.data;
+    }
+  } catch {}
+  return getChartOfAccounts();
+}
+
 export function saveChartOfAccounts(accounts) {
   try {
     localStorage.setItem(STORAGE_KEY_COA, JSON.stringify(accounts));
     window.dispatchEvent(new CustomEvent("avsr-coa-updated", { detail: accounts }));
   } catch {}
+  // Asynchronously sync latest custom account to backend API
+  if (Array.isArray(accounts)) {
+    const lastItem = accounts[accounts.length - 1];
+    if (lastItem) {
+      apiSaveChartOfAccount(lastItem).catch(() => {});
+    }
+  }
 }
 
 export function getJournalEntries() {
@@ -85,7 +113,7 @@ export function getJournalEntries() {
       narration: "Initial Capital infusion by restaurant partners into Bank & Cash",
       lines: [
         { accountCode: "1001", accountName: "Cash in Hand", debit: 50000, credit: 0 },
-        { accountCode: "1002", name: "Bank & UPI Collections", debit: 450000, credit: 0 },
+        { accountCode: "1002", accountName: "Bank & UPI Collections", debit: 450000, credit: 0 },
         { accountCode: "3001", accountName: "Owner Capital & Equity", debit: 0, credit: 500000 },
       ],
       createdBy: "pirnav",
@@ -111,11 +139,44 @@ export function getJournalEntries() {
   return initialJournals;
 }
 
-export function saveJournalEntries(entries) {
+export async function syncJournalEntriesFromApi() {
+  try {
+    const res = await apiGetJournalEntries();
+    if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+      localStorage.setItem(STORAGE_KEY_JOURNALS, JSON.stringify(res.data));
+      window.dispatchEvent(new CustomEvent("avsr-journals-updated", { detail: res.data }));
+      return res.data;
+    }
+  } catch {}
+  return getJournalEntries();
+}
+
+export function saveJournalEntries(entries, latestEntryToPost = null) {
   try {
     localStorage.setItem(STORAGE_KEY_JOURNALS, JSON.stringify(entries));
     window.dispatchEvent(new CustomEvent("avsr-journals-updated", { detail: entries }));
   } catch {}
+  // Asynchronously post to backend API
+  const entryToPost = latestEntryToPost || (Array.isArray(entries) ? entries[entries.length - 1] : null);
+  if (entryToPost && entryToPost.voucherNumber) {
+    apiCreateJournalEntry({
+      voucherNumber: entryToPost.voucherNumber,
+      entryDate: entryToPost.date || entryToPost.entryDate,
+      narration: entryToPost.narration,
+      lines: entryToPost.lines,
+      createdBy: entryToPost.createdBy || "pirnav",
+    }).catch(() => {});
+  }
+}
+
+export function deleteJournalEntryLocallyAndApi(voucherNumber) {
+  try {
+    const current = getJournalEntries();
+    const updated = current.filter((e) => e.voucherNumber !== voucherNumber && e.id !== voucherNumber);
+    localStorage.setItem(STORAGE_KEY_JOURNALS, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("avsr-journals-updated", { detail: updated }));
+  } catch {}
+  apiDeleteJournalEntry(voucherNumber).catch(() => {});
 }
 
 export function getDailyBalances() {
@@ -129,11 +190,39 @@ export function getDailyBalances() {
   return [];
 }
 
-export function saveDailyBalances(balances) {
+export async function syncDailyBalancesFromApi() {
+  try {
+    const res = await apiGetDailyBalances();
+    if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+      localStorage.setItem(STORAGE_KEY_BALANCES, JSON.stringify(res.data));
+      window.dispatchEvent(new CustomEvent("avsr-balances-updated", { detail: res.data }));
+      return res.data;
+    }
+  } catch {}
+  return getDailyBalances();
+}
+
+export function saveDailyBalances(balances, latestBalanceToPost = null) {
   try {
     localStorage.setItem(STORAGE_KEY_BALANCES, JSON.stringify(balances));
     window.dispatchEvent(new CustomEvent("avsr-balances-updated", { detail: balances }));
   } catch {}
+  const balanceToPost = latestBalanceToPost || (Array.isArray(balances) ? balances[balances.length - 1] : null);
+  if (balanceToPost && balanceToPost.date) {
+    apiSaveDailyBalance({
+      date: balanceToPost.date,
+      openingCash: Number(balanceToPost.openingCash) || 0,
+      openingBank: Number(balanceToPost.openingBank) || 0,
+      closingCash: balanceToPost.closingCash != null ? Number(balanceToPost.closingCash) : null,
+      closingBank: balanceToPost.closingBank != null ? Number(balanceToPost.closingBank) : null,
+      expectedCash: balanceToPost.expectedCash != null ? Number(balanceToPost.expectedCash) : null,
+      cashDifference: balanceToPost.cashDifference != null ? Number(balanceToPost.cashDifference) : null,
+      isClosed: Boolean(balanceToPost.isClosed),
+      openedBy: balanceToPost.openedBy || "pirnav",
+      closedBy: balanceToPost.closedBy || (balanceToPost.isClosed ? "pirnav" : null),
+      notes: balanceToPost.notes || "",
+    }).catch(() => {});
+  }
 }
 
 // ============================================================================

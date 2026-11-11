@@ -102,3 +102,21 @@ export async function apiUpdateTableStatus(id, status) {
     body: JSON.stringify({ status })
   });
 }
+
+export async function apiGetTableLocks() {
+  return await apiClient('/api/v1/tables/locks');
+}
+
+export async function apiLockTable(id, lockData) {
+  return await apiClient(`/api/v1/tables/${id}/lock`, {
+    method: 'POST',
+    body: JSON.stringify(lockData)
+  });
+}
+
+export async function apiUnlockTable(id, userId = null) {
+  const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+  return await apiClient(`/api/v1/tables/${id}/unlock${query}`, {
+    method: 'POST'
+  });
+}

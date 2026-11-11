@@ -172,7 +172,6 @@ builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
-<<<<<<< HEAD
 builder.Services.AddScoped<TakeawayService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SalaryService>();
@@ -180,10 +179,8 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportingExportService>();
 builder.Services.AddScoped<AccountingService>();
-=======
-builder.Services.AddScoped<InventoryService>();
-builder.Services.AddScoped<SalaryService>();
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+builder.Services.AddSingleton<ISseBroadcaster, SseBroadcaster>();
+builder.Services.AddSingleton<ITableLockService, TableLockService>();
 builder.Services.AddSignalR();
 
 // ============================================================

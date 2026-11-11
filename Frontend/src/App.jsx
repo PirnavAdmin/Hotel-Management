@@ -30,6 +30,9 @@ import {
   apiDeleteTable,
   apiVacateTable,
   apiUpdateTableStatus,
+  apiLockTable,
+  apiUnlockTable,
+  apiGetTableLocks,
 } from "./api/tableApi";
 import {
   apiGetMenuItems,
@@ -1123,6 +1126,22 @@ export function App() {
   };
 
   const handlePosLogout = () => {
+    if (selectedTableId) {
+      releaseTableLock(selectedTableId);
+    }
+    const myId = String(posSession?.id || posSession?.userId || posSession?.username || "");
+    if (myId && tableLocks) {
+      const updated = { ...tableLocks };
+      let changed = false;
+      Object.entries(updated).forEach(([k, lock]) => {
+        if (lock && String(lock.userId) === myId) {
+          delete updated[k];
+          changed = true;
+          apiUnlockTable(k, myId).catch(() => {});
+        }
+      });
+      if (changed) saveLocks(updated);
+    }
     setPosSession(null);
     saveRouteSession(SESSION_KEY_POS, null);
     logoutUser();
@@ -1610,6 +1629,27 @@ export function App() {
             ]);
             if (alert.type === "cooking_completed") sounds.playBell();
             else sounds.playAddItem();
+          }
+
+          // Live multi-waiter table concurrency locks from SSE
+          const incomingLocks = payload[STORAGE_KEY_TABLE_LOCKS] || payload.tableLocks || (parsedMsg.type === "SYNC_TABLE_LOCKS" ? payload : null);
+          if (incomingLocks && typeof incomingLocks === "object" && !Array.isArray(incomingLocks)) {
+            setTableLocks(incomingLocks);
+            try {
+              localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(incomingLocks));
+              window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: incomingLocks }));
+            } catch {}
+          }
+
+          // Live KOT Chef notifications to all 3 modules
+          if (parsedMsg.type === "KOT_STATUS_UPDATED" || parsedMsg.type === "KOT_PREPARED" || parsedMsg.type === "KOT_ITEM_UPDATED") {
+            const kotData = payload;
+            const status = String(kotData?.status || "").toLowerCase();
+            const tblId = kotData?.tableId || kotData?.tableNumber || "";
+            if (status === "ready" || status === "prepared" || parsedMsg.type === "KOT_PREPARED") {
+              sounds.playBell();
+              showToast(`🔔 Table ${tblId}: Food is READY to be served!`);
+            }
           }
         } catch {}
       };
@@ -3687,7 +3727,11 @@ export function App() {
             menuItems={menuItems}
             menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
             tables={tables}
-            onAdminLogin={() => navigate("/admin")}
+            onAdminLogin={() => {
+              setAdminSession(null);
+              saveRouteSession(SESSION_KEY_ADMIN, null);
+              navigate("/admin");
+            }}
           />
         )}
 
@@ -3816,7 +3860,8 @@ export function App() {
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
         {isAdminRoute &&
-          (adminSession && adminSession.role === "admin" ? (
+          (adminSession &&
+          (adminSession.role === "admin" || adminSession.role === "manager") ? (
             <AdminPortal
               isFullPage={true}
               onClose={() => navigate("/")}
@@ -3852,7 +3897,14 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
+            <LoginPage
+              currentTheme={theme}
+              onChangeTheme={setTheme}
+              role="admin"
+              onLoginSuccess={handleGlobalLogin}
+              restaurantName={restaurantSettings.restaurantName}
+              restaurantLogo={restaurantSettings.logo}
+            />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
