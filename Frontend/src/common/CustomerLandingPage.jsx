@@ -614,6 +614,12 @@ export function CustomerLandingPage({
           setIntendedDestination("reservation");
           setActiveScreen("auth");
         }
+      } else if (hash === "#admin" || hash === "#login") {
+        if (typeof onHotelLogin === "function") {
+          onHotelLogin();
+        } else {
+          window.location.href = "/admin";
+        }
       } else if (hash === "#auth") {
         setActiveScreen("auth");
       } else if (hash === "#tracking") {
@@ -1239,16 +1245,19 @@ export function CustomerLandingPage({
               </button>
             )}
 
-            {/* Customer Authentication & Profile Menu (Replaces Admin Login) */}
+            {/* Hotel / Admin Login Button */}
             {!customerUser ? (
               <button
                 className="customer-login-pill-btn"
                 type="button"
                 onClick={() => {
-                  setIntendedDestination("home");
-                  navigateScreen("auth");
+                  if (typeof onHotelLogin === "function") {
+                    onHotelLogin();
+                  } else {
+                    window.location.href = "/admin";
+                  }
                 }}
-                title="Customer Login"
+                title="Login"
               >
                 <UserRound size={16} />
                 <span>Login</span>
