@@ -11,8 +11,8 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Ensure default listening on port 5018
-builder.WebHost.UseUrls("http://0.0.0.0:5018", "http://localhost:5018");
+// Listen on the container and server API port.
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
 
 // ============================================================
 // DATABASE
@@ -28,49 +28,7 @@ if (string.IsNullOrWhiteSpace(configuredConnectionString))
         "DefaultConnection is missing from appsettings.json.");
 }
 
-// Resilient credentials resolver (supports multi-developer environments)
-string connectionString = configuredConnectionString;
-try
-{
-    using var testConn = new MySqlConnector.MySqlConnection(connectionString);
-    testConn.Open();
-}
-catch (MySqlConnector.MySqlException ex) when (ex.Number == 1045) // Access Denied
-{
-    Console.WriteLine("[Database] Configured credentials failed (Error 1045: Access Denied). Attempting fallback credentials...");
-    var fallbackCandidates = new[]
-    {
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vineetha@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=vikas;Password=vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=root;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=;CharSet=utf8mb4;"
-    };
-
-    bool resolved = false;
-    foreach (var candidate in fallbackCandidates)
-    {
-        try
-        {
-            using var candidateConn = new MySqlConnector.MySqlConnection(candidate);
-            candidateConn.Open();
-            connectionString = candidate;
-            resolved = true;
-            Console.WriteLine($"[Database] Successfully connected with fallback credentials for user: {new MySqlConnector.MySqlConnectionStringBuilder(candidate).UserID}");
-            break;
-        }
-        catch
-        {
-            // try next candidate
-        }
-    }
-
-    if (!resolved)
-    {
-        Console.Error.WriteLine("[Database] Failed to connect with any fallback credentials.");
-    }
-}
+var connectionString = configuredConnectionString;
 
 var serverVersion = ServerVersion.AutoDetect(connectionString);
 

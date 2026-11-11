@@ -233,7 +233,6 @@ function globalSyncPlugin(backendTarget) {
       const timer = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(backendUrl("/api/v1/tables"), {
         signal: controller.signal,
-        headers: { "ngrok-skip-browser-warning": "true" },
       });
       clearTimeout(timer);
       backendOnline = res.ok || res.status < 500;
@@ -355,7 +354,6 @@ function globalSyncPlugin(backendTarget) {
 
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning");
 
         if (req.method === "OPTIONS") {
           res.statusCode = 204;
@@ -2480,7 +2478,7 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_BACKEND_URL ||
     env.VITE_BACKEND_URL ||
     apiBase ||
-    "http://127.0.0.1:5018";
+    "http://127.0.0.1:5000";
 
   return {
     plugins: [react(), globalSyncPlugin(backendTarget)],
@@ -2504,7 +2502,6 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/__backend_api/, ""),
-          headers: { "ngrok-skip-browser-warning": "true" },
           configure: (proxy) => {
             proxy.on("error", (err, req, res) => {
               console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
@@ -2512,7 +2509,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                  error: "Cannot reach the ASP.NET API on port 5000. Confirm it is running."
                 }));
               }
             });
@@ -2522,13 +2519,11 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
           secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
         },
         "/api/v1": {
           target: backendTarget,
           changeOrigin: true,
           secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
         },
         "/api/auth": {
           target: backendTarget,
@@ -2539,7 +2534,6 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
           secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
         },
       },
     },
