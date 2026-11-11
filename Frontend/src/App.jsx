@@ -1109,6 +1109,12 @@ export function App() {
     saveRouteSession(SESSION_KEY_ADMIN, s);
   };
 
+  const handleHotelLogin = () => {
+    setAdminSession(null);
+    saveRouteSession(SESSION_KEY_ADMIN, null);
+    navigate("/admin");
+  };
+
   const handleGlobalLogin = (s, targetRole) => {
     const roleToUse = targetRole || s?.role || "pos";
     setSession(s);
@@ -1877,7 +1883,6 @@ export function App() {
     };
   }, []);
 
-<<<<<<< HEAD
   const [takeawayOrder, setTakeawayOrder] = useState({
     id: "takeaway",
     backendTableId: null,
@@ -1892,11 +1897,6 @@ export function App() {
     capacity: 1,
   });
 
-  const isTakeawayActive = String(selectedTableId) === "takeaway";
-  const currentTable = isTakeawayActive
-    ? takeawayOrder
-    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
-=======
   // ── Table Concurrency Locking System ──────────────────────────────
   // Prevents multiple waiters from concurrently modifying the same table order.
   const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
@@ -1946,7 +1946,7 @@ export function App() {
   const saveLocks = (newLocks) => {
     setTableLocks(newLocks);
     try {
-      localStorage.setItem(STORAGE_KEY_TABLES ? STORAGE_KEY_TABLE_LOCKS : "avsr_table_locks_v1", JSON.stringify(newLocks));
+      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(newLocks));
       window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: newLocks }));
       broadcastSync("SYNC_TABLE_LOCKS", newLocks);
     } catch {}
@@ -1954,6 +1954,7 @@ export function App() {
 
   const acquireTableLock = (tableId, session) => {
     const tableKey = String(tableId);
+    if (tableKey === "takeaway") return { success: true };
     const existing = tableLocks[tableKey];
     const myId = String(session?.id || session?.userId || session?.username || "pos_user");
     const myName = String(session?.name || session?.fullName || session?.username || "Waiter");
@@ -1991,7 +1992,7 @@ export function App() {
   };
 
   const releaseTableLock = (tableId) => {
-    if (!tableId) return;
+    if (!tableId || String(tableId) === "takeaway") return;
     const tableKey = String(tableId);
     if (!tableLocks[tableKey]) return;
     const updated = { ...tableLocks };
@@ -2002,26 +2003,26 @@ export function App() {
     apiUnlockTable(tableKey).catch(() => {});
   };
 
-  const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+  const isTakeawayActive = String(selectedTableId) === "takeaway";
+  const currentTable = isTakeawayActive
+    ? takeawayOrder
+    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
 
   // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = (id) => {
-<<<<<<< HEAD
-    const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
-    setSelectedTableId(tableId);
-=======
-    const lockResult = acquireTableLock(id, posSession);
-    const targetTable = tables.find((t) => String(t.id) === String(id));
-    const tblName = targetTable?.name || `Table ${id}`;
+    const rawId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
+    if (String(rawId) !== "takeaway") {
+      const lockResult = acquireTableLock(rawId, posSession);
+      const targetTable = tables.find((t) => String(t.id) === String(rawId));
+      const tblName = targetTable?.name || `Table ${rawId}`;
 
-    if (!lockResult.success) {
-      showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
-      return;
+      if (!lockResult.success) {
+        showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
+        return;
+      }
     }
 
-    setSelectedTableId(id);
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+    setSelectedTableId(rawId);
     setActiveView("order");
     sounds.playAddItem();
   };
@@ -2535,10 +2536,7 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-<<<<<<< HEAD
-=======
           if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
           if (itemId) {
             return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
@@ -3852,11 +3850,8 @@ export function App() {
             menuItems={menuItems}
             menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
             tables={tables}
-            onAdminLogin={() => {
-              setAdminSession(null);
-              saveRouteSession(SESSION_KEY_ADMIN, null);
-              navigate("/admin");
-            }}
+            onHotelLogin={handleHotelLogin}
+            onAdminLogin={handleHotelLogin}
           />
         )}
 
@@ -4090,7 +4085,11 @@ export function App() {
                 <TakeawayOrderFlowView onBack={() => setActiveView("takeaway")} />
               )}
               {activeView === "reservation" && (
-                <TableReservationFlow onBackToPos={() => setActiveView("tables")} />
+                <TableReservationFlow
+                  onBackToPos={() => setActiveView("tables")}
+                  onHotelLogin={handleHotelLogin}
+                  onAdminLogin={handleHotelLogin}
+                />
               )}
               {activeView === "order" && (
                 <TableDetailView

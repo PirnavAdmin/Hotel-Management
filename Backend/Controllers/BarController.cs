@@ -17,6 +17,7 @@ namespace HMS.Controllers;
 public class BarController : ControllerBase
 {
     private readonly BarService _barService;
+    private readonly InventoryService _inventoryService;
     private readonly ReportingExportService _reportingExportService;
     private readonly ExportService _exportService;
     private readonly IHubContext<PosHub> _hubContext;
@@ -24,12 +25,14 @@ public class BarController : ControllerBase
 
     public BarController(
         BarService barService,
+        InventoryService inventoryService,
         ReportingExportService reportingExportService,
         ExportService exportService,
         IHubContext<PosHub> hubContext,
         ILogger<BarController> logger)
     {
         _barService = barService;
+        _inventoryService = inventoryService;
         _reportingExportService = reportingExportService;
         _exportService = exportService;
         _hubContext = hubContext;

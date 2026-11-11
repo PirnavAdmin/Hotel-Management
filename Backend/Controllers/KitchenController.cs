@@ -75,18 +75,11 @@ public class KitchenController : ControllerBase
             var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
             var batches = kitchenItems
                 .Where(i =>
-<<<<<<< HEAD
                     i.IsActive && !i.IsDeleted &&
                     !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
-=======
-                    i.IsActive &&
-                    !i.IsDeleted &&
-                    i.KotId.HasValue &&
-                    i.KotId.Value > 0 &&
                     !barMenuItemIds.Contains(i.MenuItemId) &&
                     (i.BotId == null || i.BotId == 0) &&
                     !OrderItemRouting.IsBarItem(i.Name) &&
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
                     (i.KotStatus == "Queued" ||
                      i.KotStatus == "queued" ||
                      i.KotStatus == "Cooking" ||
@@ -189,7 +182,21 @@ public class KitchenController : ControllerBase
             return BadRequest(new { success = false, message = "Status string is required." });
         }
 
-        var cleanStatus = request.Status.Trim().ToLowerInvariant();
+        var rawStatus = request.Status.Trim();
+        string cleanStatus;
+        if (rawStatus.Equals("PREPARATION COMPLETED", StringComparison.OrdinalIgnoreCase) || rawStatus.Equals("READY", StringComparison.OrdinalIgnoreCase))
+        {
+            cleanStatus = "ready";
+        }
+        else if (rawStatus.Equals("COOKING", StringComparison.OrdinalIgnoreCase) || rawStatus.Equals("IN PREPARATION", StringComparison.OrdinalIgnoreCase) || rawStatus.Equals("IN PREP", StringComparison.OrdinalIgnoreCase))
+        {
+            cleanStatus = "cooking";
+        }
+        else
+        {
+            cleanStatus = rawStatus.ToLowerInvariant();
+        }
+
         if (cleanStatus is not ("queued" or "cooking" or "ready"))
         {
             return BadRequest(new { success = false, message = "Status must be queued, cooking, or ready." });
@@ -212,7 +219,6 @@ public class KitchenController : ControllerBase
                 return NotFound(new { success = false, message = "Order item not found." });
             }
 
-<<<<<<< HEAD
             if (item.IsDeleted || !item.IsActive ||
                 string.Equals(item.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
                 (item.Order != null && (item.Order.IsDeleted || !item.Order.IsActive ||
@@ -222,24 +228,7 @@ public class KitchenController : ControllerBase
                 return Conflict(new { success = false, message = "Cannot update kitchen item status for a cancelled or deleted order." });
             }
 
-            var cleanStatus = request.Status.Trim();
-            if (cleanStatus.Equals("PREPARATION COMPLETED", StringComparison.OrdinalIgnoreCase) || cleanStatus.Equals("READY", StringComparison.OrdinalIgnoreCase))
-            {
-                cleanStatus = "ready";
-            }
-            else if (cleanStatus.Equals("COOKING", StringComparison.OrdinalIgnoreCase) || cleanStatus.Equals("IN PREPARATION", StringComparison.OrdinalIgnoreCase) || cleanStatus.Equals("IN PREP", StringComparison.OrdinalIgnoreCase))
-            {
-                cleanStatus = "cooking";
-            }
-            else if (cleanStatus.Length > 20)
-            {
-                cleanStatus = cleanStatus.Substring(0, 20);
-            }
-
-            item.KotStatus = cleanStatus.ToLowerInvariant();
-=======
             item.KotStatus = cleanStatus;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             item.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -302,7 +291,6 @@ public class KitchenController : ControllerBase
             });
         }
 
-<<<<<<< HEAD
         if (order.IsDeleted || !order.IsActive ||
             string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(order.FulfillmentStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))
@@ -310,22 +298,15 @@ public class KitchenController : ControllerBase
             return Conflict(new { success = false, message = "Cannot start cooking a cancelled or deleted order." });
         }
 
-        var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
-        var itemsToUpdate = kitchenItems
-            .Where(i =>
-                i.IsActive && !i.IsDeleted &&
-=======
         var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
             _context,
             order.Items.Select(item => item.MenuItemId));
 
-        var itemsToUpdate = order.Items
+        var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
+        var itemsToUpdate = kitchenItems
             .Where(i =>
-                i.IsActive &&
-                !i.IsDeleted &&
-                i.KotId.HasValue &&
-                i.KotId.Value > 0 &&
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+                i.IsActive && !i.IsDeleted &&
+                !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
                 (i.KotBatch == batch || batch == 0) &&
                 !barMenuItemIds.Contains(i.MenuItemId) &&
                 (i.BotId == null || i.BotId == 0) &&
@@ -400,7 +381,6 @@ public class KitchenController : ControllerBase
             });
         }
 
-<<<<<<< HEAD
         if (order.IsDeleted || !order.IsActive ||
             string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(order.FulfillmentStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))
@@ -408,23 +388,15 @@ public class KitchenController : ControllerBase
             return Conflict(new { success = false, message = "Cannot complete a cancelled or deleted order." });
         }
 
+        var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
+            _context,
+            order.Items.Select(item => item.MenuItemId));
+
         var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
         var itemsToUpdate = kitchenItems
             .Where(i =>
                 i.IsActive && !i.IsDeleted &&
                 !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
-=======
-        var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
-            _context,
-            order.Items.Select(item => item.MenuItemId));
-
-        var itemsToUpdate = order.Items
-            .Where(i =>
-                i.IsActive &&
-                !i.IsDeleted &&
-                i.KotId.HasValue &&
-                i.KotId.Value > 0 &&
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
                 (i.KotBatch == batch || batch == 0) &&
                 !barMenuItemIds.Contains(i.MenuItemId) &&
                 (i.BotId == null || i.BotId == 0) &&

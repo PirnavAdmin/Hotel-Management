@@ -69,12 +69,11 @@ import { AttendanceManagement } from "./modules/AttendanceManagement";
 import { PromotionsManagement } from "./modules/PromotionsManagement";
 import { SuppliersManagement } from "./modules/SuppliersManagement";
 import { RolesManagement } from "./modules/RolesManagement";
-import { apiGetRestaurantSettings, apiSaveRestaurantSettings } from "../api/settingsApi";
+import { apiGetRestaurantSettings, apiSaveRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
-import { apiGetRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 import { API_BASE_URL, API_SYNC_BASE, openOptionalEventStream } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
@@ -895,15 +894,6 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
-<<<<<<< HEAD
-    apiGetRestaurantSettings()
-      .then((res) => {
-        const data = res?.data || res;
-        if (data && typeof data === "object") {
-          applySettings(data);
-        }
-      })
-=======
     fetch(`${API_SYNC_BASE}/api/state`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
@@ -916,7 +906,6 @@ export function AdminPortal({
             data?.data?.restaurantSettings,
         ),
       )
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
       .catch(() => {});
 
     // Also fetch directly from dedicated restaurant-settings API

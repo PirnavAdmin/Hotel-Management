@@ -13,39 +13,22 @@ public static class OrderItemRouting
 {
     private static readonly string[] BeverageKeywords =
     {
-<<<<<<< HEAD
         "beverage", "beverages", "drink", "drinks", "mocktail", "mocktails", "cocktail", "cocktails",
-        "beer", "beers", "wine", "wines", "spirit", "spirits", "whisky", "whiskey", "vodka", "rum", "gin",
-        "brandy", "liquor", "juice", "juices", "soda", "sodas", "tonic", "cider", "champagne", "tea", "coffee",
-        "shake", "smoothie", "bar", "tequila", "mezcal", "liqueur", "shot", "shots", "shooter", "aperitif", "bitters",
-        "mojito", "margarita", "martini", "daiquiri", "cosmopolitan", "sangria", "pina colada", "long island",
-        "scotch", "bourbon", "breezer", "coke", "pepsi", "sprite", "fanta", "limca", "thums up", "red bull",
-        "lemonade", "lassi", "water", "corona", "budweiser", "heineken", "kingfisher", "carlsberg"
-=======
-        "beverage", "beverages", "drink", "drinks", "mocktail", "mocktails",
-        "cocktail", "cocktails", "beer", "beers", "cider", "ciders",
-        "spirit", "spirits", "whisky", "whiskey", "whiskeys", "scotch", "bourbon",
-        "vodka", "vodkas", "rum", "rums", "gin", "gins", "brandy", "cognac",
-        "tequila", "mezcal", "liqueur", "liqueurs", "shot", "shots", "shooter",
-        "juice", "juices", "soda", "tonic", "champagne", "tea", "chai", "coffee",
-        "latte", "espresso", "cappuccino", "shake", "shakes", "smoothie", "smoothies",
-        "bar", "breezer", "wine", "wines"
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+        "beer", "beers", "wine", "wines", "spirit", "spirits", "whisky", "whiskey", "whiskeys", "vodka", "vodkas",
+        "rum", "rums", "gin", "gins", "brandy", "cognac", "liquor", "juice", "juices", "soda", "sodas", "tonic",
+        "cider", "ciders", "champagne", "tea", "chai", "coffee", "latte", "espresso", "cappuccino", "shake", "shakes",
+        "smoothie", "smoothies", "bar", "tequila", "mezcal", "liqueur", "liqueurs", "shot", "shots", "shooter",
+        "aperitif", "bitters", "mojito", "margarita", "martini", "daiquiri", "cosmopolitan", "sangria", "pina colada",
+        "long island", "scotch", "bourbon", "breezer", "coke", "pepsi", "sprite", "fanta", "limca", "thums up",
+        "red bull", "lemonade", "lassi", "water", "corona", "budweiser", "heineken", "kingfisher", "carlsberg"
     };
 
     private static readonly string[] FoodKeywords =
     {
-<<<<<<< HEAD
         "biryani", "curries", "curry", "starters", "starter", "rice", "breads", "bread", "roti", "naan", "kulcha",
         "desserts", "dessert", "chicken", "mutton", "fish", "prawns", "paneer", "main course", "tandoor", "tandoori",
-        "chinese", "south indian", "north indian", "snacks", "soup", "soups", "salad", "salads", "appetizer", "appetizers"
-=======
-        "biryani", "curry", "curries", "starter", "starters", "rice", "bread",
-        "breads", "roti", "naan", "dessert", "desserts", "chicken", "mutton",
-        "paneer", "main course", "tandoor", "tandoori", "soup", "soups",
-        "salad", "salads", "tikka", "kebab", "kabab", "fry", "masala", "dal",
-        "pulao", "fried rice", "noodles", "gravy"
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+        "chinese", "south indian", "north indian", "snacks", "soup", "soups", "salad", "salads", "appetizer", "appetizers",
+        "tikka", "kebab", "kabab", "fry", "masala", "dal", "pulao", "fried rice", "noodles", "gravy"
     };
 
     public static bool ContainsBeverageTerm(string text)
@@ -96,6 +79,11 @@ public static class OrderItemRouting
         return false;
     }
 
+    public static bool IsBarItem(bool isBarItem, string? drinkType, string? category, string? itemName = null)
+    {
+        return IsBarItem(itemName, category, drinkType, isBarItem);
+    }
+
     public static async Task<HashSet<long>> GetBarMenuItemIdsAsync(
         AppDbContext context,
         IEnumerable<long> menuItemIds)
@@ -120,92 +108,9 @@ public static class OrderItemRouting
             .ToListAsync();
 
         return menuItems
-<<<<<<< HEAD
-            .Where(item => IsBarItem(item.IsBarItem, item.DrinkType, item.Category, item.DishName))
-=======
             .Where(item => IsBarItem(item.DishName, item.Category, item.DrinkType, item.IsBarItem))
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             .Select(item => item.MenuItemId)
             .ToHashSet();
-    }
-
-<<<<<<< HEAD
-    private static bool ContainsWord(string text, string term)
-    {
-        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(term)) return false;
-        if (term.Contains(' '))
-        {
-            return text.Contains(term, StringComparison.OrdinalIgnoreCase);
-        }
-        var words = text.Split(new[] { ' ', '-', '_', '/', '&', ',', '(', ')', '.', '\'' }, StringSplitOptions.RemoveEmptyEntries);
-        return words.Any(w => string.Equals(w, term, StringComparison.OrdinalIgnoreCase) || 
-                              (term.Length >= 4 && w.StartsWith(term, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    public static bool IsBarItem(string? itemName, string? category = null, string? drinkType = null, bool isBarItem = false)
-    {
-        return IsBarItem(isBarItem, drinkType, category, itemName);
-    }
-
-    public static bool IsBarItem(bool isBarItem, string? drinkType, string? category, string? itemName = null)
-=======
-    public static async Task<long> ResolveMenuItemIdAsync(
-        AppDbContext context,
-        long? providedId,
-        string? itemName,
-        bool? isBarHint = null)
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
-    {
-        var cleanName = (itemName ?? string.Empty).Trim();
-        bool isDrink = isBarHint ?? IsBarItem(cleanName);
-
-        // 1. If provided ID is valid, check if it matches in database
-        if (providedId.HasValue && providedId.Value > 0)
-        {
-            var existing = await context.MenuItems
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.MenuItemId == providedId.Value);
-
-            if (existing != null)
-            {
-                bool existingIsBar = IsBarItem(existing.DishName, existing.Category, existing.DrinkType, existing.IsBarItem);
-                // If there is no contradiction between requested item type and existing item type
-                if (isDrink == existingIsBar)
-                {
-                    return existing.MenuItemId;
-                }
-            }
-        }
-
-<<<<<<< HEAD
-        // Prioritize distinct beverage names
-        if (!string.IsNullOrWhiteSpace(itemName))
-        {
-            var normalizedName = itemName.Trim().ToLowerInvariant();
-            if (BeverageCategoryTerms.Any(term => ContainsWord(normalizedName, term)))
-            {
-                if (!FoodCategoryTerms.Any(term => ContainsWord(normalizedName, term)))
-                {
-                    return true;
-                }
-            }
-        }
-
-        var normalizedCategory = (category ?? string.Empty).Trim().ToLowerInvariant();
-        if (!string.IsNullOrEmpty(normalizedCategory))
-        {
-            if (FoodCategoryTerms.Any(term => ContainsWord(normalizedCategory, term)))
-            {
-                return false;
-            }
-
-            if (BeverageCategoryTerms.Any(term => ContainsWord(normalizedCategory, term)))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public static async Task<(List<OrderItem> kitchenItems, List<OrderItem> barItems)> ClassifyOrderItemsAsync(
@@ -252,7 +157,7 @@ public static class OrderItemRouting
 
         foreach (var item in itemList)
         {
-            if (IsBarItem(false, null, null, item.Name))
+            if (IsBarItem(item.Name))
             {
                 barItems.Add(item);
                 continue;
@@ -270,8 +175,8 @@ public static class OrderItemRouting
 
             // Check if item already has bot_id set
             bool isBar = (item.BotId.HasValue && item.BotId.Value > 0) || (menu != null
-                ? IsBarItem(menu.IsBarItem, menu.DrinkType, menu.Category, item.Name)
-                : IsBarItem(false, null, null, item.Name));
+                ? IsBarItem(menu.DishName, menu.Category, menu.DrinkType, menu.IsBarItem)
+                : IsBarItem(item.Name));
 
             if (isBar)
             {
@@ -285,28 +190,33 @@ public static class OrderItemRouting
 
         return (kitchenItems, barItems);
     }
+
     public static async Task<long> ResolveMenuItemIdAsync(
         AppDbContext context,
         long? providedId,
         string? itemName,
         bool? isBarHint = null)
     {
+        var cleanName = (itemName ?? string.Empty).Trim();
+        bool isDrink = isBarHint ?? IsBarItem(cleanName);
+
+        // 1. If provided ID is valid, check if it matches in database
         if (providedId.HasValue && providedId.Value > 0)
         {
-            var exists = await context.MenuItems.AnyAsync(m => m.MenuItemId == providedId.Value);
-            if (exists) return providedId.Value;
+            var existing = await context.MenuItems
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.MenuItemId == providedId.Value);
+
+            if (existing != null)
+            {
+                bool existingIsBar = IsBarItem(existing.DishName, existing.Category, existing.DrinkType, existing.IsBarItem);
+                if (isDrink == existingIsBar)
+                {
+                    return existing.MenuItemId;
+                }
+            }
         }
 
-        var cleanName = (itemName ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(cleanName)) return 0;
-
-        var match = await context.MenuItems
-            .Where(m => m.DishName == cleanName)
-            .Select(m => m.MenuItemId)
-            .FirstOrDefaultAsync();
-
-        return match;
-=======
         // 2. Lookup by exact dish name
         if (!string.IsNullOrWhiteSpace(cleanName))
         {
@@ -335,13 +245,13 @@ public static class OrderItemRouting
 
                 // Token heuristics for common beverage families
                 var tokenMatch = barItems.FirstOrDefault(b =>
-                    (cleanName.Contains("vodka", StringComparison.OrdinalIgnoreCase) && (b.DishName.Contains("vodka", StringComparison.OrdinalIgnoreCase) || b.Category.Contains("Vodka", StringComparison.OrdinalIgnoreCase))) ||
-                    (cleanName.Contains("beer", StringComparison.OrdinalIgnoreCase) && (b.DishName.Contains("beer", StringComparison.OrdinalIgnoreCase) || b.Category.Contains("Beer", StringComparison.OrdinalIgnoreCase))) ||
-                    (cleanName.Contains("whiskey", StringComparison.OrdinalIgnoreCase) && (b.DishName.Contains("stag", StringComparison.OrdinalIgnoreCase) || b.Category.Contains("Whiskey", StringComparison.OrdinalIgnoreCase))) ||
+                    (cleanName.Contains("vodka", StringComparison.OrdinalIgnoreCase) && (b.DishName.Contains("vodka", StringComparison.OrdinalIgnoreCase) || (b.Category != null && b.Category.Contains("Vodka", StringComparison.OrdinalIgnoreCase)))) ||
+                    (cleanName.Contains("beer", StringComparison.OrdinalIgnoreCase) && (b.DishName.Contains("beer", StringComparison.OrdinalIgnoreCase) || (b.Category != null && b.Category.Contains("Beer", StringComparison.OrdinalIgnoreCase)))) ||
+                    (cleanName.Contains("whiskey", StringComparison.OrdinalIgnoreCase) && (b.DishName.Contains("stag", StringComparison.OrdinalIgnoreCase) || (b.Category != null && b.Category.Contains("Whiskey", StringComparison.OrdinalIgnoreCase)))) ||
                     (cleanName.Contains("mojito", StringComparison.OrdinalIgnoreCase) && b.DishName.Contains("mojito", StringComparison.OrdinalIgnoreCase)) ||
                     (cleanName.Contains("coffee", StringComparison.OrdinalIgnoreCase) && b.DishName.Contains("coffee", StringComparison.OrdinalIgnoreCase)) ||
-                    (cleanName.Contains("juice", StringComparison.OrdinalIgnoreCase) && b.Category.Contains("Juices", StringComparison.OrdinalIgnoreCase)) ||
-                    (cleanName.Contains("cocktail", StringComparison.OrdinalIgnoreCase) && b.Category.Contains("Cocktails", StringComparison.OrdinalIgnoreCase)));
+                    (cleanName.Contains("juice", StringComparison.OrdinalIgnoreCase) && (b.Category != null && b.Category.Contains("Juices", StringComparison.OrdinalIgnoreCase))) ||
+                    (cleanName.Contains("cocktail", StringComparison.OrdinalIgnoreCase) && (b.Category != null && b.Category.Contains("Cocktails", StringComparison.OrdinalIgnoreCase))));
 
                 if (tokenMatch != null) return tokenMatch.MenuItemId;
                 if (barItems.Count > 0) return barItems[0].MenuItemId;
@@ -372,6 +282,5 @@ public static class OrderItemRouting
 
         // 4. Default fallback: 13 (vodka) for bar, 1 (biryani) for food
         return isDrink ? 13 : 1;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     }
 }

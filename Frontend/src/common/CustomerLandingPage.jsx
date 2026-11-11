@@ -367,8 +367,8 @@ export const CURATED_TAKEAWAY_ITEMS = [
   },
 ];
 
-const getAvailableTables = (tables, guests) =>
-  (Array.isArray(tables) ? tables : []).filter((table) => {
+const getAvailableTables = (tables, guests) => {
+  const filtered = (Array.isArray(tables) ? tables : []).filter((table) => {
     const status = String(table.status || "").toLowerCase();
     const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
     return ["vacant", "available"].includes(status) && cap >= guests;
@@ -419,7 +419,9 @@ export function CustomerLandingPage({
   menuLoading = false,
   tables = [],
   onAdminLogin,
+  onHotelLogin,
 }) {
+  const handleLoginClick = onHotelLogin || onAdminLogin;
   // --- Cart & Navigation State ---
   const [cart, setCart] = useState(() => {
     // Pre-populate with exact item from POS screenshot: Hyderabadi Chicken Dum Biryani x 1
@@ -885,9 +887,9 @@ export function CustomerLandingPage({
             </button>
           )}
 
-          <button className="customer-admin-link" type="button" onClick={onAdminLogin}>
+          <button className="customer-admin-link" type="button" onClick={handleLoginClick}>
             <ShieldCheck size={18} />
-            <span>Admin Login</span>
+            <span>Hotel Login</span>
           </button>
         </div>
       </header>

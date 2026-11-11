@@ -1323,8 +1323,7 @@ public class BarService
         const string sql = @"
             SELECT 
                 bot.bot_id AS kot_id,
-<<<<<<< HEAD
-                bot.bot_number AS kot_number,
+                COALESCE(bot.bot_number, CONCAT('BOT-', bot.bot_id)) AS kot_number,
                 o.order_id,
                 COALESCE(o.order_number, CONCAT('ORD-', o.order_id)) AS order_number,
                 o.dining_table_id AS table_id,
@@ -1384,63 +1383,6 @@ public class BarService
                     AND (oi.bot_id IS NOT NULL OR mi.is_bar_item = 1 OR mi.drink_type IS NOT NULL)
               )
             ORDER BY created_at DESC;
-=======
-                COALESCE(bot.bot_number, CONCAT('BOT-', bot.bot_id)) AS kot_number,
-                o.order_id,
-                COALESCE(o.order_number, CONCAT('ORD-', o.order_id)) AS order_number,
-                o.dining_table_id AS table_id,
-                COALESCE(
-                    dt.table_number, 
-                    rt.table_number, 
-                    CASE 
-                        WHEN o.order_type = 'Takeaway' THEN 'Takeaway' 
-                        WHEN o.order_type = 'Delivery' THEN 'Delivery' 
-                        WHEN o.dining_table_id IS NOT NULL THEN CONCAT('Table-', o.dining_table_id) 
-                        ELSE 'Bar Counter' 
-                    END
-                ) AS table_number,
-                COALESCE(
-                    rt.table_name, 
-                    dt.table_number, 
-                    CASE 
-                        WHEN o.order_type = 'Takeaway' THEN 'Takeaway Counter' 
-                        WHEN o.order_type = 'Delivery' THEN 'Delivery Parcel' 
-                        WHEN o.dining_table_id IS NOT NULL THEN CONCAT('Table ', o.dining_table_id) 
-                        ELSE 'Bar Counter' 
-                    END
-                ) AS table_name,
-                COALESCE(
-                    ds.section_name, 
-                    rt.section_area, 
-                    rt.location, 
-                    CASE 
-                        WHEN o.order_type = 'Takeaway' THEN 'Takeaway' 
-                        WHEN o.order_type = 'Delivery' THEN 'Delivery' 
-                        ELSE 'Main Hall' 
-                    END
-                ) AS area,
-                COALESCE(sp.full_name, u.full_name, 'Unassigned') AS server_name,
-                CASE 
-                    WHEN bot.status = 'mixing' THEN 'preparing'
-                    ELSE COALESCE(bot.status, 'queued')
-                END AS status,
-                COALESCE(bot.priority, 'normal') AS priority,
-                COALESCE(bot.special_notes, o.special_instructions) AS special_notes,
-                bot.created_at AS created_at,
-                bot.completed_at AS completed_at
-            FROM bar_order_tickets bot
-            INNER JOIN restaurant_orders o ON o.order_id = bot.order_id
-            LEFT JOIN dining_tables dt ON o.dining_table_id = dt.dining_table_id
-            LEFT JOIN dining_sections ds ON dt.section_id = ds.section_id
-            LEFT JOIN restaurant_tables rt ON o.dining_table_id = rt.table_id
-            LEFT JOIN staff_persons sp ON sp.staff_id = COALESCE(o.waiter_id, dt.assigned_waiter_id, rt.assigned_server_id)
-            LEFT JOIN users u ON o.waiter_id = u.user_id
-            WHERE o.is_active = 1 AND o.is_deleted = 0
-              AND (o.order_status IN ('Active', 'active', 'Billed', 'billed')
-                   OR (o.order_type = 'Takeaway' AND o.order_status = 'Settled'))
-              AND LOWER(COALESCE(bot.status, 'queued')) NOT IN ('served', 'cancelled', 'canceled')
-            ORDER BY bot.created_at DESC;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         ";
 
         var tickets = await _spService.ExecuteSqlQueryAsync(sql, reader =>
@@ -1476,15 +1418,16 @@ public class BarService
             return new List<BarKotTicketDto>();
         }
 
+        var latestTicketByOrder = tickets
+            .GroupBy(t => t.OrderId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.CreatedAt).First().KotId);
+
         var ticketOrderIdsSql = string.Join(",", tickets.Select(t => t.OrderId).Distinct());
         var itemsSql = $@"
             SELECT 
                 oi.order_item_id,
                 oi.order_id,
-<<<<<<< HEAD
                 oi.kot_id,
-=======
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
                 oi.bot_id,
                 oi.menu_item_id,
                 oi.item_name,
@@ -1498,36 +1441,17 @@ public class BarService
                 m.drink_type
             FROM order_items oi
             LEFT JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
-<<<<<<< HEAD
             WHERE oi.is_active = 1 AND oi.is_deleted = 0
               AND LOWER(COALESCE(oi.item_status, '')) <> 'cancelled'
               AND oi.order_id IN ({ticketOrderIdsSql});
-=======
-            WHERE oi.is_deleted = 0 AND oi.is_active = 1
-              AND oi.bot_id IS NOT NULL AND oi.bot_id > 0;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         ";
 
         var allItems = await _spService.ExecuteSqlQueryAsync(itemsSql, reader =>
         {
             var oiId = reader.GetInt64(reader.GetOrdinal("order_item_id"));
-<<<<<<< HEAD
             var kotId = SafeGetInt64(reader, "kot_id");
             var botId = SafeGetInt64(reader, "bot_id");
             var isBar = reader.GetInt32(reader.GetOrdinal("is_bar_item")) == 1;
-            var cat = SafeGetString(reader, "category") ?? "Beverages";
-            var drinkType = SafeGetString(reader, "drink_type");
-            var dishName = SafeGetString(reader, "item_name") ?? "Drink Item";
-            var isBeverage = (botId.HasValue && botId.Value > 0) || isBar || !string.IsNullOrWhiteSpace(drinkType) || IsBeverageCategory(cat) || IsBeverageCategory(dishName);
-
-            return new
-            {
-                KotId = kotId,
-                BotId = botId,
-=======
-            var botId = SafeGetInt64(reader, "bot_id");
-            var isBar = (botId.HasValue && botId.Value > 0) ||
-                reader.GetInt32(reader.GetOrdinal("is_bar_item")) == 1;
             var cat = SafeGetString(reader, "category") ?? "Beverages";
             var drinkType = SafeGetString(reader, "drink_type");
             var dishName = SafeGetString(reader, "item_name") ?? "Drink Item";
@@ -1535,8 +1459,8 @@ public class BarService
 
             return new
             {
-                KotId = botId,
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+                KotId = kotId,
+                BotId = botId,
                 OrderId = reader.GetInt64(reader.GetOrdinal("order_id")),
                 Item = new BarKotItemDto
                 {
@@ -1558,7 +1482,6 @@ public class BarService
 
         foreach (var t in tickets)
         {
-<<<<<<< HEAD
             var isLatestTicket = latestTicketByOrder.TryGetValue(t.OrderId, out var latestTicketId) &&
                 latestTicketId == t.KotId;
             var itemsForTicket = allItems
@@ -1567,12 +1490,6 @@ public class BarService
                 .Where(i => i.IsBarItem)
                 .GroupBy(i => i.OrderItemId)
                 .Select(g => g.First())
-=======
-            var itemsForTicket = allItems
-                .Where(x => x.KotId == t.KotId)
-                .Select(x => x.Item)
-                .Where(i => i.IsBarItem)
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
                 .ToList();
 
             t.Items = itemsForTicket;
@@ -1669,7 +1586,6 @@ public class BarService
     public async Task<BarKotTicketDto?> UpdateBarKotStatusAsync(long kotId, string status)
     {
         var cleanStatus = status.Trim().ToLower();
-<<<<<<< HEAD
         if (cleanStatus == "cooking" || cleanStatus == "in prep") cleanStatus = "mixing";
         if (cleanStatus == "preparation completed" || cleanStatus == "completed") cleanStatus = "ready";
 
@@ -1694,11 +1610,6 @@ public class BarService
             }
         }
 
-        const string sql = @"
-            UPDATE bar_order_tickets 
-            SET status = @p_status,
-                completed_at = CASE WHEN @p_status IN ('ready', 'served', 'completed') THEN UTC_TIMESTAMP() ELSE completed_at END
-=======
         string botStatus = cleanStatus switch
         {
             "preparing" => "mixing",
@@ -1713,7 +1624,6 @@ public class BarService
             UPDATE bar_order_tickets 
             SET status = @p_bot_status,
                 completed_at = CASE WHEN @p_bot_status IN ('ready', 'served', 'completed') THEN UTC_TIMESTAMP() ELSE completed_at END
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             WHERE bot_id = @p_kot_id;
         ";
         await _spService.ExecuteSqlNonQueryAsync(sql, new Dictionary<string, object?>
@@ -1732,9 +1642,6 @@ public class BarService
             _ => "queued"
         };
 
-<<<<<<< HEAD
-        try
-=======
         const string itemsSql = @"
             UPDATE order_items oi
             LEFT JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id
@@ -1742,7 +1649,11 @@ public class BarService
             WHERE oi.bot_id = @p_kot_id AND oi.is_active = 1 AND oi.is_deleted = 0;
         ";
         await _spService.ExecuteSqlNonQueryAsync(itemsSql, new Dictionary<string, object?>
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+        {
+            { "@p_item_status", itemStatus },
+            { "@p_kot_id", kotId }
+        });
+        try
         {
             await _spService.ExecuteSqlNonQueryAsync(
                 "UPDATE bar_bot_items SET item_status = @p_item_status WHERE bot_id = @p_kot_id;",
@@ -1833,7 +1744,6 @@ public class BarService
     public async Task<BarKotItemDto?> UpdateBarKotItemStatusAsync(long orderItemId, string status)
     {
         var cleanStatus = status.Trim().ToLower();
-<<<<<<< HEAD
         if (cleanStatus != "cancelled")
         {
             const string itemGuardSql = @"
@@ -1848,7 +1758,7 @@ public class BarService
                 throw new InvalidOperationException("Cannot update status for a cancelled or deleted bar order item.");
             }
         }
-=======
+
         string itemStatus = cleanStatus switch
         {
             "preparing" => "cooking",
@@ -1858,8 +1768,6 @@ public class BarService
             "cancelled" => "cancelled",
             _ => "queued"
         };
-
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         const string sql = @"
             UPDATE order_items 
             SET item_status = @p_status, updated_at = UTC_TIMESTAMP()
@@ -2879,13 +2787,8 @@ public class BarService
 
         return new BarInvoicesSummaryDto
         {
-<<<<<<< HEAD
-            TotalInvoicesCount = activeInvoices.Count,
-            TotalRevenue = totalRev > 0 ? totalRev : 3756.50m,
-=======
             TotalInvoicesCount = invoices.Count,
             TotalRevenue = totalRev,
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             CashCollected = Math.Round(cashInvoices.Sum(i => i.GrandTotal), 2),
             CashInvoicesCount = cashInvoices.Count,
             UpiCollected = Math.Round(upiInvoices.Sum(i => i.GrandTotal), 2),
@@ -2953,21 +2856,6 @@ public class BarService
 
     public async Task<BarReportsScreenDto> GetBarReportsScreenAsync()
     {
-<<<<<<< HEAD
-        // 1. Active Beverage Orders (Card 1 in Image 3: 4)
-        int activeBeverageOrders = 4;
-        try
-        {
-            var beverageOrderCount = await _spService.ExecuteSqlScalarAsync<int?>(
-                "SELECT COUNT(DISTINCT ro.order_id) FROM restaurant_orders ro " +
-                "JOIN order_items oi ON ro.order_id = oi.order_id " +
-                "JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id " +
-                "WHERE ro.is_active = 1 AND ro.is_deleted = 0 " +
-                "AND LOWER(COALESCE(ro.order_status, '')) NOT IN ('completed', 'cancelled') " +
-                "AND LOWER(COALESCE(ro.fulfillment_status, '')) NOT IN ('completed', 'pickedup', 'cancelled') " +
-                "AND oi.is_active = 1 AND oi.is_deleted = 0 AND LOWER(COALESCE(oi.item_status, '')) <> 'cancelled' " +
-                "AND (mi.is_bar_item = 1 OR LOWER(mi.category) IN ('beverages','cocktails','mocktails','beer','beers','wine','spirits','whiskey'));");
-=======
         var activeBeverageOrders = await _spService.ExecuteSqlScalarAsync<int?>(
             "SELECT COUNT(DISTINCT ro.order_id) FROM restaurant_orders ro " +
             "JOIN order_items oi ON ro.order_id = oi.order_id " +
@@ -2976,7 +2864,6 @@ public class BarService
             "AND LOWER(ro.order_status) NOT IN ('completed', 'settled', 'billed', 'cancelled', 'canceled') " +
             "AND oi.is_active = 1 AND oi.is_deleted = 0 " +
             "AND (mi.is_bar_item = 1 OR LOWER(mi.category) IN ('beverages','cocktails','mocktails','beer','beers','wine','spirits','whiskey'));") ?? 0;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
         var menuBeverageItems = await _context.MenuItems
             .CountAsync(m => m.DeletedAt == null && (m.IsBarItem ||
@@ -2990,39 +2877,6 @@ public class BarService
         var inventoryRecords = await _spService.ExecuteSqlScalarAsync<int?>(
             "SELECT COUNT(*) FROM ingredients WHERE is_active = 1 AND deleted_at IS NULL;") ?? 0;
 
-<<<<<<< HEAD
-        // 3. Beverage Inventory Records (Card 3 in Image 3: 497)
-        int inventoryRecords = 497;
-        try
-        {
-            var count = await _spService.ExecuteSqlScalarAsync<int?>("SELECT COUNT(*) FROM ingredients;");
-            if (count.HasValue && count.Value == 497)
-            {
-                inventoryRecords = count.Value;
-            }
-        }
-        catch { }
-
-        // 4. Completed Drink Sales (Card 4 in Image 3: ₹300.00)
-        decimal completedSales = 300.00m;
-        try
-        {
-            var sqlSales = await _spService.ExecuteSqlScalarAsync<decimal?>(
-                "SELECT SUM(oi.total_price) FROM order_items oi " +
-                "JOIN restaurant_orders ro ON oi.order_id = ro.order_id " +
-                "JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id " +
-                "WHERE ro.is_deleted = 0 AND LOWER(COALESCE(ro.order_status, '')) = 'completed' " +
-                "AND LOWER(COALESCE(ro.fulfillment_status, '')) <> 'cancelled' " +
-                "AND oi.is_active = 1 AND oi.is_deleted = 0 AND LOWER(COALESCE(oi.item_status, '')) <> 'cancelled' " +
-                "AND NOT EXISTS (SELECT 1 FROM invoices inv WHERE inv.order_id = ro.order_id AND UPPER(COALESCE(inv.status, '')) IN ('VOID', 'REFUNDED', 'CANCELLED')) " +
-                "AND (mi.is_bar_item = 1 OR LOWER(mi.category) IN ('beverages','cocktails','mocktails','beer','beers','wine','spirits'));");
-            if (sqlSales.HasValue && sqlSales.Value > 300.00m)
-            {
-                completedSales = sqlSales.Value;
-            }
-        }
-        catch { }
-=======
         var completedSales = await _spService.ExecuteSqlScalarAsync<decimal?>(
             "SELECT COALESCE(SUM(oi.total_price), 0) FROM order_items oi " +
             "JOIN restaurant_orders ro ON oi.order_id = ro.order_id " +
@@ -3031,7 +2885,6 @@ public class BarService
             "AND LOWER(ro.order_status) IN ('completed', 'settled', 'billed') " +
             "AND oi.is_active = 1 AND oi.is_deleted = 0 " +
             "AND (mi.is_bar_item = 1 OR LOWER(mi.category) IN ('beverages','cocktails','mocktails','beer','beers','wine','spirits'));") ?? 0m;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
         var rows = new List<BarReportRowDto>
         {

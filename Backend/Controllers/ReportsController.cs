@@ -12,42 +12,29 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/reports")]
 [Microsoft.AspNetCore.Authorization.AllowAnonymous]
-<<<<<<< HEAD
-[Tags("Reports")]
-public class ReportsController : ControllerBase
-{
-    private readonly SpService _spService;
-    private readonly ReportingExportService _reportingExportService;
-    private readonly ExportService _exportService;
-=======
 [Tags("Admin", "Reports")]
 public class ReportsController : ControllerBase
 {
     private readonly SpService _spService;
     private readonly BarService _barService;
     private readonly SalaryService _salaryService;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<ReportsController> _logger;
 
     public ReportsController(
         SpService spService,
-<<<<<<< HEAD
+        BarService barService,
+        SalaryService salaryService,
         ReportingExportService reportingExportService,
         ExportService exportService,
         ILogger<ReportsController> logger)
     {
         _spService = spService;
-        _reportingExportService = reportingExportService;
-        _exportService = exportService;
-=======
-        BarService barService,
-        SalaryService salaryService,
-        ILogger<ReportsController> logger)
-    {
-        _spService = spService;
         _barService = barService;
         _salaryService = salaryService;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }[HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboardReport()
@@ -446,17 +433,13 @@ public async Task<IActionResult> GetInventoryReport()
             return StatusCode(500, new { success = false, message = ex.Message });
         }
     }
-<<<<<<< HEAD
-=======
 
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     [HttpGet("sales")]
     public async Task<IActionResult> GetRevenueReport()
     {
         return await GetDashboardReport();
     }
 
-<<<<<<< HEAD
     #region Export Endpoints
 
     [HttpGet("sales/export")]
@@ -534,7 +517,10 @@ public async Task<IActionResult> GetInventoryReport()
     {
         var doc = await _reportingExportService.GenerateFinancialReportExportAsync(fromDate, toDate, department);
         return _exportService.ExportResult(doc, format);
-=======
+    }
+
+    #endregion
+
     #region Inventory Reports
 
     [HttpGet("inventory")]
@@ -672,7 +658,6 @@ public async Task<IActionResult> GetInventoryReport()
             _logger.LogError(ex, "Error exporting salary CSV");
             return StatusCode(500, new { success = false, message = ex.Message });
         }
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     }
 
     #endregion

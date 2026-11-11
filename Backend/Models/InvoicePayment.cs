@@ -40,7 +40,6 @@ public class InvoicePayment
     [Column("payment_status")]
     public string PaymentStatus { get; set; } = "success";
 
-<<<<<<< HEAD
     [MaxLength(40)]
     [Column("gateway_provider")]
     public string? GatewayProvider { get; set; }
@@ -64,9 +63,6 @@ public class InvoicePayment
     [MaxLength(100)]
     [Column("idempotency_key")]
     public string? IdempotencyKey { get; set; }
-
-=======
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     [Column("paid_at")]
     public DateTime PaidAt { get; set; } = DateTime.UtcNow;
 }
