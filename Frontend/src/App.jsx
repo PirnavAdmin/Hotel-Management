@@ -15,7 +15,8 @@ import {
   PastOrdersModal,
   TakeawayOrderFlowView,
 } from "./user";
-import { Header, LoginPage, ErrorBoundary, CustomerLandingPage } from "./common";
+import { Header, LoginPage, ErrorBoundary } from "./common";
+import { CustomerLandingPage } from "./common/CustomerLandingPage";
 import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
 import { BarBOTView } from "./bar/BarBOTView";
@@ -1891,111 +1892,6 @@ export function App() {
     capacity: 1,
   });
 
-  // ── Table Concurrency Locking System ──────────────────────────────
-  // Prevents multiple waiters from concurrently modifying the same table order.
-  const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
-
-  const [tableLocks, setTableLocks] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_TABLE_LOCKS);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    const handleStorage = (e) => {
-      if (e.key === STORAGE_KEY_TABLE_LOCKS && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (parsed && typeof parsed === "object") setTableLocks(parsed);
-        } catch {}
-      }
-    };
-    const handleLockEvent = (e) => {
-      if (e.detail && typeof e.detail === "object") {
-        setTableLocks(e.detail);
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("avsr-table-locks-updated", handleLockEvent);
-
-    // Initial load of live table locks from backend
-    apiGetTableLocks()
-      .then((res) => {
-        const liveLocks = res?.data || res?.locks;
-        if (liveLocks && typeof liveLocks === "object") {
-          setTableLocks((prev) => ({ ...prev, ...liveLocks }));
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("avsr-table-locks-updated", handleLockEvent);
-    };
-  }, []);
-
-  const saveLocks = (newLocks) => {
-    setTableLocks(newLocks);
-    try {
-      localStorage.setItem(STORAGE_KEY_TABLES ? STORAGE_KEY_TABLE_LOCKS : "avsr_table_locks_v1", JSON.stringify(newLocks));
-      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: newLocks }));
-      broadcastSync("SYNC_TABLE_LOCKS", newLocks);
-    } catch {}
-  };
-
-  const acquireTableLock = (tableId, session) => {
-    const tableKey = String(tableId);
-    const existing = tableLocks[tableKey];
-    const myId = String(session?.id || session?.userId || session?.username || "pos_user");
-    const myName = String(session?.name || session?.fullName || session?.username || "Waiter");
-    const isStaffAdmin = String(session?.role || "").toLowerCase() === "admin";
-
-    // Timeout: 5 minutes of inactivity releases lock
-    const LOCK_TIMEOUT_MS = 5 * 60 * 1000;
-    if (existing && String(existing.userId) !== myId && (Date.now() - (existing.timestamp || 0)) < LOCK_TIMEOUT_MS) {
-      if (!isStaffAdmin) {
-        return {
-          success: false,
-          lockedBy: existing,
-        };
-      }
-    }
-
-    const lockObj = {
-      tableId: tableKey,
-      userId: myId,
-      username: session?.username || myName,
-      serverName: myName,
-      timestamp: Date.now(),
-    };
-
-    const updated = {
-      ...tableLocks,
-      [tableKey]: lockObj,
-    };
-    saveLocks(updated);
-
-    // Sync to backend API & broadcast to other waiters/devices
-    apiLockTable(tableKey, lockObj).catch(() => {});
-
-    return { success: true };
-  };
-
-  const releaseTableLock = (tableId) => {
-    if (!tableId) return;
-    const tableKey = String(tableId);
-    if (!tableLocks[tableKey]) return;
-    const updated = { ...tableLocks };
-    delete updated[tableKey];
-    saveLocks(updated);
-
-    // Release on backend API & broadcast to other waiters/devices
-    apiUnlockTable(tableKey).catch(() => {});
-  };
-
   const isTakeawayActive = String(selectedTableId) === "takeaway";
   const currentTable = isTakeawayActive
     ? takeawayOrder
@@ -2004,17 +1900,6 @@ export function App() {
   // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = (id) => {
     const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
-    if (String(tableId) !== "takeaway") {
-      const lockResult = acquireTableLock(tableId, posSession);
-      const targetTable = tables.find((t) => String(t.id) === String(tableId));
-      const tblName = targetTable?.name || `Table ${tableId}`;
-
-      if (!lockResult.success) {
-        showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
-        return;
-      }
-    }
-
     setSelectedTableId(tableId);
     setActiveView("order");
     sounds.playAddItem();
@@ -2529,7 +2414,6 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-          if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
           if (itemId) {
             return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
