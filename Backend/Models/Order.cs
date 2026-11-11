@@ -58,6 +58,57 @@ public class Order
     // restaurant_orders.updated_by
     public long? UpdatedBy { get; set; }
 
+    // restaurant_orders.customer_id
+    public long? CustomerId { get; set; }
+
+    // restaurant_orders.customer_name
+    [MaxLength(120)]
+    public string? CustomerName { get; set; }
+
+    // restaurant_orders.customer_phone
+    [MaxLength(20)]
+    public string? CustomerPhone { get; set; }
+
+    // restaurant_orders.customer_email
+    [MaxLength(120)]
+    public string? CustomerEmail { get; set; }
+
+    // restaurant_orders.packaging_charge
+    public decimal PackagingCharge { get; set; }
+
+    // restaurant_orders.fulfillment_status ("New", "Preparing", "Ready", "PickedUp", "Completed", "Cancelled")
+    [MaxLength(30)]
+    public string? FulfillmentStatus { get; set; }
+
+    // restaurant_orders.payment_status ("Paid", "Pending", "Failed")
+    [MaxLength(20)]
+    public string? PaymentStatus { get; set; }
+
+    // restaurant_orders.payment_method
+    [MaxLength(30)]
+    public string? PaymentMethod { get; set; }
+
+    // restaurant_orders.idempotency_key
+    [MaxLength(100)]
+    public string? IdempotencyKey { get; set; }
+
+    // restaurant_orders.service_charge
+    public decimal ServiceCharge { get; set; }
+
+    // restaurant_orders.cancellation_reason
+    [MaxLength(255)]
+    public string? CancellationReason { get; set; }
+
+    // restaurant_orders.cancelled_at
+    public DateTime? CancelledAt { get; set; }
+
+    // restaurant_orders.cancelled_by
+    public long? CancelledBy { get; set; }
+
+    // restaurant_orders.cancelled_by_name
+    [MaxLength(120)]
+    public string? CancelledByName { get; set; }
+
     // Navigation property
     public ICollection<OrderItem> Items { get; set; }
         = new List<OrderItem>();
@@ -105,11 +156,12 @@ public class Order
     public decimal GrandTotal { get; set; }
 
     [NotMapped]
-    public string? PaymentMethod { get; set; }
-
-    [NotMapped]
     public string? InvoiceNo { get; set; }
 
     [NotMapped]
     public DateTime? SettledAt { get; set; }
+    [NotMapped]
+    public string? KitchenKotNumber { get; set; }
+    [NotMapped]
+    public string? BarBotNumber { get; set; }
 }

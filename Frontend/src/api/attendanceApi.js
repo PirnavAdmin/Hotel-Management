@@ -16,17 +16,23 @@ export async function apiGetAttendanceLogs(staffId = null) {
 export async function apiCheckInStaff(staffId, shift = 'Morning Shift') {
   return await apiClient('/api/v1/employees/attendance/check-in', {
     method: 'POST',
-    body: JSON.stringify({ staffId, shift })
+    body: JSON.stringify({ staffId: Number(staffId), shift })
   });
 }
+
+export const apiCheckInAttendance = apiCheckInStaff;
 
 /**
  * Check-out staff member
  * POST /api/v1/employees/attendance/check-out
  */
-export async function apiCheckOutStaff(staffId) {
+export async function apiCheckOutStaff(staffId, attendanceId = null) {
+  const payload = { staffId: Number(staffId) };
+  if (attendanceId != null) payload.attendanceId = Number(attendanceId);
   return await apiClient('/api/v1/employees/attendance/check-out', {
     method: 'POST',
-    body: JSON.stringify({ staffId })
+    body: JSON.stringify(payload)
   });
 }
+
+export const apiCheckOutAttendance = apiCheckOutStaff;

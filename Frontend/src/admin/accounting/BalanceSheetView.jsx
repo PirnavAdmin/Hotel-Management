@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../../common/SearchableSelect";
 import React, { useState, useMemo } from "react";
 import {
   FileSpreadsheet,
@@ -362,7 +363,7 @@ export function BalanceSheetView({
             <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "3px", fontWeight: 600 }}>
               Compare To
             </label>
-            <select
+            <SearchableSelect
               value={compareTo}
               onChange={(e) => setCompareTo(e.target.value)}
               style={{
@@ -379,14 +380,14 @@ export function BalanceSheetView({
               <option value="Previous year">Previous year</option>
               <option value="Previous quarter">Previous quarter</option>
               <option value="Previous month">Previous month</option>
-            </select>
+            </SearchableSelect>
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "3px", fontWeight: 600 }}>
               Compare Periods
             </label>
-            <select
+            <SearchableSelect
               value={comparePeriods}
               onChange={(e) => setComparePeriods(e.target.value)}
               style={{
@@ -402,7 +403,7 @@ export function BalanceSheetView({
             >
               <option value="Previous 1 Period">Previous 1 Period</option>
               <option value="Previous 2 Periods">Previous 2 Periods</option>
-            </select>
+            </SearchableSelect>
           </div>
 
           <button

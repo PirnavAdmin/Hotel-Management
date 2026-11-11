@@ -4,7 +4,7 @@ import { apiClient } from './apiConfig';
  * Fetch delivery orders
  * GET /api/v1/delivery-orders?status=...
  */
-export async function apiGetDeliveryOrders(status) {
+export async function apiGetDeliveryOrders(status = '') {
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
   return await apiClient(`/api/v1/delivery-orders${query}`);
 }

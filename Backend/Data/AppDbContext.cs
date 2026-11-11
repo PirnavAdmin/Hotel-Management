@@ -70,6 +70,14 @@ public class AppDbContext : DbContext
     public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
     public DbSet<RestaurantSetting> RestaurantSettings { get; set; }
     public DbSet<Setting> Settings { get; set; }
+    public DbSet<InventoryPurchase> InventoryPurchases { get; set; }
+    public DbSet<SalaryPayment> SalaryPayments { get; set; }
+
+    // Accounting & Audit
+    public DbSet<ChartOfAccount> ChartOfAccounts { get; set; }
+    public DbSet<JournalVoucher> JournalVouchers { get; set; }
+    public DbSet<JournalVoucherLine> JournalVoucherLines { get; set; }
+    public DbSet<DailyCashBankRegister> DailyCashBankRegisters { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -380,6 +388,20 @@ public class AppDbContext : DbContext
             entity.Property(o => o.UpdatedAt).HasColumnName("updated_at");
             entity.Property(o => o.CreatedBy).HasColumnName("created_by");
             entity.Property(o => o.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(o => o.CustomerId).HasColumnName("customer_id");
+            entity.Property(o => o.CustomerName).HasColumnName("customer_name").HasMaxLength(120);
+            entity.Property(o => o.CustomerPhone).HasColumnName("customer_phone").HasMaxLength(20);
+            entity.Property(o => o.CustomerEmail).HasColumnName("customer_email").HasMaxLength(120);
+            entity.Property(o => o.PackagingCharge).HasColumnName("packaging_charge").HasPrecision(18, 2);
+            entity.Property(o => o.FulfillmentStatus).HasColumnName("fulfillment_status").HasMaxLength(30);
+            entity.Property(o => o.PaymentStatus).HasColumnName("payment_status").HasMaxLength(20);
+            entity.Property(o => o.PaymentMethod).HasColumnName("payment_method").HasMaxLength(30);
+            entity.Property(o => o.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
+            entity.Property(o => o.ServiceCharge).HasColumnName("service_charge").HasPrecision(18, 2);
+            entity.Property(o => o.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(255);
+            entity.Property(o => o.CancelledAt).HasColumnName("cancelled_at");
+            entity.Property(o => o.CancelledBy).HasColumnName("cancelled_by");
+            entity.Property(o => o.CancelledByName).HasColumnName("cancelled_by_name").HasMaxLength(120);
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
@@ -464,6 +486,15 @@ public class AppDbContext : DbContext
             entity.Property(p => p.TransactionReference).HasColumnName("transaction_reference").HasMaxLength(100);
             entity.Property(p => p.TxnReference).HasColumnName("txn_reference").HasMaxLength(100);
             entity.Property(p => p.PaymentStatus).HasColumnName("payment_status").HasMaxLength(20);
+<<<<<<< HEAD
+            entity.Property(p => p.GatewayProvider).HasColumnName("gateway_provider").HasMaxLength(40);
+            entity.Property(p => p.GatewayOrderId).HasColumnName("gateway_order_id").HasMaxLength(100);
+            entity.Property(p => p.GatewayPaymentId).HasColumnName("gateway_payment_id").HasMaxLength(100);
+            entity.Property(p => p.GatewaySignature).HasColumnName("gateway_signature").HasMaxLength(255);
+            entity.Property(p => p.FailureReason).HasColumnName("failure_reason").HasMaxLength(255);
+            entity.Property(p => p.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
+=======
+>>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             entity.Property(p => p.PaidAt).HasColumnName("paid_at");
         });
 
@@ -491,6 +522,143 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(k => k.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================================
+        // SALARY PAYMENTS
+        // ============================================================
+
+        modelBuilder.Entity<SalaryPayment>(entity =>
+        {
+            entity.ToTable("salary_payments");
+            entity.HasKey(e => e.PaymentId);
+            entity.Property(e => e.PaymentId).HasColumnName("payment_id");
+            entity.Property(e => e.StaffId).HasColumnName("staff_id");
+            entity.Property(e => e.StaffName).HasColumnName("staff_name").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.RoleTitle).HasColumnName("role_title").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Department).HasColumnName("department").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Amount).HasColumnName("amount").HasPrecision(18, 2);
+            entity.Property(e => e.PaymentDate).HasColumnName("payment_date");
+            entity.Property(e => e.PaymentMonth).HasColumnName("payment_month").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.PaymentMethod).HasColumnName("payment_method").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.TransactionReference).HasColumnName("transaction_reference").HasMaxLength(100);
+            entity.Property(e => e.Remarks).HasColumnName("remarks").HasMaxLength(255);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.StaffPerson)
+                  .WithMany(s => s.SalaryPayments)
+                  .HasForeignKey(e => e.StaffId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ============================================================
+        // INVENTORY PURCHASES
+        // ============================================================
+
+        // ============================================================
+        // ACCOUNTING & AUDIT (COA, JOURNAL VOUCHERS, DAILY REGISTER)
+        // ============================================================
+
+        modelBuilder.Entity<ChartOfAccount>(entity =>
+        {
+            entity.ToTable("chart_of_accounts");
+            entity.HasKey(e => e.AccountId);
+            entity.Property(e => e.AccountId).HasColumnName("account_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(20).IsRequired();
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.Property(e => e.AccountName).HasColumnName("account_name").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.AccountGroup).HasColumnName("account_group").HasMaxLength(40).IsRequired();
+            entity.Property(e => e.AccountType).HasColumnName("account_type").HasMaxLength(80).IsRequired();
+            entity.Property(e => e.NormalBalance).HasColumnName("normal_balance").HasMaxLength(15).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+            entity.Property(e => e.IsSystemAccount).HasColumnName("is_system_account");
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<JournalVoucher>(entity =>
+        {
+            entity.ToTable("journal_vouchers");
+            entity.HasKey(e => e.VoucherId);
+            entity.Property(e => e.VoucherId).HasColumnName("voucher_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.VoucherNumber).HasColumnName("voucher_number").HasMaxLength(40).IsRequired();
+            entity.HasIndex(e => e.VoucherNumber).IsUnique();
+            entity.Property(e => e.VoucherDate).HasColumnName("voucher_date");
+            entity.Property(e => e.VoucherType).HasColumnName("voucher_type").HasMaxLength(40).IsRequired();
+            entity.Property(e => e.Narration).HasColumnName("narration").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.VoidReason).HasColumnName("void_reason").HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasMany(v => v.Lines)
+                  .WithOne(l => l.Voucher)
+                  .HasForeignKey(l => l.VoucherId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<JournalVoucherLine>(entity =>
+        {
+            entity.ToTable("journal_voucher_lines");
+            entity.HasKey(e => e.LineId);
+            entity.Property(e => e.LineId).HasColumnName("line_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.VoucherId).HasColumnName("voucher_id").IsRequired();
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.AccountCode).HasColumnName("account_code").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.AccountName).HasColumnName("account_name").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(255);
+            entity.Property(e => e.DebitAmount).HasColumnName("debit_amount").HasPrecision(18, 2);
+            entity.Property(e => e.CreditAmount).HasColumnName("credit_amount").HasPrecision(18, 2);
+
+            entity.HasOne(l => l.Account)
+                  .WithMany(a => a.JournalLines)
+                  .HasForeignKey(l => l.AccountId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DailyCashBankRegister>(entity =>
+        {
+            entity.ToTable("daily_cash_bank_registers");
+            entity.HasKey(e => e.RegisterId);
+            entity.Property(e => e.RegisterId).HasColumnName("register_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.BusinessDate).HasColumnName("business_date");
+            entity.HasIndex(e => e.BusinessDate).IsUnique();
+            entity.Property(e => e.OpeningCashFloat).HasColumnName("opening_cash_float").HasPrecision(18, 2);
+            entity.Property(e => e.OpeningBankBalance).HasColumnName("opening_bank_balance").HasPrecision(18, 2);
+            entity.Property(e => e.TotalOpeningBalance).HasColumnName("total_opening_balance").HasPrecision(18, 2);
+            entity.Property(e => e.PhysicalCashCount).HasColumnName("physical_cash_count").HasPrecision(18, 2);
+            entity.Property(e => e.DenominationsJson).HasColumnName("denominations_json").HasMaxLength(1000);
+            entity.Property(e => e.CashVariance).HasColumnName("cash_variance").HasPrecision(18, 2);
+            entity.Property(e => e.ShiftStatus).HasColumnName("shift_status").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.ShiftOpenedAt).HasColumnName("shift_opened_at");
+            entity.Property(e => e.ShiftClosedAt).HasColumnName("shift_closed_at");
+            entity.Property(e => e.OpenedBy).HasColumnName("opened_by").HasMaxLength(100);
+            entity.Property(e => e.ClosedBy).HasColumnName("closed_by").HasMaxLength(100);
+            entity.Property(e => e.Notes).HasColumnName("notes").HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<InventoryPurchase>(entity =>
+        {
+            entity.ToTable("inventory_purchases");
+            entity.HasKey(e => e.PurchaseId);
+            entity.Property(e => e.PurchaseId).HasColumnName("purchase_id");
+            entity.Property(e => e.IngredientId).HasColumnName("ingredient_id");
+            entity.Property(e => e.ItemName).HasColumnName("item_name").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Department).HasColumnName("department").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Supplier).HasColumnName("supplier").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Quantity).HasColumnName("quantity").HasPrecision(18, 2);
+            entity.Property(e => e.UnitCost).HasColumnName("unit_cost").HasPrecision(18, 2);
+            entity.Property(e => e.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+            entity.Property(e => e.Note).HasColumnName("note").HasMaxLength(255);
+            entity.Property(e => e.PurchaseDate).HasColumnName("purchase_date");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
         });
     }
 }

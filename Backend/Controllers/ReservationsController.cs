@@ -81,10 +81,19 @@ public class ReservationsController : ControllerBase
             return BadRequest(new { success = false, message = "A valid TableId is required." });
         }
 
+        var tablePreference = string.IsNullOrWhiteSpace(request.TablePreference)
+            ? "Any"
+            : request.TablePreference.Trim();
+        if (tablePreference.Length > 100 || tablePreference.Any(char.IsControl))
+        {
+            return BadRequest(new { success = false, message = "Enter a valid table preference of at most 100 characters." });
+        }
+
         // Auto-lookup or create customer record
         if (!request.CustomerId.HasValue || request.CustomerId.Value <= 0)
         {
             var phone = request.Phone.Trim();
+            var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
             if (!string.IsNullOrWhiteSpace(phone))
             {
                 var existingCust = await _spService.ExecuteSqlQueryAsync(
@@ -95,15 +104,22 @@ public class ReservationsController : ControllerBase
                 if (existingCust.Count > 0)
                 {
                     request.CustomerId = existingCust[0];
+                    if (email != null)
+                    {
+                        await _spService.ExecuteSqlNonQueryAsync(
+                            "UPDATE customers SET email = @email WHERE customer_id = @customer_id",
+                            new Dictionary<string, object?> { { "email", email }, { "customer_id", request.CustomerId.Value } });
+                    }
                 }
                 else
                 {
                     await _spService.ExecuteSqlNonQueryAsync(
-                        "INSERT INTO customers (full_name, phone, registered_branch_id, is_active, created_at, updated_at) VALUES (@name, @phone, @branch_id, 1, NOW(), NOW())",
+                        "INSERT INTO customers (full_name, phone, email, registered_branch_id, is_active, created_at, updated_at) VALUES (@name, @phone, @email, @branch_id, 1, NOW(), NOW())",
                         new Dictionary<string, object?>
                         {
                             { "name", !string.IsNullOrWhiteSpace(request.CustomerName) ? request.CustomerName.Trim() : "Guest" },
                             { "phone", phone },
+                            { "email", email },
                             { "branch_id", request.BranchId ?? 1 }
                         });
 
@@ -146,7 +162,11 @@ public class ReservationsController : ControllerBase
             { "p_reservation_time", resTime.ToString(@"hh\:mm\:ss") },
             { "p_guests_count", request.GuestsCount > 0 ? request.GuestsCount : 2 },
             { "p_status", "booked" },
-            { "p_notes", request.Notes }
+            { "p_notes", string.Join(" | ", new[]
+                {
+                    string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+                    tablePreference.Equals("Any", StringComparison.OrdinalIgnoreCase) ? null : $"Table preference: {tablePreference}"
+                }.Where(note => note != null)) }
         };
 
         var results = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapSpOperationResult, parameters);

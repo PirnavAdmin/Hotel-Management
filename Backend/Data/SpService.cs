@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace HMS.Data;
 
@@ -33,6 +34,7 @@ public class SpService
     private DbCommand CreateCommand(DbConnection conn, string spName, Dictionary<string, object?>? parameters)
     {
         var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = spName;
         cmd.CommandType = CommandType.StoredProcedure;
 
@@ -99,6 +101,7 @@ public class SpService
     {
         var conn = await GetOpenConnectionAsync();
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         if (parameters != null)
@@ -119,6 +122,7 @@ public class SpService
         var list = new List<T>();
         var conn = await GetOpenConnectionAsync();
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         if (parameters != null)
@@ -143,6 +147,7 @@ public class SpService
     {
         var conn = await GetOpenConnectionAsync();
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         if (parameters != null)
@@ -161,4 +166,3 @@ public class SpService
         return (T)Convert.ChangeType(result, targetType);
     }
 }
-

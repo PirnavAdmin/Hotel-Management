@@ -18,3 +18,5 @@ export async function apiUpdateRestaurantSettings(settingsData) {
     body: JSON.stringify(settingsData)
   });
 }
+
+export const apiSaveRestaurantSettings = apiUpdateRestaurantSettings;

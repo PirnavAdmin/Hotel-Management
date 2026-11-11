@@ -319,6 +319,134 @@ public static class DbInitializer
         }
         catch { }
 
+        SeedAccountingData(context);
+    }
+
+
+
+    private static void SeedAccountingData(AppDbContext context)
+    {
+        try
+        {
+            var existingCodes = context.ChartOfAccounts
+                .AsNoTracking()
+                .Select(a => a.Code)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var now = DateTime.UtcNow;
+            var standardAccounts = new List<ChartOfAccount>
+            {
+                // ASSETS (Debit Normal Balance)
+                new() { Code = "1001", AccountName = "Cash in Hand", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "Physical cash in restaurant register", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1002", AccountName = "Bank & UPI Collections", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "HDFC / ICICI POS terminal & UPI settled account", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1100", AccountName = "Accounts Receivable", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "Credit customer receivables & pending card settlements", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1200", AccountName = "Kitchen & Bar Inventory Asset", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "Food ingredients, liquor & beverage stock on hand", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1500", AccountName = "Kitchen & Bar Equipment", AccountGroup = "Assets", AccountType = "Fixed Asset", NormalBalance = "Debit", Description = "Ovens, chillers, espresso machines, POS hardware & furniture", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // LIABILITIES (Credit Normal Balance)
+                new() { Code = "2001", AccountName = "Accounts Payable (Suppliers)", AccountGroup = "Liabilities", AccountType = "Current Liability", NormalBalance = "Credit", Description = "Unpaid vendor bills for kitchen & bar stock procurement", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "2100", AccountName = "GST & Output Tax Payable", AccountGroup = "Liabilities", AccountType = "Current Liability", NormalBalance = "Credit", Description = "Collected GST / VAT / Service Tax awaiting remittance", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "2200", AccountName = "Salaries & Wages Payable", AccountGroup = "Liabilities", AccountType = "Current Liability", NormalBalance = "Credit", Description = "Accrued staff payroll obligations", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // EQUITY (Credit Normal Balance)
+                new() { Code = "3001", AccountName = "Owner Capital & Equity", AccountGroup = "Equity", AccountType = "Equity", NormalBalance = "Credit", Description = "Partners initial capital infusion & ownership equity", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "3100", AccountName = "Retained Earnings", AccountGroup = "Equity", AccountType = "Equity", NormalBalance = "Credit", Description = "Accumulated net profits retained in business", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // INCOME (Credit Normal Balance)
+                new() { Code = "4001", AccountName = "Food & Dine-In Sales Revenue", AccountGroup = "Income", AccountType = "Operating Revenue", NormalBalance = "Credit", Description = "Dine-in, takeaway and delivery food sales net of GST", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "4002", AccountName = "Bar & Beverage Sales Revenue", AccountGroup = "Income", AccountType = "Operating Revenue", NormalBalance = "Credit", Description = "Cocktails, liquor, beer, wine and bar counter sales", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "4003", AccountName = "Service Charge & Other Income", AccountGroup = "Income", AccountType = "Operating Revenue", NormalBalance = "Credit", Description = "Service charges, corkage & miscellaneous revenue", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // EXPENSES (Debit Normal Balance)
+                new() { Code = "5001", AccountName = "Inventory & COGS Purchases", AccountGroup = "Expenses", AccountType = "Cost of Goods Sold", NormalBalance = "Debit", Description = "Raw ingredients, liquor restocking & direct kitchen/bar purchases", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "5002", AccountName = "Staff Salaries & Payroll", AccountGroup = "Expenses", AccountType = "Operating Expense", NormalBalance = "Debit", Description = "Monthly wages, incentives and chef/waiter payroll", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "5003", AccountName = "Utilities, Rent & Petty Expenses", AccountGroup = "Expenses", AccountType = "Operating Expense", NormalBalance = "Debit", Description = "Electricity, gas, rent, cleaning & petty cash overheads", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "5004", AccountName = "Depreciation Expense", AccountGroup = "Expenses", AccountType = "Non-Cash Expense", NormalBalance = "Debit", Description = "Periodic depreciation of kitchen, bar and POS fixed assets", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now }
+            };
+
+            var toInsert = standardAccounts.Where(a => !existingCodes.Contains(a.Code)).ToList();
+            if (toInsert.Count > 0)
+            {
+                context.ChartOfAccounts.AddRange(toInsert);
+                context.SaveChanges();
+            }
+
+            if (!context.JournalVouchers.AsNoTracking().Any())
+            {
+                var acctLookup = context.ChartOfAccounts.AsNoTracking()
+                    .ToDictionary(a => a.Code, a => a, StringComparer.OrdinalIgnoreCase);
+
+                if (acctLookup.TryGetValue("1001", out var cashAcct) &&
+                    acctLookup.TryGetValue("1002", out var bankAcct) &&
+                    acctLookup.TryGetValue("3001", out var equityAcct) &&
+                    acctLookup.TryGetValue("1500", out var equipAcct))
+                {
+                    var jv1 = new JournalVoucher
+                    {
+                        VoucherNumber = "JV-2026-001",
+                        VoucherDate = new DateTime(2026, 4, 1),
+                        VoucherType = "Capital",
+                        Narration = "Initial Capital infusion by restaurant partners into Bank & Cash",
+                        TotalAmount = 500000.00m,
+                        CreatedBy = "pirnav",
+                        Status = "Posted",
+                        CreatedAt = new DateTime(2026, 4, 1, 9, 0, 0),
+                        UpdatedAt = new DateTime(2026, 4, 1, 9, 0, 0),
+                        Lines = new List<JournalVoucherLine>
+                        {
+                            new() { AccountId = cashAcct.AccountId, AccountCode = cashAcct.Code, AccountName = cashAcct.AccountName, Description = "Opening drawer cash capital", DebitAmount = 50000.00m, CreditAmount = 0m },
+                            new() { AccountId = bankAcct.AccountId, AccountCode = bankAcct.Code, AccountName = bankAcct.AccountName, Description = "Partner capital bank deposit", DebitAmount = 450000.00m, CreditAmount = 0m },
+                            new() { AccountId = equityAcct.AccountId, AccountCode = equityAcct.Code, AccountName = equityAcct.AccountName, Description = "Partners equity contribution", DebitAmount = 0m, CreditAmount = 500000.00m }
+                        }
+                    };
+
+                    var jv2 = new JournalVoucher
+                    {
+                        VoucherNumber = "JV-2026-002",
+                        VoucherDate = new DateTime(2026, 4, 5),
+                        VoucherType = "Asset Purchase",
+                        Narration = "Kitchen equipment, espresso bar & POS hardware setup",
+                        TotalAmount = 120000.00m,
+                        CreatedBy = "pirnav",
+                        Status = "Posted",
+                        CreatedAt = new DateTime(2026, 4, 5, 11, 30, 0),
+                        UpdatedAt = new DateTime(2026, 4, 5, 11, 30, 0),
+                        Lines = new List<JournalVoucherLine>
+                        {
+                            new() { AccountId = equipAcct.AccountId, AccountCode = equipAcct.Code, AccountName = equipAcct.AccountName, Description = "Commercial kitchen ovens & POS terminals", DebitAmount = 120000.00m, CreditAmount = 0m },
+                            new() { AccountId = bankAcct.AccountId, AccountCode = bankAcct.Code, AccountName = bankAcct.AccountName, Description = "Payment via business bank transfer", DebitAmount = 0m, CreditAmount = 120000.00m }
+                        }
+                    };
+
+                    context.JournalVouchers.AddRange(jv1, jv2);
+                    context.SaveChanges();
+                }
+            }
+
+            if (!context.DailyCashBankRegisters.AsNoTracking().Any())
+            {
+                var today = DateTime.Today;
+                context.DailyCashBankRegisters.Add(new DailyCashBankRegister
+                {
+                    BusinessDate = today,
+                    OpeningCashFloat = 5000.00m,
+                    OpeningBankBalance = 25000.00m,
+                    TotalOpeningBalance = 30000.00m,
+                    ShiftStatus = "Open",
+                    ShiftOpenedAt = today.AddHours(8),
+                    OpenedBy = "pirnav",
+                    Notes = "Brought forward at 08:00 AM shift start",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                context.SaveChanges();
+            }
+        }
+        catch
+        {
+            // Keep initialization resilient if accounting tables are temporarily locked
+        }
+    }
     }
 
     private static void EnsureTablesSchema(AppDbContext context)
@@ -785,6 +913,19 @@ public static class DbInitializer
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `kitchen_order_tickets`; SET FOREIGN_KEY_CHECKS = 1;");
                 CreateAllTables(conn);
             }
+
+            // Verify accounting tables schema
+            try
+            {
+                _ = context.ChartOfAccounts.AsNoTracking().Take(1).ToList();
+                _ = context.JournalVouchers.AsNoTracking().Take(1).ToList();
+                _ = context.JournalVoucherLines.AsNoTracking().Take(1).ToList();
+                _ = context.DailyCashBankRegisters.AsNoTracking().Take(1).ToList();
+            }
+            catch
+            {
+                CreateAllTables(conn);
+            }
         }
         catch { }
     }
@@ -1208,6 +1349,7 @@ public static class DbInitializer
             ) ENGINE=InnoDB;");
 
         // ============================================================
+        // ============================================================
         // CA FINANCIAL ACCOUNTING & STATUTORY AUDIT TABLES
         // ============================================================
         SafeExecuteSql(conn, @"
@@ -1268,19 +1410,78 @@ public static class DbInitializer
 
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `chart_of_accounts` (
-                `id` BIGINT NOT NULL AUTO_INCREMENT,
-                `account_code` VARCHAR(50) NOT NULL UNIQUE,
+                `account_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `code` VARCHAR(50) NOT NULL,
+                `account_code` VARCHAR(50) NULL,
                 `account_name` VARCHAR(150) NOT NULL,
-                `account_group` VARCHAR(50) NOT NULL,
-                `account_type` VARCHAR(50) NOT NULL,
+                `account_group` VARCHAR(50) NOT NULL DEFAULT 'Assets',
+                `account_type` VARCHAR(80) NOT NULL DEFAULT 'Current Asset',
                 `normal_balance` VARCHAR(20) NOT NULL DEFAULT 'Debit',
-                `description` VARCHAR(255) NULL,
+                `description` VARCHAR(500) NULL,
                 `opening_balance` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `is_system_account` TINYINT(1) NOT NULL DEFAULT 0,
                 `is_system` TINYINT(1) NOT NULL DEFAULT 0,
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`),
-                KEY `idx_account_code` (`account_code`)
-            ) ENGINE=InnoDB;");
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`account_id`),
+                UNIQUE KEY `uk_coa_code` (`code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `journal_vouchers` (
+                `voucher_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `voucher_number` VARCHAR(40) NOT NULL,
+                `voucher_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `voucher_type` VARCHAR(40) NOT NULL DEFAULT 'JV',
+                `narration` VARCHAR(500) NOT NULL,
+                `total_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `created_by` VARCHAR(100) NULL DEFAULT 'admin',
+                `status` VARCHAR(20) NOT NULL DEFAULT 'Posted',
+                `void_reason` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`voucher_id`),
+                UNIQUE KEY `uk_jv_number` (`voucher_number`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `journal_voucher_lines` (
+                `line_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `voucher_id` BIGINT NOT NULL,
+                `account_id` BIGINT NOT NULL,
+                `account_code` VARCHAR(20) NOT NULL,
+                `account_name` VARCHAR(150) NOT NULL,
+                `description` VARCHAR(255) NULL,
+                `debit_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `credit_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                PRIMARY KEY (`line_id`),
+                KEY `idx_jvl_voucher` (`voucher_id`),
+                KEY `idx_jvl_account` (`account_id`),
+                KEY `idx_jvl_code` (`account_code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `daily_cash_bank_registers` (
+                `register_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `business_date` DATETIME NOT NULL,
+                `opening_cash_float` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `opening_bank_balance` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `total_opening_balance` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `physical_cash_count` DECIMAL(18,2) NULL,
+                `denominations_json` VARCHAR(1000) NULL,
+                `cash_variance` DECIMAL(18,2) NULL,
+                `shift_status` VARCHAR(20) NOT NULL DEFAULT 'Open',
+                `shift_opened_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `shift_closed_at` DATETIME NULL,
+                `opened_by` VARCHAR(100) NULL DEFAULT 'admin',
+                `closed_by` VARCHAR(100) NULL,
+                `notes` VARCHAR(500) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`register_id`),
+                UNIQUE KEY `uk_daily_reg_date` (`business_date`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
         // ============================================================
         // ALTER TABLE COLUMN SAFEGUARDS (For Pre-existing Databases)
@@ -1441,13 +1642,38 @@ public static class DbInitializer
             "ALTER TABLE `kot_orders` ADD COLUMN `staff_name` VARCHAR(100) NULL;",
             "ALTER TABLE `kot_orders` ADD COLUMN `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;",
             "ALTER TABLE `kot_orders` ADD COLUMN `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;",
-            "ALTER TABLE `kot_orders` ADD COLUMN `deleted_at` DATETIME NULL;"
+            "ALTER TABLE `kot_orders` ADD COLUMN `deleted_at` DATETIME NULL;",
+
+            // Support 'success', 'pending', 'failed', 'refunded' in invoice_payments
+            "ALTER TABLE `invoice_payments` MODIFY COLUMN `payment_status` VARCHAR(30) NOT NULL DEFAULT 'success';"
         };
 
         foreach (var sql in alterSqls)
         {
             SafeExecuteSql(conn, sql);
         }
+
+        EnsureColumnExists(conn, "restaurant_orders", "customer_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_name", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_phone", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_email", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "packaging_charge", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "restaurant_orders", "fulfillment_status", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "payment_status", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "payment_method", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "service_charge", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "restaurant_orders", "cancellation_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_by_name", "VARCHAR(120) NULL");
+
+        EnsureColumnExists(conn, "invoice_payments", "gateway_provider", "VARCHAR(40) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_order_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_payment_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_signature", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "failure_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "idempotency_key", "VARCHAR(100) NULL");
     }
 
     private static void SafeExecuteSql(DbConnection conn, string sql)

@@ -29,6 +29,7 @@ public class KotController : ControllerBase
     // GET /api/v1/kot/orders OR /api/v1/kot OR /api/v1/kot-orders OR /api/kot_orders
     [AllowAnonymous]
     [HttpGet("orders")]
+    [HttpGet]
     public async Task<IActionResult> GetActiveKotOrders([FromQuery] long? tableId, [FromQuery] string? status)
     {
         var orders = await _kotService.GetActiveKotOrdersAsync(tableId, status);
@@ -88,6 +89,7 @@ public class KotController : ControllerBase
     // POST /api/v1/kot/orders OR /api/v1/kot OR /api/v1/kot-orders
     [AllowAnonymous]
     [HttpPost("orders")]
+    [HttpPost]
     public async Task<IActionResult> CreateKotOrder([FromBody] CreateKotOrderDto dto)
     {
         var created = await _kotService.CreateKotOrderAsync(dto);
@@ -112,6 +114,7 @@ public class KotController : ControllerBase
     [AllowAnonymous]
     [HttpPatch("orders/{id:long}/status")]
     [HttpPatch("{id:long}/status")]
+    [HttpPut("{id:long}/status")]
     public async Task<IActionResult> UpdateOrderStatus(long id, [FromBody] UpdateOrderStatusDto dto)
     {
         var updated = await _kotService.UpdateOrderStatusAsync(id, dto.Status);
@@ -167,6 +170,7 @@ public class KotController : ControllerBase
     // DELETE /api/v1/kot/orders/{id} OR /api/v1/kot/{id}
     [AllowAnonymous]
     [HttpDelete("orders/{id:long}")]
+    [HttpDelete("{id:long}")]
     public async Task<IActionResult> DeleteKotOrder(long id)
     {
         var result = await _kotService.DeleteKotOrderAsync(id);
@@ -191,6 +195,7 @@ public class KotController : ControllerBase
     // GET /api/v1/kot/items OR /api/v1/kot/orders/{orderId}/items
     [AllowAnonymous]
     [HttpGet("orders/{orderId:long}/items")]
+    [HttpGet("items")]
     public async Task<IActionResult> GetKotOrderItems([FromRoute] long? orderId, [FromQuery] long? orderIdQuery, [FromQuery] string? status)
     {
         var targetOrderId = orderId ?? orderIdQuery;
@@ -207,6 +212,7 @@ public class KotController : ControllerBase
     // GET /api/v1/kot/items/{itemId} OR /api/v1/kot/orders/{orderId}/items/{itemId}
     [AllowAnonymous]
     [HttpGet("orders/{orderId:long}/items/{itemId:long}")]
+    [HttpGet("items/{itemId:long}")]
     public async Task<IActionResult> GetKotOrderItemById(long itemId)
     {
         var item = await _kotService.GetKotOrderItemByIdAsync(itemId);
@@ -278,6 +284,7 @@ public class KotController : ControllerBase
     [HttpPatch("orders/{orderId:long}/items/{itemId:long}/status")]
     [HttpPatch("{orderId:long}/items/{itemId:long}/status")]
     [HttpPatch("items/{itemId:long}/status")]
+    [HttpPut("items/{itemId:long}/status")]
     public async Task<IActionResult> UpdateItemStatus([FromRoute] long itemId, [FromRoute] long? orderId, [FromBody] UpdateItemStatusDto dto)
     {
         var updated = await _kotService.UpdateItemStatusDirectAsync(itemId, dto.Status, orderId);
@@ -334,6 +341,7 @@ public class KotController : ControllerBase
     // DELETE /api/v1/kot/items/{itemId} OR /api/v1/kot/orders/{orderId}/items/{itemId}
     [AllowAnonymous]
     [HttpDelete("orders/{orderId:long}/items/{itemId:long}")]
+    [HttpDelete("items/{itemId:long}")]
     public async Task<IActionResult> DeleteKotOrderItem([FromRoute] long itemId, [FromRoute] long? orderId)
     {
         var result = await _kotService.DeleteKotOrderItemAsync(itemId, orderId);

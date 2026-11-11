@@ -29,6 +29,10 @@ public class CreateOrderRequest
     public string? Server { get; set; }
 
     public int Guests { get; set; } = 1;
+    public bool IsTakeaway { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? IdempotencyKey { get; set; }
 
     public List<OrderItemInput> Items { get; set; } = new();
 
@@ -146,6 +150,11 @@ public class OrderDto
     public string? PaymentMethod { get; set; }
 
     public string? InvoiceNo { get; set; }
+    public long? InvoiceId { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? KitchenKotNumber { get; set; }
+    public string? BarBotNumber { get; set; }
 
     public DateTime? SettledAt { get; set; }
 
@@ -179,4 +188,8 @@ public class OrderItemDto
     public string KotStatus { get; set; } = "Queued";
 
     public int KotBatch { get; set; }
+    public long? BotId { get; set; }
+    public bool IsBarItem { get; set; }
+    public string? Department { get; set; }
+    public string? Category { get; set; }
 }
