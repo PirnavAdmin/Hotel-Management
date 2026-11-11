@@ -1627,7 +1627,7 @@ await _spService.ExecuteSqlNonQueryAsync(
         { "@p_item_status", itemStatus },
         { "@p_kot_id", kotId }
     });
-
+    }
         catch { }
 
         try
