@@ -450,7 +450,6 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
           },
           body: JSON.stringify({ [STORAGE_KEY]: updatedInventory }),
         }).catch(() => {});
@@ -951,7 +950,6 @@ export function AdminPortal({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
     });

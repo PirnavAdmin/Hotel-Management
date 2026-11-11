@@ -11,25 +11,6 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/salaries")]
 [AllowAnonymous]
-<<<<<<< HEAD
-[Tags("Salaries")]
-public class SalariesController : ControllerBase
-{
-    private readonly SalaryService _salaryService;
-    private readonly ReportingExportService _reportingExportService;
-    private readonly ExportService _exportService;
-    private readonly ILogger<SalariesController> _logger;
-
-    public SalariesController(
-        SalaryService salaryService,
-        ReportingExportService reportingExportService,
-        ExportService exportService,
-        ILogger<SalariesController> logger)
-    {
-        _salaryService = salaryService;
-        _reportingExportService = reportingExportService;
-        _exportService = exportService;
-=======
 [Tags("Admin", "Salaries")]
 public class SalariesController : ControllerBase
 {
@@ -39,7 +20,6 @@ public class SalariesController : ControllerBase
     public SalariesController(SalaryService salaryService, ILogger<SalariesController> logger)
     {
         _salaryService = salaryService;
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         _logger = logger;
     }
 
@@ -186,31 +166,6 @@ public class SalariesController : ControllerBase
     }
 
     /// <summary>
-<<<<<<< HEAD
-    /// Exports salary payments matching filter criteria as CSV or XLSX.
-    /// Supports ?month=...&amp;paymentMonth=...&amp;department=...&amp;status=...&amp;format=csv|xlsx.
-    /// </summary>
-    [HttpGet("export")]
-    public async Task<IActionResult> ExportSalaries(
-        [FromQuery] SalaryFilterDto filter,
-        [FromQuery] string? month = null,
-        [FromQuery] string? status = null,
-        [FromQuery] string? format = "csv")
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(filter.PaymentMonth) && !string.IsNullOrWhiteSpace(month))
-            {
-                filter.PaymentMonth = month;
-            }
-            var doc = await _reportingExportService.GenerateSalariesExportAsync(filter, status);
-            return _exportService.ExportResult(doc, format, "Salary_Payments");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error exporting salaries");
-            return StatusCode(500, new { success = false, message = "Failed to export salaries.", error = ex.Message });
-=======
     /// Exports salary payments matching filter criteria as CSV.
     /// </summary>
     [HttpGet("export")]
@@ -226,7 +181,6 @@ public class SalariesController : ControllerBase
         {
             _logger.LogError(ex, "Error exporting salaries CSV");
             return StatusCode(500, new { success = false, message = ex.Message });
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
         }
     }
 }

@@ -263,7 +263,6 @@ let inFlightNetworkStateRequest = null;
 const requestSharedNetworkState = () => {
   if (!inFlightNetworkStateRequest) {
     inFlightNetworkStateRequest = fetch(`${API_SYNC_BASE}/api/state`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => response.ok ? response.json() : null)
       .catch(() => null)
@@ -770,7 +769,7 @@ export function App() {
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
 
-  // ── Live Backend Integration Hook (Ngrok API) ──────────────────
+  // ── Live Backend Integration Hook ──────────────────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
     const loadLiveTables = async () => {
@@ -1245,7 +1244,6 @@ export function App() {
       const syncBody = JSON.stringify(payload);
       const headers = {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       };
 
       // Persist through the shared API first. In Vite development, relay the

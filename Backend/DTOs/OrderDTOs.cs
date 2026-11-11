@@ -188,8 +188,6 @@ public class OrderItemDto
     public string KotStatus { get; set; } = "Queued";
 
     public int KotBatch { get; set; }
-    public long? BotId { get; set; }
-    public bool IsBarItem { get; set; }
     public string? Department { get; set; }
     public string? Category { get; set; }
 }

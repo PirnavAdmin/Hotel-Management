@@ -70,8 +70,7 @@ public class AppDbContext : DbContext
     public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
     public DbSet<RestaurantSetting> RestaurantSettings { get; set; }
     public DbSet<Setting> Settings { get; set; }
-    public DbSet<InventoryPurchase> InventoryPurchases { get; set; }
-    public DbSet<SalaryPayment> SalaryPayments { get; set; }
+
 
     // Accounting & Audit
     public DbSet<ChartOfAccount> ChartOfAccounts { get; set; }
@@ -486,15 +485,6 @@ public class AppDbContext : DbContext
             entity.Property(p => p.TransactionReference).HasColumnName("transaction_reference").HasMaxLength(100);
             entity.Property(p => p.TxnReference).HasColumnName("txn_reference").HasMaxLength(100);
             entity.Property(p => p.PaymentStatus).HasColumnName("payment_status").HasMaxLength(20);
-<<<<<<< HEAD
-            entity.Property(p => p.GatewayProvider).HasColumnName("gateway_provider").HasMaxLength(40);
-            entity.Property(p => p.GatewayOrderId).HasColumnName("gateway_order_id").HasMaxLength(100);
-            entity.Property(p => p.GatewayPaymentId).HasColumnName("gateway_payment_id").HasMaxLength(100);
-            entity.Property(p => p.GatewaySignature).HasColumnName("gateway_signature").HasMaxLength(255);
-            entity.Property(p => p.FailureReason).HasColumnName("failure_reason").HasMaxLength(255);
-            entity.Property(p => p.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
-=======
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             entity.Property(p => p.PaidAt).HasColumnName("paid_at");
         });
 
