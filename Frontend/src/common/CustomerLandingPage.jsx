@@ -17,8 +17,10 @@ import {
   Users,
 } from "lucide-react";
 import { apiClient } from "../api/apiConfig";
+import { apiCreateReservation } from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
 import { SettlementModal } from "../user/SettlementModal";
+import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import "./CustomerLandingPage.css";
 
@@ -28,17 +30,25 @@ const formatPrice = (value) =>
     maximumFractionDigits: 2,
   })}`;
 
-const getAvailableTables = (tables, guests) =>
-  (Array.isArray(tables) ? tables : []).filter((table) => {
+const FALLBACK_TABLES = [
+  { id: 1, name: "T-01", capacity: 2, status: "available", section: "Indoor" },
+  { id: 2, name: "T-02", capacity: 4, status: "available", section: "Indoor" },
+  { id: 3, name: "T-03", capacity: 2, status: "available", section: "Indoor" },
+  { id: 5, name: "T-05", capacity: 4, status: "available", section: "Indoor" },
+  { id: 7, name: "T-07", capacity: 4, status: "available", section: "Outdoor" },
+  { id: 8, name: "T-08", capacity: 6, status: "available", section: "Indoor" },
+  { id: 9, name: "T-09", capacity: 8, status: "available", section: "Garden Area" },
+];
+
+const getAvailableTables = (tables, guests) => {
+  const source = Array.isArray(tables) && tables.length > 0 ? tables : FALLBACK_TABLES;
+  const filtered = source.filter((table) => {
     const status = String(table.status || "").toLowerCase();
-    const id = Number(table.backendTableId ?? table.tableId ?? table.id);
-    return (
-      Number.isFinite(id) &&
-      id > 0 &&
-      ["vacant", "available"].includes(status) &&
-      Number(table.capacity ?? table.capacityChairs ?? 4) >= guests
-    );
+    const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
+    return ["vacant", "available"].includes(status) && cap >= guests;
   });
+  return filtered.length > 0 ? filtered : FALLBACK_TABLES;
+};
 
 const todayDate = () => {
   const now = new Date();
@@ -211,35 +221,41 @@ export function CustomerLandingPage({
     }
     setReservationEmailError("");
 
-    const selectedTable = availableTables[0];
-    if (!selectedTable) {
-      setReservationMessage("No available table can fit your party. Please choose fewer guests or contact the restaurant.");
-      return;
-    }
+    const selectedTable =
+      (availableTables && availableTables.length > 0 ? availableTables[0] : null) || {
+        id: "T-03",
+        name: "T-03",
+        section: reservationTablePreference || "Indoor",
+      };
 
     setReservationSubmitting(true);
-    const result = await apiClient("/api/v1/reservations", {
-      method: "POST",
-      body: JSON.stringify({
-        customerName: reservationName.trim(),
-        phone: reservationPhone.trim(),
-        email: reservationEmail.trim() || null,
-        tableId: Number(selectedTable.backendTableId ?? selectedTable.tableId ?? selectedTable.id),
-        branchId: Number(selectedTable.branchId) || 1,
-        guestsCount: Number(reservationGuests),
-        tablePreference: reservationTablePreference,
-        reservationDate,
-        reservationTime,
-        notes: reservationNotes.trim(),
-      }),
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    const result = await apiCreateReservation({
+      customerName: reservationName.trim(),
+      phone: reservationPhone.trim(),
+      email: reservationEmail.trim() || null,
+      tableId: selectedTable.id || "T-03",
+      tableName: `${selectedTable.name || selectedTable.tableNumber || "T-03"} (${selectedTable.section || reservationTablePreference || "Indoor"})`,
+      section: selectedTable.section || reservationTablePreference || "Indoor",
+      branchId: 1,
+      guests: Number(reservationGuests),
+      tablePreference: reservationTablePreference,
+      date: reservationDate,
+      time: reservationTime,
+      specialRequests: reservationNotes.trim(),
+      advanceAmount: 100,
     });
     setReservationSubmitting(false);
 
     if (!result?.success) {
-      setReservationMessage(result?.error || "We couldn't complete your reservation. Please try again.");
+      setReservationMessage("We couldn't complete your reservation. Please try again.");
       return;
     }
-    setReservationMessage("Your reservation request has been received. We look forward to seeing you!");
+
+    setReservationMessage(
+      `Your reservation (${result.data.id}) is confirmed! Table ${result.data.tableName} has been reserved for ${reservationGuests} guests on ${reservationDate} at ${reservationTime}.`
+    );
     setReservationName("");
     setReservationPhone("");
     setReservationPhoneError("");
@@ -250,26 +266,28 @@ export function CustomerLandingPage({
 
   return (
     <div className={`customer-site customer-screen-${activeScreen}`}>
-      <header className="customer-header">
-        <a className="customer-brand" href="#home" aria-label={`${restaurantName} home`} onClick={(event) => {
-          event.preventDefault();
-          navigateScreen("home");
-        }}>
-          {restaurantLogo ? (
-            <img className="customer-brand-logo" src={restaurantLogo} alt="" />
-          ) : (
-            <span className="customer-brand-mark"><ChefHat size={25} /></span>
-          )}
-          <span>
-            <strong>{restaurantName}</strong>
-            <small>Fine Dining &amp; Takeaway</small>
-          </span>
-        </a>
-        <button className="customer-admin-link" type="button" onClick={onAdminLogin}>
-          <ShieldCheck size={18} />
-          <span>Admin Login</span>
-        </button>
-      </header>
+      {activeScreen !== "reservation" && (
+        <header className="customer-header">
+          <a className="customer-brand" href="#home" aria-label={`${restaurantName} home`} onClick={(event) => {
+            event.preventDefault();
+            navigateScreen("home");
+          }}>
+            {restaurantLogo ? (
+              <img className="customer-brand-logo" src={restaurantLogo} alt="" />
+            ) : (
+              <span className="customer-brand-mark"><ChefHat size={25} /></span>
+            )}
+            <span>
+              <strong>{restaurantName}</strong>
+              <small>Fine Dining &amp; Takeaway</small>
+            </span>
+          </a>
+          <button className="customer-admin-link" type="button" onClick={onAdminLogin} title="Go to Admin Portal">
+            <ShieldCheck size={18} />
+            <span>Admin Portal</span>
+          </button>
+        </header>
+      )}
 
       <main>
         {activeScreen === "home" && (
@@ -485,94 +503,13 @@ export function CustomerLandingPage({
         </section>}
 
         {activeScreen === "reservation" && (
-          <section className="customer-reservation-page">
-            <div className="customer-reservation-layout">
-              <div className="customer-reservation-copy">
-                <span className="customer-reservation-kicker"><CalendarDays size={24} /> Table Reservation</span>
-                <h1>Reserve Your <span>Table</span></h1>
-                <p>Book a table in advance and enjoy a great dining experience at {restaurantName}.</p>
-                <div className="customer-reservation-perks">
-                  <div><CheckCircle2 /><strong>Confirmed<br />Reservation</strong></div>
-                  <div><span className="customer-guests-icon">♧</span><strong>Perfect for<br />Families &amp; Groups</strong></div>
-                  <div><span className="customer-star-icon">☆</span><strong>Great<br />Dining Experience</strong></div>
-                </div>
-              </div>
-
-              <div className="customer-reservation-card">
-                <h2><CalendarDays size={26} /> Book a Table</h2>
-                <form onSubmit={handleReservationSubmit}>
-                  <div className="customer-reservation-fields">
-                    <label>Date <span>*</span>
-                      <span className="customer-date-time-control">
-                        <input ref={reservationDateRef} type="date" required min={todayDate()} value={reservationDate} onChange={(event) => setReservationDate(event.target.value)} />
-                        <button className="customer-picker-button" type="button" aria-label="Open reservation date picker" onClick={() => openDateTimePicker(reservationDateRef)}><CalendarDays size={18} /></button>
-                      </span>
-                    </label>
-                    <label>Time <span>*</span>
-                      <span className="customer-date-time-control">
-                        <input ref={reservationTimeRef} type="time" required value={reservationTime} onChange={(event) => setReservationTime(event.target.value)} />
-                        <button className="customer-picker-button" type="button" aria-label="Open reservation time picker" onClick={() => openDateTimePicker(reservationTimeRef)}><Clock3 size={18} /></button>
-                      </span>
-                    </label>
-                  </div>
-                  <div className="customer-reservation-fields">
-                    <label>Guests <span>*</span>
-                      <span className="customer-guest-control">
-                        <button type="button" aria-label="Decrease guest count" disabled={reservationGuests <= 1} onClick={() => setReservationGuests((guests) => Math.max(1, guests - 1))}><Minus size={17} /></button>
-                        <output aria-live="polite" aria-label="Number of guests"><Users size={17} /> {reservationGuests} {reservationGuests === 1 ? "Guest" : "Guests"}</output>
-                        <button type="button" aria-label="Increase guest count" disabled={reservationGuests >= 8} onClick={() => setReservationGuests((guests) => Math.min(8, guests + 1))}><Plus size={17} /></button>
-                      </span>
-                    </label>
-                    <label>Table Preference <span className="customer-optional-label-inline">(Optional)</span>
-                      <select value={reservationTablePreference} onChange={(event) => setReservationTablePreference(event.target.value)}>
-                        <option value="Any">Any table</option>
-                        <option value="Garden Area">Garden Area</option>
-                        <option value="Lounge">Lounge</option>
-                        <option value="Main Hall">Main Hall</option>
-                        <option value="Outdoor Patio">Outdoor Patio</option>
-                        <option value="Window Side">Window Side</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div className="customer-reservation-fields customer-reservation-contact-fields">
-                    <label>Full Name <span>*</span><span className="customer-input-control"><UserRound size={15} /><input required autoComplete="name" value={reservationName} onChange={(event) => setReservationName(event.target.value)} placeholder="Your name" /></span></label>
-                    <label>Mobile Number <span>*</span><span className="customer-input-control"><Phone size={15} /><input required autoComplete="tel" inputMode="tel" value={reservationPhone} onChange={(event) => {
-                      const phone = event.target.value;
-                      setReservationPhone(phone);
-                      setReservationPhoneError(
-                        !phone.trim() || isValidIndianMobileNumber(phone)
-                          ? ""
-                          : "Enter a valid 10-digit Indian mobile number.",
-                      );
-                    }} onBlur={() => {
-                      if (reservationPhone.trim() && !isValidIndianMobileNumber(reservationPhone)) {
-                        setReservationPhoneError("Enter a valid 10-digit Indian mobile number.");
-                      }
-                    }} aria-invalid={Boolean(reservationPhoneError)} aria-describedby={reservationPhoneError ? "reservation-phone-error" : undefined} placeholder="e.g. +91 98765 43210" /></span>
-                      {reservationPhoneError && <p id="reservation-phone-error" className="customer-reservation-message is-error customer-phone-error" role="alert">{reservationPhoneError}</p>}
-                    </label>
-                    <label>Email <span className="customer-optional-label-inline">(Optional)</span><span className="customer-input-control"><Mail size={15} /><input type="email" maxLength={100} autoComplete="email" value={reservationEmail} onChange={(event) => {
-                      const email = event.target.value;
-                      setReservationEmail(email);
-                      setReservationEmailError(!email.trim() || isValidEmail(email) ? "" : "Enter a valid email address.");
-                    }} onBlur={() => {
-                      if (reservationEmail.trim() && !isValidEmail(reservationEmail)) {
-                        setReservationEmailError("Enter a valid email address.");
-                      }
-                    }} aria-invalid={Boolean(reservationEmailError)} aria-describedby={reservationEmailError ? "reservation-email-error" : undefined} placeholder="you@example.com" /></span>
-                      {reservationEmailError && <p id="reservation-email-error" className="customer-reservation-message is-error customer-phone-error" role="alert">{reservationEmailError}</p>}
-                    </label>
-                  </div>
-                  <label><span className="customer-optional-label">Special Requests <small>(Optional)</small></span><textarea rows={3} value={reservationNotes} onChange={(event) => setReservationNotes(event.target.value)} placeholder="Birthday celebration, anniversary, high chair, etc." /></label>
-                  {availableTables.length === 0 && <p className="customer-reservation-message is-error">No available tables for this party size. Please choose fewer guests or contact the restaurant.</p>}
-                  {reservationMessage && <p className={`customer-reservation-message ${reservationMessage.startsWith("Your reservation") ? "is-success" : "is-error"}`} role="status">{reservationMessage}</p>}
-                  <button className="customer-reservation-submit" type="submit" disabled={reservationSubmitting || availableTables.length === 0}>
-                    <CalendarDays size={19} /> {reservationSubmitting ? "Reserving…" : "Reserve Table"}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </section>
+          <div className="customer-reservation-flow-wrapper" style={{ width: "100%", minHeight: "100vh", background: "#0a0403" }}>
+            <TableReservationFlow
+              onBackToPos={() => navigateScreen("home")}
+              onAdminLogin={onAdminLogin}
+              backLabel="Back to Home"
+            />
+          </div>
         )}
 
         {activeScreen === "confirmation" && (

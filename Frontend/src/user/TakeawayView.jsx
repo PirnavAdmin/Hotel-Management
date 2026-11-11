@@ -222,6 +222,12 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     <section className="takeaway-section" style={{ padding: "1.25rem 2rem", color: "var(--text-main)", minHeight: "calc(100vh - 130px)" }}>
       <style>{`
         .takeaway-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); gap: .75rem; align-items: start; min-width: 0; }
+        .takeaway-menu-filters { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); align-items: center; gap: 10px; width: 100%; min-width: 0; margin-bottom: 1rem; }
+        .takeaway-menu-search { display: flex; align-items: center; gap: .6rem; width: 100%; min-width: 0; height: 40px; box-sizing: border-box; padding: .35rem .75rem; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--bg-secondary); }
+        .takeaway-menu-search input { flex: 1; width: 100%; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--text-main); }
+        .takeaway-menu-category { width: 100%; min-width: 0; height: 40px; }
+        .takeaway-menu-category .searchable-select { width: 100%; height: 100%; }
+        .takeaway-menu-category .searchable-select-trigger { width: 100%; height: 40px; min-height: 40px; box-sizing: border-box; padding: 0 .75rem; border-color: var(--border-subtle); border-radius: 9px; background: var(--bg-secondary); color: var(--text-main); }
         .takeaway-menu-card { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-secondary); box-shadow: var(--shadow-sm); }
         .takeaway-menu-card-image { background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary)); }
         .takeaway-dietary-badge, .takeaway-prep-badge, .takeaway-special-badge { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 3px; padding: 2px 4px; border: 1px solid rgba(var(--surface-rgb),0.1); border-radius: 3px; background: rgba(0,0,0,.78); color: #fff; font-size: .54rem; font-weight: 700; }
@@ -254,6 +260,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         .takeaway-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; }
         .takeaway-header-actions .takeaway-secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 38px; padding: .55rem .75rem; font-size: .85rem; white-space: nowrap; }
         @media (max-width: 600px) { .takeaway-page-header { align-items: flex-start; } .takeaway-header-actions { width: 100%; justify-content: flex-start; } .takeaway-header-actions .takeaway-secondary-button { flex: 1 1 auto; } }
+        @media (max-width: 600px) { .takeaway-menu-filters { grid-template-columns: minmax(0, 1fr); } }
         .takeaway-history-overlay { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,.68); }
         .takeaway-history-dialog { display: flex; flex-direction: column; width: min(100%, 620px); max-height: min(82vh, 760px); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-secondary); color: var(--text-main); box-shadow: 0 24px 70px rgba(0,0,0,.4); }
         .takeaway-history-content { overflow-y: auto; padding: .9rem 1rem 1rem; }
@@ -273,9 +280,9 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: ".5rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: ".6rem .8rem" }}><ShoppingBag size={18}/><strong>{count} items</strong><span style={{ color: "var(--accent-amber-light)" }}>₹{total.toFixed(2)}</span></div>
       </div>
-      <div className="menu-catalog-controls" style={{ marginBottom: "1rem" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: ".6rem", width: "min(100%, 350px)", padding: ".55rem .75rem", border: "1px solid var(--border-subtle)", borderRadius: 9, background: "var(--bg-secondary)" }}><Search size={16}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search menu items" style={{ background: "transparent", border: 0, outline: 0, color: "inherit", width: "100%" }}/></label>
-        <SearchableSelect aria-label="Filter menu by category" value={category} onChange={(e) => setCategory(e.target.value)} style={{ minWidth: 180, padding: ".62rem .75rem", border: "1px solid var(--border-subtle)", borderRadius: 9, background: "var(--bg-secondary)", color: "var(--text-main)" }}><option value="all">All Categories</option>{categories.map((name) => <option key={name} value={name}>{name}</option>)}</SearchableSelect>
+      <div className="takeaway-menu-filters">
+        <label className="takeaway-menu-search"><Search size={16} aria-hidden="true"/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search Menu Items" aria-label="Search menu items"/></label>
+        <div className="takeaway-menu-category"><SearchableSelect aria-label="Filter menu by category" value={category} onChange={(e) => setCategory(e.target.value)} style={{ minWidth: 0 }}><option value="all">All Categories</option>{categories.map((name) => <option key={name} value={name}>{name}</option>)}</SearchableSelect></div>
       </div>
       <div className="takeaway-layout">
       {menuLoading ? <p>Loading menu…</p> : <div className="takeaway-menu-grid menu-catalog-grid">

@@ -18,7 +18,7 @@ const INITIAL_RESERVATIONS = [
     section: "Indoor",
     specialRequests: "Anniversary celebration, window table preference.",
     estimatedAmount: 2000,
-    advanceAmount: 400,
+    advanceAmount: 100,
     paymentMethod: "UPI (Google Pay)",
     status: "confirmed",
     createdAt: "2026-11-10T14:30:00Z",

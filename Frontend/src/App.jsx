@@ -15,7 +15,7 @@ import {
   PastOrdersModal,
   TakeawayOrderFlowView,
 } from "./user";
-import { Header, LoginPage, ErrorBoundary } from "./common";
+import { Header, LoginPage, ErrorBoundary, CustomerLandingPage } from "./common";
 import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
 import { BarBOTView } from "./bar/BarBOTView";
@@ -3852,7 +3852,11 @@ export function App() {
             menuItems={menuItems}
             menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
             tables={tables}
-            onAdminLogin={() => navigate("/admin")}
+            onAdminLogin={() => {
+              setAdminSession(null);
+              saveRouteSession(SESSION_KEY_ADMIN, null);
+              navigate("/admin");
+            }}
           />
         )}
 
@@ -3981,7 +3985,8 @@ export function App() {
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
         {isAdminRoute &&
-          (adminSession && adminSession.role === "admin" ? (
+          (adminSession &&
+          (adminSession.role === "admin" || adminSession.role === "manager") ? (
             <AdminPortal
               isFullPage={true}
               onClose={() => navigate("/")}
@@ -4017,7 +4022,14 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
+            <LoginPage
+              currentTheme={theme}
+              onChangeTheme={setTheme}
+              role="admin"
+              onLoginSuccess={handleGlobalLogin}
+              restaurantName={restaurantSettings.restaurantName}
+              restaurantLogo={restaurantSettings.logo}
+            />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
