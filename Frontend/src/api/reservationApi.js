@@ -147,21 +147,13 @@ export async function apiGetReservationById(id) {
 }
 
 export async function apiCreateReservation(reservationData) {
-  try {
-    const res = await apiClient('/api/v1/reservations', {
-      method: 'POST',
-      body: JSON.stringify(reservationData),
-    });
-    if (res?.success) return res;
-  } catch {}
-
   const all = getStoredReservations();
   const nextNum = 1000 + all.length + 1;
   const newReservation = {
     id: `RES-${nextNum}`,
     reservationId: `RES-${nextNum}`,
-    ...data,
-    advanceAmount: data?.advanceAmount || 100,
+    ...reservationData,
+    advanceAmount: reservationData?.advanceAmount || 100,
     status: "confirmed",
     createdAt: new Date().toISOString(),
   };

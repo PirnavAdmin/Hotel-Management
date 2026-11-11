@@ -2175,166 +2175,7 @@ function globalSyncPlugin(backendTarget) {
           return;
         }
 
-<<<<<<< HEAD
         // Authentication is forwarded directly to ASP.NET Core API via Vite proxy
-=======
-        // REST API: /api/v1/auth/login (local fallback)
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk) => {
-            body += chunk;
-          });
-          req.on("end", () => {
-            try {
-              const parsed = JSON.parse(body || "{}");
-              const inputUser = String(parsed.username || parsed.usernameOrEmail || parsed.email || parsed.Username || "").trim();
-              const inputPass = String(parsed.password || parsed.Password || "").trim();
-              const normUser = inputUser.toLowerCase();
-              const normPass = inputPass;
-
-              db = loadDb();
-              const users = Array.isArray(db.avsr_auth_users_v1) ? db.avsr_auth_users_v1 : [];
-
-              let found = null;
-
-              // Priority 1: pirnav administrative account always authenticates successfully
-              if (normUser === "pirnav" || normUser === "pirnavadmin" || normUser.includes("pirnav")) {
-                const dbPirnav = users.find((u) => String(u.username || "").toLowerCase() === "pirnav" || String(u.email || "").toLowerCase().includes("pirnav"));
-                found = dbPirnav ? { ...dbPirnav } : {
-                  id: "pirnav",
-                  username: "pirnav",
-                  fullName: "pirnav",
-                  password: "Admin@123",
-                  email: "maturi.vikas@pirnav.com",
-                  role: "admin",
-                  phone: "9999999999",
-                };
-                found.id = "pirnav";
-                found.username = "pirnav";
-                found.fullName = "pirnav";
-                found.role = "admin";
-                if (!found.password) found.password = "Admin@123";
-              }
-
-              if (!found) {
-                found = users.find((u) => {
-                  const uName = String(u.username || "").trim().toLowerCase();
-                  const uEmail = String(u.email || "").trim().toLowerCase();
-                  const uPass = String(u.password || "").trim();
-                  const matchesUser = uName === normUser || (normUser.includes("@") && uEmail === normUser);
-                  if (!matchesUser) return false;
-
-                  // Match exact password or case-insensitive password
-                  if (uPass === normPass || uPass.toLowerCase() === normPass.toLowerCase()) return true;
-
-                  // Tolerant matching for standard developer/admin accounts
-                  if ((uName === "admin" || uName === "admins" || u.role === "admin") &&
-                      ["admin@123", "admin123", "admin", "1234", "admin@2026", "pirnav"].includes(normPass.toLowerCase())) {
-                    return true;
-                  }
-                  if ((uName === "pos" || u.role === "pos") &&
-                      ["pos", "pos123", "pos@123", "1234"].includes(normPass.toLowerCase())) {
-                    return true;
-                  }
-                  if ((uName === "kot" || u.role === "kot") &&
-                      ["kot", "kot123", "kot@123", "1234"].includes(normPass.toLowerCase())) {
-                    return true;
-                  }
-                  return false;
-                });
-              }
-
-              // Fallback user resolution for standard administrative roles if not found in db
-              if (!found) {
-                if (normUser === "admin" || normUser === "admins") {
-                  if (["admin@123", "admin123", "admin", "1234", "pirnav", ""].includes(normPass.toLowerCase())) {
-                    found = {
-                      id: "1",
-                      username: "admin",
-                      fullName: "pirnav",
-                      email: "admin@bhanupos.com",
-                      role: "admin",
-                      phone: "9999999999",
-                    };
-                  }
-                } else if (normUser === "pos" || normUser === "cashier") {
-                  if (["pos", "pos123", "1234", ""].includes(normPass.toLowerCase())) {
-                    found = {
-                      id: "pos-1",
-                      username: "pos",
-                      fullName: "Billing / POS Counter",
-                      email: "pos@bhanupos.com",
-                      role: "pos",
-                      phone: "9999999999",
-                    };
-                  }
-                } else if (normUser === "kot" || normUser === "kitchen") {
-                  if (["kot", "kot123", "1234", ""].includes(normPass.toLowerCase())) {
-                    found = {
-                      id: "kot-1",
-                      username: "kot",
-                      fullName: "Kitchen / Chef Display",
-                      email: "kitchen@bhanupos.com",
-                      role: "kot",
-                      phone: "9999999999",
-                    };
-                  }
-                }
-              }
-
-              if (found) {
-                const userObj = { ...found };
-                if (inputUser && inputUser.includes("@")) {
-                  userObj.email = inputUser.toLowerCase();
-                }
-                if (String(userObj.fullName || "").includes("SURESH REDDY")) {
-                  userObj.fullName = "pirnav";
-                }
-
-                // Construct a well-formed JWT token with role claims for client auth
-                const headerB64 = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-                const payloadB64 = Buffer.from(JSON.stringify({
-                  nameid: String(userObj.id || "1"),
-                  unique_name: String(userObj.username || "admin"),
-                  name: String(userObj.fullName || userObj.username || "Admin"),
-                  email: String(userObj.email || ""),
-                  role: String(userObj.role || "admin"),
-                  "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": String(userObj.role || "admin"),
-                  nbf: Math.floor(Date.now() / 1000),
-                  exp: Math.floor(Date.now() / 1000) + 86400 * 7,
-                  iat: Math.floor(Date.now() / 1000),
-                })).toString("base64url");
-                const token = `${headerB64}.${payloadB64}.local_dev_signature`;
-
-                console.log(`\x1b[32m[AUTH LOGIN SUCCESS]\x1b[0m User: "${inputUser}" (Role: ${userObj.role})`);
-                res.writeHead(200, { "Content-Type": "application/json" });
-                return res.end(
-                  JSON.stringify({
-                    success: true,
-                    token,
-                    user: userObj,
-                  }),
-                );
-              }
-
-              console.warn(`\x1b[33m[AUTH LOGIN 401]\x1b[0m Failed login attempt for user: "${inputUser}"`);
-              res.writeHead(401, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({
-                  success: false,
-                  error: "Invalid username or password",
-                }),
-              );
-            } catch (err) {
-              res.writeHead(400, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({ success: false, error: err.message }),
-              );
-            }
-          });
-          return;
-        }
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
 
         // REST API: /api/v1/auth/forgot-password
         if (
@@ -2459,40 +2300,15 @@ function globalSyncPlugin(backendTarget) {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-<<<<<<< HEAD
-  const env = loadEnv(mode, process.cwd(), "");
-
-  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
-  const backendTarget =
-    process.env.BACKEND_URL ||
-    env.BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    env.VITE_BACKEND_URL ||
-    "http://127.0.0.1:5018";
-
-  const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
-  const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
-=======
   const env = {
     ...loadEnv(mode, WORKSPACE_ROOT, ""),
     ...loadEnv(mode, FRONTEND_ROOT, ""),
   };
 
-  let apiBase = env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
-  if (!apiBase) {
-    try {
-      const rawEnv = fs.readFileSync(path.resolve(process.cwd(), ".env"), "utf8");
-      const match = rawEnv.match(/https?:\/\/[^\s"']+/);
-      if (match) apiBase = match[0].replace(/\/$/, "");
-    } catch {}
-  }
-  if (!apiBase) {
-    apiBase = "";
-  } else {
-    apiBase = apiBase.trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
-  }
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
+  const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
+  const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
 
+  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
   const backendTarget =
     process.env.BACKEND_URL ||
     env.BACKEND_URL ||
@@ -2518,7 +2334,6 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
-<<<<<<< HEAD
         "^/__backend_api": {
           target: backendTarget,
           changeOrigin: true,
@@ -2558,25 +2373,11 @@ export default defineConfig(({ mode }) => {
         },
         "/uploads": {
           target: backendTarget,
-=======
-        "/__backend_api": {
-          target: backendTarget,
           changeOrigin: true,
           secure: false,
           headers: { "ngrok-skip-browser-warning": "true" },
         },
-        "/api/v1": {
-          target: backendTarget,
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
-          changeOrigin: true,
-          secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
-        },
-<<<<<<< HEAD
         "/swagger": {
-=======
-        "/api/auth": {
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
           target: backendTarget,
           changeOrigin: true,
           secure: false,

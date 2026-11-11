@@ -19,8 +19,8 @@
   position: absolute;
   z-index: 3;
   inset: 0 0 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
   min-height: 76px;
@@ -1504,7 +1504,7 @@
   .customer-reservation-card .customer-reservation-submit { min-height: 38px; font-size: 13px; }
 }
 @media (max-width: 900px) {
-  .customer-header { grid-template-columns: minmax(0,1fr) auto; }
+  .customer-header { display: flex; justify-content: space-between; align-items: center; }
   .customer-reservation-layout { grid-template-columns: minmax(0,1fr) minmax(410px,1fr); gap: 28px; }
   .customer-reservation-perks { margin-top: 50px; }
   .customer-action-grid { margin-top: 32px; }
@@ -1519,7 +1519,7 @@
   .customer-reservation-copy { display: none; }
 }
 @media (max-width: 620px) {
-  .customer-header { position: relative; grid-template-columns: minmax(0,1fr) auto; gap: 10px; min-height: 70px; padding: 10px 16px; background: #1c1713; }
+  .customer-header { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 70px; padding: 10px 16px; background: #1c1713; }
   .customer-brand-logo,.customer-brand-mark { width: 44px; height: 44px; flex-basis: 44px; border-radius: 11px; }
   .customer-brand strong { font-size: 19px; }
   .customer-brand small { font-size: 11px; }
@@ -2588,3 +2588,220 @@
 @media (prefers-reduced-motion: reduce) {
   .customer-site *, .customer-site *::before, .customer-site *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* ── Customer Authentication & Profile Menu Styles ─────────────── */
+.customer-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.customer-nav-link {
+  background: transparent;
+  border: none;
+  color: #f5ede6;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: color 0.15s ease;
+  position: relative;
+}
+
+.customer-nav-link:hover,
+.customer-nav-link.is-active {
+  color: #f59e0b;
+}
+
+.customer-nav-link.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #f59e0b;
+  border-radius: 2px;
+}
+
+.customer-login-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1.5px solid #f59e0b;
+  border-radius: 20px;
+  background: rgba(18, 14, 11, 0.45);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.customer-login-pill-btn:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #fbbf24;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.customer-profile-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px 0 6px;
+  border: 1.5px solid rgba(245, 158, 11, 0.5);
+  border-radius: 24px;
+  background: rgba(25, 16, 12, 0.85);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.customer-profile-pill-btn:hover {
+  background: rgba(35, 22, 16, 0.98);
+  border-color: #f59e0b;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.28);
+}
+
+.customer-avatar-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customer-profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fef3c7;
+}
+
+.customer-profile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 230px;
+  background: #1b120e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 8px;
+  z-index: 1000;
+  animation: authCardFadeIn 0.2s ease-out;
+}
+
+.customer-profile-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 6px;
+}
+
+.customer-dropdown-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customer-profile-dropdown-header strong {
+  display: block;
+  font-size: 13.5px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.customer-profile-dropdown-header small {
+  display: block;
+  font-size: 11px;
+  color: #f59e0b;
+}
+
+.customer-profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #e5d7cc;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.customer-profile-menu-item:hover {
+  background: rgba(245, 158, 11, 0.16);
+  color: #ffffff;
+}
+
+.customer-profile-menu-item.is-logout {
+  color: #ef4444;
+}
+
+.customer-profile-menu-item.is-logout:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.customer-profile-dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 6px 0;
+}
+
+/* Modal */
+.customer-profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.customer-profile-modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  color: #1a100b;
+  position: relative;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .customer-header-nav {
+    display: none;
+  }
+}
+
