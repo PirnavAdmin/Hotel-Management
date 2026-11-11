@@ -193,18 +193,7 @@ public class InvoicesController : ControllerBase
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
-<<<<<<< HEAD
-            if (string.Equals(existing.Status, "VOID", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(existing.Status, "REFUNDED", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(existing.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
-            {
-                return BadRequest(new { success = false, message = $"Cannot record payment for a {existing.Status} invoice." });
-            }
-
-            var parameters = new Dictionary<string, object?>
-=======
             if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
             {
                 return BadRequest(new { success = false, message = "Cannot record payment for a void invoice." });
             }
@@ -581,11 +570,7 @@ public class InvoicesController : ControllerBase
     }
 
     [AllowAnonymous]
-<<<<<<< HEAD
-    [HttpDelete("{id}")]
-=======
     [HttpDelete("{id:long}")]
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     public async Task<IActionResult> DeleteInvoice(string id)
     {
         long numericId = 0;

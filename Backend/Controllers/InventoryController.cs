@@ -168,11 +168,7 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost]
-<<<<<<< HEAD
-    public async Task<IActionResult> CreateIngredient([FromBody] CreateIngredientRequest request)
-=======
     public async Task<IActionResult> CreateIngredient([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     {
         try
         {
@@ -254,11 +250,7 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPut("{id:long}")]
-<<<<<<< HEAD
-    public async Task<IActionResult> UpdateIngredient(long id, [FromBody] UpdateIngredientRequest request)
-=======
     public async Task<IActionResult> UpdateIngredient(long id, [FromBody] JsonElement body)
->>>>>>> 35c8f36115066816841543296a3856444e23bf2c
     {
         try
         {
