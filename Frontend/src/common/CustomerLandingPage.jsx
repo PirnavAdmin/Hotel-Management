@@ -44,8 +44,22 @@ import {
   IceCream,
   Heart,
 } from "lucide-react";
-import { apiClient } from "../api/apiConfig";
-import { apiCreateReservation } from "../api/reservationApi";
+import {
+  apiCheckReservationAvailability,
+  apiGetAvailableReservationTables,
+  apiGetReservationTableDetails,
+  apiCreatePublicReservation,
+  apiSendReservationOtp,
+  apiVerifyReservationOtp,
+  apiGetMyReservations,
+  apiGetReservationDetails,
+  apiModifyReservation,
+  apiCancelCustomerReservation,
+  apiGetReservationPaymentStatus,
+  getReservationCustomerToken,
+  setReservationCheckoutToken,
+  setReservationCustomerToken,
+} from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
@@ -371,13 +385,6 @@ export const CURATED_TAKEAWAY_ITEMS = [
   },
 ];
 
-const getAvailableTables = (tables, guests) =>
-  (Array.isArray(tables) ? tables : []).filter((table) => {
-    const status = String(table.status || "").toLowerCase();
-    const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
-    return ["vacant", "available"].includes(status) && cap >= guests;
-  });
-
 function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -419,7 +426,6 @@ export function CustomerLandingPage({
   restaurantLogo = "",
   menuItems = [],
   menuLoading = false,
-  tables = [],
   onHotelLogin,
   kitchenNotifications = [],
   onClearNotifications,
@@ -492,8 +498,29 @@ export function CustomerLandingPage({
   const [reservationNotes, setReservationNotes] = useState("");
   const [reservationMessage, setReservationMessage] = useState("");
   const [reservationSubmitting, setReservationSubmitting] = useState(false);
+  const [reservationAvailability, setReservationAvailability] = useState(null);
+  const [reservationTables, setReservationTables] = useState([]);
+  const [reservationTableId, setReservationTableId] = useState("");
+  const [reservationTableDetail, setReservationTableDetail] = useState(null);
+  const [reservationAvailabilityLoading, setReservationAvailabilityLoading] = useState(false);
+  const [reservationAvailabilityError, setReservationAvailabilityError] = useState("");
+  const [createdReservation, setCreatedReservation] = useState(null);
+  const [reservationOtpSent, setReservationOtpSent] = useState(false);
+  const [reservationOtp, setReservationOtp] = useState("");
+  const [reservationOtpBusy, setReservationOtpBusy] = useState(false);
+  const [reservationOtpCooldown, setReservationOtpCooldown] = useState(0);
+  const [reservationDevOtp, setReservationDevOtp] = useState("");
+  const [reservationCustomerAuthed, setReservationCustomerAuthed] = useState(Boolean(getReservationCustomerToken()));
+  const [myReservations, setMyReservations] = useState([]);
+  const [reservationTab, setReservationTab] = useState("upcoming");
+  const [reservationAccountOpen, setReservationAccountOpen] = useState(false);
+  const [selectedReservationDetails, setSelectedReservationDetails] = useState(null);
+  const [reservationPaymentStatus, setReservationPaymentStatus] = useState(null);
+  const [reservationActionBusy, setReservationActionBusy] = useState(false);
+  const [reservationAccountMessage, setReservationAccountMessage] = useState("");
   const reservationDateRef = useRef(null);
   const reservationTimeRef = useRef(null);
+  const reservationIdempotencyKeyRef = useRef("");
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
@@ -617,7 +644,47 @@ export function CustomerLandingPage({
   const discount = couponApplied ? couponDiscount : 0;
   const totalAmount = Math.max(0, itemsSubtotal - discount + packingCharges + taxes);
 
-  const availableTables = getAvailableTables(tables, Number(reservationGuests));
+  useEffect(() => {
+    if (activeScreen !== "reservation") return undefined;
+    const timer = window.setTimeout(async () => {
+      setReservationAvailabilityLoading(true);
+      setReservationAvailabilityError("");
+      const params = {
+        date: reservationDate,
+        time: reservationTime,
+        guests: Number(reservationGuests),
+        preference: reservationTablePreference,
+        branchId: 1,
+      };
+      const [availabilityResult, tablesResult] = await Promise.all([
+        apiCheckReservationAvailability(params),
+        apiGetAvailableReservationTables(params),
+      ]);
+      const availability = availabilityResult?.data?.data ?? availabilityResult?.data;
+      const tableData = tablesResult?.data?.data ?? tablesResult?.data;
+      if (availabilityResult?.success) setReservationAvailability(availability);
+      if (tablesResult?.success) {
+        const rows = Array.isArray(tableData?.tables)
+          ? tableData.tables
+          : Array.isArray(tableData?.availableTables) ? tableData.availableTables : [];
+        setReservationTables(rows);
+        setReservationTableId((current) => rows.some((row) => String(row.tableId) === current)
+          ? current
+          : "");
+      }
+      if (!availabilityResult?.success || !tablesResult?.success) {
+        setReservationAvailabilityError(availabilityResult?.error || tablesResult?.error || "Live availability could not be loaded.");
+      }
+      setReservationAvailabilityLoading(false);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [activeScreen, reservationDate, reservationTime, reservationGuests, reservationTablePreference]);
+
+  useEffect(() => {
+    if (!reservationOtpCooldown) return undefined;
+    const timer = window.setTimeout(() => setReservationOtpCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [reservationOtpCooldown]);
 
   const changeQuantity = (item, delta) => {
     setCart((current) => {
@@ -748,47 +815,207 @@ export function CustomerLandingPage({
     }
     setReservationEmailError("");
 
-    const selectedTable =
-      (availableTables && availableTables.length > 0 ? availableTables[0] : null) || {
-        id: "T-03",
-        name: "T-03",
-        section: reservationTablePreference || "Indoor",
-      };
+    if (!reservationAvailability?.isAvailable || !reservationTableId || reservationTables.length === 0) {
+      setReservationMessage("Choose an available table after checking live availability.");
+      return;
+    }
+    const selectedTable = reservationTables.find((table) => String(table.tableId) === reservationTableId);
+    if (!selectedTable || selectedTable.isAvailableForSlot === false || (selectedTable.slotStatus && String(selectedTable.slotStatus).toLowerCase() !== "available")) {
+      setReservationMessage("That table is no longer available. Please choose another table.");
+      return;
+    }
 
     setReservationSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    const tableCheck = await apiGetReservationTableDetails(selectedTable.tableId, {
+      date: reservationDate,
+      time: reservationTime,
+      guests: Number(reservationGuests),
+    });
+    const tableDetails = tableCheck?.data?.data ?? tableCheck?.data;
+    if (!tableCheck?.success || tableDetails?.isAvailableForSlot === false) {
+      setReservationSubmitting(false);
+      setReservationMessage(tableCheck?.error || tableDetails?.conflictReason || "That table is no longer available. Please select another.");
+      return;
+    }
 
-    const result = await apiCreateReservation({
+    if (!reservationIdempotencyKeyRef.current) {
+      reservationIdempotencyKeyRef.current = globalThis.crypto?.randomUUID?.() || `reservation-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    const result = await apiCreatePublicReservation({
+      idempotencyKey: reservationIdempotencyKeyRef.current,
+      source: "PUBLIC",
       customerName: reservationName.trim(),
       phone: reservationPhone.trim(),
       email: reservationEmail.trim() || null,
-      tableId: selectedTable.id || "T-03",
-      tableName: `${selectedTable.name || selectedTable.tableNumber || "T-03"} (${selectedTable.section || reservationTablePreference || "Indoor"})`,
-      section: selectedTable.section || reservationTablePreference || "Indoor",
+      tableId: Number(selectedTable.tableId),
       branchId: 1,
-      guests: Number(reservationGuests),
+      guestsCount: Number(reservationGuests),
+      reservationDate,
+      reservationTime,
+      seatingPreference: reservationTablePreference,
       tablePreference: reservationTablePreference,
-      date: reservationDate,
-      time: reservationTime,
+      notes: reservationNotes.trim(),
       specialRequests: reservationNotes.trim(),
-      advanceAmount: 100,
     });
     setReservationSubmitting(false);
 
     if (!result?.success) {
-      setReservationMessage("We couldn't complete your reservation. Please try again.");
+      setReservationMessage(result?.error || "We couldn't complete your reservation. Please try again.");
       return;
     }
+    const reservation = result.data?.reservation ?? result.data?.data ?? result.data;
+    reservationIdempotencyKeyRef.current = "";
+    const reservationNumber = reservation?.reservationNumber || `RES-${reservation?.reservationId ?? ""}`;
+    if (reservation?.guestToken) setReservationCheckoutToken(reservation.guestToken);
+    setCreatedReservation(reservation);
+    const otpResult = await apiSendReservationOtp(reservationPhone.trim());
+    setReservationOtpSent(Boolean(otpResult?.success));
+    setReservationOtpCooldown(otpResult?.success ? 60 : 0);
+    const otpPayload = otpResult?.data?.data ?? otpResult?.data;
+    setReservationDevOtp(import.meta.env.DEV && otpPayload?.devOtp ? String(otpPayload.devOtp) : "");
+    setReservationAccountMessage(otpResult?.success ? "" : otpResult?.error || "Try sending the verification code again.");
+    setReservationMessage(otpResult?.success
+      ? `Reservation ${reservationNumber} is on hold pending advance payment. Verify your mobile number to manage it.`
+      : `Reservation ${reservationNumber} was created, but we couldn't send the verification code: ${otpResult?.error || "Please try again."}`);
+  };
 
-    setReservationMessage(
-      `Your reservation (${result.data.id}) is confirmed! Table ${result.data.tableName} has been reserved for ${reservationGuests} guests on ${reservationDate} at ${reservationTime}.`
-    );
-    setReservationName("");
-    setReservationPhone("");
+  const handleVerifyReservationOtp = async (event) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(reservationOtp)) {
+      setReservationMessage("Enter the six-digit verification code.");
+      return;
+    }
+    setReservationOtpBusy(true);
+    const result = await apiVerifyReservationOtp(reservationPhone.trim(), reservationOtp);
+    setReservationOtpBusy(false);
+    if (!result?.success) {
+      setReservationAccountMessage(result?.error || "The verification code could not be confirmed.");
+      return;
+    }
+    const verified = result.data?.data ?? result.data;
+    if (verified?.token) setReservationCustomerToken(verified.token);
+    setReservationCustomerAuthed(true);
+    setReservationOtpSent(false);
+    setReservationDevOtp("");
+    setReservationOtp("");
+    setReservationAccountOpen(true);
+    await loadCustomerReservations("upcoming");
+    setReservationAccountMessage(verified?.message || "Mobile number verified.");
+  };
+
+  const startReservationAccountOtp = async () => {
+    if (!isValidIndianMobileNumber(reservationPhone)) {
+      setReservationPhoneError("Enter a valid 10-digit Indian mobile number.");
+      return;
+    }
     setReservationPhoneError("");
-    setReservationEmail("");
-    setReservationEmailError("");
-    setReservationNotes("");
+    setReservationOtpBusy(true);
+    const result = await apiSendReservationOtp(reservationPhone.trim());
+    setReservationOtpBusy(false);
+    const payload = result?.data?.data ?? result?.data;
+    setReservationOtpSent(Boolean(result?.success));
+    setReservationOtpCooldown(result?.success ? 60 : 0);
+    setReservationDevOtp(import.meta.env.DEV && payload?.devOtp ? String(payload.devOtp) : "");
+    setReservationAccountMessage(result?.success ? "A verification code was sent to your mobile number." : result?.error || "The verification code could not be sent.");
+  };
+
+  async function loadCustomerReservations(tab = reservationTab) {
+    const result = await apiGetMyReservations({ tab, page: 1, pageSize: 50 });
+    if (!result?.success) {
+      setReservationAccountMessage(result?.error || "Your reservations could not be loaded.");
+      return;
+    }
+    const payload = result.data?.data ?? result.data;
+    const rows = tab === "past"
+      ? payload?.pastAndCancelled
+      : payload?.upcoming;
+    setMyReservations(Array.isArray(rows) ? rows : Array.isArray(payload?.items) ? payload.items : []);
+    setReservationTab(tab);
+  }
+
+  useEffect(() => {
+    if (activeScreen === "reservation" && reservationCustomerAuthed && !reservationAccountOpen) {
+      setReservationAccountOpen(true);
+      loadCustomerReservations("upcoming");
+    }
+  }, [activeScreen, reservationCustomerAuthed, reservationAccountOpen]);
+
+  const openCustomerReservation = async (reservation) => {
+    setReservationActionBusy(true);
+    const id = reservation.reservationNumber || reservation.reservationId;
+    const [detailsResult, paymentResult] = await Promise.all([
+      apiGetReservationDetails(id, getReservationCustomerToken()),
+      apiGetReservationPaymentStatus(id),
+    ]);
+    setReservationActionBusy(false);
+    if (!detailsResult?.success) {
+      setReservationAccountMessage(detailsResult?.error || "Reservation details could not be loaded.");
+      return;
+    }
+    const details = detailsResult.data?.data ?? detailsResult.data;
+    setSelectedReservationDetails(details);
+    if (details?.reservationDate) setReservationDate(String(details.reservationDate).slice(0, 10));
+    if (details?.reservationTime) setReservationTime(String(details.reservationTime).slice(0, 5));
+    if (details?.guestsCount) setReservationGuests(Number(details.guestsCount));
+    if (details?.seatingPreference) setReservationTablePreference(details.seatingPreference);
+    if (details?.notes) setReservationNotes(details.notes);
+    if (details?.tableId) setReservationTableId(String(details.tableId));
+    if (paymentResult?.success) setReservationPaymentStatus(paymentResult.data?.data ?? paymentResult.data);
+  };
+
+  const cancelCustomerReservation = async (reservation) => {
+    const id = reservation.reservationNumber || reservation.reservationId;
+    if (!window.confirm(`Cancel reservation ${reservation.reservationNumber || id}? The applicable refund is determined by the reservation service.`)) return;
+    setReservationActionBusy(true);
+    const result = await apiCancelCustomerReservation(id, { cancellationReason: "Cancelled by customer" });
+    setReservationActionBusy(false);
+    if (!result?.success) {
+      setReservationAccountMessage(result?.error || "Reservation cancellation failed.");
+      return;
+    }
+    const response = result.data?.data ?? result.data;
+    setReservationAccountMessage(`${response?.message || "Reservation cancelled."} Refund: ${formatPrice(response?.refundAmount)} (${response?.refundStatus || "status unavailable"}).`);
+    setSelectedReservationDetails(response?.reservation || null);
+    await loadCustomerReservations(reservationTab);
+  };
+
+  const inspectReservationTable = async (table) => {
+    setReservationTableDetail(null);
+    const result = await apiGetReservationTableDetails(table.tableId, {
+      date: reservationDate,
+      time: reservationTime,
+      guests: Number(reservationGuests),
+    });
+    if (!result?.success) {
+      setReservationAvailabilityError(result?.error || "Table details could not be loaded.");
+      return;
+    }
+    const details = result.data?.data ?? result.data;
+    setReservationTableDetail(details);
+    if (details?.isAvailableForSlot) setReservationTableId(String(details.tableId));
+  };
+
+  const saveReservationChanges = async () => {
+    if (!selectedReservationDetails) return;
+    const tableId = reservationTableId || selectedReservationDetails.tableId;
+    setReservationActionBusy(true);
+    const result = await apiModifyReservation(selectedReservationDetails.reservationNumber || selectedReservationDetails.reservationId, {
+      reservationDate,
+      reservationTime,
+      guestsCount: Number(reservationGuests),
+      tableId: Number(tableId),
+      seatingPreference: reservationTablePreference,
+      specialRequests: reservationNotes.trim(),
+    });
+    setReservationActionBusy(false);
+    if (!result?.success) {
+      setReservationAccountMessage(result?.error || "Reservation changes could not be saved.");
+      return;
+    }
+    const updated = result.data?.data ?? result.data;
+    setSelectedReservationDetails(updated?.reservation ?? updated);
+    setReservationAccountMessage(updated?.message || "Reservation updated.");
+    await loadCustomerReservations(reservationTab);
   };
 
   // Format data for standard POS ReceiptModal
@@ -2125,6 +2352,11 @@ export function CustomerLandingPage({
                 <h2>
                   <CalendarDays size={26} /> Book a Table
                 </h2>
+                <div className="customer-reservation-account-entry">
+                  {reservationCustomerAuthed
+                    ? <button type="button" onClick={() => setReservationAccountOpen((open) => !open)}>{reservationAccountOpen ? "Hide my reservations" : "My reservations"}</button>
+                    : <button type="button" disabled={reservationOtpBusy} onClick={startReservationAccountOtp}>{reservationOtpBusy ? "Sending code…" : "Manage reservations with mobile OTP"}</button>}
+                </div>
                 <form onSubmit={handleReservationSubmit}>
                   <div className="customer-reservation-fields">
                     <label>
@@ -2219,6 +2451,40 @@ export function CustomerLandingPage({
                     </label>
                   </div>
 
+                  <section className="customer-reservation-availability" aria-live="polite">
+                    <div className="customer-reservation-availability-heading">
+                      <strong>Live table availability</strong>
+                      {reservationAvailabilityLoading && <span>Checking…</span>}
+                    </div>
+                    {reservationAvailabilityError && <p className="customer-reservation-message is-error">{reservationAvailabilityError}</p>}
+                    {reservationAvailability && <>
+                      <p className={reservationAvailability.isAvailable ? "is-success" : "is-error"}>
+                        {reservationAvailability.message || (reservationAvailability.isAvailable ? "Tables are available." : "No tables are available for this slot.")}
+                      </p>
+                      <p>Estimate {formatPrice(reservationAvailability.estimatedTotalAmount)} · Advance {formatPrice(reservationAvailability.advanceAmount)}{reservationAvailability.advancePaymentPercentage != null ? ` (${reservationAvailability.advancePaymentPercentage}%)` : ""}</p>
+                      <div className="customer-reservation-table-options">
+                        {reservationTables.map((table) => {
+                          const canSelect = table.isAvailableForSlot !== false && (!table.slotStatus || String(table.slotStatus).toLowerCase() === "available");
+                          return <button key={table.tableId} type="button" disabled={!canSelect || reservationAvailabilityLoading} aria-pressed={reservationTableId === String(table.tableId)} className={reservationTableId === String(table.tableId) ? "is-selected" : ""} onClick={() => inspectReservationTable(table)}>
+                            <strong>{table.tableName || table.tableNumber || `Table ${table.tableId}`}</strong>
+                            <span>{table.capacity} seats · {table.sectionArea || table.seatingCategory || "Dining"}</span>
+                            <span>{canSelect ? "Available" : table.conflictReason || "Unavailable"}</span>
+                            {table.estimatedTotalAmount != null && <span>{formatPrice(table.estimatedTotalAmount)} · Advance {formatPrice(table.advanceAmount)}</span>}
+                          </button>;
+                        })}
+                      </div>
+                      {reservationTableDetail && <p className="customer-reservation-table-detail">
+                        {reservationTableDetail.tableName || reservationTableDetail.tableNumber}: {reservationTableDetail.capacity} seats, {reservationTableDetail.sectionArea || reservationTableDetail.seatingCategory}.
+                        {reservationTableDetail.conflictReason ? ` ${reservationTableDetail.conflictReason}` : " Available for this time."}
+                        {Array.isArray(reservationTableDetail.reservedSlotWindowsOnDate) && reservationTableDetail.reservedSlotWindowsOnDate.length ? ` Existing bookings: ${reservationTableDetail.reservedSlotWindowsOnDate.join(", ")}.` : " No occupied reservation windows on this date."}
+                      </p>}
+                      {!reservationAvailability.isAvailable && Array.isArray(reservationAvailability.alternativeSlots) && reservationAvailability.alternativeSlots.length > 0 && <div className="customer-reservation-alternatives">
+                        <span>Suggested times:</span>
+                        {reservationAvailability.alternativeSlots.map((slot) => <button key={slot.normalizedTime || slot.time} type="button" onClick={() => setReservationTime(String(slot.normalizedTime || "").slice(0, 5) || reservationTime)}>{slot.time}</button>)}
+                      </div>}
+                    </>}
+                  </section>
+
                   <div className="customer-reservation-fields customer-reservation-contact-fields">
                     <label>
                       Full Name <span>*</span>
@@ -2289,12 +2555,6 @@ export function CustomerLandingPage({
                     />
                   </label>
 
-                  {availableTables.length === 0 && (
-                    <p className="customer-reservation-message is-error">
-                      No available tables for this party size. Please choose fewer guests or contact the restaurant.
-                    </p>
-                  )}
-
                   {reservationMessage && (
                     <p
                       className={`customer-reservation-message ${
@@ -2308,11 +2568,61 @@ export function CustomerLandingPage({
                   <button
                     className="customer-reservation-submit"
                     type="submit"
-                    disabled={reservationSubmitting || availableTables.length === 0}
+                    disabled={reservationSubmitting || reservationAvailabilityLoading || !reservationAvailability?.isAvailable || !reservationTableId}
                   >
                     <CalendarDays size={19} /> {reservationSubmitting ? "Reserving…" : "Reserve Table"}
                   </button>
                 </form>
+                {(createdReservation || reservationOtpSent) && <div className="customer-reservation-followup">
+                  {createdReservation && <>
+                    <strong>Reference: {createdReservation.reservationNumber || `RES-${createdReservation.reservationId}`}</strong>
+                    <span>Reservation: {createdReservation.status || "PENDING_PAYMENT"} · Payment: {createdReservation.paymentStatus || "PENDING"}</span>
+                    <span>Total {formatPrice(createdReservation.reservationAmount ?? reservationAvailability?.estimatedTotalAmount)} · Advance due {formatPrice(createdReservation.advanceAmount ?? reservationAvailability?.advanceAmount)}</span>
+                  </>}
+                  {reservationOtpSent && <form className="customer-reservation-otp-form" onSubmit={handleVerifyReservationOtp}>
+                    <label htmlFor="reservation-otp">Verify your mobile number</label>
+                    <input id="reservation-otp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={reservationOtp} onChange={(event) => setReservationOtp(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit code" />
+                    <button type="submit" disabled={reservationOtpBusy || reservationOtp.length !== 6}>{reservationOtpBusy ? "Verifying…" : "Verify code"}</button>
+                    {reservationOtpCooldown > 0 ? <span>Resend in {reservationOtpCooldown}s</span> : <button type="button" disabled={reservationOtpBusy} onClick={async () => {
+                      setReservationOtpBusy(true);
+                      const sent = await apiSendReservationOtp(reservationPhone.trim());
+                      setReservationOtpBusy(false);
+                      const payload = sent?.data?.data ?? sent?.data;
+                      setReservationOtpSent(Boolean(sent?.success));
+                      setReservationOtpCooldown(sent?.success ? 60 : 0);
+                      setReservationDevOtp(import.meta.env.DEV && payload?.devOtp ? String(payload.devOtp) : "");
+                      setReservationAccountMessage(sent?.success ? "A new verification code was sent." : sent?.error || "Could not resend the code.");
+                    }}>Resend code</button>}
+                    {reservationDevOtp && <span>Development code: {reservationDevOtp}</span>}
+                  </form>}
+                </div>}
+                {reservationAccountMessage && <p className="customer-reservation-message is-error">{reservationAccountMessage}</p>}
+                {reservationAccountOpen && <section className="customer-reservation-account">
+                  <header>
+                    <h3>Your reservations</h3>
+                    <div>
+                      <button type="button" aria-pressed={reservationTab === "upcoming"} onClick={() => loadCustomerReservations("upcoming")}>Upcoming</button>
+                      <button type="button" aria-pressed={reservationTab === "past"} onClick={() => loadCustomerReservations("past")}>Past / Cancelled</button>
+                    </div>
+                  </header>
+                  {myReservations.length === 0 ? <p>No reservations in this list yet.</p> : myReservations.map((reservation) => <article key={reservation.reservationId}>
+                    <strong>{reservation.reservationNumber}</strong>
+                    <span>{reservation.reservationDate} · {reservation.formattedTime || reservation.reservationTime} · {reservation.guestsCount} guests</span>
+                    <span>{reservation.tableName || reservation.tableNumber || "Table pending"} · {reservation.sectionArea || reservation.seatingCategory || ""}</span>
+                    <span>{formatPrice(reservation.reservationAmount)} · Paid {formatPrice(reservation.paidAmount)} · Remaining {formatPrice(reservation.remainingAmount)}</span>
+                    <span>{reservation.status} · {reservation.paymentStatus}</span>
+                    <button type="button" disabled={reservationActionBusy} onClick={() => openCustomerReservation(reservation)}>Details / payment history</button>
+                    {!/cancel|refund|complete|no.show/i.test(reservation.status || "") && <button type="button" disabled={reservationActionBusy} onClick={() => cancelCustomerReservation(reservation)}>Cancel reservation</button>}
+                  </article>)}
+                  {selectedReservationDetails && <div className="customer-reservation-details">
+                    <h4>{selectedReservationDetails.reservationNumber} details</h4>
+                    <p>{selectedReservationDetails.customerName} · {selectedReservationDetails.customerPhone} · {selectedReservationDetails.email || "No email"}</p>
+                    <p>{selectedReservationDetails.status} · {selectedReservationDetails.paymentStatus} · Refund {formatPrice(selectedReservationDetails.refundAmount)} ({selectedReservationDetails.refundStatus || "none"})</p>
+                    <p>Payment timeline: {(selectedReservationDetails.payments || reservationPaymentStatus?.payments || []).map((payment) => `${payment.paymentType}: ${formatPrice(payment.amount)} (${payment.paymentStatus})`).join(" · ") || "No payments recorded"}</p>
+                    <button type="button" disabled={reservationActionBusy} onClick={() => openCustomerReservation(selectedReservationDetails)}>Refresh payment status</button>
+                    <button type="button" disabled={reservationActionBusy} onClick={saveReservationChanges}>Save reservation changes</button>
+                  </div>}
+                </section>}
               </div>
             </div>
           </section>
