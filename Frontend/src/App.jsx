@@ -4025,6 +4025,7 @@ export function App() {
               onChangeTheme={setTheme}
               pastOrders={pastOrders}
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
+              showToast={showToast}
             />
           ) : (
             <LoginPage
@@ -4418,6 +4419,7 @@ export function App() {
           onChangeTheme={setTheme}
           pastOrders={pastOrders}
           onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
+          showToast={showToast}
         />
       )}
 
