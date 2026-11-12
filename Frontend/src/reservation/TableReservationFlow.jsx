@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import QRCode from "qrcode";
 import {
   Calendar,
   Clock,
@@ -82,7 +83,20 @@ export function TableReservationFlow({
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableFilter, setTableFilter] = useState("all"); // "all" | "indoor" | "outdoor"
   const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState("");
   const [confirmedReservation, setConfirmedReservation] = useState(null);
+
+  useEffect(() => {
+    const upiString = `upi://pay?pa=priya@oksbi&pn=Priya%20Sharma&am=100.00&cu=INR&tn=Table%20Reservation%20Advance`;
+
+    QRCode.toDataURL(upiString, {
+      width: 640,
+      margin: 2,
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((url) => setUpiQrDataUrl(url))
+      .catch(() => setUpiQrDataUrl(""));
+  }, []);
 
   // Reservation management (Step 6, 7, 8)
   const [activeTab, setActiveTab] = useState("upcoming"); // "upcoming" | "past"
@@ -481,6 +495,7 @@ export function TableReservationFlow({
                 selectedTable={selectedTable}
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
+                upiQrDataUrl={upiQrDataUrl}
                 onBack={() => setCurrentStep(2)}
                 onPayNow={() => setCurrentStep(4)}
               />
@@ -1425,6 +1440,7 @@ function Step3Payment({
   selectedTable,
   paymentMethod,
   setPaymentMethod,
+  upiQrDataUrl,
   onBack,
   onPayNow,
 }) {
@@ -1612,87 +1628,108 @@ function Step3Payment({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "8px",
+              gap: "10px",
               marginBottom: "16px",
             }}
           >
-            {[
-              {
-                id: "upi",
-                title: "UPI (Google Pay, PhonePe, Paytm)",
-                desc: "Instant confirmation via UPI QR / VPA",
-              },
-              {
-                id: "card",
-                title: "Credit / Debit Card",
-                desc: "Visa, Mastercard, RuPay",
-              },
-              {
-                id: "netbanking",
-                title: "Net Banking",
-                desc: "All Major Indian Banks",
-              },
-              {
-                id: "wallet",
-                title: "Wallets",
-                desc: "Paytm, Amazon Pay, etc.",
-              },
-            ].map((m) => (
-              <label
-                key={m.id}
-                onClick={() => setPaymentMethod(m.id)}
+            <label
+              onClick={() => setPaymentMethod("upi")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1.5px solid #ea580c",
+                background: "#fff8f3",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name="payment"
+                checked={paymentMethod === "upi"}
+                onChange={() => setPaymentMethod("upi")}
+                style={{ accentColor: "#ea580c", marginTop: "1px" }}
+              />
+              <div>
+                <div style={{ fontSize: "13px", fontWeight: 800, color: "#1f1610" }}>
+                  UPI (Google Pay, PhonePe, Paytm)
+                </div>
+                <div style={{ fontSize: "11px", color: "#786c62" }}>
+                  Instant confirmation via UPI QR / VPA
+                </div>
+              </div>
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                padding: "10px",
+                borderRadius: "12px",
+                background: "#f5f2ee",
+                border: "1px solid #e7ded4",
+              }}
+            >
+              <div
                 style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "10px",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border:
-                    paymentMethod === m.id
-                      ? "1.5px solid #ea580c"
-                      : "1px solid #e7ded4",
-                  background: paymentMethod === m.id ? "#fff8f3" : "#faf7f2",
-                  cursor: "pointer",
+                  position: "relative",
+                  width: "100%",
+                  maxWidth: "230px",
+                  aspectRatio: "1",
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  border: "2px solid #d8d2cc",
+                  padding: "10px",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
                 }}
               >
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === m.id}
-                  onChange={() => setPaymentMethod(m.id)}
-                  style={{ accentColor: "#ea580c", marginTop: "3px" }}
-                />
-                <div>
+                {upiQrDataUrl ? (
+                  <img
+                    src={upiQrDataUrl}
+                    alt="UPI QR code"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "block",
+                      objectFit: "contain",
+                      background: "#ffffff",
+                    }}
+                  />
+                ) : (
                   <div
                     style={{
-                      fontSize: "13px",
+                      width: "100%",
+                      height: "100%",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#6b7280",
                       fontWeight: 700,
-                      color: "#1f1610",
                     }}
                   >
-                    {m.title}
+                    QR
                   </div>
-                  <div style={{ fontSize: "11px", color: "#786c62" }}>
-                    {m.desc}
-                  </div>
-                </div>
-              </label>
-            ))}
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Secure badge */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "6px",
               fontSize: "11px",
               color: "#6b5d52",
-              marginBottom: "16px",
+              marginBottom: "12px",
             }}
           >
             <ShieldCheck size={16} color="#16a34a" />
-            <span>Secure 256-Bit SSL Encrypted Payment Simulation</span>
+            <span>Secure UPI Payment</span>
           </div>
 
           <button
