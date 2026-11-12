@@ -45,8 +45,8 @@ const customerAuthRequest = async (path, body, options = {}) => {
 export const apiCustomerRegister = (data) => customerAuthRequest("register", data);
 export const apiCustomerLogin = (emailOrMobile, password, rememberMe) =>
   customerAuthRequest("login", { emailOrMobile, password, rememberMe });
-export const apiCustomerVerifyOtp = (emailOrMobile, otp, purpose) =>
-  customerAuthRequest("verify-otp", { emailOrMobile, otp, purpose });
+export const apiCustomerVerifyOtp = (emailOrMobile, otp, purpose, rememberMe = false) =>
+  customerAuthRequest("verify-otp", { emailOrMobile, otp, purpose, rememberMe });
 export const apiCustomerResendOtp = (emailOrMobile, purpose) =>
   customerAuthRequest("resend-otp", { emailOrMobile, purpose });
 export const apiCustomerForgotPassword = (emailOrMobile) =>

@@ -44,7 +44,24 @@ export function TableReservationFlow({
   onNavigate,
   onOpenProfile,
   onOpenOrders,
+  customerReservations,
+  customerReservationTab,
+  customerReservationPage = 1,
+  customerReservationTotal = 0,
+  customerUpcomingCount = 0,
+  customerPastCount = 0,
+  customerReservationsLoading = false,
+  customerReservationsError = "",
+  customerReservationActionBusy = false,
+  onCustomerReservationTabChange,
+  onCustomerReservationPageChange,
+  onCustomerReservationsRetry,
+  onLoadCustomerReservation,
+  onSaveCustomerReservation,
+  onCancelCustomerReservation,
+  customerAvailableTables = [],
 }) {
+  const customerReservationMode = Array.isArray(customerReservations);
   // Navigation: step 1 to 9, or "overview" for the 9-screen poster
   const [currentStep, setCurrentStep] = useState(initialStep || 1);
   const [viewMode, setViewMode] = useState("interactive"); // "interactive" | "poster"
@@ -54,17 +71,17 @@ export function TableReservationFlow({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [profileUserData, setProfileUserData] = useState(() => ({
-    name: customerUser?.name || "Priya Sharma",
-    phone: customerUser?.phone || "+91 98765 43210",
-    email: customerUser?.email || "priya@example.com",
+    name: customerUser?.name || "",
+    phone: customerUser?.phone || "",
+    email: customerUser?.email || "",
   }));
 
   useEffect(() => {
     if (customerUser) {
       setProfileUserData({
-        name: customerUser.name || "Priya Sharma",
-        phone: customerUser.phone || "+91 98765 43210",
-        email: customerUser.email || "priya@example.com",
+        name: customerUser.name || "",
+        phone: customerUser.phone || "",
+        email: customerUser.email || "",
       });
     }
   }, [customerUser]);
@@ -123,16 +140,16 @@ export function TableReservationFlow({
 
   // Active reservation booking state
   const [bookingForm, setBookingForm] = useState({
-    date: "2026-11-11",
+    date: new Date().toISOString().slice(0, 10),
     time: "07:30 PM",
     guests: 2,
     tablePreference: "Indoor",
-    fullName: customerUser?.name || "Priya Sharma",
+    fullName: customerUser?.name || "",
     mobileNumber: customerUser?.phone
       ? customerUser.phone.replace(/\D/g, "").slice(-10)
-      : "9876543210",
-    email: customerUser?.email || "priya@example.com",
-    specialRequests: "Anniversary celebration, window table preference.",
+      : "",
+    email: customerUser?.email || "",
+    specialRequests: "",
   });
 
   useEffect(() => {
@@ -169,17 +186,32 @@ export function TableReservationFlow({
   // Form errors
   const [formErrors, setFormErrors] = useState({});
 
-  // Load from localStorage on mount
+  // Staff/legacy flow can use locally configured records; the customer flow receives availability from the API.
   useEffect(() => {
-    const loadedRes = getStoredReservations();
-    const loadedTables = getStoredReservationTables();
+    const loadedRes = customerReservationMode ? [] : getStoredReservations();
+    const loadedTables = customerReservationMode ? [] : getStoredReservationTables();
     setReservations(loadedRes);
     setTables(loadedTables);
-    // Pre-select T-03 by default
+    // Pre-select — by default
     const defaultTable =
-      loadedTables.find((t) => t.id === "T-03") || loadedTables[0];
+      loadedTables.find((t) => t.id === "") || loadedTables[0];
     setSelectedTable(defaultTable);
-  }, []);
+  }, [customerReservationMode]);
+
+  useEffect(() => {
+    if (!customerReservationMode) return;
+    const mappedTables = customerAvailableTables.map((table) => ({
+      id: String(table.tableId),
+      name: table.tableNumber || table.tableName,
+      tableName: table.tableName,
+      capacity: table.capacity,
+      section: table.sectionArea || table.location || table.seatingCategory,
+      status: table.isAvailableForSlot ? "available" : (table.slotStatus || table.floorStatus || "unavailable"),
+      ...table,
+    }));
+    setTables(mappedTables);
+    setSelectedTable((current) => mappedTables.find((table) => String(table.id) === String(current?.id)) || mappedTables.find((table) => table.isAvailableForSlot) || mappedTables[0] || null);
+  }, [customerReservationMode, customerAvailableTables]);
 
   // Show Toast
   const showToast = (message, type = "success") => {
@@ -203,8 +235,8 @@ export function TableReservationFlow({
           guests: bookingForm.guests,
           date: bookingForm.date,
           time: bookingForm.time,
-          tableId: selectedTable?.id || "T-03",
-          tableName: `${selectedTable?.name || "T-03"} (${selectedTable?.section || "Indoor"})`,
+          tableId: selectedTable?.id || "",
+          tableName: `${selectedTable?.name || ""} (${selectedTable?.section || "Indoor"})`,
           section: selectedTable?.section || "Indoor",
           specialRequests: bookingForm.specialRequests,
           estimatedAmount: 2000,
@@ -342,11 +374,37 @@ export function TableReservationFlow({
     return true;
   });
 
-  const activeReservationsList = reservations.filter((r) =>
-    activeTab === "upcoming"
+  const displayedReservationTab = customerReservationTab || activeTab;
+  const activeReservationsList = customerReservationMode
+    ? customerReservations
+    : reservations.filter((r) => displayedReservationTab === "upcoming"
       ? r.status === "confirmed"
-      : r.status !== "confirmed",
-  );
+      : r.status !== "confirmed");
+
+  const handleCustomerModify = async (reservation) => {
+    if (!customerReservationMode || !onLoadCustomerReservation) {
+      setSelectedResForModify(reservation);
+      setCurrentStep(7);
+      return;
+    }
+    try {
+      const details = await onLoadCustomerReservation(reservation);
+      setSelectedResForModify({
+        ...reservation,
+        id: details.reservationNumber || details.reservationId,
+        date: details.reservationDate,
+        time: details.formattedTime,
+        guests: details.guestsCount,
+        tableId: details.tableId,
+        tableName: details.tableName || details.tableNumber,
+        seatingPreference: details.seatingPreference,
+        specialRequests: details.notes || "",
+      });
+      setCurrentStep(7);
+    } catch (error) {
+      showToast(error?.message || "Reservation details could not be loaded.", "error");
+    }
+  };
 
   return (
     <div
@@ -509,9 +567,9 @@ export function TableReservationFlow({
 
           <CustomerProfileDropdown
             customerUser={{
-              name: profileUserData.name || customerUser?.name || bookingForm.fullName || "Priya Sharma",
-              phone: profileUserData.phone || customerUser?.phone || (bookingForm.mobileNumber ? `+91 ${bookingForm.mobileNumber}` : "+91 98765 43210"),
-              email: profileUserData.email || customerUser?.email || bookingForm.email || "priya@example.com",
+              name: profileUserData.name || customerUser?.name || bookingForm.fullName || "",
+              phone: profileUserData.phone || customerUser?.phone || (bookingForm.mobileNumber ? `+91 ${bookingForm.mobileNumber}` : ""),
+              email: profileUserData.email || customerUser?.email || bookingForm.email || "",
             }}
             onNavigate={handleDropdownNavigate}
             onLogout={handleDropdownLogout}
@@ -585,7 +643,7 @@ export function TableReservationFlow({
                 onBackToHome={() => {
                   setCurrentStep(1);
                   setBookingForm({
-                    date: "2026-11-11",
+                    date: new Date().toISOString().slice(0, 10),
                     time: "07:30 PM",
                     guests: 2,
                     tablePreference: "Indoor",
@@ -601,22 +659,30 @@ export function TableReservationFlow({
             {/* STEP 6: My Reservations */}
             {currentStep === 6 && (
               <Step6MyReservations
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
+                activeTab={displayedReservationTab}
+                setActiveTab={customerReservationMode ? onCustomerReservationTabChange : setActiveTab}
                 reservations={activeReservationsList}
-                allReservationsCount={reservations.length}
-                upcomingCount={
-                  reservations.filter((r) => r.status === "confirmed").length
-                }
-                pastCount={
-                  reservations.filter((r) => r.status !== "confirmed").length
-                }
-                onModify={(res) => {
-                  setSelectedResForModify(res);
-                  setCurrentStep(7);
-                }}
+                allReservationsCount={customerReservationMode ? customerReservationTotal : reservations.length}
+                upcomingCount={customerReservationMode ? customerUpcomingCount : reservations.filter((r) => r.status === "confirmed").length}
+                pastCount={customerReservationMode ? customerPastCount : reservations.filter((r) => r.status !== "confirmed").length}
+                loading={customerReservationMode && customerReservationsLoading}
+                error={customerReservationMode ? customerReservationsError : ""}
+                page={customerReservationPage}
+                total={customerReservationTotal}
+                pageSize={20}
+                actionBusy={customerReservationActionBusy}
+                onRetry={onCustomerReservationsRetry}
+                onPageChange={onCustomerReservationPageChange}
+                onModify={handleCustomerModify}
                 onCancel={(res) => {
-                  setSelectedResForCancel(res);
+                  setSelectedResForCancel({
+                    ...res,
+                    id: res.reservationNumber || res.reservationId,
+                    date: res.reservationDate,
+                    time: res.formattedTime || res.reservationTime,
+                    guests: res.guestsCount,
+                    tableName: res.tableName || res.tableNumber || res.tableId,
+                  });
                   setCurrentStep(8);
                 }}
                 onNewBooking={() => setCurrentStep(1)}
@@ -630,7 +696,18 @@ export function TableReservationFlow({
                 setReservation={setSelectedResForModify}
                 tables={tables}
                 onCancel={() => setCurrentStep(6)}
-                onSave={handleUpdateReservation}
+                isCustomerReservation={customerReservationMode}
+                actionBusy={customerReservationActionBusy}
+                onSave={async () => {
+                  if (!customerReservationMode || !onSaveCustomerReservation) return handleUpdateReservation();
+                  try {
+                    await onSaveCustomerReservation(selectedResForModify);
+                    setCurrentStep(6);
+                    showToast("Reservation updated successfully.", "success");
+                  } catch (error) {
+                    showToast(error?.message || "Reservation changes could not be saved.", "error");
+                  }
+                }}
               />
             )}
 
@@ -639,7 +716,25 @@ export function TableReservationFlow({
               <Step8CancelReservation
                 reservation={selectedResForCancel || reservations[0]}
                 onKeep={() => setCurrentStep(6)}
-                onConfirm={handleConfirmCancellation}
+                actionBusy={customerReservationActionBusy}
+                onConfirm={async () => {
+                  if (!customerReservationMode || !onCancelCustomerReservation) return handleConfirmCancellation();
+                  try {
+                    const response = await onCancelCustomerReservation(selectedResForCancel);
+                    const reservation = response?.reservation || selectedResForCancel;
+                    setCancelledResInfo({
+                      ...reservation,
+                      id: reservation.reservationNumber || reservation.reservationId,
+                      date: reservation.reservationDate,
+                      time: reservation.formattedTime || reservation.reservationTime,
+                      guests: reservation.guestsCount,
+                      tableName: reservation.tableName || reservation.tableNumber,
+                    });
+                    setCurrentStep(9);
+                  } catch (error) {
+                    showToast(error?.message || "Reservation cancellation failed.", "error");
+                  }
+                }}
               />
             )}
 
@@ -850,7 +945,7 @@ export function TableReservationFlow({
                   Paneer Butter Masala x 1, Butter Naan x 2
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", color: "#78716c", marginTop: "8px" }}>
-                  <span>2026-11-09 at 07:30 PM</span>
+                  <span>Reservation date and time</span>
                   <span style={{ fontWeight: 800, color: "#1c1917" }}>Total: ₹450.00</span>
                 </div>
               </div>
@@ -1845,7 +1940,7 @@ function Step3Payment({
               <div>
                 <span style={{ color: "#6b5d52" }}>Table:</span>{" "}
                 <strong style={{ color: "#ea580c" }}>
-                  {selectedTable?.name || "T-03"} (
+                  {selectedTable?.name || ""} (
                   {selectedTable?.section || "Indoor"})
                 </strong>
               </div>
@@ -2307,7 +2402,7 @@ function Step5ReservationConfirmed({
               borderRadius: "6px",
             }}
           >
-            {reservation?.id || "RES-1023"}
+            {reservation?.reservationNumber || reservation?.reservationId || reservation?.id || "—"}
           </span>
         </div>
 
@@ -2321,34 +2416,34 @@ function Step5ReservationConfirmed({
         >
           <div>
             <span style={{ color: "#6b5d52" }}>Date:</span>{" "}
-            <strong>{reservation?.date || "2026-11-11"}</strong>
+            <strong>{reservation?.reservationDate || reservation?.date || "—"}</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Time:</span>{" "}
-            <strong>{reservation?.time || "07:30 PM"}</strong>
+            <strong>{reservation?.formattedTime || reservation?.reservationTime || reservation?.time || "—"}</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Guests:</span>{" "}
-            <strong>{reservation?.guests || 2} Guests</strong>
+            <strong>{reservation?.guestsCount || reservation?.guests || "—"} Guests</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Table:</span>{" "}
             <strong style={{ color: "#ea580c" }}>
-              {reservation?.tableName || "T-03 (Indoor)"}
+              {reservation?.tableName || reservation?.tableNumber || "—"}
             </strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Customer:</span>{" "}
-            <strong>{reservation?.customerName || "Priya Sharma"}</strong>
+            <strong>{reservation?.customerName || "—"}</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Phone:</span>{" "}
-            <strong>{reservation?.phone || "+91 98765 43210"}</strong>
+            <strong>{reservation?.customerPhone || reservation?.phone || "—"}</strong>
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Advance Paid:</span>{" "}
             <strong style={{ color: "#166534" }}>
-              ₹{reservation?.advanceAmount || 100}.00 (UPI ✓)
+              ₹{Number(reservation?.advanceAmount || 0).toFixed(2)} (UPI ✓)
             </strong>
           </div>
           <div>
@@ -2426,6 +2521,14 @@ function Step6MyReservations({
   allReservationsCount,
   upcomingCount,
   pastCount,
+  loading = false,
+  error = "",
+  page = 1,
+  pageSize = 20,
+  total = 0,
+  actionBusy = false,
+  onRetry,
+  onPageChange,
   onModify,
   onCancel,
   onNewBooking,
@@ -2488,7 +2591,7 @@ function Step6MyReservations({
       {/* Tabs */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "18px" }}>
         <button
-          onClick={() => setActiveTab("upcoming")}
+          onClick={() => setActiveTab?.("upcoming")}
           style={{
             background: activeTab === "upcoming" ? "#ea580c" : "#f4eee7",
             color: activeTab === "upcoming" ? "#ffffff" : "#4b3f36",
@@ -2503,7 +2606,7 @@ function Step6MyReservations({
           Upcoming ({upcomingCount})
         </button>
         <button
-          onClick={() => setActiveTab("past")}
+          onClick={() => setActiveTab?.("past")}
           style={{
             background: activeTab === "past" ? "#ea580c" : "#f4eee7",
             color: activeTab === "past" ? "#ffffff" : "#4b3f36",
@@ -2521,7 +2624,14 @@ function Step6MyReservations({
 
       {/* Reservations List */}
       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-        {reservations.length === 0 ? (
+        {error ? (
+          <div role="alert" style={{ padding: "26px 20px", textAlign: "center", background: "#fff7ed", borderRadius: "12px", color: "#9a3412" }}>
+            <p style={{ fontSize: "13px", fontWeight: 600 }}>{error}</p>
+            <button type="button" onClick={onRetry} style={{ background: "#ea580c", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: 700, cursor: "pointer" }}>Retry</button>
+          </div>
+        ) : loading ? (
+          [0, 1, 2].map((key) => <div key={key} role="status" aria-label="Loading reservation" style={{ height: "112px", borderRadius: "12px", background: "linear-gradient(100deg, #f3eee8 20%, #e7ded4 40%, #f3eee8 60%)", backgroundSize: "200% 100%", animation: "reservation-skeleton 1.4s ease-in-out infinite" }} />)
+        ) : reservations.length === 0 ? (
           <div
             style={{
               padding: "40px 20px",
@@ -2534,7 +2644,7 @@ function Step6MyReservations({
             <p
               style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px" }}
             >
-              No {activeTab} reservations found.
+              No reservations found
             </p>
             <button
               onClick={onNewBooking}
@@ -2555,7 +2665,7 @@ function Step6MyReservations({
         ) : (
           reservations.map((res) => (
             <div
-              key={res.id}
+              key={res.reservationId}
               style={{
                 border: "1px solid #e7ded4",
                 borderRadius: "12px",
@@ -2597,7 +2707,7 @@ function Step6MyReservations({
                     fontWeight: 700,
                   }}
                 >
-                  {res.id}
+                  {res.reservationNumber}
                 </span>
               </div>
 
@@ -2618,8 +2728,9 @@ function Step6MyReservations({
                       color: "#1f1610",
                     }}
                   >
-                    Table {res.tableName}
+                    Table {res.tableNumber || res.tableName || res.tableId}
                   </span>
+                  <small style={{ fontSize: "10px", color: "#6b5d52" }}>{res.seatingCategory || res.sectionArea || res.seatingPreference}</small>
                   <span
                     style={{
                       fontSize: "10px",
@@ -2627,11 +2738,11 @@ function Step6MyReservations({
                       padding: "2px 8px",
                       borderRadius: "10px",
                       background:
-                        res.status === "confirmed" ? "#dcfce7" : "#fee2e2",
-                      color: res.status === "confirmed" ? "#166534" : "#dc2626",
+                        String(res.status || "").toUpperCase() === "CONFIRMED" ? "#dcfce7" : "#f3f4f6",
+                      color: String(res.status || "").toUpperCase() === "CONFIRMED" ? "#166534" : "#374151",
                     }}
                   >
-                    {res.status === "confirmed" ? "✓ Confirmed" : "Cancelled"}
+                    {res.status}
                   </span>
                 </div>
 
@@ -2645,18 +2756,18 @@ function Step6MyReservations({
                   }}
                 >
                   <div>
-                    📅 {res.date} at {res.time}
+                    📅 {res.reservationDate} at {res.formattedTime || res.reservationTime}
                   </div>
-                  <div>👥 {res.guests} Guests</div>
+                  <div>👥 {res.guestsCount} Guests</div>
                   <div>
-                    👤 {res.customerName} ({res.phone})
+                    👤 {res.customerName}{res.customerPhone ? ` (${res.customerPhone})` : ""}
                   </div>
-                  <div>💰 Paid Advance: ₹{res.advanceAmount || 100}.00</div>
+                  <div>💰 Advance: ₹{Number(res.advanceAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })} · {res.paymentStatus}</div>
                 </div>
               </div>
 
               {/* Action buttons */}
-              {res.status === "confirmed" && (
+              {activeTab === "upcoming" && (
                 <div
                   style={{
                     display: "flex",
@@ -2667,6 +2778,7 @@ function Step6MyReservations({
                 >
                   <button
                     onClick={() => onModify(res)}
+                    disabled={actionBusy}
                     style={{
                       background: "#ffffff",
                       border: "1px solid #ea580c",
@@ -2686,6 +2798,7 @@ function Step6MyReservations({
 
                   <button
                     onClick={() => onCancel(res)}
+                    disabled={actionBusy}
                     style={{
                       background: "#ffffff",
                       border: "1px solid #dc2626",
@@ -2708,6 +2821,17 @@ function Step6MyReservations({
           ))
         )}
       </div>
+      {!error && !loading && total > pageSize && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "16px", fontSize: "12px", color: "#6b5d52" }}>
+          <span>Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1 || loading} aria-label="Previous reservations page">‹</button>
+            <span>Page {page} of {Math.max(1, Math.ceil(total / pageSize))}</span>
+            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= Math.ceil(total / pageSize) || loading} aria-label="Next reservations page">›</button>
+          </div>
+        </div>
+      )}
+      <style>{"@keyframes reservation-skeleton { 0% { opacity: .55; } 50% { opacity: 1; } 100% { opacity: .55; } }"}</style>
     </div>
   );
 }
@@ -2721,6 +2845,8 @@ function Step7ModifyReservation({
   tables,
   onCancel,
   onSave,
+  isCustomerReservation = false,
+  actionBusy = false,
 }) {
   return (
     <div
@@ -2811,7 +2937,7 @@ function Step7ModifyReservation({
             Time *
           </label>
           <select
-            value={reservation?.time || "07:30 PM"}
+            value={reservation?.formattedTime || reservation?.reservationTime || reservation?.time || "—"}
             onChange={(e) =>
               setReservation({ ...reservation, time: e.target.value })
             }
@@ -2894,7 +3020,7 @@ function Step7ModifyReservation({
             <span
               style={{ fontWeight: 700, fontSize: "13px", color: "#1f1610" }}
             >
-              {reservation?.guests || 2} Guests
+              {reservation?.guestsCount || reservation?.guests || "—"} Guests
             </span>
             <button
               type="button"
@@ -2933,8 +3059,12 @@ function Step7ModifyReservation({
           >
             Table Assignment
           </label>
-          <select
-            value={reservation?.tableId || "T-03"}
+          {isCustomerReservation ? (
+            <div style={{ padding: "10px 12px", border: "1px solid #d4c8bd", borderRadius: "8px", background: "#faf7f2", fontSize: "13px" }}>
+              {reservation?.tableName || reservation?.tableNumber || reservation?.tableId}
+            </div>
+          ) : <select
+            value={reservation?.tableId || ""}
             onChange={(e) => {
               const matched = tables.find((t) => t.id === e.target.value);
               setReservation({
@@ -2963,7 +3093,7 @@ function Step7ModifyReservation({
                 {t.name} ({t.capacity} Guests • {t.section})
               </option>
             ))}
-          </select>
+          </select>}
         </div>
       </div>
 
@@ -3026,6 +3156,7 @@ function Step7ModifyReservation({
         <button
           type="button"
           onClick={onSave}
+          disabled={actionBusy}
           style={{
             background: "linear-gradient(135deg, #f97316, #ea580c)",
             color: "#ffffff",
@@ -3038,7 +3169,7 @@ function Step7ModifyReservation({
             boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
           }}
         >
-          Update Reservation
+          {actionBusy ? "Saving…" : "Update Reservation"}
         </button>
       </div>
     </div>
@@ -3048,7 +3179,7 @@ function Step7ModifyReservation({
 /* ===================================================================== */
 /* STEP 8: CANCEL RESERVATION                                            */
 /* ===================================================================== */
-function Step8CancelReservation({ reservation, onKeep, onConfirm }) {
+function Step8CancelReservation({ reservation, onKeep, onConfirm, actionBusy = false }) {
   return (
     <div
       style={{
@@ -3163,6 +3294,7 @@ function Step8CancelReservation({ reservation, onKeep, onConfirm }) {
         <button
           type="button"
           onClick={onConfirm}
+          disabled={actionBusy}
           style={{
             background: "#dc2626",
             color: "#ffffff",
@@ -3175,7 +3307,7 @@ function Step8CancelReservation({ reservation, onKeep, onConfirm }) {
             boxShadow: "0 4px 12px rgba(220, 38, 38, 0.35)",
           }}
         >
-          Confirm Cancellation
+          {actionBusy ? "Cancelling…" : "Confirm Cancellation"}
         </button>
       </div>
     </div>
@@ -3227,7 +3359,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
         Reservation Cancelled
       </h2>
       <p style={{ fontSize: "13px", color: "#6b5d52", margin: "0 0 20px" }}>
-        Your table reservation ({reservation?.id || "RES-1023"}) has been
+        Your table reservation ({reservation?.reservationNumber || reservation?.reservationId || reservation?.id || "—"}) has been
         successfully cancelled.
       </p>
 
@@ -3252,7 +3384,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
           }}
         >
           <span>Reservation ID:</span>
-          <strong>{reservation?.id || "RES-1023"}</strong>
+          <strong>{reservation?.reservationNumber || reservation?.reservationId || reservation?.id || "—"}</strong>
         </div>
         <div
           style={{
@@ -3277,7 +3409,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
         >
           <span>Refund Status:</span>
           <span style={{ color: "#16a34a" }}>
-            ₹{reservation?.advanceAmount || 100}.00 (Processed)
+            ₹{Number(reservation?.advanceAmount || 0).toFixed(2)} (Processed)
           </span>
         </div>
       </div>
@@ -3301,7 +3433,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
       >
         <Info size={18} style={{ flexShrink: 0 }} />
         <span>
-          The advance payment of ₹{reservation?.advanceAmount || 100}.00 will be
+          The advance payment of ₹{Number(reservation?.advanceAmount || 0).toFixed(2)} will be
           refunded to your original payment method within 3-5 business days.
         </span>
       </div>
@@ -3369,9 +3501,9 @@ function ReservationFlowPoster({
                 fontSize: "8.5px",
               }}
             >
-              <div>📅 11/11/2026 • 07:30 PM</div>
-              <div>👥 2 Guests • Indoor Area</div>
-              <div>👤 Priya Sharma (+91 98765 43210)</div>
+              <div>📅 — • 07:30 PM</div>
+              <div>👥 Select guest count and seating</div>
+              <div>👤 Customer details</div>
             </div>
           </div>
         </PosterScreenCard>
@@ -3405,7 +3537,7 @@ function ReservationFlowPoster({
                   borderRadius: "4px",
                 }}
               >
-                <strong>T-03 ✓</strong>
+                <strong>— ✓</strong>
                 <div>2 Guests • Indoor</div>
               </div>
               <div
@@ -3416,8 +3548,8 @@ function ReservationFlowPoster({
                   borderRadius: "4px",
                 }}
               >
-                <strong>T-04</strong>
-                <div>4 Guests (Reserved)</div>
+                <strong>—</strong>
+                <div>Availability is checked by the server</div>
               </div>
             </div>
           </div>
@@ -3444,9 +3576,9 @@ function ReservationFlowPoster({
                 marginBottom: "4px",
               }}
             >
-              <div>Estimated Total: ₹2,000.00</div>
+              <div>Estimated total from current reservation details</div>
               <div style={{ fontWeight: 800, color: "#ea580c" }}>
-                Advance: ₹100.00
+                Advance amount from backend
               </div>
             </div>
             <div
@@ -3458,7 +3590,7 @@ function ReservationFlowPoster({
                 fontWeight: 700,
               }}
             >
-              Payable: ₹100.00 via UPI
+              Payment amount and status from backend
             </div>
           </div>
         </PosterScreenCard>
@@ -3522,10 +3654,10 @@ function ReservationFlowPoster({
               }}
             >
               <div>
-                ID: <strong>RES-1023</strong>
+                ID: <strong>—</strong>
               </div>
-              <div>Table T-03 (Indoor) • 2 Guests</div>
-              <div>Paid: ₹100.00 (UPI)</div>
+              <div>Table — • 2 Guests</div>
+              <div>Payment details from backend</div>
             </div>
           </div>
         </PosterScreenCard>
@@ -3552,12 +3684,12 @@ function ReservationFlowPoster({
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <strong>RES-1023</strong>
+                <strong>—</strong>
                 <span style={{ color: "#166534", fontWeight: 700 }}>
                   Confirmed
                 </span>
               </div>
-              <div>T-03 • 11/11/2026, 07:30 PM</div>
+              <div>— • —, 07:30 PM</div>
               <div style={{ display: "flex", gap: "4px", marginTop: "3px" }}>
                 <span
                   style={{
@@ -3612,9 +3744,9 @@ function ReservationFlowPoster({
                 borderRadius: "4px",
               }}
             >
-              <div>Change Date: 11/11/2026</div>
-              <div>Change Time: 08:00 PM</div>
-              <div>Guests: 4 Guests • Table T-05</div>
+              <div>Change date</div>
+              <div>Change time</div>
+              <div>Guest count and table details</div>
             </div>
           </div>
         </PosterScreenCard>
@@ -3680,7 +3812,7 @@ function ReservationFlowPoster({
                 textAlign: "left",
               }}
             >
-              <div>RES-1023</div>
+              <div>—</div>
               <div style={{ color: "#16a34a", fontWeight: 700 }}>
                 Refund: ₹100.00 (Processed)
               </div>
