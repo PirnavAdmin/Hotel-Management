@@ -1918,14 +1918,6 @@ export function App() {
   // Prevents multiple waiters from concurrently modifying the same table order.
   const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
 
-  const [tableLocks, setTableLocks] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_TABLE_LOCKS);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
 
   useEffect(() => {
     const handleStorage = (e) => {
@@ -1960,14 +1952,6 @@ export function App() {
     };
   }, []);
 
-  const saveLocks = (newLocks) => {
-    setTableLocks(newLocks);
-    try {
-      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(newLocks));
-      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: newLocks }));
-      broadcastSync("SYNC_TABLE_LOCKS", newLocks);
-    } catch {}
-  };
 
   const acquireTableLock = (tableId, session) => {
     const tableKey = String(tableId);

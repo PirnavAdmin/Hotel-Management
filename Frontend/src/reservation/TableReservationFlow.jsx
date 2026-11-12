@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Calendar,
   Clock,
@@ -23,6 +23,7 @@ import {
   Compass,
   LayoutGrid,
   Info,
+  Search,
 } from "lucide-react";
 import {
   getStoredReservations,
@@ -2533,6 +2534,38 @@ function Step6MyReservations({
   onCancel,
   onNewBooking,
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filteredReservations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const sf = statusFilter.trim().toLowerCase();
+    return reservations.filter((res) => {
+      const resStatus = String(res.status || "").toLowerCase();
+      if (sf && resStatus !== sf) return false;
+      if (!q) return true;
+      const haystack = [
+        res.reservationNumber,
+        res.tableNumber,
+        res.tableName,
+        res.seatingCategory,
+        res.sectionArea,
+        res.seatingPreference,
+        res.customerName,
+        res.customerPhone,
+        res.reservationDate,
+        res.formattedTime,
+        res.reservationTime,
+        res.status,
+        res.paymentStatus,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [reservations, searchQuery, statusFilter]);
+
   return (
     <div
       style={{
@@ -2588,38 +2621,128 @@ function Step6MyReservations({
         </button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "18px" }}>
-        <button
-          onClick={() => setActiveTab?.("upcoming")}
-          style={{
-            background: activeTab === "upcoming" ? "#ea580c" : "#f4eee7",
-            color: activeTab === "upcoming" ? "#ffffff" : "#4b3f36",
-            border: "none",
-            borderRadius: "20px",
-            padding: "6px 18px",
-            fontSize: "12.5px",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Upcoming ({upcomingCount})
-        </button>
-        <button
-          onClick={() => setActiveTab?.("past")}
-          style={{
-            background: activeTab === "past" ? "#ea580c" : "#f4eee7",
-            color: activeTab === "past" ? "#ffffff" : "#4b3f36",
-            border: "none",
-            borderRadius: "20px",
-            padding: "6px 18px",
-            fontSize: "12.5px",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Past / Cancelled ({pastCount})
-        </button>
+      {/* Tabs & Search Filter */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "18px" }}>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setActiveTab?.("upcoming")}
+            style={{
+              background: activeTab === "upcoming" ? "#ea580c" : "#f4eee7",
+              color: activeTab === "upcoming" ? "#ffffff" : "#4b3f36",
+              border: "none",
+              borderRadius: "20px",
+              padding: "6px 18px",
+              fontSize: "12.5px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Upcoming ({upcomingCount})
+          </button>
+          <button
+            onClick={() => setActiveTab?.("past")}
+            style={{
+              background: activeTab === "past" ? "#ea580c" : "#f4eee7",
+              color: activeTab === "past" ? "#ffffff" : "#4b3f36",
+              border: "none",
+              borderRadius: "20px",
+              padding: "6px 18px",
+              fontSize: "12.5px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Past / Cancelled ({pastCount})
+          </button>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", flex: "1 1 280px", justifyContent: "flex-end" }}>
+          <div style={{ position: "relative", flex: "1 1 220px", maxWidth: "300px" }}>
+            <Search size={14} color="#8c7f74" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search reservation #, table, name, date..."
+              aria-label="Search reservations"
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                borderRadius: "8px",
+                padding: "7px 28px 7px 30px",
+                border: "1px solid #dfd3c7",
+                background: "#faf7f2",
+                color: "#1f1610",
+                fontSize: "12.5px",
+                outline: "none",
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear reservation search"
+                style={{
+                  position: "absolute",
+                  right: "6px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  color: "#6b5d52",
+                  cursor: "pointer",
+                  padding: "2px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter reservations by status"
+            style={{
+              borderRadius: "8px",
+              padding: "7px 10px",
+              border: "1px solid #dfd3c7",
+              background: "#faf7f2",
+              color: "#1f1610",
+              fontSize: "12.5px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <option value="">All Statuses</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="seated">Seated</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          {(searchQuery || statusFilter) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setStatusFilter("");
+              }}
+              style={{
+                background: "#fff7ed",
+                border: "1px solid #fed7aa",
+                color: "#ea580c",
+                borderRadius: "8px",
+                padding: "7px 10px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Reservations List */}
@@ -2631,7 +2754,7 @@ function Step6MyReservations({
           </div>
         ) : loading ? (
           [0, 1, 2].map((key) => <div key={key} role="status" aria-label="Loading reservation" style={{ height: "112px", borderRadius: "12px", background: "linear-gradient(100deg, #f3eee8 20%, #e7ded4 40%, #f3eee8 60%)", backgroundSize: "200% 100%", animation: "reservation-skeleton 1.4s ease-in-out infinite" }} />)
-        ) : reservations.length === 0 ? (
+        ) : filteredReservations.length === 0 ? (
           <div
             style={{
               padding: "40px 20px",
@@ -2644,26 +2767,48 @@ function Step6MyReservations({
             <p
               style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px" }}
             >
-              No reservations found
+              {reservations.length > 0 ? "No matching reservations found" : "No reservations found"}
             </p>
-            <button
-              onClick={onNewBooking}
-              style={{
-                background: "#ea580c",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "8px 16px",
-                fontSize: "13px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Book a Table Now
-            </button>
+            {reservations.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("");
+                }}
+                style={{
+                  background: "#ea580c",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Clear Search &amp; Filters
+              </button>
+            ) : (
+              <button
+                onClick={onNewBooking}
+                style={{
+                  background: "#ea580c",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Book a Table Now
+              </button>
+            )}
           </div>
         ) : (
-          reservations.map((res) => (
+          filteredReservations.map((res) => (
             <div
               key={res.reservationId}
               style={{

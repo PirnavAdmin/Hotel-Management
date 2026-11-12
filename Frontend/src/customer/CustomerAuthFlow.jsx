@@ -91,7 +91,6 @@ export function CustomerAuthFlow({
   // ── Screen 3: OTP State ─────────────────────────────────────────────────
   const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("");
   const [otpPurpose, setOtpPurpose] = useState("ACCOUNT_VERIFY");
-  const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(58);
   const [otpError, setOtpError] = useState("");

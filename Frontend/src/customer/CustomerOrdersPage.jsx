@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChefHat, ChevronLeft, ChevronRight, Clock, RefreshCw, ShoppingBag } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ChefHat, ChevronLeft, ChevronRight, Clock, RefreshCw, Search, ShoppingBag, X } from "lucide-react";
 import { CustomerProfileDropdown } from "./CustomerProfileDropdown";
 import { apiGetCustomerProfile, apiGetMyCustomerOrders, getReservationCustomerToken } from "../api/reservationApi";
 
@@ -29,6 +29,7 @@ export function CustomerOrdersPage({
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [error, setError] = useState("");
@@ -116,6 +117,25 @@ export function CustomerOrdersPage({
     }
   };
 
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter((order) => {
+      const orderStatus = String(order.fulfillmentStatus || order.orderStatus || "").toLowerCase();
+      const orderNum = String(order.orderNumber || order.orderId || "").toLowerCase();
+      const payment = [order.paymentMethod || "", order.paymentStatus || ""].join(" ").toLowerCase();
+      const dateStr = formatDateTime(order.orderDateTime || order.createdAt).toLowerCase();
+      const itemNames = (order.items || []).map((i) => String(i.name || "")).join(" ").toLowerCase();
+      return (
+        orderNum.includes(q) ||
+        orderStatus.includes(q) ||
+        payment.includes(q) ||
+        dateStr.includes(q) ||
+        itemNames.includes(q)
+      );
+    });
+  }, [orders, searchQuery]);
+
   const displayCustomer = profile?.fullName
     ? { ...customerUser, name: profile.fullName }
     : customerUser;
@@ -149,12 +169,40 @@ export function CustomerOrdersPage({
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "14px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#fef3c7", fontSize: "12px" }}>Order status
-            <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} style={{ borderRadius: "8px", padding: "7px 10px", border: "1px solid rgba(245,158,11,.4)", background: "#21130d", color: "#fff" }}>
-              <option value="">All statuses</option>
-              {STATUS_FILTERS.map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
-          </label>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", flex: "1 1 320px" }}>
+            <div style={{ position: "relative", flex: "1 1 240px", maxWidth: "360px" }}>
+              <Search size={14} color="#f59e0b" style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search order #, item name, payment..."
+                aria-label="Search orders"
+                style={{ width: "100%", boxSizing: "border-box", borderRadius: "8px", padding: "7px 30px 7px 32px", border: "1px solid rgba(245,158,11,.4)", background: "#21130d", color: "#fff", fontSize: "12.5px", outline: "none" }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                  style={{ position: "absolute", right: "7px", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#fef3c7", cursor: "pointer", padding: "2px", display: "flex", alignItems: "center" }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#fef3c7", fontSize: "12px" }}>Order status
+              <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} style={{ borderRadius: "8px", padding: "7px 10px", border: "1px solid rgba(245,158,11,.4)", background: "#21130d", color: "#fff" }}>
+                <option value="">All statuses</option>
+                {STATUS_FILTERS.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            {(searchQuery || status) && (
+              <button type="button" onClick={() => { setSearchQuery(""); setStatus(""); setPage(1); }} style={{ border: "1px solid rgba(245,158,11,.35)", background: "rgba(245,158,11,.14)", color: "#fef3c7", padding: "7px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+                Clear Filters
+              </button>
+            )}
+          </div>
           <button type="button" onClick={() => setRetryCount((count) => count + 1)} disabled={loadingOrders} style={{ display: "inline-flex", alignItems: "center", gap: "6px", border: "1px solid rgba(245,158,11,.45)", background: "rgba(255,255,255,.08)", color: "#fff", padding: "7px 12px", borderRadius: "8px", cursor: loadingOrders ? "wait" : "pointer" }}><RefreshCw size={14} /> Refresh</button>
         </div>
 
@@ -166,12 +214,12 @@ export function CustomerOrdersPage({
             {[0, 1, 2].map((key) => <div key={key} style={{ height: "190px", borderRadius: "12px", background: "linear-gradient(100deg, rgba(255,255,255,.08) 20%, rgba(255,255,255,.16) 40%, rgba(255,255,255,.08) 60%)", backgroundSize: "200% 100%", animation: "customer-orders-pulse 1.4s ease-in-out infinite" }} />)}
             <style>{"@keyframes customer-orders-pulse { 0% { opacity: .55; } 50% { opacity: 1; } 100% { opacity: .55; } }"}</style>
           </div>
-        ) : !error && orders.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 20px", background: "rgba(22,12,8,.78)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "16px" }}><ShoppingBag size={32} color="#f59e0b" /><h2 style={{ color: "#fff", margin: "12px 0 6px" }}>No orders found</h2><p style={{ color: "#fef3c7", margin: "0 0 18px" }}>Your takeaway orders will appear here.</p><button type="button" onClick={() => onNavigate("/menu")} style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: 0, borderRadius: "20px", padding: "9px 16px", fontWeight: 700, cursor: "pointer" }}>Order Takeaway</button></div>
+        ) : !error && filteredOrders.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px", background: "rgba(22,12,8,.78)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "16px" }}><ShoppingBag size={32} color="#f59e0b" /><h2 style={{ color: "#fff", margin: "12px 0 6px" }}>{orders.length > 0 ? "No matching orders found" : "No orders found"}</h2><p style={{ color: "#fef3c7", margin: "0 0 18px" }}>{orders.length > 0 ? "Try adjusting your search or status filter." : "Your takeaway orders will appear here."}</p>{orders.length > 0 ? <button type="button" onClick={() => { setSearchQuery(""); setStatus(""); setPage(1); }} style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: 0, borderRadius: "20px", padding: "9px 16px", fontWeight: 700, cursor: "pointer" }}>Clear Search &amp; Filters</button> : <button type="button" onClick={() => onNavigate("/menu")} style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: 0, borderRadius: "20px", padding: "9px 16px", fontWeight: 700, cursor: "pointer" }}>Order Takeaway</button>}</div>
         ) : !error && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px", alignItems: "stretch" }}>
-              {orders.map((order) => {
+              {filteredOrders.map((order) => {
                 const orderStatus = order.fulfillmentStatus || order.orderStatus;
                 const isComplete = ["completed", "pickedup"].includes(String(orderStatus || "").replace(/\s/g, "").toLowerCase());
                 return <article key={order.orderId} style={{ background: "#ffffff", borderRadius: "12px", padding: "12px 16px", color: "#1a100b", boxShadow: "0 8px 22px rgba(0,0,0,0.35)", border: "1px solid rgba(245, 158, 11, 0.22)", display: "flex", flexDirection: "column", justifyContent: "space-between", boxSizing: "border-box" }}>

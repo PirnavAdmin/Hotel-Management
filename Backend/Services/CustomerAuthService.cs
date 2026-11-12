@@ -404,95 +404,39 @@ public class CustomerAuthService
                 requiresVerification: false);
         }
 
-        if (string.IsNullOrWhiteSpace(customer.Email))
-        {
-            throw new CustomerValidationException(
-                "No email address is registered for this customer account to receive the login OTP.");
-        }
-
-        string otpPurpose = customer.IsVerified ? PurposeLoginVerify : PurposeAccountVerify;
-
-        // Clear password lockout counters; LastLogin updates once the login OTP is verified.
+        // Login completes directly with password verification; OTP is only used during sign-up and password reset.
         customer.FailedLoginAttempts = 0;
         customer.LockoutUntil = null;
+        customer.LastLogin = utcNow;
         customer.UpdatedAt = utcNow;
 
-        var priorActiveOtps = await _context.CustomerOtpTokens
-            .Where(t => t.CustomerId == customer.CustomerId &&
-                        t.Purpose == otpPurpose &&
-                        t.InvalidatedAt == null)
-            .ToListAsync();
-        foreach (var prior in priorActiveOtps)
-        {
-            prior.InvalidatedAt = utcNow;
-        }
-
-        string otpCode = GenerateNumericOtp();
-        string otpHash = BCrypt.Net.BCrypt.HashPassword(otpCode, workFactor: 10);
-
-        var loginOtpToken = new CustomerOtpToken
-        {
-            CustomerId = customer.CustomerId,
-            Purpose = otpPurpose,
-            Channel = "EMAIL",
-            TargetIdentifier = customer.Email.Trim().ToLowerInvariant(),
-            OtpHash = otpHash,
-            ExpiresAt = utcNow.AddMinutes(OtpExpiryMinutes),
-            Attempts = 0,
-            MaxAttempts = MaxOtpAttempts,
-            IpAddress = TrimIp(ipAddress),
-            CreatedAt = utcNow
-        };
-
-        _context.CustomerOtpTokens.Add(loginOtpToken);
+        var session = CreateCustomerSessionPair(customer, request.RememberMe, utcNow, ipAddress, userAgent);
+        _context.CustomerRefreshTokens.Add(session.RefreshTokenEntity);
         await _context.SaveChangesAsync();
-
-        try
-        {
-            await _notificationService.SendOtpNotificationAsync(
-                customer.CustomerId,
-                customer.FullName,
-                customer.Email,
-                customer.Phone,
-                otpPurpose,
-                otpCode,
-                OtpExpiryMinutes);
-        }
-        catch (CustomerEmailDeliveryException)
-        {
-            loginOtpToken.InvalidatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            throw;
-        }
 
         await WriteAuditLogAsync(
             customer.CustomerId,
-            "CUSTOMER_LOGIN_OTP_SENT",
-            "customer_otp_tokens",
-            loginOtpToken.OtpId,
+            "CUSTOMER_LOGIN_SUCCESS",
+            "customers",
+            customer.CustomerId,
             null,
-            new { purpose = otpPurpose, rememberMe = request.RememberMe, userAgent = TrimUserAgent(userAgent) },
+            new { sessionId = session.FamilyId, rememberMe = request.RememberMe, userAgent = TrimUserAgent(userAgent) },
             ipAddress);
 
-        bool includeDevOtp = ShouldIncludeDevOtp();
         return new CustomerAuthResponseDto
         {
             Success = true,
-            Message = $"A 6-digit verification OTP has been sent to {MaskEmail(customer.Email)}. It expires in {OtpExpiryMinutes} minutes.",
-            Token = null,
-            AccessToken = null,
+            Message = "Signed in successfully.",
+            Token = session.AccessToken,
+            AccessToken = session.AccessToken,
             TokenType = "Bearer",
-            ExpiresAt = null,
-            ExpiresInSeconds = null,
-            RefreshToken = null,
-            RefreshTokenExpiresAt = null,
+            ExpiresAt = session.AccessExpiresAt,
+            ExpiresInSeconds = AccessTokenExpiryMinutes * 60,
+            RefreshToken = session.RawRefreshToken,
+            RefreshTokenExpiresAt = session.RefreshExpiresAt,
             RememberMe = request.RememberMe,
-            RequiresVerification = true,
+            RequiresVerification = false,
             VerificationTarget = customer.Email,
-            Purpose = otpPurpose,
-            OtpExpiresInMinutes = OtpExpiryMinutes,
-            ResendAfterSeconds = OtpResendCooldownSeconds,
-            DevOtp = includeDevOtp ? otpCode : null,
             Customer = MapProfileDto(customer)
         };
     }
