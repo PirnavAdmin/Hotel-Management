@@ -1740,15 +1740,20 @@ export function ReservationsManagement({
                   return (
                     <tr
                       key={resId || index}
+                      onClick={() => {
+                        setActionMenuOpenId(null);
+                        setViewingReservation(r);
+                      }}
                       style={{
                         borderBottom: "1px solid var(--border-card, #27272a)",
                         transition: "background 0.15s ease",
+                        cursor: "pointer",
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary, #27272a)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
                       {/* Row Index */}
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.78rem" }}>
+                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
                         {index + 1}
                       </td>
 
@@ -1766,8 +1771,8 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Guest Name */}
-                      <td style={{ padding: "0.85rem 1rem" }}>
-                        <div style={{ fontWeight: 650, color: "var(--text-main, #f8fafc)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      <td style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>
+                        <div style={{ fontWeight: 650, color: "var(--text-main, #f8fafc)", display: "inline-flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}>
                           <div
                             style={{
                               width: "24px",
@@ -1798,7 +1803,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Table */}
-                      <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: "var(--text-main, #f8fafc)" }}>
+                      <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
@@ -1809,9 +1814,10 @@ export function ReservationsManagement({
                             padding: "0.2rem 0.55rem",
                             borderRadius: "6px",
                             fontSize: "0.78rem",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          <MapPin size={12} color="#ea580c" />
+                          <MapPin size={12} color="#ea580c" style={{ flexShrink: 0 }} />
                           {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
                         </span>
                       </td>
@@ -1826,11 +1832,13 @@ export function ReservationsManagement({
 
                       {/* Date & Time */}
                       <td style={{ padding: "0.85rem 1rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
-                        <div>{r.reservationDate || r.date || "Today"}</div>
-                        <div style={{ fontSize: "0.76rem", color: "var(--text-muted, #94a3b8)", display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "2px" }}>
-                          <Clock size={11} color="#ea580c" />
-                          {r.reservationTime || r.time || "07:30 PM"}
-                        </div>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", whiteSpace: "nowrap" }}>
+                          <span>{r.reservationDate || r.date || "Today"}</span>
+                          <span style={{ fontSize: "0.78rem", color: "var(--text-muted, #94a3b8)", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                            <Clock size={12} color="#ea580c" />
+                            {r.reservationTime || r.time || "07:30 PM"}
+                          </span>
+                        </span>
                       </td>
 
                       {/* Status Badge */}
@@ -1855,7 +1863,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Actions: Eye Icon (Opens ReceiptModal Bill), Printer, More Menu */}
-                      <td style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
                           {/* Eye Icon -> Opens the 5th picture Invoice & Bill Print (ReceiptModal) */}
                           <button
@@ -1961,59 +1969,6 @@ export function ReservationsManagement({
                                   textAlign: "left",
                                 }}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPrintReceiptReservation(r);
-                                    setActionMenuOpenId(null);
-                                  }}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.5rem",
-                                    padding: "0.5rem 0.75rem",
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "#f8fafc",
-                                    fontSize: "0.8rem",
-                                    cursor: "pointer",
-                                    fontWeight: 500,
-                                  }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)")}
-                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                >
-                                  <ReceiptIcon size={14} color="#ea580c" />
-                                  <span>View / Print Bill</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setViewingReservation(r);
-                                    setActionMenuOpenId(null);
-                                  }}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.5rem",
-                                    padding: "0.5rem 0.75rem",
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "#f8fafc",
-                                    fontSize: "0.8rem",
-                                    cursor: "pointer",
-                                    fontWeight: 500,
-                                  }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)")}
-                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                >
-                                  <FileText size={14} color="#f59e0b" />
-                                  <span>Booking Information</span>
-                                </button>
-
-                                <div style={{ height: "1px", background: "#27272a", margin: "0.2rem 0" }} />
 
                                 {r.status !== "confirmed" && (
                                   <button

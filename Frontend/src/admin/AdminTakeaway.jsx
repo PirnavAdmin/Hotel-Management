@@ -1669,8 +1669,13 @@ export function AdminTakeaway({
                   return (
                     <tr
                       key={order.id}
+                      onClick={() => {
+                        setActionMenuOrderId(null);
+                        setSelectedOrderDetails(order);
+                      }}
                       style={{
                         transition: "background 0.15s ease",
+                        cursor: "pointer",
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(249, 115, 22, 0.03)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
@@ -1715,7 +1720,7 @@ export function AdminTakeaway({
                       <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.76rem", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {order.orderTime}
                       </td>
-                      <td style={{ padding: "0.65rem 0.45rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.65rem 0.45rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
                           {/* View bill & print invoice */}
                           <button
@@ -1825,55 +1830,6 @@ export function AdminTakeaway({
                                   textAlign: "left",
                                 }}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPrintReceiptOrder(order);
-                                    setActionMenuOrderId(null);
-                                  }}
-                                  style={{
-                                    textAlign: "left",
-                                    padding: "0.5rem 0.75rem",
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    background: "rgba(234, 88, 12, 0.08)",
-                                    color: "#ea580c",
-                                    fontSize: "0.8rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.45rem",
-                                  }}
-                                >
-                                  <Receipt size={14} /> View / Print Bill
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedOrderDetails(order);
-                                    setActionMenuOrderId(null);
-                                  }}
-                                  style={{
-                                    textAlign: "left",
-                                    padding: "0.5rem 0.75rem",
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "var(--text-main)",
-                                    fontSize: "0.8rem",
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.45rem",
-                                    borderBottom: "1px solid var(--border-card)",
-                                    marginBottom: "0.2rem",
-                                    paddingBottom: "0.5rem",
-                                  }}
-                                >
-                                  <FileText size={14} /> Order Information
-                                </button>
                                 {order.status === "Pending" && (
                                   <button
                                     type="button"

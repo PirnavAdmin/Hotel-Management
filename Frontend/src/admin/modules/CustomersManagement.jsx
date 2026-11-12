@@ -17,7 +17,14 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
     try {
       const res = await apiGetCustomers(searchTerm);
       if (res?.success) {
-        setCustomers(res.data || []);
+        const list = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : Array.isArray(res.data?.customers)
+              ? res.data.customers
+              : [];
+        setCustomers(list);
       } else {
         setError(res?.message || 'Failed to load customers');
       }
