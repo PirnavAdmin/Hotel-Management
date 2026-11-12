@@ -230,7 +230,7 @@ CREATE PROCEDURE `sp_GetMenuItems`(
 BEGIN
     SELECT menu_item_id, dish_name, category, price, dietary_type, spice_level,
            prep_time_minutes, short_description, image_url, is_chefs_special, is_available,
-           created_at, updated_at,
+           recipe_json, created_at, updated_at,
            serving_measure, drink_type, alcohol_pct, is_bar_item
     FROM `menu_items`
     WHERE deleted_at IS NULL
@@ -245,7 +245,7 @@ CREATE PROCEDURE `sp_GetMenuItemById`(IN p_menu_item_id BIGINT)
 BEGIN
     SELECT menu_item_id, dish_name, category, price, dietary_type, spice_level,
            prep_time_minutes, short_description, image_url, is_chefs_special, is_available,
-           created_at, updated_at,
+           recipe_json, created_at, updated_at,
            serving_measure, drink_type, alcohol_pct, is_bar_item
     FROM `menu_items`
     WHERE menu_item_id = p_menu_item_id AND deleted_at IS NULL;
@@ -888,15 +888,21 @@ CREATE PROCEDURE `sp_GetLowStockIngredients`()
 BEGIN
     SELECT 
         ingredient_id,
-        COALESCE(NULLIF(name, ''), ingredient_name) AS name,
-        unit,
-        current_stock,
-        minimum_threshold,
-        unit_cost,
+        COALESCE(NULLIF(name, ''), ingredient_name, '') AS name,
         COALESCE(category, 'General') AS category,
-        COALESCE(supplier, 'Local Supplier') AS supplier
+        COALESCE(subcategory, '') AS subcategory,
+        COALESCE(supplier, 'Local Supplier') AS supplier,
+        COALESCE(unit, 'KG') AS unit,
+        current_stock,
+        COALESCE(NULLIF(minimum_threshold, 0), reorder_level, 5.00) AS minimum_threshold,
+        COALESCE(NULLIF(unit_cost, 0), cost_per_unit, 0.00) AS unit_cost,
+        mrp,
+        COALESCE(ingredient_code, '') AS ingredient_code,
+        is_active,
+        updated_at
     FROM ingredients
-    WHERE current_stock <= minimum_threshold AND deleted_at IS NULL
+    WHERE current_stock <= COALESCE(NULLIF(minimum_threshold, 0), reorder_level, 5.00) 
+      AND deleted_at IS NULL
     ORDER BY current_stock ASC;
 END;
 
@@ -1147,7 +1153,8 @@ BEGIN
     WHERE UPPER(status) = 'PAID';
 
     SELECT COALESCE(NULLIF(COUNT(CASE WHEN DATE(order_time) = CURDATE() THEN 1 END), 0), COUNT(1)) AS today_total_orders 
-    FROM orders;
+    FROM orders
+    WHERE LOWER(COALESCE(status, '')) <> 'cancelled';
 
     SELECT COUNT(1) AS active_tables_count 
     FROM restaurant_tables 
@@ -1159,16 +1166,68 @@ BEGIN
         COALESCE(SUM(oi.total_price), SUM(oi.unit_price * oi.quantity), 0.00) AS total_revenue
     FROM order_items oi
     LEFT JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
+    LEFT JOIN restaurant_orders ro ON oi.order_id = ro.order_id
     WHERE oi.is_deleted = 0
+      AND LOWER(COALESCE(oi.item_status, '')) <> 'cancelled'
+      AND (ro.order_id IS NULL OR (ro.is_deleted = 0 AND LOWER(COALESCE(ro.order_status, '')) <> 'cancelled'))
     GROUP BY COALESCE(m.dish_name, oi.item_name)
     ORDER BY quantity_sold DESC
     LIMIT 5;
 
     SELECT 
-        UPPER(payment_mode) AS payment_method,
-        COALESCE(SUM(amount), 0.00) AS total_amount
-    FROM invoice_payments
-    GROUP BY UPPER(payment_mode);
+        UPPER(ip.payment_mode) AS payment_method,
+        COALESCE(SUM(ip.amount), 0.00) AS total_amount
+    FROM invoice_payments ip
+    LEFT JOIN invoices inv ON ip.invoice_id = inv.invoice_id
+    WHERE LOWER(COALESCE(ip.payment_status, 'success')) NOT IN ('failed', 'pending', 'cancelled', 'void', 'refunded')
+      AND (inv.invoice_id IS NULL OR UPPER(COALESCE(inv.status, '')) NOT IN ('VOID', 'REFUNDED', 'CANCELLED'))
+    GROUP BY UPPER(ip.payment_mode);
+END;
+
+DROP PROCEDURE IF EXISTS `sp_GetDailySalesReport`;
+CREATE PROCEDURE `sp_GetDailySalesReport`(IN p_days INT)
+BEGIN
+    DECLARE v_days INT DEFAULT 30;
+    IF p_days IS NOT NULL AND p_days > 0 THEN
+        SET v_days = p_days;
+    END IF;
+
+    SELECT 
+        DATE(created_at) AS sale_date,
+        COUNT(invoice_id) AS total_invoices,
+        SUM(CASE WHEN UPPER(status) = 'PAID' THEN 1 ELSE 0 END) AS paid_invoices,
+        COALESCE(SUM(subtotal), 0.00) AS subtotal,
+        COALESCE(SUM(tax_amount), 0.00) AS tax_amount,
+        COALESCE(SUM(discount_amount), 0.00) AS discount_amount,
+        COALESCE(SUM(total_amount), 0.00) AS total_amount,
+        COALESCE(SUM(paid_amount), 0.00) AS paid_amount
+    FROM `invoices`
+    WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL v_days DAY)
+      AND UPPER(COALESCE(status, '')) NOT IN ('VOID', 'REFUNDED', 'CANCELLED')
+    GROUP BY DATE(created_at)
+    ORDER BY sale_date DESC;
+END;
+
+DROP PROCEDURE IF EXISTS `sp_GetMonthlySalesReport`;
+CREATE PROCEDURE `sp_GetMonthlySalesReport`(IN p_year INT)
+BEGIN
+    DECLARE v_year INT;
+    SET v_year = IFNULL(p_year, YEAR(CURDATE()));
+
+    SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') AS sale_month,
+        COUNT(invoice_id) AS total_invoices,
+        SUM(CASE WHEN UPPER(status) = 'PAID' THEN 1 ELSE 0 END) AS paid_invoices,
+        COALESCE(SUM(subtotal), 0.00) AS subtotal,
+        COALESCE(SUM(tax_amount), 0.00) AS tax_amount,
+        COALESCE(SUM(discount_amount), 0.00) AS discount_amount,
+        COALESCE(SUM(total_amount), 0.00) AS total_amount,
+        COALESCE(SUM(paid_amount), 0.00) AS paid_amount
+    FROM `invoices`
+    WHERE YEAR(created_at) = v_year
+      AND UPPER(COALESCE(status, '')) NOT IN ('VOID', 'REFUNDED', 'CANCELLED')
+    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+    ORDER BY sale_month DESC;
 END;
 
 

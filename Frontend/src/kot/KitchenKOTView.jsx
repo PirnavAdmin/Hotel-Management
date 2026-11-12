@@ -42,6 +42,7 @@ import {
   getTimerUrgencyColor,
   formatDisplayTime,
 } from "../utils/timer";
+import { getBusinessDayKey } from "../utils/invoiceCounter";
 
 const formatCleanTableNum = (name, id) => {
   if (!name) return String(id ?? "");
@@ -77,10 +78,13 @@ export function KitchenKOTView({
   restaurantName = "Restaurant",
   restaurantLogo = "",
   station = "kitchen",
+  activeStation,
+  onStationChange,
   menuItems = [],
 }) {
+  const currentStation = activeStation || station;
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
-  const isBarStation = station === "bar";
+  const isBarStation = currentStation === "bar";
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
   const [isTableFilterOpen, setIsTableFilterOpen] = useState(false);
@@ -396,6 +400,14 @@ export function KitchenKOTView({
     const orderId = ticket.orderId ?? ticket.ticketId;
     const backendTableId = ticket.tableId ?? orderId;
     const ticketName = ticket.tableName || ticket.TableName || "";
+    const orderTime = ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt;
+    const parsedOrderTime = orderTime ? Date.parse(orderTime) : NaN;
+    if (
+      !Number.isFinite(parsedOrderTime) ||
+      getBusinessDayKey(new Date(parsedOrderTime)) !== getBusinessDayKey(currentTime)
+    ) {
+      return null;
+    }
     const localTable = tables.find((table) => {
       const idMatches = [table.backendTableId, table.tableId, table.id]
         .filter((id) => id !== undefined && id !== null)
@@ -418,14 +430,18 @@ export function KitchenKOTView({
       name: localTable?.name || ticketName || `Table ${tableId}`,
       section: ticket.section || ticket.sectionArea || "Main Hall",
       server: ticket.serverName || "Server",
-      orderTime: ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt,
+      orderTime,
       priority: ticket.priority || "normal",
       uniqueKey: `active-${orderId}-${batch}`,
-      isPaid: String(ticket.orderType || ticket.OrderType || "").toLowerCase() === "takeaway",
+      isPaid: false,
       ticketType: "active",
       items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
         const isDrink = isDrinkItem(item, menuLookup);
-        return isBarStation ? isDrink : !isDrink;
+        const status = String(item?.kotStatus || item?.itemStatus || "").toLowerCase();
+        return (
+          (isBarStation ? isDrink : !isDrink) &&
+          !["ready", "served", "completed", "cancelled", "canceled"].includes(status)
+        );
       }).map((item) => ({
         ...item,
         id: item.id ?? item.orderItemId,
@@ -436,7 +452,7 @@ export function KitchenKOTView({
       })),
     };
   }).filter((ticket) => {
-    if (ticket.items.length === 0) return false;
+    if (!ticket || ticket.items.length === 0) return false;
     // Never invent/render a table card for an API order whose table no longer
     // exists in the restaurant's configured floor plan. Takeaway has no table.
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway";
@@ -521,13 +537,11 @@ export function KitchenKOTView({
     // 3. Status filter
     if (statusFilter !== "all") {
       const items = Array.isArray(t?.items) ? t.items : [];
-      const allCompleted = items.length > 0 && items.every(isItemCompleted);
       const hasCooking = items.some(isItemCooking);
       const hasReceived = items.some(isItemReceived);
 
       if (statusFilter === "pending" && !hasReceived) return false;
       if (statusFilter === "cooking" && !hasCooking) return false;
-      if (statusFilter === "completed" && !allCompleted) return false;
     }
 
     return true;
@@ -541,10 +555,6 @@ export function KitchenKOTView({
   const cookingOrdersCount = allKitchenTickets.filter(
     (t) => Array.isArray(t?.items) && t.items.some(isItemCooking),
   ).length;
-  const completedOrdersCount = allKitchenTickets.filter(
-    (t) => Array.isArray(t?.items) && t.items.length > 0 && t.items.every(isItemCompleted),
-  ).length;
-
   // Auto-switch to "Received" tab when a new KOT arrives
   const prevPendingRef = useRef(pendingOrdersCount);
   useEffect(() => {
@@ -743,46 +753,77 @@ export function KitchenKOTView({
 
         .kot-cards-grid {
           width: 100%;
+          min-width: 0;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 260px));
+          gap: 0.85rem;
+          align-items: start;
+        }
+
+        .kot-cards-grid--single {
+          grid-template-columns: minmax(0, min(100%, 260px));
+          justify-content: center;
         }
 
         .kot-order-card {
           width: 100%;
+          min-width: 0;
         }
 
         .kot-order-card--compact {
           box-sizing: border-box;
-          min-height: 140px;
-          padding: 0.7rem 0.8rem;
+          padding: 0.55rem 0.65rem;
           display: grid;
-          grid-template-rows: minmax(48px, auto) 20px 32px;
-          gap: 0.55rem;
+          grid-template-rows: auto auto auto;
+          gap: 0.4rem;
           align-content: start;
         }
 
         .kot-compact-header {
           display: grid;
-          grid-template-columns: 56px minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr) max-content;
           align-items: center;
-          column-gap: 0.6rem;
+          column-gap: 0.45rem;
+          min-width: 0;
+        }
+
+        .kot-compact-leading {
+          display: grid;
+          grid-template-columns: 66px minmax(0, 1fr);
+          align-items: center;
+          column-gap: 0.45rem;
           min-width: 0;
         }
 
         .kot-compact-table-badge {
           display: grid;
           place-items: center;
-          width: 56px;
-          height: 42px;
-          padding: 0 0.25rem;
+          width: 66px;
+          min-height: 34px;
+          padding: 0.22rem 0.2rem;
           box-sizing: border-box;
           border-radius: 7px;
           font-size: 0.78rem;
           font-weight: 900;
           line-height: 1.1;
+          flex-shrink: 0;
+          text-align: center;
+          overflow-wrap: normal;
+        }
+
+        .kot-compact-table-badge > span {
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .kot-compact-table-badge small {
-          font-size: 0.48rem;
+          max-width: 100%;
+          font-size: 0.46rem;
           letter-spacing: 0.06em;
+          line-height: 1.1;
+          white-space: nowrap;
         }
 
         .kot-compact-copy {
@@ -799,12 +840,15 @@ export function KitchenKOTView({
         }
 
         .kot-compact-title {
-          font-size: 0.86rem;
-          line-height: 1.2;
+          font-size: 0.82rem;
+          line-height: 1.15;
+          min-width: 0;
+          overflow-wrap: anywhere;
+          word-break: normal;
         }
 
         .kot-compact-order-number {
-          margin-top: 3px;
+          margin-top: 2px;
           color: var(--text-muted);
           font-size: 0.69rem;
           line-height: 1.15;
@@ -814,8 +858,9 @@ export function KitchenKOTView({
           display: inline-flex;
           align-items: center;
           justify-self: end;
+          flex-shrink: 0;
           gap: 0.38rem;
-          min-width: 0;
+          min-width: max-content;
           white-space: nowrap;
           font-size: 0.72rem;
           font-weight: 750;
@@ -836,9 +881,15 @@ export function KitchenKOTView({
           align-items: center;
           gap: 0.6rem;
           min-width: 0;
+          min-height: 16px;
           color: var(--text-muted);
           font-size: 0.72rem;
-          line-height: 1;
+          line-height: 1.2;
+        }
+
+        .kot-compact-meta > :first-child {
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         .kot-compact-meta > :last-child {
@@ -848,9 +899,9 @@ export function KitchenKOTView({
 
         .kot-compact-view-button {
           justify-self: start;
-          align-self: end;
-          min-height: 32px;
-          padding: 0.35rem 0.75rem;
+          align-self: start;
+          min-height: 29px;
+          padding: 0.3rem 0.7rem;
           border: 1px solid var(--border-card);
           border-radius: 7px;
           background: var(--bg-tertiary);
@@ -860,18 +911,6 @@ export function KitchenKOTView({
           line-height: 1;
           white-space: nowrap;
           cursor: pointer;
-        }
-
-        @media (max-width: 1200px) {
-          .kot-cards-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-          }
-        }
-
-        @media (max-width: 900px) {
-          .kot-cards-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          }
         }
 
         @media (max-width: 640px) {
@@ -911,7 +950,8 @@ export function KitchenKOTView({
           }
 
           .kot-cards-grid {
-            grid-template-columns: minmax(0, 1fr) !important;
+            grid-template-columns: minmax(0, min(100%, 260px));
+            justify-content: center;
             gap: 0.75rem !important;
           }
 
@@ -920,23 +960,21 @@ export function KitchenKOTView({
           }
 
           .kot-order-card--compact {
-            min-height: 140px;
-            padding: 0.65rem 0.7rem;
-            grid-template-rows: minmax(48px, auto) 20px 32px;
+            padding: 0.55rem 0.65rem;
+            grid-template-rows: auto auto auto;
           }
 
-          .kot-compact-header { grid-template-columns: 50px minmax(0, 1fr) auto; column-gap: 0.4rem; }
-          .kot-compact-table-badge { width: 50px; }
+          .kot-compact-header { column-gap: 0.4rem; }
+          .kot-compact-leading { grid-template-columns: 66px minmax(0, 1fr); column-gap: 0.4rem; }
           .kot-compact-status { gap: 0.3rem; font-size: 0.68rem; }
           .kot-compact-title { font-size: 0.81rem; }
           .kot-compact-order-number { font-size: 0.66rem; }
         }
 
         @media (max-width: 360px) {
-          .kot-order-card--compact { min-height: 154px; grid-template-rows: minmax(60px, auto) 20px 32px; }
-          .kot-compact-header { grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 0.4rem; row-gap: 0.25rem; }
-          .kot-compact-table-badge { grid-row: 1 / span 2; width: 44px; }
-          .kot-compact-status { grid-column: 2; grid-row: 2; justify-self: start; }
+          .kot-compact-leading { grid-template-columns: 60px minmax(0, 1fr); }
+          .kot-compact-table-badge { width: 60px; }
+          .kot-compact-status { gap: 0.25rem; font-size: 0.64rem; }
         }
       `}</style>
 
@@ -1030,6 +1068,60 @@ export function KitchenKOTView({
                   >
                     KITCHEN DISPLAY SYSTEM (KDS)
                   </span>
+                  {onStationChange && (
+                    <div
+                      role="tablist"
+                      aria-label="KOT Station switcher"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        background: "var(--bg-tertiary)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "8px",
+                        padding: "2px",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={currentStation === "kitchen"}
+                        onClick={() => onStationChange("kitchen")}
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: currentStation === "kitchen" ? "var(--accent-amber)" : "transparent",
+                          color: currentStation === "kitchen" ? "#ffffff" : "var(--text-muted)",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        🍳 Kitchen KOT
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={currentStation === "bar"}
+                        onClick={() => onStationChange("bar")}
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: currentStation === "bar" ? "var(--accent-amber)" : "transparent",
+                          color: currentStation === "bar" ? "#ffffff" : "var(--text-muted)",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        🍸 Bar BOT
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <p
                   style={{
@@ -1038,8 +1130,7 @@ export function KitchenKOTView({
                     marginTop: "2px",
                   }}
                 >
-                  Live Kitchen Order Tickets • Table orders & preparation
-                  completed queue
+                  Live Kitchen Order Tickets • Active POS orders awaiting preparation
                 </p>
               </div>
             </div>
@@ -1212,15 +1303,6 @@ export function KitchenKOTView({
                   badgeColor: "var(--accent-amber-light)",
                   badgeBg: "rgba(234, 88, 12, 0.25)",
                   badgeBorder: "rgba(234, 88, 12, 0.5)",
-                },
-                {
-                  id: "completed",
-                  label: "Completed",
-                  count: completedOrdersCount,
-                  dot: "#10b981",
-                  badgeColor: "var(--success)",
-                  badgeBg: "rgba(16, 185, 129, 0.25)",
-                  badgeBorder: "rgba(16, 185, 129, 0.5)",
                 },
               ].map((tab) => (
                 <button
@@ -1696,18 +1778,7 @@ export function KitchenKOTView({
           ) : (
             /* Compact Cards Grid matching Image 2 UI */
             <div
-              className="kot-cards-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  selectedTableFilter !== "all"
-                    ? "minmax(200px, 320px)"
-                    : "repeat(auto-fill, minmax(260px, 1fr))",
-                gap: "0.85rem",
-                alignItems: "stretch",
-                justifyContent:
-                  selectedTableFilter !== "all" ? "center" : "stretch",
-              }}
+              className={`kot-cards-grid${selectedTableFilter !== "all" ? " kot-cards-grid--single" : ""}`}
             >
               {filteredTables.map((tbl) => {
                 const allServed =
@@ -1723,6 +1794,7 @@ export function KitchenKOTView({
                     ? { label: "Preparing", color: "#f97316" }
                     : { label: "Received", color: "#ef4444" };
                 const orderTimeLabel = formatDisplayTime(tbl.orderTime);
+                const isTakeawayOrder = String(tbl.orderType).toLowerCase() === "takeaway";
 
                 return (
                   <article
@@ -1738,15 +1810,17 @@ export function KitchenKOTView({
                     }}
                   >
                     <div className="kot-compact-header">
-                      <span className="kot-compact-table-badge" style={{ background: `${compactStatus.color}1c`, color: compactStatus.color }}>
-                        <small>TABLE</small>
-                        {String(tbl.orderType).toLowerCase() === "takeaway" ? "TAKEAWAY" : formatCleanTableNum(tbl.name, tbl.id)}
-                      </span>
-                      <div className="kot-compact-copy">
-                        <strong className="kot-compact-title">{String(tbl.orderType).toLowerCase() === "takeaway" ? "Takeaway Order" : formatCleanTableName(tbl.name, tbl.id)}</strong>
-                        <span className="kot-compact-order-number">Order #{tbl.backendOrderId ?? tbl.id}</span>
+                      <div className="kot-compact-leading">
+                        <span className="kot-compact-table-badge" style={{ background: `${compactStatus.color}1c`, color: compactStatus.color }}>
+                          <small>{isTakeawayOrder ? "TAKEAWAY" : "TABLE"}</small>
+                          <span>{isTakeawayOrder ? "ORDER" : formatCleanTableNum(tbl.name, tbl.id)}</span>
+                        </span>
+                        <div className="kot-compact-copy">
+                          <strong className="kot-compact-title">{isTakeawayOrder ? "Takeaway Order" : formatCleanTableName(tbl.name, tbl.id)}</strong>
+                          <span className="kot-compact-order-number">Order #{tbl.backendOrderId ?? tbl.id}</span>
+                        </div>
                       </div>
-                      <span className="kot-compact-status" style={{ color: "var(--text-main)" }}>
+                      <span className="kot-compact-status" style={{ color: "var(--kot-status-color)" }}>
                         <span aria-hidden="true" className="kot-compact-status-dot" />
                         {compactStatus.label}
                       </span>

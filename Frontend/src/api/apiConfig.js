@@ -1,12 +1,11 @@
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 
-// Keep the configured API address consistent for every device. Development
-// requests use the same-origin Vite proxy below, which forwards to this URL.
+// Browser-to-API traffic stays same-origin through a reverse proxy.
+// During development, Vite forwards requests to the backend,
+// or gracefully falls back to local server-db.json when offline so data is NEVER lost.
 export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
-
-// In development all browser-to-API traffic stays same-origin. The Vite
-// server forwards it to the backend on the POS host, including LAN clients.
-export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : API_BASE_URL;
+export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
+export const API_SYNC_BASE = import.meta.env.DEV ? "" : API_BASE_URL;
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
 // Keep development SSE on Vite for LAN state broadcasts; production uses the API.
@@ -30,7 +29,6 @@ export function openOptionalEventStream() {
 
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
-  "ngrok-skip-browser-warning": "true",
 };
 
 const inFlightGetRequests = new Map();
@@ -46,6 +44,7 @@ async function performApiRequest(endpoint, options = {}) {
         : null;
 
     const headers = {
+      ...(remoteOnly && import.meta.env.DEV ? { "X-Remote-Only": "true" } : {}),
       ...DEFAULT_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
@@ -59,18 +58,19 @@ async function performApiRequest(endpoint, options = {}) {
     let res;
     try {
       res = await fetch(url, config);
-      if (!import.meta.env.DEV && !remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+      if (!remoteOnly && !res.ok && (res.status === 502 || res.status === 503 || res.status === 504) && url !== endpoint) {
         try {
-          const localRes = await fetch(endpoint, config);
-          if (localRes.ok) {
-            res = localRes;
-          }
+          const fallbackRes = await fetch(endpoint, config);
+          if (fallbackRes.ok) res = fallbackRes;
         } catch {}
       }
     } catch (fetchErr) {
-      if (!import.meta.env.DEV && API_BASE_URL && !remoteOnly) {
-        console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
-        res = await fetch(endpoint, config);
+      if (!remoteOnly && url !== endpoint) {
+        try {
+          res = await fetch(endpoint, config);
+        } catch {
+          throw fetchErr;
+        }
       } else {
         throw fetchErr;
       }
@@ -133,23 +133,10 @@ async function performApiRequest(endpoint, options = {}) {
       return { success: true, data: null };
     }
 
-    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
-      if (!import.meta.env.DEV && API_BASE_URL) {
-        try {
-          const localRes = await fetch(endpoint, config);
-          const localText = await localRes.text();
-          if (localRes.ok && !localText.trim().startsWith('<') && !localText.includes('ERR_NGROK')) {
-            const data = JSON.parse(localText);
-            return { success: true, data };
-          }
-        } catch {}
-      }
-      const isNgrok = text.includes('ngrok') || text.includes('ERR_NGROK') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
+    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html')) {
       const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
       let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;
-      if (isNgrok) {
-        msg = 'The ngrok backend tunnel is offline or expired. Make sure ngrok and your backend server are running.';
-      } else if (isViteFallback) {
+      if (isViteFallback) {
         msg = `The backend API server is offline or route ${endpoint} is unhandled.`;
       }
       return {

@@ -36,6 +36,8 @@ export const DRINK_CATEGORY_KEYWORDS = [
   "drinks",
   "cocktail",
   "cocktails",
+  "cocktail premix",
+  "mocktail syrup",
   "mocktail",
   "mocktails",
   "juice",
@@ -44,6 +46,10 @@ export const DRINK_CATEGORY_KEYWORDS = [
   "soft drinks",
   "softdrink",
   "softdrinks",
+  "tonic water",
+  "soda water",
+  "fresh juice",
+  "fruit puree",
   "soda",
   "sodas",
   "tea",
@@ -83,11 +89,30 @@ export const DRINK_CATEGORY_KEYWORDS = [
   "shakes",
   "smoothie",
   "smoothies",
+  "cider",
+  "liqueur",
+  "bitters",
+  "tequila",
+  "mezcal",
+  "champagne",
+  "energy drink",
+  "sports drink",
+  "mineral water",
+  "sparkling water",
+  "lemonade",
+  "dairy beverage",
+  "coconut water",
+  "hot chocolate",
+  "slushie",
+  "premix",
+  "puree",
+  "syrup",
 ];
 
 export const ALCOHOLIC_KEYWORDS = [
   "beer",
   "beers",
+  "cider",
   "whiskey",
   "whisky",
   "bourbon",
@@ -98,6 +123,8 @@ export const ALCOHOLIC_KEYWORDS = [
   "rum",
   "rum & brandy",
   "brandy",
+  "liqueur",
+  "bitters",
   "wine",
   "wine & champagne",
   "champagne",
@@ -109,6 +136,7 @@ export const ALCOHOLIC_KEYWORDS = [
   "liqueur",
   "liquor",
   "tequila",
+  "mezcal",
   "alcohol",
   "alcoholic",
   "alcoholic beverage",
@@ -153,6 +181,31 @@ export function isDrinkCategory(category, item = null) {
   return DRINK_CATEGORY_KEYWORDS.some(
     (kw) => normalized === kw || normalized.includes(kw)
   );
+}
+
+/**
+ * Checks whether a category is strictly bar or alcohol related (beer, cocktails, spirits, wine, etc.).
+ * Used to filter out bar categories from Dine/Kitchen menu management.
+ * @param {string|null|undefined} category
+ * @returns {boolean}
+ */
+export function isBarCategory(category) {
+  if (!category || typeof category !== "string") return false;
+  const s = category.trim().toLowerCase();
+
+  const barKeywords = [
+    "beer", "beers", "cocktail", "cocktails", "mocktail", "mocktails",
+    "vodka", "gin", "vodka & gin", "rum", "brandy", "rum & brandy",
+    "whiskey", "whisky", "scotch", "bourbon", "wine", "wine & champagne",
+    "champagne", "tequila", "mezcal", "liqueur", "liquor", "spirits",
+    "shots", "shooters", "cider", "alcohol", "alcoholic", "bar", "bar drinks"
+  ];
+
+  return barKeywords.some((kw) => {
+    if (s === kw) return true;
+    const regex = new RegExp(`(?:^|[^a-z0-9])${kw.replace(/&/g, "\\&")}(?:$|[^a-z0-9])`, "i");
+    return regex.test(s);
+  });
 }
 
 /**

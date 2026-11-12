@@ -90,6 +90,7 @@ public class BarDrinkDto
     public string Name => DrinkName;
     public string DishName => DrinkName;
     public string Category { get; set; } = string.Empty;
+    public string? Subcategory { get; set; }
     public string ServingMeasure { get; set; } = "—";
     public string Measure => ServingMeasure;
     public string ServingVolume => ServingMeasure;
@@ -132,6 +133,9 @@ public class CreateBarDrinkDto
 
     [MaxLength(100)]
     public string? Category { get; set; } = "Cocktails";
+
+    [MaxLength(100)]
+    public string? Subcategory { get; set; }
 
     [MaxLength(30)]
     public string? DrinkType { get; set; } = "Alcoholic"; // "Alcoholic", "Non-Alcoholic"
@@ -196,6 +200,9 @@ public class UpdateBarDrinkDto
 
     [MaxLength(100)]
     public string? Category { get; set; }
+
+    [MaxLength(100)]
+    public string? Subcategory { get; set; }
 
     [MaxLength(30)]
     public string? DrinkType { get; set; }
@@ -402,6 +409,7 @@ public class BarStaffDto
     public List<long> AssignedTableIds { get; set; } = new();
     public List<AssignableTableDto> AssignedTableDetails { get; set; } = new();
     public string Status { get; set; } = "active"; // "active", "inactive"
+    public string StockStatus => Status;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -616,15 +624,22 @@ public class BarInventoryItemDto
     public string ItemName { get; set; } = string.Empty;
     public string Name => ItemName;
     public string Category { get; set; } = "Wine";
+    public string? ItemType { get; set; }
     public string Unit { get; set; } = "Bottle";
+    public string StockUnit => Unit;
     public decimal Stock { get; set; } = 0.00m;
     public decimal CurrentStock => Stock;
+    public decimal StockQuantity => Stock;
     public decimal Threshold { get; set; } = 5.00m;
     public decimal MinimumThreshold => Threshold;
     public decimal UnitCost { get; set; } = 0.00m;
     public decimal CostPerUnit => UnitCost;
+    public decimal? Mrp { get; set; }
     public decimal TotalValue => Math.Round(Stock * UnitCost, 2);
     public string FormattedTotalValue => $"₹{TotalValue:N2}";
+    public decimal StockValuation => TotalValue;
+    public decimal Valuation => TotalValue;
+    public decimal UsedQuantity { get; set; } = 0.00m;
     public string Status
     {
         get
@@ -635,7 +650,9 @@ public class BarInventoryItemDto
         }
     }
     public string? Supplier { get; set; }
+    public string StockStatus => Status;
     public bool IsActive { get; set; } = true;
+    public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -650,10 +667,12 @@ public class CreateInventoryItemDto
     [Required(ErrorMessage = "Category is required.")]
     [MaxLength(100)]
     public string Category { get; set; } = "Wine";
+    public string? ItemType { get; set; }
 
     [Required(ErrorMessage = "Unit is required.")]
     [MaxLength(50)]
     public string Unit { get; set; } = "Bottle";
+    public string StockUnit => Unit;
 
     [Range(0, 10000000)]
     public decimal Stock { get; set; } = 0.00m;
@@ -688,6 +707,8 @@ public class UpdateInventoryItemDto
     public decimal? MinimumThreshold { set => Threshold = value; }
     public decimal? UnitCost { get; set; }
     public decimal? CostPerUnit { set => UnitCost = value; }
+    public decimal? Mrp { get; set; }
+    public string? ItemType { get; set; }
     public string? Supplier { get; set; }
 }
 
@@ -707,7 +728,7 @@ public class ReceiveInventoryStockDto
     [Range(0.001, 10000000, ErrorMessage = "Quantity received must be greater than zero.")]
     public decimal QuantityReceived { get; set; }
 
-    public decimal? Quantity { set => QuantityReceived = value ?? 0; }
+    public decimal Quantity { get => QuantityReceived; set => QuantityReceived = value; }
 
     public decimal? UnitCost { get; set; }
 
@@ -719,15 +740,32 @@ public class ReceiveInventoryStockDto
 
     [MaxLength(255)]
     public string? Notes { get; set; } = "Stock received into bar inventory";
+    public string? Note { get => Notes; set => Notes = value; }
+    public DateTime? ReceivedDate { get; set; }
+    public DateTime? Date { get => ReceivedDate; set => ReceivedDate = value; }
+}
+
+public class UseStockDto
+{
+    [Required(ErrorMessage = "Quantity used is required.")]
+    [Range(0.001, 10000000, ErrorMessage = "Quantity must be greater than zero.")]
+    public decimal Quantity { get; set; }
+
+    public string? Note { get; set; } = "Used for bar operations";
 }
 
 public class BarInventorySummaryDto
 {
     public int TotalItems { get; set; }
+    public int TotalTrackedItems { get; set; }
     public int InStockItems { get; set; }
     public int LowStockItems { get; set; }
+    public int LowStockCount { get; set; }
     public int OutOfStockItems { get; set; }
+    public int OutOfStockCount { get; set; }
     public decimal TotalInventoryValue { get; set; }
+    public decimal TotalStockValuation { get; set; }
+    public string Currency { get; set; } = "INR";
     public string FormattedTotalValue => $"₹{TotalInventoryValue:N2}";
 }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HMS.Data;
@@ -126,6 +127,10 @@ public class MenuItemService
             existing.DrinkType = isDrink ? finalDrinkType : null;
             existing.AlcoholPct = isDrink ? finalAbv : null;
             existing.ServingMeasure = isDrink ? finalMeasure : null;
+            if (dto.Recipe.HasValue)
+            {
+                existing.RecipeJson = dto.Recipe.Value.GetRawText();
+            }
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -148,6 +153,7 @@ public class MenuItemService
             DrinkType = isDrink ? finalDrinkType : null,
             AlcoholPct = isDrink ? finalAbv : null,
             ServingMeasure = isDrink ? finalMeasure : null,
+            RecipeJson = dto.Recipe?.GetRawText(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -217,6 +223,10 @@ public class MenuItemService
         existing.DrinkType = isDrink ? finalDrinkType : null;
         existing.AlcoholPct = isDrink ? finalAbv : null;
         existing.ServingMeasure = isDrink ? finalMeasure : null;
+        if (dto.Recipe.HasValue)
+        {
+            existing.RecipeJson = dto.Recipe.Value.GetRawText();
+        }
         existing.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -530,6 +540,22 @@ public class MenuItemService
             servingMeasure = reader.GetString(measureOrd);
         }
 
+        JsonElement? recipe = null;
+        int recipeOrd = -1;
+        try { recipeOrd = reader.GetOrdinal("recipe_json"); } catch { }
+        if (recipeOrd >= 0 && !reader.IsDBNull(recipeOrd))
+        {
+            try
+            {
+                using var recipeDocument = JsonDocument.Parse(reader.GetString(recipeOrd));
+                recipe = recipeDocument.RootElement.Clone();
+            }
+            catch (JsonException)
+            {
+                recipe = null;
+            }
+        }
+
         bool isBarItem = false;
         int barOrd = -1;
         try { barOrd = reader.GetOrdinal("is_bar_item"); } catch { }
@@ -556,6 +582,7 @@ public class MenuItemService
             IsChefsSpecial = reader.GetBoolean(reader.GetOrdinal("is_chefs_special")),
             IsAvailable = reader.GetBoolean(reader.GetOrdinal("is_available")),
             ServingMeasure = servingMeasure,
+            Recipe = recipe,
             DrinkType = drinkType,
             AlcoholPct = alcoholPct,
             IsBarItem = isBarItem,

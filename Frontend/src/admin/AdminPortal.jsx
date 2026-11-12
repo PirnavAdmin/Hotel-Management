@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useState, useEffect, useRef } from "react";
 import { logRouteChange, logUserAction } from "../utils/logger";
 import {
@@ -17,6 +18,7 @@ import {
   Check,
   CheckCircle2,
   ChefHat,
+  Wine,
   Search,
   AlertCircle,
   Armchair,
@@ -33,6 +35,7 @@ import {
   Package,
   FileText,
   BarChart3,
+  Banknote,
   Settings,
   Sparkles,
   Boxes,
@@ -51,16 +54,30 @@ import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { isDrinkItem, isBeverageCategory } from "../kot/orderRouting";
+import { isBarCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
+import { AdminTakeaway } from "./AdminTakeaway";
 import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
+import { CustomersManagement } from "./modules/CustomersManagement";
+import { ReservationsManagement } from "./modules/ReservationsManagement";
+import { DeliveryManagement } from "./modules/DeliveryManagement";
+import { AttendanceManagement } from "./modules/AttendanceManagement";
+import { PromotionsManagement } from "./modules/PromotionsManagement";
+import { SuppliersManagement } from "./modules/SuppliersManagement";
+import { RolesManagement } from "./modules/RolesManagement";
+import {
+  apiGetRestaurantSettings,
+  apiUpdateRestaurantSettings,
+} from "../api/settingsApi";
 import { BarWorkspace } from "../bar/BarWorkspace";
+import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
-import { API_BASE_URL, API_HTTP_BASE, openOptionalEventStream } from "../api/apiConfig";
+import { API_BASE_URL, API_SYNC_BASE, openOptionalEventStream } from "../api/apiConfig";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -72,6 +89,7 @@ import {
   getRelevantLocalFallback,
 } from "../utils/menuImageHelper";
 import { SkeletonTable } from "../common/Skeletons";
+import MenuItemVisual from "../common/MenuItemVisual";
 
 const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
 
@@ -89,10 +107,8 @@ export function isDisallowedItemName(raw) {
     "tandoor", "tandoori", "tandoori & kebabs", "tandoor-kebabs", "kebabs",
     "fast-food", "fast food", "burgers, pizza & fast food", "pizza & fast food", "burgers",
     "breads", "naan & roti", "roti & naan", "roti",
-    "beverages", "beverages & coffee", "coffee & beverages", "coffee",
     "desserts", "desserts & sweets", "sweets & desserts", "sweets",
-    "cocktails", "mocktails", "beers", "wines", "spirits", "liquor", "bar",
-    "chinese", "soups", "salads", "soups & salads", "south indian", "north indian", "thali", "snacks"
+    "chinese", "soups", "salads", "soups & salads", "south indian", "north indian", "snacks"
   ];
   if (standardAllowed.includes(s)) return false;
 
@@ -106,9 +122,37 @@ export function isDisallowedItemName(raw) {
     "chicken", "mutton", "prawn", "fish", "paneer", "egg", "beef", "pork",
     "shawarma", "bagara", "lassi", "lemonade", "buttermilk", "chaas",
     "corn salt", "salt & pepper", "fried rice", "noodles", "chilli", "manchurian",
-    "dum biryani", "veg biryani", "biryani", "masala", "tikka", "kebab", "kabab", "fry", "dry"
+    "dum biryani", "veg biryani", "biryani", "masala", "tikka", "kebab", "kabab", "fry", "dry",
+    "thali", "veg thali", "watermelon", "juice", "beverage", "coffee", "tea"
   ];
   return dishKeywords.some((kw) => s.includes(kw));
+}
+
+/**
+ * Strict validator for Dine menu categories.
+ * Filters out bar categories, all beverages/drinks, and dish names.
+ */
+export function isDisallowedDineCategory(raw) {
+  if (!raw || typeof raw !== "string") return false;
+  const s = raw.trim().toLowerCase();
+  if (!s) return false;
+
+  // 1. Bar and alcohol categories
+  if (isBarCategory(s)) return true;
+
+  // 2. Drinks and beverage categories (Beverages, Juices, Watermelon Juice, Tea & Coffee, Shakes, etc.)
+  if (isDrinkCategory(s) || isBeverageCategory(s)) return true;
+  if (/^(beverage|beverages|drink|drinks|juice|juices|tea|coffee|shake|shakes|smoothie|smoothies)/i.test(s)) return true;
+  if (/\b(juice|juices|beverage|beverages|coffee|tea|mocktail|cocktail|beer|wine|vodka|gin|rum|brandy|whiskey|whisky|bourbon|scotch|tequila|liqueur|shake|smoothie|soda)\b/i.test(s)) return true;
+
+  // 3. Specific dish names or combo platters that leaked into categories
+  if (s === "veg thali" || s === "thali" || s.includes("thali") || s.includes("platter") || s.includes("combo")) return true;
+  if (s === "watermelon juice" || s.includes("watermelon")) return true;
+
+  // 4. Other dish keywords
+  if (isDisallowedItemName(s)) return true;
+
+  return false;
 }
 
 export function inferIngredientCategory(rawName = "") {
@@ -402,11 +446,10 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
         new CustomEvent("avsr-inventory-updated", { detail: updatedInventory })
       );
       try {
-        fetch(`${API_HTTP_BASE}/api/sync`, {
+        fetch(`${API_SYNC_BASE}/api/sync`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
           },
           body: JSON.stringify({ [STORAGE_KEY]: updatedInventory }),
         }).catch(() => {});
@@ -437,10 +480,14 @@ export function AdminPortal({
   onBarOrderUpdated,
   onBarOrderItemStatusUpdated,
   staffList,
+  salaryPayments = [],
+  inventoryPurchases = [],
   sharedRecordLoad,
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
+  onRecordSalaryPayment,
+  onRecordInventoryPurchase,
   onOpenKOTView,
   onUpdateItemKotStatus,
   onCompleteTableKot,
@@ -475,6 +522,7 @@ export function AdminPortal({
     } catch {}
     return [];
   });
+  const [inventoryApiError, setInventoryApiError] = useState("");
 
   useEffect(() => {
     if (Array.isArray(propInventory) && propInventory.length > 0) {
@@ -483,29 +531,36 @@ export function AdminPortal({
   }, [propInventory]);
 
   useEffect(() => {
-    if (!inventory || inventory.length === 0) {
-      apiGetInventory()
-        .then((res) => {
-          const payload = res?.data ?? res;
-          const rows = Array.isArray(payload)
-            ? payload
-            : Array.isArray(payload?.data)
-              ? payload.data
-              : Array.isArray(payload?.ingredients)
-                ? payload.ingredients
-                : [];
-          if (rows.length > 0) {
-            setInventory(rows);
-            try {
-              localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(rows));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-    }
-
+    let cancelled = false;
+    const loadInventory = async () => {
+      try {
+        const response = await apiGetInventory();
+        const payload = response?.data;
+        const rows = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.ingredients)
+              ? payload.ingredients
+              : null;
+        if (!response?.success || !rows) {
+          throw new Error(response?.error || "Inventory API returned an invalid response.");
+        }
+        if (cancelled) return;
+        setInventory(rows);
+        setInventoryApiError("");
+        try {
+          localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(rows));
+        } catch {}
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Admin Inventory] Failed to load inventory from the API:", error);
+        setInventoryApiError(error?.message || "Inventory API request failed.");
+      }
+    };
+    loadInventory();
     const handleInvUpdated = (e) => {
-      if (Array.isArray(e.detail) && e.detail.length > 0) {
+      if (Array.isArray(e.detail)) {
         setInventory(e.detail);
       }
     };
@@ -513,7 +568,7 @@ export function AdminPortal({
       if (e.key === "gourmet_pos_inventory_v1" && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setInventory(parsed);
           }
         } catch {}
@@ -522,10 +577,11 @@ export function AdminPortal({
     window.addEventListener("avsr-inventory-updated", handleInvUpdated);
     window.addEventListener("storage", handleStorage);
     return () => {
+      cancelled = true;
       window.removeEventListener("avsr-inventory-updated", handleInvUpdated);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [inventory]);
+  }, []);
   const { confirmState, requestDelete, cancelDelete } = useConfirmDelete();
 
   // Toggle between Dine (Restaurant) and Bar mode
@@ -613,6 +669,7 @@ export function AdminPortal({
     setMenuPage(1);
   };
   const [adminKotTableFilter, setAdminKotTableFilter] = useState("all");
+  const [adminKotStation, setAdminKotStation] = useState("kitchen");
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const [selectedKotModalTable, setSelectedKotModalTable] = useState(null);
@@ -839,16 +896,26 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
-    fetch(`${API_HTTP_BASE}/api/state`, {
+    fetch(`${API_SYNC_BASE}/api/state`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) =>
         applySettings(
           data?.[RESTAURANT_SETTINGS_KEY] ||
-            data?.data?.[RESTAURANT_SETTINGS_KEY],
+            data?.data?.[RESTAURANT_SETTINGS_KEY] ||
+            data?.restaurantSettings ||
+            data?.data?.restaurantSettings,
         ),
       )
+      .catch(() => {});
+
+    // Also fetch directly from dedicated restaurant-settings API
+    apiGetRestaurantSettings()
+      .then((res) => {
+        const liveSettings = res?.data || res?.settings;
+        if (liveSettings) applySettings(liveSettings);
+      })
       .catch(() => {});
 
     const events = openOptionalEventStream();
@@ -871,11 +938,18 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
-    const response = await fetch(`${API_HTTP_BASE}/api/sync`, {
+    // 1. Save directly to dedicated REST endpoint
+    try {
+      await apiUpdateRestaurantSettings(settings);
+    } catch (restErr) {
+      console.warn("Direct restaurant-settings API update warning:", restErr);
+    }
+
+    // 2. Broadcast via /api/sync
+    const response = await fetch(`${API_SYNC_BASE}/api/sync`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
     });
@@ -927,7 +1001,7 @@ export function AdminPortal({
       if (!Array.isArray(parsed)) return [];
       const cleaned = parsed.filter((cat) => {
         const str = String(typeof cat === "string" ? cat : cat?.name || cat?.label || cat?.value || "").trim();
-        return str && !isDisallowedItemName(str);
+        return str && !isDisallowedDineCategory(str);
       });
       localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(cleaned));
       return cleaned;
@@ -965,7 +1039,7 @@ export function AdminPortal({
 
   // Persistent save helpers
   const saveCustomCategory = async (newCat) => {
-    if (!newCat || !newCat.trim()) return;
+    if (!newCat || !newCat.trim() || isDisallowedDineCategory(newCat)) return;
     const trimmed = newCat.trim();
     const knownNames = [
       ...customCategories.map((category) =>
@@ -1077,14 +1151,14 @@ export function AdminPortal({
         .filter(Boolean)
         .filter((name) => {
           const s = String(name).toLowerCase().trim();
-          return !dishNames.has(s) && !isDisallowedItemName(s);
+          return !dishNames.has(s) && !isDisallowedDineCategory(s);
         });
 
       setCustomCategories((previous) => {
         const merged = previous.filter(
           (p) => {
             const s = String(typeof p === "string" ? p : p?.name || "").toLowerCase().trim();
-            return !dishNames.has(s) && !isDisallowedItemName(s);
+            return !dishNames.has(s) && !isDisallowedDineCategory(s);
           }
         );
         names.forEach((name) => {
@@ -1122,34 +1196,104 @@ export function AdminPortal({
         .filter(Boolean),
     );
 
-    // Standard high-level categories
+    // Standard high-level dining categories ordered strictly from Soups to Desserts
     const standardCategories = [
-      { value: "starters", label: "Starters & Appetizers" },
-      { value: "biryani", label: "Biryanis & Rice Special" },
-      { value: "mains", label: "Main Course & Curries" },
-      { value: "tandoor-kebabs", label: "Tandoori & Kebabs" },
-      { value: "fast-food", label: "Burgers, Pizza & Fast Food" },
-      { value: "breads", label: "Naan & Roti" },
-      { value: "desserts", label: "Desserts & Sweets" },
+      {
+        value: "soups",
+        label: "Soups",
+        order: 10,
+        aliases: ["soups", "soup", "hot soup", "soups & salads", "soups & broths", "salads & soups"],
+      },
+      {
+        value: "starters",
+        label: "Starters",
+        order: 20,
+        aliases: ["starters", "starter", "starters & appetizers", "appetizers", "appetizer", "finger food"],
+      },
+      {
+        value: "tandoor-kebabs",
+        label: "Tandoori",
+        order: 30,
+        aliases: ["tandoor-kebabs", "tandoori & kebabs", "tandoori", "kebabs", "kebab", "tikka"],
+      },
+      {
+        value: "mains",
+        label: "Main Course",
+        order: 40,
+        aliases: ["mains", "main course", "main course & curries", "curries", "curry", "gravies", "gravy"],
+      },
+      {
+        value: "breads",
+        label: "Breads",
+        order: 50,
+        aliases: ["breads", "naan & roti", "roti", "naan", "tandoori roti", "indian breads", "bread", "rotis"],
+      },
+      {
+        value: "biryani",
+        label: "Biryani",
+        order: 60,
+        aliases: [
+          "biryani",
+          "biryanis",
+          "biryanis & rice special",
+          "biryani & rice special",
+          "biryani special",
+          "rice items",
+          "rice special",
+          "rice",
+          "fried rice",
+          "pulao",
+        ],
+      },
+      {
+        value: "burgers",
+        label: "Burgers",
+        order: 70,
+        aliases: ["burger", "burgers"],
+      },
+      {
+        value: "pizza",
+        label: "Pizza",
+        order: 71,
+        aliases: ["pizza", "pizzas"],
+      },
+      {
+        value: "fast-food",
+        label: "Fast Food",
+        order: 72,
+        aliases: ["fast-food", "fast food", "fastfood", "burgers, pizza & fast food", "pizza & fast food"],
+      },
+      {
+        value: "desserts",
+        label: "Desserts",
+        order: 990, // Desserts always at the very end
+        aliases: ["desserts", "desserts & sweets", "dessert", "sweets", "ice cream", "sweet", "mithai"],
+      },
     ];
 
     standardCategories.forEach((cat) => {
-      map.set(cat.value.toLowerCase(), cat);
+      map.set(cat.value.toLowerCase(), { value: cat.value, label: cat.label, order: cat.order });
     });
 
-    const getCleanCategoryLabel = (catVal) => {
-      const s = String(catVal || "").trim().toLowerCase();
-      if (s === "cocktail") return "Cocktails";
-      if (s === "curries" || s === "curry") return "Main Course & Curries";
-      const found = standardCategories.find(
-        (c) => c.value.toLowerCase() === s || c.label.toLowerCase() === s
+    const findStandard = (rawStr) => {
+      const lower = String(rawStr || "").trim().toLowerCase();
+      return standardCategories.find(
+        (c) =>
+          c.value.toLowerCase() === lower ||
+          c.label.toLowerCase() === lower ||
+          c.aliases.some((a) => a.toLowerCase() === lower)
       );
-      if (found) return found.label;
-      const str = String(catVal).replace(/[-_]/g, " ");
+    };
+
+    const getCleanCategoryLabel = (catVal) => {
+      const s = String(catVal || "").trim();
+      const std = findStandard(s);
+      if (std) return std.label;
+      const str = s.replace(/[-_]/g, " ");
       return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
-    // Add valid custom categories (strictly excluding any dish items)
+    // Add valid custom food categories (strictly excluding bar/drinks and dish items)
     (customCategories || []).forEach((cat) => {
       const name =
         typeof cat === "string"
@@ -1157,35 +1301,46 @@ export function AdminPortal({
           : cat.categoryName || cat.category || cat.name || cat.label || cat.value;
       if (!name || typeof name !== "string") return;
       const trimmed = name.trim();
-      let lower = trimmed.toLowerCase();
-      if (lower === "cocktail") lower = "cocktails";
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      if (!trimmed || isDisallowedDineCategory(trimmed) || dishNames.has(trimmed.toLowerCase())) {
+        return;
+      }
+
+      // If matches any standard category (e.g. "Biryanis & Rice Special", "Tandoori Roti", "Rice items"), skip to avoid duplicates
+      if (findStandard(trimmed)) return;
+
+      const canonicalKey = trimmed.toLowerCase().replace(/[-_]/g, " ");
+      if (!map.has(canonicalKey)) {
+        map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed), order: 80 });
       }
     });
 
-    // Add any genuine custom categories from menuItems
+    // Add any genuine custom categories from menuItems (strictly excluding bar/drinks and dish items)
     (menuItems || []).forEach((item) => {
       if (isDrinkItem(item)) return;
       const cat = item.category || item.categoryName;
       if (!cat || typeof cat !== "string") return;
       const trimmed = cat.trim();
-      if (isBeverageCategory(trimmed)) return;
+      if (!trimmed || isDisallowedDineCategory(trimmed)) return;
+
       const lower = trimmed.toLowerCase();
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      if (dishNames.has(lower)) return;
+
+      if (findStandard(trimmed)) return;
+
+      const canonicalKey = lower.replace(/[-_]/g, " ");
+      if (!map.has(canonicalKey)) {
+        map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed), order: 80 });
       }
     });
 
-    return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
+    // Sort strictly in dining meal course order: from Soups to Desserts
+    return Array.from(map.values())
+      .sort((a, b) => {
+        const orderDiff = (a.order ?? 80) - (b.order ?? 80);
+        if (orderDiff !== 0) return orderDiff;
+        return a.label.localeCompare(b.label);
+      })
+      .map(({ value, label }) => ({ value, label }));
   }, [customCategories, menuItems]);
 
   const allSectionOptions = React.useMemo(() => {
@@ -1293,7 +1448,35 @@ export function AdminPortal({
     role: "",
     phone: "",
     shift: "",
+    monthlySalary: "0",
   });
+  const [salaryPaymentStaff, setSalaryPaymentStaff] = useState(null);
+  const [salaryPaymentSaving, setSalaryPaymentSaving] = useState(false);
+  const [salaryPaymentForm, setSalaryPaymentForm] = useState({
+    amount: "",
+    paidOn: "",
+    salaryPeriod: "",
+    paymentMethod: "Bank Transfer",
+    notes: "",
+  });
+  const currentSalaryPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const getStaffSalaryPaidThisMonth = (person) => {
+    const personName = String(person?.name || person?.fullName || person?.FullName || "").trim().toLowerCase();
+    const personId = person?.id ?? person?.staffId;
+    return salaryPayments.reduce((total, payment) => {
+      const paymentStaffId = payment.staffId ?? payment.staffID;
+      const belongsToStaff = (
+        personId != null &&
+        paymentStaffId != null &&
+        String(paymentStaffId) === String(personId)
+      ) || String(payment.staffName || "").trim().toLowerCase() === personName;
+      return total + (
+        belongsToStaff && String(payment.salaryPeriod || payment.payPeriod || "").slice(0, 7) === currentSalaryPeriod
+          ? Number(payment.amount) || 0
+          : 0
+      );
+    }, 0);
+  };
 
   // Open item modal for Add or Edit
   const handleOpenItemModal = (item = null) => {
@@ -1522,12 +1705,17 @@ export function AdminPortal({
           "",
       );
       const personRole = String(person?.role || person?.roleTitle || "");
+      const monthlySalary = Number(person.monthlySalary) || 0;
+      const salaryForForm = monthlySalary > 0
+        ? monthlySalary
+        : getStaffSalaryPaidThisMonth(person);
       setEditingStaff(person);
       setStaffForm({
         name: personName,
         role: personRole,
         phone: person.phone || "",
         shift: person.shift || "",
+        monthlySalary: String(salaryForForm),
       });
     } else {
       setEditingStaff(null);
@@ -1536,6 +1724,7 @@ export function AdminPortal({
         role: "",
         phone: "",
         shift: "",
+        monthlySalary: "0",
       });
     }
     setIsStaffModalOpen(true);
@@ -1562,6 +1751,7 @@ export function AdminPortal({
           role: staffForm.role,
           phone: staffForm.phone,
           shift: staffForm.shift,
+          monthlySalary: Number(staffForm.monthlySalary) || 0,
         });
       }
     } else {
@@ -1570,6 +1760,7 @@ export function AdminPortal({
         role: staffForm.role,
         phone: staffForm.phone,
         shift: staffForm.shift,
+        monthlySalary: Number(staffForm.monthlySalary) || 0,
       });
     }
     if (saved === false) return;
@@ -1580,8 +1771,39 @@ export function AdminPortal({
       role: "",
       phone: "",
       shift: "",
+      monthlySalary: "0",
     });
     setIsStaffModalOpen(false);
+  };
+
+  const handleOpenSalaryPaymentModal = (person) => {
+    const now = new Date();
+    const paidOn = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    setSalaryPaymentStaff(person);
+    setSalaryPaymentForm({
+      amount: String(Number(person.monthlySalary) || 0),
+      paidOn,
+      salaryPeriod: paidOn.slice(0, 7),
+      paymentMethod: "Bank Transfer",
+      notes: "",
+    });
+  };
+
+  const handleSaveSalaryPayment = async (event) => {
+    event.preventDefault();
+    if (!salaryPaymentStaff || !onRecordSalaryPayment || salaryPaymentSaving) return;
+    setSalaryPaymentSaving(true);
+    try {
+      const saved = await onRecordSalaryPayment({
+        staffId: salaryPaymentStaff.id ?? salaryPaymentStaff.staffId,
+        staffName: salaryPaymentStaff.name || salaryPaymentStaff.fullName || "Staff",
+        ...salaryPaymentForm,
+        amount: Number(salaryPaymentForm.amount),
+      });
+      if (saved !== false) setSalaryPaymentStaff(null);
+    } finally {
+      setSalaryPaymentSaving(false);
+    }
   };
 
   const handleSyncPosUsers = async () => {
@@ -1594,6 +1816,7 @@ export function AdminPortal({
       const posUsers = (Array.isArray(users) ? users : []).filter(
         (u) => String(u.role || "").toLowerCase() === "pos",
       );
+      let addedCount = 0;
       for (const u of posUsers) {
         const uName = String(u.name || u.fullName || u.username || "").trim();
         if (!uName) continue;
@@ -1603,15 +1826,24 @@ export function AdminPortal({
             uName.toLowerCase(),
         );
         if (!exists && onAddStaff) {
-          await onAddStaff({
+          const added = await onAddStaff({
             name: uName,
             role: "Floor Staff / POS",
             phone: u.mobile || u.phone || "",
             shift: "Morning Shift (10 AM - 4 PM)",
           });
+          if (added !== false) addedCount += 1;
         }
       }
-    } catch {}
+      showToast(addedCount > 0
+        ? `Synced ${addedCount} POS user${addedCount === 1 ? "" : "s"} to staff.`
+        : posUsers.length > 0
+          ? "All POS users are already in the staff list."
+          : "No POS user accounts found to sync.");
+    } catch (error) {
+      console.error("[Staff] Failed to sync POS users:", error);
+      showToast("Could not sync POS users. Check the user list and try again.");
+    }
   };
 
   // Filtered menu items (strictly exclude bar drinks from Dine menu)
@@ -1626,7 +1858,22 @@ export function AdminPortal({
           .includes(query),
       ) &&
       (!menuFilters.category ||
-        (String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase() || String(item.category ?? "").toLowerCase().replace(/[-_]/g, "") === menuFilters.category.toLowerCase().replace(/[-_]/g, ""))) &&
+        (() => {
+          const sel = menuFilters.category.toLowerCase().trim();
+          const itemCat = String(item.category ?? "").toLowerCase().trim();
+          if (itemCat === sel || itemCat.replace(/[-_]/g, "") === sel.replace(/[-_]/g, "")) return true;
+          if (sel === "soups" && itemCat.includes("soup")) return true;
+          if (sel === "starters" && (itemCat.includes("starter") || itemCat.includes("appetiz"))) return true;
+          if (sel === "tandoor-kebabs" && (itemCat.includes("tandoor") || itemCat.includes("kebab") || itemCat.includes("tikka"))) return true;
+          if (sel === "mains" && (itemCat.includes("main") || itemCat.includes("curri") || itemCat.includes("curry") || itemCat.includes("gravy"))) return true;
+          if (sel === "breads" && (itemCat.includes("bread") || itemCat.includes("roti") || itemCat.includes("naan"))) return true;
+          if (sel === "biryani" && (itemCat.includes("biryani") || itemCat.includes("rice") || itemCat.includes("pulao"))) return true;
+          if (sel === "burgers" && (itemCat === "burger" || itemCat === "burgers")) return true;
+          if (sel === "pizza" && (itemCat === "pizza" || itemCat === "pizzas")) return true;
+          if (sel === "fast-food" && (itemCat.includes("fast") || itemCat === "burgers, pizza & fast food" || itemCat === "pizza & fast food")) return true;
+          if (sel === "desserts" && (itemCat.includes("dessert") || itemCat.includes("sweet") || itemCat.includes("ice cream"))) return true;
+          return false;
+        })()) &&
       (!menuFilters.dietary ||
         Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
       (!menuFilters.availability ||
@@ -1786,6 +2033,8 @@ export function AdminPortal({
                 onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                 tables={tables}
                 staffList={staffList}
+                salaryPayments={salaryPayments}
+                inventoryPurchases={inventoryPurchases}
                 sharedRecordLoad={sharedRecordLoad}
                 onAddTable={onAddTable}
                 onUpdateTable={onUpdateTable}
@@ -1795,6 +2044,9 @@ export function AdminPortal({
                 onAddStaff={onAddStaff}
                 onUpdateStaff={onUpdateStaff}
                 onDeleteStaff={onDeleteStaff}
+                onOpenSalaryPayment={handleOpenSalaryPaymentModal}
+                onSyncPosUsers={handleSyncPosUsers}
+                onRecordInventoryPurchase={onRecordInventoryPurchase}
                 onUpdateItemKotStatus={onUpdateItemKotStatus}
                 onCompleteTableKot={onCompleteTableKot}
               />
@@ -2020,7 +2272,7 @@ export function AdminPortal({
                       ].map(({ key, label, options }) => (
                         <label className="menu-filter-field" key={key}>
                           <span>{label}</span>
-                          <select
+                          <SearchableSelect
                             value={menuFilters[key]}
                             onChange={(event) =>
                               updateMenuFilter(key, event.target.value)
@@ -2032,7 +2284,7 @@ export function AdminPortal({
                                 {option.label}
                               </option>
                             ))}
-                          </select>
+                          </SearchableSelect>
                         </label>
                       ))}
                       <button
@@ -2046,6 +2298,7 @@ export function AdminPortal({
 
                     {/* Items Table List */}
                     <div
+                      className="menu-items-list"
                       style={{
                         borderRadius: "10px",
                         border: "1px solid var(--border-card)",
@@ -2053,6 +2306,7 @@ export function AdminPortal({
                       }}
                     >
                       <table
+                        className="menu-items-table"
                         style={{
                           width: "100%",
                           borderCollapse: "collapse",
@@ -2136,6 +2390,7 @@ export function AdminPortal({
                               return (
                                 <tr
                                   key={item.id}
+                                  className="menu-admin-item-row"
                                   style={{
                                     borderBottom: "1px solid var(--border-subtle)",
                                     transition:
@@ -2164,14 +2419,13 @@ export function AdminPortal({
                                         gap: "0.75rem",
                                       }}
                                     >
-                                      <img
-                                        src={getMenuItemImage(item)}
-                                        alt={item.name}
-                                        style={{
+                                      {isDrinkItem(item) || isBeverageCategory(item.category) ? (
+                                        <MenuItemVisual
+                                          item={item}
+                                          style={{
                                           width: "52px",
                                           height: "52px",
                                           borderRadius: "10px",
-                                          objectFit: "cover",
                                           border: isAvail
                                             ? "1px solid var(--border-card)"
                                             : "1px solid rgba(239, 68, 68, 0.35)",
@@ -2179,11 +2433,28 @@ export function AdminPortal({
                                           filter: isAvail
                                             ? "none"
                                             : "grayscale(60%)",
-                                        }}
-                                        onError={(e) =>
-                                          handleDishImageError(e, item)
-                                        }
-                                      />
+                                          }}
+                                        />
+                                      ) : (
+                                        <img
+                                          src={getMenuItemImage(item)}
+                                          alt={item.name}
+                                          style={{
+                                            width: "52px",
+                                            height: "52px",
+                                            borderRadius: "10px",
+                                            objectFit: "cover",
+                                            border: isAvail
+                                              ? "1px solid var(--border-card)"
+                                              : "1px solid rgba(239, 68, 68, 0.35)",
+                                            flexShrink: 0,
+                                            filter: isAvail
+                                              ? "none"
+                                              : "grayscale(60%)",
+                                          }}
+                                          onError={(e) => handleDishImageError(e, item)}
+                                        />
+                                      )}
                                       <div style={{ minWidth: 0, flex: 1 }}>
                                         <div
                                           style={{
@@ -2280,6 +2551,7 @@ export function AdminPortal({
                                     </div>
                                   </td>
                                   <td
+                                    data-label="Category"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       textTransform: "capitalize",
@@ -2289,9 +2561,13 @@ export function AdminPortal({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {item.category.replace("-", " ")}
+                                    {allCategoryOptions.find(
+                                      (option) =>
+                                        option.value.toLowerCase() ===
+                                        String(item.category || "").toLowerCase(),
+                                    )?.label || item.category.replace(/[-_]/g, " ")}
                                   </td>
-                                  <td style={{ padding: "0.6rem 0.85rem" }}>
+                                  <td data-label="Dietary" style={{ padding: "0.6rem 0.85rem" }}>
                                     {item.isVeg ? (
                                       <span
                                         style={{
@@ -2329,6 +2605,7 @@ export function AdminPortal({
                                     )}
                                   </td>
                                   <td
+                                    data-label="Price"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       fontWeight: 800,
@@ -2340,6 +2617,7 @@ export function AdminPortal({
                                     ₹{Number(item.price).toFixed(2)}
                                   </td>
                                   <td
+                                    data-label="Actions"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       textAlign: "center",
@@ -2700,6 +2978,17 @@ export function AdminPortal({
                       )}
                     </div>
                   </div>
+                )}
+
+                {/* ================= TAB: TAKEAWAY ORDERS ================= */}
+                {activeTab === "takeaway" && (
+                  <AdminTakeaway
+                    menuItems={menuItems}
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                    restaurantLogo={restaurantLogo}
+                    currentSession={currentSession}
+                  />
                 )}
 
                 {/* ================= TAB 2: TABLES & CHAIRS (PERSONS CAPACITY) ================= */}
@@ -3433,10 +3722,19 @@ export function AdminPortal({
                       }
                       .staff-table-grid {
                         display: grid;
-                        grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
+                        grid-template-columns: minmax(150px, 1.6fr) minmax(115px, 1.15fr) minmax(125px, 1.3fr) minmax(135px, 1.1fr) minmax(105px, 1fr) minmax(140px, 1.2fr);
                         gap: 0.5rem;
                       }
                       .staff-table-grid > * { min-width: 0; }
+                      .staff-table-grid .staff-shift-cell {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                      }
+                      .staff-table-grid .staff-salary-cell {
+                        font-variant-numeric: tabular-nums;
+                        white-space: normal;
+                      }
                       @media (max-width: 900px) {
                         .staff-table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
                       }
@@ -3611,7 +3909,7 @@ export function AdminPortal({
                             {/* Col 2: Role Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-role">
                               <span>Role</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-role"
                                 value={staffFilters.role}
                                 onChange={(e) => updateStaffFilter("role", e.target.value)}
@@ -3639,13 +3937,13 @@ export function AdminPortal({
                                     {role}
                                   </option>
                                 ))}
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 4: Shift Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-shift">
                               <span>Shift</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-shift"
                                 value={staffFilters.shift}
                                 onChange={(e) => updateStaffFilter("shift", e.target.value)}
@@ -3673,13 +3971,13 @@ export function AdminPortal({
                                     {shift}
                                   </option>
                                 ))}
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 5: Assigned Tables Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-assigned">
                               <span>Table Assignment</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-assigned"
                                 value={staffFilters.assigned}
                                 onChange={(e) => updateStaffFilter("assigned", e.target.value)}
@@ -3708,7 +4006,7 @@ export function AdminPortal({
                                 <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                                   No Tables
                                 </option>
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 6: Reset / Count */}
@@ -3768,6 +4066,7 @@ export function AdminPortal({
                             <div>Staff Name</div>
                             <div>Role / Designation</div>
                             <div>Shift</div>
+                            <div title="Configured monthly salary; recorded payments are tracked separately">Monthly Salary</div>
                             <div>Table Assignment</div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
                           </div>
@@ -3847,6 +4146,10 @@ export function AdminPortal({
                             const assignedCount = tables.filter(
                               (t) => (t.server || "").trim().toLowerCase() === personName.trim().toLowerCase(),
                             ).length;
+                            const paidThisMonth = getStaffSalaryPaidThisMonth(person);
+                            const monthlySalary = Number(person.monthlySalary) || 0;
+                            const hasMonthlySalary = monthlySalary > 0;
+                            const displayedSalary = hasMonthlySalary ? monthlySalary : paidThisMonth;
 
                             return (
                               <div
@@ -3921,15 +4224,31 @@ export function AdminPortal({
 
                                 {/* Col 4: Shift (Full Description without truncation) */}
                                 <div
+                                  className="staff-shift-cell"
                                   style={{
                                     color: "var(--text-muted)",
                                     fontSize: "0.84rem",
                                     fontWeight: 500,
-                                    whiteSpace: "nowrap",
                                   }}
                                   title={person.shift || "General Shift"}
                                 >
                                   {person.shift || "General Shift"}
+                                </div>
+
+                                <div
+                                  className="staff-salary-cell"
+                                  style={{
+                                    color: hasMonthlySalary ? "var(--text-main)" : paidThisMonth > 0 ? "var(--success)" : "var(--text-dim)",
+                                    fontSize: "0.82rem",
+                                    fontWeight: 700,
+                                  }}
+                                  title={hasMonthlySalary
+                                    ? "Configured monthly salary"
+                                    : paidThisMonth > 0
+                                      ? "Salary paid for this month; set a monthly salary in the staff profile to show the regular amount"
+                                      : "Monthly salary has not been set"}
+                                >
+                                  {displayedSalary > 0 ? formatCurrency(displayedSalary) : "—"}
                                 </div>
 
                                 {/* Col 5: Status Pill (Matching Image 2 status pill) */}
@@ -3975,8 +4294,31 @@ export function AdminPortal({
                                   </div>
                                 </div>
 
-                                {/* Col 6: Actions (Edit Staff + Delete button matching Image 2) */}
+                                {/* Staff payroll and profile actions */}
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSalaryPaymentModal(person)}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "0.25rem",
+                                      padding: "0.35rem 0.45rem",
+                                      background: "rgba(16, 185, 129, 0.08)",
+                                      color: "var(--success)",
+                                      border: "1px solid rgba(16, 185, 129, 0.35)",
+                                      borderRadius: "6px",
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                    }}
+                                    title={`Record a salary payment for ${personName}`}
+                                    aria-label={`Record salary payment for ${personName}`}
+                                  >
+                                    <Banknote size={13} />
+                                    Pay
+                                  </button>
                                   {/* Edit Staff button */}
                                   <button
                                     type="button"
@@ -4109,6 +4451,60 @@ export function AdminPortal({
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 10 }}>
+                        {/* Station Switcher: Kitchen KOT / Bar BOT */}
+                        <div
+                          role="tablist"
+                          aria-label="Admin KOT Station Switcher"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "8px",
+                            padding: "3px",
+                            gap: "4px",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={adminKotStation === "kitchen"}
+                            onClick={() => setAdminKotStation("kitchen")}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: "6px",
+                              border: "none",
+                              background: adminKotStation === "kitchen" ? "var(--accent-amber)" : "transparent",
+                              color: adminKotStation === "kitchen" ? "#ffffff" : "var(--text-muted)",
+                              fontSize: "0.78rem",
+                              fontWeight: 750,
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            🍳 Kitchen KOT
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={adminKotStation === "bar"}
+                            onClick={() => setAdminKotStation("bar")}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: "6px",
+                              border: "none",
+                              background: adminKotStation === "bar" ? "var(--accent-amber)" : "transparent",
+                              color: adminKotStation === "bar" ? "#ffffff" : "var(--text-muted)",
+                              fontSize: "0.78rem",
+                              fontWeight: 750,
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            🍸 Bar BOT
+                          </button>
+                        </div>
+
                         {onOpenKOTView && (
                           <button
                           onClick={() => {
@@ -4137,7 +4533,19 @@ export function AdminPortal({
                     </div>
                     </div>
 
-                    <>
+                    {adminKotStation === "bar" ? (
+                      <BarBOTView
+                        tables={tables}
+                        menuItems={menuItems}
+                        staffList={staffList}
+                        barDrinks={menuItems.filter((i) => isBeverageCategory(i.category))}
+                        onItemsUpdated={onBarOrderItemStatusUpdated}
+                        onUpdateItemKotStatus={onUpdateItemKotStatus}
+                        onCompleteTableKot={onCompleteTableKot}
+                        embedded={true}
+                      />
+                    ) : (
+                      <>
                     {/* Table Filter Bar with Dropdown matching TableDetailView */}
                     <div
                       style={{
@@ -5132,153 +5540,270 @@ export function AdminPortal({
                                   </button>
                                 </div>
 
-                                {/* Items List Body */}
+                                {/* Items List Body: Separated Kitchen & Bar Sections */}
                                 <div
                                   style={{
                                     padding: "1rem 1.15rem",
                                     display: "flex",
                                     flexDirection: "column",
-                                    gap: "0.6rem",
+                                    gap: "1.1rem",
                                     overflowY: "auto",
                                     flex: 1,
-                                    maxHeight: "55vh",
+                                    maxHeight: "60vh",
                                   }}
                                 >
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      fontSize: "0.75rem",
-                                      fontWeight: 800,
-                                      color: "var(--text-dim)",
-                                      textTransform: "uppercase",
-                                      letterSpacing: "0.05em",
-                                      marginBottom: "0.2rem",
-                                    }}
-                                  >
-                                    <span>Ordered Dishes ({activeKotModalTable.items?.filter((i) => !isDrinkItem(i))?.length || 0})</span>
-                                    <span>Status</span>
-                                  </div>
+                                  {(() => {
+                                    const allItems = activeKotModalTable.items || [];
+                                    const foodItems = allItems.filter((i) => !isDrinkItem(i));
+                                    const drinkItems = allItems.filter((i) => isDrinkItem(i));
 
-                                  {activeKotModalTable.items && activeKotModalTable.items.filter((i) => !isDrinkItem(i)).length > 0 ? (
-                                    activeKotModalTable.items.filter((i) => !isDrinkItem(i)).map((item, idx) => {
-                                      const isReady =
-                                        item.kotStatus === "ready" ||
-                                        item.kotStatus === "served" ||
-                                        item.kotStatus === "completed";
-                                      const isCooking = item.kotStatus === "cooking";
-
-                                      return (
-                                        <div
-                                          key={idx}
-                                          style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            padding: "0.6rem 0.8rem",
-                                            borderRadius: "8px",
-                                            background: "var(--bg-primary, #0b1120)",
-                                            border: isReady
-                                              ? "1px solid rgba(16, 185, 129, 0.4)"
-                                              : isCooking
-                                                ? "1px solid rgba(234, 88, 12, 0.4)"
-                                                : "1px solid var(--border-subtle)",
-                                            gap: "0.75rem",
-                                          }}
-                                        >
-                                          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
-                                            <span
+                                    return (
+                                      <>
+                                        {/* SECTION 1: KITCHEN ORDER TICKET (KOT) */}
+                                        {foodItems.length > 0 && (
+                                          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                            <div
                                               style={{
-                                                background: "rgba(245, 158, 11, 0.16)",
-                                                border: "1px solid rgba(245, 158, 11, 0.4)",
-                                                color: "var(--accent-amber-light, #f59e0b)",
-                                                padding: "3px 8px",
-                                                borderRadius: "6px",
-                                                fontWeight: 800,
-                                                fontSize: "0.82rem",
-                                                flexShrink: 0,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "0.4rem 0.65rem",
+                                                background: "rgba(245, 158, 11, 0.1)",
+                                                border: "1px solid rgba(245, 158, 11, 0.25)",
+                                                borderRadius: "7px",
                                               }}
                                             >
-                                              {item.quantity || 1}x
-                                            </span>
-                                            <div style={{ minWidth: 0, flex: 1 }}>
-                                              <div
-                                                style={{
-                                                  fontSize: "0.92rem",
-                                                  fontWeight: 700,
-                                                  color: "var(--text-main)",
-                                                  textTransform: "capitalize",
-                                                  whiteSpace: "nowrap",
-                                                  overflow: "hidden",
-                                                  textOverflow: "ellipsis",
-                                                }}
-                                                title={item.name}
-                                              >
-                                                {item.name}
+                                              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                                <ChefHat size={15} color="#f59e0b" />
+                                                <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "#f59e0b", letterSpacing: "0.02em" }}>
+                                                  🍳 KITCHEN KOT ({activeKotModalTable.kitchenKotNumber || (activeKotModalTable.kotId ? `KOT-${activeKotModalTable.kotId}` : "KOT")})
+                                                </span>
                                               </div>
-                                              {item.notes && (
+                                              <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", fontWeight: 700 }}>
+                                                {foodItems.length} Food Dishes
+                                              </span>
+                                            </div>
+
+                                            {foodItems.map((item, idx) => {
+                                              const isReady = item.kotStatus === "ready" || item.kotStatus === "served" || item.kotStatus === "completed";
+                                              const isCooking = item.kotStatus === "cooking";
+
+                                              return (
                                                 <div
+                                                  key={`food-${idx}`}
                                                   style={{
-                                                    fontSize: "0.72rem",
-                                                    color: "var(--danger, #ef4444)",
-                                                    fontWeight: 600,
-                                                    marginTop: "2px",
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center",
+                                                    padding: "0.55rem 0.75rem",
+                                                    borderRadius: "8px",
+                                                    background: "var(--bg-primary, #0b1120)",
+                                                    border: isReady
+                                                      ? "1px solid rgba(16, 185, 129, 0.4)"
+                                                      : isCooking
+                                                        ? "1px solid rgba(234, 88, 12, 0.4)"
+                                                        : "1px solid var(--border-subtle)",
+                                                    gap: "0.75rem",
                                                   }}
                                                 >
-                                                  Note: {item.notes}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
+                                                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
+                                                    <span
+                                                      style={{
+                                                        background: "rgba(245, 158, 11, 0.16)",
+                                                        border: "1px solid rgba(245, 158, 11, 0.4)",
+                                                        color: "var(--accent-amber-light, #f59e0b)",
+                                                        padding: "2px 7px",
+                                                        borderRadius: "5px",
+                                                        fontWeight: 800,
+                                                        fontSize: "0.8rem",
+                                                        flexShrink: 0,
+                                                      }}
+                                                    >
+                                                      {item.quantity || 1}x
+                                                    </span>
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                      <div
+                                                        style={{
+                                                          fontSize: "0.9rem",
+                                                          fontWeight: 700,
+                                                          color: "var(--text-main)",
+                                                          textTransform: "capitalize",
+                                                          whiteSpace: "nowrap",
+                                                          overflow: "hidden",
+                                                          textOverflow: "ellipsis",
+                                                        }}
+                                                        title={item.name}
+                                                      >
+                                                        {item.name}
+                                                      </div>
+                                                      {item.notes && (
+                                                        <div style={{ fontSize: "0.7rem", color: "var(--danger, #ef4444)", fontWeight: 600, marginTop: "2px" }}>
+                                                          Note: {item.notes}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
 
-                                          {/* Status Toggle Button / Pill */}
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              if (onUpdateItemKotStatus) {
-                                                const nextStatus = isReady ? "cooking" : "ready";
-                                                onUpdateItemKotStatus(activeKotModalTable.id, item.id, nextStatus);
-                                              }
-                                            }}
-                                            title="Click to toggle status"
-                                            style={{
-                                              fontSize: "0.7rem",
-                                              fontWeight: 800,
-                                              letterSpacing: "0.04em",
-                                              textTransform: "uppercase",
-                                              padding: "4px 10px",
-                                              borderRadius: "6px",
-                                              flexShrink: 0,
-                                              whiteSpace: "nowrap",
-                                              cursor: onUpdateItemKotStatus ? "pointer" : "default",
-                                              background: isReady
-                                                ? "rgba(16, 185, 129, 0.18)"
-                                                : isCooking
-                                                  ? "rgba(234, 88, 12, 0.18)"
-                                                  : "rgba(245, 158, 11, 0.18)",
-                                              border: isReady
-                                                ? "1px solid rgba(16, 185, 129, 0.4)"
-                                                : isCooking
-                                                  ? "1px solid rgba(234, 88, 12, 0.4)"
-                                                  : "1px solid rgba(245, 158, 11, 0.4)",
-                                              color: isReady ? "#10b981" : isCooking ? "#ea580c" : "#f59e0b",
-                                              transition: "all 0.15s ease",
-                                            }}
-                                          >
-                                            {isReady ? "✓ READY" : isCooking ? "🔥 COOKING" : "📥 RECEIVED"}
-                                          </button>
-                                        </div>
-                                      );
-                                    })
-                                  ) : (
-                                    <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", textAlign: "center", margin: "2rem auto" }}>
-                                      No items currently ordered for this table.
-                                    </p>
-                                  )}
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      if (onUpdateItemKotStatus) {
+                                                        const nextStatus = isReady ? "cooking" : "ready";
+                                                        onUpdateItemKotStatus(activeKotModalTable.id, nextStatus, item.id);
+                                                      }
+                                                    }}
+                                                    title="Click to toggle food cooking status"
+                                                    style={{
+                                                      fontSize: "0.68rem",
+                                                      fontWeight: 800,
+                                                      letterSpacing: "0.04em",
+                                                      textTransform: "uppercase",
+                                                      padding: "4px 9px",
+                                                      borderRadius: "6px",
+                                                      flexShrink: 0,
+                                                      cursor: onUpdateItemKotStatus ? "pointer" : "default",
+                                                      background: isReady ? "rgba(16, 185, 129, 0.18)" : isCooking ? "rgba(234, 88, 12, 0.18)" : "rgba(245, 158, 11, 0.18)",
+                                                      border: isReady ? "1px solid rgba(16, 185, 129, 0.4)" : isCooking ? "1px solid rgba(234, 88, 12, 0.4)" : "1px solid rgba(245, 158, 11, 0.4)",
+                                                      color: isReady ? "#10b981" : isCooking ? "#ea580c" : "#f59e0b",
+                                                      transition: "all 0.15s ease",
+                                                    }}
+                                                  >
+                                                    {isReady ? "✓ READY" : isCooking ? "🔥 COOKING" : "📥 RECEIVED"}
+                                                  </button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+
+                                        {/* SECTION 2: BAR ORDER TICKET (BOT) */}
+                                        {drinkItems.length > 0 && (
+                                          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                            <div
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "0.4rem 0.65rem",
+                                                background: "rgba(56, 189, 248, 0.1)",
+                                                border: "1px solid rgba(56, 189, 248, 0.25)",
+                                                borderRadius: "7px",
+                                              }}
+                                            >
+                                              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                                <Wine size={15} color="#38bdf8" />
+                                                <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "#38bdf8", letterSpacing: "0.02em" }}>
+                                                  🍸 BAR BOT ({activeKotModalTable.barBotNumber || (activeKotModalTable.botId ? `BOT-${activeKotModalTable.botId}` : "BOT")})
+                                                </span>
+                                              </div>
+                                              <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", fontWeight: 700 }}>
+                                                {drinkItems.length} Drinks
+                                              </span>
+                                            </div>
+
+                                            {drinkItems.map((item, idx) => {
+                                              const isReady = item.kotStatus === "ready" || item.kotStatus === "served" || item.kotStatus === "completed";
+                                              const isMixing = item.kotStatus === "cooking" || item.kotStatus === "mixing";
+
+                                              return (
+                                                <div
+                                                  key={`drink-${idx}`}
+                                                  style={{
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center",
+                                                    padding: "0.55rem 0.75rem",
+                                                    borderRadius: "8px",
+                                                    background: "var(--bg-primary, #0b1120)",
+                                                    border: isReady
+                                                      ? "1px solid rgba(16, 185, 129, 0.4)"
+                                                      : isMixing
+                                                        ? "1px solid rgba(56, 189, 248, 0.4)"
+                                                        : "1px solid var(--border-subtle)",
+                                                    gap: "0.75rem",
+                                                  }}
+                                                >
+                                                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
+                                                    <span
+                                                      style={{
+                                                        background: "rgba(56, 189, 248, 0.16)",
+                                                        border: "1px solid rgba(56, 189, 248, 0.4)",
+                                                        color: "#38bdf8",
+                                                        padding: "2px 7px",
+                                                        borderRadius: "5px",
+                                                        fontWeight: 800,
+                                                        fontSize: "0.8rem",
+                                                        flexShrink: 0,
+                                                      }}
+                                                    >
+                                                      {item.quantity || 1}x
+                                                    </span>
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                      <div
+                                                        style={{
+                                                          fontSize: "0.9rem",
+                                                          fontWeight: 700,
+                                                          color: "var(--text-main)",
+                                                          textTransform: "capitalize",
+                                                          whiteSpace: "nowrap",
+                                                          overflow: "hidden",
+                                                          textOverflow: "ellipsis",
+                                                        }}
+                                                        title={item.name}
+                                                      >
+                                                        {item.name}
+                                                      </div>
+                                                      {item.notes && (
+                                                        <div style={{ fontSize: "0.7rem", color: "var(--danger, #ef4444)", fontWeight: 600, marginTop: "2px" }}>
+                                                          Note: {item.notes}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
+
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      if (onUpdateItemKotStatus) {
+                                                        const nextStatus = isReady ? "cooking" : "ready";
+                                                        onUpdateItemKotStatus(activeKotModalTable.id, nextStatus, item.id);
+                                                      }
+                                                    }}
+                                                    title="Click to toggle drink mixing status"
+                                                    style={{
+                                                      fontSize: "0.68rem",
+                                                      fontWeight: 800,
+                                                      letterSpacing: "0.04em",
+                                                      textTransform: "uppercase",
+                                                      padding: "4px 9px",
+                                                      borderRadius: "6px",
+                                                      flexShrink: 0,
+                                                      cursor: onUpdateItemKotStatus ? "pointer" : "default",
+                                                      background: isReady ? "rgba(16, 185, 129, 0.18)" : isMixing ? "rgba(56, 189, 248, 0.18)" : "rgba(100, 116, 139, 0.18)",
+                                                      border: isReady ? "1px solid rgba(16, 185, 129, 0.4)" : isMixing ? "1px solid rgba(56, 189, 248, 0.4)" : "1px solid rgba(100, 116, 139, 0.4)",
+                                                      color: isReady ? "#10b981" : isMixing ? "#38bdf8" : "#94a3b8",
+                                                      transition: "all 0.15s ease",
+                                                    }}
+                                                  >
+                                                    {isReady ? "✓ READY" : isMixing ? "🍸 MIXING" : "📥 QUEUED"}
+                                                  </button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+
+                                        {foodItems.length === 0 && drinkItems.length === 0 && (
+                                          <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", textAlign: "center", margin: "2rem auto" }}>
+                                            No items currently ordered for this table.
+                                          </p>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
                                 </div>
 
-                                {/* Modal Footer */}
+                                {/* Modal Footer with Department-Specific Actions */}
                                 <div
                                   style={{
                                     padding: "0.85rem 1.15rem",
@@ -5288,6 +5813,7 @@ export function AdminPortal({
                                     gap: "0.6rem",
                                     alignItems: "center",
                                     justifyContent: "space-between",
+                                    flexWrap: "wrap",
                                   }}
                                 >
                                   <button
@@ -5307,36 +5833,69 @@ export function AdminPortal({
                                     Close
                                   </button>
 
-                                  {activeKotModalTable.items && activeKotModalTable.items.length > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (onCompleteTableKot) {
-                                          onCompleteTableKot(activeKotModalTable.id);
-                                        }
-                                        setSelectedKotModalTable(null);
-                                      }}
-                                      style={{
-                                        flex: 1,
-                                        padding: "0.55rem 1rem",
-                                        borderRadius: "7px",
-                                        background: "linear-gradient(135deg, #10b981, #059669)",
-                                        border: "none",
-                                        color: "#ffffff",
-                                        fontWeight: 800,
-                                        fontSize: "0.84rem",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: "0.4rem",
-                                        boxShadow: "0 3px 10px rgba(16, 185, 129, 0.3)",
-                                      }}
-                                    >
-                                      <CheckCircle2 size={16} />
-                                      <span>Mark Preparation Completed</span>
-                                    </button>
-                                  )}
+                                  <div style={{ display: "flex", gap: "0.5rem", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                    {activeKotModalTable.items && activeKotModalTable.items.some((i) => !isDrinkItem(i)) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onCompleteTableKot) {
+                                            onCompleteTableKot(activeKotModalTable.id);
+                                          }
+                                        }}
+                                        style={{
+                                          padding: "0.55rem 0.9rem",
+                                          borderRadius: "7px",
+                                          background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          fontWeight: 800,
+                                          fontSize: "0.8rem",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "0.35rem",
+                                          boxShadow: "0 3px 10px rgba(245, 158, 11, 0.25)",
+                                        }}
+                                        title="Mark only kitchen food items as ready"
+                                      >
+                                        <ChefHat size={14} />
+                                        <span>Mark Food Ready</span>
+                                      </button>
+                                    )}
+
+                                    {activeKotModalTable.items && activeKotModalTable.items.some((i) => isDrinkItem(i)) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onUpdateItemKotStatus) {
+                                            (activeKotModalTable.items || [])
+                                              .filter((i) => isDrinkItem(i))
+                                              .forEach((drink) => {
+                                                onUpdateItemKotStatus(activeKotModalTable.id, "ready", drink.id);
+                                              });
+                                          }
+                                        }}
+                                        style={{
+                                          padding: "0.55rem 0.9rem",
+                                          borderRadius: "7px",
+                                          background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          fontWeight: 800,
+                                          fontSize: "0.8rem",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "0.35rem",
+                                          boxShadow: "0 3px 10px rgba(2, 132, 199, 0.25)",
+                                        }}
+                                        title="Mark only bar drink items as ready"
+                                      >
+                                        <Wine size={14} />
+                                        <span>Mark Drinks Ready</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -5345,6 +5904,7 @@ export function AdminPortal({
                       );
                     })()}
                     </>
+                  )}
                   </div>
                 )}
 
@@ -5354,27 +5914,84 @@ export function AdminPortal({
                     menuItems={menuItems}
                     onUpdateMenuItem={onUpdateMenuItem}
                     inventory={inventory}
-                  />
+                     inventoryApiError={inventoryApiError}
+                     onRecordInventoryPurchase={onRecordInventoryPurchase}
+                   />
                 )}
 
                 {/* ================= TAB 6: INVOICES ================= */}
                 {activeTab === "invoices" && (
                   <AdminInvoices
-                    pastOrders={pastOrders}
                     restaurantName={restaurantName}
                     restaurantSettings={restaurantSettings}
                     onUpdateInvoiceDiscount={onUpdateInvoiceDiscount}
                   />
                 )}
 
-                {/* ================= TAB 7: REPORTS ================= */}
-                {activeTab === "reports" && (
+                {/* ================= TAB 7: REPORTS & ACCOUNTING SUITE ================= */}
+                {(activeTab === "reports" ||
+                  activeTab === "daily-balances" ||
+                  activeTab === "coa" ||
+                  activeTab === "general-ledger" ||
+                  activeTab === "journal-entries" ||
+                  activeTab === "audit") && (
                   <AdminReports
                     pastOrders={pastOrders}
                     menuItems={menuItems}
                     restaurantSettings={restaurantSettings}
                     inventory={inventory}
+                    staffList={staffList}
+                    salaryPayments={salaryPayments}
+                    inventoryPurchases={inventoryPurchases}
+                    initialTab={
+                      activeTab === "audit"
+                        ? "audit-documents"
+                        : activeTab === "daily-balances"
+                        ? "daily-register"
+                        : activeTab === "coa"
+                        ? "coa"
+                        : activeTab === "general-ledger"
+                        ? "general-ledger"
+                        : activeTab === "journal-entries"
+                        ? "journal-entries"
+                        : "sales"
+                    }
                   />
+                )}
+
+                {/* ================= TAB: DELIVERY ================= */}
+                {activeTab === "delivery" && (
+                  <DeliveryManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: RESERVATIONS ================= */}
+                {activeTab === "reservations" && (
+                  <ReservationsManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: SUPPLIERS ================= */}
+                {activeTab === "suppliers" && (
+                  <SuppliersManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: CUSTOMERS ================= */}
+                {activeTab === "customers" && (
+                  <CustomersManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: ATTENDANCE ================= */}
+                {activeTab === "attendance" && (
+                  <AttendanceManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: PROMOTIONS ================= */}
+                {activeTab === "promotions" && (
+                  <PromotionsManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: ROLES & RBAC ================= */}
+                {activeTab === "roles" && (
+                  <RolesManagement isLight={isLight} showToast={showToast} />
                 )}
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
@@ -6661,6 +7278,46 @@ export function AdminPortal({
               />
             </div>
 
+            <div>
+              <label
+                htmlFor="staff-monthly-salary"
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Monthly Salary (INR)
+              </label>
+              <input
+                id="staff-monthly-salary"
+                type="number"
+                min="0"
+                max="99999999"
+                step="0.01"
+                value={staffForm.monthlySalary}
+                onChange={(e) =>
+                  setStaffForm({ ...staffForm, monthlySalary: e.target.value })
+                }
+                placeholder="0.00"
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
             <div
               style={{ display: "flex", gap: "0.75rem", marginTop: "0.6rem" }}
             >
@@ -6701,6 +7358,115 @@ export function AdminPortal({
                 }}
               >
                 {editingStaff ? "Save Changes" : "Add Person"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {salaryPaymentStaff && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 190,
+            padding: "1rem",
+            background: "var(--modal-overlay)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <form
+            onSubmit={handleSaveSalaryPayment}
+            style={{
+              width: "100%",
+              maxWidth: "430px",
+              padding: "1.1rem",
+              borderRadius: "14px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              boxShadow: "var(--shadow-lg)",
+              display: "grid",
+              gap: "0.75rem",
+            }}
+          >
+            <div>
+              <h3 style={{ margin: 0, color: "var(--text-main)", fontSize: "1rem" }}>
+                Record salary payment
+              </h3>
+              <p style={{ margin: "0.25rem 0 0", color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                {salaryPaymentStaff.name || salaryPaymentStaff.fullName || "Staff"} · {formatCurrency(Number(salaryPaymentStaff.monthlySalary) || 0)} monthly salary
+              </p>
+              <p style={{ margin: "0.2rem 0 0", color: "var(--text-dim)", fontSize: "0.72rem", lineHeight: 1.4 }}>
+                This records an actual payment. To change the monthly salary shown in the staff list, edit the staff profile.
+              </p>
+            </div>
+            <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+              PAYMENT AMOUNT (INR)
+              <input
+                autoFocus
+                required
+                type="number"
+                min="0.01"
+                max="99999999"
+                step="0.01"
+                value={salaryPaymentForm.amount}
+                onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, amount: event.target.value })}
+                style={{ height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.82rem" }}
+              />
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+              <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+                PAYMENT DATE
+                <input
+                  required
+                  type="date"
+                  value={salaryPaymentForm.paidOn}
+                  onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, paidOn: event.target.value })}
+                  style={{ height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.8rem" }}
+                />
+              </label>
+              <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+                SALARY FOR
+                <input
+                  required
+                  type="month"
+                  value={salaryPaymentForm.salaryPeriod}
+                  onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, salaryPeriod: event.target.value })}
+                  style={{ height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.8rem" }}
+                />
+              </label>
+            </div>
+            <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+              PAYMENT METHOD
+              <select
+                value={salaryPaymentForm.paymentMethod}
+                onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, paymentMethod: event.target.value })}
+                style={{ height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.8rem" }}
+              >
+                <option>Bank Transfer</option>
+                <option>UPI</option>
+                <option>Cash</option>
+                <option>Cheque</option>
+              </select>
+            </label>
+            <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
+              NOTE (OPTIONAL)
+              <input
+                maxLength={255}
+                value={salaryPaymentForm.notes}
+                onChange={(event) => setSalaryPaymentForm({ ...salaryPaymentForm, notes: event.target.value })}
+                placeholder="Installment, advance, or other note"
+                style={{ height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.82rem" }}
+              />
+            </label>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.2rem" }}>
+              <button type="button" onClick={() => setSalaryPaymentStaff(null)} style={{ height: "36px", padding: "0 0.85rem", border: "1px solid var(--border-card)", borderRadius: "8px", color: "var(--text-main)", background: "var(--bg-tertiary)", fontWeight: 700, fontSize: "0.76rem", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button type="submit" disabled={salaryPaymentSaving} style={{ height: "36px", padding: "0 0.9rem", border: 0, borderRadius: "8px", color: "#fff", background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 800, fontSize: "0.76rem", cursor: salaryPaymentSaving ? "wait" : "pointer", opacity: salaryPaymentSaving ? 0.7 : 1 }}>
+                {salaryPaymentSaving ? "Recording..." : "Record Payment"}
               </button>
             </div>
           </form>

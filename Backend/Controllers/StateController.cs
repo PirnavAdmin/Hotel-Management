@@ -14,8 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace HMS.Controllers;
 
 [ApiController]
-[Route("api")]
 [Route("api/v1")]
+[Route("api")]
 public class StateController : ControllerBase
 {
     private readonly SpService _spService;
@@ -23,6 +23,9 @@ public class StateController : ControllerBase
     private readonly MenuItemService _menuItemService;
     private readonly StaffService _staffService;
     private readonly RestaurantSettingsService _settingsService;
+    private readonly InventoryService _inventoryService;
+    private readonly ITableLockService _tableLockService;
+    private readonly ISseBroadcaster _sseBroadcaster;
     private readonly ILogger<StateController> _logger;
 
     public StateController(
@@ -31,6 +34,9 @@ public class StateController : ControllerBase
         MenuItemService menuItemService,
         StaffService staffService,
         RestaurantSettingsService settingsService,
+        InventoryService inventoryService,
+        ITableLockService tableLockService,
+        ISseBroadcaster sseBroadcaster,
         ILogger<StateController> logger)
     {
         _spService = spService;
@@ -38,15 +44,17 @@ public class StateController : ControllerBase
         _menuItemService = menuItemService;
         _staffService = staffService;
         _settingsService = settingsService;
+        _inventoryService = inventoryService;
+        _tableLockService = tableLockService;
+        _sseBroadcaster = sseBroadcaster;
         _logger = logger;
     }
 
     /// <summary>
-    /// Retrieves full POS runtime state (tables, active orders, past orders, categories, menu items, staff).
+    /// Retrieves full POS runtime state (tables, active orders, past orders, categories, menu items, staff, table locks).
     /// </summary>
     [AllowAnonymous]
     [HttpGet("state")]
-    [HttpGet("pos/state")]
     public async Task<IActionResult> GetState()
     {
         try
@@ -122,6 +130,7 @@ public class StateController : ControllerBase
             var activeOrders = new List<object>();
             var pastOrders = new List<object>();
             var restaurantSettings = await _settingsService.GetSettingsAsync();
+            var activeTableLocks = _tableLockService.GetAllActiveLocks();
 
             var stateData = new
             {
@@ -135,7 +144,9 @@ public class StateController : ControllerBase
                 gourmet_pos_inventory_v2 = ingredients,
                 gourmet_pos_inventory_v1 = ingredients,
                 restaurantSettings,
-                gourmet_pos_settings_v1 = restaurantSettings
+                gourmet_pos_settings_v1 = restaurantSettings,
+                tableLocks = activeTableLocks,
+                avsr_table_locks_v1 = activeTableLocks
             };
 
             return Ok(new PosStateResponseDto
@@ -163,7 +174,7 @@ public class StateController : ControllerBase
     }
 
     /// <summary>
-    /// Synchronizes POS client changes to the database.
+    /// Synchronizes POS client changes to the database and broadcasts to all connected clients.
     /// </summary>
     [HttpPost("sync")]
     public async Task<IActionResult> SyncState([FromBody] JsonElement syncPayload)
@@ -174,6 +185,7 @@ public class StateController : ControllerBase
 
             if (syncPayload.ValueKind == JsonValueKind.Object)
             {
+                // 1. Restaurant Settings
                 JsonElement settingsElement = default;
                 bool hasSettings = syncPayload.TryGetProperty("gourmet_pos_settings_v1", out settingsElement) ||
                                    syncPayload.TryGetProperty("restaurantSettings", out settingsElement) ||
@@ -190,83 +202,42 @@ public class StateController : ControllerBase
                     }
                 }
 
+                // 2. Inventory Items
                 JsonElement invElement = default;
                 bool hasInv = syncPayload.TryGetProperty("gourmet_pos_inventory_v2", out invElement) ||
                               syncPayload.TryGetProperty("gourmet_pos_inventory_v1", out invElement) ||
                               syncPayload.TryGetProperty("inventory", out invElement) ||
                               syncPayload.TryGetProperty("ingredients", out invElement);
 
-                if (hasInv && invElement.ValueKind == JsonValueKind.Array)
+                if (hasInv)
                 {
-                    _logger.LogInformation("Syncing {Count} inventory items via /api/sync to MySQL.", invElement.GetArrayLength());
-                    foreach (var itemElem in invElement.EnumerateArray())
+                    var items = _inventoryService.ParseJsonPayload(invElement);
+                    if (items.Count > 0)
                     {
-                        try
-                        {
-                            var name = itemElem.TryGetProperty("name", out var n) ? n.GetString() : null;
-                            if (string.IsNullOrWhiteSpace(name)) continue;
+                        _logger.LogInformation("Syncing {Count} inventory items via /api/sync through InventoryService.", items.Count);
+                        await _inventoryService.ProcessInventorySubmissionAsync(items, atomic: false);
+                    }
+                }
 
-                            var category = itemElem.TryGetProperty("category", out var c) ? c.GetString() : "General";
-                            var subcategory = itemElem.TryGetProperty("subCategory", out var sc) ? sc.GetString() : (itemElem.TryGetProperty("subcategory", out var sc2) ? sc2.GetString() : "");
-                            var supplier = itemElem.TryGetProperty("supplier", out var s) ? s.GetString() : "Local Supplier";
-                            var unit = itemElem.TryGetProperty("unit", out var u) ? u.GetString() : "KG";
-                            var stock = itemElem.TryGetProperty("stock", out var st) ? (st.TryGetDecimal(out var dStock) ? dStock : 0) : (itemElem.TryGetProperty("currentStock", out var cs) && cs.TryGetDecimal(out var dCs) ? dCs : 0);
-                            var min = itemElem.TryGetProperty("minThreshold", out var mt) ? (mt.TryGetDecimal(out var dMin) ? dMin : 5) : (itemElem.TryGetProperty("minimumThreshold", out var mt2) && mt2.TryGetDecimal(out var dMt2) ? dMt2 : 5);
-                            var mrp = itemElem.TryGetProperty("mrp", out var mr) ? (mr.TryGetDecimal(out var dMrp) ? dMrp : 0) : (itemElem.TryGetProperty("unitCost", out var uc) && uc.TryGetDecimal(out var dUc) ? dUc : 0);
+                // 3. Table Concurrency Locks
+                JsonElement locksElement = default;
+                bool hasLocks = syncPayload.TryGetProperty("avsr_table_locks_v1", out locksElement) ||
+                                syncPayload.TryGetProperty("tableLocks", out locksElement) ||
+                                syncPayload.TryGetProperty("SYNC_TABLE_LOCKS", out locksElement);
 
-                            long existingId = 0;
-                            if (itemElem.TryGetProperty("id", out var idProp))
-                            {
-                                if (idProp.ValueKind == JsonValueKind.Number) existingId = idProp.GetInt64();
-                                else if (idProp.ValueKind == JsonValueKind.String && long.TryParse(idProp.GetString(), out var parsedLong)) existingId = parsedLong;
-                            }
-                            if (existingId <= 0 && itemElem.TryGetProperty("ingredientId", out var ingIdProp))
-                            {
-                                if (ingIdProp.ValueKind == JsonValueKind.Number) existingId = ingIdProp.GetInt64();
-                                else if (ingIdProp.ValueKind == JsonValueKind.String && long.TryParse(ingIdProp.GetString(), out var parsedLong2)) existingId = parsedLong2;
-                            }
-
-                            if (existingId > 0)
-                            {
-                                var parameters = new Dictionary<string, object?>
-                                {
-                                    { "p_id", existingId },
-                                    { "p_name", name.Trim() },
-                                    { "p_category", string.IsNullOrWhiteSpace(category) ? "General" : category.Trim() },
-                                    { "p_subcategory", subcategory?.Trim() ?? string.Empty },
-                                    { "p_supplier", string.IsNullOrWhiteSpace(supplier) ? "Local Supplier" : supplier.Trim() },
-                                    { "p_unit", string.IsNullOrWhiteSpace(unit) ? "KG" : unit.Trim().ToUpper() },
-                                    { "p_current_stock", stock },
-                                    { "p_minimum_threshold", min > 0 ? min : 5.00m },
-                                    { "p_unit_cost", mrp },
-                                    { "p_mrp", mrp }
-                                };
-                                await _spService.ExecuteNonQueryAsync("sp_UpdateIngredient", parameters);
-                            }
-                            else
-                            {
-                                var parameters = new Dictionary<string, object?>
-                                {
-                                    { "p_name", name.Trim() },
-                                    { "p_category", string.IsNullOrWhiteSpace(category) ? "General" : category.Trim() },
-                                    { "p_subcategory", subcategory?.Trim() ?? string.Empty },
-                                    { "p_supplier", string.IsNullOrWhiteSpace(supplier) ? "Local Supplier" : supplier.Trim() },
-                                    { "p_unit", string.IsNullOrWhiteSpace(unit) ? "KG" : unit.Trim().ToUpper() },
-                                    { "p_current_stock", stock },
-                                    { "p_minimum_threshold", min > 0 ? min : 5.00m },
-                                    { "p_unit_cost", mrp },
-                                    { "p_mrp", mrp }
-                                };
-                                await _spService.ExecuteScalarAsync<long>("sp_CreateIngredient", parameters);
-                            }
-                        }
-                        catch (Exception invEx)
-                        {
-                            _logger.LogWarning(invEx, "Could not sync individual inventory item.");
-                        }
+                if (hasLocks && locksElement.ValueKind == JsonValueKind.Object)
+                {
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var incomingLocks = JsonSerializer.Deserialize<Dictionary<string, TableLockDto>>(locksElement.GetRawText(), options);
+                    if (incomingLocks != null)
+                    {
+                        _tableLockService.SyncLocks(incomingLocks);
                     }
                 }
             }
+
+            // Real-time broadcast to all connected clients over SSE!
+            await _sseBroadcaster.BroadcastAsync("SYNC", syncPayload);
 
             return Ok(new
             {
@@ -296,15 +267,27 @@ public class StateController : ControllerBase
 
         try
         {
-            var initialData = JsonSerializer.Serialize(new { eventType = "connected", message = "Connected to HMS live event stream.", timestamp = DateTime.UtcNow });
-            await Response.WriteAsync($"data: {initialData}\n\n", cancellationToken);
-            await Response.Body.FlushAsync(cancellationToken);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            while (!cancellationToken.IsCancellationRequested)
+            // Periodically emit a lightweight heartbeat in the background
+            _ = Task.Run(async () =>
             {
-                await Task.Delay(15000, cancellationToken);
-                var heartbeat = JsonSerializer.Serialize(new { eventType = "heartbeat", timestamp = DateTime.UtcNow });
-                await Response.WriteAsync($"data: {heartbeat}\n\n", cancellationToken);
+                while (!linkedCts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await Task.Delay(15000, linkedCts.Token);
+                        var heartbeat = JsonSerializer.Serialize(new { eventType = "heartbeat", timestamp = DateTime.UtcNow });
+                        await Response.WriteAsync($"data: {heartbeat}\n\n", linkedCts.Token);
+                        await Response.Body.FlushAsync(linkedCts.Token);
+                    }
+                    catch { break; }
+                }
+            }, linkedCts.Token);
+
+            await foreach (var sseFrame in _sseBroadcaster.SubscribeAsync(cancellationToken))
+            {
+                await Response.WriteAsync(sseFrame, cancellationToken);
                 await Response.Body.FlushAsync(cancellationToken);
             }
         }

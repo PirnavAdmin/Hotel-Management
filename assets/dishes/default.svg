@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg_def" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="cloche" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg_def)"/>
+  <ellipse cx="200" cy="245" rx="140" ry="24" fill="#000000" opacity="0.6"/>
+  <!-- Silver / Gold Cloche Platter Tray -->
+  <ellipse cx="200" cy="205" rx="145" ry="32" fill="#27272a" stroke="#52525b" stroke-width="3"/>
+  <ellipse cx="200" cy="202" rx="135" ry="26" fill="#18181b"/>
+  <!-- Cloche Dome Cover -->
+  <path d="M 115 195 C 115 110 285 110 285 195 Z" fill="url(#cloche)"/>
+  <!-- Handle Knob -->
+  <circle cx="200" cy="98" r="14" fill="#fbbf24" stroke="#d97706" stroke-width="3"/>
+  <!-- Highlight Sheen -->
+  <path d="M 140 185 C 145 130 195 120 200 120 C 190 135 155 145 150 185 Z" fill="#ffffff" opacity="0.25"/>
+  <!-- Base Trim -->
+  <path d="M 105 195 Q 200 215 295 195 L 295 202 Q 200 222 105 202 Z" fill="#b45309"/>
+  <!-- Sparkles -->
+  <polygon points="120,80 124,90 134,94 124,98 120,108 116,98 106,94 116,90" fill="#f59e0b"/>
+  <polygon points="280,75 283,83 291,86 283,89 280,97 277,89 269,86 277,83" fill="#fbbf24"/>
+</svg>

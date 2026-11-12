@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using HMS.DTOs;
 using HMS.Hubs;
@@ -12,19 +13,28 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/bar")]
-[Route("api/bar")]
+[Tags("Bar")]
 public class BarController : ControllerBase
 {
     private readonly BarService _barService;
+    private readonly InventoryService _inventoryService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly IHubContext<PosHub> _hubContext;
     private readonly ILogger<BarController> _logger;
 
     public BarController(
         BarService barService,
+        InventoryService inventoryService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
         IHubContext<PosHub> hubContext,
         ILogger<BarController> logger)
     {
         _barService = barService;
+        _inventoryService = inventoryService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _hubContext = hubContext;
         _logger = logger;
     }
@@ -36,7 +46,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("screen-feed")]
-    [HttpGet("screens")]
     public async Task<IActionResult> GetBarScreenFeed([FromQuery] long? branchId)
     {
         _logger.LogInformation("GET /api/v1/bar/screen-feed requested");
@@ -58,7 +67,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("overview")]
-    [HttpGet("dashboard")]
     public async Task<IActionResult> GetBarOverview([FromQuery] long? branchId)
     {
         _logger.LogInformation("GET /api/v1/bar/overview requested");
@@ -76,8 +84,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("orders")]
-    [HttpGet("overview/recent-orders")]
-    [HttpGet("recent-orders")]
     public async Task<IActionResult> GetBarOrders([FromQuery] long? branchId, [FromQuery] int limit = 50)
     {
         var orders = await _barService.GetRecentBarOrdersAsync(branchId, limit);
@@ -227,7 +233,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPatch("drinks/{id}/availability")]
-    [HttpPatch("drinks/{id}/toggle-status")]
     public async Task<IActionResult> ToggleDrinkAvailability(string id, [FromBody] ToggleAvailabilityDto? dto)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -307,7 +312,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPatch("drinks/{id}/special")]
-    [HttpPatch("drinks/{id}/toggle-special")]
     public async Task<IActionResult> ToggleDrinkSpecial(string id, [FromBody] ToggleSpecialDto? dto)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -764,9 +768,6 @@ public class BarController : ControllerBase
     /// Supports filtering by search, table, and status.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("kot")]
-    [HttpGet("kot/tickets")]
-    [HttpGet("bot")]
     [HttpGet("bot/tickets")]
     public async Task<IActionResult> GetBarKotTickets(
         [FromQuery] string? search,
@@ -787,7 +788,6 @@ public class BarController : ControllerBase
     /// Returns summary KPI metrics for the Bar BOT / KOT screen.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("kot/summary")]
     [HttpGet("bot/summary")]
     public async Task<IActionResult> GetBarKotSummary()
     {
@@ -799,7 +799,6 @@ public class BarController : ControllerBase
     /// Returns filter dropdown options (Tables and Statuses) for Bar BOT / KOT.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("kot/filter-options")]
     [HttpGet("bot/filter-options")]
     public async Task<IActionResult> GetBarKotFilterOptions()
     {
@@ -811,10 +810,7 @@ public class BarController : ControllerBase
     /// Unified Bar BOT Screen Feed bundling Summary, Tickets, and Filter Options together.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("kot/screen-feed")]
-    [HttpGet("kot/screens")]
     [HttpGet("bot/screen-feed")]
-    [HttpGet("bot/screens")]
     public async Task<IActionResult> GetBarKotScreenFeed(
         [FromQuery] string? search,
         [FromQuery] string? table,
@@ -833,7 +829,6 @@ public class BarController : ControllerBase
     /// Returns a single Bar BOT ticket by ID.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("kot/{id:long}")]
     [HttpGet("bot/{id:long}")]
     public async Task<IActionResult> GetBarKotTicketById(long id)
     {
@@ -849,57 +844,66 @@ public class BarController : ControllerBase
     /// Updates status of a Bar BOT ticket (e.g. 'preparing', 'ready', 'served', 'cancelled').
     /// </summary>
     [AllowAnonymous]
-    [HttpPut("kot/{id:long}/status")]
-    [HttpPatch("kot/{id:long}/status")]
     [HttpPut("bot/{id:long}/status")]
-    [HttpPatch("bot/{id:long}/status")]
     public async Task<IActionResult> UpdateBarKotStatus(long id, [FromBody] UpdateBarKotStatusDto dto)
     {
-        var updated = await _barService.UpdateBarKotStatusAsync(id, dto.Status);
-        if (updated == null)
+        try
         {
-            return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
+            var updated = await _barService.UpdateBarKotStatusAsync(id, dto.Status);
+            if (updated == null)
+            {
+                return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
+            }
+
+            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Bar BOT ticket {id} status updated to {dto.Status}.",
+                data = updated
+            });
         }
-
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
-
-        return Ok(new
+        catch (InvalidOperationException ex)
         {
-            success = true,
-            message = $"Bar BOT ticket {id} status updated to {dto.Status}.",
-            data = updated
-        });
+            return Conflict(new { success = false, message = ex.Message });
+        }
     }
 
     /// <summary>
     /// Marks all drink items in a Bar BOT ticket as 'ready'.
     /// </summary>
     [AllowAnonymous]
-    [HttpPost("kot/{id:long}/mark-all-ready")]
     [HttpPost("bot/{id:long}/mark-all-ready")]
     public async Task<IActionResult> MarkAllBarKotReady(long id)
     {
-        var updated = await _barService.MarkAllBarKotReadyAsync(id);
-        if (updated == null)
+        try
         {
-            return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
+            var updated = await _barService.MarkAllBarKotReadyAsync(id);
+            if (updated == null)
+            {
+                return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
+            }
+
+            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
+
+            return Ok(new
+            {
+                success = true,
+                message = $"All drinks in Bar BOT ticket {id} marked as ready.",
+                data = updated
+            });
         }
-
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
-
-        return Ok(new
+        catch (InvalidOperationException ex)
         {
-            success = true,
-            message = $"All drinks in Bar BOT ticket {id} marked as ready.",
-            data = updated
-        });
+            return Conflict(new { success = false, message = ex.Message });
+        }
     }
 
     /// <summary>
     /// Marks all drink items for a specific table as 'ready'.
     /// </summary>
     [AllowAnonymous]
-    [HttpPost("kot/tables/{tableId:long}/mark-all-ready")]
     [HttpPost("bot/tables/{tableId:long}/mark-all-ready")]
     public async Task<IActionResult> MarkAllBarKotTableReady(long tableId)
     {
@@ -924,50 +928,60 @@ public class BarController : ControllerBase
     /// Updates status of an individual drink line item inside a Bar BOT.
     /// </summary>
     [AllowAnonymous]
-    [HttpPut("kot/items/{orderItemId:long}/status")]
-    [HttpPatch("kot/items/{orderItemId:long}/status")]
     [HttpPut("bot/items/{orderItemId:long}/status")]
-    [HttpPatch("bot/items/{orderItemId:long}/status")]
     public async Task<IActionResult> UpdateBarKotItemStatus(long orderItemId, [FromBody] UpdateBarKotItemStatusDto dto)
     {
-        var updated = await _barService.UpdateBarKotItemStatusAsync(orderItemId, dto.Status);
-        if (updated == null)
+        try
         {
-            return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
+            var updated = await _barService.UpdateBarKotItemStatusAsync(orderItemId, dto.Status);
+            if (updated == null)
+            {
+                return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
+            }
+
+            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Bar BOT item {orderItemId} status updated to {dto.Status}.",
+                data = updated
+            });
         }
-
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
-
-        return Ok(new
+        catch (InvalidOperationException ex)
         {
-            success = true,
-            message = $"Bar BOT item {orderItemId} status updated to {dto.Status}.",
-            data = updated
-        });
+            return Conflict(new { success = false, message = ex.Message });
+        }
     }
 
     /// <summary>
     /// Advances drink item status to the next step ('queued' -> 'cooking' -> 'ready' -> 'served').
     /// </summary>
     [AllowAnonymous]
-    [HttpPost("kot/items/{orderItemId:long}/advance")]
     [HttpPost("bot/items/{orderItemId:long}/advance")]
     public async Task<IActionResult> AdvanceBarKotItemStatus(long orderItemId)
     {
-        var updated = await _barService.AdvanceBarKotItemStatusAsync(orderItemId);
-        if (updated == null)
+        try
         {
-            return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
+            var updated = await _barService.AdvanceBarKotItemStatusAsync(orderItemId);
+            if (updated == null)
+            {
+                return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
+            }
+
+            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Bar BOT item {orderItemId} status advanced to {updated.Status}.",
+                data = updated
+            });
         }
-
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
-
-        return Ok(new
+        catch (InvalidOperationException ex)
         {
-            success = true,
-            message = $"Bar BOT item {orderItemId} status advanced to {updated.Status}.",
-            data = updated
-        });
+            return Conflict(new { success = false, message = ex.Message });
+        }
     }
 
     #endregion
@@ -982,16 +996,14 @@ public class BarController : ControllerBase
     public async Task<IActionResult> GetBarInventoryItems(
         [FromQuery] string? category,
         [FromQuery] string? search,
+        [FromQuery] string? supplier,
         [FromQuery] string? status,
-        [FromQuery] bool? lowStockOnly)
+        [FromQuery] bool? lowStockOnly,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var items = await _barService.GetBarInventoryItemsAsync(category, search, status, lowStockOnly);
-        return Ok(new
-        {
-            success = true,
-            count = items.Count,
-            data = items
-        });
+        var result = await _barService.GetBarInventoryPagedAsync(category, search, supplier, status, lowStockOnly, page, pageSize);
+        return Ok(result);
     }
 
     /// <summary>
@@ -1032,7 +1044,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("inventory/screen-feed")]
-    [HttpGet("inventory/screens")]
     public async Task<IActionResult> GetBarInventoryScreenFeed(
         [FromQuery] string? category,
         [FromQuery] string? search)
@@ -1062,27 +1073,72 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Adds a new inventory item (Image 5: Add Inventory Modal).
+    /// Adds a new inventory item or batch of items (Image 5: Add Inventory Modal).
     /// Fields: Item Name *, Category *, Unit *, Stock *, Threshold *, Unit Cost *.
+    /// Supports single item object or JSON array [ ... ].
     /// </summary>
     [AllowAnonymous]
     [HttpPost("inventory")]
-    public async Task<IActionResult> CreateInventoryItem([FromBody] CreateInventoryItemDto dto)
+    [HttpPost("inventory/batch")]
+    public async Task<IActionResult> CreateInventoryItem([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
     {
-        if (string.IsNullOrWhiteSpace(dto.ItemName))
+        var items = _inventoryService.ParseJsonPayload(body);
+        if (items.Count == 0)
         {
             return BadRequest(new { success = false, message = "Item Name is required." });
         }
 
-        var created = await _barService.CreateInventoryItemAsync(dto);
-
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created); } catch { }
-
-        return CreatedAtAction(nameof(GetBarInventoryItemById), new { id = created.ItemId }, new
+        foreach (var item in items)
         {
-            success = true,
-            message = "Inventory item added successfully.",
-            data = created
+            item.IsBarItem = true;
+            if (string.IsNullOrWhiteSpace(item.Category) || item.Category.Equals("General", StringComparison.OrdinalIgnoreCase))
+            {
+                item.Category = "Wine";
+            }
+        }
+
+        if (items.Count == 1)
+        {
+            var (isValid, valErr) = _inventoryService.ValidateItem(items[0], 0);
+            if (!isValid)
+            {
+                return BadRequest(new { success = false, message = valErr });
+            }
+        }
+
+        var result = await _inventoryService.ProcessInventorySubmissionAsync(items, atomic ?? false);
+
+        if (!result.Success && result.Items.Count == 0)
+        {
+            return StatusCode(500, new { success = false, message = result.Message, errors = result.Errors });
+        }
+
+        if (items.Count == 1 && result.Items.Count == 1)
+        {
+            var created = result.Items[0];
+            try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created); } catch { }
+
+            return CreatedAtAction(nameof(GetBarInventoryItemById), new { id = created.Id }, new
+            {
+                success = true,
+                message = created.Action == "updated"
+                    ? $"Inventory item '{created.Name}' stock updated successfully."
+                    : "Inventory item added successfully.",
+                data = created
+            });
+        }
+
+        return Ok(new
+        {
+            success = result.Success,
+            message = result.Message,
+            totalReceived = result.TotalReceived,
+            insertedCount = result.InsertedCount,
+            updatedCount = result.UpdatedCount,
+            failedCount = result.FailedCount,
+            items = result.Items,
+            errors = result.Errors,
+            data = result.Items
         });
     }
 
@@ -1129,6 +1185,38 @@ public class BarController : ControllerBase
             success = true,
             message = "Stock adjusted successfully.",
             data = updated
+        });
+    }
+
+    /// <summary>
+    /// Uses/consumes inventory stock for an item with quantity validation and audit logging.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("inventory/{id:long}/use")]
+    public async Task<IActionResult> UseInventoryStock(long id, [FromBody] UseStockDto dto)
+    {
+        if (dto == null || dto.Quantity <= 0)
+        {
+            return BadRequest(new { success = false, message = "Used quantity must be greater than zero." });
+        }
+
+        var (success, errorMsg, item) = await _barService.UseBarInventoryStockAsync(id, dto);
+        if (!success)
+        {
+            if (errorMsg != null && errorMsg.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { success = false, message = errorMsg });
+            }
+            return BadRequest(new { success = false, message = errorMsg });
+        }
+
+        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", item); } catch { }
+
+        return Ok(new
+        {
+            success = true,
+            message = $"Successfully consumed {dto.Quantity} units.",
+            data = item
         });
     }
 
@@ -1224,7 +1312,6 @@ public class BarController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("invoices/screen-feed")]
-    [HttpGet("invoices/screens")]
     public async Task<IActionResult> GetBarInvoicesScreenFeed(
         [FromQuery] string? search,
         [FromQuery] string? dateRange,
@@ -1285,25 +1372,25 @@ public class BarController : ControllerBase
 
     /// <summary>
     /// Returns Bar Reports KPI cards and summary table (Image 3: Active Beverage Orders, Menu Beverage Items, Inventory Records, Completed Sales).
-    /// Supports ?format=csv or Accept: text/csv to trigger CSV download automatically.
+    /// Supports ?format=csv|xlsx&amp;fromDate=...&amp;toDate=... or Accept: text/csv|application/vnd.openxmlformats-officedocument.spreadsheetml.sheet to trigger download automatically.
     /// </summary>
     [AllowAnonymous]
     [HttpGet("reports")]
-    [HttpGet("report")]
-    [HttpGet("reports/screen-feed")]
-    [HttpGet("reports/screens")]
-    [HttpGet("/api/v1/reports/bar")]
-    [HttpGet("/api/reports/bar")]
-    [HttpGet("/api/v1/bar-reports")]
-    [HttpGet("/api/bar-reports")]
-    [HttpPost("reports")]
-    [HttpPost("report")]
-    public async Task<IActionResult> GetBarReports([FromQuery] string? format = null)
+    public async Task<IActionResult> GetBarReports(
+        [FromQuery] string? format = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
     {
+        var acceptHeader = Request.Headers.Accept.ToString();
+        bool wantsCsv = acceptHeader.Contains("text/csv", StringComparison.OrdinalIgnoreCase);
+        bool wantsXlsx = acceptHeader.Contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase);
+
         if (string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) ||
-            Request.Headers.Accept.ToString().Contains("text/csv", StringComparison.OrdinalIgnoreCase))
+            string.Equals(format, "xlsx", StringComparison.OrdinalIgnoreCase) ||
+            wantsCsv || wantsXlsx)
         {
-            return await ExportBarReportsCsv();
+            string resolvedFormat = (string.Equals(format, "xlsx", StringComparison.OrdinalIgnoreCase) || (string.IsNullOrWhiteSpace(format) && wantsXlsx)) ? "xlsx" : "csv";
+            return await ExportBarReports(fromDate, toDate, resolvedFormat);
         }
 
         var reports = await _barService.GetBarReportsScreenAsync();
@@ -1330,41 +1417,52 @@ public class BarController : ControllerBase
     }
 
     /// <summary>
-    /// Exports Bar Reports as a CSV file (Image 3: 'Export CSV' button).
+    /// Exports Bar Inventory as CSV or XLSX.
+    /// Supports ?category=...&amp;status=in-stock|low-stock|out-of-stock&amp;search=...&amp;lowStockOnly=true&amp;format=csv|xlsx.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet("reports/export-csv")]
-    [HttpGet("reports/export")]
-    [HttpGet("reports/export.csv")]
-    [HttpGet("reports/csv")]
-    [HttpGet("reports/download")]
-    [HttpGet("/api/v1/reports/bar/export-csv")]
-    [HttpGet("/api/reports/bar/export-csv")]
-    [HttpGet("/api/v1/bar-reports/export-csv")]
-    [HttpGet("/api/bar-reports/export-csv")]
-    [HttpPost("reports/export-csv")]
-    [HttpPost("reports/export")]
-    [HttpPost("/api/v1/reports/bar/export-csv")]
-    [HttpPost("/api/reports/bar/export-csv")]
-    public async Task<IActionResult> ExportBarReportsCsv()
+    [HttpGet("inventory/export")]
+    public async Task<IActionResult> ExportBarInventory(
+        [FromQuery] string? category,
+        [FromQuery] string? status = null,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? lowStockOnly = null,
+        [FromQuery] string? format = "csv")
     {
-        var csv = await _barService.ExportBarReportsCsvAsync();
+        try
+        {
+            var doc = await _reportingExportService.GenerateBarInventoryExportAsync(category, status, search, lowStockOnly);
+            return _exportService.ExportResult(doc, format, "Bar_Inventory");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting bar inventory");
+            return StatusCode(500, new { success = false, message = "Failed to export bar inventory.", error = ex.Message });
+        }
+    }
 
-        // Include UTF-8 BOM preamble so Excel renders ₹ symbols cleanly
-        byte[] preamble = System.Text.Encoding.UTF8.GetPreamble();
-        byte[] contentBytes = System.Text.Encoding.UTF8.GetBytes(csv);
-        byte[] fileBytes = new byte[preamble.Length + contentBytes.Length];
-        Buffer.BlockCopy(preamble, 0, fileBytes, 0, preamble.Length);
-        Buffer.BlockCopy(contentBytes, 0, fileBytes, preamble.Length, contentBytes.Length);
-
-        string fileName = $"Bar_Reports_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
-
-        Response.Headers["Access-Control-Expose-Headers"] = "Content-Disposition, Content-Length, X-Suggested-Filename";
-        Response.Headers["X-Suggested-Filename"] = fileName;
-
-        return File(fileBytes, "text/csv; charset=utf-8", fileName);
+    /// <summary>
+    /// Exports Bar Operations Report as CSV or XLSX.
+    /// Supports ?fromDate=...&toDate=...&format=csv|xlsx.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("reports/export")]
+    public async Task<IActionResult> ExportBarReports(
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateBarReportExportAsync(fromDate, toDate);
+            return _exportService.ExportResult(doc, format, "Bar_Reports");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting bar reports");
+            return StatusCode(500, new { success = false, message = "Failed to export bar reports.", error = ex.Message });
+        }
     }
 
     #endregion
 }
-

@@ -21,6 +21,10 @@ public class MenuItem
     [Column("category")]
     public string Category { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    [Column("subcategory")]
+    public string? Subcategory { get; set; }
+
     [Column("price", TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
 
@@ -61,6 +65,9 @@ public class MenuItem
 
     [Column("is_bar_item")]
     public bool IsBarItem { get; set; } = false;
+
+    [Column("recipe_json", TypeName = "longtext")]
+    public string? RecipeJson { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -53,6 +53,9 @@ public class Invoice
     public ICollection<InvoicePayment> Payments { get; set; } = new List<InvoicePayment>();
 
     [NotMapped]
+    public decimal DueAmount => Math.Max(0, TotalAmount - PaidAmount);
+
+    [NotMapped]
     public string TableName { get; set; } = "Table 1";
 
     [NotMapped]

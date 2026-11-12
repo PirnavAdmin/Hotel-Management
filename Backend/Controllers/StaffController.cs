@@ -9,7 +9,6 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/staff")]
-[Route("api/Staff")]
 public class StaffController : ControllerBase
 {
     private readonly StaffService _staffService;
@@ -134,7 +133,6 @@ public class StaffController : ControllerBase
     // DELETE /api/v1/staff/{id} or /api/Staff/{id}
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Staff/{id}")]
     public async Task<IActionResult> DeleteStaff(string id)
     {
         try

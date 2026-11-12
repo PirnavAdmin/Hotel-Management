@@ -147,6 +147,8 @@ public class CreateMenuItemDto : IValidatableObject
 
     public bool IsAvailable { get; set; } = true;
 
+    public JsonElement? Recipe { get; set; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(DishName))
@@ -268,6 +270,8 @@ public class UpdateMenuItemDto : IValidatableObject
 
     public bool IsAvailable { get; set; } = true;
 
+    public JsonElement? Recipe { get; set; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(DishName))
@@ -340,6 +344,8 @@ public class MenuItemResponseDto
     public bool IsChefsSpecial { get; set; }
 
     public bool IsAvailable { get; set; }
+
+    public JsonElement? Recipe { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

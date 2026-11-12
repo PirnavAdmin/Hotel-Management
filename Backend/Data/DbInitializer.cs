@@ -65,13 +65,50 @@ public static class DbInitializer
         }
 
         // ============================================================
-        // FIND ADMIN USER
+        // SEED/ENSURE PIRNAV & ADMIN USERS
         // ============================================================
+
+        var pirnavUser = context.Users.FirstOrDefault(u => u.UserName == "pirnav" && u.DeletedAt == null);
+        const string pirnavUsername = "pirnav";
+        const string pirnavPassword = "Admin@123";
+        const string pirnavEmail = "maturi.vikas@pirnav.com";
+
+        if (pirnavUser == null)
+        {
+            pirnavUser = new User
+            {
+                RoleId = adminRole.RoleId,
+                BranchId = null,
+                FullName = "pirnav",
+                UserName = pirnavUsername,
+                Password = pirnavPassword,
+                ConfirmPassword = pirnavPassword,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(pirnavPassword),
+                Email = pirnavEmail,
+                Phone = "9999999999",
+                PinCode = "1234",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            context.Users.Add(pirnavUser);
+            context.SaveChanges();
+        }
+        else
+        {
+            pirnavUser.RoleId = adminRole.RoleId;
+            pirnavUser.FullName = "pirnav";
+            pirnavUser.Password = pirnavPassword;
+            pirnavUser.ConfirmPassword = pirnavPassword;
+            pirnavUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pirnavPassword);
+            pirnavUser.IsActive = true;
+            context.SaveChanges();
+        }
 
         var adminUser = context.Users.FirstOrDefault(u => u.UserName == "admin" && u.DeletedAt == null);
         const string adminUsername = "admin";
         const string adminPassword = "Admin@123";
-        const string adminEmail = "admin@avsrfoodcourt.com";
+        const string adminEmail = "admin@bhanupos.com";
 
         if (adminUser == null)
         {
@@ -79,7 +116,7 @@ public static class DbInitializer
             {
                 RoleId = adminRole.RoleId,
                 BranchId = null,
-                FullName = "AVULA VENKATA SURESH REDDY",
+                FullName = "pirnav",
                 UserName = adminUsername,
                 Password = adminPassword,
                 ConfirmPassword = adminPassword,
@@ -97,7 +134,7 @@ public static class DbInitializer
         else
         {
             adminUser.RoleId = adminRole.RoleId;
-            adminUser.FullName = "AVULA VENKATA SURESH REDDY";
+            adminUser.FullName = "pirnav";
             adminUser.UserName = adminUsername;
             adminUser.Password = adminPassword;
             adminUser.ConfirmPassword = adminPassword;
@@ -116,12 +153,12 @@ public static class DbInitializer
             {
                 RoleId = adminRole.RoleId,
                 BranchId = null,
-                FullName = "AVULA VENKATA SURESH REDDY (Admin)",
+                FullName = "pirnav",
                 UserName = "admins",
                 Password = adminPassword,
                 ConfirmPassword = adminPassword,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
-                Email = "admins@avsrfoodcourt.com",
+                Email = "admins@bhanupos.com",
                 Phone = "9999999999",
                 PinCode = "1234",
                 IsActive = true,
@@ -134,17 +171,281 @@ public static class DbInitializer
         else
         {
             adminsUser.RoleId = adminRole.RoleId;
-            adminsUser.FullName = "AVULA VENKATA SURESH REDDY (Admin)";
+            adminsUser.FullName = "pirnav";
             adminsUser.UserName = "admins";
             adminsUser.Password = adminPassword;
             adminsUser.ConfirmPassword = adminPassword;
             adminsUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
-            adminsUser.Email = "admins@avsrfoodcourt.com";
+            adminsUser.Email = "admins@bhanupos.com";
             adminsUser.BranchId = null;
             adminsUser.IsActive = true;
             context.SaveChanges();
         }
 
+        // Seed staff_persons, ingredients, salary_payments, and inventory_purchases
+        try
+        {
+            if (!context.StaffPersons.Any())
+            {
+                var initialStaff = new List<StaffPerson>
+                {
+                    new StaffPerson { FullName = "Suresh Reddy", RoleTitle = "General Manager", Department = "Management", BaseSalary = 50000m, Phone = "9876543210", Shift = "General", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Vikas Anand", RoleTitle = "Head Bartender", Department = "Bar", BaseSalary = 30000m, Phone = "9876543211", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Rahul Sharma", RoleTitle = "Senior Mixologist", Department = "Bar", BaseSalary = 28000m, Phone = "9876543212", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Chef Sanjeev Kumar", RoleTitle = "Executive Chef", Department = "Kitchen", BaseSalary = 45000m, Phone = "9876543213", Shift = "Morning", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Anil Verma", RoleTitle = "Sous Chef", Department = "Kitchen", BaseSalary = 32000m, Phone = "9876543214", Shift = "Morning", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Pooja Patel", RoleTitle = "Cashier & Accountant", Department = "Management", BaseSalary = 26000m, Phone = "9876543215", Shift = "General", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Kiran Rao", RoleTitle = "Head Captain", Department = "Dining / Service", BaseSalary = 24000m, Phone = "9876543216", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new StaffPerson { FullName = "Ramesh Babu", RoleTitle = "Senior Steward", Department = "Dining / Service", BaseSalary = 20000m, Phone = "9876543217", Shift = "Evening", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                };
+                context.StaffPersons.AddRange(initialStaff);
+                context.SaveChanges();
+            }
+
+            if (!context.Ingredients.Any())
+            {
+                var initialIngredients = new List<Ingredient>
+                {
+                    new Ingredient { Name = "Johnnie Walker Black Label", IngredientName = "Johnnie Walker Black Label", Category = "Whiskey", Unit = "Bottle", CurrentStock = 24m, MinimumThreshold = 5m, UnitCost = 2800m, CostPerUnit = 2800m, ReorderLevel = 5m, Mrp = 3800m, Supplier = "Diageo Direct", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Absolut Vodka", IngredientName = "Absolut Vodka", Category = "Vodka & Gin", Unit = "Bottle", CurrentStock = 18m, MinimumThreshold = 4m, UnitCost = 1900m, CostPerUnit = 1900m, ReorderLevel = 4m, Mrp = 2600m, Supplier = "Pernod Ricard", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Corona Extra Beer", IngredientName = "Corona Extra Beer", Category = "Beer", Unit = "Bottle", CurrentStock = 120m, MinimumThreshold = 24m, UnitCost = 180m, CostPerUnit = 180m, ReorderLevel = 24m, Mrp = 300m, Supplier = "Anheuser-Busch", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Sula Cabernet Shiraz", IngredientName = "Sula Cabernet Shiraz", Category = "Wine", Unit = "Bottle", CurrentStock = 30m, MinimumThreshold = 6m, UnitCost = 950m, CostPerUnit = 950m, ReorderLevel = 6m, Mrp = 1500m, Supplier = "Sula Vineyards", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Basmati Rice Premium", IngredientName = "Basmati Rice Premium", Category = "Grains & Rice", Unit = "KG", CurrentStock = 200m, MinimumThreshold = 30m, UnitCost = 95m, CostPerUnit = 95m, ReorderLevel = 30m, Mrp = 120m, Supplier = "Royal Grains Ltd", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Fresh Paneer", IngredientName = "Fresh Paneer", Category = "Dairy & Cheeses", Unit = "KG", CurrentStock = 3m, MinimumThreshold = 10m, UnitCost = 320m, CostPerUnit = 320m, ReorderLevel = 10m, Mrp = 400m, Supplier = "Dairy Fresh Co", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                    new Ingredient { Name = "Fresh Mint Leaves", IngredientName = "Fresh Mint Leaves", Category = "Garnishes", Unit = "GM", CurrentStock = 0m, MinimumThreshold = 500m, UnitCost = 0.20m, CostPerUnit = 0.20m, ReorderLevel = 500m, Mrp = 0.50m, Supplier = "Local Green Market", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                };
+                context.Ingredients.AddRange(initialIngredients);
+                context.SaveChanges();
+            }
+
+            var staffList = context.StaffPersons.ToList();
+            bool staffChanged = false;
+            foreach (var st in staffList)
+            {
+                var roleLower = (st.RoleTitle ?? "").ToLowerInvariant();
+                string targetDept = "Dining / Service";
+                decimal targetSalary = 22000m;
+
+                if (roleLower.Contains("bartender") || roleLower.Contains("bar") || roleLower.Contains("mixologist") || roleLower.Contains("sommelier"))
+                {
+                    targetDept = "Bar";
+                    targetSalary = 28000m;
+                }
+                else if (roleLower.Contains("chef") || roleLower.Contains("cook") || roleLower.Contains("kitchen") || roleLower.Contains("commis"))
+                {
+                    targetDept = "Kitchen";
+                    targetSalary = 32000m;
+                }
+                else if (roleLower.Contains("manager") || roleLower.Contains("supervisor") || roleLower.Contains("cashier") || roleLower.Contains("accountant") || roleLower.Contains("admin"))
+                {
+                    targetDept = "Management";
+                    targetSalary = 45000m;
+                }
+
+                if (string.IsNullOrWhiteSpace(st.Department) || (st.Department == "Dining / Service" && targetDept != "Dining / Service"))
+                {
+                    st.Department = targetDept;
+                    staffChanged = true;
+                }
+                if (st.BaseSalary <= 0 || (st.BaseSalary == 25000.00m && targetSalary != 25000.00m))
+                {
+                    st.BaseSalary = targetSalary;
+                    staffChanged = true;
+                }
+            }
+            if (staffChanged)
+            {
+                context.SaveChanges();
+            }
+
+            // Seed initial salary payments if empty
+            if (!context.SalaryPayments.Any() && staffList.Any())
+            {
+                var currentMonthStr = DateTime.UtcNow.ToString("yyyy-MM");
+                var paymentList = new List<SalaryPayment>();
+                foreach (var st in staffList.Take(6))
+                {
+                    paymentList.Add(new SalaryPayment
+                    {
+                        StaffId = st.StaffId,
+                        StaffName = st.FullName,
+                        RoleTitle = st.RoleTitle,
+                        Department = st.Department ?? "Dining / Service",
+                        Amount = st.BaseSalary,
+                        PaymentDate = DateTime.UtcNow.AddDays(-2),
+                        PaymentMonth = currentMonthStr,
+                        PaymentMethod = "BANK_TRANSFER",
+                        TransactionReference = $"TXN-{DateTime.UtcNow:yyyyMM}-{st.StaffId:D4}",
+                        Remarks = $"Monthly salary for {currentMonthStr}",
+                        Status = "COMPLETED",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                }
+                context.SalaryPayments.AddRange(paymentList);
+                context.SaveChanges();
+            }
+
+            // Seed initial inventory purchases if empty
+            if (!context.InventoryPurchases.Any())
+            {
+                var items = context.Ingredients.Where(i => i.IsActive).Take(6).ToList();
+                var purchaseList = new List<InventoryPurchase>();
+                foreach (var itm in items)
+                {
+                    var isBar = (itm.Category ?? "").ToLower().Contains("bar") || (itm.Category ?? "").ToLower().Contains("drink") || (itm.Category ?? "").ToLower().Contains("liquor") || (itm.Category ?? "").ToLower().Contains("beer") || (itm.Category ?? "").ToLower().Contains("wine") || (itm.Category ?? "").ToLower().Contains("whiskey");
+                    var qty = itm.CurrentStock > 0 ? itm.CurrentStock : 10m;
+                    var cost = itm.UnitCost > 0 ? itm.UnitCost : 150m;
+                    purchaseList.Add(new InventoryPurchase
+                    {
+                        IngredientId = itm.IngredientId,
+                        ItemName = itm.Name ?? itm.IngredientName ?? "Stock Item",
+                        Department = isBar ? "Bar" : "Dine",
+                        Supplier = !string.IsNullOrWhiteSpace(itm.Supplier) ? itm.Supplier : "AVSR Direct Supply",
+                        Quantity = qty,
+                        UnitCost = cost,
+                        TotalAmount = qty * cost,
+                        Note = "Initial stock procurement",
+                        PurchaseDate = DateTime.UtcNow.AddDays(-5),
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+                if (purchaseList.Any())
+                {
+                    context.InventoryPurchases.AddRange(purchaseList);
+                    context.SaveChanges();
+                }
+            }
+        }
+        catch { }
+
+        SeedAccountingData(context);
+    }
+
+
+
+    private static void SeedAccountingData(AppDbContext context)
+    {
+        try
+        {
+            var existingCodes = context.ChartOfAccounts
+                .AsNoTracking()
+                .Select(a => a.Code)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var now = DateTime.UtcNow;
+            var standardAccounts = new List<ChartOfAccount>
+            {
+                // ASSETS (Debit Normal Balance)
+                new() { Code = "1001", AccountName = "Cash in Hand", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "Physical cash in restaurant register", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1002", AccountName = "Bank & UPI Collections", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "HDFC / ICICI POS terminal & UPI settled account", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1100", AccountName = "Accounts Receivable", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "Credit customer receivables & pending card settlements", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1200", AccountName = "Kitchen & Bar Inventory Asset", AccountGroup = "Assets", AccountType = "Current Asset", NormalBalance = "Debit", Description = "Food ingredients, liquor & beverage stock on hand", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "1500", AccountName = "Kitchen & Bar Equipment", AccountGroup = "Assets", AccountType = "Fixed Asset", NormalBalance = "Debit", Description = "Ovens, chillers, espresso machines, POS hardware & furniture", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // LIABILITIES (Credit Normal Balance)
+                new() { Code = "2001", AccountName = "Accounts Payable (Suppliers)", AccountGroup = "Liabilities", AccountType = "Current Liability", NormalBalance = "Credit", Description = "Unpaid vendor bills for kitchen & bar stock procurement", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "2100", AccountName = "GST & Output Tax Payable", AccountGroup = "Liabilities", AccountType = "Current Liability", NormalBalance = "Credit", Description = "Collected GST / VAT / Service Tax awaiting remittance", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "2200", AccountName = "Salaries & Wages Payable", AccountGroup = "Liabilities", AccountType = "Current Liability", NormalBalance = "Credit", Description = "Accrued staff payroll obligations", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // EQUITY (Credit Normal Balance)
+                new() { Code = "3001", AccountName = "Owner Capital & Equity", AccountGroup = "Equity", AccountType = "Equity", NormalBalance = "Credit", Description = "Partners initial capital infusion & ownership equity", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "3100", AccountName = "Retained Earnings", AccountGroup = "Equity", AccountType = "Equity", NormalBalance = "Credit", Description = "Accumulated net profits retained in business", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // INCOME (Credit Normal Balance)
+                new() { Code = "4001", AccountName = "Food & Dine-In Sales Revenue", AccountGroup = "Income", AccountType = "Operating Revenue", NormalBalance = "Credit", Description = "Dine-in, takeaway and delivery food sales net of GST", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "4002", AccountName = "Bar & Beverage Sales Revenue", AccountGroup = "Income", AccountType = "Operating Revenue", NormalBalance = "Credit", Description = "Cocktails, liquor, beer, wine and bar counter sales", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "4003", AccountName = "Service Charge & Other Income", AccountGroup = "Income", AccountType = "Operating Revenue", NormalBalance = "Credit", Description = "Service charges, corkage & miscellaneous revenue", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+
+                // EXPENSES (Debit Normal Balance)
+                new() { Code = "5001", AccountName = "Inventory & COGS Purchases", AccountGroup = "Expenses", AccountType = "Cost of Goods Sold", NormalBalance = "Debit", Description = "Raw ingredients, liquor restocking & direct kitchen/bar purchases", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "5002", AccountName = "Staff Salaries & Payroll", AccountGroup = "Expenses", AccountType = "Operating Expense", NormalBalance = "Debit", Description = "Monthly wages, incentives and chef/waiter payroll", IsSystemAccount = true, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "5003", AccountName = "Utilities, Rent & Petty Expenses", AccountGroup = "Expenses", AccountType = "Operating Expense", NormalBalance = "Debit", Description = "Electricity, gas, rent, cleaning & petty cash overheads", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now },
+                new() { Code = "5004", AccountName = "Depreciation Expense", AccountGroup = "Expenses", AccountType = "Non-Cash Expense", NormalBalance = "Debit", Description = "Periodic depreciation of kitchen, bar and POS fixed assets", IsSystemAccount = false, IsActive = true, CreatedAt = now, UpdatedAt = now }
+            };
+
+            var toInsert = standardAccounts.Where(a => !existingCodes.Contains(a.Code)).ToList();
+            if (toInsert.Count > 0)
+            {
+                context.ChartOfAccounts.AddRange(toInsert);
+                context.SaveChanges();
+            }
+
+            if (!context.JournalVouchers.AsNoTracking().Any())
+            {
+                var acctLookup = context.ChartOfAccounts.AsNoTracking()
+                    .ToDictionary(a => a.Code, a => a, StringComparer.OrdinalIgnoreCase);
+
+                if (acctLookup.TryGetValue("1001", out var cashAcct) &&
+                    acctLookup.TryGetValue("1002", out var bankAcct) &&
+                    acctLookup.TryGetValue("3001", out var equityAcct) &&
+                    acctLookup.TryGetValue("1500", out var equipAcct))
+                {
+                    var jv1 = new JournalVoucher
+                    {
+                        VoucherNumber = "JV-2026-001",
+                        VoucherDate = new DateTime(2026, 4, 1),
+                        VoucherType = "Capital",
+                        Narration = "Initial Capital infusion by restaurant partners into Bank & Cash",
+                        TotalAmount = 500000.00m,
+                        CreatedBy = "pirnav",
+                        Status = "Posted",
+                        CreatedAt = new DateTime(2026, 4, 1, 9, 0, 0),
+                        UpdatedAt = new DateTime(2026, 4, 1, 9, 0, 0),
+                        Lines = new List<JournalVoucherLine>
+                        {
+                            new() { AccountId = cashAcct.AccountId, AccountCode = cashAcct.Code, AccountName = cashAcct.AccountName, Description = "Opening drawer cash capital", DebitAmount = 50000.00m, CreditAmount = 0m },
+                            new() { AccountId = bankAcct.AccountId, AccountCode = bankAcct.Code, AccountName = bankAcct.AccountName, Description = "Partner capital bank deposit", DebitAmount = 450000.00m, CreditAmount = 0m },
+                            new() { AccountId = equityAcct.AccountId, AccountCode = equityAcct.Code, AccountName = equityAcct.AccountName, Description = "Partners equity contribution", DebitAmount = 0m, CreditAmount = 500000.00m }
+                        }
+                    };
+
+                    var jv2 = new JournalVoucher
+                    {
+                        VoucherNumber = "JV-2026-002",
+                        VoucherDate = new DateTime(2026, 4, 5),
+                        VoucherType = "Asset Purchase",
+                        Narration = "Kitchen equipment, espresso bar & POS hardware setup",
+                        TotalAmount = 120000.00m,
+                        CreatedBy = "pirnav",
+                        Status = "Posted",
+                        CreatedAt = new DateTime(2026, 4, 5, 11, 30, 0),
+                        UpdatedAt = new DateTime(2026, 4, 5, 11, 30, 0),
+                        Lines = new List<JournalVoucherLine>
+                        {
+                            new() { AccountId = equipAcct.AccountId, AccountCode = equipAcct.Code, AccountName = equipAcct.AccountName, Description = "Commercial kitchen ovens & POS terminals", DebitAmount = 120000.00m, CreditAmount = 0m },
+                            new() { AccountId = bankAcct.AccountId, AccountCode = bankAcct.Code, AccountName = bankAcct.AccountName, Description = "Payment via business bank transfer", DebitAmount = 0m, CreditAmount = 120000.00m }
+                        }
+                    };
+
+                    context.JournalVouchers.AddRange(jv1, jv2);
+                    context.SaveChanges();
+                }
+            }
+
+            if (!context.DailyCashBankRegisters.AsNoTracking().Any())
+            {
+                var today = DateTime.Today;
+                context.DailyCashBankRegisters.Add(new DailyCashBankRegister
+                {
+                    BusinessDate = today,
+                    OpeningCashFloat = 5000.00m,
+                    OpeningBankBalance = 25000.00m,
+                    TotalOpeningBalance = 30000.00m,
+                    ShiftStatus = "Open",
+                    ShiftOpenedAt = today.AddHours(8),
+                    OpenedBy = "pirnav",
+                    Notes = "Brought forward at 08:00 AM shift start",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                context.SaveChanges();
+            }
+        }
+        catch
+        {
+            // Keep initialization resilient if accounting tables are temporarily locked
+        }
     }
 
     private static void EnsureTablesSchema(AppDbContext context)
@@ -166,6 +467,37 @@ public static class DbInitializer
             SafeExecuteSql(conn, "ALTER DATABASE DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET collation_connection = utf8mb4_unicode_ci;");
+            SafeExecuteSql(conn, @"
+                CREATE TABLE IF NOT EXISTS `salary_payments` (
+                    `payment_id` BIGINT NOT NULL AUTO_INCREMENT,
+                    `staff_id` BIGINT NULL,
+                    `staff_name` VARCHAR(100) NOT NULL,
+                    `amount` DECIMAL(18,2) NOT NULL,
+                    `paid_on` DATE NOT NULL,
+                    `salary_period` CHAR(7) NOT NULL,
+                    `payment_method` VARCHAR(40) NOT NULL,
+                    `notes` VARCHAR(255) NULL,
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`payment_id`),
+                    INDEX `ix_salary_payments_staff_paid_on` (`staff_id`, `paid_on`)
+                ) ENGINE=InnoDB;");
+            SafeExecuteSql(conn, @"
+                CREATE TABLE IF NOT EXISTS `inventory_purchase_records` (
+                    `purchase_id` BIGINT NOT NULL AUTO_INCREMENT,
+                    `item_id` BIGINT NULL,
+                    `name` VARCHAR(100) NOT NULL,
+                    `category` VARCHAR(100) NOT NULL DEFAULT '',
+                    `subcategory` VARCHAR(100) NOT NULL DEFAULT '',
+                    `supplier` VARCHAR(150) NOT NULL DEFAULT '',
+                    `quantity` DECIMAL(18,3) NOT NULL,
+                    `unit` VARCHAR(50) NOT NULL,
+                    `unit_cost` DECIMAL(18,2) NOT NULL,
+                    `department` VARCHAR(10) NOT NULL DEFAULT 'dine',
+                    `purchase_date` DATE NOT NULL,
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`purchase_id`),
+                    INDEX `ix_inventory_purchase_records_department_date` (`department`, `purchase_date`)
+                ) ENGINE=InnoDB;");
 
             using (var cmd = conn.CreateCommand())
             {
@@ -206,7 +538,7 @@ public static class DbInitializer
                     "dining_sections", "menu_categories", "staff", "kitchen_stations", "kitchen_order_tickets",
                     "suppliers", "customers", "reservations", "ingredients", "purchase_orders",
                     "attendances", "promotions", "delivery_orders", "invoices", "invoice_payments",
-                    "password_reset_tokens"
+                    "password_reset_tokens", "inventory_purchases", "salary_payments", "inventory_transactions"
                 };
                 foreach (var tbl in allTables)
                 {
@@ -247,16 +579,25 @@ public static class DbInitializer
             EnsureColumnExists(conn, "invoice_payments", "paid_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "customers", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "customers", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            EnsureColumnExists(conn, "reservations", "branch_id", "BIGINT NOT NULL DEFAULT 1");
-            EnsureColumnExists(conn, "reservations", "customer_name", "VARCHAR(100) NULL");
-            EnsureColumnExists(conn, "reservations", "phone", "VARCHAR(20) NULL");
-            EnsureColumnExists(conn, "reservations", "reservation_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            EnsureColumnExists(conn, "reservations", "notes", "VARCHAR(255) NULL");
-            EnsureColumnExists(conn, "reservations", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            EnsureColumnExists(conn, "reservations", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
-            SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
+            EnsureReservationColumns(conn);
 
             EnsureColumnExists(conn, "ingredients", "name", "VARCHAR(100) NOT NULL DEFAULT ''");
+            EnsureColumnExists(conn, "ingredients", "ingredient_name", "VARCHAR(150) NULL DEFAULT ''");
+            EnsureColumnExists(conn, "ingredients", "cost_per_unit", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "inventory_transactions", "note", "VARCHAR(255) NULL");
+            EnsureColumnExists(conn, "inventory_transactions", "notes", "VARCHAR(255) NULL");
+            EnsureColumnExists(conn, "inventory_transactions", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "transaction_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "unit_cost", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "inventory_transactions", "txn_type", "VARCHAR(30) NOT NULL DEFAULT 'usage'");
+            EnsureColumnExists(conn, "inventory_transactions", "quantity", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "inventory_transactions", "remarks", "VARCHAR(255) NULL");
+            EnsureColumnExists(conn, "inventory_transactions", "txn_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "inventory_transactions", "balance_after", "DECIMAL(18,3) NOT NULL DEFAULT 0.00");
+            SafeExecuteSql(conn, "ALTER TABLE `inventory_transactions` MODIFY COLUMN `balance_after` DECIMAL(18,3) NULL DEFAULT 0.00;");
+            SafeExecuteSql(conn, "ALTER TABLE `inventory_transactions` MODIFY COLUMN `txn_type` VARCHAR(50) NOT NULL DEFAULT 'usage';");
+            EnsureColumnExists(conn, "ingredients", "reorder_level", "DECIMAL(18,2) NOT NULL DEFAULT 5.00");
             EnsureColumnExists(conn, "ingredients", "unit", "VARCHAR(20) NOT NULL DEFAULT 'KG'");
             EnsureColumnExists(conn, "ingredients", "current_stock", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
             EnsureColumnExists(conn, "ingredients", "minimum_threshold", "DECIMAL(18,2) NOT NULL DEFAULT 5.00");
@@ -267,7 +608,12 @@ public static class DbInitializer
             EnsureColumnExists(conn, "ingredients", "mrp", "DECIMAL(10,2) NULL DEFAULT 0.00");
             EnsureColumnExists(conn, "ingredients", "ingredient_code", "VARCHAR(30) NULL");
             EnsureColumnExists(conn, "ingredients", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
+            EnsureColumnExists(conn, "ingredients", "deleted_at", "DATETIME NULL");
+            SafeExecuteSql(conn, "ALTER TABLE `ingredients` MODIFY COLUMN `cost_per_unit` DECIMAL(18,2) NOT NULL DEFAULT 0.00;");
+            EnsureColumnExists(conn, "ingredients", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "ingredients", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+            EnsureColumnExists(conn, "ingredients", "used_quantity", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+            EnsureColumnExists(conn, "ingredients", "item_type", "VARCHAR(100) NULL DEFAULT ''");
 
             EnsureColumnExists(conn, "suppliers", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "purchase_orders", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
@@ -312,6 +658,7 @@ public static class DbInitializer
             // menu_items ALTER TABLE
             EnsureColumnExists(conn, "menu_items", "dish_name", "VARCHAR(100) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "menu_items", "category", "VARCHAR(100) NOT NULL DEFAULT ''");
+            EnsureColumnExists(conn, "menu_items", "subcategory", "VARCHAR(100) NULL");
             EnsureColumnExists(conn, "menu_items", "price", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
             EnsureColumnExists(conn, "menu_items", "dietary_type", "VARCHAR(20) NULL DEFAULT 'N/A'");
             EnsureColumnExists(conn, "menu_items", "spice_level", "INT NOT NULL DEFAULT 0");
@@ -320,6 +667,7 @@ public static class DbInitializer
             EnsureColumnExists(conn, "menu_items", "image_url", "VARCHAR(255) NULL");
             EnsureColumnExists(conn, "menu_items", "is_chefs_special", "TINYINT(1) NOT NULL DEFAULT 0");
             EnsureColumnExists(conn, "menu_items", "is_available", "TINYINT(1) NOT NULL DEFAULT 1");
+            EnsureColumnExists(conn, "menu_items", "recipe_json", "LONGTEXT NULL");
             EnsureColumnExists(conn, "menu_items", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "menu_items", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
             EnsureColumnExists(conn, "menu_items", "deleted_at", "DATETIME NULL");
@@ -327,6 +675,8 @@ public static class DbInitializer
             // staff_persons ALTER TABLE
             EnsureColumnExists(conn, "staff_persons", "full_name", "VARCHAR(100) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "role_title", "VARCHAR(50) NOT NULL DEFAULT ''");
+            EnsureColumnExists(conn, "staff_persons", "department", "VARCHAR(50) NOT NULL DEFAULT 'Dining / Service'");
+            EnsureColumnExists(conn, "staff_persons", "base_salary", "DECIMAL(18,2) NOT NULL DEFAULT 25000.00");
             EnsureColumnExists(conn, "staff_persons", "phone", "VARCHAR(20) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "shift", "VARCHAR(50) NOT NULL DEFAULT ''");
             EnsureColumnExists(conn, "staff_persons", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
@@ -444,12 +794,18 @@ public static class DbInitializer
                 CreateAllTables(conn);
             }
 
-            // Verify customers schema
-            try { _ = context.Customers.AsNoTracking().Take(1).ToList(); }
+            // Ensure customer portal authentication columns and tables exist BEFORE probing Customers via EF Core
+            EnsureCustomerAuthSchema(conn);
+            try
+            {
+                _ = context.Customers.AsNoTracking().Take(1).ToList();
+                _ = context.CustomerOtpTokens.AsNoTracking().Take(1).ToList();
+                _ = context.CustomerRefreshTokens.AsNoTracking().Take(1).ToList();
+            }
             catch
             {
-                SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `customers`; SET FOREIGN_KEY_CHECKS = 1;");
                 CreateAllTables(conn);
+                EnsureCustomerAuthSchema(conn);
             }
 
             // Verify reservations schema
@@ -555,6 +911,32 @@ public static class DbInitializer
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `kitchen_order_tickets`; SET FOREIGN_KEY_CHECKS = 1;");
                 CreateAllTables(conn);
             }
+
+            // Verify accounting tables schema
+            try
+            {
+                _ = context.ChartOfAccounts.AsNoTracking().Take(1).ToList();
+                _ = context.JournalVouchers.AsNoTracking().Take(1).ToList();
+                _ = context.JournalVoucherLines.AsNoTracking().Take(1).ToList();
+                _ = context.DailyCashBankRegisters.AsNoTracking().Take(1).ToList();
+            }
+            catch
+            {
+                CreateAllTables(conn);
+            }
+
+            // Verify reservation payments & OTP tokens schema and ensure indexes/backfill
+            try
+            {
+                _ = context.ReservationPayments.AsNoTracking().Take(1).ToList();
+                _ = context.ReservationOtpTokens.AsNoTracking().Take(1).ToList();
+            }
+            catch
+            {
+                CreateAllTables(conn);
+            }
+
+            EnsureReservationSchema(conn);
         }
         catch { }
     }
@@ -574,6 +956,7 @@ public static class DbInitializer
                 `image_url` VARCHAR(255) NULL,
                 `is_chefs_special` TINYINT(1) NOT NULL DEFAULT 0,
                 `is_available` TINYINT(1) NOT NULL DEFAULT 1,
+                `recipe_json` LONGTEXT NULL,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `deleted_at` DATETIME NULL,
@@ -710,32 +1093,149 @@ public static class DbInitializer
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `customers` (
                 `customer_id` BIGINT NOT NULL AUTO_INCREMENT,
-                `full_name` VARCHAR(100) NOT NULL,
+                `full_name` VARCHAR(120) NOT NULL,
                 `phone` VARCHAR(20) NOT NULL,
-                `email` VARCHAR(100) NULL,
+                `email` VARCHAR(120) NULL,
+                `password_hash` VARCHAR(255) NULL,
+                `role` VARCHAR(30) NOT NULL DEFAULT 'Customer',
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `is_verified` TINYINT(1) NOT NULL DEFAULT 0,
+                `verified_at` DATETIME NULL,
+                `last_login` DATETIME NULL,
+                `registered_branch_id` BIGINT UNSIGNED NULL,
                 `loyalty_points` INT NOT NULL DEFAULT 0,
+                `failed_login_attempts` INT NOT NULL DEFAULT 0,
+                `lockout_until` DATETIME NULL,
+                `token_version` INT NOT NULL DEFAULT 1,
+                `deleted_at` DATETIME NULL,
+                `branch_id` BIGINT NULL,
+                `outlet_id` BIGINT NULL DEFAULT 1,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`customer_id`)
-            ) ENGINE=InnoDB;");
+                PRIMARY KEY (`customer_id`),
+                KEY `idx_customers_email` (`email`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_otp_tokens` (
+                `otp_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `purpose` VARCHAR(40) NOT NULL DEFAULT 'ACCOUNT_VERIFY',
+                `channel` VARCHAR(30) NOT NULL DEFAULT 'EMAIL_AND_PHONE',
+                `target_identifier` VARCHAR(150) NOT NULL,
+                `otp_hash` VARCHAR(255) NOT NULL,
+                `reset_token_hash` VARCHAR(128) NULL,
+                `expires_at` DATETIME NOT NULL,
+                `verified_at` DATETIME NULL,
+                `used_at` DATETIME NULL,
+                `invalidated_at` DATETIME NULL,
+                `attempts` INT NOT NULL DEFAULT 0,
+                `max_attempts` INT NOT NULL DEFAULT 5,
+                `ip_address` VARCHAR(64) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`otp_id`),
+                KEY `idx_cust_otp_lookup` (`customer_id`, `purpose`, `created_at`),
+                KEY `idx_cust_otp_reset_hash` (`reset_token_hash`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_refresh_tokens` (
+                `refresh_token_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `token_hash` VARCHAR(128) NOT NULL,
+                `family_id` VARCHAR(64) NOT NULL,
+                `remember_me` TINYINT(1) NOT NULL DEFAULT 0,
+                `expires_at` DATETIME NOT NULL,
+                `revoked_at` DATETIME NULL,
+                `revoked_reason` VARCHAR(100) NULL,
+                `replaced_by_token_hash` VARCHAR(128) NULL,
+                `created_by_ip` VARCHAR(64) NULL,
+                `revoked_by_ip` VARCHAR(64) NULL,
+                `user_agent` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`refresh_token_id`),
+                UNIQUE KEY `uk_cust_rt_token_hash` (`token_hash`),
+                KEY `idx_cust_rt_customer` (`customer_id`, `revoked_at`, `expires_at`),
+                KEY `idx_cust_rt_family` (`family_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `reservations` (
                 `reservation_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `reservation_number` VARCHAR(30) NULL,
                 `branch_id` BIGINT NOT NULL DEFAULT 1,
+                `outlet_id` BIGINT NULL DEFAULT 1,
                 `customer_id` BIGINT NULL,
                 `customer_name` VARCHAR(100) NULL,
                 `phone` VARCHAR(20) NULL,
+                `email` VARCHAR(120) NULL,
                 `table_id` BIGINT NULL,
                 `guests_count` INT NOT NULL DEFAULT 2,
+                `seating_preference` VARCHAR(50) NULL,
                 `reservation_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `reservation_time` TIME NOT NULL DEFAULT '12:00:00',
-                `status` VARCHAR(20) NOT NULL DEFAULT 'booked',
-                `notes` VARCHAR(255) NULL,
+                `slot_duration_minutes` INT NOT NULL DEFAULT 120,
+                `reservation_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `advance_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `paid_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `remaining_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `payment_status` VARCHAR(30) NOT NULL DEFAULT 'UNPAID',
+                `status` VARCHAR(40) NOT NULL DEFAULT 'PENDING_PAYMENT',
+                `notes` VARCHAR(500) NULL,
+                `idempotency_key` VARCHAR(100) NULL,
+                `cancellation_reason` VARCHAR(255) NULL,
+                `cancelled_at` DATETIME NULL,
+                `cancelled_by` VARCHAR(100) NULL,
+                `refund_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `refund_status` VARCHAR(30) NOT NULL DEFAULT 'NONE',
+                `refund_reference` VARCHAR(100) NULL,
+                `confirmed_at` DATETIME NULL,
+                `modified_at` DATETIME NULL,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`reservation_id`)
-            ) ENGINE=InnoDB;");
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `reservation_payments` (
+                `payment_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `reservation_id` BIGINT NOT NULL,
+                `customer_id` BIGINT NULL,
+                `payment_type` VARCHAR(20) NOT NULL DEFAULT 'ADVANCE',
+                `amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `payment_method` VARCHAR(30) NOT NULL DEFAULT 'UPI',
+                `payment_status` VARCHAR(30) NOT NULL DEFAULT 'pending',
+                `gateway_provider` VARCHAR(40) NULL,
+                `gateway_order_id` VARCHAR(100) NULL,
+                `gateway_payment_id` VARCHAR(100) NULL,
+                `gateway_signature` VARCHAR(255) NULL,
+                `transaction_reference` VARCHAR(100) NULL,
+                `refund_reference` VARCHAR(100) NULL,
+                `idempotency_key` VARCHAR(100) NULL,
+                `failure_reason` VARCHAR(255) NULL,
+                `paid_at` DATETIME NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`payment_id`),
+                KEY `idx_res_pay_reservation` (`reservation_id`),
+                KEY `idx_res_pay_idempotency` (`idempotency_key`),
+                KEY `idx_res_pay_gateway_pid` (`gateway_payment_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `reservation_otp_tokens` (
+                `otp_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `phone` VARCHAR(20) NOT NULL,
+                `otp_hash` VARCHAR(255) NOT NULL,
+                `expires_at` DATETIME NOT NULL,
+                `verified_at` DATETIME NULL,
+                `attempts` INT NOT NULL DEFAULT 0,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`otp_id`),
+                KEY `idx_res_otp_phone` (`phone`, `created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
         SafeExecuteSql(conn, @"
             CREATE TABLE IF NOT EXISTS `ingredients` (
@@ -898,6 +1398,219 @@ public static class DbInitializer
                 PRIMARY KEY (`kot_id`)
             ) ENGINE=InnoDB;");
 
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `inventory_purchases` (
+                `purchase_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `ingredient_id` BIGINT NOT NULL,
+                `item_name` VARCHAR(150) NOT NULL,
+                `department` VARCHAR(50) NOT NULL DEFAULT 'Bar',
+                `supplier` VARCHAR(150) NOT NULL DEFAULT 'Local Supplier',
+                `quantity` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `unit_cost` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `total_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `note` VARCHAR(255) NULL,
+                `purchase_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `branch_id` BIGINT NULL,
+                `outlet_id` BIGINT NULL DEFAULT 1,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
+                PRIMARY KEY (`purchase_id`),
+                KEY `idx_inv_purchases_date` (`purchase_date`),
+                KEY `idx_inv_purchases_dept` (`department`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `salary_payments` (
+                `payment_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `staff_id` BIGINT NOT NULL,
+                `staff_name` VARCHAR(100) NOT NULL,
+                `role_title` VARCHAR(50) NOT NULL,
+                `department` VARCHAR(50) NOT NULL DEFAULT 'Dining / Service',
+                `amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `payment_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `payment_month` VARCHAR(20) NOT NULL DEFAULT '',
+                `payment_method` VARCHAR(50) NOT NULL DEFAULT 'BANK_TRANSFER',
+                `transaction_reference` VARCHAR(100) NULL,
+                `remarks` VARCHAR(255) NULL,
+                `status` VARCHAR(30) NOT NULL DEFAULT 'COMPLETED',
+                `branch_id` BIGINT NULL,
+                `outlet_id` BIGINT NULL DEFAULT 1,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
+                PRIMARY KEY (`payment_id`),
+                KEY `idx_salary_staff` (`staff_id`),
+                KEY `idx_salary_date` (`payment_date`),
+                KEY `idx_salary_dept` (`department`)
+            ) ENGINE=InnoDB;");
+
+        EnsureColumnExists(conn, "salary_payments", "role_title", "VARCHAR(50) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "salary_payments", "department", "VARCHAR(50) NOT NULL DEFAULT 'Dining / Service'");
+        EnsureColumnExists(conn, "salary_payments", "payment_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "salary_payments", "payment_month", "VARCHAR(20) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "salary_payments", "transaction_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "salary_payments", "remarks", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "salary_payments", "status", "VARCHAR(30) NOT NULL DEFAULT 'COMPLETED'");
+        EnsureColumnExists(conn, "salary_payments", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "salary_payments", "created_by", "BIGINT NULL DEFAULT NULL");
+        EnsureColumnExists(conn, "salary_payments", "paid_on", "DATE NULL");
+        EnsureColumnExists(conn, "salary_payments", "salary_period", "CHAR(7) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "salary_payments", "notes", "VARCHAR(255) NULL");
+        SafeExecuteSql(conn, "ALTER TABLE `salary_payments` MODIFY COLUMN `staff_id` BIGINT NULL;");
+        SafeExecuteSql(conn, "UPDATE `salary_payments` SET `payment_date` = `paid_on` WHERE `paid_on` IS NOT NULL;");
+        SafeExecuteSql(conn, "UPDATE `salary_payments` SET `payment_month` = `salary_period` WHERE `salary_period` <> '';");
+        SafeExecuteSql(conn, "UPDATE `salary_payments` SET `remarks` = `notes` WHERE `notes` IS NOT NULL;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `inventory_transactions` (
+                `txn_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `ingredient_id` BIGINT NOT NULL,
+                `txn_type` VARCHAR(30) NOT NULL,
+                `quantity` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `unit_cost` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `note` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`txn_id`),
+                KEY `idx_txn_ingredient` (`ingredient_id`)
+            ) ENGINE=InnoDB;");
+
+        // ============================================================
+        // ============================================================
+        // CA FINANCIAL ACCOUNTING & STATUTORY AUDIT TABLES
+        // ============================================================
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `audit_logs` (
+                `log_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `user_id` BIGINT NULL,
+                `username` VARCHAR(100) NULL DEFAULT 'System',
+                `action` VARCHAR(100) NOT NULL,
+                `table_name` VARCHAR(100) NOT NULL,
+                `record_id` VARCHAR(100) NULL,
+                `old_value` TEXT NULL,
+                `new_value` TEXT NULL,
+                `ip_address` VARCHAR(50) NULL,
+                `severity` VARCHAR(20) NOT NULL DEFAULT 'INFO',
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`log_id`),
+                KEY `idx_audit_action` (`action`),
+                KEY `idx_audit_created` (`created_at`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `daily_balances` (
+                `id` BIGINT NOT NULL AUTO_INCREMENT,
+                `balance_date` VARCHAR(20) NOT NULL UNIQUE,
+                `opening_cash` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `opening_bank` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `opening_total` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `closing_cash` DECIMAL(18,2) NULL,
+                `closing_bank` DECIMAL(18,2) NULL,
+                `closing_total` DECIMAL(18,2) NULL,
+                `expected_cash` DECIMAL(18,2) NULL,
+                `cash_difference` DECIMAL(18,2) NULL,
+                `is_closed` TINYINT(1) NOT NULL DEFAULT 0,
+                `opened_by` VARCHAR(100) NULL,
+                `closed_by` VARCHAR(100) NULL,
+                `notes` TEXT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_balance_date` (`balance_date`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `journal_entries` (
+                `id` BIGINT NOT NULL AUTO_INCREMENT,
+                `voucher_number` VARCHAR(50) NOT NULL UNIQUE,
+                `entry_date` VARCHAR(20) NOT NULL,
+                `narration` TEXT NOT NULL,
+                `total_debit` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `total_credit` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `lines_json` LONGTEXT NOT NULL,
+                `created_by` VARCHAR(100) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_journal_date` (`entry_date`),
+                KEY `idx_journal_voucher` (`voucher_number`)
+            ) ENGINE=InnoDB;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `chart_of_accounts` (
+                `account_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `code` VARCHAR(50) NOT NULL,
+                `account_code` VARCHAR(50) NULL,
+                `account_name` VARCHAR(150) NOT NULL,
+                `account_group` VARCHAR(50) NOT NULL DEFAULT 'Assets',
+                `account_type` VARCHAR(80) NOT NULL DEFAULT 'Current Asset',
+                `normal_balance` VARCHAR(20) NOT NULL DEFAULT 'Debit',
+                `description` VARCHAR(500) NULL,
+                `opening_balance` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `is_system_account` TINYINT(1) NOT NULL DEFAULT 0,
+                `is_system` TINYINT(1) NOT NULL DEFAULT 0,
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`account_id`),
+                UNIQUE KEY `uk_coa_code` (`code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `journal_vouchers` (
+                `voucher_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `voucher_number` VARCHAR(40) NOT NULL,
+                `voucher_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `voucher_type` VARCHAR(40) NOT NULL DEFAULT 'JV',
+                `narration` VARCHAR(500) NOT NULL,
+                `total_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `created_by` VARCHAR(100) NULL DEFAULT 'admin',
+                `status` VARCHAR(20) NOT NULL DEFAULT 'Posted',
+                `void_reason` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`voucher_id`),
+                UNIQUE KEY `uk_jv_number` (`voucher_number`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `journal_voucher_lines` (
+                `line_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `voucher_id` BIGINT NOT NULL,
+                `account_id` BIGINT NOT NULL,
+                `account_code` VARCHAR(20) NOT NULL,
+                `account_name` VARCHAR(150) NOT NULL,
+                `description` VARCHAR(255) NULL,
+                `debit_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `credit_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                PRIMARY KEY (`line_id`),
+                KEY `idx_jvl_voucher` (`voucher_id`),
+                KEY `idx_jvl_account` (`account_id`),
+                KEY `idx_jvl_code` (`account_code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `daily_cash_bank_registers` (
+                `register_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `business_date` DATETIME NOT NULL,
+                `opening_cash_float` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `opening_bank_balance` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `total_opening_balance` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `physical_cash_count` DECIMAL(18,2) NULL,
+                `denominations_json` VARCHAR(1000) NULL,
+                `cash_variance` DECIMAL(18,2) NULL,
+                `shift_status` VARCHAR(20) NOT NULL DEFAULT 'Open',
+                `shift_opened_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `shift_closed_at` DATETIME NULL,
+                `opened_by` VARCHAR(100) NULL DEFAULT 'admin',
+                `closed_by` VARCHAR(100) NULL,
+                `notes` VARCHAR(500) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`register_id`),
+                UNIQUE KEY `uk_daily_reg_date` (`business_date`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
         // ============================================================
         // ALTER TABLE COLUMN SAFEGUARDS (For Pre-existing Databases)
         // ============================================================
@@ -1057,13 +1770,163 @@ public static class DbInitializer
             "ALTER TABLE `kot_orders` ADD COLUMN `staff_name` VARCHAR(100) NULL;",
             "ALTER TABLE `kot_orders` ADD COLUMN `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;",
             "ALTER TABLE `kot_orders` ADD COLUMN `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;",
-            "ALTER TABLE `kot_orders` ADD COLUMN `deleted_at` DATETIME NULL;"
+            "ALTER TABLE `kot_orders` ADD COLUMN `deleted_at` DATETIME NULL;",
+
+            // Support 'success', 'pending', 'failed', 'refunded' in invoice_payments
+            "ALTER TABLE `invoice_payments` MODIFY COLUMN `payment_status` VARCHAR(30) NOT NULL DEFAULT 'success';"
         };
 
         foreach (var sql in alterSqls)
         {
             SafeExecuteSql(conn, sql);
         }
+
+        EnsureColumnExists(conn, "restaurant_orders", "customer_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_name", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_phone", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_email", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "packaging_charge", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "restaurant_orders", "fulfillment_status", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "payment_status", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "payment_method", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "service_charge", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "restaurant_orders", "cancellation_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_by_name", "VARCHAR(120) NULL");
+
+        EnsureColumnExists(conn, "invoice_payments", "gateway_provider", "VARCHAR(40) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_order_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_payment_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_signature", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "failure_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "idempotency_key", "VARCHAR(100) NULL");
+    }
+
+    private static void EnsureReservationColumns(DbConnection conn)
+    {
+        EnsureColumnExists(conn, "reservations", "branch_id", "BIGINT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "reservations", "outlet_id", "BIGINT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "reservations", "reservation_number", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "reservations", "customer_name", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "phone", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "reservations", "email", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "reservations", "seating_preference", "VARCHAR(50) NULL");
+        EnsureColumnExists(conn, "reservations", "reservation_date", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "reservations", "slot_duration_minutes", "INT NOT NULL DEFAULT 120");
+        EnsureColumnExists(conn, "reservations", "reservation_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "advance_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "paid_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "remaining_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "payment_status", "VARCHAR(30) NOT NULL DEFAULT 'UNPAID'");
+        EnsureColumnExists(conn, "reservations", "notes", "VARCHAR(500) NULL");
+        EnsureColumnExists(conn, "reservations", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "cancellation_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "reservations", "cancelled_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "reservations", "cancelled_by", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "refund_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "reservations", "refund_status", "VARCHAR(30) NOT NULL DEFAULT 'NONE'");
+        EnsureColumnExists(conn, "reservations", "refund_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservations", "confirmed_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "reservations", "modified_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "reservations", "created_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "reservations", "updated_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "reservations", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "reservations", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
+        SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `status` VARCHAR(40) NOT NULL DEFAULT 'PENDING_PAYMENT';");
+        SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `notes` VARCHAR(500) NULL;");
+    }
+
+    private static void EnsureCustomerAuthSchema(DbConnection conn)
+    {
+        EnsureColumnExists(conn, "customers", "password_hash", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "customers", "role", "VARCHAR(30) NOT NULL DEFAULT 'Customer'");
+        EnsureColumnExists(conn, "customers", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "customers", "is_verified", "TINYINT(1) NOT NULL DEFAULT 0");
+        EnsureColumnExists(conn, "customers", "verified_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "last_login", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "registered_branch_id", "BIGINT UNSIGNED NULL");
+        EnsureColumnExists(conn, "customers", "failed_login_attempts", "INT NOT NULL DEFAULT 0");
+        EnsureColumnExists(conn, "customers", "lockout_until", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "token_version", "INT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "customers", "deleted_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "customers", "branch_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "customers", "outlet_id", "BIGINT NULL DEFAULT 1");
+
+        SafeExecuteSql(conn, "UPDATE `customers` SET `role` = 'Customer' WHERE `role` IS NULL OR `role` = '';");
+        SafeExecuteSql(conn, "UPDATE `customers` SET `token_version` = 1 WHERE `token_version` IS NULL OR `token_version` < 1;");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_customers_email` ON `customers` (`email`);");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_otp_tokens` (
+                `otp_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `purpose` VARCHAR(40) NOT NULL DEFAULT 'ACCOUNT_VERIFY',
+                `channel` VARCHAR(30) NOT NULL DEFAULT 'EMAIL_AND_PHONE',
+                `target_identifier` VARCHAR(150) NOT NULL,
+                `otp_hash` VARCHAR(255) NOT NULL,
+                `reset_token_hash` VARCHAR(128) NULL,
+                `expires_at` DATETIME NOT NULL,
+                `verified_at` DATETIME NULL,
+                `used_at` DATETIME NULL,
+                `invalidated_at` DATETIME NULL,
+                `attempts` INT NOT NULL DEFAULT 0,
+                `max_attempts` INT NOT NULL DEFAULT 5,
+                `ip_address` VARCHAR(64) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`otp_id`),
+                KEY `idx_cust_otp_lookup` (`customer_id`, `purpose`, `created_at`),
+                KEY `idx_cust_otp_reset_hash` (`reset_token_hash`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `customer_refresh_tokens` (
+                `refresh_token_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `customer_id` BIGINT NOT NULL,
+                `token_hash` VARCHAR(128) NOT NULL,
+                `family_id` VARCHAR(64) NOT NULL,
+                `remember_me` TINYINT(1) NOT NULL DEFAULT 0,
+                `expires_at` DATETIME NOT NULL,
+                `revoked_at` DATETIME NULL,
+                `revoked_reason` VARCHAR(100) NULL,
+                `replaced_by_token_hash` VARCHAR(128) NULL,
+                `created_by_ip` VARCHAR(64) NULL,
+                `revoked_by_ip` VARCHAR(64) NULL,
+                `user_agent` VARCHAR(255) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`refresh_token_id`),
+                UNIQUE KEY `uk_cust_rt_token_hash` (`token_hash`),
+                KEY `idx_cust_rt_customer` (`customer_id`, `revoked_at`, `expires_at`),
+                KEY `idx_cust_rt_family` (`family_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+    }
+
+    private static void EnsureReservationSchema(DbConnection conn)
+    {
+        EnsureReservationColumns(conn);
+
+        EnsureColumnExists(conn, "reservation_payments", "customer_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "reservation_payments", "payment_type", "VARCHAR(20) NOT NULL DEFAULT 'ADVANCE'");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_provider", "VARCHAR(40) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_order_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_payment_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "gateway_signature", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "transaction_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "refund_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "failure_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "reservation_payments", "paid_at", "DATETIME NULL");
+
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `reservation_number` = CONCAT('RES-', 1000 + `reservation_id`) WHERE `reservation_number` IS NULL OR `reservation_number` = '';");
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `slot_duration_minutes` = 120 WHERE `slot_duration_minutes` IS NULL OR `slot_duration_minutes` <= 0;");
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `payment_status` = 'UNPAID' WHERE `payment_status` IS NULL OR `payment_status` = '';");
+        SafeExecuteSql(conn, "UPDATE `reservations` SET `refund_status` = 'NONE' WHERE `refund_status` IS NULL OR `refund_status` = '';");
+        SafeExecuteSql(conn, "CREATE UNIQUE INDEX `uk_reservations_number` ON `reservations` (`reservation_number`);");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_table_date_status` ON `reservations` (`table_id`, `reservation_date`, `status`);");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_phone` ON `reservations` (`phone`);");
+        SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_idempotency` ON `reservations` (`idempotency_key`);");
     }
 
     private static void SafeExecuteSql(DbConnection conn, string sql)

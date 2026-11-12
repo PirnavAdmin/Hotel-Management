@@ -13,8 +13,9 @@ using Microsoft.Extensions.Logging;
 namespace HMS.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
 [Route("api/v1/users")]
+[Route("api/[controller]")]
+[Tags("Admin", "Users")]
 public class UsersController : ControllerBase
 {
     private readonly SpService _spService;

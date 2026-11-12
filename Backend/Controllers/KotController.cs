@@ -8,21 +8,18 @@ using Microsoft.AspNetCore.SignalR;
 namespace HMS.Controllers;
 
 [ApiController]
-[Route("api/Kot")]
 [Route("api/v1/kot")]
-[Route("api/kot-orders")]
-[Route("api/v1/kot-orders")]
-[Route("api/kot_orders")]
-[Route("api/v1/kot_orders")]
 public class KotController : ControllerBase
 {
     private readonly KotService _kotService;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly ISseBroadcaster _sseBroadcaster;
 
-    public KotController(KotService kotService, IHubContext<PosHub> hubContext)
+    public KotController(KotService kotService, IHubContext<PosHub> hubContext, ISseBroadcaster sseBroadcaster)
     {
         _kotService = kotService;
         _hubContext = hubContext;
+        _sseBroadcaster = sseBroadcaster;
     }
 
     // ============================================================
@@ -31,8 +28,8 @@ public class KotController : ControllerBase
 
     // GET /api/v1/kot/orders OR /api/v1/kot OR /api/v1/kot-orders OR /api/kot_orders
     [AllowAnonymous]
-    [HttpGet]
     [HttpGet("orders")]
+    [HttpGet]
     public async Task<IActionResult> GetActiveKotOrders([FromQuery] long? tableId, [FromQuery] string? status)
     {
         var orders = await _kotService.GetActiveKotOrdersAsync(tableId, status);
@@ -50,7 +47,6 @@ public class KotController : ControllerBase
     // GET /api/v1/kot/summary OR /api/v1/kot/orders/summary
     [AllowAnonymous]
     [HttpGet("summary")]
-    [HttpGet("orders/summary")]
     public async Task<IActionResult> GetKotSummary()
     {
         var summary = await _kotService.GetKotSummaryAsync();
@@ -65,8 +61,6 @@ public class KotController : ControllerBase
     // GET /api/v1/kot/screen-feed OR /api/v1/kot/screens (Together for Kitchen & POS Screens)
     [AllowAnonymous]
     [HttpGet("screen-feed")]
-    [HttpGet("screens")]
-    [HttpGet("orders/screen-feed")]
     public async Task<IActionResult> GetKotScreenFeed([FromQuery] long? tableId, [FromQuery] string? status)
     {
         var feed = await _kotService.GetScreenFeedAsync(tableId, status);
@@ -80,8 +74,8 @@ public class KotController : ControllerBase
 
     // GET /api/v1/kot/{id} OR /api/v1/kot/orders/{id}
     [AllowAnonymous]
-    [HttpGet("{id:long}")]
     [HttpGet("orders/{id:long}")]
+    [HttpGet("{id:long}")]
     public async Task<IActionResult> GetKotOrderById(long id)
     {
         var order = await _kotService.GetKotOrderByIdAsync(id);
@@ -94,8 +88,8 @@ public class KotController : ControllerBase
 
     // POST /api/v1/kot/orders OR /api/v1/kot OR /api/v1/kot-orders
     [AllowAnonymous]
-    [HttpPost]
     [HttpPost("orders")]
+    [HttpPost]
     public async Task<IActionResult> CreateKotOrder([FromBody] CreateKotOrderDto dto)
     {
         var created = await _kotService.CreateKotOrderAsync(dto);
@@ -104,6 +98,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("ReceiveNewKOT", created);
             await _hubContext.Clients.All.SendAsync("KotOrderCreated", created);
+            await _sseBroadcaster.BroadcastAsync("KOT_CREATED", created);
         }
         catch { }
 
@@ -117,10 +112,9 @@ public class KotController : ControllerBase
 
     // PUT/PATCH /api/v1/kot/orders/{id}/status OR /api/v1/kot/{id}/status
     [AllowAnonymous]
-    [HttpPut("{id:long}/status")]
-    [HttpPatch("{id:long}/status")]
-    [HttpPut("orders/{id:long}/status")]
     [HttpPatch("orders/{id:long}/status")]
+    [HttpPatch("{id:long}/status")]
+    [HttpPut("{id:long}/status")]
     public async Task<IActionResult> UpdateOrderStatus(long id, [FromBody] UpdateOrderStatusDto dto)
     {
         var updated = await _kotService.UpdateOrderStatusAsync(id, dto.Status);
@@ -133,6 +127,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotOrderUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", updated);
         }
         catch { }
 
@@ -146,8 +141,8 @@ public class KotController : ControllerBase
 
     // POST /api/v1/kot/{id}/mark-all-prepared OR /api/v1/kot/orders/{id}/mark-all-prepared
     [AllowAnonymous]
-    [HttpPost("{id:long}/mark-all-prepared")]
     [HttpPost("orders/{id:long}/mark-all-prepared")]
+    [HttpPost("{id:long}/mark-all-prepared")]
     public async Task<IActionResult> MarkAllPrepared(long id)
     {
         var updated = await _kotService.MarkAllPreparedAsync(id);
@@ -160,6 +155,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotOrderUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", updated);
         }
         catch { }
 
@@ -173,8 +169,8 @@ public class KotController : ControllerBase
 
     // DELETE /api/v1/kot/orders/{id} OR /api/v1/kot/{id}
     [AllowAnonymous]
-    [HttpDelete("{id:long}")]
     [HttpDelete("orders/{id:long}")]
+    [HttpDelete("{id:long}")]
     public async Task<IActionResult> DeleteKotOrder(long id)
     {
         var result = await _kotService.DeleteKotOrderAsync(id);
@@ -198,8 +194,8 @@ public class KotController : ControllerBase
 
     // GET /api/v1/kot/items OR /api/v1/kot/orders/{orderId}/items
     [AllowAnonymous]
-    [HttpGet("items")]
     [HttpGet("orders/{orderId:long}/items")]
+    [HttpGet("items")]
     public async Task<IActionResult> GetKotOrderItems([FromRoute] long? orderId, [FromQuery] long? orderIdQuery, [FromQuery] string? status)
     {
         var targetOrderId = orderId ?? orderIdQuery;
@@ -215,8 +211,8 @@ public class KotController : ControllerBase
 
     // GET /api/v1/kot/items/{itemId} OR /api/v1/kot/orders/{orderId}/items/{itemId}
     [AllowAnonymous]
-    [HttpGet("items/{itemId:long}")]
     [HttpGet("orders/{orderId:long}/items/{itemId:long}")]
+    [HttpGet("items/{itemId:long}")]
     public async Task<IActionResult> GetKotOrderItemById(long itemId)
     {
         var item = await _kotService.GetKotOrderItemByIdAsync(itemId);
@@ -230,7 +226,6 @@ public class KotController : ControllerBase
     // POST /api/v1/kot/orders/{orderId}/items
     [AllowAnonymous]
     [HttpPost("orders/{orderId:long}/items")]
-    [HttpPost("{orderId:long}/items")]
     public async Task<IActionResult> AddKotOrderItem(long orderId, [FromBody] CreateKotOrderItemDto dto)
     {
         var createdItem = await _kotService.AddKotOrderItemAsync(orderId, dto);
@@ -286,12 +281,10 @@ public class KotController : ControllerBase
 
     // PUT/PATCH /api/v1/kot/items/{itemId}/status OR /api/v1/kot/orders/{orderId}/items/{itemId}/status
     [AllowAnonymous]
-    [HttpPut("items/{itemId:long}/status")]
-    [HttpPatch("items/{itemId:long}/status")]
-    [HttpPut("{orderId:long}/items/{itemId:long}/status")]
-    [HttpPatch("{orderId:long}/items/{itemId:long}/status")]
-    [HttpPut("orders/{orderId:long}/items/{itemId:long}/status")]
     [HttpPatch("orders/{orderId:long}/items/{itemId:long}/status")]
+    [HttpPatch("{orderId:long}/items/{itemId:long}/status")]
+    [HttpPatch("items/{itemId:long}/status")]
+    [HttpPut("items/{itemId:long}/status")]
     public async Task<IActionResult> UpdateItemStatus([FromRoute] long itemId, [FromRoute] long? orderId, [FromBody] UpdateItemStatusDto dto)
     {
         var updated = await _kotService.UpdateItemStatusDirectAsync(itemId, dto.Status, orderId);
@@ -304,6 +297,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_ITEM_UPDATED", updated);
         }
         catch { }
 
@@ -317,9 +311,9 @@ public class KotController : ControllerBase
 
     // POST /api/v1/kot/items/{itemId}/advance OR /api/v1/kot/orders/{orderId}/items/{itemId}/advance
     [AllowAnonymous]
-    [HttpPost("items/{itemId:long}/advance")]
-    [HttpPost("{orderId:long}/items/{itemId:long}/advance")]
     [HttpPost("orders/{orderId:long}/items/{itemId:long}/advance")]
+    [HttpPost("{orderId:long}/items/{itemId:long}/advance")]
+    [HttpPost("items/{itemId:long}/advance")]
     public async Task<IActionResult> AdvanceItemStatus([FromRoute] long itemId, [FromRoute] long? orderId)
     {
         var updated = await _kotService.AdvanceItemStatusDirectAsync(itemId, orderId);
@@ -332,6 +326,7 @@ public class KotController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+            await _sseBroadcaster.BroadcastAsync("KOT_ITEM_UPDATED", updated);
         }
         catch { }
 
@@ -345,9 +340,8 @@ public class KotController : ControllerBase
 
     // DELETE /api/v1/kot/items/{itemId} OR /api/v1/kot/orders/{orderId}/items/{itemId}
     [AllowAnonymous]
-    [HttpDelete("items/{itemId:long}")]
-    [HttpDelete("{orderId:long}/items/{itemId:long}")]
     [HttpDelete("orders/{orderId:long}/items/{itemId:long}")]
+    [HttpDelete("items/{itemId:long}")]
     public async Task<IActionResult> DeleteKotOrderItem([FromRoute] long itemId, [FromRoute] long? orderId)
     {
         var result = await _kotService.DeleteKotOrderItemAsync(itemId, orderId);

@@ -9,6 +9,12 @@ export function formatCurrency(amount) {
   })}`;
 }
 
+export function roundCurrency(amount) {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return 0;
+  return Math.sign(value) * Math.round((Math.abs(value) + Number.EPSILON) * 100) / 100;
+}
+
 export function formatCurrencyInt(amount) {
   const num = Number(amount) || 0;
   return `₹${Math.round(num).toLocaleString('en-IN')}`;

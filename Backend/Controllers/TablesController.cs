@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using HMS.DTOs;
 using HMS.Services;
@@ -9,15 +11,23 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/tables")]
-[Route("api/Tables")]
+[Route("api/[controller]")]
 public class TablesController : ControllerBase
 {
     private readonly TableService _tableService;
+    private readonly ITableLockService _tableLockService;
+    private readonly ISseBroadcaster _sseBroadcaster;
     private readonly ILogger<TablesController> _logger;
 
-    public TablesController(TableService tableService, ILogger<TablesController> logger)
+    public TablesController(
+        TableService tableService,
+        ITableLockService tableLockService,
+        ISseBroadcaster sseBroadcaster,
+        ILogger<TablesController> logger)
     {
         _tableService = tableService;
+        _tableLockService = tableLockService;
+        _sseBroadcaster = sseBroadcaster;
         _logger = logger;
     }
 
@@ -51,6 +61,66 @@ public class TablesController : ControllerBase
         {
             success = true,
             data = summary
+        });
+    }
+
+    // GET /api/v1/tables/locks or /api/tables/locks
+    [AllowAnonymous]
+    [HttpGet("locks")]
+    public IActionResult GetTableLocks()
+    {
+        var locks = _tableLockService.GetAllActiveLocks();
+        return Ok(new
+        {
+            success = true,
+            count = locks.Count,
+            data = locks
+        });
+    }
+
+    // POST /api/v1/tables/{id}/lock or /api/tables/{id}/lock
+    [AllowAnonymous]
+    [HttpPost("{id}/lock")]
+    public async Task<IActionResult> AcquireLock(string id, [FromBody] TableLockDto dto)
+    {
+        dto.TableId = id;
+        var result = _tableLockService.AcquireLock(id, dto);
+        if (!result.Success)
+        {
+            return Conflict(new
+            {
+                success = false,
+                message = result.Message,
+                lockedBy = result.LockedBy
+            });
+        }
+
+        var allLocks = _tableLockService.GetAllActiveLocks();
+        await _sseBroadcaster.BroadcastAsync("SYNC_TABLE_LOCKS", allLocks);
+
+        return Ok(new
+        {
+            success = true,
+            message = result.Message,
+            data = result.LockedBy
+        });
+    }
+
+    // POST /api/v1/tables/{id}/unlock or /api/tables/{id}/unlock
+    [AllowAnonymous]
+    [HttpPost("{id}/unlock")]
+    public async Task<IActionResult> ReleaseLock(string id, [FromQuery] string? userId)
+    {
+        var released = _tableLockService.ReleaseLock(id, userId);
+        var allLocks = _tableLockService.GetAllActiveLocks();
+        await _sseBroadcaster.BroadcastAsync("SYNC_TABLE_LOCKS", allLocks);
+
+        return Ok(new
+        {
+            success = true,
+            released,
+            message = "Table lock released.",
+            data = allLocks
         });
     }
 
@@ -89,6 +159,9 @@ public class TablesController : ControllerBase
 
             _logger.LogInformation("POST /api/v1/tables completed successfully: TableId={TableId}, TableNumber='{TableNumber}', TableName='{TableName}', BranchId={BranchId}",
                 created.TableId, created.TableNumber, created.TableName, created.BranchId);
+
+            var tables = await _tableService.GetTablesAsync();
+            await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
 
             return CreatedAtAction(nameof(GetTableById), new { id = created.TableId }, new
             {
@@ -135,6 +208,10 @@ public class TablesController : ControllerBase
                 _logger.LogWarning("PUT /api/v1/tables/{Id} not found", id);
                 return NotFound(new { success = false, message = $"Table with ID {id} not found." });
             }
+
+            var tables = await _tableService.GetTablesAsync();
+            await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
+
             return Ok(new
             {
                 success = true,
@@ -162,7 +239,6 @@ public class TablesController : ControllerBase
     // PATCH /api/v1/tables/{id}/status OR PUT /api/v1/tables/{id}/status
     [AllowAnonymous]
     [HttpPatch("{id}/status")]
-    [HttpPut("{id}/status")]
     public async Task<IActionResult> UpdateTableStatus(string id, [FromBody] UpdateTableStatusDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Status))
@@ -178,6 +254,16 @@ public class TablesController : ControllerBase
 
         _logger.LogInformation("Updating table {Id} ({TableName}) status to {Status}", table.TableId, table.TableName, dto.Status);
         var updated = await _tableService.UpdateTableStatusAsync(table.TableId, dto.Status);
+
+        if (string.Equals(dto.Status, "available", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(dto.Status, "vacant", StringComparison.OrdinalIgnoreCase))
+        {
+            _tableLockService.ReleaseLock(id);
+        }
+
+        var tables = await _tableService.GetTablesAsync();
+        await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
+
         return Ok(new
         {
             success = true,
@@ -189,7 +275,6 @@ public class TablesController : ControllerBase
     // DELETE /api/v1/tables/{id} or /api/Tables/{id}
     [AllowAnonymous]
     [HttpDelete("{id}")]
-    [HttpDelete("/api/Tables/{id}")]
     public async Task<IActionResult> DeleteTable(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -198,7 +283,12 @@ public class TablesController : ControllerBase
         }
 
         _logger.LogInformation("DELETE /api/v1/tables/{Id} initiated", id);
+        _tableLockService.ReleaseLock(id);
         var success = await _tableService.DeleteTableByIdOrIdentifierAsync(id);
+
+        var tables = await _tableService.GetTablesAsync();
+        await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
+
         return Ok(new { success = true, message = "Table removed successfully." });
     }
 
@@ -218,6 +308,10 @@ public class TablesController : ControllerBase
             return BadRequest(new { success = false, message = result.Message });
         }
 
+        _tableLockService.ReleaseLock(dto.SourceTableId.ToString());
+        var tables = await _tableService.GetTablesAsync();
+        await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
+
         return Ok(new { success = true, message = result.Message });
     }
 
@@ -233,6 +327,10 @@ public class TablesController : ControllerBase
 
         _logger.LogInformation("Vacating table {Id} ({TableName})", existing.TableId, existing.TableName);
         var updated = await _tableService.UpdateTableStatusAsync(existing.TableId, "available");
+        _tableLockService.ReleaseLock(id);
+
+        var tables = await _tableService.GetTablesAsync();
+        await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
 
         return Ok(new
         {

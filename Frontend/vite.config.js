@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "node:url";
 let nodemailer = null;
 try {
   const nmMod = await import("nodemailer");
@@ -10,8 +11,13 @@ try {
   nodemailer = null;
 }
 
-const env = loadEnv("development", process.cwd(), "");
-const backendApiTarget = (env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+const FRONTEND_ROOT = path.dirname(fileURLToPath(import.meta.url));
+const WORKSPACE_ROOT = path.resolve(FRONTEND_ROOT, "..");
+const roundCurrency = (amount) => {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return 0;
+  return Math.sign(value) * Math.round((Math.abs(value) + Number.EPSILON) * 100) / 100;
+};
 
 const getBusinessDateStr = (dateObj = new Date()) => {
   const d = new Date(dateObj);
@@ -159,10 +165,22 @@ const sendOtpEmail = async (email, otp, fullName = "Admin") => {
   return { success: true, fallback: true, isLive: false };
 };
 
-function globalSyncPlugin() {
+function globalSyncPlugin(backendTarget) {
   let sseClients = [];
   const getDataFile = () => {
-    return path.resolve(import.meta.dirname || process.cwd(), "server-db.json");
+    const candidates = [
+      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
+      path.resolve(process.cwd(), "..", "server-db.json"),
+      path.resolve(process.cwd(), "server-db.json"),
+      path.resolve(process.cwd(), "POS", "server-db.json"),
+      path.resolve(process.cwd(), "Frontend", "server-db.json"),
+      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\server-db.json",
+      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\Frontend\\server-db.json",
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+    return path.resolve(process.cwd(), "server-db.json");
   };
 
   const loadDb = () => {
@@ -181,6 +199,12 @@ function globalSyncPlugin() {
     try {
       const file = getDataFile();
       fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+      const altFile = file.includes("Frontend")
+        ? path.resolve(file, "..", "..", "server-db.json")
+        : path.resolve(file, "..", "Frontend", "server-db.json");
+      if (fs.existsSync(altFile) && altFile !== file) {
+        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
+      }
     } catch {}
   };
 
@@ -195,41 +219,113 @@ function globalSyncPlugin() {
     });
   };
 
+  let backendOnline = false;
+  let lastHealthCheck = 0;
+  const backendBaseUrl = String(backendTarget || "").replace(/\/+$/, "");
+  const backendUrl = (pathname) => `${backendBaseUrl}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+
+  const isBackendAvailable = async () => {
+    const now = Date.now();
+    if (now - lastHealthCheck < 3000) return backendOnline;
+    lastHealthCheck = now;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(backendUrl("/api/v1/tables"), {
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      backendOnline = res.ok || res.status < 500;
+    } catch {
+      backendOnline = false;
+    }
+    return backendOnline;
+  };
+
   return {
     name: "avsr-global-sync-plugin",
     configureServer(server) {
-            server.middlewares.use((req, res, next) => {
+      server.middlewares.use(async (req, res, next) => {
         const requestUrl = req.url || "/";
         if (requestUrl.startsWith("/__backend_api/")) {
-          const targetUrl = `${backendApiTarget}${requestUrl.slice("/__backend_api".length)}`;
+          const apiPath = requestUrl.slice("/__backend_api".length);
+          const remoteOnly = String(req.headers["x-remote-only"] || "").toLowerCase() === "true";
           const requestChunks = [];
-          req.on("data", (chunk) => requestChunks.push(chunk));
-          req.on("end", async () => {
+          const forwardRequest = async (body) => {
+            const method = String(req.method || "GET").toUpperCase();
+            const headers = {};
+            const hopByHopHeaders = new Set([
+              "host",
+              "connection",
+              "transfer-encoding",
+              "content-length",
+              "keep-alive",
+              "upgrade",
+              "te",
+              "proxy-authorization",
+              "proxy-authenticate",
+              "x-remote-only"
+            ]);
+            for (const [key, value] of Object.entries(req.headers)) {
+              if (hopByHopHeaders.has(key.toLowerCase())) continue;
+              headers[key] = value;
+            }
+
             try {
-              const headers = {};
-              if (req.headers["content-type"]) headers["Content-Type"] = req.headers["content-type"];
-              if (req.headers.authorization) headers.Authorization = req.headers.authorization;
-              const method = String(req.method || "GET").toUpperCase();
-              const body = Buffer.concat(requestChunks);
-              const upstream = await fetch(targetUrl, {
+              const upstream = await fetch(backendUrl(apiPath), {
                 method,
                 headers,
-                ...(method === "GET" || method === "HEAD" ? {} : { body }),
+                ...(method === "GET" || method === "HEAD" ? {} : { body, duplex: "half" }),
               });
               const responseBody = Buffer.from(await upstream.arrayBuffer());
-              res.writeHead(upstream.status, {
+              const resHeaders = {
                 "Content-Type": upstream.headers.get("content-type") || "application/json",
                 "Cache-Control": "no-store",
-              });
+              };
+              res.writeHead(upstream.status, resHeaders);
               return res.end(responseBody);
             } catch {
-              res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-              return res.end(JSON.stringify({ success: false, error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer." }));
+              backendOnline = false;
+              if (remoteOnly) {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "The configured backend is unavailable; this request requires the remote service." }));
+              }
+              req.url = apiPath;
+              return next();
             }
-          });
-          return;
-        }
+          };
+          const receiveAndForward = () => {
+            if (req.readableEnded) {
+              forwardRequest(Buffer.concat(requestChunks));
+              return;
+            }
+            req.on("data", (chunk) => requestChunks.push(chunk));
+            req.on("end", () => forwardRequest(Buffer.concat(requestChunks)));
+            req.on("error", (err) => {
+              console.error("[Vite Proxy] Client stream error:", err.message);
+              res.writeHead(500, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ success: false, error: err.message }));
+            });
+          };
 
+          // Authentication requests must reach the configured API directly;
+          // a separate health probe can be slower or routed differently.
+          if (remoteOnly) {
+            // Leave the proxy prefix intact so Vite's configured proxy target
+            // handles this request and strips the prefix exactly once.
+            delete req.headers["x-remote-only"];
+            return next();
+          }
+
+          const live = await isBackendAvailable();
+          if (live) {
+            receiveAndForward();
+            return;
+          }
+
+          // Offline fallback: rewrite URL and seamlessly fall through to local handlers below
+          req.url = apiPath;
+        }
         // Centralized Backend HTTP Request/Response Logger
         const start = Date.now();
         const method = req.method || "GET";
@@ -258,7 +354,6 @@ function globalSyncPlugin() {
 
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning");
 
         if (req.method === "OPTIONS") {
           res.statusCode = 204;
@@ -1091,19 +1186,241 @@ function globalSyncPlugin() {
           return res.end(JSON.stringify({ success: true, message: "Staff deleted successfully" }));
         }
 
-        // REST API: /api/v1/inventory (GET)
-        if (req.url.startsWith("/api/v1/inventory") && req.method === "GET") {
+        // REST API: /api/v1/inventory/purchases
+        if (req.url.startsWith("/api/v1/inventory/purchases")) {
           db = loadDb();
-          const items = db.gourmet_pos_inventory_v1 || [];
-          res.writeHead(200, { "Content-Type": "application/json" });
-          return res.end(
-            JSON.stringify({
-              success: true,
-              count: items.length,
-              data: items,
-              ingredients: items,
-            }),
+          const purchases = db.gourmet_pos_inventory_purchases_v1 || [];
+          if (req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: purchases.length, data: purchases }));
+          }
+          if (req.method === "POST") {
+            let body = "";
+            req.on("data", (chunk) => { body += chunk; });
+            req.on("end", () => {
+              try {
+                const payload = JSON.parse(body || "{}");
+                const newRecord = {
+                  ...payload,
+                  id: payload.id || `pur-${Date.now()}`,
+                  purchaseId: payload.purchaseId || Date.now(),
+                  createdAt: new Date().toISOString(),
+                };
+                db.gourmet_pos_inventory_purchases_v1 = [newRecord, ...purchases];
+                saveDb(db);
+                broadcast({ gourmet_pos_inventory_purchases_v1: db.gourmet_pos_inventory_purchases_v1 });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newRecord }));
+              } catch (err) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            });
+            return;
+          }
+        }
+
+        // REST API: /api/v1/salary-payments
+        if (req.url.startsWith("/api/v1/salary-payments")) {
+          db = loadDb();
+          const payments = db.gourmet_pos_salary_payments_v1 || [];
+          if (req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: payments.length, data: payments }));
+          }
+          if (req.method === "POST") {
+            let body = "";
+            req.on("data", (chunk) => { body += chunk; });
+            req.on("end", () => {
+              try {
+                const payload = JSON.parse(body || "{}");
+                const newRecord = {
+                  ...payload,
+                  id: payload.id || `sal-${Date.now()}`,
+                  paymentId: payload.paymentId || Date.now(),
+                  createdAt: new Date().toISOString(),
+                };
+                db.gourmet_pos_salary_payments_v1 = [newRecord, ...payments];
+                saveDb(db);
+                broadcast({ gourmet_pos_salary_payments_v1: db.gourmet_pos_salary_payments_v1 });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newRecord }));
+              } catch (err) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            });
+            return;
+          }
+        }
+
+        // REST API: /api/v1/bar/drinks
+        if (req.url.startsWith("/api/v1/bar/drinks")) {
+          db = loadDb();
+          const drinks = db.gourmet_pos_bar_drinks_v1 || [];
+          if (req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: drinks.length, data: drinks }));
+          }
+          if (req.method === "POST") {
+            let body = "";
+            req.on("data", (chunk) => { body += chunk; });
+            req.on("end", () => {
+              try {
+                const payload = JSON.parse(body || "{}");
+                const newDrink = {
+                  ...payload,
+                  id: payload.id || `drink-${Date.now()}`,
+                  name: payload.drinkName || payload.name || "Unnamed Drink",
+                  category: payload.category || "Cocktails",
+                  price: Number(payload.price ?? 200),
+                  isAvailable: true,
+                  isBarItem: true,
+                  isBarDrink: true,
+                };
+                db.gourmet_pos_bar_drinks_v1 = [newDrink, ...drinks];
+                saveDb(db);
+                broadcast({ gourmet_pos_bar_drinks_v1: db.gourmet_pos_bar_drinks_v1 });
+                res.writeHead(200, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: true, data: newDrink }));
+              } catch (err) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            });
+            return;
+          }
+        }
+
+        // REST API: /api/v1/inventory (GET)
+        const inventoryUrl = new URL(req.url || "/", "http://localhost");
+        const inventoryPath = inventoryUrl.pathname.replace(/\/+$/, "") || "/";
+        if (
+          req.method === "GET" &&
+          inventoryPath.startsWith("/api/v1/inventory")
+        ) {
+          db = loadDb();
+          const allItems = db.gourmet_pos_inventory_v1 || [];
+          const itemIdMatch = inventoryPath.match(/^\/api\/v1\/inventory\/([^/]+)$/i);
+          if (inventoryPath === "/api/v1/inventory/transactions") {
+            const limit = Math.min(200, Math.max(1, Number(inventoryUrl.searchParams.get("limit")) || 50));
+            const transactions = (db.gourmet_pos_inventory_transactions_v1 || [])
+              .slice()
+              .sort((a, b) => String(b.txnDate || "").localeCompare(String(a.txnDate || "")))
+              .slice(0, limit);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: transactions.length, data: transactions }));
+          }
+          if (inventoryPath === "/api/v1/inventory/low-stock") {
+            const items = allItems
+              .filter((item) =>
+                Number(item.stock ?? item.currentStock ?? item.CurrentStock ?? 0) <=
+                Number(item.minThreshold ?? item.minimumThreshold ?? item.MinimumThreshold ?? 0),
+              )
+              .sort((a, b) =>
+                Number(a.stock ?? a.currentStock ?? a.CurrentStock ?? 0) -
+                Number(b.stock ?? b.currentStock ?? b.CurrentStock ?? 0),
+              );
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: items.length, data: items }));
+          }
+          if (inventoryPath === "/api/v1/inventory/categories") {
+            const categories = [...new Set(
+              allItems.map((item) => String(item.category || "").trim()).filter(Boolean),
+            )].sort((a, b) => a.localeCompare(b));
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, count: categories.length, data: categories }));
+          }
+          if (itemIdMatch && !["ingredients", "transactions", "purchases"].includes(itemIdMatch[1].toLowerCase())) {
+            const id = decodeURIComponent(itemIdMatch[1]);
+            const item = allItems.find((row) => String(row.id ?? row.ingredientId ?? row.IngredientId) === id);
+            res.writeHead(item ? 200 : 404, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify(item
+              ? { success: true, data: item }
+              : { success: false, error: "Inventory item not found." }));
+          }
+          if (inventoryPath !== "/api/v1/inventory" &&
+              inventoryPath !== "/api/v1/inventory/ingredients") {
+            return next();
+          }
+
+          const category = String(inventoryUrl.searchParams.get("category") || "").trim().toLowerCase();
+          const search = String(inventoryUrl.searchParams.get("search") || "").trim().toLowerCase();
+          const items = allItems.filter((item) =>
+            (!category || category === "all" || String(item.category || "").trim().toLowerCase() === category) &&
+            (!search || [item.name, item.supplier, item.ingredientCode]
+              .some((value) => String(value || "").toLowerCase().includes(search))),
           );
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({
+            success: true,
+            count: items.length,
+            data: items,
+            ingredients: items,
+          }));
+        }
+
+        if (new URL(req.url || "/", "http://localhost").pathname === "/api/v1/inventory/adjust" &&
+            req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const ingredientId = Number(payload.ingredientId ?? payload.id);
+              const quantityChange = Number(payload.quantityChange ?? payload.delta);
+              const reason = String(payload.reason || "Stock adjustment").trim();
+              if (!Number.isInteger(ingredientId) || ingredientId <= 0 ||
+                  !Number.isFinite(quantityChange) || quantityChange === 0) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Valid Ingredient ID and non-zero Quantity change are required." }));
+              }
+              if (reason.length > 255) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Stock adjustment reason cannot exceed 255 characters." }));
+              }
+
+              db = loadDb();
+              const items = db.gourmet_pos_inventory_v1 || [];
+              const item = items.find((row) =>
+                Number(row.id ?? row.ingredientId ?? row.IngredientId) === ingredientId,
+              );
+              if (!item) {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: `Ingredient ${ingredientId} was not found.` }));
+              }
+              const currentStock = Number(item.stock ?? item.currentStock ?? 0);
+              if (quantityChange < -currentStock) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: `Cannot consume more than the ${currentStock} ${item.unit || ""} currently in stock.` }));
+              }
+
+              const balanceAfter = currentStock + quantityChange;
+              item.stock = balanceAfter;
+              item.currentStock = balanceAfter;
+              const transactions = db.gourmet_pos_inventory_transactions_v1 || [];
+              const transaction = {
+                txnId: `txn-${Date.now()}`,
+                ingredientId,
+                ingredientName: item.name || "",
+                txnType: quantityChange > 0 ? "IN" : "OUT",
+                quantity: Math.abs(quantityChange),
+                unitCost: Number(item.unitCost ?? item.mrp ?? 0),
+                balanceAfter,
+                remarks: reason,
+                txnDate: new Date().toISOString(),
+              };
+              db.gourmet_pos_inventory_transactions_v1 = [transaction, ...transactions];
+              saveDb(db);
+              broadcast({ gourmet_pos_inventory_v1: items });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Stock adjusted successfully.", data: item }));
+            } catch (error) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: error.message }));
+            }
+          });
+          return;
         }
 
                 // REST API: /api/v1/inventory (POST)
@@ -1228,7 +1545,7 @@ function globalSyncPlugin() {
             (o) => o && String(o.status || o.Status || "").toLowerCase() === "settled"
           );
           const customInvoices = (db.invoices || db.gourmet_pos_invoices || []).filter(
-            (i) => i && String(i.status || i.Status || "").toLowerCase() === "settled"
+            (i) => i && typeof i === "object"
           );
 
           const mappedFromOrders = pastOrders.map((ord, idx) => {
@@ -1309,6 +1626,14 @@ function globalSyncPlugin() {
         if (invoiceByOrderMatch && req.method === "GET") {
           const targetOrderId = decodeURIComponent(invoiceByOrderMatch[1]);
           db = loadDb();
+          const customInvoices = db.invoices || db.gourmet_pos_invoices || [];
+          const matchedInvoice = customInvoices.find((invoice) =>
+            String(invoice.orderId ?? invoice.OrderId ?? "") === targetOrderId,
+          );
+          if (matchedInvoice) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: true, data: matchedInvoice, invoice: matchedInvoice }));
+          }
           const pastOrders = db.gourmet_pos_past_orders_v2_inr || [];
           const matchedOrder = pastOrders.find((o) => String(o.id ?? o.orderId) === targetOrderId);
           if (matchedOrder) {
@@ -1340,14 +1665,35 @@ function globalSyncPlugin() {
           req.on("end", () => {
             try {
               const payload = JSON.parse(body || "{}");
+              const orderId = Number(payload.orderId ?? payload.OrderId);
+              const subtotal = Number(payload.subtotal ?? payload.Subtotal);
+              if (!Number.isInteger(orderId) || orderId <= 0 || !Number.isFinite(subtotal) || subtotal <= 0) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Valid Order ID and positive subtotal are required." }));
+              }
               db = loadDb();
               const existing = db.invoices || db.gourmet_pos_invoices || [];
+              const discountAmount = Number(payload.discountAmount ?? payload.DiscountAmount) || 0;
+              const taxableAmount = Math.max(0, Number(payload.taxableAmount ?? payload.TaxableAmount) || subtotal - discountAmount);
+              const taxAmount = Number(payload.taxAmount ?? payload.TaxAmount);
+              const normalizedTaxAmount = Number.isFinite(taxAmount) && taxAmount >= 0
+                ? taxAmount
+                : taxableAmount * 0.05;
               const newInvoice = {
                 ...payload,
                 id: payload.id || `inv-${Date.now()}`,
+                orderId,
                 invoiceNo: payload.invoiceNo || payload.invoiceNumber || `INV-${Date.now()}`,
                 createdAt: payload.createdAt || new Date().toISOString(),
-                status: payload.status || "PAID",
+                subtotal,
+                taxableAmount,
+                discountAmount,
+                taxAmount: normalizedTaxAmount,
+                totalAmount: Math.max(0, subtotal + normalizedTaxAmount - discountAmount),
+                paidAmount: 0,
+                amountPaid: 0,
+                payments: [],
+                status: "UNPAID",
               };
               const updated = [newInvoice, ...existing];
               db.gourmet_pos_invoices = updated;
@@ -1359,6 +1705,74 @@ function globalSyncPlugin() {
             } catch (err) {
               res.writeHead(400, { "Content-Type": "application/json" });
               return res.end(JSON.stringify({ success: false, error: err.message }));
+            }
+          });
+          return;
+        }
+
+        if (invoicePaymentsMatch && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => { body += chunk; });
+          req.on("end", () => {
+            try {
+              const payload = JSON.parse(body || "{}");
+              const amount = Number(payload.amount ?? payload.Amount);
+              if (!Number.isFinite(amount) || amount <= 0) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Payment amount must be greater than zero." }));
+              }
+
+              const invoiceId = decodeURIComponent(invoicePaymentsMatch[1]);
+              db = loadDb();
+              const invoices = db.invoices || db.gourmet_pos_invoices || [];
+              const index = invoices.findIndex((invoice) =>
+                String(invoice.id ?? invoice.invoiceId ?? invoice.invoiceNo ?? invoice.invoiceNumber) === invoiceId,
+              );
+              if (index < 0) {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: `Invoice ${invoiceId} not found.` }));
+              }
+
+              const invoice = invoices[index];
+              if (String(invoice.status || invoice.Status || "").toLowerCase() === "void") {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                return res.end(JSON.stringify({ success: false, error: "Cannot record payment for a void invoice." }));
+              }
+              const now = new Date().toISOString();
+              const paymentMode = String(payload.paymentMode ?? payload.PaymentMode ?? "CASH").trim().toUpperCase();
+              const payments = Array.isArray(invoice.payments ?? invoice.Payments)
+                ? [...(invoice.payments ?? invoice.Payments)]
+                : [];
+              payments.push({
+                amount,
+                amountPaid: amount,
+                paymentMode,
+                paymentMethod: paymentMode.toLowerCase(),
+                transactionReference: payload.transactionReference ?? payload.TransactionReference ?? null,
+                paidAt: now,
+              });
+              const paidAmount = payments.reduce((total, payment) =>
+                total + (Number(payment.amount ?? payment.Amount) || 0), 0);
+              const totalAmount = Number(invoice.totalAmount ?? invoice.TotalAmount ?? invoice.grandTotal ?? 0);
+              const updatedInvoice = {
+                ...invoice,
+                payments,
+                paidAmount,
+                amountPaid: paidAmount,
+                paymentMethod: paymentMode,
+                status: paidAmount >= totalAmount && totalAmount > 0 ? "PAID" : "PARTIAL",
+                updatedAt: now,
+              };
+              invoices[index] = updatedInvoice;
+              db.invoices = invoices;
+              db.gourmet_pos_invoices = invoices;
+              saveDb(db);
+              broadcast({ gourmet_pos_invoices: invoices });
+              res.writeHead(200, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: true, message: "Payment recorded successfully.", data: updatedInvoice }));
+            } catch (error) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ success: false, error: error.message }));
             }
           });
           return;
@@ -1391,12 +1805,21 @@ function globalSyncPlugin() {
                 (s, it) => s + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
                 0
               );
-              const subtotal = Number(payload.subtotal) > 0 ? Number(payload.subtotal) : itemsSubtotal;
-              const discountPercent = Number(payload.discountPercent || activeOrder?.discountPercent || 0);
-              const discountAmount = Math.round((subtotal * discountPercent) / 100);
-              const taxableAmount = Math.max(0, subtotal - discountAmount);
-              const taxAmount = Math.round(taxableAmount * 0.05);
-              const grandTotal = taxableAmount + taxAmount;
+              const subtotal = roundCurrency(Number(payload.subtotal) > 0 ? Number(payload.subtotal) : itemsSubtotal);
+              const rawDiscountPercent = Number(payload.discountPercent ?? activeOrder?.discountPercent ?? 0);
+              const discountPercent = Number.isFinite(rawDiscountPercent)
+                ? Math.max(0, Math.min(100, rawDiscountPercent))
+                : 0;
+              const discountAmount = roundCurrency((subtotal * discountPercent) / 100);
+              const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
+              const taxAmount = roundCurrency(taxableAmount * 0.05);
+              const serviceChargeEnabled = payload.serviceChargeEnabled !== false;
+              const serviceChargePercent = serviceChargeEnabled ? 5 : 0;
+              const serviceChargeAmount = roundCurrency(taxableAmount * serviceChargePercent / 100);
+              const tipAmount = roundCurrency(Math.max(0, Number(payload.tipAmount) || 0));
+              const grandTotal = roundCurrency(
+                taxableAmount + taxAmount + serviceChargeAmount + tipAmount,
+              );
 
               const now = new Date();
               const businessDate = getBusinessDateStr(now);
@@ -1419,6 +1842,10 @@ function globalSyncPlugin() {
                 discountAmount,
                 taxableAmount,
                 taxAmount,
+                serviceChargeEnabled,
+                serviceChargePercent,
+                serviceChargeAmount,
+                tipAmount,
                 grandTotal,
                 total: grandTotal,
                 totalAmount: grandTotal,
@@ -1746,59 +2173,7 @@ function globalSyncPlugin() {
           return;
         }
 
-        // Authentication must be handled by the ASP.NET API, never local JSON.
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          res.writeHead(503, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ success: false, error: "Authentication server is unavailable." }));
-        }
-
-        // REST API: /api/v1/auth/login (disabled local mock)
-        if (req.url === "/api/v1/auth/login" && req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk) => {
-            body += chunk;
-          });
-          req.on("end", () => {
-            try {
-              const { username, password } = JSON.parse(body);
-              db = loadDb();
-              const users = db.avsr_auth_users_v1 || [];
-              const found = users.find(
-                (u) =>
-                  (u.username?.toLowerCase() === username?.toLowerCase() ||
-                    u.email?.toLowerCase() === username?.toLowerCase()) &&
-                  u.password === password,
-              );
-              if (found) {
-                const userObj = { ...found };
-                if (username && String(username).includes("@")) {
-                  userObj.email = String(username).trim().toLowerCase();
-                }
-                res.writeHead(200, { "Content-Type": "application/json" });
-                return res.end(
-                  JSON.stringify({
-                    success: true,
-                    token: "avsr-local-jwt-token",
-                    user: userObj,
-                  }),
-                );
-              }
-              res.writeHead(401, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({
-                  success: false,
-                  error: "Invalid username or password",
-                }),
-              );
-            } catch (err) {
-              res.writeHead(400, { "Content-Type": "application/json" });
-              return res.end(
-                JSON.stringify({ success: false, error: err.message }),
-              );
-            }
-          });
-          return;
-        }
+        // Authentication is forwarded directly to ASP.NET Core API via Vite proxy
 
         // REST API: /api/v1/auth/forgot-password
         if (
@@ -1923,15 +2298,25 @@ function globalSyncPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const env = {
+    ...loadEnv(mode, WORKSPACE_ROOT, ""),
+    ...loadEnv(mode, FRONTEND_ROOT, ""),
+  };
 
-  const apiBase = (env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+  const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
+  const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
+
+  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
+  const backendTarget =
+    process.env.BACKEND_URL ||
+    env.BACKEND_URL ||
+    process.env.VITE_BACKEND_URL ||
+    env.VITE_BACKEND_URL ||
+    apiBase ||
+    "http://127.0.0.1:5000";
 
   return {
-    plugins: [react(), globalSyncPlugin()],
-    define: {
-      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBase),
-    },
+    plugins: [react(), globalSyncPlugin(backendTarget)],
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,
@@ -1941,25 +2326,52 @@ export default defineConfig(({ mode }) => {
           '**/.git/**',
           /[\\/]\.vs[\\/]/,
           '**/server-db.json',
+          '**/Backend/**',
+          '**/bin/**',
+          '**/obj/**',
         ],
       },
       proxy: {
+        "^/__backend_api": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/__backend_api/, ""),
+          configure: (proxy) => {
+            proxy.on("error", (err, req, res) => {
+              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
+              if (res && !res.headersSent && typeof res.writeHead === "function") {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                  success: false,
+                  error: "Cannot reach the ASP.NET API on port 5000. Confirm it is running."
+                }));
+              }
+            });
+          },
+        },
         "/uploads": {
-          target: apiBase,
-          changeOrigin: true,
-          headers: { "ngrok-skip-browser-warning": "true" },
-        },
-        "/api/v1": {
-          target: apiBase,
+          target: backendTarget,
           changeOrigin: true,
           secure: false,
           headers: { "ngrok-skip-browser-warning": "true" },
+          configure: (proxy) => {
+            proxy.on("error", (err, req, res) => {
+              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
+              if (res && !res.headersSent && typeof res.writeHead === "function") {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({
+                  success: false,
+                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                }));
+              }
+            });
+          },
         },
-        "/api/auth": {
-          target: apiBase,
+        "/swagger": {
+          target: backendTarget,
           changeOrigin: true,
           secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
         },
       },
     },

@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Armchair, ArrowRight, BarChart3, Beer, Check, ChefHat, ChevronLeft, ChevronRight,
-  Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
+  Banknote, Clock3, Coffee, Eye, FileText, GlassWater, IndianRupee, Martini, Package,
   Pencil, SquarePen, Star, Plus, Printer, Receipt, RefreshCw, Search, Trash2, Users, Wine, X, AlertCircle, RotateCcw, CheckCircle2, AlertTriangle, TrendingDown, ChevronDown, Download
 , MinusCircle, PackagePlus } from "lucide-react";
 import { apiAddOrderItems, apiCreateOrder, apiGetActiveOrders, apiGetOrderForTable, apiSendOrderKot } from "../api/orderApi";
 import { apiAdjustStock, apiCreateInventoryItem, apiUpdateInventoryItem, apiDeleteInventoryItem, apiGetInventory } from "../api/inventoryApi";
 import { createMenuItemLookup, findMenuItem, isBeverageCategory } from "../kot/orderRouting";
-import { isDrinkCategory } from "../utils/drinkCategoryHelper";
+import { isAlcoholicCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import MenuItemVisual from "../common/MenuItemVisual";
+import SearchableSelect from "../common/SearchableSelect";
 import { SkeletonTable } from "../common/Skeletons";
 import { BarBOTView, BarKOTView } from "./BarBOTView";
 import { AdminInvoices } from "../admin/AdminInvoices";
@@ -37,24 +38,42 @@ import {
   apiGetBarAvailabilityOptions,
   apiGetBarOverview,
   apiGetBarRecentOrders,
-  apiGetBarStaff,
-  apiGetBarStaffById,
-  apiCreateBarStaff,
-  apiUpdateBarStaff,
-  apiToggleBarStaffStatus,
-  apiDeleteBarStaff,
   apiGetBarStaffFilterOptions,
   apiGetAssignableTables,
 } from "../api/barApi";
 import { ConfirmDeleteModal, useConfirmDelete } from "../common/ConfirmDeleteModal";
 import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
+import { BAR_CATEGORIES, BAR_DRINK_SUBCATEGORIES, mergeBarDrinkCategories, normalizeBarDrinkCategory } from "./barDrinkCategories";
+import { BAR_INVENTORY_CATEGORIES, isLegacyBarInventoryCategory, normalizeBarInventoryCategory } from "./barInventoryCategories";
+import { BAR_SERVING_MEASURES, mergeBarServingMeasures, normalizeBarServingMeasure } from "./barServingMeasures";
+export { BAR_CATEGORIES } from "./barDrinkCategories";
+export { BAR_SERVING_MEASURES };
 
 
 const PAGE_SIZE = 8;
 const BAR_AREAS = ["Bar Counter", "Lounge", "Indoor Bar", "Outdoor Bar"];
 const BAR_ROLES = ["Bartender", "Head Bartender", "Bar Manager", "Bar Waiter", "Bar Server", "Mixologist", "Bar Assistant"];
 const BAR_SHIFTS = ["Morning (10 AM-4 PM)", "Evening (4 PM-10 PM)", "Night (6 PM-Close)"];
+const getStaffSalaryPaidThisMonth = (person, salaryPayments) => {
+  const date = new Date();
+  const salaryPeriod = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  const personName = String(person?.name || person?.fullName || person?.FullName || "").trim().toLowerCase();
+  const personId = person?.id ?? person?.staffId;
+  return (Array.isArray(salaryPayments) ? salaryPayments : []).reduce((total, payment) => {
+    const paymentStaffId = payment.staffId ?? payment.staffID;
+    const belongsToStaff = (
+      personId != null &&
+      paymentStaffId != null &&
+      String(paymentStaffId) === String(personId)
+    ) || String(payment.staffName || "").trim().toLowerCase() === personName;
+    return total + (
+      belongsToStaff && String(payment.salaryPeriod || payment.payPeriod || "").slice(0, 7) === salaryPeriod
+        ? Number(payment.amount) || 0
+        : 0
+    );
+  }, 0);
+};
 const SETTINGS_DEFAULTS = {
   barName: "Telugu Taste Bar", contact: "+91 80 4567 8900", area: "Ground Floor • East Wing",
   opening: "10:00", closing: "23:30", prepTime: 8, kotPrefix: "BKOT", autoPrint: false,
@@ -67,36 +86,11 @@ const ACCESS_DEFAULTS = Object.fromEntries(ACCESS_ROLES.map((role, index) => [ro
 
 const BAR_DRINK_UNITS = ["Glass", "Bottle", "Can", "Peg", "ml", "Litre"];
 
-export const BAR_CATEGORIES = [
-  "Cocktails",
-  "Mocktails",
-  "Beers",
-  "Whiskey",
-  "Vodka & Gin",
-  "Rum & Brandy",
-  "Wine & Champagne",
-  "Shots & Shooters",
-];
-
-export const BAR_SERVING_MEASURES = [
-  "30 ml (Single Peg)",
-  "60 ml (Double Peg)",
-  "90 ml (Large Peg)",
-  "Pint (330 ml)",
-  "Bottle (650 ml)",
-  "Bottle (750 ml)",
-  "Glass (150 ml)",
-  "Glass (250 ml)",
-  "Can (330 ml)",
-  "Can (500 ml)",
-  "Peg (60 ml)",
-  "Pitcher (1500 ml)",
-  "Tower (3000 ml)",
-];
 const FIELD_SETS = {
   drink: [
     ["name", "Drink Name", "text", true],
     ["category", "Category", "category_selector", true],
+    ["subcategory", "Subcategory / Variety", "subcategory_selector", false],
     ["drinkType", "Drink Type", "select", false, ["Alcoholic", "Non-Alcoholic"]],
     ["abv", "Alcohol Content (ABV %)", "number", false],
     ["measure", "Serving Measure / Volume", "measure_selector", false],
@@ -121,87 +115,6 @@ const FIELD_SETS = {
     ["items", "Drinks and Quantities", "textarea", true], ["subtotal", "Subtotal", "number", true],
   ],
 };
-
-export const BAR_INVENTORY_CATEGORIES = [
-  {
-    category: "Whiskey & Scotch",
-    subcategories: ["Single Malt Scotch", "Blended Scotch", "Bourbon & American", "Irish Whiskey", "Premium Indian Whisky"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 42.8,
-  },
-  {
-    category: "Vodka & Gin",
-    subcategories: ["Premium Vodka", "Flavored Vodka", "London Dry Gin", "Craft Botanical Gin", "Pink Gin"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 40,
-  },
-  {
-    category: "Rum & Brandy",
-    subcategories: ["White Rum", "Dark / Spiced Rum", "Aged Rum", "Cognac & VSOP", "Premium Brandy"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 42.8,
-  },
-  {
-    category: "Tequila & Mezcal",
-    subcategories: ["Silver / Blanco", "Reposado Tequila", "Añejo Tequila", "Artisanal Mezcal"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 38,
-  },
-  {
-    category: "Beers & Ciders",
-    subcategories: ["Draught Beer Keg", "Premium Lager (Pint 330ml)", "Strong Beer (650ml)", "Craft Wheat Beer", "Apple / Fruit Cider"],
-    defaultUnit: "Bottle (330 ml)",
-    defaultAbv: 5,
-  },
-  {
-    category: "Wine & Champagne",
-    subcategories: ["Red Wine", "White Wine", "Sparkling Wine / Prosecco", "Brut Champagne", "Rosé Wine", "Port Wine"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 12.5,
-  },
-  {
-    category: "Liqueurs & Bitters",
-    subcategories: ["Coffee Liqueur (Kahlúa)", "Irish Cream (Baileys)", "Triple Sec / Orange", "Herbal / Aperitif (Campari)", "Angostura Bitters"],
-    defaultUnit: "Bottle (750 ml)",
-    defaultAbv: 25,
-  },
-  {
-    category: "Cocktails & Premixes",
-    subcategories: ["Margarita Mix", "Bloody Mary Base", "Sour Mix", "Piña Colada Mix", "Cocktail Concentrates"],
-    defaultUnit: "Bottle (1 L)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Mocktails & Syrups",
-    subcategories: ["Blue Curacao Syrup", "Grenadine Syrup", "Mojito Mint Syrup", "Passion Fruit Puree", "Simple Sugar Syrup"],
-    defaultUnit: "Bottle (1 L)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Soft Drinks, Tonics & Soda",
-    subcategories: ["Club Soda", "Tonic Water", "Ginger Ale", "Cola / Diet Cola", "Lemon Soda (Sprite/Limca)", "Energy Drink (Red Bull)"],
-    defaultUnit: "Can (330 ml)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Juices & Purees",
-    subcategories: ["Cranberry Juice", "Fresh Orange Juice", "Pineapple Juice", "Fresh Lime Juice", "Apple Juice", "Tomato Juice"],
-    defaultUnit: "Tetra Pack (1 L)",
-    defaultAbv: 0,
-  },
-  {
-    category: "Bar Garnishes & Supplies",
-    subcategories: ["Maraschino Cherries", "Cocktail Stuffed Olives", "Margarita Rim Salt", "Cocktail Sugar", "Fresh Lemons & Limes", "Fresh Mint"],
-    defaultUnit: "Jar / Canister",
-    defaultAbv: 0,
-  },
-  {
-    category: "Bar Consumables & Ice",
-    subcategories: ["Clear Ice Blocks / Cubes", "Cocktail Paper Straws", "Stirrers & Cocktail Picks", "Bar Coasters", "Bar Napkins"],
-    defaultUnit: "Pack / Box",
-    defaultAbv: 0,
-  },
-];
 
 export const BAR_INVENTORY_UNITS = [
   "Bottle (750 ml)",
@@ -243,7 +156,7 @@ export const BAR_SUPPLIERS = [
   "Local Wholesale Bar Supplier",
 ];
 
-function SharedBarInventory({ inventory, loading, error, onRefresh }) {
+function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInventoryPurchase }) {
   const [busy, setBusy] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalBusy, setModalBusy] = useState(false);
@@ -262,6 +175,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const [consumeReason, setConsumeReason] = useState("Bar Usage");
   const [restockItem, setRestockItem] = useState(null);
   const [restockAmount, setRestockAmount] = useState("");
+  const [restockUnitCost, setRestockUnitCost] = useState("");
   const [restockSupplier, setRestockSupplier] = useState("");
   const [customRestockSupplier, setCustomRestockSupplier] = useState(false);
 
@@ -271,7 +185,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
 
   const defaultForm = {
     name: "",
-    category: "Whiskey & Scotch",
+    category: "Whiskey",
     subcategory: "",
     brand: "",
     unit: "Bottle (750 ml)",
@@ -287,6 +201,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
 
   const [formData, setFormData] = useState(defaultForm);
   const [customCategory, setCustomCategory] = useState(false);
+  const [customSubcategory, setCustomSubcategory] = useState(false);
   const [customUnit, setCustomUnit] = useState(false);
   const [customLocation, setCustomLocation] = useState(false);
   const [customSupplier, setCustomSupplier] = useState(false);
@@ -323,7 +238,10 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
       ) {
         return false;
       }
-      return isBeverageCategory(item.category ?? item.subcategory ?? item.name);
+      const normalizedCategory = normalizeBarInventoryCategory(item.category, item);
+      const isStandardInventoryCategory = BAR_INVENTORY_CATEGORIES.some((category) => category.category === normalizedCategory);
+      const hasBarMetadata = item.isBarItem === true || item.isBarDrink === true || item.isBeverage === true || Number(item.abv ?? item.alcoholContent ?? 0) > 0;
+      return isStandardInventoryCategory || isLegacyBarInventoryCategory(item.category) || hasBarMetadata || isBeverageCategory(item.category ?? item.subcategory ?? item.name);
     });
   }, [inventory]);
 
@@ -332,7 +250,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     const set = new Set();
     BAR_INVENTORY_CATEGORIES.forEach((c) => set.add(c.category));
     validBeverages.forEach((item) => {
-      if (item.category) set.add(item.category);
+      if (item.category) set.add(normalizeBarInventoryCategory(item.category, item));
     });
     return Array.from(set);
   }, [validBeverages]);
@@ -345,6 +263,17 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
       if (item.supplier) set.add(item.supplier);
     });
     return Array.from(set);
+  }, [validBeverages]);
+
+  const inventoryCategoryOptions = useMemo(() => {
+    const unique = new Map();
+    const barCategoriesFromInventory = validBeverages.map((item) => normalizeBarInventoryCategory(item.category, item));
+    [...BAR_INVENTORY_CATEGORIES.map((item) => item.category), ...barCategoriesFromInventory]
+      .forEach((raw) => {
+        const value = String(raw || "").trim();
+        if (value && !unique.has(value.toLocaleLowerCase())) unique.set(value.toLocaleLowerCase(), value);
+      });
+    return Array.from(unique.values());
   }, [validBeverages]);
 
   // Operational KPI metrics (exact formulas matching Dine Inventory)
@@ -377,13 +306,13 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
         !q ||
         String(item.name || "").toLowerCase().includes(q) ||
         String(item.brand || item.subcategory || "").toLowerCase().includes(q) ||
-        String(item.category || "").toLowerCase().includes(q) ||
+        normalizeBarInventoryCategory(item.category, item).toLowerCase().includes(q) ||
         String(item.storageLocation || "").toLowerCase().includes(q) ||
         String(item.supplier || "").toLowerCase().includes(q);
 
       const matchesCat =
         categoryFilter === "all" ||
-        String(item.category || "").toLowerCase() === categoryFilter.toLowerCase();
+        normalizeBarInventoryCategory(item.category, item).toLowerCase() === categoryFilter.toLowerCase();
 
       const matchesSupplier =
         supplierFilter === "all" ||
@@ -416,16 +345,21 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const handleCategorySelect = (selected) => {
     if (selected === "__custom__") {
       setCustomCategory(true);
+      setCustomSubcategory(true);
       setField("category", "");
       setField("subcategory", "");
     } else {
       setCustomCategory(false);
-      setField("category", selected);
+      const canonical = inventoryCategoryOptions.find((category) => category.toLocaleLowerCase() === String(selected).trim().toLocaleLowerCase()) || selected;
+      setField("category", canonical);
+      setCustomSubcategory(false);
       const matched = BAR_INVENTORY_CATEGORIES.find((c) => c.category === selected);
       if (matched) {
         setField("subcategory", matched.subcategories[0] || "");
         setField("unit", matched.defaultUnit || "Bottle (750 ml)");
         setField("abv", matched.defaultAbv != null ? matched.defaultAbv : 40);
+      } else {
+        setField("subcategory", "");
       }
     }
   };
@@ -434,6 +368,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     setEditingItem(null);
     setFormData(defaultForm);
     setCustomCategory(false);
+    setCustomSubcategory(false);
     setCustomUnit(false);
     setCustomLocation(false);
     setCustomSupplier(false);
@@ -443,9 +378,10 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
 
   const openEditModal = (item) => {
     setEditingItem(item);
+    const normalizedCategory = normalizeBarInventoryCategory(item.category, item);
     setFormData({
       name: item.name || "",
-      category: item.category || "Whiskey & Scotch",
+      category: normalizedCategory || "Vodka",
       subcategory: item.subcategory || "",
       brand: item.brand || "",
       unit: item.unit || "Bottle (750 ml)",
@@ -458,7 +394,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
       storageLocation: item.storageLocation || "Front Bar Display Shelf",
       supplier: item.supplier || "State Beverages Corporation (TSBCL/Govt Depot)",
     });
-    setCustomCategory(false);
+    setCustomCategory(!inventoryCategoryOptions.some((category) => category.toLocaleLowerCase() === normalizedCategory.toLocaleLowerCase()));
+    const knownSubcategories = [
+      ...(BAR_INVENTORY_CATEGORIES.find((category) => category.category === normalizedCategory)?.subcategories || []),
+    ];
+    setCustomSubcategory(Boolean(item.subcategory) && !knownSubcategories.some((subcategory) => subcategory.toLocaleLowerCase() === String(item.subcategory).trim().toLocaleLowerCase()));
     setCustomUnit(false);
     setCustomLocation(false);
     setCustomSupplier(false);
@@ -472,22 +412,46 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
     setModalError("");
 
     try {
+      const numericFields = [
+        ["Stock", formData.stock],
+        ["Minimum stock", formData.minThreshold],
+        ["Unit cost", formData.unitCost],
+        ["Selling price", formData.sellingPrice],
+      ];
+      for (const [label, rawValue] of numericFields) {
+        const value = Number(rawValue);
+        if (rawValue === "" || !Number.isFinite(value) || value < 0) {
+          throw new Error(`${label} must be a valid non-negative number.`);
+        }
+      }
+      const abv = formData.abv === "" ? null : Number(formData.abv);
+      if (abv !== null && (!Number.isFinite(abv) || abv < 0 || abv > 100)) {
+        throw new Error("Alcohol content must be between 0 and 100%.");
+      }
+      const volumeMl = formData.volumeMl === "" ? null : Number(formData.volumeMl);
+      if (volumeMl !== null && (!Number.isFinite(volumeMl) || volumeMl <= 0)) {
+        throw new Error("Volume must be greater than zero.");
+      }
+
+      const enteredCategory = String(formData.category).trim();
+      const existingCategory = inventoryCategoryOptions.find((category) => category.toLocaleLowerCase() === enteredCategory.toLocaleLowerCase());
+      const canonicalCategory = customCategory && existingCategory ? existingCategory : enteredCategory;
       const payload = {
         name: String(formData.name).trim(),
-        category: String(formData.category).trim() || "Beverages & Bar",
+        category: canonicalCategory || "Beverages & Bar",
         subcategory: String(formData.subcategory).trim(),
         brand: String(formData.brand).trim(),
         unit: String(formData.unit).trim() || "Bottle",
-        volumeMl: formData.volumeMl ? Number(formData.volumeMl) : null,
-        abv: formData.abv ? Number(formData.abv) : null,
-        stock: Number(formData.stock) || 0,
-        currentStock: Number(formData.stock) || 0,
-        minThreshold: Number(formData.minThreshold) || 5,
-        minimumThreshold: Number(formData.minThreshold) || 5,
-        unitCost: Number(formData.unitCost) || 0,
-        cost: Number(formData.unitCost) || 0,
-        sellingPrice: Number(formData.sellingPrice) || 0,
-        mrp: Number(formData.sellingPrice) || Number(formData.unitCost) || 0,
+        volumeMl,
+        abv,
+        stock: Number(formData.stock),
+        currentStock: Number(formData.stock),
+        minThreshold: Number(formData.minThreshold),
+        minimumThreshold: Number(formData.minThreshold),
+        unitCost: Number(formData.unitCost),
+        cost: Number(formData.unitCost),
+        sellingPrice: Number(formData.sellingPrice),
+        mrp: Number(formData.sellingPrice),
         storageLocation: String(formData.storageLocation).trim() || "Front Bar Display Shelf",
         supplier: String(formData.supplier).trim() || "State Beverages Corporation (TSBCL/Govt Depot)",
         updatedAt: new Date().toISOString(),
@@ -522,30 +486,15 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
       const targetId = item.id ?? item.ingredientId;
       const currentStock = Number(item.stock ?? item.currentStock ?? 0);
       const nextStock = Math.max(0, Number((currentStock + delta).toFixed(2)));
-      const adjustedAmount = Math.abs(nextStock - currentStock);
-      const nextUsed = Number((Number(item.totalUsed || 0) + (delta < 0 ? adjustedAmount : 0)).toFixed(2));
-      const nextRestocked = Number((Number(item.totalRestocked || 0) + (delta > 0 ? adjustedAmount : 0)).toFixed(2));
-
-      await apiAdjustStock({
+      if (!Number.isFinite(delta) || delta === 0 || currentStock + delta < 0) {
+        throw new Error("Stock adjustment must be non-zero and cannot reduce stock below zero.");
+      }
+      const response = await apiAdjustStock({
         ingredientId: targetId,
         quantityChange: delta,
         reason: delta > 0 ? "Shipment Received" : "Quick Consume",
-      }).catch(async () => {
-        await apiUpdateInventoryItem(targetId, {
-          ...item,
-          stock: nextStock,
-          currentStock: nextStock,
-          totalUsed: nextUsed,
-          totalRestocked: nextRestocked,
-        });
       });
-
-      try {
-        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
-        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
-        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed, totalRestocked: nextRestocked } : it));
-        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      if (!response?.success) throw new Error(response?.error || "Stock adjustment was rejected by the inventory API.");
 
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
@@ -560,45 +509,24 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const handleRecordUsage = async (event) => {
     event?.preventDefault?.();
     const amount = Number(consumeAmount);
-    if (!consumeItem || !Number.isFinite(amount) || amount <= 0) return;
+    if (!consumeItem || !Number.isFinite(amount) || amount <= 0) {
+      window.alert("Enter a quantity greater than zero.");
+      return;
+    }
+    const currentStock = Number(consumeItem.stock ?? consumeItem.currentStock ?? 0);
+    if (amount > currentStock) {
+      window.alert(`Cannot use ${amount}; only ${currentStock} ${consumeItem.unit || "units"} are in stock.`);
+      return;
+    }
     setBusy(true);
     try {
       const targetId = consumeItem.id ?? consumeItem.ingredientId;
-      const currentStock = Number(consumeItem.stock ?? consumeItem.currentStock ?? 0);
-      const nextStock = Math.max(0, Number((currentStock - amount).toFixed(2)));
-      const nextUsed = Number((Number(consumeItem.totalUsed || 0) + amount).toFixed(2));
-
-      await apiAdjustStock({
+      const response = await apiAdjustStock({
         ingredientId: targetId,
         quantityChange: -amount,
         reason: consumeReason.trim() || "Bar Usage",
-      }).catch(async () => {
-        await apiUpdateInventoryItem(targetId, {
-          ...consumeItem,
-          stock: nextStock,
-          currentStock: nextStock,
-          totalUsed: nextUsed,
-        });
       });
-
-      try {
-        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
-        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
-        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalUsed: nextUsed } : it));
-        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
-
-        const ledger = JSON.parse(localStorage.getItem("gourmet_pos_inventory_deductions_v1") || "[]");
-        ledger.unshift({
-          id: `usage-${Date.now()}`,
-          itemId: targetId,
-          itemName: consumeItem.name,
-          quantity: amount,
-          unit: consumeItem.unit || "Bottle",
-          reason: consumeReason.trim() || "Bar Usage",
-          timestamp: new Date().toISOString(),
-        });
-        localStorage.setItem("gourmet_pos_inventory_deductions_v1", JSON.stringify(ledger.slice(0, 500)));
-      } catch {}
+      if (!response?.success) throw new Error(response?.error || "Stock usage was rejected by the inventory API.");
 
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
@@ -616,40 +544,45 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
   const handleReceiveStock = async (event) => {
     event?.preventDefault?.();
     const amount = Number(restockAmount);
-    if (!restockItem || !Number.isFinite(amount) || amount <= 0) return;
+    const unitCost = Number(restockUnitCost);
+    if (!restockItem || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(unitCost) || unitCost < 0) {
+      window.alert("Enter a received quantity greater than zero and a valid non-negative unit cost.");
+      return;
+    }
     setBusy(true);
     try {
       const targetId = restockItem.id ?? restockItem.ingredientId;
-      const currentStock = Number(restockItem.stock ?? restockItem.currentStock ?? 0);
-      const nextStock = Number((currentStock + amount).toFixed(2));
-      const nextRestocked = Number((Number(restockItem.totalRestocked || 0) + amount).toFixed(2));
       const supplierToUse = restockSupplier.trim() || restockItem.supplier || "State Beverages Corporation (TSBCL/Govt Depot)";
+      const date = new Date();
 
-      await apiAdjustStock({
+      const response = await apiAdjustStock({
         ingredientId: targetId,
         quantityChange: amount,
         reason: `Shipment Received (${supplierToUse})`,
-      }).catch(async () => {
-        await apiUpdateInventoryItem(targetId, {
-          ...restockItem,
-          stock: nextStock,
-          currentStock: nextStock,
-          totalRestocked: nextRestocked,
-          supplier: supplierToUse,
-        });
       });
+      if (!response?.success) throw new Error(response?.error || "Received stock was rejected by the inventory API.");
 
-      try {
-        const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
-        const stored = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
-        const updated = stored.map((it) => (String(it.id) === String(targetId) ? { ...it, stock: nextStock, currentStock: nextStock, totalRestocked: nextRestocked, supplier: supplierToUse } : it));
-        localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      const purchaseSaved = await onRecordInventoryPurchase?.({
+        itemId: targetId,
+        name: restockItem.name,
+        category: restockItem.category,
+        subcategory: restockItem.subcategory,
+        supplier: supplierToUse,
+        quantity: amount,
+        unit: restockItem.unit || "Bottle",
+        unitCost,
+        department: "bar",
+        purchaseDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      });
+      if (purchaseSaved === false) {
+        throw new Error("Stock was updated, but the purchase history could not be recorded.");
+      }
 
       await onRefresh();
       window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: [] }));
       setRestockItem(null);
       setRestockAmount("");
+      setRestockUnitCost("");
       setRestockSupplier("");
       setCustomRestockSupplier(false);
     } catch (err) {
@@ -745,7 +678,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
         const status = stock <= 0 ? "Out of Stock" : stock <= threshold ? "Low Stock" : "In Stock";
         return [
           item.name,
-          item.category || "Beverages & Bar",
+          normalizeBarInventoryCategory(item.category, item) || "Other Bar Stock",
           item.subcategory || "",
           item.brand || "",
           item.unit || "Bottle",
@@ -767,7 +700,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
 
   // Find subcategories for current category
   const currentCategoryObj = BAR_INVENTORY_CATEGORIES.find((c) => c.category === formData.category);
-  const currentSubcategories = currentCategoryObj?.subcategories || [];
+  const currentSubcategories = Array.from(new Map([
+    ...(currentCategoryObj?.subcategories || []),
+    ...(Array.isArray(inventory) ? inventory.filter((item) => normalizeBarInventoryCategory(item?.category, item).toLocaleLowerCase() === String(formData.category || "").trim().toLocaleLowerCase()).map((item) => String(item?.subcategory || "").trim()).filter(Boolean) : []),
+    ...(formData.subcategory ? [String(formData.subcategory).trim()] : []),
+  ].filter(Boolean).map((option) => [option.toLocaleLowerCase(), option])).values());
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -971,7 +908,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
             >
               {/* Category Dropdown */}
               <div style={{ position: "relative", minWidth: 0 }}>
-                <select
+                <SearchableSelect
                   aria-label="Filter by category"
                   value={categoryFilter}
                   onChange={(e) => {
@@ -982,7 +919,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                     width: "100%",
                     minWidth: 0,
                     height: "40px",
-                    padding: "0 2.25rem 0 0.75rem",
+                    padding: "0 0.75rem",
                     color: "var(--text-main)",
                     background: "var(--bg-tertiary)",
                     border: "1px solid var(--border-card)",
@@ -1000,25 +937,13 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                   {availableCategories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    right: "0.75rem",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-muted)",
-                    pointerEvents: "none",
-                  }}
-                />
+                </SearchableSelect>
+                
               </div>
 
               {/* Status Dropdown */}
               <div style={{ position: "relative", minWidth: 0 }}>
-                <select
+                <SearchableSelect
                   aria-label="Filter by status"
                   value={stockFilter === "expenditure" ? "all" : stockFilter}
                   onChange={(e) => {
@@ -1029,7 +954,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                     width: "100%",
                     minWidth: 0,
                     height: "40px",
-                    padding: "0 2.25rem 0 0.75rem",
+                    padding: "0 0.75rem",
                     color: "var(--text-main)",
                     background: "var(--bg-tertiary)",
                     border: "1px solid var(--border-card)",
@@ -1047,25 +972,13 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                   <option value="in_stock">In Stock</option>
                   <option value="low_stock">Low Stock</option>
                   <option value="out_of_stock">Out of Stock</option>
-                </select>
-                <ChevronDown
-                  size={16}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    right: "0.75rem",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-muted)",
-                    pointerEvents: "none",
-                  }}
-                />
+                </SearchableSelect>
+                
               </div>
 
               {/* Supplier Dropdown */}
               <div style={{ position: "relative", minWidth: 0 }}>
-                <select
+                <SearchableSelect
                   aria-label="Filter by supplier"
                   value={supplierFilter}
                   onChange={(e) => {
@@ -1076,7 +989,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                     width: "100%",
                     minWidth: 0,
                     height: "40px",
-                    padding: "0 2.25rem 0 0.75rem",
+                    padding: "0 0.75rem",
                     color: "var(--text-main)",
                     background: "var(--bg-tertiary)",
                     border: "1px solid var(--border-card)",
@@ -1094,20 +1007,8 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                   {availableSuppliers.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    right: "0.75rem",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-muted)",
-                    pointerEvents: "none",
-                  }}
-                />
+                </SearchableSelect>
+                
               </div>
             </div>
           </div>
@@ -1366,7 +1267,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                           fontWeight: 600,
                         }}
                       >
-                        <div style={{ lineHeight: "1.25" }}>{item.category || "Beverages & Bar"}</div>
+                        <div style={{ lineHeight: "1.25" }}>{normalizeBarInventoryCategory(item.category, item) || "Other Bar Stock"}</div>
                         {displaySubtitle && (
                           <div
                             style={{
@@ -1592,6 +1493,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                             onClick={() => {
                               setRestockItem(item);
                               setRestockAmount("");
+                              setRestockUnitCost(String(Number(item.unitCost ?? item.cost ?? item.mrp) || 0));
                               setRestockSupplier(item.supplier || "");
                               setCustomRestockSupplier(false);
                             }}
@@ -2125,6 +2027,42 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 marginBottom: "0.35rem",
               }}
             >
+              PURCHASE COST PER {restockItem.unit || "Bottle"} (INR) *
+            </label>
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={restockUnitCost}
+              onChange={(event) => setRestockUnitCost(event.target.value)}
+              placeholder="Enter unit purchase cost"
+              style={{
+                width: "100%",
+                height: "38px",
+                boxSizing: "border-box",
+                padding: "0 0.65rem",
+                borderRadius: "8px",
+                border: "1px solid var(--border-card)",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                fontSize: "0.82rem",
+                marginBottom: "0.7rem",
+              }}
+            />
+            <div style={{ color: "var(--text-muted)", fontSize: "0.74rem", marginBottom: "0.7rem" }}>
+              Purchase total: <strong style={{ color: "var(--text-main)" }}>{formatCurrency((Number(restockAmount) || 0) * (Number(restockUnitCost) || 0))}</strong>
+            </div>
+
+            <label
+              style={{
+                display: "block",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                marginBottom: "0.35rem",
+              }}
+            >
               SUPPLIER
             </label>
             <div style={{ marginBottom: "0.9rem" }}>
@@ -2283,11 +2221,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
           role="presentation"
           onMouseDown={(event) => event.target === event.currentTarget && !modalBusy && setModalOpen(false)}
         >
-          <section className="bar-modal" role="dialog" aria-modal="true" style={{ width: "min(840px, 100%)" }}>
+          <section className="bar-modal bar-inventory-modal" role="dialog" aria-modal="true" aria-labelledby="bar-inventory-modal-title">
             <header className="bar-modal-head">
               <div>
                 <span className="bar-kicker">BAR & LIQUOR LEDGER</span>
-                <h2>{editingItem ? `Edit "${editingItem.name}"` : "Add Bar Inventory"}</h2>
+                <h2 id="bar-inventory-modal-title">{editingItem ? `Edit "${editingItem.name}"` : "Add Bar Inventory"}</h2>
               </div>
               <button
                 className="bar-icon-button"
@@ -2300,7 +2238,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
               </button>
             </header>
 
-            <form className="bar-form" onSubmit={saveInventoryItem} style={{ padding: "18px 20px" }}>
+            <form className="bar-form bar-inventory-form" onSubmit={saveInventoryItem}>
               <div className="bar-form-grid">
                 {/* Item Name */}
                 <label className="bar-field wide">
@@ -2317,33 +2255,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 <label className="bar-field">
                   <span>Bar Category *</span>
                   {!customCategory ? (
-                    <select
-                      value={formData.category}
-                      onChange={(e) => handleCategorySelect(e.target.value)}
-                    >
-                      {BAR_INVENTORY_CATEGORIES.map((c) => (
-                        <option key={c.category} value={c.category}>{c.category}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Category…</option>
-                    </select>
+                    <SearchableSelect options={inventoryCategoryOptions} value={formData.category} placeholder="Select bar category" searchPlaceholder="Search bar categories…" onChange={handleCategorySelect} allowCustom customLabel="+ Custom Category" onCustom={() => handleCategorySelect("__custom__")} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        required
-                        placeholder="Type custom category name…"
-                        value={formData.category}
-                        onChange={(e) => setField("category", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomCategory(false);
-                          setField("category", BAR_INVENTORY_CATEGORIES[0].category);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input required placeholder="Type custom category name…" value={formData.category} onChange={(e) => setField("category", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomCategory(false); setField("category", inventoryCategoryOptions[0] || BAR_INVENTORY_CATEGORIES[0].category); }}>Select</button>
                     </div>
                   )}
                 </label>
@@ -2351,24 +2267,15 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 {/* Subcategory / Variety */}
                 <label className="bar-field">
                   <span>Subcategory / Variety</span>
-                  {currentSubcategories.length > 0 && !customCategory ? (
-                    <select
-                      value={formData.subcategory}
-                      onChange={(e) => setField("subcategory", e.target.value)}
-                    >
-                      {currentSubcategories.map((sub) => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))}
-                    </select>
+                  {!customSubcategory ? (
+                    <SearchableSelect options={currentSubcategories} value={formData.subcategory} placeholder="Select subcategory / variety" searchPlaceholder="Search subcategories…" onChange={(value) => setField("subcategory", value)} allowCustom customLabel="+ Custom Subcategory" onCustom={() => setCustomSubcategory(true)} />
                   ) : (
-                    <input
-                      placeholder="e.g. Single Malt, Craft IPA, Blanco, Puree"
-                      value={formData.subcategory}
-                      onChange={(e) => setField("subcategory", e.target.value)}
-                    />
+                    <div className="bar-inventory-custom-field">
+                      <input placeholder="Enter custom subcategory / variety" value={formData.subcategory} onChange={(e) => setField("subcategory", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomSubcategory(false); if (!formData.subcategory && currentSubcategories[0]) setField("subcategory", currentSubcategories[0]); }}>Select</button>
+                    </div>
                   )}
                 </label>
-
                 {/* Brand */}
                 <label className="bar-field">
                   <span>Brand / Label</span>
@@ -2383,48 +2290,20 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 <label className="bar-field">
                   <span>Packaging Unit *</span>
                   {!customUnit ? (
-                    <select
-                      value={formData.unit}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setCustomUnit(true);
-                          setField("unit", "");
-                        } else {
-                          setField("unit", e.target.value);
-                          if (e.target.value.includes("750")) setField("volumeMl", 750);
-                          else if (e.target.value.includes("1 L") || e.target.value.includes("1000")) setField("volumeMl", 1000);
-                          else if (e.target.value.includes("330")) setField("volumeMl", 330);
-                          else if (e.target.value.includes("650")) setField("volumeMl", 650);
-                        }
-                      }}
-                    >
-                      {BAR_INVENTORY_UNITS.map((u) => (
-                        <option key={u} value={u}>{u}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Unit…</option>
-                    </select>
+                    <SearchableSelect options={[...BAR_INVENTORY_UNITS, ...(formData.unit ? [formData.unit] : [])]} value={formData.unit} placeholder="Select packaging unit" searchPlaceholder="Search packaging units…" onChange={(value) => {
+                      setField("unit", value);
+                      if (value.includes("750")) setField("volumeMl", 750);
+                      else if (value.includes("1 L") || value.includes("1000")) setField("volumeMl", 1000);
+                      else if (value.includes("330")) setField("volumeMl", 330);
+                      else if (value.includes("650")) setField("volumeMl", 650);
+                    }} allowCustom customLabel="+ Custom Unit" onCustom={() => { setCustomUnit(true); setField("unit", ""); }} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        required
-                        placeholder="e.g. Case of 12, Barrel 20L"
-                        value={formData.unit}
-                        onChange={(e) => setField("unit", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomUnit(false);
-                          setField("unit", BAR_INVENTORY_UNITS[0]);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input required placeholder="e.g. Case of 12, Barrel 20L" value={formData.unit} onChange={(e) => setField("unit", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomUnit(false); setField("unit", BAR_INVENTORY_UNITS[0]); }}>Select</button>
                     </div>
                   )}
                 </label>
-
                 {/* Bottle Volume (ml) */}
                 <label className="bar-field">
                   <span>Volume / Bottle Size (ml)</span>
@@ -2508,85 +2387,27 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 <label className="bar-field">
                   <span>Storage / Rack Location</span>
                   {!customLocation ? (
-                    <select
-                      value={formData.storageLocation}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setCustomLocation(true);
-                          setField("storageLocation", "");
-                        } else {
-                          setField("storageLocation", e.target.value);
-                        }
-                      }}
-                    >
-                      {BAR_STORAGE_LOCATIONS.map((loc) => (
-                        <option key={loc} value={loc}>{loc}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Location…</option>
-                    </select>
+                    <SearchableSelect options={[...BAR_STORAGE_LOCATIONS, ...(formData.storageLocation ? [formData.storageLocation] : [])]} value={formData.storageLocation} placeholder="Select storage location" searchPlaceholder="Search storage locations…" onChange={(value) => setField("storageLocation", value)} allowCustom customLabel="+ Custom Location" onCustom={() => { setCustomLocation(true); setField("storageLocation", ""); }} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        placeholder="e.g. Cellar Rack B3"
-                        value={formData.storageLocation}
-                        onChange={(e) => setField("storageLocation", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomLocation(false);
-                          setField("storageLocation", BAR_STORAGE_LOCATIONS[0]);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input placeholder="e.g. Cellar Rack B3" value={formData.storageLocation} onChange={(e) => setField("storageLocation", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomLocation(false); setField("storageLocation", BAR_STORAGE_LOCATIONS[0]); }}>Select</button>
                     </div>
                   )}
                 </label>
-
                 {/* Supplier / Distributor */}
                 <label className="bar-field">
                   <span>Supplier / Distributor</span>
                   {!customSupplier ? (
-                    <select
-                      value={formData.supplier}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setCustomSupplier(true);
-                          setField("supplier", "");
-                        } else {
-                          setField("supplier", e.target.value);
-                        }
-                      }}
-                    >
-                      {BAR_SUPPLIERS.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Supplier…</option>
-                    </select>
+                    <SearchableSelect options={[...BAR_SUPPLIERS, ...availableSuppliers, ...(formData.supplier ? [formData.supplier] : [])]} value={formData.supplier} placeholder="Select supplier / distributor" searchPlaceholder="Search suppliers…" onChange={(value) => setField("supplier", value)} allowCustom customLabel="+ Custom Supplier" onCustom={() => { setCustomSupplier(true); setField("supplier", ""); }} />
                   ) : (
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <input
-                        placeholder="e.g. Local Wine Wholesaler"
-                        value={formData.supplier}
-                        onChange={(e) => setField("supplier", e.target.value)}
-                      />
-                      <button
-                        className="bar-button secondary small"
-                        type="button"
-                        onClick={() => {
-                          setCustomSupplier(false);
-                          setField("supplier", BAR_SUPPLIERS[0]);
-                        }}
-                      >
-                        Select
-                      </button>
+                    <div className="bar-inventory-custom-field">
+                      <input placeholder="e.g. Local Wine Wholesaler" value={formData.supplier} onChange={(e) => setField("supplier", e.target.value)} />
+                      <button className="bar-button secondary small" type="button" onClick={() => { setCustomSupplier(false); setField("supplier", BAR_SUPPLIERS[0]); }}>Select</button>
                     </div>
                   )}
                 </label>
               </div>
-
               {Number(formData.unitCost) > 0 && Number(formData.stock) > 0 && (
                 <div
                   style={{
@@ -2613,7 +2434,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh }) {
                 </div>
               )}
 
-              <footer className="bar-modal-foot" style={{ marginTop: "16px" }}>
+              <footer className="bar-modal-foot">
                 <button
                   className="bar-button secondary"
                   type="button"
@@ -2673,46 +2494,41 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
     ...(kind === "drink" && initial ? {
       isAvailable: initial.isAvailable === false || initial.isAvailable === "Unavailable" ? "Unavailable" : "Available",
       active: initial.active === false || initial.active === "Inactive" ? "Inactive" : "Active",
-      category: initial.category || "Cocktails",
+      category: normalizeBarDrinkCategory(initial.category || "Cocktails", initial),
+      subcategory: initial.subcategory || "",
       drinkType: initial.drinkType || (initial.abv ? "Alcoholic" : "Non-Alcoholic"),
-      measure: initial.measure || "",
+      measure: normalizeBarServingMeasure(initial.measure || initial.servingMeasure || initial.servingVolume || ""),
       abv: initial.abv ?? "",
     } : kind === "drink" ? {
       category: "Cocktails",
+      subcategory: "",
       drinkType: "Alcoholic",
-      measure: "60 ml (Double Peg)",
+      measure: "Double Peg (60 ml)",
       isAvailable: "Available",
       abv: "",
     } : {}),
   }));
 
-  const allKnownCategories = useMemo(() => {
-    const excluded = new Set([
-      "all", "all categories", "all category", "all items", "category", "categories",
-      "beverages", "beverage", "tea & coffee", "tea and coffee", "tea", "coffee",
-      "juices & shakes", "juices and shakes", "shakes", "juices", "soft drinks & soda",
-      "soft drinks", "soda", "food"
-    ]);
-    const list = [...BAR_CATEGORIES];
-    if (Array.isArray(drinks)) {
-      drinks.forEach((d) => {
-        const cat = String(d?.category || "").trim();
-        if (cat && !excluded.has(cat.toLowerCase()) && !list.some((c) => c.toLowerCase() === cat.toLowerCase())) {
-          list.push(cat);
-        }
-      });
-    }
-    return list;
-  }, [drinks]);
+  const allKnownCategories = useMemo(
+    () => mergeBarDrinkCategories([], drinks).map((option) => option.value),
+    [drinks],
+  );
 
   const [isCustomCategory, setIsCustomCategory] = useState(() => {
     if (kind !== "drink" || !initial?.category) return false;
-    return !BAR_CATEGORIES.some((c) => c.toLowerCase() === String(initial.category).toLowerCase());
+    const normalizedCategory = normalizeBarDrinkCategory(initial.category, initial).toLocaleLowerCase();
+    return !BAR_CATEGORIES.some((category) => category.toLocaleLowerCase() === normalizedCategory);
+  });
+
+  const [isCustomSubcategory, setIsCustomSubcategory] = useState(() => {
+    if (kind !== "drink" || !initial?.subcategory) return false;
+    return !(BAR_DRINK_SUBCATEGORIES[normalizeBarDrinkCategory(initial.category, initial)] || []).some((entry) => entry.toLocaleLowerCase() === String(initial.subcategory).trim().toLocaleLowerCase());
   });
 
   const [isCustomMeasure, setIsCustomMeasure] = useState(() => {
-    if (kind !== "drink" || !initial?.measure) return false;
-    return !BAR_SERVING_MEASURES.some((m) => m.toLowerCase() === String(initial.measure).toLowerCase());
+    if (kind !== "drink" || !(initial?.measure || initial?.servingMeasure || initial?.servingVolume)) return false;
+    const initialMeasure = normalizeBarServingMeasure(initial.measure || initial.servingMeasure || initial.servingVolume);
+    return !BAR_SERVING_MEASURES.some((measure) => measure.toLocaleLowerCase() === initialMeasure.toLocaleLowerCase());
   });
 
   const [error, setError] = useState("");
@@ -2752,7 +2568,8 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
       setError("Alcohol Percentage (ABV) must be between 0 and 100.");
       return;
     }
-    const result = await onSave(values);
+    const saveValues = kind === "drink" ? { ...values, measure: normalizeBarServingMeasure(values.measure) } : values;
+    const result = await onSave(saveValues);
     if (result === false) setError("The requested changes were not fully applied. Check the message and try again.");
   };
 
@@ -2769,7 +2586,7 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
           <div className="bar-form-grid">
             {fields.map(([key, label, type = "text", required, options]) => {
               if (kind === "drink" && key === "abv") {
-                const isAlcoholic = values.drinkType === "Alcoholic" || ["Cocktails", "Beers", "Whiskey", "Vodka & Gin", "Rum & Brandy", "Wine & Champagne", "Shots & Shooters"].some((c) => c.toLowerCase() === String(values.category || "").toLowerCase());
+                const isAlcoholic = values.drinkType === "Alcoholic" || isAlcoholicCategory(values.category, values.drinkType, values.abv);
                 if (!isAlcoholic) return null;
               }
 
@@ -2793,44 +2610,48 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
                           style={{ whiteSpace: "nowrap" }}
                           onClick={() => {
                             setIsCustomCategory(false);
-                            set("category", allKnownCategories[0] || "Cocktails");
+                            const category = allKnownCategories[0] || "Cocktails";
+                            set("category", category);
+                            set("subcategory", "");
+                            setIsCustomSubcategory(false);
                           }}
                         >
                           Choose from list
                         </button>
                       </div>
                     ) : (
+                      <SearchableSelect
+                        options={allKnownCategories}
+                        value={values.category ?? ""}
+                        placeholder="Select drink category"
+                        searchPlaceholder="Search drink categories…"
+                        onChange={(value) => {
+                          set("category", value);
+                          set("subcategory", "");
+                          setIsCustomSubcategory(false);
+                        }}
+                        allowCustom
+                        customLabel="+ Custom Category"
+                        onCustom={() => { setIsCustomCategory(true); set("category", ""); set("subcategory", ""); setIsCustomSubcategory(true); }}
+                      />
+                    )
+                  ) : type === "subcategory_selector" ? (
+                    isCustomSubcategory ? (
                       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        <select
-                          required={required}
-                          value={values.category ?? ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__custom__") {
-                              setIsCustomCategory(true);
-                              set("category", "");
-                            } else {
-                              set("category", e.target.value);
-                            }
-                          }}
-                        >
-                          <option value="">Select category</option>
-                          {allKnownCategories.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                          <option value="__custom__">+ Type custom category...</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="bar-button secondary small"
-                          style={{ whiteSpace: "nowrap" }}
-                          onClick={() => {
-                            setIsCustomCategory(true);
-                            set("category", "");
-                          }}
-                        >
-                          + Custom
-                        </button>
+                        <input required={required} type="text" placeholder="Type custom subcategory..." value={values.subcategory ?? ""} onChange={(event) => set("subcategory", event.target.value)} />
+                        <button type="button" className="bar-button secondary small" style={{ whiteSpace: "nowrap" }} onClick={() => { setIsCustomSubcategory(false); set("subcategory", ""); }}>Choose from list</button>
                       </div>
+                    ) : (
+                      <SearchableSelect
+                        options={[...(BAR_DRINK_SUBCATEGORIES[values.category] || []), ...(values.subcategory ? [values.subcategory] : [])]}
+                        value={values.subcategory ?? ""}
+                        placeholder="Select subcategory / variety"
+                        searchPlaceholder="Search subcategories…"
+                        onChange={(value) => set("subcategory", value)}
+                        allowCustom
+                        customLabel="+ Custom Subcategory"
+                        onCustom={() => { setIsCustomSubcategory(true); set("subcategory", ""); }}
+                      />
                     )
                   ) : type === "measure_selector" ? (
                     isCustomMeasure ? (
@@ -2856,23 +2677,19 @@ function EntityModal({ kind, initial, tables = [], staff = [], drinks = [], onCl
                       </div>
                     ) : (
                       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        <select
-                          value={values.measure ?? ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__custom__") {
-                              setIsCustomMeasure(true);
-                              set("measure", "");
-                            } else {
-                              set("measure", e.target.value);
-                            }
-                          }}
-                        >
-                          <option value="">Select serving measure</option>
-                          {BAR_SERVING_MEASURES.map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                          <option value="__custom__">+ Custom Measure...</option>
-                        </select>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <SearchableSelect
+                            options={mergeBarServingMeasures([], drinks)}
+                            value={values.measure ?? ""}
+                            placeholder="Select serving measure"
+                            searchPlaceholder="Search serving measure..."
+                            emptyMessage="No serving measures found"
+                            onChange={(value) => set("measure", normalizeBarServingMeasure(value))}
+                            allowCustom
+                            customLabel="Custom Measure"
+                            onCustom={() => { setIsCustomMeasure(true); set("measure", ""); }}
+                          />
+                        </div>
                         <button
                           type="button"
                           className="bar-button secondary small"
@@ -3053,19 +2870,22 @@ function BarDrinksMenu({
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [isCustomSubcategory, setIsCustomSubcategory] = useState(false);
   const [isCustomMeasure, setIsCustomMeasure] = useState(false);
   const [itemForm, setItemForm] = useState({
     name: "",
     category: "Cocktails",
+    subcategory: "",
+    customSubcategory: "",
     customCategory: "",
     price: "",
-    drinkType: "Alcoholic",    measure: "Glass (250 ml)",
+    drinkType: "Alcoholic",    measure: "Medium Glass (250 ml)",
     customMeasure: "",
     abv: "",
     isVeg: false,
     isChefSpecial: false,
     prepTime: "15 min",
-    measure: "30 ml (Single Peg)",
+    measure: BAR_SERVING_MEASURES[0],
     customMeasure: "",
     drinkType: "Alcoholic",
     abv: "40",
@@ -3074,85 +2894,12 @@ function BarDrinksMenu({
     isAvailable: "Available",
   });
 
-  const categoryOptions = useMemo(() => {
-    const excluded = new Set([
-      "all",
-      "all categories",
-      "all category",
-      "all items",
-      "category",
-      "categories",
-      "beverages",
-      "beverage",
-      "tea & coffee",
-      "tea and coffee",
-      "tea",
-      "coffee",
-      "juices & shakes",
-      "juices and shakes",
-      "shakes",
-      "juices",
-      "soft drinks & soda",
-      "soft drinks",
-      "soda",
-      "food",
-      "biryani",
-      "curries",
-      "curry",
-      "starters",
-      "starter",
-      "soups",
-      "breads",
-      "rice",
-      "desserts",
-    ]);
+  const categoryOptions = useMemo(
+    () => mergeBarDrinkCategories(extraCategories, drinks),
+    [drinks, extraCategories],
+  );
 
-    const map = new Map();
-    // 1. Standard bar categories
-    BAR_CATEGORIES.forEach((cat) => {
-      const key = cat.toLowerCase().trim();
-      if (!excluded.has(key)) {
-        map.set(key, { value: cat, label: cat });
-      }
-    });
-
-    // 2. Extra categories from API (filter out non-bar and duplicate entries)
-    (extraCategories || []).forEach((cat) => {
-      if (!cat) return;
-      const key = String(cat).toLowerCase().trim();
-      if (!excluded.has(key) && !map.has(key)) {
-        map.set(key, { value: cat, label: cat });
-      }
-    });
-
-    // 3. Categories from loaded drink items (filter out non-bar entries)
-    (drinks || []).forEach((d) => {
-      const cat = String(d?.category || "").trim();
-      if (!cat) return;
-      const key = cat.toLowerCase();
-      if (!excluded.has(key) && !map.has(key)) {
-        map.set(key, { value: cat, label: cat });
-      }
-    });
-
-    return Array.from(map.values());
-  }, [drinks, extraCategories]);
-
-  const measureOptions = useMemo(() => {
-    const list = [...BAR_SERVING_MEASURES];
-    extraMeasures.forEach((m) => {
-      if (m && !list.some((existing) => existing.toLowerCase() === m.toLowerCase())) {
-        list.push(m);
-      }
-    });
-    drinks.forEach((d) => {
-      const msr = String(d.measure || d.servingMeasure || "").trim();
-      if (msr && !list.some((m) => m.toLowerCase() === msr.toLowerCase())) {
-        list.push(msr);
-      }
-    });
-    return list;
-  }, [drinks, extraMeasures]);
+  const measureOptions = useMemo(() => mergeBarServingMeasures(extraMeasures, drinks), [drinks, extraMeasures]);
 
   const filteredDrinks = useMemo(() => {
     return drinks.filter((item) => {
@@ -3164,7 +2911,7 @@ function BarDrinksMenu({
         );
       const matchesCategory =
         !menuFilters.category ||
-        String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase();
+        normalizeBarDrinkCategory(item.category, item).toLocaleLowerCase() === normalizeBarDrinkCategory(menuFilters.category).toLocaleLowerCase();
       
       const isItemAlcoholic = item.drinkType
         ? item.drinkType.toLowerCase().includes("alc") && !item.drinkType.toLowerCase().includes("non")
@@ -3194,17 +2941,17 @@ function BarDrinksMenu({
   const handleOpenItemModal = (item = null) => {
     if (item) {
       setEditingItem(item);
-      const cat = String(item.category || "").trim();
-      const isKnownCat = BAR_CATEGORIES.some(
-        (c) => c.toLowerCase() === cat.toLowerCase()
-      );
+      const cat = normalizeBarDrinkCategory(item.category, item);
+      const isKnownCat = categoryOptions.some((option) => option.value.toLowerCase() === cat.toLowerCase());
       const isCustomCat = !isKnownCat && Boolean(cat);
       setIsCustomCategory(isCustomCat);
+      const subcategory = String(item.subcategory || "").trim();
+      const knownSubcategories = BAR_DRINK_SUBCATEGORIES[cat] || [];
+      const isCustomSubcat = Boolean(subcategory) && !knownSubcategories.some((entry) => entry.toLocaleLowerCase() === subcategory.toLocaleLowerCase());
+      setIsCustomSubcategory(isCustomSubcat);
 
-      const msr = String(item.measure || item.servingMeasure || "").trim();
-      const isKnownMeasure = BAR_SERVING_MEASURES.some(
-        (m) => m.toLowerCase() === msr.toLowerCase()
-      );
+      const msr = normalizeBarServingMeasure(item.measure || item.servingMeasure || item.servingVolume || "");
+      const isKnownMeasure = BAR_SERVING_MEASURES.some((measure) => measure.toLocaleLowerCase() === msr.toLocaleLowerCase());
       const isCustomMsr = !isKnownMeasure && Boolean(msr);
       setIsCustomMeasure(isCustomMsr);
 
@@ -3219,11 +2966,13 @@ function BarDrinksMenu({
         name: item.name || "",
         category: isCustomCat ? "__custom__" : (cat || "Cocktails"),
         customCategory: isCustomCat ? cat : "",
+        subcategory,
+        customSubcategory: isCustomSubcat ? subcategory : "",
         price: item.price !== undefined && item.price !== null ? String(item.price) : "",
         isVeg: Boolean(item.isVeg),
         isChefSpecial: isSpecial,
         prepTime: item.prepTime || "15 min",
-        measure: isCustomMsr ? "__custom__" : (msr || "30 ml (Single Peg)"),
+        measure: isCustomMsr ? "__custom__" : (msr || BAR_SERVING_MEASURES[0]),
         customMeasure: isCustomMsr ? msr : "",
         drinkType: item.drinkType || (item.abv ? "Alcoholic" : "Non-Alcoholic"),
         abv: item.abv !== undefined && item.abv !== null ? String(item.abv) : "",
@@ -3234,16 +2983,19 @@ function BarDrinksMenu({
     } else {
       setEditingItem(null);
       setIsCustomCategory(false);
+      setIsCustomSubcategory(false);
       setIsCustomMeasure(false);
       setItemForm({
         name: "",
         category: "Cocktails",
+        subcategory: "",
+        customSubcategory: "",
         customCategory: "",
         price: "",
         isVeg: false,
         isChefSpecial: false,
         prepTime: "15 min",
-        measure: "30 ml (Single Peg)",
+        measure: BAR_SERVING_MEASURES[0],
         customMeasure: "",
         drinkType: "Alcoholic",
         abv: "40",
@@ -3271,25 +3023,28 @@ function BarDrinksMenu({
     // Resolve Category: custom input or dropdown selection
     let finalCategory = "Cocktails";
     if (isCustomCategory || itemForm.category === "__custom__") {
-      finalCategory = String(itemForm.customCategory || "").trim();
-      if (!finalCategory) {
+      const requestedCategory = String(itemForm.customCategory || "").trim();
+      if (!requestedCategory) {
         setToast?.("Please enter a custom category name.");
         return;
       }
+      finalCategory = categoryOptions.find((option) => option.value.toLocaleLowerCase() === requestedCategory.toLocaleLowerCase())?.value || requestedCategory;
     } else {
       finalCategory = String(itemForm.category || "").trim() || "Cocktails";
     }
 
+    const finalSubcategory = String(isCustomSubcategory ? itemForm.customSubcategory : itemForm.subcategory || "").trim();
+
     // Resolve Serving Measure: custom input or dropdown selection
-    let finalMeasure = "30 ml (Single Peg)";
+    let finalMeasure = BAR_SERVING_MEASURES[0];
     if (isCustomMeasure || itemForm.measure === "__custom__") {
-      finalMeasure = String(itemForm.customMeasure || "").trim();
+      finalMeasure = normalizeBarServingMeasure(itemForm.customMeasure);
       if (!finalMeasure) {
         setToast?.("Please enter a custom serving measure / volume.");
         return;
       }
     } else {
-      finalMeasure = String(itemForm.measure || "").trim() || "30 ml (Single Peg)";
+      finalMeasure = normalizeBarServingMeasure(itemForm.measure || BAR_SERVING_MEASURES[0]);
     }
 
     const isSpecial = Boolean(itemForm.isChefSpecial);
@@ -3301,6 +3056,7 @@ function BarDrinksMenu({
       dishName: itemForm.name.trim(),
       drinkName: itemForm.name.trim(),
       category: finalCategory,
+      subcategory: finalSubcategory,
       price: parseFloat(itemForm.price || 0),
       isVeg: (itemForm.drinkType === "Alcoholic" || isAlcoholicCategory(finalCategory, itemForm.drinkType, itemForm.abv)),
       dietaryType: (itemForm.drinkType === "Alcoholic" || isAlcoholicCategory(finalCategory, itemForm.drinkType, itemForm.abv)) ? "Veg" : "Non-Veg",
@@ -3518,7 +3274,7 @@ function BarDrinksMenu({
 
         <label className="menu-filter-field">
           <span>Category</span>
-          <select
+          <SearchableSelect
             value={menuFilters.category}
             onChange={(e) => {
               setMenuFilters((prev) => ({ ...prev, category: e.target.value }));
@@ -3531,12 +3287,12 @@ function BarDrinksMenu({
                 {opt.label}
               </option>
             ))}
-          </select>
+          </SearchableSelect>
         </label>
 
         <label className="menu-filter-field">
           <span>Drink Type</span>
-          <select
+          <SearchableSelect
             value={menuFilters.drinkType}
             onChange={(e) => {
               setMenuFilters((prev) => ({ ...prev, drinkType: e.target.value }));
@@ -3546,12 +3302,12 @@ function BarDrinksMenu({
             <option value="">All</option>
             <option value="alcoholic">Alcoholic</option>
             <option value="non-alcoholic">Non-Alcoholic</option>
-          </select>
+          </SearchableSelect>
         </label>
 
         <label className="menu-filter-field">
           <span>Availability</span>
-          <select
+          <SearchableSelect
             value={menuFilters.availability}
             onChange={(e) => {
               setMenuFilters((prev) => ({ ...prev, availability: e.target.value }));
@@ -3561,7 +3317,7 @@ function BarDrinksMenu({
             <option value="">All</option>
             <option value="available">Available</option>
             <option value="unavailable">Unavailable</option>
-          </select>
+          </SearchableSelect>
         </label>
 
         <button
@@ -3574,7 +3330,6 @@ function BarDrinksMenu({
           }}
           title="Reset drink filters"
         >
-          <RotateCcw size={13} strokeWidth={2.2} />
           <span>Clear Filters</span>
         </button>
       </div>
@@ -3641,15 +3396,12 @@ function BarDrinksMenu({
                     {/* Drink Name + Thumbnail */}
                     <td style={{ padding: "0.6rem 0.85rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        <img
-                          src={getMenuItemImage(item)}
-                          alt={item.name}
-                          onError={(e) => handleDishImageError(e, item)}
+                        <MenuItemVisual
+                          item={item}
                           style={{
                             width: "48px",
                             height: "48px",
                             borderRadius: "10px",
-                            objectFit: "cover",
                             border: isAvail
                               ? "1px solid var(--border-card)"
                               : "1px solid rgba(239, 68, 68, 0.35)",
@@ -4243,7 +3995,9 @@ function BarDrinksMenu({
                       type="button"
                       onClick={() => {
                         setIsCustomCategory(false);
-                        setItemForm((prev) => ({ ...prev, category: BAR_CATEGORIES[0] }));
+                        const category = categoryOptions[0]?.value || BAR_CATEGORIES[0];
+                        setIsCustomSubcategory(false);
+                        setItemForm((prev) => ({ ...prev, category, subcategory: "", customSubcategory: "" }));
                       }}
                       style={{
                         height: "38px",
@@ -4262,60 +4016,56 @@ function BarDrinksMenu({
                     </button>
                   </div>
                 ) : (
+                  <SearchableSelect
+                    options={categoryOptions}
+                    value={itemForm.category}
+                    placeholder="Select drink category"
+                    searchPlaceholder="Search drink categories…"
+                    onChange={(value) => {
+                      setIsCustomSubcategory(false);
+                      setItemForm((prev) => ({ ...prev, category: value, subcategory: "", customSubcategory: "" }));
+                    }}
+                    allowCustom
+                    customLabel="+ Custom Category"
+                    onCustom={() => {
+                      setIsCustomCategory(true);
+                      setIsCustomSubcategory(true);
+                      setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "", subcategory: "", customSubcategory: "" }));
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Row 2, Col 1: Optional category-specific variety */}
+              <div>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-main)", display: "block", marginBottom: "5px" }}>
+                  Subcategory / Variety
+                </label>
+                {isCustomSubcategory ? (
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <select
-                      value={itemForm.category}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "__custom__") {
-                          setIsCustomCategory(true);
-                          setItemForm((prev) => ({ ...prev, customCategory: "" }));
-                        } else {
-                          setItemForm((prev) => ({ ...prev, category: val }));
-                        }
-                      }}
-                      style={{
-                        flex: 1,
-                        height: "38px",
-                        boxSizing: "border-box",
-                        background: "var(--bg-tertiary)",
-                        border: "1.5px solid var(--border-subtle)",
-                        borderRadius: "8px",
-                        padding: "0 0.85rem",
-                        color: "var(--text-main)",
-                        fontWeight: 600,
-                        fontSize: "0.9rem",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {categoryOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Category...</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomCategory(true);
-                        setItemForm((prev) => ({ ...prev, category: "__custom__", customCategory: "" }));
-                      }}
-                      style={{
-                        height: "38px",
-                        padding: "0 12px",
-                        borderRadius: "8px",
-                        border: "1.5px solid var(--border-subtle)",
-                        background: "var(--bg-tertiary)",
-                        color: "var(--text-main)",
-                        fontWeight: 700,
-                        fontSize: "0.82rem",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      + Custom
-                    </button>
+                    <input
+                      type="text"
+                      placeholder="Type subcategory / variety..."
+                      value={itemForm.customSubcategory}
+                      onChange={(event) => setItemForm((previous) => ({ ...previous, customSubcategory: event.target.value }))}
+                      style={{ flex: 1, height: "38px", boxSizing: "border-box", background: "var(--bg-tertiary)", border: "1.5px solid var(--border-subtle)", borderRadius: "8px", padding: "0 0.85rem", color: "var(--text-main)", fontSize: "0.88rem", outline: "none" }}
+                    />
+                    <button type="button" className="bar-button secondary small" onClick={() => {
+                      setIsCustomSubcategory(false);
+                      setItemForm((previous) => ({ ...previous, subcategory: "", customSubcategory: "" }));
+                    }}>List</button>
                   </div>
+                ) : (
+                  <SearchableSelect
+                    options={[...(BAR_DRINK_SUBCATEGORIES[itemForm.category] || []), ...(itemForm.subcategory ? [itemForm.subcategory] : [])]}
+                    value={itemForm.subcategory}
+                    placeholder="Select subcategory / variety"
+                    searchPlaceholder="Search subcategories…"
+                    onChange={(value) => setItemForm((previous) => ({ ...previous, subcategory: value }))}
+                    allowCustom
+                    customLabel="+ Custom Subcategory"
+                    onCustom={() => { setIsCustomSubcategory(true); setItemForm((previous) => ({ ...previous, customSubcategory: "", subcategory: "" })); }}
+                  />
                 )}
               </div>
 
@@ -4451,38 +4201,22 @@ function BarDrinksMenu({
                   </div>
                 ) : (
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <select
-                      value={itemForm.measure}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "__custom__") {
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <SearchableSelect
+                        options={measureOptions}
+                        value={itemForm.measure}
+                        placeholder="Select serving measure"
+                        searchPlaceholder="Search serving measure..."
+                        emptyMessage="No serving measures found"
+                        onChange={(value) => setItemForm((previous) => ({ ...previous, measure: normalizeBarServingMeasure(value) }))}
+                        allowCustom
+                        customLabel="Custom Measure"
+                        onCustom={() => {
                           setIsCustomMeasure(true);
-                          setItemForm((prev) => ({ ...prev, customMeasure: "" }));
-                        } else {
-                          setItemForm((prev) => ({ ...prev, measure: val }));
-                        }
-                      }}
-                      style={{
-                        flex: 1,
-                        height: "38px",
-                        boxSizing: "border-box",
-                        background: "var(--bg-tertiary)",
-                        border: "1.5px solid var(--border-subtle)",
-                        borderRadius: "8px",
-                        padding: "0 0.85rem",
-                        color: "var(--text-main)",
-                        fontWeight: 600,
-                        fontSize: "0.9rem",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="">Select serving measure</option>
-                      {measureOptions.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                      <option value="__custom__">+ Custom Measure...</option>
-                    </select>
+                          setItemForm((previous) => ({ ...previous, measure: "__custom__", customMeasure: "" }));
+                        }}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -4653,19 +4387,15 @@ function BarDrinksMenu({
                   Choose Image
                 </label>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                  {itemForm.image && (
-                    <img
-                      src={itemForm.image}
-                      alt="Drink preview"
-                      style={{
-                        width: "56px",
-                        height: "56px",
-                        borderRadius: "8px",
-                        objectFit: "cover",
-                        border: "1px solid var(--border-card)",
-                      }}
-                    />
-                  )}
+                  <MenuItemVisual
+                    item={{ ...itemForm, name: itemForm.name || "Beverage", image: itemForm.image }}
+                    style={{
+                      width: "56px",
+                      height: "56px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-card)",
+                    }}
+                  />
                   <label
                     style={{
                       display: "inline-flex",
@@ -4683,7 +4413,7 @@ function BarDrinksMenu({
                     }}
                   >
                     <Plus size={15} />
-                    <span>{itemForm.image ? "Change Image" : "+ Choose Image"}</span>
+                    <span>{itemForm.image ? "Change Image" : "Choose Image"}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -6112,11 +5842,12 @@ function BarTablesView({
 function BarStaffView({
   staffList = [],
   tables = [],
+  salaryPayments = [],
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
-  onReloadStaff,
-  loading = false,
+  onOpenSalaryPayment,
+  onSyncPosUsers,
   setToast,
 }) {
   const { requestDelete, confirmState, cancelDelete } = useConfirmDelete();
@@ -6352,6 +6083,7 @@ function BarStaffView({
     role: "",
     phone: "",
     shift: "",
+    monthlySalary: "0",
     assignedTableIds: [],
   });
 
@@ -6368,12 +6100,15 @@ function BarStaffView({
       const personTableIds = Array.isArray(person?.assignedTableIds)
         ? person.assignedTableIds
         : [];
+      const monthlySalary = Number(person.monthlySalary) || 0;
+      const paidThisMonth = getStaffSalaryPaidThisMonth(person, salaryPayments);
       setEditingStaff(person);
       setStaffForm({
         name: personName,
         role: personRole,
         phone: person.phone || "",
         shift: person.shift || "",
+        monthlySalary: String(monthlySalary > 0 ? monthlySalary : paidThisMonth),
         assignedTableIds: personTableIds,
       });
     } else {
@@ -6383,6 +6118,7 @@ function BarStaffView({
         role: "",
         phone: "",
         shift: "",
+        monthlySalary: "0",
         assignedTableIds: [],
       });
     }
@@ -6408,6 +6144,7 @@ function BarStaffView({
       roleTitle: staffForm.role,
       phone: staffForm.phone || "+91 98450 00000",
       shift: staffForm.shift,
+      monthlySalary: Number(staffForm.monthlySalary) || 0,
       assignedTableIds: staffForm.assignedTableIds || [],
     };
 
@@ -6432,6 +6169,7 @@ function BarStaffView({
       role: "",
       phone: "",
       shift: "",
+      monthlySalary: "0",
       assignedTableIds: [],
     });
     setIsStaffModalOpen(false);
@@ -6496,10 +6234,15 @@ function BarStaffView({
         }
         .staff-table-grid {
           display: grid;
-          grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1.2fr) minmax(160px, 1.5fr) minmax(120px, 1fr) minmax(110px, 130px);
+          grid-template-columns: minmax(150px, 1.6fr) minmax(115px, 1.15fr) minmax(125px, 1.3fr) minmax(125px, 1.1fr) minmax(105px, 1fr) minmax(145px, 170px);
           gap: 0.5rem;
         }
         .staff-table-grid > * { min-width: 0; }
+        .staff-table-grid .staff-shift-cell {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         @media (max-width: 900px) {
           .staff-table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
@@ -6562,6 +6305,7 @@ function BarStaffView({
               }}
             >
               Manage bartenders, bar captains and servers handling bar guests
+              {" "}Shared with Dine staff.
             </p>
           </div>
         </div>
@@ -6569,29 +6313,25 @@ function BarStaffView({
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
           <button
             type="button"
-            onClick={() => {
-              onReloadStaff?.();
-              setToast?.("Staff list refreshed from database.");
-            }}
-            title="Reload staff list from backend database"
+            onClick={onSyncPosUsers}
+            title="Import POS users from Login Management as serving staff"
             style={{
               display: "flex",
               alignItems: "center",
               gap: "0.35rem",
               padding: "0.5rem 0.9rem",
-              background: "var(--bg-secondary)",
-              border: "1px solid var(--border-card)",
-              color: "var(--text-dim)",
+              background: "rgba(59, 130, 246, 0.12)",
+              border: "1px solid rgba(59, 130, 246, 0.35)",
+              color: "#60a5fa",
               borderRadius: "8px",
               fontWeight: 600,
               fontSize: "0.8rem",
               cursor: "pointer",
             }}
           >
-            <RotateCcw size={14} />
-            <span>Refresh</span>
+            <Users size={14} />
+            <span>Sync POS Users</span>
           </button>
-
           <button
             type="button"
             onClick={() => handleOpenStaffModal()}
@@ -6678,7 +6418,7 @@ function BarStaffView({
               {/* Col 2: Role Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-role">
                 <span>Role</span>
-                <select
+                <SearchableSelect
                   id="bar-staff-filter-role"
                   value={staffFilters.role}
                   onChange={(e) => updateStaffFilter("role", e.target.value)}
@@ -6706,13 +6446,13 @@ function BarStaffView({
                       {role}
                     </option>
                   ))}
-                </select>
+                </SearchableSelect>
               </label>
 
               {/* Col 4: Shift Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-shift">
                 <span>Shift</span>
-                <select
+                <SearchableSelect
                   id="bar-staff-filter-shift"
                   value={staffFilters.shift}
                   onChange={(e) => updateStaffFilter("shift", e.target.value)}
@@ -6740,13 +6480,13 @@ function BarStaffView({
                       {shift}
                     </option>
                   ))}
-                </select>
+                </SearchableSelect>
               </label>
 
               {/* Col 5: Assigned Tables Filter */}
               <label className="menu-filter-field" htmlFor="bar-staff-filter-assigned">
                 <span>Table Assignment</span>
-                <select
+                <SearchableSelect
                   id="bar-staff-filter-assigned"
                   value={staffFilters.assigned}
                   onChange={(e) => updateStaffFilter("assigned", e.target.value)}
@@ -6775,7 +6515,7 @@ function BarStaffView({
                   <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                     No Tables
                   </option>
-                </select>
+                </SearchableSelect>
               </label>
 
               {/* Col 6: Reset / Count */}
@@ -6835,6 +6575,7 @@ function BarStaffView({
               <div>Staff Name</div>
               <div>Role / Designation</div>
               <div>Shift</div>
+              <div>Monthly Salary</div>
               <div>Table Assignment</div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>Actions</div>
             </div>
@@ -6911,6 +6652,9 @@ function BarStaffView({
                 person?.role || person?.roleTitle || person?.jobTitle || "Staff",
               );
               const personId = person?.id ?? person?.staffId;
+              const monthlySalary = Number(person.monthlySalary) || 0;
+              const paidThisMonth = getStaffSalaryPaidThisMonth(person, salaryPayments);
+              const displayedSalary = monthlySalary > 0 ? monthlySalary : paidThisMonth;
               const assignedCount = (Array.isArray(person?.assignedTableIds) && person.assignedTableIds.length > 0)
                 ? person.assignedTableIds.length
                 : (person?.assignedTables && person.assignedTables !== "—"
@@ -6997,18 +6741,30 @@ function BarStaffView({
 
                   {/* Col 4: Shift */}
                   <div
+                    className="staff-shift-cell"
                     style={{
                       color: "var(--text-muted)",
                       fontSize: "0.84rem",
                       fontWeight: 500,
-                      whiteSpace: "nowrap",
                     }}
                     title={person.shift || "General Shift"}
                   >
                     {person.shift || "General Shift"}
                   </div>
 
-                  {/* Col 5: Status Pill */}
+                  <div
+                    style={{
+                      color: displayedSalary > 0 ? "var(--text-main)" : "var(--text-dim)",
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                    title={monthlySalary > 0 ? "Configured monthly salary" : paidThisMonth > 0 ? "Actual salary payments this month" : "Monthly salary has not been set"}
+                  >
+                    {displayedSalary > 0 ? formatCurrency(displayedSalary) : "—"}
+                  </div>
+
+                  {/* Table assignment status */}
                   <div>
                     <div
                       style={{
@@ -7053,6 +6809,30 @@ function BarStaffView({
 
                   {/* Col 6: Actions */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenSalaryPayment?.(person)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "0.25rem",
+                        padding: "0.35rem 0.45rem",
+                        background: "rgba(16, 185, 129, 0.08)",
+                        color: "var(--success)",
+                        border: "1px solid rgba(16, 185, 129, 0.35)",
+                        borderRadius: "6px",
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={`Record a salary payment for ${personName}`}
+                      aria-label={`Record salary payment for ${personName}`}
+                    >
+                      <Banknote size={13} />
+                      Pay
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleOpenStaffModal(person)}
@@ -7276,6 +7056,44 @@ function BarStaffView({
               />
             </div>
 
+            <div>
+              <label
+                htmlFor="bar-staff-monthly-salary"
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  display: "block",
+                  marginBottom: "5px",
+                }}
+              >
+                Monthly Salary (INR)
+              </label>
+              <input
+                id="bar-staff-monthly-salary"
+                type="number"
+                min="0"
+                max="99999999"
+                step="0.01"
+                value={staffForm.monthlySalary}
+                onChange={(e) => setStaffForm({ ...staffForm, monthlySalary: e.target.value })}
+                placeholder="0.00"
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  boxSizing: "border-box",
+                  background: "var(--bg-tertiary)",
+                  border: "1.5px solid var(--border-subtle)",
+                  borderRadius: "8px",
+                  padding: "0 0.85rem",
+                  color: "var(--text-main)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
             {assignableTables.length > 0 && (
               <div>
                 <label
@@ -7429,9 +7247,13 @@ export function BarWorkspace({
   onOrderUpdated,
   onBarOrderItemStatusUpdated,
   onUpdateItemKotStatus = null,
-  onCompleteTableKot = null,
   inventory: sharedInventory = [],
   pastOrders = [],
+  salaryPayments = [],
+  inventoryPurchases = [],
+  onOpenSalaryPayment,
+  onSyncPosUsers,
+  onRecordInventoryPurchase,
   restaurantName = "Restaurant",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
@@ -7538,9 +7360,9 @@ export function BarWorkspace({
           category: d.category || "Cocktails",
           price: Number(d.price ?? d.sellingPrice ?? 0),
           sellingPrice: Number(d.price ?? d.sellingPrice ?? 0),
-          measure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
-          servingMeasure: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
-          servingVolume: d.servingMeasure || d.measure || d.servingVolume || "30 ml (Single Peg)",
+          measure: normalizeBarServingMeasure(d.servingMeasure || d.measure || d.servingVolume || BAR_SERVING_MEASURES[0]),
+          servingMeasure: normalizeBarServingMeasure(d.servingMeasure || d.measure || d.servingVolume || BAR_SERVING_MEASURES[0]),
+          servingVolume: normalizeBarServingMeasure(d.servingMeasure || d.measure || d.servingVolume || BAR_SERVING_MEASURES[0]),
           isAvailable: d.isAvailable !== false && d.isAvailable !== "Unavailable",
           drinkType: d.drinkType || (d.abv || d.alcoholContent ? "Alcoholic" : "Non-Alcoholic"),
           abv: d.abv !== undefined && d.abv !== null ? d.abv : (d.alcoholContent !== undefined ? d.alcoholContent : ""),
@@ -7593,8 +7415,8 @@ export function BarWorkspace({
           isVeg: drinkType === "Alcoholic",
           alcoholContent: Number(m.alcoholPct ?? m.abv ?? (drinkType === "Alcoholic" ? 40 : 0)),
           abv: Number(m.alcoholPct ?? m.abv ?? (drinkType === "Alcoholic" ? 40 : 0)),
-          measure: m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"),
-          servingMeasure: m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? "30 ml (Single Peg)" : "Glass (250 ml)"),
+          measure: normalizeBarServingMeasure(m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? BAR_SERVING_MEASURES[0] : "Medium Glass (250 ml)")),
+          servingMeasure: normalizeBarServingMeasure(m.servingMeasure || m.measure || (drinkType === "Alcoholic" ? BAR_SERVING_MEASURES[0] : "Medium Glass (250 ml)")),
           isBarDrink: true,
           isBarItem: true,
         };
@@ -7630,168 +7452,6 @@ export function BarWorkspace({
     } catch {}
     window.dispatchEvent(new CustomEvent("avsr-bar-drinks-updated", { detail: barDrinks }));
   }, [barDrinks]);
-
-const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
-
-  // Dedicated bar staff state - loaded live from Backend API (no mock data)
-  const [barStaff, setBarStaff] = useState(() => {
-    try {
-      localStorage.removeItem("avsr_bar_staff_v1");
-      const saved = localStorage.getItem(STORAGE_KEY_BAR_STAFF);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  });
-  const [barStaffLoading, setBarStaffLoading] = useState(false);
-
-  const loadBarStaff = useCallback(async () => {
-    setBarStaffLoading(true);
-    try {
-      const res = await apiGetBarStaff();
-      const raw = res?.data?.data || res?.data;
-      if (res?.success && Array.isArray(raw)) {
-        const formatted = raw.map((s) => ({
-          ...s,
-          id: s.staffId || s.id,
-          staffId: s.staffId || s.id,
-          name: s.fullName || s.name || "",
-          fullName: s.fullName || s.name || "",
-          role: s.jobTitle || s.role || s.roleTitle || "Staff",
-          jobTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
-          roleTitle: s.jobTitle || s.role || s.roleTitle || "Staff",
-          phone: s.phone || "",
-          shift: s.shift || "General Shift",
-          barArea: s.barArea || "—",
-          assignedTables: s.assignedTables || "—",
-          assignedTableIds: Array.isArray(s.assignedTableIds) ? s.assignedTableIds : [],
-          assignedTableDetails: Array.isArray(s.assignedTableDetails) ? s.assignedTableDetails : [],
-          isActive: s.isActive !== false && s.status !== "inactive",
-          status: s.status || (s.isActive !== false ? "active" : "inactive"),
-        }));
-        setBarStaff(formatted);
-      }
-    } catch (err) {
-      console.warn("[BarWorkspace] apiGetBarStaff offline/fallback:", err?.message);
-    } finally {
-      setBarStaffLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadBarStaff();
-  }, [loadBarStaff]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_BAR_STAFF, JSON.stringify(barStaff));
-    } catch {}
-  }, [barStaff]);
-
-  const handleAddBarStaff = async (newStaff) => {
-    try {
-      const res = await apiCreateBarStaff({
-        fullName: newStaff.name || newStaff.fullName,
-        jobTitle: newStaff.role || newStaff.jobTitle || newStaff.roleTitle,
-        phone: newStaff.phone,
-        shift: newStaff.shift,
-        assignedTableIds: newStaff.assignedTableIds || [],
-        assignedTables: newStaff.assignedTables || [],
-        isActive: true,
-      });
-      const created = res?.data?.data || res?.data;
-      if (created) {
-        const mapped = {
-          ...created,
-          id: created.staffId || created.id,
-          staffId: created.staffId || created.id,
-          name: created.fullName || created.name || newStaff.name,
-          fullName: created.fullName || created.name || newStaff.name,
-          role: created.jobTitle || created.role || created.roleTitle || newStaff.role,
-          jobTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
-          roleTitle: created.jobTitle || created.role || created.roleTitle || newStaff.role,
-          phone: created.phone || newStaff.phone,
-          shift: created.shift || newStaff.shift,
-          barArea: created.barArea || "—",
-          assignedTables: created.assignedTables || "—",
-          assignedTableIds: created.assignedTableIds || [],
-          assignedTableDetails: created.assignedTableDetails || [],
-          isActive: true,
-          status: "active",
-        };
-        setBarStaff((prev) => [mapped, ...prev.filter((s) => s.id !== mapped.id)]);
-        return mapped;
-      }
-    } catch (err) {
-      console.error("[BarWorkspace] apiCreateBarStaff error:", err);
-      const fallback = {
-        ...newStaff,
-        id: Date.now(),
-        staffId: Date.now(),
-        fullName: newStaff.name,
-        jobTitle: newStaff.role,
-        roleTitle: newStaff.role,
-        isActive: true,
-        status: "active",
-      };
-      setBarStaff((prev) => [fallback, ...prev]);
-      return fallback;
-    }
-  };
-
-  const handleUpdateBarStaff = async (updatedStaff) => {
-    const id = updatedStaff.staffId || updatedStaff.id;
-    try {
-      const res = await apiUpdateBarStaff(id, {
-        fullName: updatedStaff.name || updatedStaff.fullName,
-        jobTitle: updatedStaff.role || updatedStaff.jobTitle || updatedStaff.roleTitle,
-        phone: updatedStaff.phone,
-        shift: updatedStaff.shift,
-        assignedTableIds: updatedStaff.assignedTableIds,
-        assignedTables: updatedStaff.assignedTables,
-        isActive: updatedStaff.isActive,
-      });
-      const updated = res?.data?.data || res?.data;
-      if (updated) {
-        const mapped = {
-          ...updated,
-          id: updated.staffId || updated.id || id,
-          staffId: updated.staffId || updated.id || id,
-          name: updated.fullName || updated.name || updatedStaff.name,
-          fullName: updated.fullName || updated.name || updatedStaff.name,
-          role: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
-          jobTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
-          roleTitle: updated.jobTitle || updated.role || updated.roleTitle || updatedStaff.role,
-          phone: updated.phone || updatedStaff.phone,
-          shift: updated.shift || updatedStaff.shift,
-          barArea: updated.barArea || "—",
-          assignedTables: updated.assignedTables || "—",
-          assignedTableIds: updated.assignedTableIds || [],
-          assignedTableDetails: updated.assignedTableDetails || [],
-          isActive: updated.isActive !== false,
-          status: updated.status || "active",
-        };
-        setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? mapped : s)));
-        return mapped;
-      }
-    } catch (err) {
-      console.error("[BarWorkspace] apiUpdateBarStaff error:", err);
-      setBarStaff((prev) => prev.map((s) => (s.id === id || s.staffId === id ? updatedStaff : s)));
-      return updatedStaff;
-    }
-  };
-
-  const handleDeleteBarStaff = async (staffId) => {
-    try {
-      await apiDeleteBarStaff(staffId);
-    } catch (err) {
-      console.error("[BarWorkspace] apiDeleteBarStaff error:", err);
-    }
-    setBarStaff((prev) => prev.filter((s) => s.id !== staffId && s.staffId !== staffId));
-    return true;
-  };
 
   // Mojito auto-removal removed to preserve Dine-Bar drink synchronization
 
@@ -7962,7 +7622,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
     return apiBarOrders;
   }, [apiBarOrders]);
   const inventoryRows = useMemo(() => inventory.filter((item) => isBeverageCategory(item.category ?? item.subcategory ?? item.name)), [inventory]);
-  const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter((order) => {
+  const isBarInvoice = useCallback((order) => {
     const allItems = Array.isArray(order.items) ? order.items : [];
     return allItems.some((item) => {
       const name = item.name || item.dishName || item.menuItemName || "";
@@ -7970,11 +7630,12 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
         String(candidate.name || "").trim().toLowerCase() === String(name).trim().toLowerCase());
       return isBeverageCategory(menuItem?.category ?? menuItem?.categoryName ?? item.category ?? item.categoryName ?? item.subcategory ?? name);
     });
-  }), [pastOrders, menuItems, menuLookup]);
+  }, [menuItems, menuLookup]);
+  const barInvoices = useMemo(() => (Array.isArray(pastOrders) ? pastOrders : []).filter(isBarInvoice), [pastOrders, isBarInvoice]);
 
   const staffIdOf = (person) => person?.staffId ?? person?.id;
   const staffNameOf = (person) => person?.fullName || person?.name || person?.FullName || "";
-  const effectiveStaffList = barStaff.length > 0 ? barStaff : (Array.isArray(dineStaff) ? dineStaff : []);
+  const effectiveStaffList = Array.isArray(dineStaff) ? dineStaff : [];
   const tables = (Array.isArray(dineTables) ? dineTables : []).map((source) => {
     const sourceTableId = source.backendTableId ?? source.tableId ?? source.id;
     const activeOrder = orders.find((order) => String(order.tableId ?? order.TableId) === String(sourceTableId))
@@ -8337,7 +7998,7 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
   }, [inventoryRows]);
 
   const alcoholicDrinksCount = useMemo(() => {
-    return drinks.filter((d) => d.drinkType === "Alcoholic" || ["cocktails", "beers", "whiskey", "vodka & gin", "rum & brandy", "wine & champagne", "shots & shooters"].some((c) => c === String(d.category || "").toLowerCase())).length;
+    return drinks.filter((drink) => isAlcoholicCategory(normalizeBarDrinkCategory(drink.category, drink), drink.drinkType, drink.abv)).length;
   }, [drinks]);
 
   const nonAlcoholicDrinksCount = useMemo(() => {
@@ -8389,12 +8050,12 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
     "bar-staff": { title: "Bar Staff & Persons", description: "Shared hotel staff records • changes appear in Dine mode too.", rows: staff, kind: "staff", columns: ["Staff ID", "Full Name", "Job Title", "Shift", "Bar Area", "Assigned Tables", "Status", "Actions"] },
   }[route];
 
-  const filterChoices = route === "bar-drinks" ? ["all", ...new Set([...BAR_CATEGORIES, ...drinks.map((drink) => drink.category).filter(Boolean)].filter((c) => !["all", "all categories", "beverages", "tea & coffee", "juices & shakes", "soft drinks & soda"].includes(String(c).toLowerCase().trim())))] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
+  const filterChoices = route === "bar-drinks" ? ["all", ...mergeBarDrinkCategories([], drinks).map((option) => option.value)] : route === "bar-tables" ? ["all", ...new Set(tables.map((table) => table.area))] : route === "bar-staff" ? ["all", ...new Set([...BAR_ROLES, ...staff.map((person) => person.role)])] : ["all"];
   const listRows = (() => {
     if (!listConfig) return [];
     return listConfig.rows.filter((row) => {
       const matchesQuery = !query.trim() || JSON.stringify(row).toLowerCase().includes(query.trim().toLowerCase());
-      const matchesFilter = route === "bar-drinks" ? (filter === "all" || String(row.category || "").toLowerCase() === filter.toLowerCase()) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice))
+      const matchesFilter = route === "bar-drinks" ? (filter === "all" || normalizeBarDrinkCategory(row.category, row).toLocaleLowerCase() === normalizeBarDrinkCategory(filter).toLocaleLowerCase()) && (minPrice === "" || Number(row.price) >= Number(minPrice)) && (maxPrice === "" || Number(row.price) <= Number(maxPrice))
         : route === "bar-tables" ? (filter === "all" || row.area === filter) && (extraFilter === "all" || row.status === extraFilter) && (capacityFilter === "all" || Number(row.capacity) >= Number(capacityFilter))
         : route === "bar-staff" ? (filter === "all" || row.role === filter) && (extraFilter === "all" || row.shift === extraFilter) && (assignmentFilter === "all" || (Array.isArray(row.tables) && row.tables.includes(assignmentFilter)))
         : true;
@@ -8450,20 +8111,20 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
 
   const listPage = listConfig && <section className="bar-page-card">
     <div className="bar-section-head"><div><h2>{listConfig.title}</h2><p>{listConfig.description}</p></div><button className="bar-button primary" disabled={sharedListKey && sharedListStatus !== "ready"} onClick={() => openForm(listConfig.kind)}><Plus size={16} /> Add {listConfig.kind === "drink" ? "Drink" : listConfig.kind === "table" ? "Table" : "Staff"}</button></div>
-    <div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={`Search ${listConfig.title.toLowerCase()}...`} /></label><label className="bar-select-label"><span>{route === "bar-staff" ? "Role" : route === "bar-tables" ? "Area" : "Category"}</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All {route === "bar-staff" ? "Roles" : route === "bar-tables" ? "Areas" : "Categories"}</option>{filterChoices.slice(1).map((choice) => <option key={choice}>{choice}</option>)}</select></label>
+    <div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={`Search ${listConfig.title.toLowerCase()}...`} /></label><label className="bar-select-label"><span>{route === "bar-staff" ? "Role" : route === "bar-tables" ? "Area" : "Category"}</span><SearchableSelect value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All {route === "bar-staff" ? "Roles" : route === "bar-tables" ? "Areas" : "Categories"}</option>{filterChoices.slice(1).map((choice) => <option key={choice}>{choice}</option>)}</SearchableSelect></label>
       {route === "bar-drinks" && (
         <>
           <label className="bar-select-label">
             <span>Availability</span>
-            <select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}>
+            <SearchableSelect value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}>
               <option value="all">All</option>
               <option value="available">Available</option>
               <option value="unavailable">Unavailable</option>
-            </select>
+            </SearchableSelect>
           </label>
           <label className="bar-select-label">
             <span>Price Range</span>
-            <select
+            <SearchableSelect
               value={pricePreset}
               onChange={(e) => {
                 const val = e.target.value;
@@ -8492,13 +8153,13 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
               <option value="150-300">₹150 – ₹300</option>
               <option value="300-500">₹300 – ₹500</option>
               <option value="above-500">Above ₹500</option>
-              </select>
+              </SearchableSelect>
           </label>
         </>
       )}
-      {route === "bar-tables" && <><label className="bar-select-label"><span>Occupancy</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">Any status</option>{[...new Set(tables.map((table) => table.status))].map((status) => <option key={status}>{status}</option>)}</select></label><label className="bar-select-label"><span>Minimum Capacity</span><select value={capacityFilter} onChange={(event) => { setCapacityFilter(event.target.value); setPage(1); }}><option value="all">Any capacity</option>{[2, 4, 6].map((size) => <option key={size} value={size}>{size}+ guests</option>)}</select></label></>}
-      {route === "bar-staff" && <label className="bar-select-label"><span>Shift</span><select value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All shifts</option>{BAR_SHIFTS.map((shift) => <option key={shift}>{shift}</option>)}</select></label>}
-      {route === "bar-staff" && <label className="bar-select-label"><span>Table Assignment</span><select value={assignmentFilter} onChange={(event) => { setAssignmentFilter(event.target.value); setPage(1); }}><option value="all">All assignments</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</select></label>}
+      {route === "bar-tables" && <><label className="bar-select-label"><span>Occupancy</span><SearchableSelect value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">Any status</option>{[...new Set(tables.map((table) => table.status))].map((status) => <option key={status}>{status}</option>)}</SearchableSelect></label><label className="bar-select-label"><span>Minimum Capacity</span><SearchableSelect value={capacityFilter} onChange={(event) => { setCapacityFilter(event.target.value); setPage(1); }}><option value="all">Any capacity</option>{[2, 4, 6].map((size) => <option key={size} value={size}>{size}+ guests</option>)}</SearchableSelect></label></>}
+      {route === "bar-staff" && <label className="bar-select-label"><span>Shift</span><SearchableSelect value={extraFilter} onChange={(event) => { setExtraFilter(event.target.value); setPage(1); }}><option value="all">All shifts</option>{BAR_SHIFTS.map((shift) => <option key={shift}>{shift}</option>)}</SearchableSelect></label>}
+      {route === "bar-staff" && <label className="bar-select-label"><span>Table Assignment</span><SearchableSelect value={assignmentFilter} onChange={(event) => { setAssignmentFilter(event.target.value); setPage(1); }}><option value="all">All assignments</option>{tables.map((table) => <option key={table.id} value={table.id}>{table.number}</option>)}</SearchableSelect></label>}
     </div>
     {sharedListStatus === "loading" ? <SkeletonTable rows={6} columns={listConfig.columns.length} /> : sharedListStatus === "error" ? <div className="bar-error" role="alert">{sharedListError || `Could not load shared hotel ${sharedListKey}. The Bar page is not showing demo records.`}</div> : <>{renderStaticTable(listConfig.columns, visibleRows, (column, row) => renderListCell(column, row, listConfig.kind), `bar-${listConfig.kind}-table`)}
     <footer className="bar-pagination"><span>Showing {listRows.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, listRows.length)} of {listRows.length}</span><div><button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Previous page"><ChevronLeft size={16} /></button><span>Page {page} of {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Next page"><ChevronRight size={16} /></button></div></footer>
@@ -9177,11 +8838,9 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
                   onMouseEnter={(event) => { event.currentTarget.style.borderColor = "var(--accent-amber)"; }}
                   onMouseLeave={(event) => { event.currentTarget.style.borderColor = "var(--border-subtle)"; }}
                 >
-                  <img
-                    src={getMenuItemImage(drink)}
-                    alt={drink.name}
-                    style={{ width: "36px", height: "36px", borderRadius: "7px", objectFit: "cover", flexShrink: 0 }}
-                    onError={(event) => handleDishImageError(event, drink)}
+                  <MenuItemVisual
+                    item={drink}
+                    style={{ width: "36px", height: "36px", borderRadius: "7px", flexShrink: 0 }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
@@ -9335,18 +8994,19 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
           onAddTable={onAddTable}
           onUpdateTable={onUpdateTable}
           onDeleteTable={onDeleteTable}
-          onAddStaff={handleAddBarStaff}
+          onAddStaff={onAddStaff}
           setToast={setToast}
         />
       ) : route === "bar-staff" ? (
         <BarStaffView
-          staffList={barStaff}
+          staffList={dineStaff}
           tables={tables}
-          onAddStaff={handleAddBarStaff}
-          onUpdateStaff={handleUpdateBarStaff}
-          onDeleteStaff={handleDeleteBarStaff}
-          onReloadStaff={loadBarStaff}
-          loading={barStaffLoading}
+          salaryPayments={salaryPayments}
+          onAddStaff={onAddStaff}
+          onUpdateStaff={onUpdateStaff}
+          onDeleteStaff={onDeleteStaff}
+          onOpenSalaryPayment={onOpenSalaryPayment}
+          onSyncPosUsers={onSyncPosUsers}
           setToast={setToast}
         />
       ) : (
@@ -9361,15 +9021,14 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
           barDrinks={barDrinks}
           onItemsUpdated={onBarOrderItemStatusUpdated}
           onUpdateItemKotStatus={onUpdateItemKotStatus}
-          onCompleteTableKot={onCompleteTableKot}
         />
       )}
 
-      {route === "bar-invoices" && <AdminInvoices pastOrders={barInvoices} preferPastOrders restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
+      {route === "bar-invoices" && <AdminInvoices invoiceFilter={isBarInvoice} restaurantName={restaurantName} restaurantSettings={restaurantSettings} onUpdateInvoiceDiscount={onUpdateInvoiceDiscount} />}
 
-      {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} />}
+      {route === "bar-inventory" && <SharedBarInventory inventory={inventory} loading={inventoryLoading} error={inventoryError} onRefresh={loadInventory} onRecordInventoryPurchase={onRecordInventoryPurchase} />}
 
-      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</select></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError}</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
+      {route === "bar-orders" && <section className="bar-page-card"><div className="bar-section-head"><div><h2>Bar Orders / Bills</h2><p>Shared restaurant orders with beverage summaries.</p></div><div className="bar-actions"><button className="bar-button secondary" onClick={loadOrders} disabled={ordersLoading}><RefreshCw size={15} /> Refresh</button><button className="bar-button primary" onClick={() => setOrderComposerOpen(true)}><Plus size={16} /> New Bar Order</button></div></div><div className="bar-list-tools"><label className="bar-search"><Search size={16} /><input placeholder="Search orders, tables, customers…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label><label className="bar-select-label"><span>Order Status</span><SearchableSelect value={filter} onChange={(event) => { setFilter(event.target.value); setPage(1); }}><option value="all">All statuses</option>{[...new Set(barOrders.map((order) => order.status))].map((status) => <option key={status}>{status}</option>)}</SearchableSelect></label></div>{ordersLoading ? <SkeletonTable rows={5} columns={8} /> : <>{ordersError && <div className="bar-error" role="status">{ordersError}</div>}{renderStaticTable(["Order ID", "Table / Order Type", "Customer / Server", "Drinks and Quantities", "Order Time", "Total", "Order Status", "Actions"], visibleOrders, (column, order) => ({ "Order ID": <strong className="bar-order-id" title={String(order.id)}>{order.id}</strong>, "Table / Order Type": order.table, "Customer / Server": order.customer, "Drinks and Quantities": order.itemLabel, "Order Time": order.time, Total: <strong>{formatCurrency(order.total)}</strong>, "Order Status": <Status>{order.status}</Status>, Actions: <div className="bar-actions bar-order-actions"><button className="bar-button secondary small" title="View all items in this order" onClick={() => setItemsOrder(order)}>View Items</button><button className="bar-icon-button" aria-label={`Print order ${order.id}`} title="Print order details" onClick={() => printBill({ ...order, subtotal: order.total, discount: 0, gst: 0, service: 0, items: order.itemLabel }) || setToast("Allow pop-ups to print the order details.")}><Printer size={15} /></button></div> })[column], "bar-orders-table")}<footer className="bar-pagination"><span>Showing {filteredOrders.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}</span><div><button disabled={page <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))}><ChevronLeft size={16} /></button><span>Page {page} of {Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))}</span><button disabled={page >= Math.ceil(filteredOrders.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}><ChevronRight size={16} /></button></div></footer></>}</section>}
       <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
       <OrderItemsModal order={tableItems} onClose={() => setTableItems(null)} />
 
@@ -9380,6 +9039,9 @@ const STORAGE_KEY_BAR_STAFF = "avsr_bar_staff_v2";
           restaurantSettings={restaurantSettings}
           inventory={inventory}
           pastOrders={barInvoices}
+          staffList={dineStaff}
+          salaryPayments={salaryPayments}
+          inventoryPurchases={inventoryPurchases}
         />
       )}
 

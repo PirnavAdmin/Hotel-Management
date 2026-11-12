@@ -12,6 +12,7 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/roles")]
 [AllowAnonymous]
+[Tags("Admin", "Roles")]
 public class RolesController : ControllerBase
 {
     private readonly SpService _spService;

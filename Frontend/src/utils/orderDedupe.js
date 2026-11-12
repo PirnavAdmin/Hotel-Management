@@ -297,7 +297,10 @@ export function dedupeOrders(orders = []) {
       grandTotal: orderGrandTotal,
       total: orderGrandTotal,
       totalAmount: orderGrandTotal,
-      paidAmount: Number(rawOrder.paidAmount ?? rawOrder.amountPaid ?? rawOrder.AmountPaid ?? orderGrandTotal) || 0,
+      paidAmount: Math.min(
+        Number(rawOrder.paidAmount ?? rawOrder.amountPaid ?? rawOrder.AmountPaid ?? orderGrandTotal) || 0,
+        orderGrandTotal,
+      ),
       status: "Settled",
       Status: "Settled",
     };

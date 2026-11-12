@@ -4,7 +4,6 @@ import {
   dedupeOrders,
   isSettledInvoiceRecord,
   isSettledSaleRecord,
-  mergeSettledOrders,
   sortOrdersBySettlementTime,
 } from "./orderDedupe";
 const valueFrom = (object, ...keys) => {
@@ -101,11 +100,14 @@ export function normalizeInvoiceRecord(invoice, order = null) {
 
   const isSettledOrder = String(valueFrom(order, "status", "Status") || "").toLowerCase() === "settled";
   const invoicePaidAmount = valueFrom(invoice, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid");
-  const paidAmount = Number(
+  const rawPaidAmount = Number(
     invoicePaidAmount ??
       valueFrom(order, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid") ??
       grandTotal,
   ) || 0;
+  const paidAmount = isSettledOrder && rawPaidAmount > grandTotal
+    ? grandTotal
+    : rawPaidAmount;
 
   const createdAt = valueFrom(order, "settledAt", "SettledAt", "createdAt", "CreatedAt") ??
     valueFrom(invoice, "createdAt", "CreatedAt");
@@ -231,30 +233,21 @@ async function loadLiveInvoiceRecords() {
   const invoices = extractInvoiceRecords(invoiceResponse);
   const orders = extractSettledOrderRecords(orderResponse);
 
-  let fallbackOrders = [];
-  try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_past_orders_v2_inr") : null;
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        fallbackOrders = parsed;
-      }
-    }
-  } catch {}
-
   const liveRecords = mergeLiveInvoiceRecords(invoices || [], orders || []);
-  const merged = liveRecords.length > 0 || invoices !== null || orders !== null
-    ? mergeSettledOrders(liveRecords, fallbackOrders)
-    : mergeSettledOrders(fallbackOrders);
-  const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(merged)).filter(
+  const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(liveRecords)).filter(
     (record) => !["void", "cancelled"].includes(String(record.status || record.Status || "").toLowerCase()),
   );
+  const error = invoices === null && orders === null
+    ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
+    : invoices === null
+    ? `Invoice records could not be loaded (${invoiceResponse?.error || "invoice service unavailable"}); showing settled POS orders.`
+    : orders === null
+    ? `POS order history could not be loaded (${orderResponse?.error || "order history service unavailable"}); invoice details may be incomplete.`
+    : "";
 
   return {
     records: cleanRecords,
-    error: (invoices === null && orders === null && cleanRecords.length === 0)
-      ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
-      : "",
+    error,
   };
 }
 

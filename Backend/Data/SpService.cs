@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace HMS.Data;
 
@@ -19,6 +20,10 @@ public class SpService
     private async Task<DbConnection> GetOpenConnectionAsync()
     {
         var conn = _context.Database.GetDbConnection();
+        if (conn.State == ConnectionState.Broken)
+        {
+            await conn.CloseAsync();
+        }
         if (conn.State != ConnectionState.Open)
         {
             await conn.OpenAsync();
@@ -29,6 +34,7 @@ public class SpService
     private DbCommand CreateCommand(DbConnection conn, string spName, Dictionary<string, object?>? parameters)
     {
         var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = spName;
         cmd.CommandType = CommandType.StoredProcedure;
 
@@ -58,7 +64,8 @@ public class SpService
         using var cmd = CreateCommand(conn, spName, parameters);
         var result = await cmd.ExecuteScalarAsync();
         if (result == null || result == DBNull.Value) return default;
-        return (T)Convert.ChangeType(result, typeof(T));
+        var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        return (T)Convert.ChangeType(result, targetType);
     }
 
     public async Task<List<T>> ExecuteQueryAsync<T>(string spName, Func<DbDataReader, T> mapper, Dictionary<string, object?>? parameters = null)
@@ -94,6 +101,7 @@ public class SpService
     {
         var conn = await GetOpenConnectionAsync();
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         if (parameters != null)
@@ -114,6 +122,7 @@ public class SpService
         var list = new List<T>();
         var conn = await GetOpenConnectionAsync();
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         if (parameters != null)
@@ -138,6 +147,7 @@ public class SpService
     {
         var conn = await GetOpenConnectionAsync();
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
         cmd.CommandText = sql;
         cmd.CommandType = CommandType.Text;
         if (parameters != null)
@@ -152,7 +162,7 @@ public class SpService
         }
         var result = await cmd.ExecuteScalarAsync();
         if (result == null || result == DBNull.Value) return default;
-        return (T)Convert.ChangeType(result, typeof(T));
+        var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        return (T)Convert.ChangeType(result, targetType);
     }
 }
-

@@ -1,9 +1,12 @@
+using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using HMS.Data;
+using HMS.DTOs;
 using HMS.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,17 +16,25 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory")]
-[Route("api/Inventory")]
-[Route("api/v1/ingredients")]
-[Route("api/Ingredients")]
 public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly InventoryService _inventoryService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<InventoryController> _logger;
 
-    public InventoryController(SpService spService, ILogger<InventoryController> logger)
+    public InventoryController(
+        SpService spService,
+        InventoryService inventoryService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InventoryController> logger)
     {
         _spService = spService;
+        _inventoryService = inventoryService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }
 
@@ -32,7 +43,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet]
-    [HttpGet("ingredients")]
     public async Task<IActionResult> GetIngredients([FromQuery] string? category, [FromQuery] string? search)
     {
         try
@@ -74,7 +84,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet("{id:long}")]
-    [HttpGet("ingredients/{id:long}")]
     public async Task<IActionResult> GetIngredientById(long id)
     {
         try
@@ -109,7 +118,11 @@ public class InventoryController : ControllerBase
         try
         {
             _logger.LogInformation("Retrieving low stock ingredient alerts.");
-            var lowStock = await _spService.ExecuteQueryAsync("sp_GetLowStockIngredients", MapIngredientFromReader);
+            var ingredients = await _spService.ExecuteQueryAsync("sp_GetIngredients", MapIngredientFromReader);
+            var lowStock = ingredients
+                .Where(ingredient => ingredient.CurrentStock <= ingredient.MinimumThreshold)
+                .OrderBy(ingredient => ingredient.CurrentStock)
+                .ToList();
 
             return Ok(new
             {
@@ -158,63 +171,84 @@ public class InventoryController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new ingredient in MySQL.
+    /// Creates or batch-processes inventory ingredients (both Food and Bar items) in MySQL.
+    /// Supports single item object, JSON array [ ... ], or wrapped batch { items: [ ... ] }.
     /// </summary>
     [AllowAnonymous]
     [HttpPost]
-    [HttpPost("ingredients")]
-    public async Task<IActionResult> CreateIngredient([FromBody] CreateIngredientRequest request)
+    public async Task<IActionResult> CreateIngredient([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.Name))
-        {
-            return BadRequest(new { success = false, message = "Ingredient Name is required." });
-        }
-
         try
         {
-            _logger.LogInformation("Creating new ingredient: {Name}, Stock: {Stock}, Unit: {Unit}", request.Name, request.Stock, request.Unit);
-
-            var parameters = new Dictionary<string, object?>
+            var items = _inventoryService.ParseJsonPayload(body);
+            if (items.Count == 0)
             {
-                { "p_name", request.Name.Trim() },
-                { "p_category", string.IsNullOrWhiteSpace(request.Category) ? "General" : request.Category.Trim() },
-                { "p_subcategory", request.Subcategory?.Trim() ?? string.Empty },
-                { "p_supplier", string.IsNullOrWhiteSpace(request.Supplier) ? "Local Supplier" : request.Supplier.Trim() },
-                { "p_unit", string.IsNullOrWhiteSpace(request.Unit) ? "KG" : request.Unit.Trim().ToUpper() },
-                { "p_current_stock", request.Stock },
-                { "p_minimum_threshold", request.MinThreshold > 0 ? request.MinThreshold : 5.00m },
-                { "p_unit_cost", request.UnitCost > 0 ? request.UnitCost : (request.Mrp ?? 0.00m) },
-                { "p_mrp", request.Mrp }
-            };
+                return BadRequest(new { success = false, message = "Ingredient Name is required or no valid items found." });
+            }
 
-            long id = await _spService.ExecuteScalarAsync<long>("sp_CreateIngredient", parameters);
-
-            var created = new Ingredient
+            // Check if single item failed basic validation
+            if (items.Count == 1)
             {
-                IngredientId = id,
-                Name = request.Name.Trim(),
-                Category = string.IsNullOrWhiteSpace(request.Category) ? "General" : request.Category.Trim(),
-                Subcategory = request.Subcategory?.Trim() ?? string.Empty,
-                Supplier = string.IsNullOrWhiteSpace(request.Supplier) ? "Local Supplier" : request.Supplier.Trim(),
-                Unit = string.IsNullOrWhiteSpace(request.Unit) ? "KG" : request.Unit.Trim().ToUpper(),
-                CurrentStock = request.Stock,
-                MinimumThreshold = request.MinThreshold > 0 ? request.MinThreshold : 5.00m,
-                UnitCost = request.UnitCost > 0 ? request.UnitCost : (request.Mrp ?? 0.00m),
-                Mrp = request.Mrp,
-                UpdatedAt = DateTime.UtcNow,
-                IsActive = true
-            };
+                var (isValid, valErr) = _inventoryService.ValidateItem(items[0], 0);
+                if (!isValid)
+                {
+                    return BadRequest(new { success = false, message = valErr });
+                }
+            }
 
-            return CreatedAtAction(nameof(GetIngredientById), new { id }, new
+            var result = await _inventoryService.ProcessInventorySubmissionAsync(items, atomic ?? false);
+
+            if (!result.Success && result.Items.Count == 0)
             {
-                success = true,
-                message = "Ingredient added to inventory successfully.",
-                data = created
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+            }
+
+            // Single item creation: return 201 CreatedAtAction for backwards compatibility
+            if (items.Count == 1 && result.Items.Count == 1)
+            {
+                var first = result.Items[0];
+                return CreatedAtAction(nameof(GetIngredientById), new { id = first.Id }, new
+                {
+                    success = true,
+                    message = first.Action == "updated"
+                        ? $"Ingredient '{first.Name}' stock updated in inventory successfully."
+                        : $"Ingredient '{first.Name}' added to inventory successfully.",
+                    classification = first.Classification,
+                    isBarItem = first.IsBarItem,
+                    data = first,
+                    totalReceived = 1,
+                    insertedCount = result.InsertedCount,
+                    updatedCount = result.UpdatedCount,
+                    failedCount = result.FailedCount,
+                    items = result.Items,
+                    errors = result.Errors
+                });
+            }
+
+            // Batch creation: return 200 OK with full summary
+            return Ok(new
+            {
+                success = result.Success,
+                message = result.Message,
+                totalReceived = result.TotalReceived,
+                insertedCount = result.InsertedCount,
+                updatedCount = result.UpdatedCount,
+                failedCount = result.FailedCount,
+                foodCount = result.FoodCount,
+                barCount = result.BarCount,
+                items = result.Items,
+                errors = result.Errors,
+                data = result.Items
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create ingredient: {Name}", request.Name);
+            _logger.LogError(ex, "Failed to create ingredient(s).");
             return StatusCode(500, new { success = false, message = "Failed to add ingredient: " + ex.Message });
         }
     }
@@ -224,43 +258,50 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPut("{id:long}")]
-    [HttpPut("ingredients/{id:long}")]
-    public async Task<IActionResult> UpdateIngredient(long id, [FromBody] UpdateIngredientRequest request)
+    public async Task<IActionResult> UpdateIngredient(long id, [FromBody] JsonElement body)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.Name))
-        {
-            return BadRequest(new { success = false, message = "Ingredient Name is required." });
-        }
-
         try
         {
-            _logger.LogInformation("Updating ingredient {IngredientId}: {Name}", id, request.Name);
-
-            var parameters = new Dictionary<string, object?>
+            var items = _inventoryService.ParseJsonPayload(body);
+            if (items.Count == 0 || string.IsNullOrWhiteSpace(items[0].Name))
             {
-                { "p_id", id },
-                { "p_name", request.Name.Trim() },
-                { "p_category", string.IsNullOrWhiteSpace(request.Category) ? "General" : request.Category.Trim() },
-                { "p_subcategory", request.Subcategory?.Trim() ?? string.Empty },
-                { "p_supplier", string.IsNullOrWhiteSpace(request.Supplier) ? "Local Supplier" : request.Supplier.Trim() },
-                { "p_unit", string.IsNullOrWhiteSpace(request.Unit) ? "KG" : request.Unit.Trim().ToUpper() },
-                { "p_current_stock", request.Stock },
-                { "p_minimum_threshold", request.MinThreshold > 0 ? request.MinThreshold : 5.00m },
-                { "p_unit_cost", request.UnitCost > 0 ? request.UnitCost : (request.Mrp ?? 0.00m) },
-                { "p_mrp", request.Mrp }
-            };
+                return BadRequest(new { success = false, message = "Ingredient Name is required." });
+            }
 
-            await _spService.ExecuteNonQueryAsync("sp_UpdateIngredient", parameters);
+            var item = items[0];
+            item.Id = id;
 
-            var updatedList = await _spService.ExecuteQueryAsync("sp_GetIngredientById", MapIngredientFromReader, new Dictionary<string, object?> { { "p_id", id } });
-            var updated = updatedList.FirstOrDefault();
-
-            return Ok(new
+            var (isValid, error) = _inventoryService.ValidateItem(item, 0);
+            if (!isValid)
             {
-                success = true,
-                message = "Ingredient updated successfully.",
-                data = updated
-            });
+                return BadRequest(new { success = false, message = error });
+            }
+
+            var existing = await _spService.ExecuteQueryAsync(
+                "sp_GetIngredientById",
+                MapIngredientFromReader,
+                new Dictionary<string, object?> { { "p_id", id } });
+            if (existing.Count == 0)
+            {
+                return NotFound(new { success = false, message = $"Ingredient with ID {id} was not found." });
+            }
+
+            var result = await _inventoryService.ProcessInventorySubmissionAsync(
+                new List<InventoryItemInputDto> { item },
+                atomic: true,
+                replaceStockOnExisting: true);
+
+            if (result.Items.Count > 0)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "Ingredient updated successfully.",
+                    data = result.Items[0]
+                });
+            }
+
+            return StatusCode(500, new { success = false, message = result.Message });
         }
         catch (Exception ex)
         {
@@ -274,7 +315,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpDelete("{id:long}")]
-    [HttpDelete("ingredients/{id:long}")]
     public async Task<IActionResult> DeleteIngredient(long id)
     {
         try
@@ -302,16 +342,37 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost("adjust")]
-    [HttpPost("stock-adjustment")]
     public async Task<IActionResult> AdjustStock([FromBody] StockAdjustmentRequest request)
     {
         if (request == null || request.IngredientId <= 0 || request.QuantityChange == 0)
         {
             return BadRequest(new { success = false, message = "Valid Ingredient ID and non-zero Quantity change are required." });
         }
+        if (request.Reason?.Length > 255)
+        {
+            return BadRequest(new { success = false, message = "Stock adjustment reason cannot exceed 255 characters." });
+        }
 
         try
         {
+            var currentItems = await _spService.ExecuteQueryAsync(
+                "sp_GetIngredientById",
+                MapIngredientFromReader,
+                new Dictionary<string, object?> { { "p_id", request.IngredientId } });
+            var currentItem = currentItems.FirstOrDefault();
+            if (currentItem == null)
+            {
+                return NotFound(new { success = false, message = $"Ingredient {request.IngredientId} was not found." });
+            }
+            if (request.QuantityChange < -currentItem.CurrentStock)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Cannot consume more than the {currentItem.CurrentStock} {currentItem.Unit} currently in stock."
+                });
+            }
+
             _logger.LogInformation("Adjusting stock for Ingredient {IngredientId} by {QuantityChange}. Reason: {Reason}",
                 request.IngredientId, request.QuantityChange, request.Reason);
 
@@ -381,31 +442,170 @@ public class InventoryController : ControllerBase
         }
     }
 
+    public static int GetOrdinalSafe(DbDataReader reader, params string[] columnNames)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            string name = reader.GetName(i);
+            foreach (var col in columnNames)
+            {
+                if (string.Equals(name, col, StringComparison.OrdinalIgnoreCase))
+                {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static string GetStringSafe(DbDataReader reader, string defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            return reader.GetValue(ord)?.ToString() ?? defaultValue;
+        }
+        return defaultValue;
+    }
+
+    private static decimal GetDecimalSafe(DbDataReader reader, decimal defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToDecimal(reader.GetValue(ord));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static decimal? GetNullableDecimalSafe(DbDataReader reader, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToDecimal(reader.GetValue(ord));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static long GetInt64Safe(DbDataReader reader, long defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToInt64(reader.GetValue(ord));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static bool GetBoolSafe(DbDataReader reader, bool defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                object val = reader.GetValue(ord);
+                if (val is bool b) return b;
+                if (val is int i) return i == 1;
+                if (val is sbyte sb) return sb == 1;
+                if (val is short s) return s == 1;
+                if (val is long l) return l == 1;
+                string str = val.ToString()?.Trim() ?? "";
+                if (str == "1" || string.Equals(str, "true", StringComparison.OrdinalIgnoreCase)) return true;
+                if (str == "0" || string.Equals(str, "false", StringComparison.OrdinalIgnoreCase)) return false;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static DateTime GetDateTimeSafe(DbDataReader reader, DateTime defaultValue, params string[] columnNames)
+    {
+        int ord = GetOrdinalSafe(reader, columnNames);
+        if (ord >= 0 && !reader.IsDBNull(ord))
+        {
+            try
+            {
+                return Convert.ToDateTime(reader.GetValue(ord));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
     public static Ingredient MapIngredientFromReader(DbDataReader reader)
     {
-        int catOrd = reader.GetOrdinal("category");
-        int subOrd = reader.GetOrdinal("subcategory");
-        int supOrd = reader.GetOrdinal("supplier");
-        int mrpOrd = reader.GetOrdinal("mrp");
-        int codeOrd = reader.GetOrdinal("ingredient_code");
-        int actOrd = reader.GetOrdinal("is_active");
+        string code = GetStringSafe(reader, string.Empty, "ingredient_code", "code");
 
         return new Ingredient
         {
-            IngredientId = reader.GetInt64(reader.GetOrdinal("ingredient_id")),
-            Name = reader.GetString(reader.GetOrdinal("name")),
-            Category = reader.IsDBNull(catOrd) ? "General" : reader.GetString(catOrd),
-            Subcategory = reader.IsDBNull(subOrd) ? string.Empty : reader.GetString(subOrd),
-            Supplier = reader.IsDBNull(supOrd) ? "Local Supplier" : reader.GetString(supOrd),
-            Unit = reader.GetString(reader.GetOrdinal("unit")).ToUpper(),
-            CurrentStock = reader.GetDecimal(reader.GetOrdinal("current_stock")),
-            MinimumThreshold = reader.GetDecimal(reader.GetOrdinal("minimum_threshold")),
-            UnitCost = reader.GetDecimal(reader.GetOrdinal("unit_cost")),
-            Mrp = reader.IsDBNull(mrpOrd) ? null : reader.GetDecimal(mrpOrd),
-            IngredientCode = reader.IsDBNull(codeOrd) ? null : reader.GetString(codeOrd),
-            IsActive = !reader.IsDBNull(actOrd) && (reader.GetInt32(actOrd) == 1 || reader.GetBoolean(actOrd)),
-            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
+            IngredientId = GetInt64Safe(reader, 0L, "ingredient_id", "id"),
+            Name = GetStringSafe(reader, string.Empty, "name", "ingredient_name"),
+            Category = GetStringSafe(reader, "General", "category"),
+            Subcategory = GetStringSafe(reader, string.Empty, "subcategory", "sub_category"),
+            Supplier = GetStringSafe(reader, "Local Supplier", "supplier"),
+            Unit = GetStringSafe(reader, "KG", "unit").ToUpperInvariant(),
+            CurrentStock = GetDecimalSafe(reader, 0.00m, "current_stock", "stock"),
+            MinimumThreshold = GetDecimalSafe(reader, 5.00m, "minimum_threshold", "min_threshold", "reorder_level"),
+            UnitCost = GetDecimalSafe(reader, 0.00m, "unit_cost", "cost_per_unit"),
+            Mrp = GetNullableDecimalSafe(reader, "mrp"),
+            IngredientCode = string.IsNullOrWhiteSpace(code) ? null : code,
+            IsActive = GetBoolSafe(reader, true, "is_active", "active"),
+            UpdatedAt = GetDateTimeSafe(reader, DateTime.UtcNow, "updated_at")
         };
+    }
+    /// <summary>
+    /// Exports Dine Inventory (or All / Bar when ?department=All|Bar is passed) as CSV or XLSX.
+    /// Supports ?category=...&amp;status=in-stock|low-stock|out-of-stock&amp;search=...&amp;lowStockOnly=true&amp;department=Dine|Bar|All&amp;format=csv|xlsx.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportInventory(
+        [FromQuery] string? category,
+        [FromQuery] string? status,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? lowStockOnly = null,
+        [FromQuery] string? department = null,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateDineInventoryExportAsync(category, status, search, lowStockOnly, department);
+            return _exportService.ExportResult(doc, format, doc.BaseFileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting dine inventory");
+            return StatusCode(500, new { success = false, message = "Failed to export dine inventory.", error = ex.Message });
+        }
     }
 }
 

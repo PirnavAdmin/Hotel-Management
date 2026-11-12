@@ -1,3 +1,5 @@
+import { API_BASE_URL, API_HTTP_BASE } from "../api/apiConfig";
+
 // Neutral image used only when a menu item has no associated image or its
 // stored image cannot be loaded. Dish photos are never inferred from names.
 export const MENU_ITEM_IMAGE_PLACEHOLDER = "/assets/dishes/default.svg";
@@ -55,12 +57,45 @@ export function withAssetVersion(url) {
   return url;
 }
 
+/** Resolve menu image references against the currently configured API host. */
+export function resolveMenuImageUrl(value) {
+  if (typeof value !== "string") return "";
+  const image = value.trim();
+  if (!image) return "";
+  if (/^(data:|blob:)/i.test(image)) return image;
+
+  const configuredBase = (import.meta.env.DEV ? API_HTTP_BASE : API_BASE_URL).replace(/\/$/, "");
+  const resolvePath = (pathname, search = "", hash = "") => {
+    let path = pathname.replace(/\\/g, "/");
+    path = path.replace(/^(?:\/__backend_api)+(?=\/|$)/i, "");
+    if (!path.startsWith("/")) path = `/${path}`;
+    if (/^\/assets\//i.test(path)) return `${path}${search}${hash}`;
+    return `${configuredBase}${path}${search}${hash}`;
+  };
+
+  if (image.startsWith("/")) return resolvePath(image);
+  if (/^(?:__backend_api\/)+/i.test(image)) return resolvePath(image);
+  if (/^uploads\//i.test(image)) return resolvePath(image);
+  if (/^assets\//i.test(image)) return resolvePath(image);
+  if (!/^[a-z][a-z\d+.-]*:/i.test(image)) return resolvePath(image);
+
+  try {
+    const parsed = new URL(image.startsWith("//") ? `https:${image}` : image);
+    if (/^\/__backend_api(?:\/|$)/i.test(parsed.pathname) || /^\/uploads\//i.test(parsed.pathname)) {
+      return resolvePath(parsed.pathname, parsed.search, parsed.hash);
+    }
+    return image;
+  } catch {
+    return "";
+  }
+}
+
 /** Returns the item's stored image reference, or the neutral placeholder. */
 export function getMenuItemImage(item = {}) {
   const image = [item.imageUrl, item.image_url, item.image, item.ImageUrl].find(
     (value) => typeof value === "string" && value.trim().length > 0,
   );
-  return withAssetVersion(image ? image.trim() : MENU_ITEM_IMAGE_PLACEHOLDER);
+  return withAssetVersion(resolveMenuImageUrl(image) || MENU_ITEM_IMAGE_PLACEHOLDER);
 }
 
 /** Replaces a broken image with the neutral placeholder without retrying. */

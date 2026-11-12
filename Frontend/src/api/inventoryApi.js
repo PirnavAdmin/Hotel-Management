@@ -22,7 +22,9 @@ export async function apiGetInventoryIngredients() {
  */
 export async function apiCreateInventoryItem(itemData) {
   const stockVal = Number(itemData.stock) || 0;
-  const thresholdVal = Number(itemData.minThreshold) || 5;
+  const thresholdVal = itemData.minThreshold == null || itemData.minThreshold === ""
+    ? 5
+    : Number(itemData.minThreshold);
   const mrpVal =
     itemData.mrp == null || itemData.mrp === "" ? null : Number(itemData.mrp);
   const costVal = Number(itemData.unitCost || mrpVal || 0);
@@ -63,7 +65,9 @@ export async function apiCreateIngredient(ingredientData) {
  */
 export async function apiUpdateInventoryItem(id, itemData) {
   const stockVal = Number(itemData.stock) || 0;
-  const thresholdVal = Number(itemData.minThreshold) || 5;
+  const thresholdVal = itemData.minThreshold == null || itemData.minThreshold === ""
+    ? 5
+    : Number(itemData.minThreshold);
   const mrpVal =
     itemData.mrp == null || itemData.mrp === "" ? null : Number(itemData.mrp);
   const costVal = Number(itemData.unitCost || mrpVal || 0);
@@ -127,15 +131,49 @@ export async function apiDeleteIngredient(id) {
  * Adjusts stock quantity for an ingredient in MySQL database and logs audit transaction.
  */
 export async function apiAdjustStock({ ingredientId, quantityChange, reason }) {
+  const id = Number(ingredientId);
+  const change = Number(quantityChange);
+  if (!Number.isInteger(id) || id <= 0 || !Number.isFinite(change) || change === 0) {
+    return { success: false, error: "Ingredient ID and a non-zero stock change are required." };
+  }
+  if (String(reason || "").length > 255) {
+    return { success: false, error: "Stock adjustment reason cannot exceed 255 characters." };
+  }
   return apiClient("/api/v1/inventory/adjust", {
     method: "POST",
     body: JSON.stringify({
-      ingredientId: Number(ingredientId),
-      quantityChange: Number(quantityChange),
+      ingredientId: id,
+      quantityChange: change,
       reason: reason || "Stock adjustment",
       // Compatibility aliases
-      id: Number(ingredientId),
-      delta: Number(quantityChange),
+      id,
+      delta: change,
+    }),
+  });
+}
+
+export function apiGetInventoryPurchases({ department, limit = 500 } = {}) {
+  const query = new URLSearchParams();
+  if (department) query.set("department", department);
+  query.set("limit", String(limit));
+  return apiClient(`/api/v1/inventory/purchases?${query.toString()}`);
+}
+
+export function apiCreateInventoryPurchase(purchase) {
+  const itemId = Number(purchase.itemId);
+  return apiClient("/api/v1/inventory/purchases", {
+    method: "POST",
+    body: JSON.stringify({
+      itemId: Number.isInteger(itemId) && itemId > 0 ? itemId : null,
+      name: String(purchase.name || "").trim(),
+      category: String(purchase.category || "").trim(),
+      subcategory: String(purchase.subcategory || "").trim(),
+      supplier: String(purchase.supplier || "").trim(),
+      quantity: Number(purchase.quantity),
+      unit: String(purchase.unit || "").trim(),
+      unitCost: Number(purchase.unitCost),
+      department: String(purchase.department || "dine").trim().toLowerCase(),
+      purchaseDate: purchase.purchaseDate,
     }),
   });
 }
