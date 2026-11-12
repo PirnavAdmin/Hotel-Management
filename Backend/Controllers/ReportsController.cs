@@ -107,6 +107,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("daily")]
+    [HttpGet("daily-sales")]
     public async Task<IActionResult> GetDailySalesReport([FromQuery] int? days)
     {
         try
@@ -140,6 +141,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("monthly")]
+    [HttpGet("monthly-sales")]
     public async Task<IActionResult> GetMonthlySalesReport([FromQuery] int? year)
     {
         try
@@ -401,6 +403,7 @@ public async Task<IActionResult> GetInventoryReport()
     }
 
     [HttpGet("categories")]
+    [HttpGet("category-sales")]
     public async Task<IActionResult> GetCategorySalesReport()
     {
         try
@@ -428,6 +431,7 @@ public async Task<IActionResult> GetInventoryReport()
         }
     }
     [HttpGet("sales")]
+    [HttpGet("revenue")]
     public async Task<IActionResult> GetRevenueReport()
     {
         return await GetDashboardReport();
@@ -451,6 +455,7 @@ public async Task<IActionResult> GetInventoryReport()
     }
 
     [HttpGet("inventory/purchases")]
+    [HttpGet("inventory-purchases")]
     public async Task<IActionResult> GetInventoryPurchases([FromQuery] PurchaseLedgerFilterDto filter)
     {
         try
@@ -466,6 +471,7 @@ public async Task<IActionResult> GetInventoryReport()
     }
 
     [HttpGet("inventory/purchase-summary")]
+    [HttpGet("inventory-purchase-summary")]
     public async Task<IActionResult> GetInventoryPurchaseSummary([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
         try

@@ -1418,7 +1418,7 @@ export function App() {
         if (Array.isArray(incomingTables)) {
           const freshDel = getDeletedTableIds();
           const clean = mergeIncomingTables(incomingTables, freshDel);
-          setTables(clean);
+          setTables((prev) => (prev && prev.length > 0 ? prev : clean));
           try {
             localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
           } catch {}

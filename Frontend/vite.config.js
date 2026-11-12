@@ -2313,7 +2313,7 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_BACKEND_URL ||
     env.VITE_BACKEND_URL ||
     apiBase ||
-    "http://127.0.0.1:5000";
+    "http://127.0.0.1:5018";
 
   return {
     plugins: [react(), globalSyncPlugin(backendTarget)],
@@ -2344,7 +2344,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5000. Confirm it is running."
+                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running."
                 }));
               }
             });
