@@ -203,144 +203,34 @@
       "createdAt": "10:32 AM",
       "items": [
         {
+          "id": 229,
+          "kotId": 73,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 87,
           "menuItemId": 3,
           "dishName": "Special Boneless Chicken Biryani",
           "category": "Biryani",
           "price": 350,
-          "dietaryType": "Non-Veg",
-          "isVeg": false,
-          "drinkType": null,
-          "alcoholPct": null,
-          "servingMeasure": null,
-          "isBarItem": false,
-          "spiceLevel": 2,
-          "prepTimeMinutes": 15,
-          "shortDescription": "Juicy boneless chicken cubes spiced with crushed pepper and dum rice",
-          "imageUrl": null,
-          "isChefsSpecial": false,
-          "isAvailable": true,
-          "createdAt": "2026-10-27T11:55:58",
-          "updatedAt": "2026-10-27T11:55:58",
-          "recipe": [
-            {
-              "inventoryId": "inv-1793941019227-wdsf",
-              "name": "Basmati Biryani Rice",
-              "quantity": 0.2,
-              "unit": "KG",
-              "category": "Grains & Rice"
-            },
-            {
-              "inventoryId": "inv-1793941019227-3f60",
-              "name": "Raw Chicken",
-              "quantity": 0.25,
-              "unit": "KG",
-              "category": "Meat & Seafood"
-            },
-            {
-              "inventoryId": "inv-1793941019227-7nk4",
-              "name": "Cooking Oil",
-              "quantity": 0.04,
-              "unit": "L",
-              "category": "Oils & Condiments"
-            },
-            {
-              "inventoryId": "inv-1793941019227-atwu",
-              "name": "Onions",
-              "quantity": 0.08,
-              "unit": "KG",
-              "category": "Vegetables & Fresh Produce"
-            },
-            {
-              "inventoryId": "inv-1793941019227-javi",
-              "name": "Biryani Spices & Masala",
-              "quantity": 0.02,
-              "unit": "KG",
-              "category": "Spices & Seasoning"
-            }
-          ],
-          "id": 3,
-          "name": "Special Boneless Chicken Biryani",
-          "drinkName": "Special Boneless Chicken Biryani",
-          "isBarDrink": false,
-          "abv": null,
-          "alcoholContent": null,
-          "measure": null,
-          "servingVolume": null,
-          "isChefSpecial": false,
-          "prepTime": "15 min",
-          "description": "Juicy boneless chicken cubes spiced with crushed pepper and dum rice",
-          "image": "/assets/dishes/default.svg?v=20261015-v4",
-          "quantity": 1
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "ready",
+          "kotBatch": 1
         },
         {
+          "id": 230,
+          "kotId": 73,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 87,
           "menuItemId": 4,
           "dishName": "Chicken 65 Biryani",
           "category": "Biryani",
           "price": 360,
-          "dietaryType": "Non-Veg",
-          "isVeg": false,
-          "drinkType": null,
-          "alcoholPct": null,
-          "servingMeasure": null,
-          "isBarItem": false,
-          "spiceLevel": 3,
-          "prepTimeMinutes": 14,
-          "shortDescription": "Crispy spicy Chicken 65 tossed with curry leaves layered over biryani",
-          "imageUrl": null,
-          "isChefsSpecial": false,
-          "isAvailable": true,
-          "createdAt": "2026-10-27T11:55:58",
-          "updatedAt": "2026-10-27T11:55:58",
-          "recipe": [
-            {
-              "inventoryId": "inv-1793941019227-wdsf",
-              "name": "Basmati Biryani Rice",
-              "quantity": 0.2,
-              "unit": "KG",
-              "category": "Grains & Rice"
-            },
-            {
-              "inventoryId": "inv-1793941019227-3f60",
-              "name": "Raw Chicken",
-              "quantity": 0.25,
-              "unit": "KG",
-              "category": "Meat & Seafood"
-            },
-            {
-              "inventoryId": "inv-1793941019227-7nk4",
-              "name": "Cooking Oil",
-              "quantity": 0.04,
-              "unit": "L",
-              "category": "Oils & Condiments"
-            },
-            {
-              "inventoryId": "inv-1793941019227-atwu",
-              "name": "Onions",
-              "quantity": 0.08,
-              "unit": "KG",
-              "category": "Vegetables & Fresh Produce"
-            },
-            {
-              "inventoryId": "inv-1793941019227-javi",
-              "name": "Biryani Spices & Masala",
-              "quantity": 0.02,
-              "unit": "KG",
-              "category": "Spices & Seasoning"
-            }
-          ],
-          "id": 4,
-          "name": "Chicken 65 Biryani",
-          "drinkName": "Chicken 65 Biryani",
-          "isBarDrink": false,
-          "abv": null,
-          "alcoholContent": null,
-          "measure": null,
-          "servingVolume": null,
-          "isChefSpecial": false,
-          "prepTime": "14 min",
-          "description": "Crispy spicy Chicken 65 tossed with curry leaves layered over biryani",
-          "image": "/assets/dishes/default.svg?v=20261015-v4",
-          "quantity": 1
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "ready",
+          "kotBatch": 1
         }
       ],
       "orderId": "ord_1793941354840_1a3oa",
@@ -2872,28 +2762,48 @@
       "createdAt": "2026-10-30T18:01:54",
       "items": [
         {
+          "id": 56,
+          "orderId": 25,
+          "menuItemId": 1,
           "name": "Hyderabadi Chicken Dum Biryani",
-          "quantity": 1,
           "price": 320,
-          "total": 320
-        },
-        {
-          "name": "Royal Mutton Dum Biryani",
           "quantity": 1,
-          "price": 440,
-          "total": 440
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
         },
         {
+          "id": 57,
+          "orderId": 25,
+          "menuItemId": 2,
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
+        },
+        {
+          "id": 58,
+          "orderId": 25,
+          "menuItemId": 1,
           "name": "Hyderabadi Chicken Dum Biryani",
-          "quantity": 1,
           "price": 320,
-          "total": 320
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
         },
         {
+          "id": 59,
+          "orderId": 25,
+          "menuItemId": 2,
           "name": "Royal Mutton Dum Biryani",
-          "quantity": 1,
           "price": 440,
-          "total": 440
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
         }
       ],
       "invoiceId": 25,
@@ -3908,22 +3818,37 @@
       "createdAt": "2026-11-02T10:41:02",
       "items": [
         {
+          "id": 60,
+          "orderId": 26,
+          "menuItemId": 11,
           "name": "beers",
-          "quantity": 1,
           "price": 120,
-          "total": 120
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
         },
         {
+          "id": 61,
+          "orderId": 26,
+          "menuItemId": 2,
           "name": "Royal Mutton Dum Biryani",
-          "quantity": 1,
           "price": 440,
-          "total": 440
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
         },
         {
+          "id": 62,
+          "orderId": 26,
+          "menuItemId": 3,
           "name": "Special Boneless Chicken Biryani",
-          "quantity": 1,
           "price": 350,
-          "total": 350
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
         }
       ],
       "invoiceId": 26,
@@ -4675,10 +4600,17 @@
       "invoiceId": 16,
       "orderId": 16,
       "invoiceNumber": "INV-20261021-16",
+<<<<<<< HEAD
       "taxableAmount": 288,
       "totalAmount": 316.8,
       "paidAmount": 316.8,
       "amountPaid": 352,
+=======
+      "taxableAmount": 320,
+      "totalAmount": 352,
+      "paidAmount": 352,
+      "amountPaid": 316.8,
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "updatedAt": "2026-10-21T10:29:16",
       "payments": [],
       "server": "Staff",
@@ -4739,10 +4671,17 @@
       "invoiceId": 15,
       "orderId": 15,
       "invoiceNumber": "INV-20261021-15",
+<<<<<<< HEAD
       "taxableAmount": 490.5,
       "totalAmount": 539.55,
       "paidAmount": 539.55,
       "amountPaid": 599.5,
+=======
+      "taxableAmount": 545,
+      "totalAmount": 599.5,
+      "paidAmount": 599.5,
+      "amountPaid": 539.55,
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "updatedAt": "2026-10-21T10:29:44",
       "payments": [],
       "server": "Staff",
@@ -4916,10 +4855,17 @@
       "invoiceId": 13,
       "orderId": 13,
       "invoiceNumber": "INV-20261021-13",
+<<<<<<< HEAD
       "taxableAmount": 576,
       "totalAmount": 633.6,
       "paidAmount": 633.6,
       "amountPaid": 704,
+=======
+      "taxableAmount": 640,
+      "totalAmount": 704,
+      "paidAmount": 704,
+      "amountPaid": 633.6,
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "updatedAt": "2026-10-21T09:36:36",
       "payments": [],
       "server": "Staff",
@@ -5579,7 +5525,7 @@
       "serviceCharge": 0
     },
     {
-      "invoiceId": 5,
+      "invoiceId": 99,
       "orderId": 99,
       "invoiceNumber": "INV-20261012-1396",
       "subtotal": 500,
@@ -5592,6 +5538,7 @@
       "status": "Settled",
       "createdAt": "2026-10-12T14:55:45",
       "updatedAt": "2026-10-15T17:33:43",
+<<<<<<< HEAD
       "payments": [
         {
           "paymentId": 6,
@@ -5606,6 +5553,9 @@
           "paidAt": "2026-10-12T14:55:45"
         }
       ],
+=======
+      "payments": [],
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "tableName": "Table 1",
       "serverName": "Staff",
       "paymentMethod": "UPI",
@@ -5761,10 +5711,11 @@
       "discountPercent": 0,
       "discountAmount": 0,
       "taxPercent": 5,
-      "taxAmount": 94,
+      "taxAmount": 49,
       "serviceChargePercent": 5,
       "serviceChargeAmount": 94,
       "tipAmount": 0,
+<<<<<<< HEAD
       "grandTotal": 2068,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-002",
@@ -5779,13 +5730,22 @@
           "orderId": 2,
           "menuItemId": 1,
           "name": "",
-          "price": 520,
+=======
+      "grandTotal": 1069,
+      "paymentMethod": "CASH",
+      "invoiceNo": "INV-BLR-2026-0002",
+      "settledAt": "2026-10-09T20:46:00",
+      "createdAt": "2026-10-12T07:40:39",
+      "items": [
+        {
+          "name": "Item",
           "quantity": 1,
-          "notes": null,
-          "kotStatus": "ready",
-          "kotBatch": 1
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
+          "price": 520,
+          "total": 520
         },
         {
+<<<<<<< HEAD
           "id": 6,
           "kotId": 2,
           "botId": null,
@@ -5793,22 +5753,26 @@
           "orderId": 2,
           "menuItemId": 1,
           "name": "",
-          "price": 460,
+=======
+          "name": "Item",
           "quantity": 1,
-          "notes": null,
-          "kotStatus": "ready",
-          "kotBatch": 1
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
+          "price": 460,
+          "total": 460
         },
         {
+<<<<<<< HEAD
           "id": 9,
           "kotId": null,
           "botId": null,
           "isBarItem": false,
           "orderId": 2,
           "menuItemId": 1,
+=======
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
           "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
           "quantity": 2,
+<<<<<<< HEAD
           "notes": null,
           "kotStatus": "ready",
           "kotBatch": 1
@@ -5820,20 +5784,37 @@
           "isBarItem": false,
           "orderId": 2,
           "menuItemId": 5,
+=======
+          "price": 320,
+          "total": 640
+        },
+        {
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
           "name": "Paneer Butter Masala",
-          "price": 260,
           "quantity": 1,
+<<<<<<< HEAD
           "notes": null,
           "kotStatus": "ready",
           "kotBatch": 1
+=======
+          "price": 260,
+          "total": 260
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
         }
       ],
       "invoiceId": 2,
       "orderId": 2,
+<<<<<<< HEAD
       "invoiceNumber": "INV-002",
       "taxableAmount": 1880,
       "totalAmount": 2068,
       "paidAmount": 2068,
+=======
+      "invoiceNumber": "INV-BLR-2026-0002",
+      "taxableAmount": 980,
+      "totalAmount": 1069,
+      "paidAmount": 1069,
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "amountPaid": 0,
       "updatedAt": "2026-10-09T15:20:23",
       "payments": [],
@@ -5842,7 +5823,7 @@
       "orderTime": "2026-10-12T07:40:39",
       "isPaid": true,
       "serviceCharge": 5,
-      "total": 2068,
+      "total": 1069,
       "Status": "Settled",
       "orderType": "DineIn",
       "customerName": null,
@@ -5980,7 +5961,7 @@
       "date": "2026-10-09T20:32:00",
       "orderTime": "2026-10-09T20:32:00",
       "isPaid": true,
-      "taxableAmount": 1179,
+      "taxableAmount": 2435,
       "serviceCharge": 5,
       "totalAmount": 2678.5,
       "paidAmount": 2678.5,
@@ -6265,6 +6246,7 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
       "id": "ord_82",
       "invoiceId": "ord_82",
       "orderId": "ord_82",
@@ -6312,6 +6294,9 @@
       "orderId": "ord_84",
       "invoiceNumber": "INV-205227",
       "invoiceNo": "INV-205227",
+=======
+      "tableId": 14,
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "tableName": "Table 14",
       "serverName": "A V SURESH REDDY",
       "server": "Karan D.",
@@ -7312,6 +7297,7 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
       "id": "ord_68",
       "invoiceId": "ord_68",
       "orderId": "ord_68",
@@ -7372,6 +7358,8 @@
       "Status": "Settled"
     },
     {
+=======
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "id": "ord_69",
       "invoiceId": "ord_69",
       "orderId": "ord_69",
@@ -10237,11 +10225,300 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
       "id": "ord_79",
       "invoiceId": "ord_79",
       "orderId": "ord_79",
       "invoiceNumber": "INV-214149",
       "invoiceNo": "INV-214149",
+=======
+      "id": "ord_48",
+      "invoiceId": "ord_48",
+      "orderId": "ord_48",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_68",
+      "invoiceId": "ord_68",
+      "orderId": "ord_68",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_79",
+      "invoiceId": "ord_79",
+      "orderId": "ord_79",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_77",
+      "invoiceId": "ord_77",
+      "orderId": "ord_77",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_82",
+      "invoiceId": "ord_82",
+      "orderId": "ord_82",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "tableId": 1,
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "tableName": "Table 1",
       "serverName": "Rajesh K.",
       "server": "Rajesh K.",
@@ -11104,9 +11381,15 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
       "id": "ord_48",
       "invoiceId": "ord_48",
       "orderId": "ord_48",
+=======
+      "id": "ord_167",
+      "invoiceId": "ord_167",
+      "orderId": "ord_167",
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "invoiceNumber": "INV-1048",
       "invoiceNo": "INV-1048",
       "tableName": "Table 1",
@@ -11124,7 +11407,17 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
+<<<<<<< HEAD
       "payments": [],
+=======
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
       "items": [
         {
           "id": "bir-1",
@@ -11696,6 +11989,7 @@
       "serviceCharge": 0,
       "total": 627,
       "Status": "Settled"
+<<<<<<< HEAD
     },
     {
       "id": "ord_77",
@@ -11747,6 +12041,8 @@
       "serviceCharge": 0,
       "total": 627,
       "Status": "Settled"
+=======
+>>>>>>> c134e4e02ff4692082d6bf06ae96ebf4c33edb43
     }
   ],
   "gourmet_pos_staff_v1": [
