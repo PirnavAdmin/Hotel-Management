@@ -62,6 +62,7 @@ public class SalaryService
                 throw new ArgumentException("A valid Staff ID or Staff Name is required.");
             }
         }
+        }
 
         var paymentDate = dto.PaymentDate ?? DateTime.UtcNow;
         var paymentMonth = !string.IsNullOrWhiteSpace(dto.PaymentMonth) 

@@ -262,7 +262,6 @@ let inFlightNetworkStateRequest = null;
 const requestSharedNetworkState = () => {
   if (!inFlightNetworkStateRequest) {
     inFlightNetworkStateRequest = fetch(`${API_SYNC_BASE}/api/state`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => response.ok ? response.json() : null)
       .catch(() => null)
@@ -769,7 +768,7 @@ export function App() {
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
 
-  // ── Live Backend Integration Hook (Ngrok API) ──────────────────
+  // ── Live Backend Integration Hook ──────────────────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
     const loadLiveTables = async () => {
@@ -1011,7 +1010,9 @@ export function App() {
   const [posSession, setPosSession] = useState(null);
   const [kotSession, setKotSession] = useState(null);
   const [adminSession, setAdminSession] = useState(null);
-  const isLandingRoute = location.pathname === "/" && !posSession;
+  const customerRoutes = ["/", "/profile", "/my-orders", "/my-reservations", "/menu", "/reserve", "/takeaway"];
+  const isLandingRoute =
+    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) && !posSession;
   const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
@@ -1242,7 +1243,6 @@ export function App() {
       const syncBody = JSON.stringify(payload);
       const headers = {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       };
 
       // Persist through the shared API first. In Vite development, relay the
@@ -3852,6 +3852,8 @@ export function App() {
             tables={tables}
             onHotelLogin={handleHotelLogin}
             onAdminLogin={handleHotelLogin}
+            kitchenNotifications={kitchenNotifications}
+            onClearNotifications={handleClearNotifications}
           />
         )}
 

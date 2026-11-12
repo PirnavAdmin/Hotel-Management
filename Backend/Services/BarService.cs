@@ -1645,8 +1645,10 @@ public class BarService
         const string itemsSql = @"
             UPDATE order_items oi
             LEFT JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id
-            SET oi.item_status = @p_item_status 
-            WHERE oi.bot_id = @p_kot_id AND oi.is_active = 1 AND oi.is_deleted = 0;
+            SET oi.item_status = @p_item_status
+            WHERE oi.bot_id = @p_kot_id
+              AND oi.is_active = 1
+              AND oi.is_deleted = 0;
         ";
         await _spService.ExecuteSqlNonQueryAsync(itemsSql, new Dictionary<string, object?>
         {

@@ -63,6 +63,7 @@ public class InvoicePayment
     [MaxLength(100)]
     [Column("idempotency_key")]
     public string? IdempotencyKey { get; set; }
+
     [Column("paid_at")]
     public DateTime PaidAt { get; set; } = DateTime.UtcNow;
 }

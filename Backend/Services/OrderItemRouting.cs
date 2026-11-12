@@ -190,7 +190,6 @@ public static class OrderItemRouting
 
         return (kitchenItems, barItems);
     }
-
     public static async Task<long> ResolveMenuItemIdAsync(
         AppDbContext context,
         long? providedId,

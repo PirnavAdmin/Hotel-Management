@@ -227,7 +227,6 @@ public class KitchenController : ControllerBase
             {
                 return Conflict(new { success = false, message = "Cannot update kitchen item status for a cancelled or deleted order." });
             }
-
             item.KotStatus = cleanStatus;
             item.UpdatedAt = DateTime.UtcNow;
 
@@ -297,7 +296,6 @@ public class KitchenController : ControllerBase
         {
             return Conflict(new { success = false, message = "Cannot start cooking a cancelled or deleted order." });
         }
-
         var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
             _context,
             order.Items.Select(item => item.MenuItemId));
@@ -387,7 +385,6 @@ public class KitchenController : ControllerBase
         {
             return Conflict(new { success = false, message = "Cannot complete a cancelled or deleted order." });
         }
-
         var barMenuItemIds = await OrderItemRouting.GetBarMenuItemIdsAsync(
             _context,
             order.Items.Select(item => item.MenuItemId));

@@ -304,7 +304,7 @@ public class AuditController : ControllerBase
             {
                 ("pirnav", "USER_LOGIN_SUCCESS", "users", "1", "", "Logged into POS Admin Portal", "INFO", "127.0.0.1"),
                 ("pirnav", "OPENING_BALANCE_RECORDED", "daily_balances", DateTime.UtcNow.ToString("yyyy-MM-dd"), "", "Initial register cash float: ₹5,000.00, Bank: ₹25,000.00", "INFO", "127.0.0.1"),
-                ("System", "SYSTEM_STARTUP", "system", "app_start", "", "ASP.NET Core Web API initialized on port 5018", "INFO", "127.0.0.1"),
+                ("System", "SYSTEM_STARTUP", "system", "app_start", "", "ASP.NET Core Web API initialized on port 5000", "INFO", "65.0.8.48"),
                 ("pirnav", "CREATE_JOURNAL_VOUCHER", "journal_entries", "JV-2026-001", "", "Initial Partner Equity infusion: ₹5,00,000.00", "INFO", "127.0.0.1"),
                 ("Cashier", "ORDER_SETTLED", "restaurant_orders", "INV-1001", "Pending", "Settled via UPI with 5% GST", "INFO", "192.168.0.159"),
                 ("Manager", "INVENTORY_PURCHASE_RECORDED", "inventory_purchases", "PO-001", "", "Fresh Basmati Rice and Dairy Stock acquired", "INFO", "127.0.0.1"),

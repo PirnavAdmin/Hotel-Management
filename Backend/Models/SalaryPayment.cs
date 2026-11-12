@@ -73,6 +73,7 @@ public class SalaryPayment
         get => Remarks;
         set => Remarks = value;
     }
+
     [MaxLength(50)]
     [Column("status")]
     public string Status { get; set; } = "PAID"; // "PAID", "PROCESSED", "PENDING"

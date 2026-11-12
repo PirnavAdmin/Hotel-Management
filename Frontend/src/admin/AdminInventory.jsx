@@ -843,7 +843,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({ [INVENTORY_STORAGE_KEY]: normalized }),
       }).catch(() => {});
