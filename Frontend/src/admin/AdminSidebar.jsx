@@ -9,6 +9,7 @@ import {
   Package,
   FileText,
   BarChart3,
+  CalendarDays,
   ShieldCheck,
   Settings,
   Wine,
@@ -17,12 +18,7 @@ import {
   GlassWater,
   Sparkles,
   ReceiptText,
-  Truck,
-  Calendar,
-  Tag,
-  Key,
   Clock,
-  UserCheck,
 } from "lucide-react";
 
 export const BAR_ICON_MAP = {
@@ -89,6 +85,11 @@ export function AdminSidebar({
           badge: takeawayCount > 0 ? takeawayCount : null,
         },
         {
+          id: "reservations",
+          label: "Table Reservations",
+          icon: CalendarDays,
+        },
+        {
           id: "kot",
           label: "Kitchen KOT",
           icon: ChefHat,
@@ -111,29 +112,9 @@ export function AdminSidebar({
           icon: ReceiptText,
         },
         {
-          id: "delivery",
-          label: "Delivery Orders",
-          icon: Truck,
-        },
-        {
-          id: "reservations",
-          label: "Reservations",
-          icon: Calendar,
-        },
-        {
-          id: "suppliers",
-          label: "Suppliers & PO",
-          icon: Package,
-        },
-        {
           id: "reports",
           label: "Reports",
           icon: BarChart3,
-        },
-        {
-          id: "audit",
-          label: "Audit Documents",
-          icon: FileText,
         },
       ],
     },
@@ -144,21 +125,6 @@ export function AdminSidebar({
           id: "customers",
           label: "Customers",
           icon: Users,
-        },
-        {
-          id: "attendance",
-          label: "Attendance",
-          icon: UserCheck,
-        },
-        {
-          id: "promotions",
-          label: "Promotions",
-          icon: Tag,
-        },
-        {
-          id: "roles",
-          label: "Roles & RBAC",
-          icon: Key,
         },
         {
           id: "logins",
