@@ -24,6 +24,7 @@ import {
   CreditCard,
   FileText,
   AlertCircle,
+  Receipt as ReceiptIcon,
 } from "lucide-react";
 import {
   apiGetReservations,
@@ -36,6 +37,7 @@ import {
   saveStoredReservationTables,
 } from "../../api/reservationApi";
 import { apiGetTables } from "../../api/tableApi";
+import { ReceiptModal } from "../../user/ReceiptModal";
 
 const STORAGE_KEY_RESERVATIONS = "bhanu_bistro_reservations_v1";
 
@@ -71,7 +73,7 @@ const INITIAL_SEED_RESERVATIONS = [
     guestsCount: 4,
     reservationDate: "2026-11-12",
     reservationTime: "08:00 PM",
-    status: "pending",
+    status: "confirmed",
     advanceAmount: 200,
     paymentMethod: "UPI (PhonePe)",
     notes: "High chair needed for a child.",
@@ -452,6 +454,46 @@ const DEFAULT_TABLES = [
   { id: 10, tableId: 10, name: "Table 10", section: "Family Lounge", capacity: 6, status: "available" },
 ];
 
+// Vibrant status tab color themes (matches Takeaway Orders tabs)
+const STATUS_TAB_THEMES = {
+  all: {
+    text: "#ea580c",
+    background: "rgba(234, 88, 12, 0.12)",
+    border: "rgba(234, 88, 12, 0.35)",
+    activeBg: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+  },
+  confirmed: {
+    text: "#16a34a",
+    background: "rgba(34, 197, 94, 0.12)",
+    border: "rgba(34, 197, 94, 0.35)",
+    activeBg: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+  },
+  pending: {
+    text: "#d97706",
+    background: "rgba(245, 158, 11, 0.12)",
+    border: "rgba(245, 158, 11, 0.35)",
+    activeBg: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+  },
+  seated: {
+    text: "#2563eb",
+    background: "rgba(59, 130, 246, 0.12)",
+    border: "rgba(59, 130, 246, 0.35)",
+    activeBg: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+  },
+  completed: {
+    text: "#059669",
+    background: "rgba(16, 185, 129, 0.12)",
+    border: "rgba(16, 185, 129, 0.35)",
+    activeBg: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+  },
+  cancelled: {
+    text: "#dc2626",
+    background: "rgba(239, 68, 68, 0.12)",
+    border: "rgba(239, 68, 68, 0.35)",
+    activeBg: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+  },
+};
+
 export function ReservationsManagement({
   isLight = false,
   showToast = alert,
@@ -467,7 +509,6 @@ export function ReservationsManagement({
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-      // Also check customer reservations
       const customerRaw = localStorage.getItem("avsr_customer_reservations");
       if (customerRaw) {
         const parsedCustomer = JSON.parse(customerRaw);
@@ -495,6 +536,7 @@ export function ReservationsManagement({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [dateFilter, setDateFilter] = useState("all"); // "all" | "today" | "tomorrow" | "7days" | "month" | "custom"
+  const [particularDate, setParticularDate] = useState(""); // For custom single date picking
   const [dateRangeLabel, setDateRangeLabel] = useState("All Dates");
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
@@ -506,7 +548,7 @@ export function ReservationsManagement({
   const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
   const [viewingReservation, setViewingReservation] = useState(null);
-  const [printingReservation, setPrintingReservation] = useState(null);
+  const [printReceiptReservation, setPrintReceiptReservation] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // New Booking Form State
@@ -522,7 +564,7 @@ export function ReservationsManagement({
     advanceAmount: 100,
   });
 
-  // Action Menu & Dropdown outside click ref
+  // Action Menu outside click ref
   const actionMenuRef = useRef(null);
 
   useEffect(() => {
@@ -559,9 +601,8 @@ export function ReservationsManagement({
         const serverData = resRes.value.data;
         if (serverData.length > 0) {
           setReservations((prev) => {
-            // merge server with local custom records
-            const serverIds = new Set(serverData.map((r) => r.reservationId || r.id));
-            const localOnly = prev.filter((r) => !serverIds.has(r.reservationId || r.id));
+            const serverIds = new Set(serverData.map((r) => String(r.reservationId || r.id)));
+            const localOnly = prev.filter((r) => !serverIds.has(String(r.reservationId || r.id)));
             return [...localOnly, ...serverData];
           });
         }
@@ -594,13 +635,13 @@ export function ReservationsManagement({
   const handleStatusUpdate = async (reservationId, newStatus) => {
     setReservations((prev) =>
       prev.map((r) =>
-        (r.reservationId || r.id) === reservationId
+        String(r.reservationId || r.id) === String(reservationId)
           ? { ...r, status: newStatus, updatedAt: new Date().toISOString() }
           : r
       )
     );
     setActionMenuOpenId(null);
-    if (viewingReservation && (viewingReservation.reservationId || viewingReservation.id) === reservationId) {
+    if (viewingReservation && String(viewingReservation.reservationId || viewingReservation.id) === String(reservationId)) {
       setViewingReservation((prev) => ({ ...prev, status: newStatus }));
     }
 
@@ -616,10 +657,10 @@ export function ReservationsManagement({
   const handleDelete = async (reservationId) => {
     if (!window.confirm("Are you sure you want to remove this reservation?")) return;
     setReservations((prev) =>
-      prev.filter((r) => (r.reservationId || r.id) !== reservationId)
+      prev.filter((r) => String(r.reservationId || r.id) !== String(reservationId))
     );
     setActionMenuOpenId(null);
-    if (viewingReservation && (viewingReservation.reservationId || viewingReservation.id) === reservationId) {
+    if (viewingReservation && String(viewingReservation.reservationId || viewingReservation.id) === String(reservationId)) {
       setViewingReservation(null);
     }
     try {
@@ -684,7 +725,7 @@ export function ReservationsManagement({
     showToast("🎉 Table reserved successfully!");
   };
 
-  // ── 8. Filter Logic ────────────────────────────────────────────────────
+  // ── 8. Robust Filter Logic (Safe String Conversions to Prevent .toLowerCase Crashes) ──
   const filteredReservations = useMemo(() => {
     let list = [...reservations];
 
@@ -702,45 +743,61 @@ export function ReservationsManagement({
       );
     }
 
-    // Date Range Filter
+    // Date Range / Particular Date Filter
     const todayStr = new Date().toISOString().split("T")[0];
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
     if (dateFilter === "today") {
-      list = list.filter((r) => (r.reservationDate || r.date || "").startsWith(todayStr));
+      list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(todayStr));
     } else if (dateFilter === "tomorrow") {
-      list = list.filter((r) => (r.reservationDate || r.date || "").startsWith(tomorrowStr));
+      list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(tomorrowStr));
     } else if (dateFilter === "7days") {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
       list = list.filter((r) => {
-        const d = r.reservationDate || r.date || "";
+        const d = String(r.reservationDate || r.date || "");
         return d >= sevenDaysAgoStr && d <= todayStr;
       });
     } else if (dateFilter === "month") {
       const currentMonth = todayStr.slice(0, 7);
-      list = list.filter((r) => (r.reservationDate || r.date || "").startsWith(currentMonth));
-    } else if (dateFilter === "custom" && customStartDate && customEndDate) {
-      list = list.filter((r) => {
-        const d = r.reservationDate || r.date || "";
-        return d >= customStartDate && d <= customEndDate;
-      });
+      list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(currentMonth));
+    } else if (dateFilter === "custom") {
+      if (particularDate) {
+        list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(particularDate));
+      } else if (customStartDate && customEndDate) {
+        list = list.filter((r) => {
+          const d = String(r.reservationDate || r.date || "");
+          return d >= customStartDate && d <= customEndDate;
+        });
+      }
     }
 
-    // Text Search Filter
+    // Text Search Filter with 100% Safe String Conversion
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (r) =>
-          (r.reservationId || r.id || "").toLowerCase().includes(q) ||
-          (r.customerName || "").toLowerCase().includes(q) ||
-          (r.phone || "").toLowerCase().includes(q) ||
-          (r.tableName || "").toLowerCase().includes(q) ||
-          (r.notes || "").toLowerCase().includes(q)
-      );
+      list = list.filter((r) => {
+        const idStr = String(r.reservationId ?? r.id ?? "").toLowerCase();
+        const nameStr = String(r.customerName ?? r.name ?? r.customer ?? "").toLowerCase();
+        const phoneStr = String(r.phone ?? r.customerPhone ?? "").toLowerCase();
+        const tableStr = String(r.tableName ?? (r.tableNumber ? `Table ${r.tableNumber}` : r.tableId ? `Table ${r.tableId}` : "")).toLowerCase();
+        const notesStr = String(r.notes ?? r.specialRequests ?? "").toLowerCase();
+        const statusStr = String(r.status ?? "").toLowerCase();
+        const dateStr = String(r.reservationDate ?? r.date ?? "").toLowerCase();
+        const timeStr = String(r.reservationTime ?? r.time ?? "").toLowerCase();
+        return (
+          idStr.includes(q) ||
+          nameStr.includes(q) ||
+          phoneStr.includes(q) ||
+          tableStr.includes(q) ||
+          notesStr.includes(q) ||
+          statusStr.includes(q) ||
+          dateStr.includes(q) ||
+          timeStr.includes(q)
+        );
+      });
     }
 
     return list;
@@ -749,6 +806,7 @@ export function ReservationsManagement({
     activeStatusTab,
     secondaryStatusFilter,
     dateFilter,
+    particularDate,
     customStartDate,
     customEndDate,
     searchQuery,
@@ -830,6 +888,57 @@ export function ReservationsManagement({
         };
     }
   };
+
+  // ── 10. Table Data Prepared for ReceiptModal (Invoice & Bill Print) ───
+  const receiptTableData = useMemo(() => {
+    if (!printReceiptReservation) return null;
+    const r = printReceiptReservation;
+
+    const resId = String(r.reservationId || r.id || "RES-1000");
+    const tableName = String(
+      r.tableName || (r.tableNumber ? `Table ${r.tableNumber}` : `Table ${r.tableId || 1}`)
+    );
+    const advancePaid = Number(r.advanceAmount) || 100;
+
+    const items = [
+      {
+        name: `Table Reservation Booking Deposit (${tableName})`,
+        quantity: 1,
+        price: advancePaid,
+      },
+    ];
+
+    const subtotal = advancePaid;
+    const taxAmount = Math.round(subtotal * 0.05 * 100) / 100;
+    const serviceChargeAmount = 0;
+    const grandTotal = subtotal;
+
+    return {
+      id: resId,
+      invoiceNo: resId,
+      name: tableName,
+      tableName: tableName,
+      tableNumber: r.tableNumber || r.tableId || 1,
+      section: r.section || "Fine Dining",
+      server: "Host Staff",
+      guests: Number(r.guestsCount || r.guests || 2),
+      date: r.reservationDate || r.date || new Date().toISOString().split("T")[0],
+      orderTime: r.reservationTime || r.time || "07:30 PM",
+      status: r.status === "cancelled" ? "Cancelled" : "Completed",
+      isPaid: true,
+      settled: true,
+      settledAt: r.createdAt || new Date().toISOString(),
+      paymentMethod: String(r.paymentMethod || "UPI (PAID)").toUpperCase(),
+      customer: String(r.customerName || "Guest"),
+      customerPhone: String(r.phone || r.customerPhone || ""),
+      items,
+      subtotal,
+      taxAmount,
+      serviceCharge: 0,
+      serviceChargeAmount: 0,
+      grandTotal,
+    };
+  }, [printReceiptReservation]);
 
   return (
     <div
@@ -935,7 +1044,7 @@ export function ReservationsManagement({
                   boxShadow: "0 10px 25px rgba(0, 0, 0, 0.4)",
                   padding: "0.4rem",
                   zIndex: 50,
-                  minWidth: "210px",
+                  minWidth: "220px",
                   display: "flex",
                   flexDirection: "column",
                   gap: "0.2rem",
@@ -954,6 +1063,7 @@ export function ReservationsManagement({
                     onClick={() => {
                       setDateFilter(preset.value);
                       setDateRangeLabel(preset.label);
+                      setParticularDate("");
                       setDateDropdownOpen(false);
                       setCustomDateRangeOpen(false);
                     }}
@@ -962,16 +1072,17 @@ export function ReservationsManagement({
                       padding: "0.55rem 0.85rem",
                       borderRadius: "6px",
                       border: "none",
-                      background: dateFilter === preset.value ? "rgba(234, 88, 12, 0.15)" : "transparent",
-                      color: dateFilter === preset.value ? "#ea580c" : "var(--text-main, #f8fafc)",
+                      background: dateFilter === preset.value && !particularDate ? "rgba(234, 88, 12, 0.15)" : "transparent",
+                      color: dateFilter === preset.value && !particularDate ? "#ea580c" : "var(--text-main, #f8fafc)",
                       fontSize: "0.82rem",
-                      fontWeight: dateFilter === preset.value ? 600 : 400,
+                      fontWeight: dateFilter === preset.value && !particularDate ? 600 : 400,
                       cursor: "pointer",
                     }}
                   >
                     {preset.label}
                   </button>
                 ))}
+
                 <button
                   type="button"
                   onClick={() => setCustomDateRangeOpen((open) => !open)}
@@ -987,8 +1098,9 @@ export function ReservationsManagement({
                     cursor: "pointer",
                   }}
                 >
-                  Custom date range
+                  📅 Pick Particular Date / Range
                 </button>
+
                 {customDateRangeOpen && (
                   <div
                     style={{
@@ -1000,61 +1112,88 @@ export function ReservationsManagement({
                     }}
                   >
                     <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem" }}>
-                      From
+                      Exact Date
+                      <input
+                        type="date"
+                        value={particularDate}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setParticularDate(val);
+                          setDateFilter("custom");
+                          setDateRangeLabel(val ? `Date: ${val}` : "Particular Date");
+                          setDateDropdownOpen(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          padding: "0.45rem",
+                          border: "1px solid var(--border-card, #27272a)",
+                          borderRadius: "6px",
+                          background: "var(--bg-secondary, #27272a)",
+                          color: "var(--text-main, #f8fafc)",
+                          cursor: "pointer",
+                        }}
+                      />
+                    </label>
+
+                    <div style={{ height: "1px", background: "var(--border-card, #27272a)", margin: "2px 0" }} />
+
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted, #94a3b8)" }}>Or Date Range:</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.35rem" }}>
                       <input
                         type="date"
                         value={customStartDate}
-                        max={customEndDate || undefined}
+                        placeholder="From"
                         onChange={(e) => setCustomStartDate(e.target.value)}
                         style={{
                           width: "100%",
                           boxSizing: "border-box",
-                          padding: "0.45rem",
+                          padding: "0.35rem",
                           border: "1px solid var(--border-card, #27272a)",
                           borderRadius: "6px",
                           background: "var(--bg-secondary, #27272a)",
                           color: "var(--text-main, #f8fafc)",
+                          fontSize: "0.75rem",
                         }}
                       />
-                    </label>
-                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem" }}>
-                      To
                       <input
                         type="date"
                         value={customEndDate}
-                        min={customStartDate || undefined}
+                        placeholder="To"
                         onChange={(e) => setCustomEndDate(e.target.value)}
                         style={{
                           width: "100%",
                           boxSizing: "border-box",
-                          padding: "0.45rem",
+                          padding: "0.35rem",
                           border: "1px solid var(--border-card, #27272a)",
                           borderRadius: "6px",
                           background: "var(--bg-secondary, #27272a)",
                           color: "var(--text-main, #f8fafc)",
+                          fontSize: "0.75rem",
                         }}
                       />
-                    </label>
+                    </div>
                     <button
                       type="button"
                       disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
                       onClick={() => {
                         setDateFilter("custom");
                         setDateRangeLabel(`${customStartDate} to ${customEndDate}`);
+                        setParticularDate("");
                         setDateDropdownOpen(false);
                       }}
                       style={{
-                        padding: "0.5rem",
+                        padding: "0.45rem",
                         borderRadius: "6px",
                         border: "none",
                         background: "linear-gradient(135deg, #f97316, #ea580c)",
                         color: "#fff",
-                        fontSize: "0.8rem",
+                        fontSize: "0.78rem",
                         fontWeight: 600,
                         cursor: "pointer",
                       }}
                     >
-                      Apply date range
+                      Apply Range
                     </button>
                   </div>
                 )}
@@ -1252,7 +1391,7 @@ export function ReservationsManagement({
         </div>
       </div>
 
-      {/* ── 3. Status Filter Tabs (Horizontal Pills) ─────────── */}
+      {/* ── 3. Status Filter Tabs (Vibrant Colors for Each Status) ── */}
       <div
         style={{
           display: "flex",
@@ -1272,6 +1411,7 @@ export function ReservationsManagement({
         ].map((tab) => {
           const isActive = activeStatusTab.toLowerCase() === tab.key.toLowerCase();
           const Icon = tab.icon;
+          const theme = STATUS_TAB_THEMES[tab.key] || STATUS_TAB_THEMES.all;
 
           return (
             <button
@@ -1285,18 +1425,18 @@ export function ReservationsManagement({
                 padding: "0.48rem 0.95rem",
                 borderRadius: "10px",
                 border: isActive
-                  ? "1px solid #ea580c"
-                  : "1px solid var(--border-card, #27272a)",
+                  ? "1px solid transparent"
+                  : `1px solid ${theme.border}`,
                 background: isActive
-                  ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)"
-                  : "var(--bg-card, #18181b)",
-                color: isActive ? "#ffffff" : "var(--text-main, #cbd5e1)",
+                  ? theme.activeBg
+                  : theme.background,
+                color: isActive ? "#ffffff" : theme.text,
                 fontSize: "0.82rem",
-                fontWeight: isActive ? 700 : 500,
+                fontWeight: isActive ? 750 : 650,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s ease",
-                boxShadow: isActive ? "0 2px 8px rgba(234, 88, 12, 0.3)" : "none",
+                boxShadow: isActive ? "0 3px 10px rgba(0, 0, 0, 0.3)" : "none",
               }}
             >
               <Icon size={14} />
@@ -1318,7 +1458,7 @@ export function ReservationsManagement({
           gap: "0.75rem",
         }}
       >
-        {/* Search input */}
+        {/* Search input with 100% crash protection */}
         <div
           style={{
             position: "relative",
@@ -1375,21 +1515,30 @@ export function ReservationsManagement({
           )}
         </div>
 
-        {/* Dropdown Filters and Refresh Button */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+        {/* Dropdown Filters, Particular Date Picker, and Refresh Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
           {/* Quick Date Select */}
           <select
             value={dateFilter}
             onChange={(e) => {
-              setDateFilter(e.target.value);
-              const labelMap = {
-                all: "All Dates",
-                today: "Today",
-                tomorrow: "Tomorrow",
-                "7days": "Last 7 Days",
-                month: "This Month",
-              };
-              setDateRangeLabel(labelMap[e.target.value] || "Custom");
+              const val = e.target.value;
+              setDateFilter(val);
+              if (val === "custom") {
+                if (!particularDate) {
+                  setParticularDate(new Date().toISOString().split("T")[0]);
+                }
+                setDateRangeLabel("Custom Date");
+              } else {
+                setParticularDate("");
+                const labelMap = {
+                  all: "All Dates",
+                  today: "Today",
+                  tomorrow: "Tomorrow",
+                  "7days": "Last 7 Days",
+                  month: "This Month",
+                };
+                setDateRangeLabel(labelMap[val] || "All Dates");
+              }
             }}
             style={{
               height: "42px",
@@ -1409,7 +1558,61 @@ export function ReservationsManagement({
             <option value="tomorrow">Tomorrow</option>
             <option value="7days">Last 7 Days</option>
             <option value="month">This Month</option>
+            <option value="custom">📅 Particular Date...</option>
           </select>
+
+          {/* Particular Date Picker (Appears when Particular Date is selected) */}
+          {dateFilter === "custom" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <input
+                type="date"
+                value={particularDate}
+                onChange={(e) => {
+                  setParticularDate(e.target.value);
+                  setDateRangeLabel(e.target.value ? `Date: ${e.target.value}` : "Custom Date");
+                }}
+                style={{
+                  height: "42px",
+                  padding: "0 0.85rem",
+                  borderRadius: "10px",
+                  border: "1.5px solid #ea580c",
+                  background: "var(--bg-card, #18181b)",
+                  color: "var(--text-main, #f8fafc)",
+                  fontSize: "0.83rem",
+                  fontWeight: 600,
+                  outline: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 0 10px rgba(234, 88, 12, 0.25)",
+                }}
+                title="Select specific reservation date"
+              />
+              {particularDate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setParticularDate("");
+                    setDateFilter("all");
+                    setDateRangeLabel("All Dates");
+                  }}
+                  title="Clear specific date"
+                  style={{
+                    height: "42px",
+                    width: "36px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--border-card, #27272a)",
+                    background: "var(--bg-card, #18181b)",
+                    color: "var(--text-muted, #94a3b8)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Secondary Status Filter */}
           <select
@@ -1529,7 +1732,7 @@ export function ReservationsManagement({
                 </tr>
               ) : (
                 filteredReservations.map((r, index) => {
-                  const resId = r.reservationId || r.id;
+                  const resId = String(r.reservationId || r.id || `RES-${index + 1000}`);
                   const badge = getStatusBadge(r.status);
                   const BadgeIcon = badge.icon;
                   const isMenuOpen = actionMenuOpenId === resId;
@@ -1580,7 +1783,7 @@ export function ReservationsManagement({
                               flexShrink: 0,
                             }}
                           >
-                            {(r.customerName || "G")[0].toUpperCase()}
+                            {(String(r.customerName || "G"))[0].toUpperCase()}
                           </div>
                           <span>{r.customerName || "Guest"}</span>
                         </div>
@@ -1651,14 +1854,14 @@ export function ReservationsManagement({
                         </span>
                       </td>
 
-                      {/* Actions: View, Print, More Menu */}
+                      {/* Actions: Eye Icon (Opens ReceiptModal Bill), Printer, More Menu */}
                       <td style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
-                          {/* Eye / View Details */}
+                          {/* Eye Icon -> Opens the 5th picture Invoice & Bill Print (ReceiptModal) */}
                           <button
                             type="button"
-                            onClick={() => setViewingReservation(r)}
-                            title="View Reservation Details"
+                            onClick={() => setPrintReceiptReservation(r)}
+                            title="View / Print Tax Invoice Bill"
                             style={{
                               width: "32px",
                               height: "32px",
@@ -1684,11 +1887,11 @@ export function ReservationsManagement({
                             <Eye size={15} />
                           </button>
 
-                          {/* Print Booking Voucher */}
+                          {/* Print Icon -> Opens the same Invoice & Bill Print (ReceiptModal) */}
                           <button
                             type="button"
-                            onClick={() => setPrintingReservation(r)}
-                            title="Print Booking Voucher"
+                            onClick={() => setPrintReceiptReservation(r)}
+                            title="Print Tax Invoice Bill"
                             style={{
                               width: "32px",
                               height: "32px",
@@ -1761,6 +1964,32 @@ export function ReservationsManagement({
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    setPrintReceiptReservation(r);
+                                    setActionMenuOpenId(null);
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#f8fafc",
+                                    fontSize: "0.8rem",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                >
+                                  <ReceiptIcon size={14} color="#ea580c" />
+                                  <span>View / Print Bill</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
                                     setViewingReservation(r);
                                     setActionMenuOpenId(null);
                                   }}
@@ -1780,34 +2009,8 @@ export function ReservationsManagement({
                                   onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)")}
                                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                                 >
-                                  <FileText size={14} color="#ea580c" />
-                                  <span>Reservation Details</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPrintingReservation(r);
-                                    setActionMenuOpenId(null);
-                                  }}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.5rem",
-                                    padding: "0.5rem 0.75rem",
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "#f8fafc",
-                                    fontSize: "0.8rem",
-                                    cursor: "pointer",
-                                    fontWeight: 500,
-                                  }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)")}
-                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                >
-                                  <Printer size={14} color="#f59e0b" />
-                                  <span>Print Booking Voucher</span>
+                                  <FileText size={14} color="#f59e0b" />
+                                  <span>Booking Information</span>
                                 </button>
 
                                 <div style={{ height: "1px", background: "#27272a", margin: "0.2rem 0" }} />
@@ -1949,7 +2152,7 @@ export function ReservationsManagement({
         </div>
       </div>
 
-      {/* ── 6. Modal: "+ Book Table" (Matches Takeaway Order Modal) ── */}
+      {/* ── 6. Modal: "+ Book Table" (New Reservation Modal) ── */}
       {isNewBookingModalOpen && (
         <div
           style={{
@@ -2232,7 +2435,7 @@ export function ReservationsManagement({
         </div>
       )}
 
-      {/* ── 7. Modal: View Reservation Details ──────────────── */}
+      {/* ── 7. Modal: View Booking Information Breakdown ────── */}
       {viewingReservation && (
         <div
           style={{
@@ -2305,7 +2508,7 @@ export function ReservationsManagement({
                 <div>
                   <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Contact Phone</small>
                   <div style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
-                    {viewingReservation.phone || "—"}
+                    {viewingReservation.phone || viewingReservation.customerPhone || "—"}
                   </div>
                 </div>
                 <div>
@@ -2333,7 +2536,7 @@ export function ReservationsManagement({
                 <div>
                   <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Date & Time</small>
                   <div style={{ color: "#f8fafc", fontWeight: 600 }}>
-                    {viewingReservation.reservationDate} at {viewingReservation.reservationTime}
+                    {viewingReservation.reservationDate || viewingReservation.date} at {viewingReservation.reservationTime || viewingReservation.time}
                   </div>
                 </div>
                 <div>
@@ -2362,13 +2565,25 @@ export function ReservationsManagement({
                 </div>
               </div>
 
-              {/* Status Actions in Modal */}
+              {/* Action Buttons */}
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const r = viewingReservation;
+                    setViewingReservation(null);
+                    setPrintReceiptReservation(r);
+                  }}
+                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid #ea580c", background: "rgba(234, 88, 12, 0.15)", color: "#ea580c", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+                >
+                  <ReceiptIcon size={14} />
+                  <span>View / Print Bill</span>
+                </button>
                 {viewingReservation.status !== "confirmed" && (
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "confirmed")}
-                    style={{ flex: 1, padding: "0.5rem", borderRadius: "8px", border: "none", background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Confirm Booking
                   </button>
@@ -2377,7 +2592,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "seated")}
-                    style={{ flex: 1, padding: "0.5rem", borderRadius: "8px", border: "none", background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Seat Guests
                   </button>
@@ -2386,7 +2601,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "completed")}
-                    style={{ flex: 1, padding: "0.5rem", borderRadius: "8px", border: "none", background: "rgba(5, 150, 105, 0.2)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(5, 150, 105, 0.2)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Complete Visit
                   </button>
@@ -2397,109 +2612,20 @@ export function ReservationsManagement({
         </div>
       )}
 
-      {/* ── 8. Modal: Print Booking Voucher ──────────────────── */}
-      {printingReservation && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(6px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: "1rem",
+      {/* ── 8. MODAL 3: Tax Invoice & Bill Print (ReceiptModal - Matches Image 5) ── */}
+      {receiptTableData && (
+        <ReceiptModal
+          table={receiptTableData}
+          restaurantSettings={{
+            restaurantName: restaurantName || "Bhanu Bistro",
+            tagline: "Fine Dining & POS Management",
+            address: "Main Road, Near Tech Park, Hyderabad, India",
+            phone: "+91 98450 12345",
+            gstin: "36AABCA1234F1Z5",
+            ...restaurantSettings,
           }}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              color: "#18181b",
-              borderRadius: "14px",
-              width: "100%",
-              maxWidth: "420px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ padding: "1.5rem", borderBottom: "1px dashed #cbd5e1" }}>
-              <div style={{ textAlign: "center", marginBottom: "1rem" }}>
-                <h2 style={{ margin: "0 0 2px", fontSize: "1.3rem", fontWeight: 900, color: "#ea580c" }}>
-                  {restaurantName}
-                </h2>
-                <small style={{ color: "#64748b", fontSize: "0.76rem" }}>
-                  FINE DINING & TABLE RESERVATIONS
-                </small>
-                <div style={{ fontSize: "0.74rem", color: "#94a3b8", marginTop: "2px" }}>
-                  Main Road, Hyderabad • Phone: +91 98765 43210
-                </div>
-              </div>
-
-              <div style={{ background: "#f8fafc", padding: "0.85rem", borderRadius: "8px", marginBottom: "1rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Booking Ref:</span>
-                  <strong style={{ fontFamily: "monospace", color: "#ea580c" }}>
-                    {printingReservation.reservationId || printingReservation.id}
-                  </strong>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Date:</span>
-                  <strong>{printingReservation.reservationDate}</strong>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Time:</span>
-                  <strong>{printingReservation.reservationTime}</strong>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Table:</span>
-                  <strong>{printingReservation.tableName || `Table ${printingReservation.tableId}`}</strong>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Guests:</span>
-                  <strong>{printingReservation.guestsCount || 2} Persons</strong>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "1rem" }}>
-                <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Guest Details:</div>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{printingReservation.customerName}</div>
-                <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{printingReservation.phone}</div>
-                {printingReservation.notes && (
-                  <div style={{ marginTop: "4px", fontSize: "0.74rem", color: "#ea580c" }}>
-                    Note: {printingReservation.notes}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>Advance Deposit Paid:</span>
-                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#16a34a" }}>
-                  ₹ {Number(printingReservation.advanceAmount || 100).toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <div style={{ padding: "1rem 1.5rem", background: "#f8fafc", display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-              <button
-                type="button"
-                onClick={() => setPrintingReservation(null)}
-                style={{ padding: "0.5rem 1rem", borderRadius: "6px", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", fontSize: "0.8rem" }}
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  window.print();
-                }}
-                style={{ padding: "0.5rem 1.25rem", borderRadius: "6px", border: "none", background: "#ea580c", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
-              >
-                Print Voucher
-              </button>
-            </div>
-          </div>
-        </div>
+          onClose={() => setPrintReceiptReservation(null)}
+        />
       )}
     </div>
   );
